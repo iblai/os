@@ -1,0 +1,212 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { AccessTab } from '@/components/modals/edit-mentor-modal/tabs/access-tab';
+
+const mockUseParams = vi.fn();
+const mockUseUsername = vi.fn();
+const mockGetMentorId = vi.fn();
+const mockUseGetMentorSettingsQuery = vi.fn();
+const mockUseGetRbacMentorAccessListQuery = vi.fn();
+const renderedAddAccessProps: Array<Record<string, unknown>> = [];
+const renderedRoleAccessProps: Array<Record<string, unknown>> = [];
+
+vi.mock('next/navigation', () => ({
+  useParams: () => mockUseParams(),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => mockUseUsername(),
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({
+    getMentorId: () => mockGetMentorId(),
+  }),
+}));
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
+  useGetRbacMentorAccessListQuery: (...args: unknown[]) =>
+    mockUseGetRbacMentorAccessListQuery(...args),
+}));
+
+vi.mock('@/components/modals/edit-mentor-modal/tabs/access-tab/add-access', () => ({
+  AddAccessDialog: (props: {
+    availableRoles: string[];
+    isLoading: boolean;
+    onAccessCreated: () => Promise<void>;
+  }) => {
+    renderedAddAccessProps.push(props);
+    return (
+      <div data-testid="add-access-dialog">
+        add-access-{props.availableRoles.join(',')}-{props.isLoading ? 'loading' : 'ready'}
+      </div>
+    );
+  },
+}));
+
+vi.mock('@/components/modals/edit-mentor-modal/tabs/access-tab/update-access', () => ({
+  RoleAccessPanel: (props: {
+    policy: Record<string, unknown>;
+    onAccessUpdated: () => Promise<void>;
+  }) => {
+    renderedRoleAccessProps.push(props);
+    return <div data-testid="role-access-panel">role-panel-{props.policy?.role as string}</div>;
+  },
+}));
+
+const createAccessQueryState = (overrides: Record<string, unknown> = {}) => ({
+  data: { policies: [] },
+  isLoading: false,
+  isFetching: false,
+  isError: false,
+  error: null,
+  refetch: vi.fn(),
+  ...overrides,
+});
+
+describe('AccessTab', () => {
+  beforeEach(() => {
+    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-from-route' });
+    mockUseUsername.mockReturnValue('mentor-user');
+    mockGetMentorId.mockReturnValue('mentor-from-navigate');
+
+    mockUseGetMentorSettingsQuery.mockReturnValue({
+      data: { mentor_id: 101 },
+      isLoading: false,
+    });
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(createAccessQueryState());
+
+    renderedAddAccessProps.length = 0;
+    renderedRoleAccessProps.length = 0;
+  });
+
+  it('renders loading placeholders while queries are loading', () => {
+    mockUseGetMentorSettingsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+
+    const { container } = render(<AccessTab />);
+
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2);
+    expect(screen.queryByTestId('add-access-dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Access management is unavailable.')).not.toBeInTheDocument();
+  });
+
+  it('shows manage unavailable state when mentor context is missing', () => {
+    mockUseGetMentorSettingsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    });
+
+    render(<AccessTab />);
+
+    expect(screen.getByText('Access management is unavailable.')).toBeInTheDocument();
+    expect(screen.queryByTestId('add-access-dialog')).not.toBeInTheDocument();
+  });
+
+  it('renders table of policies and add access dialog when data is available', () => {
+    const policies = [
+      {
+        id: 1,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'viewer',
+        users: [{ id: 11, username: 'alpha' }],
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    expect(screen.getByRole('heading', { name: 'Access control' })).toBeInTheDocument();
+    expect(screen.getByText('Viewer')).toBeInTheDocument();
+    expect(screen.getByText('1 user assigned to this role')).toBeInTheDocument();
+    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
+    expect(screen.getByTestId('add-access-dialog')).toHaveTextContent('add-access-editor-ready');
+  });
+
+  it('shows empty state when there are no access policies', () => {
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies: [] },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    expect(screen.getByText('No roles available for this mentor.')).toBeInTheDocument();
+  });
+
+  it('hides add access dialog when all default roles already exist', () => {
+    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
+    const policies = [
+      {
+        id: 1,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'editor',
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    expect(screen.queryByTestId('add-access-dialog')).not.toBeInTheDocument();
+  });
+
+  it('renders error state when fetching policies fails', () => {
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: undefined,
+        isError: true,
+        error: { message: 'Something went wrong' },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    expect(screen.getByText('Unable to load mentor access.')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+  });
+
+  it('opens role access dialog when edit button is clicked', async () => {
+    const user = userEvent.setup();
+    const policies = [
+      {
+        id: 1,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'viewer',
+        users: [],
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit Viewer access' }));
+
+    expect(screen.getByTestId('role-access-panel')).toHaveTextContent('role-panel-viewer');
+    expect(renderedRoleAccessProps.at(-1)?.policy).toMatchObject({ role: 'viewer' });
+  });
+});

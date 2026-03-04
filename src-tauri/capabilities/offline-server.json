@@ -1,0 +1,21 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "offline-server-access",
+  "description": "Allows the offline server (localhost:3456) to access Tauri IPC commands",
+  "windows": ["main"],
+  "platforms": ["windows", "macOS", "linux"],
+  "remote": {
+    "urls": ["http://localhost:3456/*", "http://127.0.0.1:3456/*"]
+  },
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
+    "core:path:default",
+    "core:app:default",
+    "core:app:allow-version",
+    "core:window:default",
+    "core:webview:default"
+  ]
+}

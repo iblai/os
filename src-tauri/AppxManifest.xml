@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap rescap desktop">
+
+  <!--
+    Partner Center identity - Store ID: 9MZPPXDWGWK9
+    PFN: ibl.ai.ibl.aiOS_zx1xbkjfpftke
+
+    For local testing with self-signed cert, override Publisher to match your cert:
+      1. Run setup-test-cert.ps1 (creates CN=iblai-test cert)
+      2. Temporarily change Publisher below to "CN=iblai-test"
+      3. Build and sign: .\build-msix.ps1 -CertThumbprint "THUMBPRINT"
+      4. Revert Publisher before Store submission
+  -->
+  <Identity
+    Name="ibl.ai.ibl.aiOS"
+    Publisher="CN=02D69AED-8E37-4338-A36D-57B9C8A6FA57"
+    Version="1.1.9.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>ibl.ai OS</DisplayName>
+    <PublisherDisplayName>ibl.ai</PublisherDisplayName>
+    <Logo>icons\StoreLogo.png</Logo>
+    <Description>AI-powered mentoring assistant</Description>
+  </Properties>
+
+  <Dependencies>
+    <!-- Windows 10 1809 (build 17763) minimum for WebView2 compatibility -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22631.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application
+      Id="iblaiOS"
+      Executable="ibl-ai-os.exe"
+      EntryPoint="Windows.FullTrustApplication">
+
+      <uap:VisualElements
+        DisplayName="ibl.ai OS"
+        Description="ibl.ai OS provides intelligent tutoring and learning support with offline capabilities."
+        BackgroundColor="transparent"
+        Square150x150Logo="icons\Square150x150Logo.png"
+        Square44x44Logo="icons\Square44x44Logo.png">
+
+        <uap:DefaultTile
+          Square71x71Logo="icons\Square71x71Logo.png"
+          Wide310x150Logo="icons\Wide310x150Logo.png"
+          Square310x310Logo="icons\Square310x310Logo.png"
+          ShortName="ibl.ai OS" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- Deep link: iblai-mentor:// protocol -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="iblai-mentor">
+            <uap:DisplayName>ibl.ai Mentor</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+
+        <!-- Deep link: ai.ibl.mentorai:// protocol -->
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="ai.ibl.mentorai">
+            <uap:DisplayName>ibl.ai Mentor AI</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- Network access for API calls, Ollama server, offline server -->
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+
+    <!-- Full trust required for Win32 desktop app (Ollama process management, shell access) -->
+    <rescap:Capability Name="runFullTrust" />
+
+    <!-- Camera and microphone for voice/video calls (DeviceCapability must come last) -->
+    <DeviceCapability Name="webcam" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>

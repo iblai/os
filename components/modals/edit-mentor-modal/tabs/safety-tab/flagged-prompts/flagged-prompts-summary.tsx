@@ -1,0 +1,22 @@
+import { AlertTriangle } from 'lucide-react';
+
+interface FlaggedPromptsSummaryProps {
+  totalFlagged: number;
+}
+
+export function FlaggedPromptsSummary({ totalFlagged }: FlaggedPromptsSummaryProps) {
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <AlertTriangle className="h-5 w-5 text-blue-600" />
+        <span className="font-semibold text-gray-900">{totalFlagged} Total Flagged Prompts</span>
+      </div>
+      <p className="text-gray-900 text-sm leading-relaxed">
+        Review prompts that have been flagged by our automated moderation and safety systems. Each
+        flagged prompt includes the user's information, the flagged content, and the system's
+        analysis. Use the contact feature to reach out to users directly through the notification
+        system for follow-up or clarification.
+      </p>
+    </div>
+  );
+}

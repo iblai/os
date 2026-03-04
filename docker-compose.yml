@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+    networks:
+      - ibl_local_default
+      - internal-network
+
+networks:
+  ibl_local_default:
+    external: true
+  internal-network:
+    driver: bridge

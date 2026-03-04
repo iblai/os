@@ -1,0 +1,85 @@
+# Default permissions for custom app commands
+# These commands are defined in lib.rs and need explicit permissions
+
+[default]
+identifier = "default"
+description = "Default permissions for IBL.ai OS custom commands"
+permissions = [
+    "allow-open-external-url",
+    "allow-navigate-to",
+    "allow-get-os-type",
+    "allow-install-ollama",
+    "allow-check-ollama-status",
+    "allow-check-disk-space-for-model",
+    "allow-download-phi3-model",
+    "allow-cancel-model-download",
+    "allow-check-network-status",
+    "allow-ollama-chat",
+    "allow-ollama-chat-stream"
+]
+
+[[permission]]
+identifier = "allow-open-external-url"
+description = "Enables opening URLs in the system browser for OAuth flows"
+[permission.commands]
+allow = ["open_external_url"]
+
+[[permission]]
+identifier = "allow-navigate-to"
+description = "Enables navigating to a URL in the webview"
+[permission.commands]
+allow = ["navigate_to"]
+
+[[permission]]
+identifier = "allow-get-os-type"
+description = "Enables getting the OS type"
+[permission.commands]
+allow = ["get_os_type"]
+
+[[permission]]
+identifier = "allow-install-ollama"
+description = "Enables installing Ollama"
+[permission.commands]
+allow = ["install_ollama"]
+
+[[permission]]
+identifier = "allow-check-ollama-status"
+description = "Enables checking Ollama status"
+[permission.commands]
+allow = ["check_ollama_status"]
+
+[[permission]]
+identifier = "allow-check-disk-space-for-model"
+description = "Enables checking disk space for model downloads"
+[permission.commands]
+allow = ["check_disk_space_for_model"]
+
+[[permission]]
+identifier = "allow-download-phi3-model"
+description = "Enables downloading the phi3 model"
+[permission.commands]
+allow = ["download_phi3_model"]
+
+[[permission]]
+identifier = "allow-cancel-model-download"
+description = "Enables canceling model downloads"
+[permission.commands]
+allow = ["cancel_model_download"]
+
+[[permission]]
+identifier = "allow-check-network-status"
+description = "Enables checking network status"
+[permission.commands]
+allow = ["check_network_status"]
+
+[[permission]]
+identifier = "allow-ollama-chat"
+description = "Enables Ollama chat"
+[permission.commands]
+allow = ["ollama_chat"]
+
+[[permission]]
+identifier = "allow-ollama-chat-stream"
+description = "Enables Ollama streaming chat"
+[permission.commands]
+allow = ["ollama_chat_stream"]

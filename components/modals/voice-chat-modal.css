@@ -1,0 +1,22 @@
+@keyframes soundWave {
+  0% {
+    height: 8px;
+  }
+  100% {
+    height: 30px;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-30px) translateX(15px);
+    opacity: 0;
+  }
+} 

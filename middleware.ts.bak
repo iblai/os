@@ -1,0 +1,18 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+/**
+ * Temporary middleware - i18n disabled to diagnose 404 issues
+ * FIXME: Re-enable i18n once issue is resolved
+ */
+export default function middleware(request: NextRequest) {
+  // Just pass through - no processing
+  return NextResponse.next();
+}
+
+export const config = {
+  // Match all paths except:
+  // - API routes
+  // - Next.js internals (_next)
+  // - Static files (files with extensions)
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+};

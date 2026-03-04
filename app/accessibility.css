@@ -1,0 +1,133 @@
+/* Accessibility styles that are applied based on context settings */
+
+/* Highlight links */
+.accessibility-highlight-links a {
+  background-color: yellow !important;
+  color: black !important;
+  padding: 2px 4px !important;
+  border-radius: 2px !important;
+  text-decoration: underline !important;
+}
+
+/* Hide images */
+.accessibility-hide-images img,
+.accessibility-hide-images [role='img'],
+.accessibility-hide-images picture,
+.accessibility-hide-images svg:not([aria-hidden='true']) {
+  opacity: 0.1 !important;
+  filter: grayscale(1) !important;
+}
+
+/* Updated dyslexia friendly fonts with multiple options */
+.accessibility-dyslexia-friendly * {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', cursive, sans-serif !important;
+  font-weight: bold !important;
+}
+
+.accessibility-legible-font * {
+  font-family: 'Arial', 'Helvetica', sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Simplified cursor implementation - just applies custom cursor when enabled */
+.accessibility-custom-cursor,
+.accessibility-custom-cursor * {
+  cursor:
+    url('/cursor.svg') 14 21,
+    auto !important;
+}
+
+/* Pause animations */
+.accessibility-pause-animations *,
+.accessibility-pause-animations *::before,
+.accessibility-pause-animations *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Updated text alignment options */
+.accessibility-text-left * {
+  text-align: left !important;
+}
+
+.accessibility-text-center * {
+  text-align: center !important;
+}
+
+.accessibility-text-right * {
+  text-align: right !important;
+}
+
+.accessibility-text-justify * {
+  text-align: justify !important;
+}
+
+/* Updated contrast modes */
+.accessibility-dark-contrast {
+  filter: contrast(2) brightness(0.8) !important;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+.accessibility-light-contrast {
+  filter: contrast(1.5) brightness(1.2) !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Tooltips enhancement */
+.accessibility-tooltips [title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  background: black;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+/* Updated text size options */
+.accessibility-text-size * {
+  font-size: calc(1rem * var(--accessibility-font-size, 1)) !important;
+}
+
+/* Text spacing - only when enabled */
+.accessibility-text-spacing * {
+  letter-spacing: var(--accessibility-letter-spacing, normal) !important;
+  word-spacing: var(--accessibility-word-spacing, normal) !important;
+}
+
+/* Line height - only when enabled */
+.accessibility-line-height * {
+  line-height: var(--accessibility-line-height, 2) !important;
+}
+
+/* Invert colors - only when enabled */
+.accessibility-invert {
+  filter: var(--accessibility-invert, invert(1)) !important;
+}
+
+/* Fixed saturation functionality with proper filter values */
+.accessibility-saturation {
+  filter: var(--accessibility-saturation, saturate(1)) !important;
+}
+
+.accessibility-saturation-high {
+  filter: saturate(1.5) !important;
+}
+
+.accessibility-saturation-low {
+  filter: saturate(0.5) !important;
+}
+
+/* Ensure some elements don't get inverted twice */
+.accessibility-invert img,
+.accessibility-invert video,
+.accessibility-invert iframe {
+  filter: invert(1) !important;
+}

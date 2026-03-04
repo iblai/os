@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Deep Links - ibl.ai OS</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #333; }
+        .link-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .link-section h2 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        a {
+            display: block;
+            padding: 15px;
+            margin: 10px 0;
+            background: #0066cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+        }
+        a:active {
+            background: #0052a3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .working { background: #d4edda; color: #155724; }
+        .not-working { background: #f8d7da; color: #721c24; }
+        code {
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Deep Links - ibl.ai OS</h1>
+
+    <div class="link-section">
+        <h2>✅ Custom URL Scheme (Works in Development)</h2>
+        <div class="status working">
+            <strong>Status:</strong> Working ✓
+        </div>
+        <p>These links use the custom URL scheme <code>iblai://</code> and work immediately with development builds.</p>
+
+        <a href="iblai://mentorai/mobile-sso-login?data=test123">
+            Test Custom URL Scheme
+        </a>
+
+        <a href="iblai://mentorai/test?redirect=/dashboard">
+            Test with Redirect Parameter
+        </a>
+    </div>
+
+    <div class="link-section">
+        <h2>⚠️ Universal Links (Requires TestFlight/App Store)</h2>
+        <div class="status not-working">
+            <strong>Status:</strong> Not working with development builds
+        </div>
+        <p>These links use <code>https://</code> and require a distribution-signed build (TestFlight or App Store) to work properly.</p>
+
+        <a href="https://mentorai.iblai.app/mobile-sso-login?data=test123">
+            Test Universal Link
+        </a>
+
+        <a href="https://mentorai.iblai.app/test?redirect=/dashboard">
+            Test Universal Link with Redirect
+        </a>
+    </div>
+
+    <div class="link-section">
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li>Open this HTML file on your iPhone (via AirDrop or email)</li>
+            <li>Tap the <strong>Custom URL Scheme</strong> links - they should open the app ✅</li>
+            <li>Tap the <strong>Universal Links</strong> - they will open Safari (expected for dev builds)</li>
+        </ol>
+
+        <h3>For Production Testing:</h3>
+        <ul>
+            <li>Build and upload to TestFlight</li>
+            <li>Install from TestFlight</li>
+            <li>Universal links will work ✅</li>
+        </ul>
+    </div>
+
+    <div class="link-section">
+        <h2>💡 Recommendation</h2>
+        <p><strong>For Development:</strong> Use custom URL schemes (<code>iblai://</code>)</p>
+        <p><strong>For Production:</strong> Use universal links (<code>https://</code>)</p>
+        <p>Both are handled by the same deep link handler in your app!</p>
+    </div>
+</body>
+</html>

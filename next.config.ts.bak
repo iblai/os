@@ -1,0 +1,44 @@
+import type { NextConfig } from 'next';
+
+/**
+ * Tauri-specific Next.js configuration for static export.
+ * This config is used when building for the Tauri desktop app.
+ *
+ * Usage: NEXT_CONFIG_FILE=next.config.tauri.ts next build
+ * Or via the build:tauri script in package.json
+ */
+
+const nextConfig: NextConfig = {
+  output: 'export',
+
+  // Static export doesn't support image optimization
+  images: {
+    unoptimized: true,
+  },
+
+  // Ensure trailing slashes for static file serving
+  trailingSlash: true,
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // Skip API routes validation for static export
+  // API routes won't be included in the export
+
+  experimental: {
+    turbo: {
+      rules: {
+        '*.svg': ['@svgr/webpack'],
+      },
+    },
+  },
+
+  webpack: (config) => {
+    return config;
+  },
+
+  transpilePackages: ['@iblai/web-utils', '@iblai/data-layer', '@iblai/web-containers'],
+};
+
+export default nextConfig;

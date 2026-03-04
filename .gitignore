@@ -1,0 +1,72 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# next.js
+.next/
+out/
+
+# build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# testing
+coverage/
+
+# environment & secrets
+.env
+.env.*
+!.env.example
+.npmrc
+
+# keys & certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Sentry
+.sentryclirc
+
+# Electron
+dist-electron/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/android/
+src-tauri/gen/apple/
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel
+
+# next-env (auto-generated, but commonly checked in — keep ignored to be safe)
+# next-env.d.ts
+
+# misc
+*.log
+*.local
+.cache/

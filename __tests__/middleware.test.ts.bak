@@ -1,0 +1,133 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextRequest } from 'next/server';
+
+// Mock next-intl/middleware
+const mockHandleI18nRouting = vi.fn();
+vi.mock('next-intl/middleware', () => ({
+  default: vi.fn(() => mockHandleI18nRouting),
+}));
+
+describe('middleware', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should export a middleware function', async () => {
+    const middleware = await import('../middleware');
+    expect(middleware.default).toBeDefined();
+    expect(typeof middleware.default).toBe('function');
+  });
+
+  it('should export a config object', async () => {
+    const middleware = await import('../middleware');
+    expect(middleware.config).toBeDefined();
+    expect(middleware.config).toHaveProperty('matcher');
+  });
+
+  it('should have correct matcher pattern', async () => {
+    const middleware = await import('../middleware');
+    expect(middleware.config.matcher).toEqual(['/((?!api|_next|_vercel|.*\\..*).*)'
+]);
+  });
+
+  it('should have matcher that references api exclusion', async () => {
+    const middleware = await import('../middleware');
+    const matcher = middleware.config.matcher[0];
+
+    // Verify the pattern includes api exclusion
+    expect(matcher).toContain('api');
+  });
+
+  it('should have matcher that references _next exclusion', async () => {
+    const middleware = await import('../middleware');
+    const matcher = middleware.config.matcher[0];
+
+    // Verify the pattern includes _next exclusion
+    expect(matcher).toContain('_next');
+  });
+
+  it('should skip i18n middleware for /sso-login routes', async () => {
+    const middleware = await import('../middleware');
+
+    const request = {
+      nextUrl: {
+        pathname: '/sso-login',
+      },
+    } as NextRequest;
+
+    const result = middleware.default(request);
+
+    expect(result).toBeUndefined();
+    expect(mockHandleI18nRouting).not.toHaveBeenCalled();
+  });
+
+  it('should skip i18n middleware for /mobile-sso-login routes', async () => {
+    const middleware = await import('../middleware');
+
+    const request = {
+      nextUrl: {
+        pathname: '/mobile-sso-login',
+      },
+    } as NextRequest;
+
+    const result = middleware.default(request);
+
+    expect(result).toBeUndefined();
+    expect(mockHandleI18nRouting).not.toHaveBeenCalled();
+  });
+
+  it('should skip i18n middleware for /sso-login-complete routes', async () => {
+    const middleware = await import('../middleware');
+
+    const request = {
+      nextUrl: {
+        pathname: '/sso-login-complete',
+      },
+    } as NextRequest;
+
+    const result = middleware.default(request);
+
+    expect(result).toBeUndefined();
+    expect(mockHandleI18nRouting).not.toHaveBeenCalled();
+  });
+
+  it('should run i18n middleware for non-excluded routes', async () => {
+    const middleware = await import('../middleware');
+
+    const request = {
+      nextUrl: {
+        pathname: '/platform/tenant/mentor',
+      },
+    } as NextRequest;
+
+    middleware.default(request);
+
+    expect(mockHandleI18nRouting).toHaveBeenCalledWith(request);
+  });
+
+  it('should run i18n middleware for root route', async () => {
+    const middleware = await import('../middleware');
+
+    const request = {
+      nextUrl: {
+        pathname: '/',
+      },
+    } as NextRequest;
+
+    middleware.default(request);
+
+    expect(mockHandleI18nRouting).toHaveBeenCalledWith(request);
+  });
+
+  it('should use routing from i18n/routing', async () => {
+    const { routing } = await import('../i18n/routing');
+
+    // Verify the routing object has expected properties
+    expect(routing).toHaveProperty('locales');
+    expect(routing).toHaveProperty('defaultLocale');
+    expect(routing).toHaveProperty('localePrefix');
+    expect(routing.locales).toEqual(['en']);
+    expect(routing.defaultLocale).toBe('en');
+    expect(routing.localePrefix).toBe('never');
+  });
+});

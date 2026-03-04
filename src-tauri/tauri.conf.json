@@ -1,0 +1,86 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "ibl.ai OS",
+  "identifier": "ai.ibl.mentorai",
+  "version": "1.1.9",
+  "build": {
+    "devUrl": "https://mentorai.iblai.app",
+    "frontendDist": "offline-shell"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app", "nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "IBL.ai",
+    "homepage": "https://ibl.ai",
+    "shortDescription": "AI-powered mentoring assistant",
+    "longDescription": "ibl.ai OS provides intelligent tutoring and learning support with offline capabilities.",
+    "category": "Education",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "frameworks": [],
+      "exceptionDomain": "",
+      "signingIdentity": "Apple Distribution: Class Generation, LLC (L4FWRM8W5Z)",
+      "providerShortName": "L4FWRM8W5Z",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist"
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      },
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "iOS": {
+      "developmentTeam": "L4FWRM8W5Z"
+    },
+    "android": {
+      "minSdkVersion": 24
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null,
+      "capabilities": ["default", "offline-server-access"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    },
+    "windows": []
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "deep-link": {
+      "mobile": [
+        { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
+        { "host": "login.iblai.app", "pathPrefix": ["/"] }
+      ],
+      "desktop": {
+        "schemes": ["iblai-mentor", "ai.ibl.mentorai"]
+      }
+    }
+  }
+}
