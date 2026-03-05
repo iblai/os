@@ -76,6 +76,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useServiceWorker } from '@/components/service-worker-provider';
 import { FileText } from 'lucide-react';
 import { useFileDragDrop } from '@/hooks/use-file-drag-drop';
+import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 
 /* istanbul ignore next -- @preserve dynamic import */
 const CanvasView = dynamic(
@@ -209,6 +210,7 @@ export function Chat({
   const { userTenants } = useUserTenants();
   const { getMentorId } = useNavigate();
   const { metadata } = useTenantContext();
+  const isAccessingPublicRoute = useAccessingPublicRoute();
   const { mentorId: mentorIdParam, tenantKey } = useParams<TenantKeyMentorIdParams>();
 
   // Skip tenant metadata API call in Tauri offline mode
@@ -371,6 +373,7 @@ export function Chat({
     // Offline mode for Tauri desktop app
     isOffline: isOfflineInTauri,
     onOfflineWithoutLocalLLM: handleOfflineWithoutLocalLLM,
+    isPublicRoute: isAccessingPublicRoute,
   });
 
   const {
@@ -391,6 +394,7 @@ export function Chat({
     mentorId,
     tenantKey,
     username: username ?? ANONYMOUS_USERNAME,
+    isPublicRoute: isAccessingPublicRoute,
     errorHandler: async (message, error) => {
       if (error) {
         console.error(JSON.stringify({ tenant: tenantKey, error }));

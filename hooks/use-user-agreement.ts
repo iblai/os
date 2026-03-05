@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useGetDisclaimersQuery, useAgreeToDisclaimerMutation } from '@iblai/iblai-js/data-layer';
 import { useUsername } from './use-user';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
@@ -9,6 +9,8 @@ import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
 export function useUserAgreement() {
   const username = useUsername();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const searchParams = useSearchParams();
+  const isAccessingPublicRoute = !!searchParams.get('token');
 
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
   const [userHasAgreedToDisclaimer, setUserHasAgreedToDisclaimer] = useState(false);
@@ -25,7 +27,7 @@ export function useUserAgreement() {
       },
     },
     {
-      skip: !mentorId || !tenantKey || !username,
+      skip: !mentorId || !tenantKey || !username || isAccessingPublicRoute,
     },
   );
 
