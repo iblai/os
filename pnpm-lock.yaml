@@ -12,8 +12,8 @@ importers:
         specifier: 4.166.0-ai
         version: 4.166.0-ai
       '@iblai/iblai-js':
-        specifier: 1.0.9
-        version: 1.0.9(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)
+        specifier: 1.0.11
+        version: 1.0.11(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)
       '@iblai/iblai-web-mentor':
         specifier: 1.3.4
         version: 1.3.4(@babel/core@7.29.0)(@types/babel__core@7.20.5)(rollup@4.59.0)(typescript@5.9.3)
@@ -901,8 +901,8 @@ packages:
   '@iblai/iblai-api@4.166.0-ai':
     resolution: {integrity: sha512-dY9Jv+CkXEyTxRsOQFay5YvYe8K2LSQluJJvtssGQV2RbrxPPzONaKfnhcyarDs7Ft35Xqk1fuErjhUwNG3OIg==}
 
-  '@iblai/iblai-js@1.0.9':
-    resolution: {integrity: sha512-BsP42WJ/7R7NzpcQRztaqG6k/wnxs5CvlJ3xbK6bJjnIVTmHw6KUtMZScZHgqIbHxrUB3qTJqEQ1Jxtq536HzQ==}
+  '@iblai/iblai-js@1.0.11':
+    resolution: {integrity: sha512-/BLIxfnl79vy9UGSNTC0rL4e1Z5Py8h3FP3zYPnxV4MZKZ9Ne5L57e5d2LhM2Y55g5+CPgu9qVVkuObm2QVxjg==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@iblai/iblai-api': 4.166.0-ai
@@ -918,11 +918,11 @@ packages:
   '@iblai/iblai-web-mentor@1.3.4':
     resolution: {integrity: sha512-w0K22cQl/LquXDDnVi7DgiOeuS+iha85poZxuLCtJqvwyCxAMLch1DWN3LbNCxw+YGhrV7BOEENp8s7bZ+7ZGw==}
 
-  '@iblai/web-containers@1.1.7':
-    resolution: {integrity: sha512-taa5dPEi5OBF6xXsXYzlaJzvUlBGephNL9Df9jyO0Ohz/oH9CObuTCTiub90c7a8M/UFOqWSIF8Ys0K8ezWlCQ==}
+  '@iblai/web-containers@1.1.9':
+    resolution: {integrity: sha512-k3cUUNpkTkOnM4t41yUrscka6Z8kvnYgfW0zMBAjMm4NcmQx030sTZcp136+UlJyR0eVAVT64KHsFOOPYFel/g==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
-      '@iblai/data-layer': ^1.1.4
+      '@iblai/data-layer': ^1.1.5
       '@iblai/iblai-api': 4.166.0-ai
       '@iblai/web-utils': ^1.1.8
       '@reduxjs/toolkit': 2.7.0
@@ -8952,11 +8952,11 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@iblai/iblai-js@1.0.9(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)':
+  '@iblai/iblai-js@1.0.11(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.0(@tiptap/core@3.20.0(@tiptap/pm@3.20.0))(@tiptap/pm@3.20.0))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)':
     dependencies:
       '@iblai/data-layer': 1.1.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
-      '@iblai/web-containers': 1.1.7(053e344f413ff2cd91f85c99a35ceca5)
+      '@iblai/web-containers': 1.1.9(053e344f413ff2cd91f85c99a35ceca5)
       '@iblai/web-utils': 1.1.8(@iblai/data-layer@1.1.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.10.1)(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       react: 19.1.0
@@ -8987,7 +8987,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@iblai/web-containers@1.1.7(053e344f413ff2cd91f85c99a35ceca5)':
+  '@iblai/web-containers@1.1.9(053e344f413ff2cd91f85c99a35ceca5)':
     dependencies:
       '@iblai/data-layer': 1.1.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
