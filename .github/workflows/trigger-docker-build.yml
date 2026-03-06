@@ -39,3 +39,15 @@ jobs:
             }'
 
           echo "Triggered ibl-web-ops build for mentor v${{ steps.version.outputs.version }}"
+
+      - name: Build link
+        run: |
+          OPS_URL="https://github.com/iblai/ibl-web-ops/actions/workflows/docker-build.yml"
+          echo "## Docker Build Dispatched" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **App** | mentor |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build** | [Track in ibl-web-ops Actions]($OPS_URL) |" >> $GITHUB_STEP_SUMMARY
