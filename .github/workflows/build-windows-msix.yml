@@ -1,0 +1,103 @@
+name: Build MSIX (x64 + arm64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
+        required: false
+        type: string
+
+concurrency:
+  group: msix-build
+  cancel-in-progress: false
+
+jobs:
+  build-msix:
+    name: Build MSIX (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runs_on: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+          - arch: arm64
+            runs_on: windows-11-arm
+            rust_target: aarch64-pc-windows-msvc
+
+    runs-on: ${{ matrix.runs_on }}
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      # Keep build outputs per-arch so caches/artifacts don't collide
+      CARGO_TARGET_DIR: ${{ github.workspace }}\apps\mentor\src-tauri\target\${{ matrix.rust_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: chore/mentor/prepare-msix-build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            apps/mentor/src-tauri/target/${{ matrix.rust_target }}
+          key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('apps/mentor/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            rust-msix-${{ matrix.rust_target }}-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Tauri CLI
+        run: |
+          # Prefer prebuilt if available; fall back to source build if not.
+          cargo install cargo-binstall --locked
+          try {
+            cargo binstall tauri-cli --no-confirm
+          } catch {
+            Write-Host "cargo-binstall tauri-cli failed; falling back to cargo install tauri-cli..."
+            cargo install tauri-cli --locked
+          }
+
+      - name: Build Tauri app (${{ matrix.rust_target }})
+        working-directory: apps/mentor
+        run: cargo tauri build --target ${{ matrix.rust_target }}
+
+      - name: Override version in AppxManifest
+        if: inputs.version != ''
+        working-directory: apps/mentor/src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
+          Set-Content -Path AppxManifest.xml -Value $manifest
+
+      - name: Build MSIX package (unsigned)
+        working-directory: apps/mentor/src-tauri
+        run: .\build-msix.ps1 -SkipTauriBuild
+
+      - name: Upload MSIX artifact (${{ matrix.arch }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-os-msix-${{ matrix.arch }}
+          path: apps/mentor/src-tauri/msix-output/*.msix
+          if-no-files-found: error
