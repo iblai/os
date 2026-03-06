@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import Providers from '@/providers';
 import { Toaster } from '@/components/ui/sonner';
 
+import '@iblai/iblai-js/web-containers/styles';
 import './globals.css';
 
 import Script from 'next/script';
