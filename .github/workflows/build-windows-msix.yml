@@ -33,7 +33,7 @@ jobs:
 
     env:
       # Keep build outputs per-arch so caches/artifacts don't collide
-      CARGO_TARGET_DIR: ${{ github.workspace }}\src-tauri\target\${{ matrix.rust_target }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}\src-tauri\target
 
     steps:
       - name: Checkout
@@ -60,7 +60,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target/${{ matrix.rust_target }}
+            src-tauri/target
           key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
             rust-msix-${{ matrix.rust_target }}-
