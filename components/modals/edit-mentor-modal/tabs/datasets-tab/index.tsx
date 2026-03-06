@@ -13,8 +13,14 @@ import { useDatasetsWithPagination } from '@/hooks/use-datasets';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { AddResourceModal } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
 import { Spinner } from '@/components/spinner';
+import type { Dataset } from './dataset-item';
 
-export function DatasetsTab() {
+interface DatasetsTabProps {
+  onSelect?: (dataset: Dataset) => void;
+  selectedDatasetId?: string;
+}
+
+export function DatasetsTab({ onSelect, selectedDatasetId }: DatasetsTabProps = {}) {
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
 
   const openAddResourceModal = () => setShowAddResourceModal(true);
@@ -105,8 +111,12 @@ export function DatasetsTab() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    {/* @ts-expect-error - Type mismatch between RetrieverDocumentEmbedding[] and Dataset[], id property type difference */}
-                    <DatasetItemList datasets={datasets?.results ?? []} />
+                    <DatasetItemList
+                      // @ts-ignore - Type mismatch between RetrieverDocumentEmbedding[] and Dataset[], id property type difference
+                      datasets={datasets?.results ?? []}
+                      onSelect={onSelect}
+                      selectedDatasetId={selectedDatasetId}
+                    />
                   </Table>
                 )}
               </div>

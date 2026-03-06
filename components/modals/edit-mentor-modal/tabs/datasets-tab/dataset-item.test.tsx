@@ -37,7 +37,7 @@ vi.mock('@/hooks/use-user', () => ({
  * Mock data-layer mutations
  * Handles API calls for training document operations
  */
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useEditTrainingDocumentMutation: () => [mockEditTrainingDocument, { isLoading: false }],
 }));
 

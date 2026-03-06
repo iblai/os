@@ -561,10 +561,12 @@ export function NavBar() {
   const pathname = usePathname();
   const isPromptGalleryOrAnalytics =
     pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
   const isOnChatPage =
     !pathname.includes('/prompt-gallery') &&
     !pathname.includes('/analytics') &&
-    !pathname.includes('/explore');
+    !pathname.includes('/explore') &&
+    !isWorkflowsPage;
 
   const handleAvatarClick = () => {
     // Open the mentor menu instead of the profile
@@ -661,7 +663,8 @@ export function NavBar() {
               </Tooltip>
             )}
 
-            {!pathname.includes('/explore') &&
+            {!pathname.includes('/explore') && 
+              !isWorkflowsPage &&
               mentorId &&
               (isPromptGalleryOrAnalytics ? (
                 <TooltipProvider>

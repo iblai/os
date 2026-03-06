@@ -13,7 +13,16 @@ import {
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import { ANONYMOUS_USERNAME, LOCAL_STORAGE_KEYS, MODALS, UserType } from '@/lib/constants';
 import { AppDispatch } from '@/store';
-import { ChartLine, Globe2, Mail, PenSquare, CirclePlus, Settings, LucideMail } from 'lucide-react';
+import {
+  ChartLine,
+  Globe2,
+  Mail,
+  PenSquare,
+  CirclePlus,
+  Settings,
+  LucideMail,
+  Workflow,
+} from 'lucide-react';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { config } from '@/lib/config';
@@ -24,7 +33,7 @@ import { useShowFreeTrialDialog } from './user-user-actions';
 import { clearFiles } from '@iblai/iblai-js/web-utils';
 import { useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useLocalStorage } from './use-local-storage';
-// import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
+// import { useAdvancedChat } from '@iblai/web-utils';
 
 // Helper to deeply compare modal stacks
 const areModalStacksEqual = (stackA: ModalInfo[], stackB: ModalInfo[]): boolean => {
@@ -321,6 +330,15 @@ export function useNavigate() {
         );
       }
     },
+    navigateToWorkflows: () => {
+      if (tenantKey && mentorIdFromParams) {
+        router.push(`/platform/${tenantKey}/workflows/${mentorIdFromParams}`);
+      } else if (tenantKey) {
+        router.push(`/platform/${tenantKey}/workflows`);
+      } else {
+        console.warn('Cannot navigate to workflows: tenantKey missing from URL params.');
+      }
+    },
 
     // Enhanced modal functions
     openCreateMentorModal: (tab?: string) => openModal(MODALS.CREATE_MENTOR.name, tab),
@@ -406,6 +424,7 @@ export function useSidebarNavigation() {
     openSettingsModal,
     openNoMentorSelectedModal,
     navigateToNotifications,
+    navigateToWorkflows,
   } = useNavigate();
   const pathname = usePathname();
   const isChatPage =
@@ -473,6 +492,16 @@ export function useSidebarNavigation() {
         executeWithTrialCheck(openInviteUserModal);
       },
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
+      isAnAdminAction: true,
+    },
+    {
+      label: 'Workflows',
+      icon: Workflow,
+      onClick: () => {
+        executeWithTrialCheck(navigateToWorkflows);
+      },
+      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
+      rbacResource: (_: number) => `/mentors/${mentorPublicSettings?.mentor_id}/#manage`,
       isAnAdminAction: true,
     },
   ];

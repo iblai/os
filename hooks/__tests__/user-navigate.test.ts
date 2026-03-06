@@ -166,6 +166,7 @@ vi.mock('lucide-react', () => ({
   CirclePlus: () => null,
   Settings: () => null,
   LucideMail: () => null,
+  Workflow: () => null,
 }));
 
 describe('user-navigate', () => {
@@ -473,6 +474,36 @@ describe('user-navigate', () => {
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Cannot navigate to notifications'),
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('navigateToWorkflows - should navigate to workflows with mentorId', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/workflows/mentor-123');
+      });
+
+      it('navigateToWorkflows - should navigate to workflows without mentorId when mentorId is missing', () => {
+        mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/workflows');
+      });
+
+      it('navigateToWorkflows - should warn when tenantKey is missing', () => {
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        mocked.useParams.mockReturnValue({});
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot navigate to workflows'),
         );
         consoleWarnSpy.mockRestore();
       });
@@ -1360,6 +1391,22 @@ describe('user-navigate', () => {
       const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
       expect(analyticsItem?.rbacResource).toBeDefined();
       expect(analyticsItem?.rbacResource?.(1)).toContain('mentor-123');
+    });
+
+    it('should have Workflows in content items', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find((item) => item.label === 'Workflows');
+      expect(workflowsItem).toBeDefined();
+    });
+
+    it('Workflows onClick - should navigate to workflows', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find((item) => item.label === 'Workflows');
+      workflowsItem?.onClick();
+
+      expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/workflows/mentor-123');
     });
 
     it('should have hasBorder flag for New Chat', () => {
