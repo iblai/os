@@ -70,3 +70,5 @@ src-tauri/gen/apple/
 *.log
 *.local
 .cache/
+.yalc
+.yalc.lock

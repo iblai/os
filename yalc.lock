@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "@iblai/iblai-js": {
+      "signature": "dd77f003a21c329cef70cecae9ab890a",
+      "file": true,
+      "replaced": "1.0.9"
+    }
+  }
+}
