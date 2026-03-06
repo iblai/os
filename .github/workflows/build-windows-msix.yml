@@ -33,7 +33,7 @@ jobs:
 
     env:
       # Keep build outputs per-arch so caches/artifacts don't collide
-      CARGO_TARGET_DIR: ${{ github.workspace }}\apps\mentor\src-tauri\target\${{ matrix.rust_target }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}\src-tauri\target\${{ matrix.rust_target }}
 
     steps:
       - name: Checkout
@@ -60,8 +60,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            apps/mentor/src-tauri/target/${{ matrix.rust_target }}
-          key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('apps/mentor/src-tauri/Cargo.lock') }}
+            src-tauri/target/${{ matrix.rust_target }}
+          key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
             rust-msix-${{ matrix.rust_target }}-
 
@@ -80,24 +80,23 @@ jobs:
           }
 
       - name: Build Tauri app (${{ matrix.rust_target }})
-        working-directory: apps/mentor
         run: cargo tauri build --target ${{ matrix.rust_target }}
 
       - name: Override version in AppxManifest
         if: inputs.version != ''
-        working-directory: apps/mentor/src-tauri
+        working-directory: src-tauri
         run: |
           $manifest = Get-Content AppxManifest.xml -Raw
           $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
           Set-Content -Path AppxManifest.xml -Value $manifest
 
       - name: Build MSIX package (unsigned)
-        working-directory: apps/mentor/src-tauri
+        working-directory: src-tauri
         run: .\build-msix.ps1 -SkipTauriBuild
 
       - name: Upload MSIX artifact (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
           name: ibl-ai-os-msix-${{ matrix.arch }}
-          path: apps/mentor/src-tauri/msix-output/*.msix
+          path: src-tauri/msix-output/*.msix
           if-no-files-found: error
