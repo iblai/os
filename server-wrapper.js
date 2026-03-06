@@ -17,7 +17,7 @@ process.on('unhandledRejection', (reason) => {
 
 // Now start the Next.js standalone server
 // In Docker, server.js is in the same directory; locally it's in .next/standalone/apps/mentor/
-const localPath = './.next/standalone/apps/mentor/server.js';
+const localPath = './.next/standalone/server.js';
 const dockerPath = './server.js';
 
 if (existsSync(localPath)) {
