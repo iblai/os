@@ -31,10 +31,6 @@ jobs:
       run:
         shell: pwsh
 
-    env:
-      # Keep build outputs per-arch so caches/artifacts don't collide
-      CARGO_TARGET_DIR: ${{ github.workspace }}\src-tauri\target
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +56,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
+            src-tauri/target/${{ matrix.rust_target }}
           key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
             rust-msix-${{ matrix.rust_target }}-
@@ -89,6 +85,14 @@ jobs:
           $manifest = Get-Content AppxManifest.xml -Raw
           $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
           Set-Content -Path AppxManifest.xml -Value $manifest
+
+      - name: Locate built executable
+        working-directory: src-tauri
+        run: |
+          Write-Host "Searching for executables in target directory..."
+          Get-ChildItem -Path target -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $_.DirectoryName -like "*release*" } |
+            ForEach-Object { Write-Host $_.FullName }
 
       - name: Build MSIX package (unsigned)
         working-directory: src-tauri
