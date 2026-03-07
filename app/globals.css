@@ -4,7 +4,7 @@
 
 @plugin 'tailwind-scrollbar';
 
-@source "../../../packages/web-containers";
+@import '@iblai/iblai-js/web-containers/styles';
 
 @custom-variant dark (&:is(.dark *));
 
