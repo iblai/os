@@ -2,6 +2,207 @@ import { toast } from 'sonner';
 import { markdownToHtml } from '@/lib/utils';
 import { sanitizeFilename, escapeHtml, stripHtml, splitTextIntoLines } from './canvas-utils';
 
+/**
+ * Convert LaTeX string to readable plain text with Unicode symbols.
+ * Handles common LaTeX commands: Greek letters, fractions, operators, etc.
+ */
+/**
+ * Find the content of a brace-delimited group starting at position i in text.
+ * text[i] must be '{'. Returns { content, end } where end is the index after '}'.
+ * Returns null if no matching brace is found.
+ */
+const extractBraceGroup = (text: string, i: number): { content: string; end: number } | null => {
+  if (text[i] !== '{') return null;
+  let depth = 1;
+  let j = i + 1;
+  while (j < text.length && depth > 0) {
+    if (text[j] === '{') depth++;
+    else if (text[j] === '}') depth--;
+    j++;
+  }
+  if (depth !== 0) return null;
+  return { content: text.slice(i + 1, j - 1), end: j };
+};
+
+/**
+ * Replace all occurrences of \cmd{arg1}{arg2} with a transform function,
+ * handling nested braces correctly.
+ */
+const replaceTwoArgCmd = (
+  text: string,
+  cmd: string,
+  transform: (a: string, b: string) => string,
+): string => {
+  const prefix = '\\' + cmd;
+  let result = '';
+  let i = 0;
+  while (i < text.length) {
+    const idx = text.indexOf(prefix, i);
+    if (idx === -1) {
+      result += text.slice(i);
+      break;
+    }
+    result += text.slice(i, idx);
+    const afterCmd = idx + prefix.length;
+    const first = extractBraceGroup(text, afterCmd);
+    if (!first) {
+      result += prefix;
+      i = afterCmd;
+      continue;
+    }
+    const second = extractBraceGroup(text, first.end);
+    if (!second) {
+      result += prefix;
+      i = afterCmd;
+      continue;
+    }
+    result += transform(first.content, second.content);
+    i = second.end;
+  }
+  return result;
+};
+
+/**
+ * Replace all occurrences of \cmd{arg} with a transform function,
+ * handling nested braces correctly.
+ */
+const replaceOneArgCmd = (
+  text: string,
+  cmd: string,
+  transform: (a: string) => string,
+): string => {
+  const prefix = '\\' + cmd;
+  let result = '';
+  let i = 0;
+  while (i < text.length) {
+    const idx = text.indexOf(prefix, i);
+    if (idx === -1) {
+      result += text.slice(i);
+      break;
+    }
+    result += text.slice(i, idx);
+    const afterCmd = idx + prefix.length;
+    const group = extractBraceGroup(text, afterCmd);
+    if (!group) {
+      result += prefix;
+      i = afterCmd;
+      continue;
+    }
+    result += transform(group.content);
+    i = group.end;
+  }
+  return result;
+};
+
+export const latexToReadableText = (latex: string): string => {
+  let text = latex;
+
+  // Greek letters
+  const greekMap: Record<string, string> = {
+    alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ',
+    eta: 'η', theta: 'θ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'μ',
+    nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ',
+    upsilon: 'υ', phi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
+    Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ',
+    Pi: 'Π', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
+    varepsilon: 'ε', varphi: 'φ', varpi: 'ϖ', varrho: 'ϱ', varsigma: 'ς', vartheta: 'ϑ',
+  };
+  for (const [cmd, sym] of Object.entries(greekMap)) {
+    text = text.replace(new RegExp(`\\\\${cmd}(?![a-zA-Z])`, 'g'), sym);
+  }
+
+  // Math operators and symbols
+  const symbolMap: Record<string, string> = {
+    '\\infty': '∞', '\\pm': '±', '\\mp': '∓', '\\times': '×', '\\div': '÷',
+    '\\cdot': '·', '\\ldots': '…', '\\cdots': '⋯', '\\approx': '≈', '\\neq': '≠',
+    '\\ne': '≠', '\\leq': '≤', '\\le': '≤', '\\geq': '≥', '\\ge': '≥',
+    '\\ll': '≪', '\\gg': '≫', '\\subset': '⊂', '\\supset': '⊃',
+    '\\subseteq': '⊆', '\\supseteq': '⊇', '\\in': '∈', '\\notin': '∉',
+    '\\cup': '∪', '\\cap': '∩', '\\forall': '∀', '\\exists': '∃',
+    '\\nabla': '∇', '\\partial': '∂', '\\sum': 'Σ', '\\prod': 'Π',
+    '\\int': '∫', '\\iint': '∬', '\\iiint': '∭',
+    '\\rightarrow': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒',
+    '\\Leftarrow': '⇐', '\\leftrightarrow': '↔', '\\Leftrightarrow': '⇔',
+    '\\to': '→', '\\gets': '←',
+    '\\quad': '  ', '\\qquad': '    ', '\\,': ' ', '\\;': ' ', '\\!': '',
+    '\\left': '', '\\right': '', '\\bigl': '', '\\bigr': '',
+    '\\Bigl': '', '\\Bigr': '', '\\biggl': '', '\\biggr': '',
+    '\\big': '', '\\Big': '', '\\bigg': '', '\\Bigg': '',
+  };
+  // Sort by key length descending to prevent prefix matching issues
+  // Use regex with word boundary for alpha commands (e.g., \in must not match inside \int)
+  const sortedSymbols = Object.entries(symbolMap).sort((a, b) => b[0].length - a[0].length);
+  for (const [cmd, sym] of sortedSymbols) {
+    // Check if the command ends with a letter (needs word boundary)
+    if (/[a-zA-Z]$/.test(cmd)) {
+      text = text.replace(new RegExp(cmd.replace(/\\/g, '\\\\') + '(?![a-zA-Z])', 'g'), sym);
+    } else {
+      text = text.split(cmd).join(sym);
+    }
+  }
+
+  // One-arg commands with nested brace support
+  text = replaceOneArgCmd(text, 'text', (a) => a);
+  text = replaceOneArgCmd(text, 'textbf', (a) => a);
+  text = replaceOneArgCmd(text, 'textit', (a) => a);
+  text = replaceOneArgCmd(text, 'mathrm', (a) => a);
+  text = replaceOneArgCmd(text, 'mathbf', (a) => a);
+  text = replaceOneArgCmd(text, 'mathcal', (a) => a);
+  text = replaceOneArgCmd(text, 'hat', (a) => `${a}\u0302`);
+  text = replaceOneArgCmd(text, 'bar', (a) => `${a}\u0304`);
+  text = replaceOneArgCmd(text, 'tilde', (a) => `${a}\u0303`);
+  text = replaceOneArgCmd(text, 'vec', (a) => `${a}\u20D7`);
+  text = replaceOneArgCmd(text, 'dot', (a) => `${a}\u0307`);
+  text = replaceOneArgCmd(text, 'sqrt', (a) => `√(${a})`);
+  text = replaceOneArgCmd(text, 'overline', (a) => `${a}\u0304`);
+
+  // \frac{a}{b} → (a)/(b) with nested brace support — apply recursively
+  let prev = '';
+  while (prev !== text) {
+    prev = text;
+    text = replaceTwoArgCmd(text, 'frac', (a, b) => `(${a})/(${b})`);
+  }
+
+  // ^{exp} and _{sub} with proper brace matching
+  // Process from right to left by repeatedly replacing innermost
+  prev = '';
+  while (prev !== text) {
+    prev = text;
+    // Simple regex for innermost brace groups in ^ and _
+    text = text.replace(/\^\{([^{}]*)\}/g, '^($1)');
+    text = text.replace(/_\{([^{}]*)\}/g, '_($1)');
+  }
+
+  // Remove remaining braces that were just for grouping
+  prev = '';
+  while (prev !== text) {
+    prev = text;
+    text = text.replace(/\{([^{}]*)\}/g, '$1');
+  }
+
+  // Clean up remaining backslash commands — just remove the backslash
+  text = text.replace(/\\([a-zA-Z]+)/g, '$1');
+
+  // Clean up extra whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+
+  return text;
+};
+
+/**
+ * Extract readable math text from a KaTeX DOM element.
+ * Uses the MathML content (proper Unicode) with structural awareness,
+ * falling back to latexToReadableText on the annotation.
+ */
+export const extractReadableMath = (element: Element): string => {
+  // Try annotation first, convert via latexToReadableText
+  const annotation = element.querySelector('annotation[encoding="application/x-tex"]');
+  if (annotation?.textContent) {
+    return latexToReadableText(annotation.textContent);
+  }
+  return element.textContent ?? '';
+};
+
 /* istanbul ignore next -- @preserve internal base64 encoding for PDF fonts */
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
@@ -870,6 +1071,28 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       return;
     }
 
+    // Handle KaTeX math elements: extract readable math text
+    if (element.classList.contains('katex-display') || element.classList.contains('katex')) {
+      // Skip inner .katex when already handled by .katex-display parent
+      if (
+        element.classList.contains('katex') &&
+        element.parentElement?.classList.contains('katex-display')
+      ) {
+        return;
+      }
+      const readable = extractReadableMath(element);
+      if (readable) {
+        const isDisplay = element.classList.contains('katex-display');
+        parts.push({
+          text: isDisplay ? ` ${readable} ` : readable,
+          type: 'text',
+          href: context.href,
+          style: context.style,
+        });
+      }
+      return;
+    }
+
     if (element.classList.contains('katex-html')) {
       return;
     }
@@ -1430,13 +1653,37 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
 /**
  * Export content as DOCX
  */
+/**
+ * Replace KaTeX HTML spans with readable math text for export formats
+ * that don't support KaTeX CSS (e.g., DOCX).
+ */
+const replaceKatexWithText = (html: string): string => {
+  // Replace display math: <span class="katex-display">...<annotation>LATEX</annotation>...</span>
+  let result = html.replace(
+    /<span class="katex-display">[\s\S]*?<annotation encoding="application\/x-tex">([^<]+)<\/annotation>[\s\S]*?<\/span>/g,
+    (_, tex) => {
+      const readable = latexToReadableText(tex);
+      return `<p style="text-align:center;font-family:'Cambria Math',serif;">${escapeHtml(readable)}</p>`;
+    },
+  );
+  // Replace inline math: <span class="katex">...<annotation>LATEX</annotation>...</span>
+  result = result.replace(
+    /<span class="katex">[\s\S]*?<annotation encoding="application\/x-tex">([^<]+)<\/annotation>[\s\S]*?<\/span>/g,
+    (_, tex) => {
+      const readable = latexToReadableText(tex);
+      return `<span style="font-family:'Cambria Math',serif;">${escapeHtml(readable)}</span>`;
+    },
+  );
+  return result;
+};
+
 export const exportAsDOCX = (markdownSource: string, exportTitle: string): void => {
   if (!markdownSource || !markdownSource.trim()) {
     toast.error('Nothing to export yet');
     return;
   }
 
-  const htmlOutput = markdownToHtml(markdownSource);
+  const htmlOutput = replaceKatexWithText(markdownToHtml(markdownSource));
   const wordContent = `
 <!DOCTYPE html>
 <html lang="en">
