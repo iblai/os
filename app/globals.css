@@ -4,7 +4,11 @@
 
 @plugin 'tailwind-scrollbar';
 
+/* SDK: custom base styles (CSS variables, no Tailwind utilities) */
 @import '@iblai/iblai-js/web-containers/styles';
+
+/* SDK: scan compiled components so Tailwind generates their utility classes */
+@source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
 
 @custom-variant dark (&:is(.dark *));
 
