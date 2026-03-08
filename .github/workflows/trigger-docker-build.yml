@@ -1,0 +1,53 @@
+name: Trigger Docker Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+run-name: "Trigger build for ${{ github.ref_name }}"
+
+jobs:
+  trigger-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (to read version)
+        uses: actions/checkout@v4
+
+      - name: Extract version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Trigger ibl-web-ops build
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.OPS_DISPATCH_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/iblai/ibl-web-ops/dispatches \
+            -d '{
+              "event_type": "spa-docker-build",
+              "client_payload": {
+                "app_name": "mentor",
+                "source_repo": "${{ github.repository }}",
+                "source_ref": "${{ github.ref }}",
+                "version": "${{ steps.version.outputs.version }}"
+              }
+            }'
+
+          echo "Triggered ibl-web-ops build for mentor v${{ steps.version.outputs.version }}"
+
+      - name: Build link
+        run: |
+          OPS_URL="https://github.com/iblai/ibl-web-ops/actions/workflows/docker-build.yml"
+          echo "## Docker Build Dispatched" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **App** | mentor |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build** | [Track in ibl-web-ops Actions]($OPS_URL) |" >> $GITHUB_STEP_SUMMARY
