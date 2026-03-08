@@ -1,9 +1,10 @@
-## [Unreleased]
+## [0.35.9]
 - Fixes https://github.com/iblai/iblai-platform/issues/283
 - https://github.com/user-attachments/assets/d0069dcf-5ef4-4ec5-abd7-1dba1a735c34
 - fix(mentor): llm image issue on explore when swtiching to community mentors 
 - Fixes https://github.com/iblai/iblai-platform/issues/472
 - Add RBAC permissions to MCP list
+- bump iblai-js sdk version to 1.0.16
 
 ## [0.35.8]
 
