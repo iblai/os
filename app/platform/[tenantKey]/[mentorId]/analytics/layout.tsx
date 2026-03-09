@@ -18,7 +18,7 @@ export default function AnalyticsLayoutWrapper({ children }: { children: React.R
   };
 
   return (
-    <AnalyticsLayout currentPath={pathname} basePath={basePath} onTabChange={handleTabChange}>
+    <AnalyticsLayout excludeTabs={['courses', 'programs']} currentPath={pathname} basePath={basePath} onTabChange={handleTabChange}>
       {children}
     </AnalyticsLayout>
   );
