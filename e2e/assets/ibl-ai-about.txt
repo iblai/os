@@ -1,0 +1,15 @@
+Mission
+
+IBL's mission is to transform education using generative AI and open source. We empower our partners to have full ownership over their code and data.
+
+Our Story
+
+As a partner of AWS and Google located in the technological hub of New York, IBL is a collective of AI and open-source engineers specializing in the development of AI-based revenue generating systems for the educational sector. Our core expertise lies in the advanced orchestration of technologies to create, deliver, and enhance educational experiences.
+
+We have a profound command over open-source Large Language Models (LLMs) and Generative AI, including state-of-the-art models like Llama and Mixtral. This expertise allows us to tailor highly sophisticated and interactive educational content, providing personalized learning experiences at scale.
+
+Our technical arsenal extends to leveraging cutting-edge technologies such as Langchain, Google's VertexAI, and AWS' Bedrock, alongside integral tools like Docker, Apache Kafka, Python, and ReactJS. This diverse and powerful technological stack ensures our systems are scalable, efficient, and ready to integrate seamlessly into any educational environment.
+
+In addition to our web-based solutions, we excel in mobile application engineering. We utilize Flutter for cross-platform mobile app development and harness the power of the Apple Neural Engine to bring machine learning capabilities directly to devices, enhancing user interaction and engagement.
+
+At IBL, we're not just engineers; we are architects of the future of education technology. Our commitment to innovation and excellence is unwavering, and we invite you to join us on this transformative journey.
