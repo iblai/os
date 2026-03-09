@@ -13,6 +13,7 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import { useUserIsOnTrial, useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useSearchParams } from 'next/navigation';
 
 export type ChatHistoryFilter = {
   dateRange: DateRange | undefined;
@@ -26,6 +27,8 @@ export function useHistoryWithPagination(itemsPerPage = 10) {
   const username = useUsername();
   const [currentPage, setCurrentPage] = React.useState(1);
   const userIsOnTrial = useUserIsOnTrial();
+  const searchParams = useSearchParams();
+  const isAccessingPublicRoute = !!searchParams.get('token');
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() || mentorId;
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery({
@@ -42,7 +45,7 @@ export function useHistoryWithPagination(itemsPerPage = 10) {
       userId: username ?? '',
       mentorId: mentorPublicSettings?.mentor_unique_id,
     },
-    { skip: userIsOnTrial },
+    { skip: userIsOnTrial || isAccessingPublicRoute },
   );
 
   const [filters, setFilters] = React.useState<ChatHistoryFilter>({
@@ -71,7 +74,7 @@ export function useHistoryWithPagination(itemsPerPage = 10) {
       filterUserId: filters.users,
     },
     {
-      skip: chatHistoryFilter === undefined && userIsOnTrial,
+      skip: (chatHistoryFilter === undefined && userIsOnTrial) || isAccessingPublicRoute,
     },
   );
 

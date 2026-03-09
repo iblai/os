@@ -159,7 +159,9 @@ export function ChatInputForm({
     },
   });
 
-  const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
+  const isAnonymousAccessAllowed = mentorSettings?.data?.allowAnonymous === true;
+  const visibleToLoggedInUsersOnly =
+    !isAccessingPublicRoute || isLoggedIn() || isAnonymousAccessAllowed;
   const isMentorViewableByAnyone =
     mentorSettings?.data?.mentorVisibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
 

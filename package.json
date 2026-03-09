@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.35.8",
+  "version": "0.35.9",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -28,7 +28,10 @@
     "desktop:build": "pnpm build && electron-builder",
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build",
-    "tauri:build:debug": "pnpm build && cargo tauri build --debug"
+    "tauri:build:debug": "pnpm build && cargo tauri build --debug",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
   },
   "build": {
     "appId": "ai.iblai.mentorai",
@@ -199,6 +202,10 @@
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.4",
     "vitest-axe": "^0.1.0",
-    "wait-on": "9.0.3"
+    "wait-on": "9.0.3",
+    "@playwright/test": "1.52.0",
+    "@axe-core/playwright": "4.10.2",
+    "dotenv": "16.4.7",
+    "cross-env": "7.0.3"
   }
 }

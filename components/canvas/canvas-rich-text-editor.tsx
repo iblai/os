@@ -35,6 +35,7 @@ import { useUpdateArtifactMutation } from '@iblai/iblai-js/data-layer';
 
 import { Button } from '@/components/ui/button';
 import { htmlToMarkdown, markdownToHtml } from '@/lib/utils';
+import { MathInline, MathBlock } from './tiptap-math-extension';
 
 const Superscript = Mark.create({
   name: 'superscript',
@@ -865,6 +866,9 @@ export function useCanvasRichTextEditor({
           rel: 'noopener noreferrer',
         },
       }),
+      // Math extensions for KaTeX rendering
+      MathInline,
+      MathBlock,
     ],
     content: getInitialContent(),
     // Note: onUpdate is handled via event listener in useEffect to ensure latest refs are used
