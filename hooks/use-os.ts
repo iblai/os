@@ -1,15 +1,21 @@
-import { platform } from "@tauri-apps/plugin-os";
+import { getPlatform } from '@iblai/iblai-js/web-utils';
 
 export const useOS = () => {
-  let isAppleDevice = false;
+  let os: string | null = null;
+
   try {
-    const os = platform();
-    isAppleDevice = os === "macos" || os === "ios";
+    const platform = getPlatform();
+    if (platform && typeof platform.getOS === 'function') {
+      os = platform.getOS();
+    }
   } catch {
-    isAppleDevice = false;
+    os = null;
   }
 
+  const isAppleDevice = os === 'macos' || os === 'ios';
+
   return {
+    os,
     isAppleDevice,
   };
 };

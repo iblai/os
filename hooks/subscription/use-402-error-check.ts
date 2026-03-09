@@ -1,17 +1,17 @@
-import { useAppDispatch } from "@/lib/hooks";
-import { toast } from "sonner";
+import { useAppDispatch } from '@/lib/hooks';
+import { toast } from 'sonner';
 import {
   setError402Detected,
   setPricingModalData,
   setOpenPricingModal,
-  setOpenAppleRestrictionModal,
-} from "@/features/subscription/subscription-slice";
-import { Error402MessageData } from "@iblai/iblai-js/web-utils";
-import { getUserEmail } from "@/features/utils";
-import { useCallback } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useIsAdmin } from "../use-user";
-import { useOS } from "../use-os";
+} from '@/features/subscription/subscription-slice';
+import { Error402MessageData } from '@iblai/iblai-js/web-utils';
+import { getUserEmail } from '@/features/utils';
+import { useCallback, useState } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useIsAdmin } from '../use-user';
+import { useOS } from '../use-os';
+import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -20,13 +20,14 @@ export const use402ErrorCheck = () => {
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const { isAppleDevice } = useOS();
+  const [isAppleRestrictionModalOpen, setIsAppleRestrictionModalOpen] = useState(false);
 
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
       toast.error(
         messageData.error ||
           messageData.message ||
-          "Insufficient balance. Please add credits to continue.",
+          'Insufficient balance. Please add credits to continue.',
         {
           //duration: 1000 * 60 * 2, // 2 minutes
           closeButton: true,
@@ -35,14 +36,14 @@ export const use402ErrorCheck = () => {
 
       // Show Apple restriction modal for iOS/macOS users
       if (isAppleDevice) {
-        dispatch(setOpenAppleRestrictionModal(true));
+        setIsAppleRestrictionModalOpen(true);
         return;
       }
 
       if (isAdmin) {
         // Open the billing tab by injecting profileTab=billing query param
         const params = new URLSearchParams(searchParams.toString());
-        params.set("profileTab", "billing");
+        params.set('profileTab', 'billing');
         router.push(`${pathname}?${params.toString()}`);
         return;
       }
@@ -54,8 +55,8 @@ export const use402ErrorCheck = () => {
       ) {
         dispatch(
           setPricingModalData({
-            referenceId: messageData.pricing_table.client_reference_id || "",
-            customerEmail: getUserEmail() || "",
+            referenceId: messageData.pricing_table.client_reference_id || '',
+            customerEmail: getUserEmail() || '',
             publishableKey: messageData.pricing_table.publishable_key,
             pricingTableId: messageData.pricing_table.pricing_table_id,
           }),
@@ -63,6 +64,7 @@ export const use402ErrorCheck = () => {
         dispatch(setOpenPricingModal(true));
         return;
       } else {
+
         //students use case
         dispatch(setError402Detected(new Date().toISOString()));
       }
@@ -72,5 +74,8 @@ export const use402ErrorCheck = () => {
 
   return {
     handle402Error,
+    isAppleRestrictionModalOpen,
+    closeAppleRestrictionModal: () => setIsAppleRestrictionModalOpen(false),
+    AppleRestrictionModal,
   };
 };
