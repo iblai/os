@@ -7,9 +7,11 @@ import {
 } from '@/features/subscription/subscription-slice';
 import { Error402MessageData } from '@iblai/iblai-js/web-utils';
 import { getUserEmail } from '@/features/utils';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
+import { useOS } from '../use-os';
+import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -17,6 +19,8 @@ export const use402ErrorCheck = () => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
+  const { isAppleDevice } = useOS();
+  const [isAppleRestrictionModalOpen, setIsAppleRestrictionModalOpen] = useState(false);
 
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
@@ -29,6 +33,13 @@ export const use402ErrorCheck = () => {
           closeButton: true,
         },
       );
+
+      // Show Apple restriction modal for iOS/macOS users
+      if (isAppleDevice) {
+        setIsAppleRestrictionModalOpen(true);
+        return;
+      }
+
       if (isAdmin) {
         // Open the billing tab by injecting profileTab=billing query param
         const params = new URLSearchParams(searchParams.toString());
@@ -53,13 +64,18 @@ export const use402ErrorCheck = () => {
         dispatch(setOpenPricingModal(true));
         return;
       } else {
+
+        //students use case
         dispatch(setError402Detected(new Date().toISOString()));
       }
     },
-    [dispatch, pathname, router, searchParams],
+    [dispatch, pathname, router, searchParams, isAppleDevice],
   );
 
   return {
     handle402Error,
+    isAppleRestrictionModalOpen,
+    closeAppleRestrictionModal: () => setIsAppleRestrictionModalOpen(false),
+    AppleRestrictionModal,
   };
 };
