@@ -94,7 +94,7 @@ export const AIMessageBubble = forwardRef<HTMLButtonElement, AIMessageBubbleProp
                   hasArtifactVersions(message) && 'p-0 bg-white',
                 )}
               >
-                <div className="text-gray-800 text-sm/6 [&_strong]:font-bold [&_em]:italic [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_pre]:bg-gray-200 [&_pre]:p-2 [&_pre]:rounded [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1">
+                <div className="text-gray-800 text-sm/6 overflow-x-auto [&_strong]:font-bold [&_em]:italic [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_pre]:bg-gray-200 [&_pre]:p-2 [&_pre]:rounded [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:mb-1 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden">
                   <MessagePreview
                     content={content}
                     artifactVersions={message?.artifactVersions}

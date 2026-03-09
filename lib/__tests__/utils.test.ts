@@ -1841,6 +1841,44 @@ describe('htmlToMarkdown function', () => {
     const result = htmlToMarkdown(123 as unknown as string);
     expect(result).toBe('');
   });
+
+  // TipTap math serialization (data-math-latex) tests
+  describe('data-math-latex handling', () => {
+    it('should convert inline data-math-latex span to inline math', () => {
+      const html = '<p>The value is <span data-math-latex="x^2"></span> here</p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$x^2$');
+    });
+
+    it('should convert display data-math-latex span to display math', () => {
+      const html = '<p><span data-math-latex="\\frac{a}{b}" data-math-display="true"></span></p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$$\\frac{a}{b}$$');
+    });
+
+    it('should handle multiple inline math spans', () => {
+      const html =
+        '<p><span data-math-latex="\\alpha"></span> and <span data-math-latex="\\beta"></span></p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$\\alpha$');
+      expect(result).toContain('$\\beta$');
+    });
+
+    it('should handle display math with complex LaTeX', () => {
+      const html =
+        '<p><span data-math-latex="P(X = k) = \\frac{\\lambda^k}{k!}" data-math-display="true"></span></p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$$P(X = k) = \\frac{\\lambda^k}{k!}$$');
+    });
+
+    it('should handle mixed data-math-latex and regular content', () => {
+      const html =
+        '<p>Given <span data-math-latex="x > 0"></span>, we have <strong>positive</strong> values</p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$x > 0$');
+      expect(result).toContain('positive');
+    });
+  });
 });
 
 describe('markdownToHtml function', () => {
