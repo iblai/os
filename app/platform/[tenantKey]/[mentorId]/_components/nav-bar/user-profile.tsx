@@ -248,16 +248,16 @@ export function UserProfile() {
       getTopUpURL(false).then((url) => {
         setTopUpURL(url || '');
       });
+      getUserActiveAppLegacy().then((app) => {
+        setUserActiveApp(app as unknown as UserApp);
+      });
+      getUserSubscriptionPackage().then((plan) => {
+        if (plan) {
+          const splittedPlanName = String(plan).split('-');
+          setCurrentPlan(splittedPlanName[splittedPlanName.length - 1]);
+        }
+      });
     }
-    getUserActiveAppLegacy().then((app) => {
-      setUserActiveApp(app as unknown as UserApp);
-    });
-    getUserSubscriptionPackage().then((plan) => {
-      if (plan) {
-        const splittedPlanName = String(plan).split('-');
-        setCurrentPlan(splittedPlanName[splittedPlanName.length - 1]);
-      }
-    });
   };
 
   const handleProfileClick = () => {
