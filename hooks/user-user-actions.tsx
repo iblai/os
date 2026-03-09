@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FreeTrialDialog as IblFreeTrialDialog } from '@/components/free-trial-dialog';
+import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 import { useAppDispatch } from '@/lib/hooks';
 import { useAppSelector } from '@/lib/hooks';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
@@ -8,6 +9,7 @@ import { getUserEmail, getUserName } from '@/features/utils';
 import { useUserTenants } from '@/hooks/use-user';
 import { useCurrentTenant } from '@/hooks/use-user';
 import { SUBSCRIPTION_V2_TRIGGERS, useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
+import { useOS } from '@/hooks/use-os';
 
 // Custom hook to handle trial user actions
 export const useShowFreeTrialDialog = (
@@ -33,6 +35,8 @@ export const useShowFreeTrialDialog = (
   });
   const { bannerButtonTriggerCallback } = useSubscriptionHandlerV2(subscriptionFlow);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAppleRestrictionModalOpen, setIsAppleRestrictionModalOpen] = useState(false);
+  const { isAppleDevice } = useOS();
   const FreeTrialDialog =
     options.modalComponent || (options.enableFallbackModal ? IblFreeTrialDialog : null);
 
@@ -49,6 +53,10 @@ export const useShowFreeTrialDialog = (
       (subscriptionStatus.creditExhausted && subscriptionStatus.callToAction) ||
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
+      if (isAppleDevice) {
+        setIsAppleRestrictionModalOpen(true);
+        return null;
+      }
       const callback = bannerButtonTriggerCallback(
         subscriptionStatus.callToAction || SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
       );
@@ -66,6 +74,9 @@ export const useShowFreeTrialDialog = (
     closeModal: () => setIsModalOpen(false),
     FreeTrialDialog,
     isNewlyUserOnPreFreeOrAdvertisingMode,
+    isAppleRestrictionModalOpen,
+    closeAppleRestrictionModal: () => setIsAppleRestrictionModalOpen(false),
+    AppleRestrictionModal,
   };
 };
 
