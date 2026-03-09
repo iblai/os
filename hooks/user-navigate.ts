@@ -24,7 +24,6 @@ import { useShowFreeTrialDialog } from './user-user-actions';
 import { clearFiles } from '@iblai/iblai-js/web-utils';
 import { useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useLocalStorage } from './use-local-storage';
-// import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
 
 // Helper to deeply compare modal stacks
 const areModalStacksEqual = (stackA: ModalInfo[], stackB: ModalInfo[]): boolean => {
@@ -43,6 +42,8 @@ export function useNavigate() {
   );
 
   const username = useUsername();
+  const searchParams = useSearchParams();
+  const isAccessingPublicRoute = !!searchParams.get('token');
   const params = useParams<{ tenantKey?: string; mentorId?: string; projectId?: string }>(); // Make params potentially undefined
   const tenantKey = params?.tenantKey;
   const projectId = params?.projectId;
@@ -56,11 +57,9 @@ export function useNavigate() {
       userId: username ?? '',
     },
     {
-      skip: !mentorIdFromParams || !tenantKey || !username,
+      skip: !mentorIdFromParams || !tenantKey || !username || isAccessingPublicRoute,
     },
   );
-
-  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
 
   const modalParam = searchParams.get('modal');
