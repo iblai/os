@@ -6,7 +6,7 @@ set -e
 
 echo "📦 Copying static assets to standalone output..."
 
-STANDALONE_DIR=".next/standalone/apps/mentor"
+STANDALONE_DIR=".next/standalone"
 
 # Copy static files
 if [ -d ".next/static" ]; then

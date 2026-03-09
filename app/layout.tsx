@@ -6,8 +6,6 @@ import Providers from '@/providers';
 import { Toaster } from '@/components/ui/sonner';
 
 import './globals.css';
-import '@iblai/iblai-js/web-containers/styles';
-
 
 import Script from 'next/script';
 import { StoreProvider } from '@/providers/store-provider';

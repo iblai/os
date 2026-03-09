@@ -10,8 +10,8 @@ fi
 
 EXPECTED_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
 
-# Read current version from package.json
-CURRENT=$(node -e "const p=require('./package.json'); console.log(p.dependencies['$PACKAGE'] || '')")
+# Read current version from package.json using grep
+CURRENT=$(grep "\"$PACKAGE\"" package.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
 
 # Check for yalc/file/link/portal references
 case "$CURRENT" in
@@ -22,15 +22,14 @@ case "$CURRENT" in
     echo ""
     echo "Replacing with registry version $EXPECTED_VERSION..."
 
-    node -e "
-      const fs = require('fs');
-      let pkg = fs.readFileSync('package.json', 'utf8');
-      pkg = pkg.replace(
-        /\"$PACKAGE\":\s*\"[^\"]+\"/,
-        '\"$PACKAGE\": \"$EXPECTED_VERSION\"'
-      );
-      fs.writeFileSync('package.json', pkg);
-    "
+    # Replace in package.json using sed
+    sed -i.bak "s|\"$PACKAGE\": *\"[^\"]*\"|\"$PACKAGE\": \"$EXPECTED_VERSION\"|" package.json
+    rm -f package.json.bak
+
+    # Source nvm/fnm if available so pnpm can be found
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    eval "$(fnm env 2>/dev/null)" || true
 
     echo "Running pnpm install..."
     pnpm install --no-frozen-lockfile
@@ -39,7 +38,7 @@ case "$CURRENT" in
     git commit -m "fix: replace yalc $PACKAGE with registry version $EXPECTED_VERSION"
 
     echo ""
-    echo "fix-yalc: Fixed."
+    echo "fix-yalc: Fixed. Please run 'git push' again."
     exit 1
     ;;
   *)
