@@ -1,3 +1,9 @@
+## [0.35.10]
+
+- fix: analytics and billing issues fixed
+- bump Update ibai-js version to 1.0.19
+
+
 ## [0.35.9]
 - Fixes https://github.com/iblai/iblai-platform/issues/283
 - https://github.com/user-attachments/assets/d0069dcf-5ef4-4ec5-abd7-1dba1a735c34
