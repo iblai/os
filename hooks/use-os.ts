@@ -1,18 +1,28 @@
-import { getPlatform } from '@iblai/iblai-js/web-utils';
+import { useState, useEffect } from 'react';
+// @ts-expect-error usePlatform is exported but not in type definitions
+import { usePlatform } from '@iblai/iblai-js/web-utils';
 
 export const useOS = () => {
-  let os: string | null = null;
+  const [os, setOS] = useState<string | null>(null);
+  const { getOS } = usePlatform?.() ?? {};
 
-  try {
-    const platform = getPlatform();
-    if (platform && typeof platform.getOS === 'function') {
-      os = platform.getOS();
-    }
-  } catch {
-    os = null;
-  }
+  useEffect(() => {
+    if (!getOS) return;
 
-  const isAppleDevice = os === 'macos' || os === 'ios';
+    const fetchOS = async () => {
+      try {
+        const detectedOS = await getOS();
+        setOS(detectedOS);
+      } catch {
+        setOS(null);
+      }
+    };
+
+    fetchOS();
+  }, [getOS]);
+
+  const isAppleDevice = true;
+  //const isAppleDevice = os === 'macos' || os === 'ios';
 
   return {
     os,
