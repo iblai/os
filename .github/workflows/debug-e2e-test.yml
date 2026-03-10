@@ -188,11 +188,13 @@ jobs:
           }]
           CEOF
 
-          # Image pull secrets for private OCIR registry
+          # Image pull secrets for private OCIR registry (values must be base64 encoded)
           OCIR_REGISTRY="iad.ocir.io"
           OCIR_NAMESPACE="idcwyla5j5cr"
+          OCIR_USER_B64=$(echo -n "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}" | base64 -w0)
+          OCIR_PASS_B64=$(echo -n "${{ secrets.OCIR_AUTH_TOKEN }}" | base64 -w0)
           cat > "$TEMP_DIR/image-pull-secrets.json" <<IPSEOF
-          [{"registryEndpoint": "${OCIR_REGISTRY}", "secretType": "BASIC", "username": "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}", "password": "${{ secrets.OCIR_AUTH_TOKEN }}"}]
+          [{"registryEndpoint": "${OCIR_REGISTRY}", "secretType": "BASIC", "username": "${OCIR_USER_B64}", "password": "${OCIR_PASS_B64}"}]
           IPSEOF
 
           echo "Launching container instance..."
