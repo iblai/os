@@ -188,8 +188,8 @@ export function ChatInputForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Prevent submission when chat is disabled or files are uploading
-    if (isChatDisabledByRbac || hasUploadingFiles) return;
+    // Prevent submission when chat is disabled, files are uploading, or session not ready
+    if (isChatDisabledByRbac || hasUploadingFiles || !sessionId) return;
     onSubmit(inputValue);
     setInputValue('');
     setFileAddedNotification(null);
@@ -322,7 +322,7 @@ export function ChatInputForm({
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <UploadMenu
                   onFileInputTrigger={() => executeWithTrialCheck(triggerFileInput)}
-                  disabled={isChatDisabledByRbac}
+                  disabled={isChatDisabledByRbac || !sessionId}
                 />
               )}
 
@@ -380,7 +380,7 @@ export function ChatInputForm({
                     isPreviewMode={isPreviewMode}
                     allowAnonymousAccess={isMentorViewableByAnyone}
                     isUploading={hasUploadingFiles}
-                    disabled={isChatDisabledByRbac}
+                    disabled={isChatDisabledByRbac || !sessionId}
                     isConnecting={isConnecting}
                   />
                 )}
@@ -399,7 +399,7 @@ export function ChatInputForm({
                 : MENTOR_CHAT_DOCUMENTS_EXTENSIONS.join(',')
             }
             multiple
-            disabled={isChatDisabledByRbac}
+            disabled={isChatDisabledByRbac || !sessionId}
           />
         </div>
 
