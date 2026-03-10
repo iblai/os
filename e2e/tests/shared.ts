@@ -1,7 +1,7 @@
 import test, { expect, Locator, Page } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 import { safeWaitForURL } from '@iblai/iblai-js/playwright';
-import { waitForPageReady } from './mentornextjs/utils';
+import { waitForPageReady } from './utils';
 
 export async function inviteUserTest(page: Page, inviteModal: Locator) {
   // Fill email with a unique timestamp to avoid duplicates
