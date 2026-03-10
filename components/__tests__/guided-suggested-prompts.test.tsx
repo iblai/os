@@ -5,7 +5,7 @@ import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
 const mockRefetch = vi.fn();
 const mockUseGetGuidedPromptsQuery = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetGuidedPromptsQuery: (...args: unknown[]) => mockUseGetGuidedPromptsQuery(...args),
 }));
 

@@ -33,7 +33,7 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 // Mock data-layer
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
   useCreateDisclaimerMutation: () => [mockCreateDisclaimer, { isLoading: false }],
   useUpdateDisclaimerMutation: () => [mockUpdateDisclaimer, { isLoading: false }],

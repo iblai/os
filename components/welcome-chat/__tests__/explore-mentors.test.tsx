@@ -40,7 +40,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 const mockUseGetAiSearchMentorsQuery = vi.fn();
 const mockUseGetPublicMentorsQuery = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
   useGetPublicMentorsQuery: (...args: unknown[]) => mockUseGetPublicMentorsQuery(...args),
 }));

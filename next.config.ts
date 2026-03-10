@@ -73,6 +73,10 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: [
     '@tauri-apps/api',
+    '@iblai/iblai-js',
+    '@iblai/web-utils',
+    '@iblai/data-layer',
+    '@iblai/web-containers',
   ],
 };
 const sentryWebpackPluginOptions = {

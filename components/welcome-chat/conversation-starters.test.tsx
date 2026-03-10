@@ -40,7 +40,7 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
   useMentorSettings: () => mockUseMentorSettings(),
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetGuidedPromptsQuery: (...args: unknown[]) => mockUseGetGuidedPromptsQuery(...args),
 }));
 

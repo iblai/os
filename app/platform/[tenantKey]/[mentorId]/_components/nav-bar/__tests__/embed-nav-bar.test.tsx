@@ -49,17 +49,11 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
-vi.mock('@web-utils/hooks/tenant-metadata/use-tenant-metadata', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
     metadata: mockMetadata,
   }),
-}));
-
-vi.mock('@web-utils/utils', () => ({
   addProtocolToUrl: (url: string) => url,
-}));
-
-vi.mock('@web-utils/features', () => ({
   chatActions: {
     setShouldStartNewChat: (val: boolean) => ({ type: 'chat/setShouldStartNewChat', payload: val }),
   },

@@ -13,10 +13,13 @@ const mockUseEmbedMode = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
   useParams: () => mockUseParams(),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock('@web-utils/hooks', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => mockUseTenantMetadata(),
+  selectChats: (state: any) => state.chatSliceShared?.chats ?? {},
+  selectActiveTab: (state: any) => state.chatSliceShared?.activeTab ?? 'chat',
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
