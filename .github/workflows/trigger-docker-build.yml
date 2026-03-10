@@ -1,0 +1,34 @@
+name: Docker Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+run-name: "Build mentor ${{ github.ref_name }}"
+
+jobs:
+  prepare:
+    name: "Prepare"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+  build:
+    needs: prepare
+    uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-docker-build.yml@main
+    with:
+      app_name: mentor
+      source_repo: ${{ github.repository }}
+      source_ref: ${{ github.ref }}
+      version: ${{ needs.prepare.outputs.version }}
+    secrets: inherit

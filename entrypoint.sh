@@ -6,7 +6,7 @@ set -e
 echo "Generating env.js from environment variables..."
 
 # Path to the output env.js file (public so it's available to the frontend)
-ENV_JS_PATH=/app/apps/mentor/public/env.js
+ENV_JS_PATH=/app/public/env.js
 
 # Create the env.js file
 cat <<EOF > $ENV_JS_PATH

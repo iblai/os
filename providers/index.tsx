@@ -93,6 +93,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           console.log('[auth-redirect] Skipping 401 redirect - Tauri offline mode');
           return;
         }
+        // Don't redirect on shareable links — the user may be visiting a
+        // different tenant and some tenant-scoped API calls will 401.  The
+        // public-settings endpoint still provides all the data we need.
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('token')) {
+          console.log('[auth-redirect] Skipping 401 redirect - shareable link');
+          return;
+        }
         console.log('[auth-redirect] API returned 401 Unauthorized');
         redirectToAuthSpa(undefined, undefined, true);
       },
@@ -395,7 +403,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         pathname={fullPathname}
         token={searchParams.get('token') ?? undefined}
         storageService={LocalStorageService.getInstance()}
-        enableStorageSync={!showingSharedChat && !isTauriOffline}
+        enableStorageSync={!showingSharedChat && !isTauriOffline && !searchParams.get('token')}
         fallback={
           isPreviewMode ? null : (
             <div className="flex h-dvh w-screen items-center justify-center">

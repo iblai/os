@@ -714,6 +714,18 @@ export function htmlToMarkdown(htmlText: string) {
   try {
     let processedHtml = htmlText;
 
+    // Restore display math from TipTap editor serialization (data-math-latex with data-math-display)
+    processedHtml = processedHtml.replace(
+      /<span\s+data-math-latex="([^"]*?)"\s+data-math-display="true"\s*><\/span>/g,
+      (_, tex) => `$$${decodeHtmlEntities(tex)}$$`,
+    );
+
+    // Restore inline math from TipTap editor serialization (data-math-latex without data-math-display)
+    processedHtml = processedHtml.replace(
+      /<span\s+data-math-latex="([^"]*?)"\s*><\/span>/g,
+      (_, tex) => `$${decodeHtmlEntities(tex)}$`,
+    );
+
     // Restore inline math from KaTeX annotation elements
     // KaTeX renders math with an annotation element containing the original LaTeX
     // Use [\s\S]*? instead of .*? with 's' flag for ES5/ES6 compatibility
