@@ -1,0 +1,357 @@
+name: Debug E2E Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - safari
+          - edge
+      skip-build:
+        description: 'Skip image build (reuse existing)'
+        required: false
+        default: false
+        type: boolean
+      playwright-image:
+        description: 'Existing playwright image URI (only if skip-build=true)'
+        required: false
+        type: string
+        default: ''
+
+run-name: "Debug E2E - ${{ inputs.browser }}"
+
+jobs:
+  debug-test:
+    runs-on: ubuntu-latest
+    environment: iblai.app
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN }}
+          path: .ops
+
+      - name: Install tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          # OCI CLI
+          if [ ! -d "$HOME/lib/oracle-cli" ]; then
+            curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh -o install.sh
+            bash install.sh --accept-all-defaults
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Configure OCI CLI
+        run: |
+          mkdir -p ~/.oci
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=~/.oci/key.pem
+          EOF
+          echo "${{ secrets.OCI_API_KEY }}" > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem ~/.oci/config
+
+      - name: Build and push Playwright image
+        if: inputs.skip-build != true
+        id: build
+        env:
+          OCIR_REGISTRY: iad.ocir.io
+          OCIR_NAMESPACE: idcwyla5j5cr
+        run: |
+          echo "============================================"
+          echo "Building Playwright Docker image"
+          echo "============================================"
+
+          # Login to OCIR (same format as reusable-pr-docker-build.yml)
+          echo "${{ secrets.OCIR_AUTH_TOKEN }}" | docker login \
+            "${OCIR_REGISTRY}" \
+            -u "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}" --password-stdin
+
+          TAG="debug-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          IMAGE="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/ibl-mentor-playwright:${TAG}"
+
+          echo "Image: $IMAGE"
+          echo "Building from repo root with -f e2e/Dockerfile..."
+
+          docker build -f e2e/Dockerfile -t "$IMAGE" .
+
+          echo ""
+          echo "Pushing..."
+          docker push "$IMAGE"
+
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Build complete: $IMAGE"
+
+      - name: Set image URI
+        id: image
+        run: |
+          if [ "${{ inputs.skip-build }}" = "true" ] && [ -n "${{ inputs.playwright-image }}" ]; then
+            echo "image=${{ inputs.playwright-image }}" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ steps.build.outputs.image }}" >> $GITHUB_OUTPUT
+          fi
+          echo "Using image: $(cat $GITHUB_OUTPUT | grep image | cut -d= -f2)"
+
+      - name: Determine test config
+        id: config
+        uses: ./.ops/.github/actions/determine-test-user
+        with:
+          domain-number: '3'
+          app-type: mentor
+
+      - name: Launch OCI container
+        id: launch
+        run: |
+          echo "============================================"
+          echo "Launching OCI Container Instance"
+          echo "============================================"
+
+          PLAYWRIGHT_IMAGE="${{ steps.image.outputs.image }}"
+          BROWSER="${{ inputs.browser }}"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          DISPLAY_NAME="debug-mentor-${BROWSER}-${TIMESTAMP}"
+          RUN_ID="${{ github.run_id }}-${{ github.run_attempt }}/debug-${BROWSER}"
+
+          echo "Image:    $PLAYWRIGHT_IMAGE"
+          echo "Browser:  $BROWSER"
+          echo "Platform: mentor"
+          echo "Run ID:   $RUN_ID"
+          echo ""
+
+          TEMP_DIR=$(mktemp -d)
+
+          # Environment variables — verbose for debugging
+          cat > "$TEMP_DIR/env-vars.json" <<ENVEOF
+          {
+            "BROWSERS": "$BROWSER",
+            "PLATFORM": "mentor",
+            "PLAYWRIGHT_USERNAME": "${{ steps.config.outputs.username }}",
+            "PLAYWRIGHT_PASSWORD": "${{ secrets.TEST_USER_PASSWORD }}",
+            "AUTH_HOST": "${{ steps.config.outputs.auth-domain }}",
+            "MENTOR_NEXTJS_HOST": "${{ steps.config.outputs.mentor-domain }}",
+            "AUTH_FLOW": "${{ vars.AUTH_FLOW }}",
+            "AUTH_IDP": "${{ vars.AUTH_IDP }}",
+            "CI": "true",
+            "NODE_ENV": "production",
+            "S3_BUCKET": "${{ secrets.S3_LOGS_BUCKET }}",
+            "AWS_ACCESS_KEY_ID": "${{ secrets.S3_LOGS_ACCESS_KEY_ID }}",
+            "AWS_SECRET_ACCESS_KEY": "${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}",
+            "AWS_REGION": "${{ vars.AWS_REGION || 'us-east-1' }}",
+            "RUN_ID": "$RUN_ID",
+            "IMAGE_TAG": "debug",
+            "CLOUDFRONT_DOMAIN": "${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}",
+            "WORKERS": "1",
+            "DEBUG": "pw:api"
+          }
+          ENVEOF
+
+          jq 'with_entries(select(.value != ""))' "$TEMP_DIR/env-vars.json" > "$TEMP_DIR/env-clean.json"
+
+          echo "Environment variables being passed:"
+          jq 'keys' "$TEMP_DIR/env-clean.json"
+          echo ""
+
+          # Check critical vars
+          echo "--- Critical variable check ---"
+          echo "BROWSERS: $BROWSER"
+          echo "PLATFORM: mentor"
+          echo "AUTH_HOST: ${{ steps.config.outputs.auth-domain }}"
+          echo "MENTOR_NEXTJS_HOST: ${{ steps.config.outputs.mentor-domain }}"
+          echo "S3_BUCKET set: $([ -n '${{ secrets.S3_LOGS_BUCKET }}' ] && echo 'yes' || echo 'NO')"
+          echo "TEST_USER_PASSWORD set: $([ -n '${{ secrets.TEST_USER_PASSWORD }}' ] && echo 'yes' || echo 'NO')"
+          echo "AUTH_FLOW: ${{ vars.AUTH_FLOW }}"
+          echo ""
+
+          cat > "$TEMP_DIR/containers.json" <<CEOF
+          [{
+            "displayName": "$DISPLAY_NAME",
+            "imageUrl": "$PLAYWRIGHT_IMAGE",
+            "command": ["/docker-entrypoint.sh"],
+            "arguments": ["test"],
+            "environmentVariables": $(cat "$TEMP_DIR/env-clean.json")
+          }]
+          CEOF
+
+          echo "Launching container instance..."
+          RESULT=$(oci container-instances container-instance create \
+            --compartment-id "${{ secrets.OCI_COMPARTMENT_OCID }}" \
+            --availability-domain "${{ secrets.OCI_AVAILABILITY_DOMAIN }}" \
+            --shape "CI.Standard.E4.Flex" \
+            --shape-config '{"ocpus":4.0,"memoryInGBs":16.0}' \
+            --vnics '[{"subnetId":"${{ secrets.OCI_SUBNET_OCID }}"}]' \
+            --containers "file://$TEMP_DIR/containers.json" \
+            --container-restart-policy "NEVER" \
+            --display-name "$DISPLAY_NAME" 2>&1) && EXIT_CODE=0 || EXIT_CODE=$?
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "LAUNCH FAILED (exit $EXIT_CODE):"
+            echo "$RESULT"
+            rm -rf "$TEMP_DIR"
+            exit 1
+          fi
+
+          INSTANCE_ID=$(echo "$RESULT" | jq -r '.data.id')
+          echo "Instance ID: $INSTANCE_ID"
+
+          # Get container ID
+          sleep 5
+          CONTAINER_ID=$(oci container-instances container-instance get \
+            --container-instance-id "$INSTANCE_ID" \
+            --query 'data.containers[0]."container-id"' \
+            --raw-output 2>/dev/null || echo "")
+
+          echo "Container ID: $CONTAINER_ID"
+          echo ""
+
+          echo "instance-id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "container-id=$CONTAINER_ID" >> $GITHUB_OUTPUT
+          echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
+
+          rm -rf "$TEMP_DIR"
+
+      - name: Monitor and stream logs
+        id: monitor
+        run: |
+          INSTANCE_ID="${{ steps.launch.outputs.instance-id }}"
+          CONTAINER_ID="${{ steps.launch.outputs.container-id }}"
+
+          echo "============================================"
+          echo "Monitoring container: $INSTANCE_ID"
+          echo "============================================"
+          echo ""
+
+          MAX_WAIT=900
+          ELAPSED=0
+          CHECK_INTERVAL=15
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            if [ -n "$CONTAINER_ID" ]; then
+              RESPONSE=$(oci container-instances container get \
+                --container-id "$CONTAINER_ID" \
+                --output json 2>/dev/null || echo '{"data":{}}')
+              STATE=$(echo "$RESPONSE" | jq -r '.data."lifecycle-state" // "UNKNOWN"')
+              EXIT_CODE=$(echo "$RESPONSE" | jq -r '.data."exit-code" // "null"')
+            else
+              RESPONSE=$(oci container-instances container-instance get \
+                --container-instance-id "$INSTANCE_ID" \
+                --output json 2>/dev/null || echo '{"data":{}}')
+              STATE=$(echo "$RESPONSE" | jq -r '.data."lifecycle-state" // "UNKNOWN"')
+              EXIT_CODE="null"
+            fi
+
+            echo "[${ELAPSED}s] State: $STATE | Exit: $EXIT_CODE"
+
+            if [ "$STATE" = "INACTIVE" ] || [ "$STATE" = "FAILED" ]; then
+              echo ""
+              echo "Container finished with state: $STATE, exit: $EXIT_CODE"
+              echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "TIMEOUT after ${MAX_WAIT}s"
+            echo "exit-code=timeout" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch S3 logs
+        if: always()
+        run: |
+          RUN_ID="${{ steps.launch.outputs.run-id }}"
+          S3_BUCKET="${{ secrets.S3_LOGS_BUCKET }}"
+          AWS_REGION="${{ vars.AWS_REGION || 'us-east-1' }}"
+          CLOUDFRONT="${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}"
+
+          export AWS_ACCESS_KEY_ID="${{ secrets.S3_LOGS_ACCESS_KEY_ID }}"
+          export AWS_SECRET_ACCESS_KEY="${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}"
+          export AWS_REGION
+
+          echo "============================================"
+          echo "Fetching test logs from S3"
+          echo "============================================"
+          echo "S3 path: s3://$S3_BUCKET/runs/$RUN_ID/"
+          echo ""
+
+          echo "--- Listing S3 contents ---"
+          aws s3 ls "s3://$S3_BUCKET/runs/$RUN_ID/" --recursive --region "$AWS_REGION" 2>&1 || echo "(no files found or access denied)"
+          echo ""
+
+          echo "--- Test run log ---"
+          LOG_PATH="s3://$S3_BUCKET/runs/$RUN_ID/mentor/logs/test-run.log"
+          aws s3 cp "$LOG_PATH" /tmp/test-run.log --region "$AWS_REGION" 2>/dev/null && cat /tmp/test-run.log || echo "(log not found at $LOG_PATH)"
+          echo ""
+
+          echo "--- Log URL ---"
+          echo "https://${CLOUDFRONT}/runs/${RUN_ID}/mentor/logs/test-run.log"
+
+      - name: Fetch OCI container logs
+        if: always()
+        run: |
+          CONTAINER_ID="${{ steps.launch.outputs.container-id }}"
+
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "No container ID available"
+            exit 0
+          fi
+
+          echo "============================================"
+          echo "OCI Container Logs (last output)"
+          echo "============================================"
+          echo ""
+
+          oci container-instances container retrieve-logs \
+            --container-id "$CONTAINER_ID" 2>&1 | head -500 || echo "(could not retrieve container logs)"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          INSTANCE_ID="${{ steps.launch.outputs.instance-id }}"
+          if [ -n "$INSTANCE_ID" ]; then
+            echo "Deleting instance: $INSTANCE_ID"
+            oci container-instances container-instance delete \
+              --container-instance-id "$INSTANCE_ID" \
+              --force 2>&1 || echo "Failed to delete (may already be gone)"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.monitor.outputs.exit-code }}"
+          RUN_ID="${{ steps.launch.outputs.run-id }}"
+          CLOUDFRONT="${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}"
+
+          {
+            echo "## Debug E2E Test Results"
+            echo ""
+            echo "**Browser:** ${{ inputs.browser }}"
+            echo "**Platform:** mentor"
+            echo "**Image:** ${{ steps.image.outputs.image }}"
+            echo "**Exit Code:** ${EXIT_CODE:-unknown}"
+            echo ""
+            echo "**Log:** https://${CLOUDFRONT}/runs/${RUN_ID}/mentor/logs/test-run.log"
+          } >> $GITHUB_STEP_SUMMARY
+
+          if [ "$EXIT_CODE" != "0" ] && [ "$EXIT_CODE" != "null" ]; then
+            echo ""
+            echo "TEST FAILED (exit: $EXIT_CODE)"
+            exit 1
+          fi

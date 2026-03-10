@@ -1,3 +1,8 @@
+## [0.35.12]
+
+- bump iblai-js version to 1.0.23
+- disable sending of message if session Id is not found
+
 ## [0.35.11]
 
 - bump Update ibai-js version to 1.0.22
