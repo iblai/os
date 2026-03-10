@@ -7,6 +7,11 @@ on:
 
 run-name: "PR #${{ github.event.pull_request.number }} - Mentor Test Validation"
 
+permissions:
+  statuses: write
+  contents: read
+  pull-requests: read
+
 concurrency:
   group: pr-validation-mentor-${{ github.event.pull_request.number }}
   cancel-in-progress: false
@@ -734,6 +739,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Check test results
+        id: check-results
         if: always()
         run: |
           FAILED=false
@@ -793,3 +799,18 @@ jobs:
             echo "WORKFLOW PASSED - All checks passed!"
             exit 0
           fi
+
+      - name: Update PR gate status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const passed = '${{ steps.check-results.outcome }}' === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: passed ? 'success' : 'failure',
+              context: 'PR Validation',
+              description: passed ? 'All checks passed' : 'Some checks failed',
+            });
