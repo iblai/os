@@ -188,6 +188,13 @@ jobs:
           }]
           CEOF
 
+          # Image pull secrets for private OCIR registry
+          OCIR_REGISTRY="iad.ocir.io"
+          OCIR_NAMESPACE="idcwyla5j5cr"
+          cat > "$TEMP_DIR/image-pull-secrets.json" <<IPSEOF
+          [{"registryEndpoint": "${OCIR_REGISTRY}", "secretType": "BASIC", "username": "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}", "password": "${{ secrets.OCIR_AUTH_TOKEN }}"}]
+          IPSEOF
+
           echo "Launching container instance..."
           RESULT=$(oci container-instances container-instance create \
             --compartment-id "${{ secrets.OCI_COMPARTMENT_OCID }}" \
@@ -196,6 +203,7 @@ jobs:
             --shape-config '{"ocpus":4.0,"memoryInGBs":16.0}' \
             --vnics '[{"subnetId":"${{ secrets.OCI_SUBNET_OCID }}"}]' \
             --containers "file://$TEMP_DIR/containers.json" \
+            --image-pull-secrets "file://$TEMP_DIR/image-pull-secrets.json" \
             --container-restart-policy "NEVER" \
             --display-name "$DISPLAY_NAME" 2>&1) && EXIT_CODE=0 || EXIT_CODE=$?
 
@@ -319,7 +327,11 @@ jobs:
           echo ""
 
           oci container-instances container retrieve-logs \
-            --container-id "$CONTAINER_ID" 2>&1 | head -500 || echo "(could not retrieve container logs)"
+            --container-id "$CONTAINER_ID" \
+            --file /tmp/oci-container-logs.txt 2>&1 || echo "(could not retrieve container logs)"
+          if [ -f /tmp/oci-container-logs.txt ]; then
+            head -500 /tmp/oci-container-logs.txt
+          fi
 
       - name: Cleanup
         if: always()
