@@ -69,18 +69,21 @@ jobs:
       - name: Build and push Playwright image
         if: inputs.skip-build != true
         id: build
+        env:
+          OCIR_REGISTRY: iad.ocir.io
+          OCIR_NAMESPACE: idcwyla5j5cr
         run: |
           echo "============================================"
           echo "Building Playwright Docker image"
           echo "============================================"
 
-          # Login to OCIR
+          # Login to OCIR (same format as reusable-pr-docker-build.yml)
           echo "${{ secrets.OCIR_AUTH_TOKEN }}" | docker login \
-            ${{ secrets.OCI_REGION }}.ocir.io \
-            -u "${{ secrets.OCIR_USERNAME }}" --password-stdin
+            "${OCIR_REGISTRY}" \
+            -u "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}" --password-stdin
 
           TAG="debug-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
-          IMAGE="${{ secrets.OCI_REGION }}.ocir.io/${{ secrets.OCI_TENANCY_OCID }}/ibl-mentor-playwright:${TAG}"
+          IMAGE="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/ibl-mentor-playwright:${TAG}"
 
           echo "Image: $IMAGE"
           echo "Building from repo root with -f e2e/Dockerfile..."
