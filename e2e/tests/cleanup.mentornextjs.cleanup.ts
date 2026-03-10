@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { MENTOR_NEXTJS_HOST } from './utils';
-import { checkAdminStatus } from './mentornextjs/utils';
-import { fillCreateMentorForm } from './mentornextjs/utils/create-mentor';
+import { checkAdminStatus } from './utils';
+import { fillCreateMentorForm } from './utils/create-mentor';
 
 test.describe('Delete Mentor Cleanup', () => {
   test.setTimeout(200000);

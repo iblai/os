@@ -11,24 +11,27 @@ const envFile =
 dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 export default createPlaywrightConfig({
+  testDir: '.',
   platforms: [
     { name: 'auth', dependencies: [], otherTestMatch: ['**auth/*/*.spec.ts'] },
-    { name: 'mentor', dependencies: ['setup'], otherTestMatch: ['*.common.spec.ts'] },
     {
-      name: 'mentornextjs',
+      name: 'mentor',
       dependencies: ['setup'],
-      otherTestMatch: ['**mentornextjs/*/*.spec.ts', '**mentornextjs/**/*.spec.ts'],
+      otherTestMatch: [
+        'tests/!(auth)/**/*.spec.ts',
+        '*.common.spec.ts',
+      ],
     },
   ],
   extraProjects: [
     {
-      name: 'mentornextjs-cleanup',
-      dependencies: ['mentornextjs'],
+      name: 'mentor-cleanup',
+      dependencies: ['mentor'],
       testMatch: ['**cleanup.mentornextjs.cleanup.ts'],
     },
     {
-      name: 'mentornextjs-public-views',
-      dependencies: ['mentornextjs'],
+      name: 'mentor-public-views',
+      dependencies: ['mentor'],
       testMatch: ['**mentor-viewable-by-anyone.spec.ts'],
     },
   ],
