@@ -31,4 +31,5 @@ jobs:
       source_repo: ${{ github.repository }}
       source_ref: ${{ github.ref }}
       version: ${{ needs.prepare.outputs.version }}
+      next_image_patterns: ${{ vars.NEXT_IMAGE_PATTERNS }}
     secrets: inherit
