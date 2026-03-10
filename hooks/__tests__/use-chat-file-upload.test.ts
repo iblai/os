@@ -23,11 +23,11 @@ vi.mock('@/lib/hooks', () => ({
   useAppSelector: mocked.useAppSelector,
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetFileUploadUrlMutation: () => [mocked.getFileUploadUrl],
 }));
 
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: mocked.selectSessionId,
   addFiles: mocked.addFiles,
   updateFileProgress: mocked.updateFileProgress,
@@ -35,9 +35,6 @@ vi.mock('@web-utils/features', () => ({
   updateFileUrl: mocked.updateFileUrl,
   updateFileMetadata: mocked.updateFileMetadata,
   updateFileRetryCount: mocked.updateFileRetryCount,
-}));
-
-vi.mock('@web-utils/services', () => ({
   uploadToS3: mocked.uploadToS3,
 }));
 

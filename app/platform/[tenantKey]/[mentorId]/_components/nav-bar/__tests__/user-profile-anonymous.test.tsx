@@ -74,23 +74,6 @@ vi.mock('@/lib/hooks', () => ({
   },
 }));
 
-// Mock subscription hook
-vi.mock('@web-utils/hooks', () => ({
-  useSubscriptionHandlerV2: () => ({
-    getBillingURL: mockGetBillingURL,
-    getTopUpURL: mockGetTopUpURL,
-    getUserSubscriptionPackage: mockGetUserSubscriptionPackage,
-    getUserActiveAppLegacy: mockGetUserActiveAppLegacy,
-    bannerButtonTriggerCallback: mockBannerButtonTriggerCallback,
-  }),
-  SUBSCRIPTION_V2_TRIGGERS: {
-    PRICING_MODAL: 'TRIGGER_PRICING_MODAL',
-    TOP_UP_CREDIT: 'TRIGGER_TOP_UP_CREDIT',
-    CONTACT_ADMIN: 'TRIGGER_CONTACT_ADMIN',
-    BILLING_PAGE: 'TRIGGER_BILLING_PAGE',
-  },
-}));
-
 // Mock config
 vi.mock('@/lib/config', () => ({
   config: {
@@ -124,13 +107,26 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
-// Mock tenant metadata
+// Mock tenant metadata and subscription hooks
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
     metadata: { help_center_url: 'https://help.example.com', show_help: true },
     metadataLoaded: true,
   }),
   Tenant: {},
+  useSubscriptionHandlerV2: () => ({
+    getBillingURL: mockGetBillingURL,
+    getTopUpURL: mockGetTopUpURL,
+    getUserSubscriptionPackage: mockGetUserSubscriptionPackage,
+    getUserActiveAppLegacy: mockGetUserActiveAppLegacy,
+    bannerButtonTriggerCallback: mockBannerButtonTriggerCallback,
+  }),
+  SUBSCRIPTION_V2_TRIGGERS: {
+    PRICING_MODAL: 'TRIGGER_PRICING_MODAL',
+    TOP_UP_CREDIT: 'TRIGGER_TOP_UP_CREDIT',
+    CONTACT_ADMIN: 'TRIGGER_CONTACT_ADMIN',
+    BILLING_PAGE: 'TRIGGER_BILLING_PAGE',
+  },
 }));
 
 // Mock @iblai/iblai-api to provide the enum

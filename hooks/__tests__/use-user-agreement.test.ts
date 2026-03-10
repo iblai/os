@@ -11,6 +11,7 @@ vi.mock('../use-user', () => ({
 const mockUseParams = vi.fn();
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock('sonner', () => ({
@@ -30,7 +31,7 @@ vi.mock('@/constants/disclaimer', () => ({
 // Mock data-layer hooks
 const mockUseGetDisclaimersQuery = vi.fn();
 const mockAgreeToDisclaimer = vi.fn();
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetDisclaimersQuery: (...args: unknown[]) => mockUseGetDisclaimersQuery(...args),
   useAgreeToDisclaimerMutation: () => [mockAgreeToDisclaimer],
 }));

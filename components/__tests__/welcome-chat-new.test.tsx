@@ -50,7 +50,7 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-vi.mock('@data-layer/features/projects/api-slice', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetUserProjectDetailsQuery: (args: any, options: any) =>
     mockUseGetUserProjectDetailsQuery(args, options),
   projectsApiSlice: {

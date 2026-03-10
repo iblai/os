@@ -63,7 +63,7 @@ vi.mock('@/lib/eventBus', () => ({
   RemoteEvents: {},
 }));
 
-vi.mock('@web-utils/providers', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantContext: () => ({
     setDetermineUserPath: vi.fn(),
     determineUserPath: false,

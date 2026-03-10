@@ -44,7 +44,7 @@ vi.mock('@/hooks/use-user', () => ({
  * Mock data-layer queries and mutations
  * Handles API calls for retrain schedule operations
  */
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetTrainingDocumentRetrainScheduleQuery: () => mockQueryResult,
   useCreateTrainingDocumentRetrainScheduleMutation: () => [
     mockSetRetrainInterval,

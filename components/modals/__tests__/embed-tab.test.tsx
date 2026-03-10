@@ -146,7 +146,7 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 // Mock data-layer
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
   useGetMentorSettingsQuery: () => mockGetMentorSettingsQuery(),
   useGetShareableLinkQuery: () => mockGetShareableLinkQuery(),
@@ -236,7 +236,7 @@ vi.mock('@/components/ui/use-toast', () => ({
 }));
 
 // Mock tenant metadata
-vi.mock('@web-utils/hooks/tenant-metadata/use-tenant-metadata', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
     metadata: { support_email: 'support@test.com' },
   }),

@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 
 // Mock data-layer
 const mockLoadGuidedPrompts = vi.fn();
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetGuidedPromptsQuery: () => [mockLoadGuidedPrompts],
 }));
 
