@@ -1,3 +1,7 @@
+## [0.35.11]
+
+- bump Update ibai-js version to 1.0.22
+
 ## [0.35.10]
 
 - fix: analytics and billing issues fixed
