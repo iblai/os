@@ -14,7 +14,7 @@
 set -e
 
 BROWSERS="${BROWSERS:-chrome}"
-PLATFORM="${PLATFORM:-mentornextjs}"
+PLATFORM="${PLATFORM:-mentor}"
 TEST_FILES="${TEST_FILES:-}"
 WORKERS="${WORKERS:-1}"
 S3_BUCKET="${S3_BUCKET:-}"
@@ -28,9 +28,6 @@ REPORT_DIR="/app/playwright-report"
 
 # Determine app name for S3 paths
 APP_NAME="$PLATFORM"
-if [ "$PLATFORM" = "mentornextjs" ]; then
-  APP_NAME="mentor"
-fi
 
 echo "================================================================================"
 echo "Playwright Test Runner"
