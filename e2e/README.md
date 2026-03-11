@@ -196,3 +196,4 @@ From `tests/utils.ts`:
 - Use `checkAdminStatus(page)` to conditionally run admin-only test steps
 - Place feature-specific helpers in a `helpers.ts` file within the feature directory
 - Auth state is saved per-browser in `playwright/.auth/` — tests in the `mentor` platform reuse this state
+- Traces are automatically captured on failure (`retain-on-failure`) and uploaded to S3 with Trace Viewer links in the CI summary
