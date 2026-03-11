@@ -638,8 +638,6 @@ jobs:
     needs: [gate, acquire-domain, lint, typecheck, coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
     if: always()
     runs-on: ubuntu-22.04
-    permissions:
-      statuses: write
     env:
       CLOUDFRONT_DOMAIN: ${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}
     steps:
