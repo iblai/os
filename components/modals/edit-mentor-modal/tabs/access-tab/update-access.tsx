@@ -402,13 +402,6 @@ export function RoleAccessPanel({ policy, onAccessUpdated }: RoleAccessPanelProp
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-gray-900">Add users</h4>
-        <p className="text-xs text-gray-600">
-          {hasUsersPermission
-            ? 'Search by name, username, or email to grant this role to additional users.'
-            : 'Enter a username or email to grant this role to additional users.'}
-        </p>
-
         <div className="mt-3 space-y-1.5">
           {hasUsersPermission ? (
             <>
