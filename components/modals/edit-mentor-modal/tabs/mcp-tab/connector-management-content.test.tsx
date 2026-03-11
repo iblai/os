@@ -174,11 +174,8 @@ vi.mock('@/components/ui/dialog', () => ({
       </div>
     );
   },
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
-}));
-
-vi.mock('@iblai/iblai-js/web-containers/components/ui/dialog', () => ({
   DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
 }));
 
 vi.mock('@/components/spinner', () => ({

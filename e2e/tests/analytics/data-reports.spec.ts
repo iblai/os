@@ -15,7 +15,17 @@ import {
   shouldVerifyCSVEditorDialogAccessibility,
 } from '../shared';
 import { navigateToMentorApp } from '../profile/helpers';
-import { safeWaitForURL } from '@iblai/iblai-js/playwright';
+import {
+  safeWaitForURL,
+  navigateToReportDownload,
+  verifyPreparingPhase,
+  verifyDonePhase,
+  verifyErrorPhase,
+  clickBackHome,
+  clickDownloadAgain,
+  waitForReportDownload,
+} from '@iblai/iblai-js/playwright';
+import { MENTOR_NEXTJS_HOST } from '../utils';
 
 test.skip();
 
@@ -275,5 +285,58 @@ test.describe.skip('Data Reports Feature', () => {
 
       await shouldDisableOtherDownloadButtonsWhileGeneratingReport(page);
     });
+  });
+});
+
+const REPORT_DOWNLOAD_OPTIONS = {
+  baseUrl: MENTOR_NEXTJS_HOST,
+  platformKey: 'test-platform',
+  reportName: 'user-report',
+};
+
+test.describe('Analytics Report Download Page', () => {
+  test('should navigate to report download page and show preparing phase', async ({
+    page,
+  }) => {
+    await navigateToReportDownload(page, REPORT_DOWNLOAD_OPTIONS);
+    await verifyPreparingPhase(page);
+  });
+
+  test('should complete full report download flow', async ({ page }) => {
+    await waitForReportDownload(page, {
+      ...REPORT_DOWNLOAD_OPTIONS,
+      timeout: 120_000,
+    });
+  });
+
+  test('should allow downloading report again after completion', async ({
+    page,
+  }) => {
+    await waitForReportDownload(page, {
+      ...REPORT_DOWNLOAD_OPTIONS,
+      timeout: 120_000,
+    });
+    await clickDownloadAgain(page);
+  });
+
+  test('should navigate back home when clicking Back Home button', async ({
+    page,
+  }) => {
+    await navigateToReportDownload(page, REPORT_DOWNLOAD_OPTIONS);
+    await verifyPreparingPhase(page);
+    await clickBackHome(page);
+
+    // Verify navigated to home
+    await safeWaitForURL(page, (url) => url.pathname === '/', {
+      timeout: 30_000,
+    });
+  });
+
+  test('should show error phase for invalid report', async ({ page }) => {
+    await navigateToReportDownload(page, {
+      ...REPORT_DOWNLOAD_OPTIONS,
+      reportName: 'nonexistent-report',
+    });
+    await verifyErrorPhase(page, { timeout: 120_000 });
   });
 });

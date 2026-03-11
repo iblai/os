@@ -76,11 +76,12 @@ vi.mock('@/features/navigation/slice', () => ({
   selectModalMentorId: mocked.selectModalMentorId,
 }));
 
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   chatActions: {
     setShouldStartNewChat: mocked.setShouldStartNewChat,
   },
   clearFiles: mocked.clearFiles,
+  useTenantContext: mocked.useTenantContext,
 }));
 
 vi.mock('@/lib/constants', () => ({
@@ -148,10 +149,6 @@ vi.mock('@iblai/iblai-api', () => ({
 
 vi.mock('../user-user-actions', () => ({
   useShowFreeTrialDialog: mocked.useShowFreeTrialDialog,
-}));
-
-vi.mock('@web-utils/providers', () => ({
-  useTenantContext: mocked.useTenantContext,
 }));
 
 vi.mock('../use-local-storage', () => ({

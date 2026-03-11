@@ -182,7 +182,7 @@ vi.mock('@/lib/eventBus', () => ({
 
 const mockClearFiles = vi.fn((_arg?: unknown) => ({ type: 'clearFiles' }));
 const mockSetShouldStartNewChat = vi.fn((_arg?: unknown) => ({ type: 'setShouldStartNewChat' }));
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: { name: 'selectSessionId' },
   clearFiles: (arg?: unknown) => mockClearFiles(arg),
   chatActions: {

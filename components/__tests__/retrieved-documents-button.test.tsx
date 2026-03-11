@@ -28,11 +28,11 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'test-user',
 }));
 
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectStreaming: vi.fn(),
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetVectorDocumentsQuery: () => ({
     data: mockVectorDocuments,
     refetch: mockRefetch,

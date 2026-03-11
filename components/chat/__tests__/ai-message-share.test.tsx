@@ -17,7 +17,7 @@ vi.mock('@/hooks/use-copy-to-clipboard', () => ({
   }),
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useUpdateChatSessionSharedMutation: () => [mockUpdateChatSession, { isLoading: false }],
 }));
 

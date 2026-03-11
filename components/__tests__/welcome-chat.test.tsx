@@ -44,7 +44,7 @@ vi.mock('@/hooks/use-welcome-message', () => ({
   default: (args: any) => mockUseWelcome(args),
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetGuidedPromptsQuery: (args: any, options: any) =>
     mockUseGetGuidedPromptsQuery(args, options),
   useGetPromptsSearchQuery: (args: any, options: any) =>

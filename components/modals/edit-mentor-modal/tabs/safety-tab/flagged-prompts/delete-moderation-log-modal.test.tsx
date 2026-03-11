@@ -23,7 +23,7 @@ vi.mock('@/hooks/use-user', () => ({
 
 const mockDeleteModerationLogLoading = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useDeleteModerationLogMutation: () => [
     mockDeleteModerationLog,
     { isLoading: mockDeleteModerationLogLoading() },

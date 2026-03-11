@@ -188,6 +188,15 @@ jobs:
           }]
           CEOF
 
+          # Image pull secrets for private OCIR registry (values must be base64 encoded)
+          OCIR_REGISTRY="iad.ocir.io"
+          OCIR_NAMESPACE="idcwyla5j5cr"
+          OCIR_USER_B64=$(echo -n "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}" | base64 -w0)
+          OCIR_PASS_B64=$(echo -n "${{ secrets.OCIR_AUTH_TOKEN }}" | base64 -w0)
+          cat > "$TEMP_DIR/image-pull-secrets.json" <<IPSEOF
+          [{"registryEndpoint": "${OCIR_REGISTRY}", "secretType": "BASIC", "username": "${OCIR_USER_B64}", "password": "${OCIR_PASS_B64}"}]
+          IPSEOF
+
           echo "Launching container instance..."
           RESULT=$(oci container-instances container-instance create \
             --compartment-id "${{ secrets.OCI_COMPARTMENT_OCID }}" \
@@ -196,6 +205,7 @@ jobs:
             --shape-config '{"ocpus":4.0,"memoryInGBs":16.0}' \
             --vnics '[{"subnetId":"${{ secrets.OCI_SUBNET_OCID }}"}]' \
             --containers "file://$TEMP_DIR/containers.json" \
+            --image-pull-secrets "file://$TEMP_DIR/image-pull-secrets.json" \
             --container-restart-policy "NEVER" \
             --display-name "$DISPLAY_NAME" 2>&1) && EXIT_CODE=0 || EXIT_CODE=$?
 
@@ -303,6 +313,20 @@ jobs:
           echo "--- Log URL ---"
           echo "https://${CLOUDFRONT}/runs/${RUN_ID}/mentor/logs/test-run.log"
 
+          echo ""
+          echo "--- Trace files ---"
+          TRACE_PREFIX="runs/$RUN_ID/mentor/traces/"
+          TRACE_FILES=$(aws s3 ls "s3://$S3_BUCKET/${TRACE_PREFIX}" --region "$AWS_REGION" 2>/dev/null | awk '{print $4}' | grep -E '\.zip$' || echo "")
+          if [ -n "$TRACE_FILES" ]; then
+            for trace_file in $TRACE_FILES; do
+              TRACE_URL="https://${CLOUDFRONT}/${TRACE_PREFIX}${trace_file}"
+              echo "Trace: $trace_file"
+              echo "  View: https://trace.playwright.dev/?trace=${TRACE_URL}"
+            done
+          else
+            echo "(no trace files found)"
+          fi
+
       - name: Fetch OCI container logs
         if: always()
         run: |
@@ -319,7 +343,11 @@ jobs:
           echo ""
 
           oci container-instances container retrieve-logs \
-            --container-id "$CONTAINER_ID" 2>&1 | head -500 || echo "(could not retrieve container logs)"
+            --container-id "$CONTAINER_ID" \
+            --file /tmp/oci-container-logs.txt 2>&1 || echo "(could not retrieve container logs)"
+          if [ -f /tmp/oci-container-logs.txt ]; then
+            head -500 /tmp/oci-container-logs.txt
+          fi
 
       - name: Cleanup
         if: always()
@@ -339,6 +367,11 @@ jobs:
           RUN_ID="${{ steps.launch.outputs.run-id }}"
           CLOUDFRONT="${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}"
 
+          export AWS_ACCESS_KEY_ID="${{ secrets.S3_LOGS_ACCESS_KEY_ID }}"
+          export AWS_SECRET_ACCESS_KEY="${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}"
+          S3_BUCKET="${{ secrets.S3_LOGS_BUCKET }}"
+          AWS_REGION="${{ vars.AWS_REGION || 'us-east-1' }}"
+
           {
             echo "## Debug E2E Test Results"
             echo ""
@@ -347,8 +380,26 @@ jobs:
             echo "**Image:** ${{ steps.image.outputs.image }}"
             echo "**Exit Code:** ${EXIT_CODE:-unknown}"
             echo ""
-            echo "**Log:** https://${CLOUDFRONT}/runs/${RUN_ID}/mentor/logs/test-run.log"
+            echo "**Log:** [test-run.log](https://${CLOUDFRONT}/runs/${RUN_ID}/mentor/logs/test-run.log)"
           } >> $GITHUB_STEP_SUMMARY
+
+          # List trace files from S3 and add to summary
+          TRACE_PREFIX="runs/${RUN_ID}/mentor/traces/"
+          TRACE_FILES=$(aws s3 ls "s3://$S3_BUCKET/${TRACE_PREFIX}" --region "$AWS_REGION" 2>/dev/null | awk '{print $4}' | grep -E '\.zip$' || echo "")
+          if [ -n "$TRACE_FILES" ]; then
+            {
+              echo ""
+              echo "### Trace Viewer Links (Failed Tests)"
+              echo ""
+              echo "Click to open in [Playwright Trace Viewer](https://trace.playwright.dev/):"
+              echo ""
+            } >> $GITHUB_STEP_SUMMARY
+            for trace_file in $TRACE_FILES; do
+              TRACE_URL="https://${CLOUDFRONT}/${TRACE_PREFIX}${trace_file}"
+              VIEWER_URL="https://trace.playwright.dev/?trace=${TRACE_URL}"
+              echo "- [\`${trace_file}\`](${VIEWER_URL})" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
 
           if [ "$EXIT_CODE" != "0" ] && [ "$EXIT_CODE" != "null" ]; then
             echo ""

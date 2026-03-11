@@ -9,7 +9,7 @@ import type { Message } from '@iblai/iblai-js/web-utils';
 let mockShowingSharedChat = false;
 
 vi.mock('@iblai/iblai-js/web-utils', async () => {
-  const actual = await vi.importActual('@iblai/web-utils');
+  const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
     selectShowingSharedChat: () => mockShowingSharedChat,

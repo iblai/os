@@ -57,7 +57,7 @@ const mockUseGetPersonnalizedMentorsQuery = vi.fn();
 const mockStarMentor = vi.fn();
 const mockUnstarMentor = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
   useGetPersonnalizedMentorsQuery: (...args: unknown[]) =>
     mockUseGetPersonnalizedMentorsQuery(...args),

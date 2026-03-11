@@ -10,7 +10,7 @@ import { mockStarredMentor, mockMentorsListWithPagination, mockEmptyMentorsList 
 // Mock the data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
 }));
 

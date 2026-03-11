@@ -1,3 +1,15 @@
+## [0.35.14]
+
+- trigger-docker-build.yml: Pass next_image_patterns: ${{ vars.NEXT_IMAGE_PATTERNS }} as input to the reusable workflow
+- next.config.ts: Treat empty string as unset so defaults always kick in as a safety net
+
+## [0.35.13]
+
+- fix: chat history > source payload passed to reports download hook
+- feat: report download page calling AnalyticsReportDownload implemented
+- feat: report download page calling AnalyticsReportDownload > playwright tests coverage 
+- iblai-js bump version to 1.0.24
+
 ## [0.35.12]
 
 - bump iblai-js version to 1.0.23
