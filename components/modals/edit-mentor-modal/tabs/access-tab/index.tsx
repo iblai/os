@@ -137,7 +137,7 @@ export function AccessTab() {
       }
     };
     loadPlatformPermissions();
-  }, [dispatch, getRbacPermissions, tenantKey]);
+  }, []);
 
   const isLoading = isMentorSettingsLoading || isAccessLoading || isAccessFetching;
   const canManageAccess = Boolean(mentorDbId && platformKey);
