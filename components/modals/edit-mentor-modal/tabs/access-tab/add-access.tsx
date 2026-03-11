@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   usePlatformUsersQuery,
   useUpdateRbacMentorAccessMutation,
+  useGetRbacPermissionsMutation,
   PlatformUsersListResponse,
   isPoliciesResponse,
   useGetMentorSettingsQuery,
@@ -38,6 +39,9 @@ import { formatRoleName, getErrorMessage } from './shared';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { selectRbacPermissions, updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 
 type AddAccessDialogProps = {
   availableRoles: DefaultMentorRole[];
@@ -52,14 +56,21 @@ export function AddAccessDialog({
 }: AddAccessDialogProps) {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
+  const dispatch = useAppDispatch();
+  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const hasUsersPermission = checkRbacPermission(rbacPermissions, `/users/#list`);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<DefaultMentorRole | ''>('');
   const [selectedUsers, setSelectedUsers] = useState<PlatformUserOption[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserSearchResults, setShowUserSearchResults] = useState(false);
   const [debouncedUserSearchTerm] = useDebounce(userSearchTerm, 300);
+  const [manualInputType, setManualInputType] = useState<'username' | 'email'>('email');
+  const [manualInputValue, setManualInputValue] = useState('');
+  const [manualEntries, setManualEntries] = useState<string[]>([]);
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
+  const [getRbacPermissions] = useGetRbacPermissionsMutation();
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
@@ -87,6 +98,9 @@ export function AddAccessDialog({
         setSelectedUsers([]);
         setUserSearchTerm('');
         setShowUserSearchResults(false);
+        setManualInputType('email');
+        setManualInputValue('');
+        setManualEntries([]);
       }
     },
     [setIsCreateDialogOpen],
@@ -98,6 +112,9 @@ export function AddAccessDialog({
     setSelectedUsers([]);
     setUserSearchTerm('');
     setShowUserSearchResults(false);
+    setManualInputType('email');
+    setManualInputValue('');
+    setManualEntries([]);
   }, []);
 
   const shouldFetchCreationUsers = Boolean(
@@ -212,12 +229,28 @@ export function AddAccessDialog({
     }
 
     try {
+      // Also stage any remaining input
+      const remaining = manualInputValue.trim();
+      const allEntries = remaining && !manualEntries.includes(remaining)
+        ? [...manualEntries, remaining]
+        : [...manualEntries];
+
+      const usersPayload = hasUsersPermission
+        ? selectedUsers.length > 0
+          ? { users_to_add: selectedUsers.map((user) => user.id) }
+          : {}
+        : allEntries.length > 0
+          ? manualInputType === 'email'
+            ? { emails_to_add: allEntries }
+            : { usernames_to_add: allEntries }
+          : {};
+
       await createMentorAccess({
         requestBody: {
           platform_key: platformKey,
           mentor_id: mentorDbId,
           role: selectedRole,
-          ...(selectedUsers.length > 0 && { users_to_add: selectedUsers.map((user) => user.id) }),
+          ...usersPayload,
         },
       } as unknown as { requestBody: MentorPolicy }).unwrap();
 
@@ -226,6 +259,9 @@ export function AddAccessDialog({
       setSelectedUsers([]);
       setUserSearchTerm('');
       setShowUserSearchResults(false);
+      setManualInputType('email');
+      setManualInputValue('');
+      setManualEntries([]);
       setIsCreateDialogOpen(false);
       await onAccessCreated();
     } catch (error) {
@@ -234,6 +270,10 @@ export function AddAccessDialog({
   }, [
     availableRoles,
     createMentorAccess,
+    hasUsersPermission,
+    manualEntries,
+    manualInputType,
+    manualInputValue,
     mentorDbId,
     onAccessCreated,
     platformKey,
@@ -252,6 +292,25 @@ export function AddAccessDialog({
       setIsCreateDialogOpen(false);
     }
   }, [availableRoles]);
+
+  // Fetch and dispatch RBAC permissions for platform users resource on load
+  useEffect(() => {
+    if (!tenantKey) return;
+    const loadPlatformPermissions = async () => {
+      try {
+        const result = await getRbacPermissions({
+          requestBody: {
+            platform_key: tenantKey,
+            resources: [`/users/`],
+          },
+        }).unwrap();
+        dispatch(updateRbacPermissions({ ...result }));
+      } catch {
+        // silently fail — permission check will default to no access
+      }
+    };
+    loadPlatformPermissions();
+  }, [dispatch, getRbacPermissions, tenantKey]);
 
   return (
     <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
@@ -302,7 +361,7 @@ export function AddAccessDialog({
                     key={user.id}
                     className="group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm"
                   >
-                    <span className="font-medium">{user.name || user.email}</span>
+                    <span className="font-medium">{user.email || user.name}</span>
                     <Button
                       type="button"
                       size="icon"
@@ -311,7 +370,7 @@ export function AddAccessDialog({
                       onClick={() => handleRemoveSelectedUser(user.id)}
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span className="sr-only">Remove {user.name || user.email}</span>
+                      <span className="sr-only">Remove {user.email || user.name}</span>
                     </Button>
                   </div>
                 ))}
@@ -324,60 +383,140 @@ export function AddAccessDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="create-user-search">Add users</Label>
-            <div className="relative">
-              <Input
-                id="create-user-search"
-                value={userSearchTerm}
-                onChange={handleUserSearchChange}
-                onFocus={handleUserSearchFocus}
-                onBlur={handleUserSearchBlur}
-                placeholder="Search by name, username, or email"
-                autoComplete="off"
-                aria-autocomplete="list"
-                aria-expanded={showUserSearchResults}
-              />
-              {showUserSearchResults && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                  {userSearchTerm.trim().length < 2 ? (
-                    <div className="px-3 py-2 text-sm text-gray-600">
-                      Type at least two characters to search.
+            {hasUsersPermission ? (
+              <>
+                <Label htmlFor="create-user-search">Add users</Label>
+                <div className="relative">
+                  <Input
+                    id="create-user-search"
+                    value={userSearchTerm}
+                    onChange={handleUserSearchChange}
+                    onFocus={handleUserSearchFocus}
+                    onBlur={handleUserSearchBlur}
+                    placeholder="Search by name, username, or email"
+                    autoComplete="off"
+                    aria-autocomplete="list"
+                    aria-expanded={showUserSearchResults}
+                  />
+                  {showUserSearchResults && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                      {userSearchTerm.trim().length < 2 ? (
+                        <div className="px-3 py-2 text-sm text-gray-600">
+                          Type at least two characters to search.
+                        </div>
+                      ) : isLoadingCreationUsers || isFetchingCreationUsers ? (
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          Searching users…
+                        </div>
+                      ) : creationAvailableUsers.length > 0 ? (
+                        creationAvailableUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className="flex w-full flex-col items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handleAddUserSelection(user)}
+                          >
+                            <span className="text-sm font-medium text-gray-900">
+                              {user.name || user.email}
+                            </span>
+                            {user.name && (
+                              <span className="text-xs text-gray-600">
+                                {user.username}
+                                {user.username && user.email ? ' • ' : ''}
+                                {user.email}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-600">No matching users found.</div>
+                      )}
                     </div>
-                  ) : isLoadingCreationUsers || isFetchingCreationUsers ? (
-                    <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      Searching users…
-                    </div>
-                  ) : creationAvailableUsers.length > 0 ? (
-                    creationAvailableUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        className="flex w-full flex-col items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => handleAddUserSelection(user)}
-                      >
-                        <span className="text-sm font-medium text-gray-900">
-                          {user.name || user.email}
-                        </span>
-                        {user.name && (
-                          <span className="text-xs text-gray-600">
-                            {user.username}
-                            {user.username && user.email ? ' • ' : ''}
-                            {user.email}
-                          </span>
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-sm text-gray-600">No matching users found.</div>
                   )}
                 </div>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              Type at least two characters to search and assign users to this role.
-            </p>
+                <p className="text-xs text-gray-500">
+                  Type at least two characters to search and assign users to this role.
+                </p>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="create-manual-user-input">Add by</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={manualInputType}
+                      onValueChange={(value) => setManualInputType(value as 'username' | 'email')}
+                    >
+                      <SelectTrigger className="w-[130px]" aria-label="Select input type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="username">Username</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="create-manual-user-input"
+                      value={manualInputValue}
+                      onChange={(e) => setManualInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const value = manualInputValue.trim();
+                          if (!value) return;
+                          setManualEntries((prev) => (prev.includes(value) ? prev : [...prev, value]));
+                          setManualInputValue('');
+                        }
+                      }}
+                      placeholder={manualInputType === 'email' ? 'user@example.com' : 'username'}
+                      autoComplete="off"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const value = manualInputValue.trim();
+                        if (!value) return;
+                        setManualEntries((prev) => (prev.includes(value) ? prev : [...prev, value]));
+                        setManualInputValue('');
+                      }}
+                      disabled={!manualInputValue.trim()}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="sr-only">Add entry</span>
+                    </Button>
+                  </div>
+                  {manualEntries.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {manualEntries.map((entry) => (
+                        <div
+                          key={entry}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm"
+                        >
+                          <span>{entry}</span>
+                          <button
+                            type="button"
+                            onClick={() => setManualEntries((prev) => prev.filter((e) => e !== entry))}
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            <span className="sr-only">Remove {entry}</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Press Enter or click + to stage {manualInputType}s, then click Create to assign them.
+                </p>
+              </>
+            )}
           </div>
         </div>
         <DialogFooter className="gap-2">

@@ -40,11 +40,17 @@ export const getErrorMessage = (error: unknown, fallback = 'Something went wrong
   if (!error) return fallback;
   if (typeof error === 'string') return error;
   if (error && typeof error === 'object') {
-    const maybeError = error as { data?: unknown; error?: unknown; message?: string };
+    const maybeError = error as { data?: unknown; error?: unknown; message?: string;};
     if (maybeError?.data && typeof maybeError.data === 'object') {
       const data = maybeError.data as Record<string, unknown>;
       if (typeof data.detail === 'string') return data.detail;
       if (typeof data.message === 'string') return data.message;
+      if (data.emails_to_add && Array.isArray(data.emails_to_add)) {
+        return data.emails_to_add.join(', ');
+      }
+      if (data.usernames_to_add && Array.isArray(data.usernames_to_add)) {
+        return data.usernames_to_add.join(', ');
+      }
     }
     if (typeof maybeError.message === 'string' && maybeError.message.trim().length > 0) {
       return maybeError.message;
