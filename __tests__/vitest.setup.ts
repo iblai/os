@@ -48,6 +48,22 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
+// Mock pointer capture methods required by Radix UI in jsdom
+if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (typeof Element.prototype.setPointerCapture === 'undefined') {
+  Element.prototype.setPointerCapture = () => {};
+}
+if (typeof Element.prototype.releasePointerCapture === 'undefined') {
+  Element.prototype.releasePointerCapture = () => {};
+}
+
+// Mock scrollIntoView
+if (typeof Element.prototype.scrollIntoView === 'undefined') {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Mock ResizeObserver
 if (typeof global.ResizeObserver === 'undefined') {
   global.ResizeObserver = class ResizeObserver {
