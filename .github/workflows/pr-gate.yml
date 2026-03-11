@@ -20,16 +20,16 @@ jobs:
             const sha = context.payload.pull_request.head.sha;
 
             if (!labels.includes('run-tests')) {
-              // No validation required — allow merge
+              // No label — block merge until validation is triggered
               await github.rest.repos.createCommitStatus({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 sha,
-                state: 'success',
+                state: 'failure',
                 context: 'PR Validation',
-                description: 'Tests not required (add run-tests label to trigger)',
+                description: 'Add the run-tests label to trigger validation',
               });
-              core.info('No run-tests label — gate passes');
+              core.info('No run-tests label — gate blocks merge');
             } else {
               // Label present — block merge until validation workflow completes
               await github.rest.repos.createCommitStatus({
