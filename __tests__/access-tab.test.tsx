@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,8 @@ const mockUseUsername = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUseGetRbacMentorAccessListQuery = vi.fn();
+const mockGetRbacPermissions = vi.fn();
+const mockDispatch = vi.fn();
 const renderedAddAccessProps: Array<Record<string, unknown>> = [];
 const renderedRoleAccessProps: Array<Record<string, unknown>> = [];
 
@@ -30,6 +32,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
   useGetRbacMentorAccessListQuery: (...args: unknown[]) =>
     mockUseGetRbacMentorAccessListQuery(...args),
+  useGetRbacPermissionsMutation: () => [mockGetRbacPermissions],
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => mockDispatch,
+}));
+
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  updateRbacPermissions: (payload: unknown) => ({ type: 'rbac/updateRbacPermissions', payload }),
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal/tabs/access-tab/add-access', () => ({
@@ -69,6 +80,7 @@ const createAccessQueryState = (overrides: Record<string, unknown> = {}) => ({
 
 describe('AccessTab', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-from-route' });
     mockUseUsername.mockReturnValue('mentor-user');
     mockGetMentorId.mockReturnValue('mentor-from-navigate');
@@ -79,10 +91,48 @@ describe('AccessTab', () => {
     });
 
     mockUseGetRbacMentorAccessListQuery.mockReturnValue(createAccessQueryState());
+    mockGetRbacPermissions.mockReturnValue({ unwrap: () => Promise.resolve({}) });
 
     renderedAddAccessProps.length = 0;
     renderedRoleAccessProps.length = 0;
   });
+
+  /* ---------- RBAC permission fetch on mount ---------- */
+
+  it('fetches RBAC permissions on mount with correct args', async () => {
+    render(<AccessTab />);
+
+    await waitFor(() => {
+      expect(mockGetRbacPermissions).toHaveBeenCalledWith({
+        requestBody: {
+          platform_key: 'tenant-1',
+          resources: ['/users/'],
+        },
+      });
+    });
+  });
+
+  it('dispatches updateRbacPermissions after successful fetch', async () => {
+    const permResult = { '/users/': { list: true } };
+    mockGetRbacPermissions.mockReturnValue({ unwrap: () => Promise.resolve(permResult) });
+
+    render(<AccessTab />);
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/updateRbacPermissions',
+        payload: { ...permResult },
+      });
+    });
+  });
+
+  it('does not fetch permissions when tenantKey is missing', () => {
+    mockUseParams.mockReturnValue({ tenantKey: undefined, mentorId: 'mentor-from-route' });
+    render(<AccessTab />);
+    expect(mockGetRbacPermissions).not.toHaveBeenCalled();
+  });
+
+  /* ---------- Loading / error / empty states ---------- */
 
   it('renders loading placeholders while queries are loading', () => {
     mockUseGetMentorSettingsQuery.mockReturnValue({

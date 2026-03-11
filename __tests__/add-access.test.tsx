@@ -13,8 +13,6 @@ const mockUseUsername = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUsePlatformUsersQuery = vi.fn();
 const mockUpdateRbacMentorAccess = vi.fn();
-const mockGetRbacPermissions = vi.fn();
-const mockDispatch = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockCheckRbacPermission = vi.fn();
 
@@ -30,18 +28,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
   usePlatformUsersQuery: (...args: unknown[]) => mockUsePlatformUsersQuery(...args),
   useUpdateRbacMentorAccessMutation: () => [mockUpdateRbacMentorAccess, { isLoading: false }],
-  useGetRbacPermissionsMutation: () => [mockGetRbacPermissions],
   isPoliciesResponse: () => false,
 }));
 
 vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => mockRbacPermissions(),
-  useAppDispatch: () => mockDispatch,
 }));
 
 vi.mock('@/features/rbac/rbac-slice', () => ({
   selectRbacPermissions: 'selectRbacPermissions',
-  updateRbacPermissions: (payload: unknown) => ({ type: 'rbac/updateRbacPermissions', payload }),
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
@@ -96,43 +91,7 @@ describe('AddAccessDialog', () => {
     });
     mockRbacPermissions.mockReturnValue({});
     mockCheckRbacPermission.mockReturnValue(true);
-    mockGetRbacPermissions.mockReturnValue({ unwrap: () => Promise.resolve({}) });
     mockUpdateRbacMentorAccess.mockReturnValue({ unwrap: () => Promise.resolve({}) });
-  });
-
-  /* ---------- RBAC permission fetch on mount ---------- */
-
-  it('fetches RBAC permissions on mount with correct args', async () => {
-    setup();
-
-    await waitFor(() => {
-      expect(mockGetRbacPermissions).toHaveBeenCalledWith({
-        requestBody: {
-          platform_key: 'test-tenant',
-          resources: ['/users/'],
-        },
-      });
-    });
-  });
-
-  it('dispatches updateRbacPermissions after successful fetch', async () => {
-    const permResult = { '/users/': { list: true } };
-    mockGetRbacPermissions.mockReturnValue({ unwrap: () => Promise.resolve(permResult) });
-
-    setup();
-
-    await waitFor(() => {
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'rbac/updateRbacPermissions',
-        payload: { ...permResult },
-      });
-    });
-  });
-
-  it('does not fetch permissions when tenantKey is missing', () => {
-    mockUseParams.mockReturnValue({ tenantKey: undefined, mentorId: 'test-mentor' });
-    setup();
-    expect(mockGetRbacPermissions).not.toHaveBeenCalled();
   });
 
   /* ---------- With permission: search mode ---------- */
