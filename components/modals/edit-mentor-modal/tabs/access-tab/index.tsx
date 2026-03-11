@@ -1,19 +1,22 @@
 'use client';
 
 import * as React from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Pencil, ShieldAlert, UserCog, Users } from 'lucide-react';
 
 import {
   useGetMentorSettingsQuery,
   useGetRbacMentorAccessListQuery,
+  useGetRbacPermissionsMutation,
   CustomRbacMentorAccessList,
 } from '@iblai/iblai-js/data-layer';
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useAppDispatch } from '@/lib/hooks';
+import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -113,6 +116,28 @@ export function AccessTab() {
   const handleRefetch = useCallback(async () => {
     await refetchAccess();
   }, [refetchAccess]);
+
+  const dispatch = useAppDispatch();
+  const [getRbacPermissions] = useGetRbacPermissionsMutation();
+
+  // Fetch and dispatch RBAC permissions for platform users resource on load
+  useEffect(() => {
+    if (!tenantKey) return;
+    const loadPlatformPermissions = async () => {
+      try {
+        const result = await getRbacPermissions({
+          requestBody: {
+            platform_key: tenantKey,
+            resources: [`/users/`],
+          },
+        }).unwrap();
+        dispatch(updateRbacPermissions({ ...result }));
+      } catch {
+        // silently fail — permission check will default to no access
+      }
+    };
+    loadPlatformPermissions();
+  }, [dispatch, getRbacPermissions, tenantKey]);
 
   const isLoading = isMentorSettingsLoading || isAccessLoading || isAccessFetching;
   const canManageAccess = Boolean(mentorDbId && platformKey);

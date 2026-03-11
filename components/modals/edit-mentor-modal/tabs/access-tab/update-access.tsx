@@ -7,7 +7,6 @@ import {
   useGetMentorSettingsQuery,
   usePlatformUsersQuery,
   useUpdateRbacMentorAccessMutation,
-  useGetRbacPermissionsMutation,
   PlatformUsersListResponse,
   isPoliciesResponse,
 } from '@iblai/iblai-js/data-layer';
@@ -16,8 +15,8 @@ import { useParams } from 'next/navigation';
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
-import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { selectRbacPermissions, updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppSelector } from '@/lib/hooks';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +40,6 @@ type RoleAccessPanelProps = {
 export function RoleAccessPanel({ policy, onAccessUpdated }: RoleAccessPanelProps) {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
-  const dispatch = useAppDispatch();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const hasUsersPermission = checkRbacPermission(rbacPermissions, `/users/#list`);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,7 +57,6 @@ export function RoleAccessPanel({ policy, onAccessUpdated }: RoleAccessPanelProp
   const listboxRef = useRef<HTMLDivElement>(null);
 
   const [updateMentorAccess] = useUpdateRbacMentorAccessMutation();
-  const [getRbacPermissions] = useGetRbacPermissionsMutation();
 
   const assignedUserIds = useMemo(
     () => new Set((policy.users ?? []).map((user) => user.id)),
@@ -137,25 +134,6 @@ export function RoleAccessPanel({ policy, onAccessUpdated }: RoleAccessPanelProp
       .filter((user): user is PlatformUserOption => user !== null)
       .filter((user) => !assignedUserIds.has(user.id));
   }, [assignedUserIds, usersData]);
-
-  // Fetch and dispatch RBAC permissions for platform users resource on load
-  useEffect(() => {
-    if (!tenantKey) return;
-    const loadPlatformPermissions = async () => {
-      try {
-        const result = await getRbacPermissions({
-          requestBody: {
-            platform_key: tenantKey,
-            resources: [`/users/`],
-          },
-        }).unwrap();
-        dispatch(updateRbacPermissions({ ...result }));
-      } catch {
-        // silently fail — permission check will default to no access
-      }
-    };
-    loadPlatformPermissions();
-  }, [dispatch, getRbacPermissions, tenantKey]);
 
   // Scroll highlighted option into view
   useEffect(() => {

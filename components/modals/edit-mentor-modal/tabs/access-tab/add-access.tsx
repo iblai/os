@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import {
   usePlatformUsersQuery,
   useUpdateRbacMentorAccessMutation,
-  useGetRbacPermissionsMutation,
   PlatformUsersListResponse,
   isPoliciesResponse,
   useGetMentorSettingsQuery,
@@ -39,8 +38,8 @@ import { formatRoleName, getErrorMessage } from './shared';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
-import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { selectRbacPermissions, updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppSelector } from '@/lib/hooks';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 
 type AddAccessDialogProps = {
@@ -56,7 +55,6 @@ export function AddAccessDialog({
 }: AddAccessDialogProps) {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
-  const dispatch = useAppDispatch();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const hasUsersPermission = checkRbacPermission(rbacPermissions, `/users/#list`);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -70,7 +68,6 @@ export function AddAccessDialog({
   const [manualEntries, setManualEntries] = useState<string[]>([]);
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
-  const [getRbacPermissions] = useGetRbacPermissionsMutation();
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
@@ -292,25 +289,6 @@ export function AddAccessDialog({
       setIsCreateDialogOpen(false);
     }
   }, [availableRoles]);
-
-  // Fetch and dispatch RBAC permissions for platform users resource on load
-  useEffect(() => {
-    if (!tenantKey) return;
-    const loadPlatformPermissions = async () => {
-      try {
-        const result = await getRbacPermissions({
-          requestBody: {
-            platform_key: tenantKey,
-            resources: [`/users/`],
-          },
-        }).unwrap();
-        dispatch(updateRbacPermissions({ ...result }));
-      } catch {
-        // silently fail — permission check will default to no access
-      }
-    };
-    loadPlatformPermissions();
-  }, [dispatch, getRbacPermissions, tenantKey]);
 
   return (
     <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
