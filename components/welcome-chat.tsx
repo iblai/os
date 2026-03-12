@@ -2,15 +2,13 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAxdToken } from '@/hooks/use-tokens';
-import useWelcome from '@/hooks/use-welcome-message';
-import { config } from '@/lib/config';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
 import { useGetGuidedPromptsQuery, useGetPromptsSearchQuery } from '@iblai/iblai-js/data-layer';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import Markdown from '@/components/markdown';
+import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 
 interface Props {
@@ -40,16 +38,6 @@ export function WelcomeChat({
   const axdToken = useAxdToken();
   const mentorSettings = useMentorSettings();
   const isSuggestedPrompts = mentorSettings?.data?.starterPrompts === 'suggested_prompt';
-
-  const { welcomeMessage } = useWelcome({
-    sessionId,
-    username: username ?? '', // defaults to empty string if no username is provided
-    tenantKey,
-    mentorUniqueId,
-    token: axdToken,
-    wsUrl: `${config.baseWsUrl()}/ws/langflow/`,
-    isNewSession,
-  });
 
   const { data: guidedPrompts } = useGetGuidedPromptsQuery(
     {
@@ -104,9 +92,16 @@ export function WelcomeChat({
           </Avatar>
           <div>
             <h1 className="text-xl font-bold text-gray-800">{mentorName}</h1>
-            <Markdown className="mt-1 text-[14px] text-gray-600">
-              {welcomeMessage || aiWelcomeMessage || ''}
-            </Markdown>
+            <WelcomeMessage
+              aiWelcomeMessage={aiWelcomeMessage}
+              sessionId={sessionId}
+              username={username ?? ''}
+              tenantKey={tenantKey}
+              mentorUniqueId={mentorUniqueId}
+              token={axdToken}
+              isNewSession={isNewSession ?? true}
+              className="mt-1 text-[14px] text-gray-600"
+            />
           </div>
         </div>
       )}
