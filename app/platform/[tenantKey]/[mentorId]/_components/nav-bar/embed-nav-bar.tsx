@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import {
   BadgeHelp,
@@ -70,6 +70,18 @@ export function EmbedNavBar({
       '*',
     );
   }
+
+  useEffect(() => {
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        notifyParentOnEmbedClose();
+      }
+    }
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, []);
 
   const helpItems = [
     ...(metadata?.show_help !== false
