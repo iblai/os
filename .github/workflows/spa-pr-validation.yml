@@ -16,7 +16,7 @@ jobs:
   # GATE: Detect what changed, decide what to build/test
   # ============================================================
   gate:
-    if: github.event.label.name == 'run-tests'
+    if: github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-22.04
     environment: iblai.app
     outputs:
