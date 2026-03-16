@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { FreeTrialDialog as IblFreeTrialDialog } from '@/components/free-trial-dialog';
-import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 import { useAppDispatch } from '@/lib/hooks';
 import { useAppSelector } from '@/lib/hooks';
+import { setOpenAppleRestrictionModal } from '@/features/subscription/subscription-slice';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
@@ -35,7 +35,6 @@ export const useShowFreeTrialDialog = (
   });
   const { bannerButtonTriggerCallback } = useSubscriptionHandlerV2(subscriptionFlow);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAppleRestrictionModalOpen, setIsAppleRestrictionModalOpen] = useState(false);
   const { isAppleDevice } = useOS();
   const FreeTrialDialog =
     options.modalComponent || (options.enableFallbackModal ? IblFreeTrialDialog : null);
@@ -54,7 +53,7 @@ export const useShowFreeTrialDialog = (
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
       if (isAppleDevice) {
-        setIsAppleRestrictionModalOpen(true);
+        dispatch(setOpenAppleRestrictionModal(true));
         return null;
       }
       const callback = bannerButtonTriggerCallback(
@@ -74,9 +73,6 @@ export const useShowFreeTrialDialog = (
     closeModal: () => setIsModalOpen(false),
     FreeTrialDialog,
     isNewlyUserOnPreFreeOrAdvertisingMode,
-    isAppleRestrictionModalOpen,
-    closeAppleRestrictionModal: () => setIsAppleRestrictionModalOpen(false),
-    AppleRestrictionModal,
   };
 };
 

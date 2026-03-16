@@ -4,14 +4,14 @@ import {
   setError402Detected,
   setPricingModalData,
   setOpenPricingModal,
+  setOpenAppleRestrictionModal,
 } from '@/features/subscription/subscription-slice';
 import { Error402MessageData } from '@iblai/iblai-js/web-utils';
 import { getUserEmail } from '@/features/utils';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
 import { useOS } from '../use-os';
-import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -20,7 +20,6 @@ export const use402ErrorCheck = () => {
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const { isAppleDevice } = useOS();
-  const [isAppleRestrictionModalOpen, setIsAppleRestrictionModalOpen] = useState(false);
 
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
@@ -36,7 +35,7 @@ export const use402ErrorCheck = () => {
 
       // Show Apple restriction modal for iOS/macOS users
       if (isAppleDevice) {
-        setIsAppleRestrictionModalOpen(true);
+        dispatch(setOpenAppleRestrictionModal(true));
         return;
       }
 
@@ -74,8 +73,5 @@ export const use402ErrorCheck = () => {
 
   return {
     handle402Error,
-    isAppleRestrictionModalOpen,
-    closeAppleRestrictionModal: () => setIsAppleRestrictionModalOpen(false),
-    AppleRestrictionModal,
   };
 };
