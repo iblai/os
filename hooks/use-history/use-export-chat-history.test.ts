@@ -115,6 +115,7 @@ describe('useExportChatHistory', () => {
           start_date: undefined,
           sentiment: undefined,
           topics: undefined,
+          source: 'http://localhost:3000',
         },
       });
     });
@@ -271,6 +272,7 @@ describe('useExportChatHistory', () => {
           end_date: '2024-12-31',
           sentiment: 'negative',
           topics: 'topic1,topic2,topic3',
+          source: 'http://localhost:3000',
         },
       });
     });
