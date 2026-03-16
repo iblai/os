@@ -5,7 +5,7 @@ import path from 'path';
  * Resolve a fixture file path from the shared testing_folder.
  */
 export function testFile(name: string): string {
-  return path.resolve(__dirname, '../../../../files/testing_folder', name);
+  return path.resolve(__dirname, '../../../files/testing_folder', name);
 }
 
 // ── Accepted files ──────────────────────────────────────────────────
