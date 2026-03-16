@@ -34,8 +34,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -66,7 +64,6 @@ jobs:
 
       - name: Install Tauri CLI
         run: |
-          # Prefer prebuilt if available; fall back to source build if not.
           cargo install cargo-binstall --locked
           try {
             cargo binstall tauri-cli --no-confirm
@@ -86,21 +83,91 @@ jobs:
           $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
           Set-Content -Path AppxManifest.xml -Value $manifest
 
-      - name: Locate built executable
-        working-directory: src-tauri
-        run: |
-          Write-Host "Searching for executables in target directory..."
-          Get-ChildItem -Path target -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
-            Where-Object { $_.DirectoryName -like "*release*" } |
-            ForEach-Object { Write-Host $_.FullName }
-
       - name: Build MSIX package (unsigned)
         working-directory: src-tauri
-        run: .\build-msix.ps1 -SkipTauriBuild
+        run: .\build-msix.ps1 -SkipTauriBuild -Architecture ${{ matrix.arch }}
 
       - name: Upload MSIX artifact (${{ matrix.arch }})
         uses: actions/upload-artifact@v4
         with:
           name: ibl-ai-os-msix-${{ matrix.arch }}
           path: src-tauri/msix-output/*.msix
+          if-no-files-found: error
+
+  bundle-msix:
+    name: Create MSIX Bundle
+    needs: build-msix
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Download x64 MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: ibl-ai-os-msix-x64
+          path: msix-packages
+
+      - name: Download arm64 MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: ibl-ai-os-msix-arm64
+          path: msix-packages
+
+      - name: List downloaded packages
+        run: Get-ChildItem -Path msix-packages -Recurse
+
+      - name: Locate MakeAppx.exe
+        id: sdk
+        run: |
+          $SdkRoot = "C:\Program Files (x86)\Windows Kits\10\bin"
+          $SdkVersions = Get-ChildItem -Path $SdkRoot -Directory |
+            Where-Object { $_.Name -match "^10\." } |
+            Sort-Object Name -Descending
+          if ($SdkVersions.Count -eq 0) {
+            Write-Error "Windows 10 SDK not found"
+            exit 1
+          }
+          $MakeAppx = Join-Path $SdkVersions[0].FullName "x64\makeappx.exe"
+          if (-not (Test-Path $MakeAppx)) {
+            Write-Error "makeappx.exe not found at $MakeAppx"
+            exit 1
+          }
+          Write-Host "Found: $MakeAppx"
+          echo "MAKEAPPX=$MakeAppx" >> $env:GITHUB_OUTPUT
+
+      - name: Create MSIX Bundle
+        run: |
+          New-Item -ItemType Directory -Path bundle-output -Force | Out-Null
+
+          # Determine bundle filename from one of the packages
+          $msixFiles = Get-ChildItem -Path msix-packages -Filter "*.msix"
+          Write-Host "Bundling $($msixFiles.Count) packages:"
+          $msixFiles | ForEach-Object { Write-Host "  $_" }
+
+          # Extract version from filename (e.g. ibl-ai-os-1.1.9.0-x64.msix)
+          $sampleName = $msixFiles[0].Name
+          if ($sampleName -match '(\d+\.\d+\.\d+\.\d+)') {
+            $version = $Matches[1]
+          } else {
+            $version = "0.0.0.0"
+          }
+
+          $bundlePath = "bundle-output\ibl-ai-os-$version.msixbundle"
+
+          & "${{ steps.sdk.outputs.MAKEAPPX }}" bundle /d msix-packages /p $bundlePath /o
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "makeappx bundle failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+          Write-Host "Bundle created: $bundlePath" -ForegroundColor Green
+
+      - name: Upload MSIX Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-os-msixbundle
+          path: bundle-output/*.msixbundle
           if-no-files-found: error
