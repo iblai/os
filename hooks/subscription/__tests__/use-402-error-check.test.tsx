@@ -41,6 +41,12 @@ vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => mockIsAdmin),
 }));
 
+// Mock useOS hook
+let mockIsAppleDevice = false;
+vi.mock('@/hooks/use-os', () => ({
+  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
+}));
+
 describe('use402ErrorCheck', () => {
   type TestState = {
     subscription: ReturnType<typeof subscriptionSlice.reducer>;
@@ -63,7 +69,8 @@ describe('use402ErrorCheck', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     store = createTestStore();
-    mockIsAdmin = false; // Reset to default non-admin state
+    mockIsAdmin = false;
+    mockIsAppleDevice = false;
   });
 
   afterEach(() => {
@@ -280,6 +287,69 @@ describe('use402ErrorCheck', () => {
       expect(state.subscription.pricingModalData.publishableKey).toBe('pk_test_456');
       expect(state.subscription.pricingModalData.referenceId).toBe('');
       expect(state.subscription.openPricingModal).toBe(true);
+    });
+
+    it('should dispatch setOpenAppleRestrictionModal when on an Apple device', async () => {
+      mockIsAppleDevice = true;
+      mockIsAdmin = false;
+      const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
+
+      await act(async () => {
+        await result.current.handle402Error({ error: 'Test error' });
+      });
+
+      const state = store.getState();
+      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+      // Should NOT fall through to admin redirect or error dispatch
+      expect(mockRouterPush).not.toHaveBeenCalled();
+      expect(state.subscription.error402Detected).toBe('');
+    });
+
+    it('should show toast even on Apple device before opening Apple modal', async () => {
+      mockIsAppleDevice = true;
+      const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
+
+      await act(async () => {
+        await result.current.handle402Error({ error: 'Quota exceeded' });
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Quota exceeded', expect.objectContaining({ closeButton: true }));
+    });
+
+    it('should prioritise Apple modal over admin billing redirect when on Apple device', async () => {
+      mockIsAppleDevice = true;
+      mockIsAdmin = true;
+      const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
+
+      await act(async () => {
+        await result.current.handle402Error({ error: 'Test error' });
+      });
+
+      // Apple check runs before admin check
+      expect(mockRouterPush).not.toHaveBeenCalled();
+      const state = store.getState();
+      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+    });
+
+    it('should prioritise Apple modal over pricing modal when on Apple device', async () => {
+      mockIsAppleDevice = true;
+      mockIsAdmin = false;
+      const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
+
+      await act(async () => {
+        await result.current.handle402Error({
+          error: 'Insufficient credits',
+          pricing_table: {
+            pricing_table_id: 'table_123',
+            pricing_table_js: 'https://js.stripe.com/v3/pricing-table.js',
+            publishable_key: 'pk_test_123',
+          },
+        });
+      });
+
+      const state = store.getState();
+      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+      expect(state.subscription.openPricingModal).toBe(false);
     });
 
     it('should not redirect admin to billing if they have pricing_table data', async () => {
