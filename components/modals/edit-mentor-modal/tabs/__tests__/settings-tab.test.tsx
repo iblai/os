@@ -173,6 +173,7 @@ vi.mock('@/components/ui/select', () => ({
   SelectItem: ({ children, value, ...props }: any) => (
     <div
       role="option"
+      aria-selected={false}
       data-value={value}
       onClick={() => {
         // Find parent Select's onValueChange through DOM traversal
@@ -198,7 +199,7 @@ vi.mock('@/components/ui/command', () => ({
   CommandGroup: ({ children }: any) => <div>{children}</div>,
   CommandInput: (props: any) => <input data-testid="command-input" {...props} />,
   CommandItem: ({ children, value, onSelect }: any) => (
-    <div role="option" data-value={value} onClick={() => onSelect?.(value)}>
+    <div role="option" aria-selected={false} data-value={value} onClick={() => onSelect?.(value)}>
       {children}
     </div>
   ),
