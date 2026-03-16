@@ -137,17 +137,28 @@ jobs:
           Write-Host "Found: $MakeAppx"
           echo "MAKEAPPX=$MakeAppx" >> $env:GITHUB_OUTPUT
 
+      - name: Rename .msix to .appx for bundle compatibility
+        run: |
+          # makeappx.exe bundle rejects .msix extensions for packages targeting older
+          # MinVersion platforms (error 0x80080215). The .msix and .appx formats are
+          # binary-identical — only the extension differs. Renaming to .appx before
+          # bundling is the standard workaround.
+          Get-ChildItem -Path msix-packages -Filter "*.msix" | ForEach-Object {
+            $newName = $_.FullName -replace '\.msix$', '.appx'
+            Rename-Item $_.FullName $newName
+            Write-Host "Renamed: $($_.Name) -> $(Split-Path $newName -Leaf)"
+          }
+
       - name: Create MSIX Bundle
         run: |
           New-Item -ItemType Directory -Path bundle-output -Force | Out-Null
 
-          # Determine bundle filename from one of the packages
-          $msixFiles = Get-ChildItem -Path msix-packages -Filter "*.msix"
-          Write-Host "Bundling $($msixFiles.Count) packages:"
-          $msixFiles | ForEach-Object { Write-Host "  $_" }
+          $appxFiles = Get-ChildItem -Path msix-packages -Filter "*.appx"
+          Write-Host "Bundling $($appxFiles.Count) packages:"
+          $appxFiles | ForEach-Object { Write-Host "  $_" }
 
-          # Extract version from filename (e.g. ibl-ai-os-1.1.9.0-x64.msix)
-          $sampleName = $msixFiles[0].Name
+          # Extract version from filename (e.g. ibl-ai-os-0.35.14.0-x64.appx)
+          $sampleName = $appxFiles[0].Name
           if ($sampleName -match '(\d+\.\d+\.\d+\.\d+)') {
             $version = $Matches[1]
           } else {
