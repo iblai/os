@@ -19,7 +19,7 @@ import { getUserEmail, getUserName } from '@/features/utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useSubscriptionHandlerV2, SUBSCRIPTION_V2_TRIGGERS } from '@iblai/iblai-js/web-utils';
-import { handleLogout, handleTenantSwitch, isStripeActivated } from '@/lib/utils';
+import { handleLogout, handleTenantSwitch, isStripeActivated, onAccountDeleted } from '@/lib/utils';
 import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useLazyGetTenantMetadataQuery } from '@/features/tenants/api-slice';
@@ -360,6 +360,7 @@ export function UserProfile() {
       isModalOpen={isProfileModalOpen}
       onModalOpenChange={handleModalOpenChange}
       defaultActiveTab={activeProfileTab}
+      onAccountDeleted={()=>onAccountDeleted()}
     />
   );
 }
