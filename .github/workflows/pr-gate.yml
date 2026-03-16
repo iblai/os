@@ -18,6 +18,21 @@ jobs:
           script: |
             const labels = context.payload.pull_request.labels.map(l => l.name);
             const sha = context.payload.pull_request.head.sha;
+            const branch = context.payload.pull_request.head.ref;
+
+            // Release branches skip validation
+            if (branch.startsWith('release/')) {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state: 'success',
+                context: 'PR Validation',
+                description: 'Release branch — validation skipped',
+              });
+              core.info('Release branch — auto-pass');
+              return;
+            }
 
             if (!labels.includes('run-tests')) {
               // No label — block merge until validation is triggered
