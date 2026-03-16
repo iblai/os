@@ -1,3 +1,12 @@
-#!/usr/bin/env sh
+#!/bin/sh
 
 sh scripts/fix-yalc.sh
+
+echo "Running typecheck..."
+pnpm typecheck
+
+echo "Running lint..."
+pnpm lint:check
+
+echo "Running build..."
+pnpm build
