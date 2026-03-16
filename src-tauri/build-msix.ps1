@@ -3,30 +3,21 @@
 #
 # Prerequisites:
 #   - Windows 10 SDK (for makeappx.exe and signtool.exe)
-#   - Rust toolchain with x86_64-pc-windows-msvc target
+#   - Rust toolchain with appropriate target
 #   - Tauri CLI: cargo install tauri-cli
 #
 # Usage:
-#   .\build-msix.ps1                           # Build unsigned MSIX (Windows 11 quick test)
-#   .\build-msix.ps1 -CertThumbprint "ABC123"  # Build and sign with certificate
-#   .\build-msix.ps1 -SkipTauriBuild           # Skip Tauri build, just repackage
-#   .\build-msix.ps1 -RegisterOnly             # Skip packaging, register loose files for testing
-#
-# Quick test workflow (Windows 11, no cert needed):
-#   1. .\build-msix.ps1
-#   2. Add-AppxPackage -AllowUnsigned -Path .\msix-output\ibl-ai-os-1.1.9.0-x64.msix
-#
-# Even quicker (loose file registration, no .msix file needed):
-#   1. cargo tauri build --target x86_64-pc-windows-msvc
-#   2. .\build-msix.ps1 -RegisterOnly
-#
-# TODO: Before Store submission, update AppxManifest.xml with your Partner Center values:
-#   - Identity.Name = your Package Identity Name
-#   - Identity.Publisher = your Publisher ID (CN=xxx) - remove the OID for unsigned testing
+#   .\build-msix.ps1                                    # Build unsigned MSIX for x64
+#   .\build-msix.ps1 -Architecture arm64                # Build unsigned MSIX for arm64
+#   .\build-msix.ps1 -CertThumbprint "ABC123"           # Build and sign with certificate
+#   .\build-msix.ps1 -SkipTauriBuild                    # Skip Tauri build, just repackage
+#   .\build-msix.ps1 -SkipTauriBuild -Architecture arm64 # Repackage arm64 build
+#   .\build-msix.ps1 -RegisterOnly                      # Skip packaging, register loose files for testing
 
 param(
     [string]$CertThumbprint = "",
     [string]$TimestampUrl = "http://timestamp.digicert.com",
+    [ValidateSet("x64", "arm64")]
     [string]$Architecture = "x64",
     [switch]$SkipTauriBuild,
     [switch]$RegisterOnly
@@ -39,12 +30,26 @@ $ProjectRoot = Resolve-Path "$ScriptDir\.."
 $TauriDir = $ScriptDir
 $AppName = "ibl-ai-os"
 
+# Map Architecture to Rust target triple
+$RustTargetMap = @{
+    "x64"   = "x86_64-pc-windows-msvc"
+    "arm64" = "aarch64-pc-windows-msvc"
+}
+$RustTarget = $RustTargetMap[$Architecture]
+
+# Map Architecture to MSIX ProcessorArchitecture value
+$MsixArchMap = @{
+    "x64"   = "x64"
+    "arm64" = "arm64"
+}
+$MsixArch = $MsixArchMap[$Architecture]
+
 # --- Step 1: Build the Tauri app ---
 if (-not $SkipTauriBuild -and -not $RegisterOnly) {
-    Write-Host "`n[1/4] Building Tauri app..." -ForegroundColor Yellow
+    Write-Host "`n[1/4] Building Tauri app for $RustTarget..." -ForegroundColor Yellow
     Push-Location $ProjectRoot
     try {
-        cargo tauri build --target x86_64-pc-windows-msvc
+        cargo tauri build --target $RustTarget
     } finally {
         Pop-Location
     }
@@ -52,18 +57,20 @@ if (-not $SkipTauriBuild -and -not $RegisterOnly) {
     Write-Host "`n[1/4] Skipping Tauri build." -ForegroundColor DarkYellow
 }
 
-# Locate the built executable - Tauri outputs to src-tauri/target/
+# Locate the built executable - search architecture-specific paths first, then generic
 $BuildOutput = $null
 $ExePath = $null
 $SearchPaths = @(
-    (Join-Path $TauriDir "target\x86_64-pc-windows-msvc\release"),
+    (Join-Path $TauriDir "target\$RustTarget\release"),
     (Join-Path $TauriDir "target\release"),
-    (Join-Path $ProjectRoot "target\x86_64-pc-windows-msvc\release"),
+    (Join-Path $ProjectRoot "target\$RustTarget\release"),
     (Join-Path $ProjectRoot "target\release")
 )
 
+Write-Host "Searching for $AppName.exe (arch=$Architecture, target=$RustTarget)..." -ForegroundColor Gray
 foreach ($candidate in $SearchPaths) {
     $candidateExe = Join-Path $candidate "$AppName.exe"
+    Write-Host "  Checking: $candidateExe" -ForegroundColor Gray
     if (Test-Path $candidateExe) {
         $BuildOutput = $candidate
         $ExePath = $candidateExe
@@ -72,7 +79,7 @@ foreach ($candidate in $SearchPaths) {
 }
 
 if (-not $ExePath) {
-    Write-Error "Built executable not found. Searched:`n  $($SearchPaths -join "`n  ")`nRun 'cargo tauri build' first."
+    Write-Error "Built executable not found. Searched:`n  $($SearchPaths -join "`n  ")`nRun 'cargo tauri build --target $RustTarget' first."
     exit 1
 }
 
@@ -124,12 +131,25 @@ if ($RegisterOnly) {
 
 # --- Resolve Windows SDK tools ---
 $SdkRoot = "C:\Program Files (x86)\Windows Kits\10\bin"
+if (-not (Test-Path $SdkRoot)) {
+    # ARM64 runners may have the SDK in Program Files instead
+    $SdkRoot = "C:\Program Files\Windows Kits\10\bin"
+}
 $SdkVersions = Get-ChildItem -Path $SdkRoot -Directory | Where-Object { $_.Name -match "^10\." } | Sort-Object Name -Descending
 if ($SdkVersions.Count -eq 0) {
     Write-Error "Windows 10 SDK not found. Install it from https://developer.microsoft.com/windows/downloads/windows-sdk/"
     exit 1
 }
-$SdkBin = Join-Path $SdkVersions[0].FullName $Architecture
+
+# SDK tools are available in x64 and arm64 subdirectories.
+# Try the matching architecture first, then fall back to x64 (which works via emulation on ARM).
+$SdkToolArch = $Architecture
+$SdkBin = Join-Path $SdkVersions[0].FullName $SdkToolArch
+if (-not (Test-Path $SdkBin)) {
+    Write-Host "SDK tools not found for $SdkToolArch, falling back to x64..." -ForegroundColor DarkYellow
+    $SdkToolArch = "x64"
+    $SdkBin = Join-Path $SdkVersions[0].FullName $SdkToolArch
+}
 $MakeAppx = Join-Path $SdkBin "makeappx.exe"
 $SignTool = Join-Path $SdkBin "signtool.exe"
 
@@ -138,7 +158,7 @@ if (-not (Test-Path $MakeAppx)) {
     exit 1
 }
 
-Write-Host "Using Windows SDK: $($SdkVersions[0].Name)" -ForegroundColor Cyan
+Write-Host "Using Windows SDK: $($SdkVersions[0].Name) ($SdkToolArch tools)" -ForegroundColor Cyan
 Write-Host "makeappx: $MakeAppx" -ForegroundColor Gray
 Write-Host "signtool: $SignTool" -ForegroundColor Gray
 
@@ -154,8 +174,14 @@ New-Item -ItemType Directory -Path $StagingDir | Out-Null
 # Copy executable
 Copy-Item $ExePath $StagingDir
 
-# Copy AppxManifest
-Copy-Item (Join-Path $TauriDir "AppxManifest.xml") $StagingDir
+# Copy AppxManifest and patch ProcessorArchitecture for the target
+$ManifestSrc = Join-Path $TauriDir "AppxManifest.xml"
+$ManifestDest = Join-Path $StagingDir "AppxManifest.xml"
+$manifestContent = Get-Content $ManifestSrc -Raw
+$manifestContent = $manifestContent -replace 'ProcessorArchitecture="[^"]*"', "ProcessorArchitecture=`"$MsixArch`""
+Set-Content -Path $ManifestDest -Value $manifestContent
+
+Write-Host "Set ProcessorArchitecture=$MsixArch in AppxManifest.xml" -ForegroundColor Gray
 
 # Copy icons
 $IconsDestDir = Join-Path $StagingDir "icons"
@@ -208,8 +234,8 @@ if (-not (Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir | Out-Null
 }
 
-# Read version from AppxManifest
-[xml]$manifest = Get-Content (Join-Path $StagingDir "AppxManifest.xml")
+# Read version from staged AppxManifest (which has the correct arch already)
+[xml]$manifest = Get-Content $ManifestDest
 $Version = $manifest.Package.Identity.Version
 $MsixPath = Join-Path $OutputDir "$AppName-$Version-$Architecture.msix"
 
@@ -247,6 +273,7 @@ Remove-Item -Recurse -Force $StagingDir
 # --- Summary ---
 Write-Host "`n--- Build Complete ---" -ForegroundColor Cyan
 Write-Host "MSIX Package: $MsixPath" -ForegroundColor White
+Write-Host "Architecture: $Architecture ($RustTarget)" -ForegroundColor White
 Write-Host ""
 Write-Host "Install options:" -ForegroundColor Yellow
 $installCmd = '  Unsigned (Win11):  Add-AppxPackage -AllowUnsigned -Path ' + $MsixPath

@@ -2,7 +2,8 @@ import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
-const rawPatterns = process.env.NEXT_IMAGE_PATTERNS?.split(',') || [
+const envPatterns = process.env.NEXT_IMAGE_PATTERNS?.trim();
+const rawPatterns = envPatterns ? envPatterns.split(',') : [
   'https://hebbkx1anhila5yf.public.blob.vercel-storage.com',
   'https://s3.*.amazonaws.com',
   'https://base.manager.iblai.tech',
@@ -73,6 +74,10 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: [
     '@tauri-apps/api',
+    '@iblai/iblai-js',
+    '@iblai/web-utils',
+    '@iblai/data-layer',
+    '@iblai/web-containers',
   ],
 };
 const sentryWebpackPluginOptions = {

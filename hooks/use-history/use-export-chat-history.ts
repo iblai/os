@@ -6,6 +6,7 @@ import { useReports } from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { ChatHistoryFilter } from '@/hooks/use-history';
+import { REPORT_NAME } from '@/lib/constants';
 
 export function useExportChatHistory() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -21,7 +22,7 @@ export function useExportChatHistory() {
     (filters: ChatHistoryFilter) => {
       initializeReportDownload({
         report: {
-          report_name: 'ai-mentor-chat-history',
+          report_name: REPORT_NAME,
         },
         autoDownload: true,
         extraRequestBody: {
@@ -31,6 +32,7 @@ export function useExportChatHistory() {
             : undefined,
           sentiment: filters.sentiment,
           topics: filters.topics,
+          source:window.location.origin
         },
       });
     },

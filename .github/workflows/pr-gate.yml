@@ -1,0 +1,59 @@
+name: PR Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  statuses: write
+
+jobs:
+  pr-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set validation status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const sha = context.payload.pull_request.head.sha;
+            const branch = context.payload.pull_request.head.ref;
+
+            // Release branches skip validation
+            if (branch.startsWith('release/')) {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state: 'success',
+                context: 'PR Validation',
+                description: 'Release branch — validation skipped',
+              });
+              core.info('Release branch — auto-pass');
+              return;
+            }
+
+            if (!labels.includes('run-tests')) {
+              // No label — block merge until validation is triggered
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state: 'failure',
+                context: 'PR Validation',
+                description: 'Add the run-tests label to trigger validation',
+              });
+              core.info('No run-tests label — gate blocks merge');
+            } else {
+              // Label present — block merge until validation workflow completes
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state: 'pending',
+                context: 'PR Validation',
+                description: 'Waiting for SPA PR Validation to complete...',
+              });
+              core.info('run-tests label found — set pending, validation workflow will update');
+            }

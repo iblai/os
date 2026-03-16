@@ -262,7 +262,7 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
 
 // Mock subscription-related hooks to prevent circular dependencies
 vi.mock('@iblai/iblai-js/web-utils', async () => {
-  const actual = await vi.importActual('@iblai/web-utils');
+  const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
     useSubscriptionHandlerV2: vi.fn(() => ({

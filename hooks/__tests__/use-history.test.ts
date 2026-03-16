@@ -11,6 +11,7 @@ vi.mock('@/lib/constants', () => ({
 const mockUseParams = vi.fn();
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 // Mock use-user

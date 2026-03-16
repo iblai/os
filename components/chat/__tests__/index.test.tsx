@@ -84,13 +84,11 @@ vi.mock('next/navigation', () => ({
     tenantKey: 'test-tenant',
     mentorId: 'mentor-123',
   })),
-  useSearchParams: vi.fn(() => ({
-    get: vi.fn(() => null),
-  })),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', async () => {
-  const actual = await vi.importActual('@iblai/web-utils');
+  const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
     ANONYMOUS_USERNAME: 'anonymous',
@@ -119,6 +117,9 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     })),
     useTenantContext: vi.fn(() => ({
       metadata: { support_email: 'support@test.com' },
+    })),
+    useAuthContext: vi.fn(() => ({
+      userIsAccessingPublicRoute: false,
     })),
     useTenantMetadata: vi.fn(() => ({
       platformName: 'Test Platform',
@@ -153,6 +154,8 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       CANVAS: 'canvas',
       DEEP_RESEARCH: 'deep_research',
     },
+    clearFiles: vi.fn(() => ({ type: 'files/clearFiles' })),
+    removeFile: vi.fn((id: string) => ({ type: 'files/removeFile', payload: id })),
   };
 });
 
@@ -289,11 +292,6 @@ vi.mock('@/hooks/use-file-drag-drop', () => ({
     handleDragLeave: vi.fn(),
     handleDrop: vi.fn(),
   })),
-}));
-
-vi.mock('@web-utils/features', () => ({
-  clearFiles: vi.fn(() => ({ type: 'files/clearFiles' })),
-  removeFile: vi.fn((id) => ({ type: 'files/removeFile', payload: id })),
 }));
 
 vi.mock('@/components/chat-input-form', () => ({
@@ -10589,7 +10587,11 @@ describe('Chat', () => {
   describe('Tauri app detection', () => {
     it('should detect Tauri app when __TAURI__ is in window', async () => {
       // Add __TAURI__ to window to simulate Tauri app
-      (window as unknown as Record<string, unknown>).__TAURI__ = {};
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        writable: true,
+        configurable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -10622,8 +10624,16 @@ describe('Chat', () => {
 
     it('should handle Tauri offline mode flag', async () => {
       // Set up Tauri offline mode
-      (window as unknown as Record<string, unknown>).__TAURI__ = {};
-      (window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__ = true;
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(window, '__TAURI_OFFLINE_MODE__', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -10662,7 +10672,11 @@ describe('Chat', () => {
 
     it('should handle Tauri offline mode via localStorage', async () => {
       // Set up Tauri with localStorage offline mode
-      (window as unknown as Record<string, unknown>).__TAURI__ = {};
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        writable: true,
+        configurable: true,
+      });
       localStorage.setItem('tauri_offline_mode', 'true');
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -10701,7 +10715,11 @@ describe('Chat', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       // Set up Tauri environment
-      (window as unknown as Record<string, unknown>).__TAURI__ = {};
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        writable: true,
+        configurable: true,
+      });
 
       // Mock navigator.onLine to be false
       const originalOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');

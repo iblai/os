@@ -40,7 +40,7 @@ vi.mock('@/hooks/use-chat-mode', () => ({
   useChatMode: () => 'chat',
 }));
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: vi.fn(() => ({ data: null })),
   useLazyGetShareableLinkPublicQuery: vi.fn(() => [vi.fn(), { data: null }]),
 }));

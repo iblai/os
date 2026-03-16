@@ -26,7 +26,7 @@ vi.mock('@/lib/hooks', () => ({
   useAppSelector: (selector: (s: typeof mockReduxState) => unknown) => selector(mockReduxState),
 }));
 
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectActiveTab: (state: typeof mockReduxState) => state.chat.activeTab,
   selectSessionIds: (state: typeof mockReduxState) => state.chat.sessionIds,
 }));

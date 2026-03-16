@@ -29,7 +29,7 @@ vi.mock('@/lib/hooks', () => ({
 }));
 
 // Mock selectTokenEnabled
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectTokenEnabled: vi.fn(),
 }));
 

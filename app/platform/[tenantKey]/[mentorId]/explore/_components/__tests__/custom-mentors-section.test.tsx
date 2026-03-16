@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 // Mock the data-layer hooks
 const mockUseGetPersonnalizedMentorsQuery = vi.fn();
 
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetPersonnalizedMentorsQuery: (...args: unknown[]) =>
     mockUseGetPersonnalizedMentorsQuery(...args),
 }));

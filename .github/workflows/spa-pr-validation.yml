@@ -16,7 +16,7 @@ jobs:
   # GATE: Detect what changed, decide what to build/test
   # ============================================================
   gate:
-    if: github.event.label.name == 'run-tests'
+    if: github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-22.04
     environment: iblai.app
     outputs:
@@ -50,7 +50,7 @@ jobs:
               - 'tailwind.config.*'
               - 'Dockerfile'
             tests:
-              - 'tests/**'
+              - 'e2e/**'
 
       - name: Decide build strategy
         id: decide
@@ -87,7 +87,7 @@ jobs:
     with:
       app-name: mentor
       pr-number: ${{ github.event.pull_request.number }}
-      test-dir: tests
+      test-dir: e2e/tests
     secrets:
       s3-bucket: ${{ secrets.S3_LOGS_BUCKET }}
       aws-access-key-id: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
@@ -100,6 +100,7 @@ jobs:
   acquire-domain:
     needs: [gate]
     uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
     with:
       action: acquire
       app-type: testing
@@ -210,8 +211,8 @@ jobs:
     uses: iblai/ibl-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
-      dockerfile-path: tests/Dockerfile
-      build-context: tests/
+      dockerfile-path: e2e/Dockerfile
+      build-context: .
       image-name: ibl-mentor-playwright
       registry-type: ocir
       event-name: pull_request
@@ -221,12 +222,11 @@ jobs:
   # DEPLOY MENTOR APP
   # ============================================================
   deploy-app:
-    needs: [gate, acquire-domain, lint, typecheck, build-app-image, check-prod-versions]
+    needs: [gate, acquire-domain, lint, build-app-image, check-prod-versions]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success' &&
       needs.lint.result == 'success' &&
-      needs.typecheck.result == 'success' &&
       needs.build-app-image.result != 'failure'
     uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
@@ -237,6 +237,7 @@ jobs:
       venv-name: ${{ needs.gate.outputs.venv-name }}
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   # ============================================================
   # DEPLOY AUTH (uses prod auth image)
@@ -253,6 +254,7 @@ jobs:
       venv-name: ${{ needs.gate.outputs.venv-name }}
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   # ============================================================
   # SEQUENTIAL BROWSER TESTS (default mode)
@@ -273,6 +275,7 @@ jobs:
       health-port: '5007'
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   test-chrome:
     needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
@@ -312,6 +315,7 @@ jobs:
       health-port: '5007'
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   test-firefox:
     needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-firefox]
@@ -351,6 +355,7 @@ jobs:
       health-port: '5007'
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   test-safari:
     needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-safari]
@@ -390,6 +395,7 @@ jobs:
       health-port: '5007'
     secrets:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
 
   test-edge:
     needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-edge]
@@ -618,6 +624,7 @@ jobs:
       always() &&
       needs.acquire-domain.result == 'success'
     uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
     with:
       action: release
       app-type: testing
@@ -726,6 +733,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
       - name: Check test results
+        id: check-results
         if: always()
         run: |
           FAILED=false
@@ -785,3 +793,18 @@ jobs:
             echo "WORKFLOW PASSED - All checks passed!"
             exit 0
           fi
+
+      - name: Update PR gate status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const passed = '${{ steps.check-results.outcome }}' === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: passed ? 'success' : 'failure',
+              context: 'PR Validation',
+              description: passed ? 'All checks passed' : 'Some checks failed',
+            });

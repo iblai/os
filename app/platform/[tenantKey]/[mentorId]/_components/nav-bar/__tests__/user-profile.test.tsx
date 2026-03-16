@@ -86,23 +86,6 @@ vi.mock('@/lib/hooks', () => ({
   },
 }));
 
-// Mock subscription hook with controlled return values
-vi.mock('@web-utils/hooks', () => ({
-  useSubscriptionHandlerV2: () => ({
-    getBillingURL: mockGetBillingURL,
-    getTopUpURL: mockGetTopUpURL,
-    getUserSubscriptionPackage: mockGetUserSubscriptionPackage,
-    getUserActiveAppLegacy: mockGetUserActiveAppLegacy,
-    bannerButtonTriggerCallback: mockBannerButtonTriggerCallback,
-  }),
-  SUBSCRIPTION_V2_TRIGGERS: {
-    PRICING_MODAL: 'TRIGGER_PRICING_MODAL',
-    TOP_UP_CREDIT: 'TRIGGER_TOP_UP_CREDIT',
-    CONTACT_ADMIN: 'TRIGGER_CONTACT_ADMIN',
-    BILLING_PAGE: 'TRIGGER_BILLING_PAGE',
-  },
-}));
-
 // Mock config
 vi.mock('@/lib/config', () => ({
   config: {
@@ -136,13 +119,26 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
-// Mock tenant metadata
+// Mock tenant metadata and subscription hooks
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
     metadata: { help_center_url: 'https://help.example.com', show_help: true },
     metadataLoaded: true,
   }),
   Tenant: {},
+  useSubscriptionHandlerV2: () => ({
+    getBillingURL: mockGetBillingURL,
+    getTopUpURL: mockGetTopUpURL,
+    getUserSubscriptionPackage: mockGetUserSubscriptionPackage,
+    getUserActiveAppLegacy: mockGetUserActiveAppLegacy,
+    bannerButtonTriggerCallback: mockBannerButtonTriggerCallback,
+  }),
+  SUBSCRIPTION_V2_TRIGGERS: {
+    PRICING_MODAL: 'TRIGGER_PRICING_MODAL',
+    TOP_UP_CREDIT: 'TRIGGER_TOP_UP_CREDIT',
+    CONTACT_ADMIN: 'TRIGGER_CONTACT_ADMIN',
+    BILLING_PAGE: 'TRIGGER_BILLING_PAGE',
+  },
 }));
 
 // Mock data layer query
@@ -348,6 +344,7 @@ describe('UserProfile', () => {
 
   describe('callbacks', () => {
     it('should handle profile click', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
       const { default: userEvent } = await import('@testing-library/user-event');
       const user = userEvent.setup();
 
@@ -562,6 +559,7 @@ describe('UserProfile', () => {
 
   describe('subscription data fetching', () => {
     it('should fetch subscription data on profile click', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
       const { default: userEvent } = await import('@testing-library/user-event');
       const user = userEvent.setup();
 
@@ -606,6 +604,7 @@ describe('UserProfile', () => {
     });
 
     it('should set current plan from subscription package', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
       mockGetUserSubscriptionPackage.mockResolvedValue('org-tenant-pro-monthly');
       const { default: userEvent } = await import('@testing-library/user-event');
       const user = userEvent.setup();
@@ -700,6 +699,7 @@ describe('UserProfile', () => {
 
   describe('plan parsing', () => {
     it('should extract last segment of plan name', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
       mockGetUserSubscriptionPackage.mockResolvedValue('org-tenant-pro-monthly');
 
       render(<UserProfile />);
@@ -714,6 +714,7 @@ describe('UserProfile', () => {
     });
 
     it('should handle single-segment plan name', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
       mockGetUserSubscriptionPackage.mockResolvedValue('premium');
 
       render(<UserProfile />);

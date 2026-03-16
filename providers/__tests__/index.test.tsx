@@ -198,20 +198,29 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 let mockMetadata: Record<string, unknown> = {};
 
-vi.mock('@web-utils/hooks/tenant-metadata/use-tenant-metadata', () => ({
-  useTenantMetadata: () => ({
-    metadata: mockMetadata,
-    platformName: null,
-    isLoading: false,
-    isError: false,
-    metadataLoaded: true,
-    getAllMetadatas: vi.fn(() => []),
-    getSupportEmail: vi.fn(() => null),
-  }),
-}));
+let capturedIframeMessageHandler: {
+  handlers?: unknown;
+  defaultHandler?: (data: Record<string, unknown>) => void;
+} = {};
+
+// Messages to simulate being received by the defaultHandler after render
+let pendingIframeMessages: Record<string, unknown>[] = [];
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   sanitizeCss: (css: string) => css,
+  useIframeMessageHandler: (opts: {
+    handlers?: unknown;
+    defaultHandler?: (data: Record<string, unknown>) => void;
+  }) => {
+    capturedIframeMessageHandler = opts;
+    if (opts.defaultHandler && pendingIframeMessages.length > 0) {
+      for (const msg of pendingIframeMessages) {
+        opts.defaultHandler(msg);
+      }
+      pendingIframeMessages = [];
+    }
+  },
+  TimeTrackingProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 // ── External providers – capture their props so we can exercise callbacks ───
@@ -226,6 +235,15 @@ let tenantProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
 let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> = [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useTenantMetadata: () => ({
+    metadata: mockMetadata,
+    platformName: null,
+    isLoading: false,
+    isError: false,
+    metadataLoaded: true,
+    getAllMetadatas: vi.fn(() => []),
+    getSupportEmail: vi.fn(() => null),
+  }),
   AuthProvider: (props: Record<string, unknown>) => {
     capturedAuthProviderProps = props;
     for (const cb of authProviderCallbacksToInvoke) {
@@ -308,42 +326,6 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       return false;
     }
   },
-}));
-
-// ── web-containers ──────────────────────────────────────────────────────────
-
-let capturedIframeMessageHandler: {
-  handlers?: unknown;
-  defaultHandler?: (data: Record<string, unknown>) => void;
-} = {};
-
-// Messages to simulate being received by the defaultHandler after render
-let pendingIframeMessages: Record<string, unknown>[] = [];
-
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useIframeMessageHandler: (opts: {
-    handlers?: unknown;
-    defaultHandler?: (data: Record<string, unknown>) => void;
-  }) => {
-    capturedIframeMessageHandler = opts;
-    // Execute any pending messages through the real handler
-    if (opts.defaultHandler && pendingIframeMessages.length > 0) {
-      for (const msg of pendingIframeMessages) {
-        opts.defaultHandler(msg);
-      }
-      pendingIframeMessages = [];
-    }
-  },
-}));
-
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useIframeMessageHandler: (opts: {
-    handlers?: unknown;
-    defaultHandler?: (data: Record<string, unknown>) => void;
-  }) => {
-    capturedIframeMessageHandler = opts;
-  },
-  TimeTrackingProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 // ── misc mocks ──────────────────────────────────────────────────────────────

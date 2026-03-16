@@ -18,7 +18,7 @@ export function AccessibilityFab() {
   const isEmbedMode = useEmbedMode();
   const chats = useAppSelector(selectChats);
   const activeTab = useAppSelector(selectActiveTab);
-  const messages = chats[activeTab];
+  const messages = chats?.[activeTab] ?? [];
 
   const isAnalyticsPage = pathname?.includes('/analytics');
   const isAccessibilityMenuEnabled = metadata?.accessibility_menu;

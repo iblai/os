@@ -7,6 +7,7 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 const mockUseParams = vi.fn();
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 const mockUseUsername = vi.fn();
@@ -16,7 +17,7 @@ vi.mock('@/providers/use-user', () => ({
 
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUseGetMentorPublicSettingsQuery = vi.fn();
-vi.mock('@data-layer/index', () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),

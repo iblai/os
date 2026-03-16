@@ -70,7 +70,7 @@ vi.mock('@/lib/hooks', () => ({
   },
 }));
 
-vi.mock('@web-utils/features', () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   chatActions: mockChatActions,
   selectSessionId: mockSelectSessionId,
   clearFiles: mockClearFiles,
