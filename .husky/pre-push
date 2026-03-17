@@ -10,3 +10,9 @@ pnpm lint:check
 
 echo "Running build..."
 pnpm build
+
+echo "Running unit tests..."
+pnpm test
+
+echo "Checking test coverage for changed files..."
+bash ./scripts/check-test-coverage.sh
