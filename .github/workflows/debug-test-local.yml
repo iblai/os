@@ -215,7 +215,7 @@ jobs:
 
       - name: Create e2e .env
         run: |
-          cat > e2e/.env.production <<EOF
+          cat > e2e/.env.production <<ENVEOF
           MENTOR_NEXTJS_HOST=${{ steps.test-user.outputs.mentor-domain }}
           AUTH_HOST=${{ steps.test-user.outputs.auth-domain }}
           PLAYWRIGHT_USERNAME=${{ steps.test-user.outputs.username }}
@@ -231,7 +231,10 @@ jobs:
           AUTH_FLOW=${{ vars.AUTH_FLOW }}
           AUTH_IDP=${{ vars.AUTH_IDP }}
           PLATFORM=mentor
-          EOF
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' e2e/.env.production
+          echo "Generated e2e/.env.production:"
+          cat e2e/.env.production
 
       - name: Display test parameters
         run: |
