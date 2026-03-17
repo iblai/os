@@ -233,6 +233,31 @@ jobs:
           PLATFORM=mentor
           EOF
 
+      - name: Display test parameters
+        run: |
+          echo "================================================================================"
+          echo "  DEBUG TEST PARAMETERS"
+          echo "================================================================================"
+          echo ""
+          echo "  Branch:          ${{ inputs.branch || github.ref_name }}"
+          echo "  Browser:         ${{ inputs.browser }}"
+          echo "  Project:         mentor-desktop-${{ inputs.browser }}"
+          echo "  Workers:         ${{ inputs.workers }}"
+          echo ""
+          echo "  Mentor domain:   ${{ steps.test-user.outputs.mentor-domain }}"
+          echo "  Auth domain:     ${{ steps.test-user.outputs.auth-domain }}"
+          echo "  Mentor image:    ${{ inputs.mentor-image || 'current prod' }}"
+          echo ""
+          echo "  Test user:       ${{ steps.test-user.outputs.username }}"
+          echo "  Auth flow:       ${{ vars.AUTH_FLOW }}"
+          echo ""
+          echo "  Spec files:"
+          for f in ${{ inputs.test-files }}; do
+            echo "    - $f"
+          done
+          echo ""
+          echo "================================================================================"
+
       - name: Run Playwright tests
         env:
           CI: true
@@ -240,15 +265,6 @@ jobs:
           PLAYWRIGHT_HTML_OPEN: never
         run: |
           PROJECT="mentor-desktop-${{ inputs.browser }}"
-
-          echo "============================================"
-          echo "Running Playwright tests"
-          echo "============================================"
-          echo "Project:    $PROJECT"
-          echo "Workers:    ${{ inputs.workers }}"
-          echo "Test files: ${{ inputs.test-files }}"
-          echo "Target:     ${{ steps.test-user.outputs.mentor-domain }}"
-          echo ""
 
           npx playwright test \
             ${{ inputs.test-files }} \
@@ -294,10 +310,18 @@ jobs:
         run: |
           echo "# Local Debug Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Browser:** ${{ inputs.browser }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Test files:** \`${{ inputs.test-files }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Workers:** ${{ inputs.workers }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Mentor image:** ${{ inputs.mentor-image != '' && inputs.mentor-image || 'current prod' }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Parameters" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ inputs.branch || github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Browser | ${{ inputs.browser }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Workers | ${{ inputs.workers }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mentor domain | \`https://mentorai3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth domain | \`https://login3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test user | \`iblaiuserthree@ibleducation.com\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mentor image | \`${{ inputs.mentor-image || 'current prod' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test files | \`${{ inputs.test-files }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "## Results" >> $GITHUB_STEP_SUMMARY
