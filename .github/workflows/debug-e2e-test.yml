@@ -38,7 +38,7 @@ jobs:
       - name: Checkout ops
         uses: actions/checkout@v4
         with:
-          repository: iblai/ibl-web-ops
+          repository: iblai/iblai-web-ops
           token: ${{ secrets.GIT_TOKEN }}
           path: .ops
 
