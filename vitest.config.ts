@@ -60,6 +60,9 @@ export default defineConfig({
         'app/share/**/*.{ts,tsx}',
       ],
       exclude: [
+        // Playwright E2E tests (not unit coverage)
+        'e2e/**',
+
         // Default exclusions
         'node_modules/**',
         '.next/**',
