@@ -78,3 +78,4 @@ test-results
 e2e/playwright-report
 
 playwright/.auth
+e2e/playwright/.auth
