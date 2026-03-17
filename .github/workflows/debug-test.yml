@@ -18,7 +18,7 @@ on:
           - safari
           - edge
       mentor-image:
-        description: 'Existing mentor image URI (skip build if provided)'
+        description: 'Existing mentor image URI - skip build if provided (e.g. <account-id>.dkr.ecr.us-east-1.amazonaws.com/ibl-mentor-spa-pro:<tag>)'
         required: false
         type: string
         default: ''
