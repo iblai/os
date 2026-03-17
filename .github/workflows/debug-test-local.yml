@@ -211,7 +211,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps ${{ inputs.browser == 'safari' && 'webkit' || inputs.browser == 'edge' && 'chromium' || inputs.browser }}
+        run: npx playwright install --with-deps
 
       - name: Create e2e .env
         run: |
