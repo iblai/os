@@ -27,8 +27,7 @@ test.describe('Mentors Page (Desktop)', () => {
     ).toBeVisible({ timeout: 60_000 });
   });
 
-  // TODO: Fix this test
-  test.describe.skip('Favorites functionality', () => {
+  test.describe('Favorites functionality', () => {
     test('should star and unstar a mentor', async ({ page }) => {
       await testStarUnstarMentor(page);
     });

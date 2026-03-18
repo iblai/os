@@ -29,7 +29,7 @@
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build",
     "tauri:build:debug": "pnpm build && cargo tauri build --debug",
-    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e": "mkdir -p playwright/.auth && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-chrome.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-edge.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-safari.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-firefox.json && playwright test --config e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
   },

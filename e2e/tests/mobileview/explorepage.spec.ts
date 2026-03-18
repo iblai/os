@@ -12,8 +12,6 @@ import { expectMentorTextsVisible } from '../utils';
 import { safeWaitForURL } from '@iblai/iblai-js/playwright';
 const pageURL = MENTOR_NEXTJS_HOST;
 
-test.skip();
-
 test.use(devices['Pixel 5']);
 
 // Suite: Validates the mentors discovery experience on mobile devices.

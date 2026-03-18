@@ -21,7 +21,7 @@ test.describe('Mentor Switching Tests', () => {
    * User navigates to mentor A (chats), then opens My Mentors modal
    * and switches to mentor B, then chats with mentor B
    */
-  test.skip('should switch between mentors using My Mentors modal', async ({
+  test('should switch between mentors using My Mentors modal', async ({
     page,
   }) => {
     // Step 1: Navigate to application and wait for page load
@@ -66,7 +66,7 @@ test.describe('Mentor Switching Tests', () => {
    * User navigates to mentor A (chats), then opens Explore page
    * and switches to mentor B, then chats with mentor B
    */
-  test.skip('should switch between mentors using Explore page', async ({
+  test('should switch between mentors using Explore page', async ({
     page,
   }) => {
     // Step 1: Navigate to application and wait for page load
@@ -111,7 +111,7 @@ test.describe('Mentor Switching Tests', () => {
    * User navigates to mentor A (chats), then clicks on the Explore Mentors section on the home page
    * and switches to mentor B, then chats with mentor B
    */
-  test.skip('should switch between mentors using the Explore Mentors section on the home page', async ({
+  test('should switch between mentors using the Explore Mentors section on the home page', async ({
     page,
   }) => {
     // Step 1: Navigate to application and wait for page load

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 import {
   navigateToDataReports,
   shouldAddNewRowWhenClickingAddRowButton,
@@ -13,77 +13,80 @@ import {
   shouldOpenCSVEditorForUserMetadataReport,
   shouldSaveEditedCSVAndTriggerDownload,
   shouldVerifyCSVEditorDialogAccessibility,
-} from '../shared';
-import { navigateToMentorApp } from '../profile/helpers';
+} from "../shared";
+import { navigateToMentorApp } from "../profile/helpers";
 import {
   safeWaitForURL,
   navigateToReportDownload,
   verifyPreparingPhase,
-  verifyDonePhase,
   verifyErrorPhase,
   clickBackHome,
   clickDownloadAgain,
   waitForReportDownload,
-} from '@iblai/iblai-js/playwright';
-import { MENTOR_NEXTJS_HOST } from '../utils';
+} from "@iblai/iblai-js/playwright";
+import { MENTOR_NEXTJS_HOST, parsePlatformUrl } from "../utils";
 
-test.skip();
+// platformKey for the report download page.
+// Falls back to extracting it from the current URL at runtime (see beforeAll),
+// but can be overridden via PLAYWRIGHT_TENANT_KEY for envs where the URL
+// is not accessible before the test suite initialises.
+const envTenantKey = process.env.PLAYWRIGHT_TENANT_KEY || "";
 
 // Report card labels used in the UI
 const REPORT_CARDS = [
   {
-    name: 'User Report',
-    ariaLabel: 'User Report report card',
-    description: 'Basic user information including login details',
+    name: "User Report",
+    ariaLabel: "User Report report card",
+    description: "Basic user information including login details",
     expectsCsvEditor: true,
   },
   {
-    name: 'User Metadata Report',
-    ariaLabel: 'User Metadata Report report card',
-    description: 'User information including profile metadata like company',
+    name: "User Metadata Report",
+    ariaLabel: "User Metadata Report report card",
+    description: "User information including profile metadata like company",
     expectsCsvEditor: true,
   },
   {
-    name: 'Chat History',
-    ariaLabel: 'All Mentor Chat History report card',
-    description: 'Get detailed mentor chat history for all participants.',
+    name: "Chat History",
+    ariaLabel: "All Mentor Chat History report card",
+    description: "Get detailed mentor chat history for all participants.",
     expectsCsvEditor: false, // Chat History downloads directly
   },
 ];
 
-test.describe.skip('Data Reports Feature', () => {
+test.describe("Data Reports Feature", () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
 
-  test.describe('Data Reports Page Navigation', () => {
-    test('should navigate to Data Reports tab from Analytics', async ({
+  test.describe("Data Reports Page Navigation", () => {
+    test("should navigate to Data Reports tab from Analytics", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await navigateToDataReports(page);
     });
 
-    test('should display all report cards with download buttons', async ({
+    test("should display all report cards with download buttons", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -91,75 +94,75 @@ test.describe.skip('Data Reports Feature', () => {
     });
   });
 
-  test.describe('CSV Visualizer Dialog', () => {
-    test('should open CSV editor dialog when clicking download on User Report', async ({
+  test.describe("CSV Visualizer Dialog", () => {
+    test("should open CSV editor dialog when clicking download on User Report", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldOpenCSVEditorDialog(page);
     });
 
-    test('should display CSV data in editable table format', async ({
+    test("should display CSV data in editable table format", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldDisplayCSVInEditableTableFormat(page);
     });
 
-    test('should allow editing cell values in CSV editor', async ({ page }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+    test("should allow editing cell values in CSV editor", async ({ page }) => {
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldAllowEditingCellValuesInCSVEditor(page);
     });
 
-    test('should add new row when clicking Add Row button', async ({
+    test("should add new row when clicking Add Row button", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldAddNewRowWhenClickingAddRowButton(page);
     });
 
-    test('should save edited CSV and trigger download', async ({ page }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+    test("should save edited CSV and trigger download", async ({ page }) => {
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       if (!(await analyticsButton.isVisible())) {
         test.skip();
@@ -169,41 +172,41 @@ test.describe.skip('Data Reports Feature', () => {
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldSaveEditedCSVAndTriggerDownload(page);
     });
 
-    test('should close CSV editor without saving when clicking Cancel', async ({
+    test("should close CSV editor without saving when clicking Cancel", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
       await shouldCloseCSVEditorWithoutSavingWhenClickingCancel(page);
     });
 
-    test('should close CSV editor when clicking Close button', async ({
+    test("should close CSV editor when clicking Close button", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -211,18 +214,18 @@ test.describe.skip('Data Reports Feature', () => {
     });
   });
 
-  test.describe('CSV Editor Accessibility', () => {
-    test('CSV editor should have proper ARIA labels and roles', async ({
+  test.describe("CSV Editor Accessibility", () => {
+    test("CSV editor should have proper ARIA labels and roles", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -230,18 +233,18 @@ test.describe.skip('Data Reports Feature', () => {
     });
   });
 
-  test.describe('User Metadata Report', () => {
-    test('should open CSV editor for User Metadata Report', async ({
+  test.describe("User Metadata Report", () => {
+    test("should open CSV editor for User Metadata Report", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -249,18 +252,18 @@ test.describe.skip('Data Reports Feature', () => {
     });
   });
 
-  test.describe('Chat History Report', () => {
-    test('should directly download Chat History report without CSV editor', async ({
+  test.describe("Chat History Report", () => {
+    test("should directly download Chat History report without CSV editor", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -268,18 +271,18 @@ test.describe.skip('Data Reports Feature', () => {
     });
   });
 
-  test.describe('Report Download Loading States', () => {
-    test('should disable other download buttons while generating report', async ({
+  test.describe("Report Download Loading States", () => {
+    test("should disable other download buttons while generating report", async ({
       page,
     }) => {
-      const analyticsButton = page.getByRole('button', { name: 'Analytics' });
+      const analyticsButton = page.getByRole("button", { name: "Analytics" });
 
       await expect(analyticsButton).toBeVisible({ timeout: 120_000 });
 
       await analyticsButton.click();
 
       // Wait for Analytics page to load
-      await safeWaitForURL(page, (url) => url.href.endsWith('/analytics'), {
+      await safeWaitForURL(page, (url) => url.href.endsWith("/analytics"), {
         timeout: 60_000,
       });
 
@@ -288,55 +291,83 @@ test.describe.skip('Data Reports Feature', () => {
   });
 });
 
-const REPORT_DOWNLOAD_OPTIONS = {
-  baseUrl: MENTOR_NEXTJS_HOST,
-  platformKey: 'test-platform',
-  reportName: 'user-report',
-};
+test.describe("Analytics Report Download Page", () => {
+  // Resolve the tenant key once per describe block.
+  // Priority: PLAYWRIGHT_TENANT_KEY env var → extracted from the live page URL.
+  let resolvedTenantKey = envTenantKey;
 
-test.describe('Analytics Report Download Page', () => {
-  test('should navigate to report download page and show preparing phase', async ({
+  test.beforeAll(async ({ browser }) => {
+    if (resolvedTenantKey) return; // already set via env var
+
+    // Derive the tenant key by navigating to the app and parsing the URL
+    const ctx = await browser.newContext();
+    const pg = await ctx.newPage();
+    try {
+      await navigateToMentorApp(pg);
+      const { platformKey } = parsePlatformUrl(pg.url());
+      resolvedTenantKey = platformKey;
+    } finally {
+      await pg.close();
+      await ctx.close();
+    }
+  });
+
+  test("should navigate to report download page and show preparing phase", async ({
     page,
   }) => {
-    await navigateToReportDownload(page, REPORT_DOWNLOAD_OPTIONS);
+    const opts = {
+      baseUrl: MENTOR_NEXTJS_HOST,
+      platformKey: resolvedTenantKey,
+      reportName: "user-report",
+    };
+    await navigateToReportDownload(page, opts);
     await verifyPreparingPhase(page);
   });
 
-  test('should complete full report download flow', async ({ page }) => {
-    await waitForReportDownload(page, {
-      ...REPORT_DOWNLOAD_OPTIONS,
-      timeout: 120_000,
-    });
+  test("should complete full report download flow", async ({ page }) => {
+    const opts = {
+      baseUrl: MENTOR_NEXTJS_HOST,
+      platformKey: resolvedTenantKey,
+      reportName: "user-report",
+    };
+    await waitForReportDownload(page, { ...opts, timeout: 120_000 });
   });
 
-  test('should allow downloading report again after completion', async ({
+  test("should allow downloading report again after completion", async ({
     page,
   }) => {
-    await waitForReportDownload(page, {
-      ...REPORT_DOWNLOAD_OPTIONS,
-      timeout: 120_000,
-    });
+    const opts = {
+      baseUrl: MENTOR_NEXTJS_HOST,
+      platformKey: resolvedTenantKey,
+      reportName: "user-report",
+    };
+    await waitForReportDownload(page, { ...opts, timeout: 120_000 });
     await clickDownloadAgain(page);
   });
 
-  test('should navigate back home when clicking Back Home button', async ({
+  test("should navigate back home when clicking Back Home button", async ({
     page,
   }) => {
-    await navigateToReportDownload(page, REPORT_DOWNLOAD_OPTIONS);
+    const opts = {
+      baseUrl: MENTOR_NEXTJS_HOST,
+      platformKey: resolvedTenantKey,
+      reportName: "user-report",
+    };
+    await navigateToReportDownload(page, opts);
     await verifyPreparingPhase(page);
     await clickBackHome(page);
-
-    // Verify navigated to home
-    await safeWaitForURL(page, (url) => url.pathname === '/', {
+    await safeWaitForURL(page, (url) => url.pathname === "/", {
       timeout: 30_000,
     });
   });
 
-  test('should show error phase for invalid report', async ({ page }) => {
-    await navigateToReportDownload(page, {
-      ...REPORT_DOWNLOAD_OPTIONS,
-      reportName: 'nonexistent-report',
-    });
+  test("should show error phase for invalid report", async ({ page }) => {
+    const opts = {
+      baseUrl: MENTOR_NEXTJS_HOST,
+      platformKey: resolvedTenantKey,
+      reportName: "nonexistent-report",
+    };
+    await navigateToReportDownload(page, opts);
     await verifyErrorPhase(page, { timeout: 120_000 });
   });
 });

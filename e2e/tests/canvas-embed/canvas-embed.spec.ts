@@ -1,10 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-import { CANVAS_EMAIL, CANVAS_PASSWORD, CANVAS_URL } from '../utils';
-import { logger } from '@iblai/iblai-js/playwright';
+import { CANVAS_EMAIL, CANVAS_PASSWORD, CANVAS_URL } from "../utils";
+import { logger } from "@iblai/iblai-js/playwright";
 
-test.describe('Canvas embed', () => {
-  test.skip(true, 'Skipping canvas embed test');
+const hasCanvasEnv = !!(CANVAS_URL && CANVAS_EMAIL && CANVAS_PASSWORD);
+
+test.describe("Canvas embed", () => {
+  test.skip(
+    !hasCanvasEnv,
+    "Skipping canvas embed test — set CANVAS_URL, CANVAS_EMAIL, and CANVAS_PASSWORD to enable",
+  );
   test.setTimeout(200000);
   test.beforeEach(async ({ page }) => {
     await page.goto(CANVAS_URL);
@@ -12,26 +17,26 @@ test.describe('Canvas embed', () => {
     await page.waitForTimeout(10_000);
   });
 
-  test('testing the canvas embed ensuring it display properly and  users are capable of chatting with the mentor', async ({
+  test("testing the canvas embed ensuring it display properly and  users are capable of chatting with the mentor", async ({
     page,
   }, testInfo) => {
-    if (testInfo.project.name === 'mentor-desktop-safari') {
-      test.skip(true, 'Skipping on Safari (WebKit)');
+    if (testInfo.project.name === "mentor-desktop-safari") {
+      test.skip(true, "Skipping on Safari (WebKit)");
     }
     // Authenticating user
 
-    await page.locator('#pseudonym_session_unique_id').fill(CANVAS_EMAIL);
-    await page.locator('#pseudonym_session_password').fill(CANVAS_PASSWORD);
+    await page.locator("#pseudonym_session_unique_id").fill(CANVAS_EMAIL);
+    await page.locator("#pseudonym_session_password").fill(CANVAS_PASSWORD);
     await page.locator('input[name="commit"]').click();
 
     //Home Page
-    const mentorCard = page.getByLabel('mentorAI', { exact: true });
-    await mentorCard.waitFor({ state: 'visible', timeout: 60_000 });
+    const mentorCard = page.getByLabel("mentorAI", { exact: true });
+    await mentorCard.waitFor({ state: "visible", timeout: 60_000 });
     await mentorCard.click();
 
     // Using the exact title attribute
     const moduleItem = mentorCard
-      .locator('ul:first-child li:first-child a:first-child')
+      .locator("ul:first-child li:first-child a:first-child")
       .first();
     // const moduleItem = page.getByRole('link', {
     //   name: 'AI Assessment Creator',
@@ -41,23 +46,23 @@ test.describe('Canvas embed', () => {
     await moduleItem.click();
 
     // Wait for the mentor AI wrapper to appear
-    const mentorAIWrapper = page.locator('#mentor-ai-wrapper');
+    const mentorAIWrapper = page.locator("#mentor-ai-wrapper");
     const mentorAIWrapperIsVisible = await mentorAIWrapper.isVisible({
       timeout: 60000,
     });
     if (mentorAIWrapperIsVisible) {
-      const mentorAIWrapperInnerFrame = mentorAIWrapper.frameLocator('iframe');
+      const mentorAIWrapperInnerFrame = mentorAIWrapper.frameLocator("iframe");
 
       const widget = mentorAIWrapperInnerFrame.locator(
-        '#ibl-chat-widget-container'
+        "#ibl-chat-widget-container",
       );
       await expect(widget).toBeVisible({ timeout: 60000 });
-      const iblIframe = widget.frameLocator('iframe').first();
+      const iblIframe = widget.frameLocator("iframe").first();
 
       // Step 7: Validate elements inside the iframe
-      const navName = iblIframe.locator('nav h1');
+      const navName = iblIframe.locator("nav h1");
       await expect(navName).toBeVisible({ timeout: 60000 });
-      const closeButton = iblIframe.getByRole('button', {
+      const closeButton = iblIframe.getByRole("button", {
         name: /close chat/i,
       });
       await expect(closeButton).toBeVisible();
@@ -65,20 +70,20 @@ test.describe('Canvas embed', () => {
       await expect(img).toBeVisible();
 
       const isLoaded = await img.evaluate(
-        (imgEl: HTMLImageElement) => imgEl.naturalWidth > 0
+        (imgEl: HTMLImageElement) => imgEl.naturalWidth > 0,
       );
       expect(isLoaded).toBeTruthy();
 
-      logger.info(' Chat loaded and text content verified');
+      logger.info(" Chat loaded and text content verified");
 
-      const text = 'hello whats IBL all about?';
+      const text = "hello whats IBL all about?";
 
       const textArea = iblIframe.locator(
-        'textarea[placeholder]:not([placeholder=""])'
+        'textarea[placeholder]:not([placeholder=""])',
       );
       await expect(textArea).toBeVisible();
-      await expect(textArea).toHaveAttribute('placeholder', /.+/);
-      const sendButton = iblIframe.getByRole('button', {
+      await expect(textArea).toHaveAttribute("placeholder", /.+/);
+      const sendButton = iblIframe.getByRole("button", {
         name: /send message/i,
       });
 
@@ -88,10 +93,10 @@ test.describe('Canvas embed', () => {
       await page.waitForTimeout(5000);
       await sendButton.click();
 
-      const userMessage = iblIframe.locator('.chat-user-message-query', {
+      const userMessage = iblIframe.locator(".chat-user-message-query", {
         hasText: text,
       });
-      const mentorResponse = iblIframe.locator('.chat-ai-message-response');
+      const mentorResponse = iblIframe.locator(".chat-ai-message-response");
       await userMessage.waitFor();
       await mentorResponse.waitFor();
 

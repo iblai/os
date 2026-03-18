@@ -76,3 +76,4 @@ src-tauri/gen/apple/
 # playwright
 test-results
 e2e/playwright-report
+.auth
