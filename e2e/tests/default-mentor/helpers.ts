@@ -100,10 +100,11 @@ export async function selectDefaultMentor(
 ): Promise<string> {
   // Find the Default Mentor section and its combobox
   const defaultMentorCombobox = dialog.getByRole("combobox").first();
-  const mentorName = await defaultMentorCombobox.textContent();
+  // Wait for the combobox to load its data (it starts as "Select mentor")
   await expect(defaultMentorCombobox).not.toHaveText("Select mentor", {
-    timeout: 10000,
+    timeout: 30_000,
   });
+  const mentorName = await defaultMentorCombobox.textContent();
   const isMentorNotYetSelected = mentorName === "None";
   if (!isMentorNotYetSelected) {
     logger.info(`Mentor already selected: ${mentorName}`);
