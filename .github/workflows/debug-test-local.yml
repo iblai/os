@@ -293,9 +293,7 @@ jobs:
             --project="$PROJECT" \
             --workers=${{ inputs.workers }} \
             --reporter=list \
-            --trace=on \
-            --screenshot=on \
-            --video=retain-on-failure
+            --trace=on
 
       - name: Upload test results
         if: always()
