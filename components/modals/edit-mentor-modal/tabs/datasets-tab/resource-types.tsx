@@ -247,6 +247,33 @@ export const resourceTypes: ResourceType[] = [
     ),
   },
   {
+    id: 'csv',
+    name: 'CSV',
+    bgColor: 'bg-blue-100',
+    isActive: true,
+    type: 'local',
+    accept: 'text/csv,.csv',
+    icon: (
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect x="2" y="2" width="20" height="20" rx="2" fill="#217346" />
+        <path d="M7 7H11V9H7V7Z" fill="white" />
+        <path d="M13 7H17V9H13V7Z" fill="white" />
+        <path d="M7 10H11V12H7V10Z" fill="white" />
+        <path d="M13 10H17V12H13V10Z" fill="white" />
+        <path d="M7 13H11V15H7V13Z" fill="white" />
+        <path d="M13 13H17V15H13V13Z" fill="white" />
+        <path d="M7 16H11V18H7V16Z" fill="white" />
+        <path d="M13 16H17V18H13V16Z" fill="white" />
+      </svg>
+    ),
+  },
+  {
     id: 'github',
     name: 'GitHub',
     bgColor: 'bg-blue-100',
