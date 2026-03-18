@@ -80,7 +80,9 @@ jobs:
         working-directory: src-tauri
         run: |
           $manifest = Get-Content AppxManifest.xml -Raw
-          $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
+          # Negative lookbehind ensures we only replace the Identity Version attribute,
+          # not MinVersion or MaxVersionTested in TargetDeviceFamily
+          $manifest = $manifest -replace '(?<![A-Za-z])Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
           Set-Content -Path AppxManifest.xml -Value $manifest
 
       - name: Build MSIX package (unsigned)
