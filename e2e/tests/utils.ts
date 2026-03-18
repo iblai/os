@@ -1686,6 +1686,11 @@ export async function uploadDataOnTheDataSet(page: Page) {
       path: 'files/testing_folder/outerHTML.txt',
       name: 'outerHTML.txt',
     },
+    {
+      type: 'CSV',
+      path: 'files/testing_folder/test-data.csv',
+      name: 'test-data.csv',
+    },
   ];
 
   for (const resource of resources) {

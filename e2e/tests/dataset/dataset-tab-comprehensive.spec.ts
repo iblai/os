@@ -156,8 +156,8 @@ test.describe('Datasets Tab - Comprehensive Tests', () => {
     await expect(modalDescription).toBeVisible();
 
     // Verify resource type buttons are present (check for common ones based on actual resource-types.tsx)
-    // Available types: PowerPoint, OneDrive, Google Drive, Dropbox, YouTube, URL, PDF, DOCX, Excel, GitHub, TXT, Audio, Video, Image, Web Crawler
-    const resourceTypes = ['PDF', 'URL', 'Image', 'TXT', 'YouTube', 'GitHub'];
+    // Available types: PowerPoint, OneDrive, Google Drive, Dropbox, YouTube, URL, PDF, DOCX, Excel, CSV, GitHub, TXT, Audio, Video, Image, Web Crawler
+    const resourceTypes = ['PDF', 'URL', 'Image', 'TXT', 'YouTube', 'GitHub', 'CSV'];
     for (const type of resourceTypes) {
       const resourceButton = addResourceModal.locator('button').filter({
         hasText: new RegExp(`^${type}$`, 'i'),
@@ -1469,5 +1469,79 @@ test.describe('Datasets Tab - Comprehensive Tests', () => {
     }
 
     logger.info('TC28: File upload cancellation handled gracefully');
+  });
+
+  test('TC29: Should upload a CSV file via Add Resource modal', async ({
+    page,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      logger.info('TC29: Skipping - User is not admin');
+      test.skip();
+      return;
+    }
+
+    const dialog = await navigateToDatasetsTab(page);
+
+    // Click Add Resource button
+    const addResourceButton = dialog.getByRole('button', {
+      name: /Add Resource/i,
+    });
+    await expect(addResourceButton).toBeVisible({ timeout: 10000 });
+    await addResourceButton.click();
+
+    // Wait for Add Resources modal
+    const addResourceModal = page
+      .getByRole('dialog')
+      .filter({ hasText: /Add Resources/i });
+    await expect(addResourceModal).toBeVisible({ timeout: 10000 });
+
+    // Verify CSV button is visible in the resource types grid
+    const csvButton = addResourceModal
+      .locator('button')
+      .filter({ hasText: /^CSV$/i });
+    await expect(csvButton).toBeVisible({ timeout: 5000 });
+
+    // Click CSV button
+    await csvButton.click();
+    await page.waitForTimeout(1000);
+
+    // Wait for CSV upload dialog
+    const csvDialog = page.getByRole('dialog').filter({ hasText: 'CSV' });
+    await expect(csvDialog).toBeVisible({ timeout: 5000 });
+
+    // Verify drag and drop area is shown
+    await expect(
+      csvDialog.getByText('Drag and drop your file here')
+    ).toBeVisible();
+
+    // Verify Browse files button is shown
+    await expect(csvDialog.getByText('Browse files')).toBeVisible();
+
+    // Verify the file input accepts CSV files
+    const fileInput = csvDialog.locator('input[type="file"]');
+    await expect(fileInput).toHaveAttribute('accept', 'text/csv,.csv');
+
+    // Upload a CSV file
+    await fileInput.setInputFiles('files/testing_folder/test-data.csv');
+
+    // Verify file name appears in the dialog
+    await expect(csvDialog.getByText('test-data.csv')).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Click Submit button
+    const submitButton = csvDialog.getByRole('button', { name: /Submit/i });
+    await expect(submitButton).toBeVisible();
+    await expect(submitButton).toBeEnabled();
+    await submitButton.click();
+
+    // Wait for success toast
+    const successToast = page.getByText(
+      /Document has been queued for training/i
+    );
+    await expect(successToast).toBeVisible({ timeout: 30000 });
+
+    logger.info('TC29: CSV file uploaded successfully');
   });
 });
