@@ -218,7 +218,7 @@ jobs:
           cat > e2e/.env.production <<ENVEOF
           MENTOR_NEXTJS_HOST=${{ steps.test-user.outputs.mentor-domain }}
           AUTH_HOST=${{ steps.test-user.outputs.auth-domain }}
-          PLAYWRIGHT_USERNAME=${{ steps.test-user.outputs.username }}
+          PLAYWRIGHT_USERNAME=iblaiuserchromenew@ibleducation.com
           PLAYWRIGHT_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}
           PLAYWRIGHT_USERNAME_CHROME=iblaiuserchromenew@ibleducation.com
           PLAYWRIGHT_PASSWORD_CHROME=${{ secrets.TEST_USER_PASSWORD }}
