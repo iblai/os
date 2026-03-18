@@ -650,16 +650,16 @@ test.describe("Admin Activities", () => {
       ).toBeVisible();
 
       // Validate voice and attachment features
-      // Anonymous embed shows attach file, voice input, voice call features when enabled in embed settings
+      // Anonymous embed does not have attach file, voice input, voice call features
       await expect(
         secondIframe.getByRole("button", { name: "Attach File" }),
-      ).toBeVisible({ timeout: 120_000 });
+      ).not.toBeVisible({ timeout: 120_000 });
       await expect(
         secondIframe.getByRole("button", { name: "Voice input" }),
-      ).toBeVisible({ timeout: 120_000 });
+      ).not.toBeVisible({ timeout: 120_000 });
       await expect(
         secondIframe.getByRole("button", { name: "Voice call" }),
-      ).toBeVisible({ timeout: 120_000 });
+      ).not.toBeVisible({ timeout: 120_000 });
 
       logger.info("✅ Chat loaded and UI elements verified");
 
