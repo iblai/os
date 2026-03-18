@@ -13,9 +13,7 @@ import { AUTH_HOST, EMBED_URL, MENTOR_NEXTJS_HOST } from "../utils";
 import { fillCreateMentorForm } from "../utils/create-mentor";
 import { navigateToMentorApp } from "../profile/helpers";
 import { safeWaitForURL } from "@iblai/iblai-js/playwright";
-
-const password: string = process.env.PLAYWRIGHT_PASSWORD || "";
-const username: string = process.env.PLAYWRIGHT_USERNAME || "";
+import { getCredentials } from "../helpers";
 
 // test.describe.configure({ mode: 'serial' });
 
@@ -28,11 +26,12 @@ test.describe("Admin Activities", () => {
   test("Default non-anonymous embed with voice call, voice record and attachment", async ({
     page,
     browser,
-  }) => {
+  }, testInfo) => {
     // TODO: Temporary skip for Safari
     const isSafari = browser.browserType().name() === "webkit";
     test.skip(isSafari, "Skipping on Safari due to navigation policy issues");
 
+    const { username, password } = getCredentials(testInfo.project.name);
     const isAdmin = await checkAdminStatus(page);
     if (isAdmin) {
       await fillCreateMentorForm({ page });
