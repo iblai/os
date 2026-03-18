@@ -220,7 +220,7 @@ jobs:
           AUTH_HOST=${{ steps.test-user.outputs.auth-domain }}
           PLAYWRIGHT_USERNAME=${{ steps.test-user.outputs.username }}
           PLAYWRIGHT_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}
-          PLAYWRIGHT_USERNAME_CHROME=${{ steps.test-user.outputs.username-chrome }}
+          PLAYWRIGHT_USERNAME_CHROME=iblaiuserchromenew@ibleducation.com
           PLAYWRIGHT_PASSWORD_CHROME=${{ secrets.TEST_USER_PASSWORD }}
           PLAYWRIGHT_USERNAME_FIREFOX=${{ steps.test-user.outputs.username-firefox }}
           PLAYWRIGHT_PASSWORD_FIREFOX=${{ secrets.TEST_USER_PASSWORD }}
