@@ -283,6 +283,7 @@ jobs:
           CI: true
           NODE_ENV: production
           PLAYWRIGHT_HTML_OPEN: never
+          DEBUG: pw:api,pw:browser
         run: |
           PROJECT="mentor-desktop-${{ inputs.browser }}"
 
@@ -291,7 +292,10 @@ jobs:
             --config e2e/playwright.config.ts \
             --project="$PROJECT" \
             --workers=${{ inputs.workers }} \
-            --reporter=list
+            --reporter=list \
+            --trace=on \
+            --screenshot=on \
+            --video=retain-on-failure
 
       - name: Upload test results
         if: always()
