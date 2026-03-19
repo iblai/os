@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-MIN_COVERAGE=95
+MIN_COVERAGE="${MIN_COVERAGE:-95}"
 BASE_BRANCH="${BASE_BRANCH:-origin/main}"
 
 SKIP_COVERAGE_FILES=(
