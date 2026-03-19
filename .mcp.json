@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "iblai-js-mcp": {
+      "command": "pnpm",
+      "args": ["dlx", "@iblai/mcp"]
+    }
+  }
+}

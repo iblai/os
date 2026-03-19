@@ -48,6 +48,7 @@
   "exclude": [
     "**/node_modules",
     ".next",
-    "dist-electron"
+    "dist-electron",
+    "e2e"
   ]
 }
