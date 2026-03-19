@@ -308,3 +308,4 @@ echo "Exit code: $OVERALL_EXIT_CODE"
 echo "================================================================================"
 
 exit $OVERALL_EXIT_CODE
+
