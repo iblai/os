@@ -52,6 +52,12 @@ export const getErrorMessage = (
       const data = maybeError.data as Record<string, unknown>;
       if (typeof data.detail === "string") return data.detail;
       if (typeof data.message === "string") return data.message;
+      if (data.emails_to_add && Array.isArray(data.emails_to_add)) {
+        return data.emails_to_add.join(", ");
+      }
+      if (data.usernames_to_add && Array.isArray(data.usernames_to_add)) {
+        return data.usernames_to_add.join(", ");
+      }
     }
     if (
       typeof maybeError.message === "string" &&
