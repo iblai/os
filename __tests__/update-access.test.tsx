@@ -24,11 +24,15 @@ vi.mock("@/hooks/use-user", () => ({
   useUsername: () => mockUseUsername(),
 }));
 
+const mockUseGetRbacGroupsQuery = vi.fn();
+
 vi.mock("@iblai/iblai-js/data-layer", () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorSettingsQuery(...args),
   usePlatformUsersQuery: (...args: unknown[]) =>
     mockUsePlatformUsersQuery(...args),
+  useGetRbacGroupsQuery: (...args: unknown[]) =>
+    mockUseGetRbacGroupsQuery(...args),
   useUpdateRbacMentorAccessMutation: () => [mockUpdateMentorAccess],
   isPoliciesResponse: () => false,
 }));
@@ -94,6 +98,11 @@ describe("RoleAccessPanel", () => {
       isLoading: false,
     });
     mockUsePlatformUsersQuery.mockReturnValue({
+      data: undefined,
+      isFetching: false,
+      isLoading: false,
+    });
+    mockUseGetRbacGroupsQuery.mockReturnValue({
       data: undefined,
       isFetching: false,
       isLoading: false,
@@ -395,6 +404,116 @@ describe("RoleAccessPanel", () => {
       expect(
         screen.getByRole("button", { name: /add 1 user$/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  /* ---------- Groups ---------- */
+
+  describe("with groups permission", () => {
+    beforeEach(() => {
+      mockCheckRbacPermission.mockImplementation(
+        (_perms: unknown, resource: string) => {
+          if (resource === `/groups/#list`) return true;
+          if (resource === `/users/#list`) return true;
+          return false;
+        },
+      );
+    });
+
+    it("renders assigned groups section", () => {
+      setup({
+        policy: createPolicy({
+          groups: [{ id: 10, name: "Engineering", unique_id: "eng-1" }],
+        }),
+      });
+
+      expect(screen.getByText("Assigned groups")).toBeInTheDocument();
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    it("shows empty groups state when no groups assigned", () => {
+      setup({ policy: createPolicy({ groups: [] }) });
+
+      expect(
+        screen.getByText("No groups have this role yet."),
+      ).toBeInTheDocument();
+    });
+
+    it("renders groups search input", () => {
+      setup();
+
+      expect(
+        screen.getByPlaceholderText("Search groups by name"),
+      ).toBeInTheDocument();
+    });
+
+    it("removes group and calls mutation with groups_to_remove", async () => {
+      const { user } = setup({
+        policy: createPolicy({
+          groups: [{ id: 10, name: "Engineering", unique_id: "eng-1" }],
+        }),
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: /remove engineering/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
+          requestBody: expect.objectContaining({
+            groups_to_remove: [10],
+            role: "editor",
+          }),
+        });
+      });
+    });
+
+    it("adds group via search and calls mutation with groups_to_add", async () => {
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: {
+          results: [{ id: 20, name: "Design" }],
+        },
+        isFetching: false,
+        isLoading: false,
+      });
+
+      const { user } = setup();
+
+      const searchInput = screen.getByPlaceholderText("Search groups by name");
+      await user.type(searchInput, "des");
+
+      const resultButton = await screen.findByText("Design");
+      await user.click(resultButton);
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
+          requestBody: expect.objectContaining({
+            groups_to_add: [20],
+            role: "editor",
+          }),
+        });
+      });
+    });
+  });
+
+  describe("without groups permission", () => {
+    beforeEach(() => {
+      mockCheckRbacPermission.mockImplementation(
+        (_perms: unknown, resource: string) => {
+          if (resource === `/groups/#list`) return false;
+          if (resource === `/users/#list`) return true;
+          return false;
+        },
+      );
+    });
+
+    it("does not render groups section", () => {
+      setup();
+
+      expect(screen.queryByText("Assigned groups")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search groups by name"),
+      ).not.toBeInTheDocument();
     });
   });
 });

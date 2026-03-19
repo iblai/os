@@ -1,4 +1,4 @@
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,7 @@ const mockUseParams = vi.fn();
 const mockUseUsername = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUsePlatformUsersQuery = vi.fn();
+const mockUseGetRbacGroupsQuery = vi.fn();
 const mockUpdateRbacMentorAccess = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockCheckRbacPermission = vi.fn();
@@ -29,6 +30,8 @@ vi.mock("@iblai/iblai-js/data-layer", () => ({
     mockUseGetMentorSettingsQuery(...args),
   usePlatformUsersQuery: (...args: unknown[]) =>
     mockUsePlatformUsersQuery(...args),
+  useGetRbacGroupsQuery: (...args: unknown[]) =>
+    mockUseGetRbacGroupsQuery(...args),
   useUpdateRbacMentorAccessMutation: () => [
     mockUpdateRbacMentorAccess,
     { isLoading: false },
@@ -93,6 +96,11 @@ describe("AddAccessDialog", () => {
       isLoading: false,
     });
     mockUsePlatformUsersQuery.mockReturnValue({
+      data: undefined,
+      isFetching: false,
+      isLoading: false,
+    });
+    mockUseGetRbacGroupsQuery.mockReturnValue({
       data: undefined,
       isFetching: false,
       isLoading: false,
@@ -440,6 +448,115 @@ describe("AddAccessDialog", () => {
 
     await waitFor(() => {
       expect(defaultProps.onAccessCreated).toHaveBeenCalled();
+    });
+  });
+
+  /* ---------- Groups permission ---------- */
+
+  describe("with groups permission", () => {
+    beforeEach(() => {
+      mockCheckRbacPermission.mockImplementation(
+        (_perms: unknown, resource: string) => {
+          if (resource === `/groups/#list`) return true;
+          if (resource === `/users/#list`) return true;
+          return false;
+        },
+      );
+    });
+
+    it("renders groups search input when dialog is opened", async () => {
+      const { user } = setup();
+      await openDialog(user);
+
+      expect(
+        screen.getByPlaceholderText("Search groups by name"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows selected groups and allows removal", async () => {
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: {
+          results: [{ id: 10, name: "Engineering" }],
+        },
+        isFetching: false,
+        isLoading: false,
+      });
+
+      const { user } = setup();
+      await openDialog(user);
+
+      const searchInput = screen.getByPlaceholderText("Search groups by name");
+      await user.type(searchInput, "eng");
+
+      const resultButton = await screen.findByText("Engineering");
+      await user.click(resultButton);
+
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+
+      // Remove
+      await user.click(
+        screen.getByRole("button", { name: /remove engineering/i }),
+      );
+
+      expect(screen.getByText("No groups selected yet.")).toBeInTheDocument();
+    });
+
+    it("submits with groups_to_add in payload", async () => {
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: {
+          results: [{ id: 10, name: "Engineering" }],
+        },
+        isFetching: false,
+        isLoading: false,
+      });
+
+      const { user } = setup();
+      await openDialog(user);
+
+      // Select role
+      await user.click(screen.getByRole("combobox", { name: /select role/i }));
+      await user.click(screen.getByRole("option", { name: /editor/i }));
+
+      // Search and select group
+      const searchInput = screen.getByPlaceholderText("Search groups by name");
+      await user.type(searchInput, "eng");
+      const resultButton = await screen.findByText("Engineering");
+      await user.click(resultButton);
+
+      // Create
+      await user.click(screen.getByRole("button", { name: /create$/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
+          requestBody: expect.objectContaining({
+            platform_key: "test-tenant",
+            mentor_id: 42,
+            role: "editor",
+            groups_to_add: [10],
+          }),
+        });
+      });
+    });
+  });
+
+  describe("without groups permission", () => {
+    beforeEach(() => {
+      mockCheckRbacPermission.mockImplementation(
+        (_perms: unknown, resource: string) => {
+          if (resource === `/groups/#list`) return false;
+          if (resource === `/users/#list`) return true;
+          return false;
+        },
+      );
+    });
+
+    it("does not render groups search input", async () => {
+      const { user } = setup();
+      await openDialog(user);
+
+      expect(
+        screen.queryByPlaceholderText("Search groups by name"),
+      ).not.toBeInTheDocument();
     });
   });
 });

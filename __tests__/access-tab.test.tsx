@@ -128,7 +128,7 @@ describe("AccessTab", () => {
       expect(mockGetRbacPermissions).toHaveBeenCalledWith({
         requestBody: {
           platform_key: "tenant-1",
-          resources: ["/users/"],
+          resources: ["/users/", "/groups/"],
         },
       });
     });
@@ -216,9 +216,8 @@ describe("AccessTab", () => {
     expect(
       screen.getByText("1 user assigned to this role"),
     ).toBeInTheDocument();
-    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
     expect(screen.getByTestId("add-access-dialog")).toHaveTextContent(
-      "add-access-editor-ready",
+      "add-access-editor,chat-ready",
     );
   });
 
@@ -237,13 +236,18 @@ describe("AccessTab", () => {
   });
 
   it("hides add access dialog when all default roles already exist", () => {
-    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
     const policies = [
       {
         id: 1,
         mentor_id: 101,
         platform_key: "tenant-1",
         role: "editor",
+      },
+      {
+        id: 2,
+        mentor_id: 101,
+        platform_key: "tenant-1",
+        role: "chat",
       },
     ];
 
