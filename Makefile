@@ -1,51 +1,67 @@
 # Start the development server with Turbopack for faster builds
 dev:
-	npm run dev
+	pnpm run dev
 
 # Build the application for production
 build:
-	npm run build
+	pnpm run build
 
 # Start the production server
 start:
-	npm run start
+	pnpm run start
 
 # Run ESLint to check for code quality issues
 lint:
-	npm run lint
+	pnpm run lint
 
 # Run ESLint to check for code quality issues without fixing
 lint-check:
-	npm run lint:check
+	pnpm run lint:check
 
 # Format code using Prettier
 format:
-	npm run format
+	pnpm run format
 
 # Check code formatting without making changes
 format-check:
-	npm run format:check
+	pnpm run format:check
 
 # Format and lint code in one command
 format-lint:
-	npm run format-lint
+	pnpm run format-lint
 
 # Install all dependencies
 install:
-	npm install
+	pnpm install
+
+# Clean build artifacts and dependencies
+clean:
+	rm -rf node_modules
+	rm -rf .next
+	rm -rf dist
+	rm -rf dist-electron
+	rm -rf .turbo
+	rm -rf playwright-report
+	rm -rf test-results
+	rm -rf coverage
+
+# Clean everything and reinstall
+clean-install:
+	$(MAKE) clean
+	$(MAKE) install
 
 # run all tests
 test:
-	npm run test
+	pnpm run test
 
 # run all tests in watch mode
 test-watch:
-	npm run test:watch
+	pnpm run test:watch
 
 # run all tests in coverage mode
 test-coverage:
-	npm run test:coverage
+	pnpm run test:coverage
 
 # run all tests in ui mode
 test-ui:
-	npm run test:ui
+	pnpm run test:ui

@@ -1,6 +1,6 @@
-import test, { expect } from '@playwright/test';
-import { checkAdminStatus, selectDropdownWorksCorrectly } from '../utils';
-import { logger } from '@iblai/iblai-js/playwright';
+import test, { expect } from "@playwright/test";
+import { checkAdminStatus, selectDropdownWorksCorrectly } from "../utils";
+import { logger } from "@iblai/iblai-js/playwright";
 import {
   openChatWidget,
   removeChatBubbleIfExists,
@@ -8,30 +8,26 @@ import {
   waitForChatReady,
   waitForIframeReady,
   waitForMentorResponse,
-} from '../embedding-mentor/helpers';
-import { EMBED_URL } from '../utils';
-import { fillCreateMentorForm } from '../utils/create-mentor';
-import { navigateToMentorApp } from '../profile/helpers';
+} from "../embedding-mentor/helpers";
+import { EMBED_URL } from "../utils";
+import { fillCreateMentorForm } from "../utils/create-mentor";
+import { navigateToMentorApp } from "../profile/helpers";
 import {
   generateShareableLink,
   sendChatMessage,
   waitForMentorResponseToAppear,
-} from './helpers';
+} from "./helpers";
 
-test.describe('Shareable Links', () => {
+test.describe("Shareable Links", () => {
   test.setTimeout(300000);
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
 
-  test('Default non-anonymous embed with voice call, voice record and attachment', async ({
+  test("Default non-anonymous embed with voice call, voice record and attachment", async ({
     page,
     browser,
   }) => {
-    // TODO: Temporary skip for Safari
-    const isSafari = browser.browserType().name() === 'webkit';
-    test.skip(isSafari, 'Skipping on Safari due to navigation policy issues');
-
     const isAdmin = await checkAdminStatus(page);
     if (isAdmin) {
       await fillCreateMentorForm({ page });
@@ -50,16 +46,16 @@ test.describe('Shareable Links', () => {
       const newPage = await newContext.newPage();
       await navigateToMentorApp(newPage, shareableLink);
 
-      const loginButton = newPage.getByRole('button', { name: 'Log in' });
+      const loginButton = newPage.getByRole("button", { name: "Log in" });
       await expect(loginButton).toBeVisible({ timeout: 30_000 });
 
-      const signUpButton = newPage.getByRole('button', {
-        name: 'Sign up for free',
+      const signUpButton = newPage.getByRole("button", {
+        name: "Sign up for free",
       });
       await expect(signUpButton).toBeVisible({ timeout: 30_000 });
 
-      const sendMessageButton = newPage.getByRole('button', {
-        name: 'Send message',
+      const sendMessageButton = newPage.getByRole("button", {
+        name: "Send message",
       });
       await expect(sendMessageButton).toBeVisible({ timeout: 30_000 });
       await expect(sendMessageButton).not.toBeEnabled({ timeout: 30_000 });
@@ -69,13 +65,13 @@ test.describe('Shareable Links', () => {
     } else {
       // Non-admin user validation
       await selectDropdownWorksCorrectly(page);
-      const embedMenuItem = page.getByRole('menuitem', { name: 'Embed' });
+      const embedMenuItem = page.getByRole("menuitem", { name: "Embed" });
       await expect(embedMenuItem).not.toBeVisible();
-      logger.info('✅ Non-admin user correctly cannot see Embed option');
+      logger.info("✅ Non-admin user correctly cannot see Embed option");
     }
   });
 
-  test('Advanced anonymous embed mentor without context awareness, voice attachment, voice call, voice record', async ({
+  test("Advanced anonymous embed mentor without context awareness, voice attachment, voice call, voice record", async ({
     page,
     browser,
   }) => {
@@ -98,22 +94,22 @@ test.describe('Shareable Links', () => {
       const newPage = await newContext.newPage();
       await navigateToMentorApp(newPage, shareableLink);
 
-      const loginButton = newPage.getByRole('button', { name: 'Log in' });
+      const loginButton = newPage.getByRole("button", { name: "Log in" });
       await expect(loginButton).toBeVisible({ timeout: 30_000 });
 
-      const signUpButton = newPage.getByRole('button', {
-        name: 'Sign up for free',
+      const signUpButton = newPage.getByRole("button", {
+        name: "Sign up for free",
       });
       await expect(signUpButton).toBeVisible({ timeout: 30_000 });
 
-      const sendMessageButton = newPage.getByRole('button', {
-        name: 'Send message',
+      const sendMessageButton = newPage.getByRole("button", {
+        name: "Send message",
       });
       await expect(sendMessageButton).toBeVisible({ timeout: 30_000 });
       await expect(sendMessageButton).toBeEnabled({ timeout: 30_000 });
 
       // send message
-      await sendChatMessage(newPage, 'Hello');
+      await sendChatMessage(newPage, "Hello");
 
       await waitForMentorResponseToAppear(newPage);
 
@@ -128,13 +124,13 @@ test.describe('Shareable Links', () => {
       await page.waitForTimeout(3000);
 
       await expect(
-        page.getByRole('menuitem', { name: 'New chat' })
+        page.getByRole("menuitem", { name: "New chat" }),
       ).toBeVisible();
 
-      const embedMenuItem = page.getByRole('menuitem', { name: 'Embed' });
+      const embedMenuItem = page.getByRole("menuitem", { name: "Embed" });
       await expect(embedMenuItem).not.toBeVisible();
 
-      logger.info('✅ Non-admin user correctly cannot see Embed option');
+      logger.info("✅ Non-admin user correctly cannot see Embed option");
     }
   });
 });
