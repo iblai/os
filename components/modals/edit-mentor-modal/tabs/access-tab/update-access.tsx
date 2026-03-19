@@ -9,6 +9,7 @@ import {
   useUpdateRbacMentorAccessMutation,
   PlatformUsersListResponse,
   isPoliciesResponse,
+  useGetRbacGroupsQuery,
 } from "@iblai/iblai-js/data-layer";
 import type { MentorPolicy, RbacUser } from "@iblai/iblai-api";
 import { useParams } from "next/navigation";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/select";
 
 import type {
+  GroupOption,
   MentorAccessPolicy,
   PlatformUserOption,
   UpdateAction,
@@ -52,6 +54,10 @@ export function RoleAccessPanel({
     rbacPermissions,
     `/users/#list`,
   );
+  const hasGroupsPermission = checkRbacPermission(
+    rbacPermissions,
+    `/groups/#list`,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [showUserSearchResults, setShowUserSearchResults] = useState(false);
   const [debouncedSearch] = useDebounce(searchTerm, 300);
@@ -64,6 +70,12 @@ export function RoleAccessPanel({
   const [manualInputValue, setManualInputValue] = useState("");
   const [manualEntries, setManualEntries] = useState<string[]>([]);
   const [isAddingManual, setIsAddingManual] = useState(false);
+  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+  const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
+  const [debouncedGroupSearch] = useDebounce(groupSearchTerm, 300);
+  const [pendingGroupId, setPendingGroupId] = useState<number | null>(null);
+  const [pendingGroupAction, setPendingGroupAction] =
+    useState<UpdateAction | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
@@ -167,11 +179,18 @@ export function RoleAccessPanel({
   const resetPendingState = useCallback(() => {
     setPendingUserId(null);
     setPendingAction(null);
+    setPendingGroupId(null);
+    setPendingGroupAction(null);
   }, []);
 
   const handleMutation = useCallback(
     async (
-      payload: { users_to_add?: number[]; users_to_remove?: number[] },
+      payload: {
+        users_to_add?: number[];
+        users_to_remove?: number[];
+        groups_to_add?: number[];
+        groups_to_remove?: number[];
+      },
       successMessage: string,
     ) => {
       if (!tenantKey || !mentorSettings?.mentor_id) {
@@ -373,8 +392,104 @@ export function RoleAccessPanel({
     onAccessUpdated,
   ]);
 
+  // Groups query and handlers
+  const assignedGroupIds = useMemo(
+    () => new Set((policy.groups ?? []).map((g) => g.id)),
+    [policy.groups],
+  );
+
+  const shouldFetchGroups = Boolean(
+    tenantKey &&
+      hasGroupsPermission &&
+      showGroupSearchResults &&
+      debouncedGroupSearch &&
+      debouncedGroupSearch.trim().length >= 2,
+  );
+
+  const {
+    data: groupsData,
+    isFetching: isFetchingGroups,
+    isLoading: isLoadingGroups,
+  } = useGetRbacGroupsQuery(
+    {
+      platformKey: tenantKey,
+      name: shouldFetchGroups ? debouncedGroupSearch : undefined,
+      page: 1,
+      pageSize: 20,
+    },
+    {
+      skip: !shouldFetchGroups,
+    },
+  );
+
+  const availableGroupOptions = useMemo<GroupOption[]>(() => {
+    if (!groupsData) return [];
+    const results = (groupsData as { results?: unknown[] })?.results;
+    if (!Array.isArray(results)) return [];
+    return results
+      .filter(
+        (g): g is { id: number; name?: string } =>
+          !!g &&
+          typeof g === "object" &&
+          typeof (g as Record<string, unknown>).id === "number",
+      )
+      .map((g) => ({ id: g.id, name: g.name ?? `Group ${g.id}` }))
+      .filter((g) => !assignedGroupIds.has(g.id));
+  }, [groupsData, assignedGroupIds]);
+
+  const handleGroupSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setGroupSearchTerm(event.target.value);
+      setShowGroupSearchResults(true);
+    },
+    [],
+  );
+
+  const handleGroupSearchFocus = useCallback(() => {
+    if (groupSearchTerm.trim().length >= 2) {
+      setShowGroupSearchResults(true);
+    }
+  }, [groupSearchTerm]);
+
+  const handleGroupSearchBlur = useCallback(() => {
+    window.setTimeout(() => {
+      setShowGroupSearchResults(false);
+    }, 100);
+  }, []);
+
+  const handleAddGroup = useCallback(
+    async (group: GroupOption) => {
+      if (pendingGroupId !== null) return;
+      setPendingGroupId(group.id);
+      setPendingGroupAction("add");
+      await handleMutation(
+        { groups_to_add: [group.id] },
+        `${group.name} now has ${formatRoleName(policy.role)} access.`,
+      );
+      setGroupSearchTerm("");
+      setShowGroupSearchResults(false);
+    },
+    [handleMutation, pendingGroupId, policy.role],
+  );
+
+  const handleRemoveGroup = useCallback(
+    async (group: { id: number; name?: string }) => {
+      if (pendingGroupId !== null) return;
+      setPendingGroupId(group.id);
+      setPendingGroupAction("remove");
+      await handleMutation(
+        { groups_to_remove: [group.id] },
+        `${group.name ?? `Group ${group.id}`} was removed from ${formatRoleName(policy.role)} access.`,
+      );
+    },
+    [handleMutation, pendingGroupId, policy.role],
+  );
+
   const isPending = (userId: number, action: UpdateAction) =>
     pendingUserId === userId && pendingAction === action;
+
+  const isGroupPending = (groupId: number, action: UpdateAction) =>
+    pendingGroupId === groupId && pendingGroupAction === action;
 
   const renderAssignedUsers = () => {
     const users = policy.users ?? [];
@@ -643,6 +758,138 @@ export function RoleAccessPanel({
           )}
         </div>
       </div>
+
+      {hasGroupsPermission && (
+        <>
+          <div>
+            <h4 className="text-sm font-medium text-gray-900">
+              Assigned groups
+            </h4>
+            <p className="text-xs text-gray-600">
+              Remove groups who should no longer have this role.
+            </p>
+            <div className="mt-3">
+              {(policy.groups ?? []).length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                  No groups have this role yet.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(policy.groups ?? []).map((group) => (
+                    <div
+                      key={group.id}
+                      className="group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50"
+                    >
+                      <span className="font-medium">
+                        {group.name || group.unique_id}
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-gray-500 hover:text-red-600"
+                        onClick={() => handleRemoveGroup(group)}
+                        disabled={pendingGroupId !== null}
+                      >
+                        {isGroupPending(group.id, "remove") ? (
+                          <Loader2
+                            className="h-3.5 w-3.5 animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        )}
+                        <span className="sr-only">
+                          Remove {group.name ?? `group ${group.id}`}
+                        </span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="mt-3 space-y-1.5">
+              <Label htmlFor="group-search">Add groups</Label>
+              <div className="relative">
+                <Input
+                  id="group-search"
+                  value={groupSearchTerm}
+                  onChange={handleGroupSearchChange}
+                  onFocus={handleGroupSearchFocus}
+                  onBlur={handleGroupSearchBlur}
+                  placeholder="Search groups by name"
+                  autoComplete="off"
+                  aria-autocomplete="list"
+                  aria-expanded={showGroupSearchResults}
+                />
+                {showGroupSearchResults && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                    {groupSearchTerm.trim().length < 2 ? (
+                      <div
+                        className="px-3 py-2 text-sm text-gray-600"
+                        role="status"
+                      >
+                        Type at least two characters to search.
+                      </div>
+                    ) : isLoadingGroups ||
+                      isFetchingGroups ||
+                      groupSearchTerm.trim() !== debouncedGroupSearch.trim() ? (
+                      <div
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600"
+                        role="status"
+                      >
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                        Searching groups…
+                      </div>
+                    ) : availableGroupOptions.length > 0 ? (
+                      availableGroupOptions.map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          className="flex w-full items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => handleAddGroup(group)}
+                          disabled={pendingGroupId !== null}
+                        >
+                          <span className="text-sm font-medium text-gray-900">
+                            {group.name}
+                          </span>
+                          {isGroupPending(group.id, "add") && (
+                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                              <Loader2
+                                className="h-3 w-3 animate-spin"
+                                aria-hidden="true"
+                              />
+                              Adding…
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div
+                        className="px-3 py-2 text-sm text-gray-600"
+                        role="status"
+                      >
+                        No matching groups found.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                Type at least two characters to search and assign groups to this
+                role.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

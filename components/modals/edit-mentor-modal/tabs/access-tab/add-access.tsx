@@ -10,6 +10,7 @@ import {
   PlatformUsersListResponse,
   isPoliciesResponse,
   useGetMentorSettingsQuery,
+  useGetRbacGroupsQuery,
 } from "@iblai/iblai-js/data-layer";
 import type { MentorPolicy } from "@iblai/iblai-api";
 
@@ -33,7 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { DefaultMentorRole, PlatformUserOption } from "./shared";
+import type {
+  DefaultMentorRole,
+  GroupOption,
+  PlatformUserOption,
+} from "./shared";
 import { formatRoleName, getErrorMessage } from "./shared";
 import { useParams } from "next/navigation";
 import { TenantKeyMentorIdParams } from "@/lib/types";
@@ -60,6 +65,10 @@ export function AddAccessDialog({
     rbacPermissions,
     `/users/#list`,
   );
+  const hasGroupsPermission = checkRbacPermission(
+    rbacPermissions,
+    `/groups/#list`,
+  );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<DefaultMentorRole | "">("");
   const [selectedUsers, setSelectedUsers] = useState<PlatformUserOption[]>([]);
@@ -71,6 +80,10 @@ export function AddAccessDialog({
   );
   const [manualInputValue, setManualInputValue] = useState("");
   const [manualEntries, setManualEntries] = useState<string[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<GroupOption[]>([]);
+  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+  const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
+  const [debouncedGroupSearchTerm] = useDebounce(groupSearchTerm, 300);
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
 
@@ -104,6 +117,9 @@ export function AddAccessDialog({
         setManualInputType("email");
         setManualInputValue("");
         setManualEntries([]);
+        setSelectedGroups([]);
+        setGroupSearchTerm("");
+        setShowGroupSearchResults(false);
       }
     },
     [setIsCreateDialogOpen],
@@ -118,6 +134,9 @@ export function AddAccessDialog({
     setManualInputType("email");
     setManualInputValue("");
     setManualEntries([]);
+    setSelectedGroups([]);
+    setGroupSearchTerm("");
+    setShowGroupSearchResults(false);
   }, []);
 
   const shouldFetchCreationUsers = Boolean(
@@ -222,6 +241,81 @@ export function AddAccessDialog({
     setSelectedUsers((prev) => prev.filter((user) => user.id !== userId));
   }, []);
 
+  // Groups query and handlers
+  const shouldFetchGroups = Boolean(
+    platformKey &&
+      hasGroupsPermission &&
+      debouncedGroupSearchTerm &&
+      debouncedGroupSearchTerm.length >= 2,
+  );
+
+  const {
+    data: groupsData,
+    isFetching: isFetchingGroups,
+    isLoading: isLoadingGroups,
+  } = useGetRbacGroupsQuery(
+    {
+      platformKey: platformKey,
+      name: shouldFetchGroups ? debouncedGroupSearchTerm : undefined,
+      page: 1,
+      pageSize: 20,
+    },
+    {
+      skip: !shouldFetchGroups,
+    },
+  );
+
+  const selectedGroupIds = useMemo(
+    () => new Set(selectedGroups.map((g) => g.id)),
+    [selectedGroups],
+  );
+
+  const availableGroups = useMemo<GroupOption[]>(() => {
+    if (!groupsData) return [];
+    const results = (groupsData as { results?: unknown[] })?.results;
+    if (!Array.isArray(results)) return [];
+    return results
+      .filter(
+        (g): g is { id: number; name?: string } =>
+          !!g &&
+          typeof g === "object" &&
+          typeof (g as Record<string, unknown>).id === "number",
+      )
+      .map((g) => ({ id: g.id, name: g.name ?? `Group ${g.id}` }))
+      .filter((g) => !selectedGroupIds.has(g.id));
+  }, [groupsData, selectedGroupIds]);
+
+  const handleGroupSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setGroupSearchTerm(event.target.value);
+      setShowGroupSearchResults(true);
+    },
+    [],
+  );
+
+  const handleGroupSearchFocus = useCallback(() => {
+    if (groupSearchTerm.length > 0) setShowGroupSearchResults(true);
+  }, [groupSearchTerm]);
+
+  const handleGroupSearchBlur = useCallback(() => {
+    window.setTimeout(() => {
+      setShowGroupSearchResults(false);
+    }, 100);
+  }, []);
+
+  const handleAddGroupSelection = useCallback((group: GroupOption) => {
+    setSelectedGroups((prev) => {
+      if (prev.some((g) => g.id === group.id)) return prev;
+      return [...prev, group];
+    });
+    setGroupSearchTerm("");
+    setShowGroupSearchResults(false);
+  }, []);
+
+  const handleRemoveSelectedGroup = useCallback((groupId: number) => {
+    setSelectedGroups((prev) => prev.filter((g) => g.id !== groupId));
+  }, []);
+
   const handleCreateRoleAccess = useCallback(async () => {
     /* istanbul ignore if -- defensive: Create button is disabled when no role selected */
     if (!selectedRole) {
@@ -261,12 +355,18 @@ export function AddAccessDialog({
             : { usernames_to_add: allEntries }
           : {};
 
+      const groupsPayload =
+        hasGroupsPermission && selectedGroups.length > 0
+          ? { groups_to_add: selectedGroups.map((g) => g.id) }
+          : {};
+
       await createMentorAccess({
         requestBody: {
           platform_key: platformKey,
           mentor_id: mentorDbId,
           role: selectedRole,
           ...usersPayload,
+          ...groupsPayload,
         },
       } as unknown as { requestBody: MentorPolicy }).unwrap();
 
@@ -278,6 +378,9 @@ export function AddAccessDialog({
       setManualInputType("email");
       setManualInputValue("");
       setManualEntries([]);
+      setSelectedGroups([]);
+      setGroupSearchTerm("");
+      setShowGroupSearchResults(false);
       setIsCreateDialogOpen(false);
       await onAccessCreated();
     } catch (error) {
@@ -288,6 +391,7 @@ export function AddAccessDialog({
   }, [
     availableRoles,
     createMentorAccess,
+    hasGroupsPermission,
     hasUsersPermission,
     manualEntries,
     manualInputType,
@@ -295,6 +399,7 @@ export function AddAccessDialog({
     mentorDbId,
     onAccessCreated,
     platformKey,
+    selectedGroups,
     selectedRole,
     selectedUsers,
   ]);
@@ -549,6 +654,94 @@ export function AddAccessDialog({
             )}
           </div>
         </div>
+        {hasGroupsPermission && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Groups</Label>
+              {selectedGroups.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm"
+                    >
+                      <span className="font-medium">{group.name}</span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-gray-500 hover:text-red-600"
+                        onClick={() => handleRemoveSelectedGroup(group.id)}
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span className="sr-only">Remove {group.name}</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                  No groups selected yet.
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-group-search">Add groups</Label>
+              <div className="relative">
+                <Input
+                  id="create-group-search"
+                  value={groupSearchTerm}
+                  onChange={handleGroupSearchChange}
+                  onFocus={handleGroupSearchFocus}
+                  onBlur={handleGroupSearchBlur}
+                  placeholder="Search groups by name"
+                  autoComplete="off"
+                  aria-autocomplete="list"
+                  aria-expanded={showGroupSearchResults}
+                />
+                {showGroupSearchResults && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                    {groupSearchTerm.trim().length < 2 ? (
+                      <div className="px-3 py-2 text-sm text-gray-600">
+                        Type at least two characters to search.
+                      </div>
+                    ) : isLoadingGroups || isFetchingGroups ? (
+                      <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                        Searching groups…
+                      </div>
+                    ) : availableGroups.length > 0 ? (
+                      availableGroups.map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          className="flex w-full items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => handleAddGroupSelection(group)}
+                        >
+                          <span className="text-sm font-medium text-gray-900">
+                            {group.name}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-600">
+                        No matching groups found.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">
+                Type at least two characters to search and assign groups to this
+                role.
+              </p>
+            </div>
+          </div>
+        )}
         <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={handleCancelCreate}>
             Cancel

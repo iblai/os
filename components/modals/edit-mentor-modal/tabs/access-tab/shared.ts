@@ -1,10 +1,11 @@
-import type { MentorPolicy, RbacUser } from "@iblai/iblai-api";
+import type { MentorPolicy, RbacPolicyGroup, RbacUser } from "@iblai/iblai-api";
 
 export type MentorAccessPolicy = Pick<
   MentorPolicy,
   "id" | "mentor_id" | "platform_key" | "role"
 > & {
   users?: RbacUser[];
+  groups?: RbacPolicyGroup[];
 };
 
 export type PlatformUserOption = {
@@ -12,6 +13,11 @@ export type PlatformUserOption = {
   name: string;
   username?: string | null;
   email?: string;
+};
+
+export type GroupOption = {
+  id: number;
+  name: string;
 };
 
 export type UpdateAction = "add" | "remove";

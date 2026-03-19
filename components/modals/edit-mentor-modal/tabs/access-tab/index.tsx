@@ -133,7 +133,7 @@ export function AccessTab() {
         const result = await getRbacPermissions({
           requestBody: {
             platform_key: tenantKey,
-            resources: [`/users/`],
+            resources: [`/users/`, `/groups/`],
           },
         }).unwrap();
         dispatch(updateRbacPermissions({ ...result }));
