@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-18 | 233 checkpoints | 32 journeys | 100% covered
+> Last updated: 2026-03-18 | 234 checkpoints | 33 journeys | 100% covered
 
 ## How This Works
 
@@ -16,7 +16,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 1: Authentication (4 checkpoints) — `auth/sign-up-auth-tests.mentor.spec.ts`, `auth/user-invalid-credentials.mentor.spec.ts`
+## Journey 1: Authentication (4 checkpoints) — `journeys/01-authentication.spec.ts`
 
 **Source files:** `app/sso-login/page.tsx`, `app/sso-login-complete/page.tsx`
 
@@ -27,7 +27,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (6 checkpoints) — `main-tenant/new_user_chat.spec.ts`, `main-tenant/new_user_navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (6 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -40,7 +40,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 3: New User UI & Profile Dropdown (4 checkpoints) — `main-tenant/new_user_profile.spec.ts`
+## Journey 3: New User UI & Profile Dropdown (4 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
@@ -51,7 +51,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 4: User Profile Management (14 checkpoints) — `profile/profile.spec.ts`
+## Journey 4: User Profile Management (14 checkpoints) — `journeys/04-user-profile-management.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -72,7 +72,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 5: Mentor Discovery — Explore Page (13 checkpoints) — `explore/mentors-visibility.spec.ts`, `explore/mentors-discovery.spec.ts`, `explore/mentors-chat.spec.ts`, `explore/mentors-filters.spec.ts`, `explore/mentors-featured.spec.ts`, `explore/mentors-custom.spec.ts`, `explore/mentors-favorites.spec.ts`
+## Journey 5: Mentor Discovery — Explore Page (13 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`
 
@@ -92,7 +92,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (8 checkpoints) — `create-mentor/admin.spec.ts`, `tests/cleanup.mentornextjs.cleanup.ts`
+## Journey 6: Mentor Management — Admin (8 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
 
@@ -108,7 +108,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (5 checkpoints) — `settings/settings-tab.spec.ts`, `settings-tab/tooltips.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (5 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -120,7 +120,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 8: Chat File Upload (9 checkpoints) — `chat/file-upload/index.spec.ts`
+## Journey 8: Chat File Upload (9 checkpoints) — `journeys/08-chat-file-upload.spec.ts`
 
 **Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`
 
@@ -136,7 +136,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 9: Voice Chat (5 checkpoints) — `voice-chat/voice-chat-chromium.spec.ts`, `voice-chat/voice-chat-non-chromium.spec.ts`
+## Journey 9: Voice Chat (5 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
 **Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
@@ -148,7 +148,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 10: Canvas — AI Document Editor (11 checkpoints) — `canvas/canvas-component.spec.ts`
+## Journey 10: Canvas — AI Document Editor (11 checkpoints) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
 **Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
 
@@ -166,7 +166,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 11: Canvas — Embed _(1 checkpoint)_ — `canvas-embed/canvas-embed.spec.ts`
+## Journey 11: Canvas — Embed (1 checkpoint) — `journeys/11-canvas-embed.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/canvas/canvas-view.tsx`
 
@@ -174,7 +174,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 12: Chat Sharing (6 checkpoints) — `share/share.spec.ts`
+## Journey 12: Chat Sharing (6 checkpoints) — `journeys/12-chat-sharing.spec.ts`
 
 **Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`
 
@@ -187,7 +187,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (4 checkpoints) — `shareable-links/shareable-links.spec.ts`, `embedding-mentor/non-anonymous-embed.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (4 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`
 
@@ -198,7 +198,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 14: Anonymous / Public Access (6 checkpoints) — `non-logged-in-user/index.spec.ts`
+## Journey 14: Anonymous / Public Access (6 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`
 
@@ -211,7 +211,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 15: Mentor Switching (6 checkpoints) — `main-tenant/new_user_mentor_switch.spec.ts`, `switch-between-mentors/switch-between-mentors.spec.ts`
+## Journey 15: Mentor Switching (6 checkpoints) — `journeys/15-mentor-switching.spec.ts`
 
 **Source files:** `components/modals/my-mentors-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `hooks/use-mentors.ts`
 
@@ -224,7 +224,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 16: My Mentors Modal (3 checkpoints) — `myMentors/myMentors.spec.ts`
+## Journey 16: My Mentors Modal (3 checkpoints) — `journeys/16-my-mentors-modal.spec.ts`
 
 **Source files:** `components/modals/my-mentors-modal.tsx`, `hooks/use-mentors.ts`
 
@@ -234,7 +234,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 17: Notifications (5 checkpoints) — `notifications/notifications.spec.ts`, `main-tenant/new_user_notifications.spec.ts`
+## Journey 17: Notifications (6 checkpoints) — `journeys/17-notifications.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/notifications/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -247,7 +247,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 18: Analytics Dashboard (5 checkpoints) — `analytics/analytics.spec.ts`
+## Journey 18: Analytics Dashboard (5 checkpoints) — `journeys/18-analytics-dashboard.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/users/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/financial/page.tsx`
 
@@ -259,7 +259,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 19: Data Reports (10 checkpoints) — `analytics/data-reports.spec.ts`
+## Journey 19: Data Reports (18 checkpoints) — `journeys/19-data-reports.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/reports/page.tsx`, `app/reports/[tenantKey]/[reportName]/page.tsx`
 
@@ -276,7 +276,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 20: Dataset Management (16 checkpoints) — `dataset/dataset-tab-comprehensive.spec.ts`
+## Journey 20: Dataset Management (16 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `hooks/use-datasets.ts`
 
@@ -299,7 +299,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 21: Billing & Subscription (9 checkpoints) — `billing/billing.spec.ts`, `subscription/subscription.spec.ts`
+## Journey 21: Billing & Subscription (9 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`, `app/provider-association/stripe/callback/[launch_id]/page.tsx`, `hooks/subscription/use-subscription-v2.ts`
 
@@ -315,7 +315,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (7 checkpoints) — `disclaimers/disclaimers.spec.ts`
+## Journey 22: Disclaimers & User Agreement (8 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`
 
@@ -329,7 +329,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 23: Mentor History Tab (5 checkpoints) — `history/history.spec.ts`, `acessibility/acessibility.spec.ts`
+## Journey 23: Mentor History Tab (5 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/history-tab.tsx`, `hooks/use-history.ts`, `hooks/use-history/use-export-chat-history.ts`
 
@@ -341,7 +341,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 24: Mentor Memory Tab (3 checkpoints) — `memory/memory.spec.ts`
+## Journey 24: Mentor Memory Tab (3 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
 
@@ -351,7 +351,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 25: MCP (Model Context Protocol) Tab (4 checkpoints) — `mcp/mcp.spec.ts`
+## Journey 25: MCP (Model Context Protocol) Tab (4 checkpoints) — `journeys/25-mentor-mcp-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-dialogs.tsx`
 
@@ -362,7 +362,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 26: Projects (8 checkpoints) — `projects/projects.spec.ts`
+## Journey 26: Projects (8 checkpoints) — `journeys/26-projects.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/projects/project-landing-page.tsx`, `components/projects/create-project-modal.tsx`, `components/projects/project-mentors-list.tsx`, `components/projects/project-action-buttons.tsx`, `components/projects/project-files-modal.tsx`, `components/projects/project-instructions-modal.tsx`, `components/projects/rename-project-modal.tsx`, `components/projects/delete-project-modal.tsx`
 
@@ -377,7 +377,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 27: User Invitations & Default Mentor (5 checkpoints) — `accept-invite/user-can-accept-invite.spec.ts`, `default-mentor/default-mentor.spec.ts`
+## Journey 27: User Invitations & Default Mentor (5 checkpoints) — `journeys/27-user-invitations-and-default-mentor.spec.ts`
 
 **Source files:** `components/modals/settings-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`
 
@@ -389,7 +389,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 28: App Overview & Navigation UI (7 checkpoints) — `overview/test-overview.spec.ts`, `overview/llm-provider-modal.spec.ts`
+## Journey 28: App Overview & Navigation UI (7 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -403,7 +403,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (16 checkpoints) — `acessibility/acessibility.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (16 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
 
 **Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, all major modals and dialogs
 
@@ -426,7 +426,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 30: Advanced CSS / JS Customization (7 checkpoints) — `advanced-css/advanced-css.spec.ts`
+## Journey 30: Advanced CSS / JS Customization (8 checkpoints) — `journeys/30-advanced-css-js-customization.spec.ts`
 
 **Source files:** `components/modals/advanced-settings-modal.tsx`
 
@@ -441,7 +441,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 31: Mobile View (7 checkpoints) — `mobileview/mobileview.spec.ts`, `mobileview/explorepage.spec.ts`, `mobileview/dataset.spec.ts`
+## Journey 31: Mobile View (7 checkpoints) — `journeys/31-mobile-view.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`
 
@@ -455,7 +455,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (8 checkpoints) — `enterprise_tenant/mentor_creation.spec.ts`, `enterprise_tenant/user_navigations.spec.ts`, `advertising-tenant/advertising_tenants_desktop.spec.ts`, `authentication-interface/authentication-interface.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
@@ -470,3 +470,11 @@ When adding a new page or modifying an existing user flow:
 - [x] Advertising tenant: user can log in to the advertising tenant mentor _(env-gated: set ENABLE_ADVERTISING_LOGIN_TEST=true after the session_id UUID bug is fixed in new-user onboarding)_
 - [x] Help Center toggle controls dropdown and embed visibility _(serial mode added to prevent parallel browser interference)_
 - [x] Help Center URL updates correctly in the dropdown and embed menu _(serial mode added)_
+
+---
+
+## Journey 33: UI Render Console Errors (1 checkpoint) — `journeys/33-ui-render-console-errors.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`
+
+- [x] Authenticated user goes to the platform URL and sees no render failures or console errors

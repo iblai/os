@@ -1,15 +1,10 @@
-import { createPlaywrightConfig } from "@iblai/iblai-js/playwright";
-import { type PlaywrightTestConfig } from "@playwright/test";
-import dotenv from "dotenv";
-import path from "path";
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-const envFile =
-  process.env.NODE_ENV === "production"
-    ? ".env.production"
-    : ".env.development";
-
-dotenv.config({ path: path.resolve(__dirname, envFile) });
+const root = path.resolve(__dirname, '.');
+dotenv.config({ path: path.join(root, '.env.local'), override: true });
+dotenv.config({ path: path.join(root, '.env') });
 
 const testTimeout = process.env.TEST_TIMEOUT
   ? parseInt(process.env.TEST_TIMEOUT, 10)
@@ -17,40 +12,95 @@ const testTimeout = process.env.TEST_TIMEOUT
     ? 120_000
     : 60_000;
 
-const base = createPlaywrightConfig({
-  testDir: ".",
-  platforms: [
-    { name: "auth", dependencies: [], otherTestMatch: ["**auth/*/*.spec.ts"] },
-    {
-      name: "mentor",
-      dependencies: ["setup"],
-      otherTestMatch: ["tests/!(auth)/**/*.spec.ts", "*.common.spec.ts"],
-    },
-  ],
-  extraProjects: [
-    {
-      name: "mentor-cleanup",
-      dependencies: ["mentor"],
-      testMatch: ["**cleanup.mentornextjs.cleanup.ts"],
-    },
-    {
-      name: "mentor-public-views",
-      dependencies: ["mentor"],
-      testMatch: ["**mentor-viewable-by-anyone.spec.ts"],
-    },
-  ],
-});
+const testRetries = process.env.TEST_RETRIES
+  ? parseInt(process.env.TEST_RETRIES, 10)
+  : process.env.CI
+    ? 2
+    : 1;
 
-const config: PlaywrightTestConfig = {
-  ...base,
+export default defineConfig({
+  testDir: './journeys',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: testRetries,
+  workers: process.env.CI ? 1 : undefined,
   timeout: testTimeout,
-  reporter: process.env.CI
-    ? base.reporter
-    : [
-        ["list"],
-        ["./custom-reporter.ts"],
-        ["html", { outputFolder: "playwright-report", open: "on-failure" }],
-      ],
-};
+  reporter: [
+    ['html', { open: process.env.CI ? 'never' : 'on-failure' }],
+    process.env.CI ? ['list', { printSteps: true }] : ['list'],
+    ['json', { outputFile: 'test-results.json' }],
+  ],
+  use: {
+    baseURL: process.env.MENTOR_NEXTJS_HOST || 'http://localhost:3000',
+    headless: true,
+    trace: process.env.CI ? 'retain-on-failure' : 'off',
+    screenshot: process.env.CI ? 'only-on-failure' : 'off',
+    actionTimeout: 30_000,
+    navigationTimeout: 30_000,
+  },
+  projects: [
+    // ── Auth setup: runs once per browser, saves storage state ────────────────
+    {
+      name: 'setup-chrome',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'setup-firefox',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'setup-safari',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'setup-edge',
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices['Desktop Edge'] },
+    },
 
-export default config;
+    // ── Test projects: each depends on its setup and uses saved auth tokens ───
+    {
+      name: 'mentor-desktop-chrome',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user-chrome.json',
+      },
+      dependencies: ['setup-chrome'],
+    },
+    {
+      name: 'mentor-desktop-firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: 'playwright/.auth/user-firefox.json',
+      },
+      dependencies: ['setup-firefox'],
+    },
+    {
+      name: 'mentor-desktop-safari',
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: 'playwright/.auth/user-safari.json',
+      },
+      dependencies: ['setup-safari'],
+    },
+    {
+      name: 'mentor-desktop-edge',
+      use: {
+        ...devices['Desktop Edge'],
+        storageState: 'playwright/.auth/user-edge.json',
+      },
+      dependencies: ['setup-edge'],
+    },
+  ],
+  webServer: process.env.MENTOR_NEXTJS_HOST
+    ? undefined
+    : {
+        command: 'pnpm dev',
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
+});
