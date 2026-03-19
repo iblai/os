@@ -2,19 +2,23 @@ import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-const rootNodeModules = new URL('./node_modules', import.meta.url).pathname;
-
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   resolve: {
     alias: [
       {
         find: '@tauri-apps/api/core',
-        replacement: new URL('./__tests__/mocks/tauri-core.mock.ts', import.meta.url).pathname,
+        replacement: new URL(
+          './__tests__/mocks/tauri-core.mock.ts',
+          import.meta.url,
+        ).pathname,
       },
       {
         find: '@tauri-apps/api/event',
-        replacement: new URL('./__tests__/mocks/tauri-event.mock.ts', import.meta.url).pathname,
+        replacement: new URL(
+          './__tests__/mocks/tauri-event.mock.ts',
+          import.meta.url,
+        ).pathname,
       },
       {
         // Vitest + Node ESM resolution needs explicit extension for this SDK import path
@@ -25,7 +29,10 @@ export default defineConfig({
         // The SDK can resolve to a pnpm package-local absolute path that bypasses bare import aliasing.
         // Normalize it to the project-level Next.js navigation entry.
         find: /\/node_modules\/\.pnpm\/@iblai\+web-containers@[^/]+\/node_modules\/next\/navigation$/,
-        replacement: new URL('./node_modules/next/navigation.js', import.meta.url).pathname,
+        replacement: new URL(
+          './node_modules/next/navigation.js',
+          import.meta.url,
+        ).pathname,
       },
       // Mock Tauri APIs for testing
     ],

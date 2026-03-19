@@ -344,7 +344,11 @@ export function Chat({
     redirectToAuthSpa,
     sendMessageToParentWebsite,
     isPreviewMode:
-      isPreviewMode || (!!visitingTenant && isLoggedIn() && !mentorSettings.allowAnonymous),
+      isPreviewMode ||
+      (!!visitingTenant &&
+        isLoggedIn() &&
+        !mentorSettings.allowAnonymous &&
+        !searchParams.get('token')),
     mentorShareableToken: searchParams.get('token'),
     on402Error: handle402Error,
     cachedSessionId,

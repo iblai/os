@@ -196,7 +196,7 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild);
       vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild);
     });
@@ -410,7 +410,7 @@ describe('canvas-export-handlers', () => {
 
       document.documentElement.style.setProperty = mockSetProperty;
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockProbe);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockProbe as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockProbe);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockProbe);
     });
@@ -819,7 +819,7 @@ describe('canvas-export-handlers', () => {
       realCreateElement = document.createElement.bind(document);
 
       // Mock document.createElement for tempDiv
-      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      (vi.spyOn(document, 'createElement') as any).mockImplementation((tag: string) => {
         if (tag === 'div') {
           const div = realCreateElement('div');
           tempDivs.push(div);
@@ -917,7 +917,7 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
     });
@@ -1008,7 +1008,7 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
     });
@@ -1514,7 +1514,7 @@ describe('canvas-export-handlers', () => {
       } as unknown as HTMLAnchorElement;
       createdElements.push(mockAnchor);
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
 
@@ -1550,7 +1550,7 @@ describe('canvas-export-handlers', () => {
       } as unknown as HTMLAnchorElement;
       createdElements.push(mockAnchor);
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
 

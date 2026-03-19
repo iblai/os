@@ -402,7 +402,7 @@ describe('ProjectLandingPage', () => {
   const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
   const mockSetSessionTools = vi.fn().mockResolvedValue(undefined);
 
-  const defaultMentors: Mentor[] = [
+  const defaultMentors = [
     {
       id: 1,
       name: 'Mentor 1',
@@ -419,9 +419,9 @@ describe('ProjectLandingPage', () => {
       slug: 'mentor-2',
       created_at: '2024-01-01T00:00:00Z',
     },
-  ];
+  ] as unknown as Mentor[];
 
-  const defaultProject: Project = {
+  const defaultProject = {
     id: 1,
     name: 'Test Project',
     description: 'Test Description',
@@ -437,7 +437,7 @@ describe('ProjectLandingPage', () => {
     updated_at: '2024-01-01T00:00:00Z',
     mentors: defaultMentors,
     instructions: 'Test instructions',
-  };
+  } as unknown as Project;
 
   const defaultProps = {
     project: defaultProject,
@@ -802,18 +802,18 @@ describe('ProjectLandingPage', () => {
     });
 
     it('should handle project with many mentors', () => {
-      const manyMentors: Mentor[] = Array.from({ length: 10 }, (_, i) => ({
+      const manyMentors = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         name: `Mentor ${i + 1}`,
         description: `Description ${i + 1}`,
         unique_id: `mentor-${i + 1}`,
         slug: `mentor-${i + 1}`,
         created_at: '2024-01-01T00:00:00Z',
-      }));
+      })) as unknown as Mentor[];
       const projectWithManyMentors = {
         ...defaultProject,
         mentors: manyMentors,
-      };
+      } as unknown as Project;
       renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithManyMentors} />);
       expect(screen.getByTestId('project-mentors-list')).toBeInTheDocument();
       expect(screen.getByText('Mentor 1')).toBeInTheDocument();

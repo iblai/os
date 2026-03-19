@@ -391,7 +391,7 @@ describe('Canvas Utils', () => {
   describe('stripHtml', () => {
     beforeEach(() => {
       // Mock document.createElement for jsdom
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      (vi.spyOn(document, 'createElement') as any).mockImplementation((tag: string) => {
         if (tag === 'div') {
           const mockDiv = {
             _innerHTML: '',
@@ -902,7 +902,7 @@ describe('Canvas Utils', () => {
 
   describe('stripHtml edge cases', () => {
     beforeEach(() => {
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      (vi.spyOn(document, 'createElement') as any).mockImplementation((tag: string) => {
         if (tag === 'div') {
           const mockDiv = {
             _innerHTML: '',

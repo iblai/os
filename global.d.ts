@@ -1,3 +1,5 @@
+/// <reference types="vitest/globals" />
+
 declare namespace JSX {
   interface IntrinsicElements {
     "mentor-ai": any; // You can replace 'any' with a more specific type if you have one

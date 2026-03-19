@@ -73,7 +73,7 @@ vi.mock('next/dynamic', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: (props: any) => <img {...props} />,
+  default: (props: any) => <img alt="" {...props} />,
 }));
 
 vi.mock('@/components/ui/button', () => ({
