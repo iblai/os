@@ -63,7 +63,11 @@ for file in "${SOURCE_FILES[@]}"; do
     echo_warn "Excluding '${file}' from coverage (in exclusion list)"
     continue
   fi
-  include_args+=("--coverage.include=${file}")
+  # Escape brackets so Istanbul/micromatch treats them as literal chars
+  # (Next.js dynamic routes like [tenantKey] would otherwise be glob character classes)
+  escaped_file="${file//\[/\\[}"
+  escaped_file="${escaped_file//\]/\\]}"
+  include_args+=("--coverage.include=${escaped_file}")
 done
 
 [[ ${#include_args[@]} -eq 0 ]] && { echo_success "All changed files are excluded from coverage."; exit 0; }
