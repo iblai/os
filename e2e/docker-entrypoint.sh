@@ -31,8 +31,8 @@ REPORT_DIR="/app/playwright-report"
 # Determine app name for S3 paths
 APP_NAME="$PLATFORM"
 
-# Capture all output to log file while showing on console
-exec > >(tee -a "$LOG_FILE") 2>&1
+# Capture all output to log file while showing on console (line-buffered for reliable flushing)
+exec > >(stdbuf -oL tee -a "$LOG_FILE") 2>&1
 
 echo "================================================================================"
 echo "Playwright Test Runner"
@@ -48,6 +48,45 @@ echo "App Name:   $APP_NAME"
 echo "CloudFront: $CLOUDFRONT_DOMAIN"
 echo "================================================================================"
 echo ""
+
+# --- Live log streaming to S3 ---
+# Uploads the log file to S3 every LOG_FLUSH_INTERVAL seconds in the background.
+# Ensures logs are available even if the container is hard-killed without triggering the EXIT trap.
+# The final upload in upload_logs() still runs on graceful exit and overwrites with the complete log.
+
+LOG_FLUSH_INTERVAL="${LOG_FLUSH_INTERVAL:-15}"
+LOG_FLUSHER_PID=""
+S3_LOG_PATH="s3://$S3_BUCKET/runs/$RUN_ID/$APP_NAME/logs/test-run.log"
+LIVE_LOG_URL="https://${CLOUDFRONT_DOMAIN}/runs/${RUN_ID}/$APP_NAME/logs/test-run.log"
+
+start_log_flusher() {
+  if [ -z "$S3_BUCKET" ] || [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    return 0
+  fi
+
+  (
+    while true; do
+      sleep "$LOG_FLUSH_INTERVAL"
+      if [ -f "$LOG_FILE" ] && [ -s "$LOG_FILE" ]; then
+        aws s3 cp "$LOG_FILE" "$S3_LOG_PATH" \
+          --region "$AWS_REGION" \
+          --content-type "text/plain; charset=utf-8" \
+          --content-disposition "inline" >/dev/null 2>&1 || true
+      fi
+    done
+  ) &
+  LOG_FLUSHER_PID=$!
+  echo "Live log streaming started (every ${LOG_FLUSH_INTERVAL}s, PID: $LOG_FLUSHER_PID)"
+  echo "Live logs: $LIVE_LOG_URL"
+}
+
+stop_log_flusher() {
+  if [ -n "$LOG_FLUSHER_PID" ]; then
+    kill "$LOG_FLUSHER_PID" 2>/dev/null || true
+    wait "$LOG_FLUSHER_PID" 2>/dev/null || true
+    LOG_FLUSHER_PID=""
+  fi
+}
 
 # --- S3 upload functions ---
 
@@ -208,8 +247,8 @@ upload_test_results() {
   echo ""
 }
 
-# Trap: traces first, then test results, then logs (logs last so they capture upload output)
-trap 'EXIT_CODE=$?; echo ""; echo "Caught exit with code: $EXIT_CODE"; upload_traces; upload_test_results $EXIT_CODE; upload_report; upload_logs $EXIT_CODE; echo "Final exit code: $EXIT_CODE"; exit $EXIT_CODE' EXIT
+# Trap: stop flusher, then traces, test results, report, and final log upload (logs last so they capture upload output)
+trap 'EXIT_CODE=$?; echo ""; echo "Caught exit with code: $EXIT_CODE"; stop_log_flusher; upload_traces; upload_test_results $EXIT_CODE; upload_report; upload_logs $EXIT_CODE; echo "Final exit code: $EXIT_CODE"; exit $EXIT_CODE' EXIT
 
 # --- Build test command ---
 
@@ -219,6 +258,9 @@ if [ -n "$TEST_FILES" ]; then
   echo "Selective execution: $TEST_FILES_ARGS"
   echo ""
 fi
+
+# Start live log streaming to S3
+start_log_flusher
 
 # --- Run tests per browser ---
 
