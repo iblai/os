@@ -310,4 +310,60 @@ describe("AccessTab", () => {
       role: "viewer",
     });
   });
+
+  it("closes role access dialog and clears editing state", async () => {
+    const user = userEvent.setup();
+    const policies = [
+      {
+        id: 1,
+        mentor_id: 101,
+        platform_key: "tenant-1",
+        role: "viewer",
+        users: [],
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    // Open dialog
+    await user.click(
+      screen.getByRole("button", { name: "Edit Viewer access" }),
+    );
+    expect(screen.getByTestId("role-access-panel")).toBeInTheDocument();
+
+    // Close via Escape (triggers onOpenChange(false))
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("role-access-panel")).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls refetch when onAccessCreated is invoked", async () => {
+    const refetchMock = vi.fn();
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies: [] },
+        refetch: refetchMock,
+      }),
+    );
+
+    render(<AccessTab />);
+
+    // The AddAccessDialog receives onAccessCreated as a prop
+    const addAccessProps = renderedAddAccessProps.at(-1);
+    expect(addAccessProps).toBeDefined();
+
+    const onAccessCreated =
+      addAccessProps?.onAccessCreated as () => Promise<void>;
+    await onAccessCreated();
+
+    expect(refetchMock).toHaveBeenCalled();
+  });
 });

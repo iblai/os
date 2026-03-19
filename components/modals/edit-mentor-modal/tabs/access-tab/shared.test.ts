@@ -107,6 +107,18 @@ describe("shared access-tab utilities", () => {
       const error = { data: "string data", message: "Regular message" };
       expect(getErrorMessage(error)).toBe("Regular message");
     });
+
+    it("should return joined emails_to_add from error.data", () => {
+      const error = {
+        data: { emails_to_add: ["invalid@x.com", "bad@y.com"] },
+      };
+      expect(getErrorMessage(error)).toBe("invalid@x.com, bad@y.com");
+    });
+
+    it("should return joined usernames_to_add from error.data", () => {
+      const error = { data: { usernames_to_add: ["alice", "bob"] } };
+      expect(getErrorMessage(error)).toBe("alice, bob");
+    });
   });
 
   describe("roleDescriptions", () => {
