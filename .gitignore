@@ -80,6 +80,6 @@ src-tauri/gen/apple/
 test-results
 playwright-report
 e2e/playwright-report
-
+e2e/test-results.json
 playwright/.auth
 e2e/playwright/.auth
