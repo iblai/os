@@ -1,3 +1,11 @@
+## [0.36.0]
+
+- iblai-js package version updated to 1.0.35
+- feat: account deletion component integrated
+- feat: mentor access > updated adding/updating user to sync with rbac & toggle manual/auto mode
+- feat: mentor access > chat role added
+- feat: mentor access > add groups field added
+
 ## [0.35.16]
 
 - feat: derive lmsUrl, dmUrl, axdUrl from NEXT_PUBLIC_PLATFORM_BASE_DOMAIN when API base URL is unset
