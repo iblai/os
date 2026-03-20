@@ -1,3 +1,7 @@
+## [0.36.1]
+
+- bump version to 0.36.1
+
 ## [0.36.0]
 
 - iblai-js package version updated to 1.0.35
