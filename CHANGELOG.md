@@ -1,3 +1,8 @@
+## [0.36.3]
+
+- bump iblai-js version to 1.0.36
+- fix: use env-based git config for HTTPS rewrite in Docker build
+
 ## [0.36.2]
 
 - bump version to 0.36.2
