@@ -12,8 +12,8 @@ importers:
         specifier: 4.166.0-ai
         version: 4.166.0-ai
       '@iblai/iblai-js':
-        specifier: 1.0.34
-        version: 1.0.34(@axe-core/playwright@4.10.2(playwright-core@1.52.0))(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@playwright/test@1.52.0)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
+        specifier: 1.0.35
+        version: 1.0.35(@axe-core/playwright@4.10.2(playwright-core@1.52.0))(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@playwright/test@1.52.0)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       '@iblai/iblai-web-mentor':
         specifier: 1.3.4
         version: 1.3.4(@babel/core@7.29.0)(@types/babel__core@7.20.5)(rollup@4.59.0)(typescript@5.9.3)
@@ -714,8 +714,8 @@ packages:
     resolution: {integrity: sha512-Qkzpg2s9GnVV2I2BjRksUi43U5e6+zaQMcjoJy0C+C5oxaKl+fmckGDQFtRpZpZV0NQekuZZ+tGz7EA9TVnQtQ==}
     engines: {node: '>=12'}
 
-  '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
-    resolution: {tarball: https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2}
+  '@electron/node-gyp@git+https://git@github.com:electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2':
+    resolution: {commit: 06b29aafb7708acef8b3669835c8a7857ebc92d2, repo: git@github.com:electron/node-gyp.git, type: git}
     version: 10.2.0-electron.1
     engines: {node: '>=12.13.0'}
     hasBin: true
@@ -1021,8 +1021,8 @@ packages:
   '@iblai/iblai-api@4.166.0-ai':
     resolution: {integrity: sha512-dY9Jv+CkXEyTxRsOQFay5YvYe8K2LSQluJJvtssGQV2RbrxPPzONaKfnhcyarDs7Ft35Xqk1fuErjhUwNG3OIg==}
 
-  '@iblai/iblai-js@1.0.34':
-    resolution: {integrity: sha512-lxaOsqlMJ9fDj5FrWvsbejB6JECknAcOidOz9AaJ6qdO2wJZlmptB3ceP76D64zr4Q9mfvf/wHpyA8sglFeU0w==}
+  '@iblai/iblai-js@1.0.35':
+    resolution: {integrity: sha512-W1ymCo33xBPWNSPRpBA/jzCSieINpStBXBnBqANCpWc6V2Nqjuq8I5WmeJreUYfWGoc4SltpO6MK2ohzKtPdcg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -1050,8 +1050,8 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@iblai/web-containers@1.1.21':
-    resolution: {integrity: sha512-rnVkh5+r0MTi/SuB38rlE6jKi/jw2tbxL/d9+VQV8NnYlBMFgI09AIAb/BjRGhP1ZeQVzXh0hzMdP0jGMvM61Q==}
+  '@iblai/web-containers@1.1.22':
+    resolution: {integrity: sha512-OmcPB1egMybeP8cyCOO/OTeFuxUzK3cPLaUWrK4h+VoDdSuFLBCoCN4vqj8B7XaXhHtjK7BBw2jPZy+o2zwNdQ==}
     engines: {node: 25.3.0}
     peerDependencies:
       '@iblai/data-layer': ^1.1.2
@@ -9439,7 +9439,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
+  '@electron/node-gyp@git+https://git@github.com:electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2':
     dependencies:
       env-paths: 2.2.1
       exponential-backoff: 3.1.3
@@ -9476,7 +9476,7 @@ snapshots:
 
   '@electron/rebuild@3.7.0':
     dependencies:
-      '@electron/node-gyp': https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2
+      '@electron/node-gyp': git+https://git@github.com:electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2
       '@malept/cross-spawn-promise': 2.0.0
       chalk: 4.1.2
       debug: 4.4.3
@@ -9726,12 +9726,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@iblai/iblai-js@1.0.34(@axe-core/playwright@4.10.2(playwright-core@1.52.0))(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@playwright/test@1.52.0)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))':
+  '@iblai/iblai-js@1.0.35(@axe-core/playwright@4.10.2(playwright-core@1.52.0))(@floating-ui/dom@1.7.6)(@iblai/iblai-api@4.166.0-ai)(@playwright/test@1.52.0)(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@tauri-apps/api@2.10.1)(@tiptap/extensions@3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4))(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(next@15.3.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.52.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))':
     dependencies:
       '@iblai/data-layer': 1.1.13(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
       '@iblai/mcp': 1.1.0
-      '@iblai/web-containers': 1.1.21(7760d00287b2c015bf63ac98f41a89cb)
+      '@iblai/web-containers': 1.1.22(7760d00287b2c015bf63ac98f41a89cb)
       '@iblai/web-utils': 1.1.15(@iblai/data-layer@1.1.13(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.10.1)(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       axios: 1.13.6
@@ -9777,7 +9777,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@iblai/web-containers@1.1.21(7760d00287b2c015bf63ac98f41a89cb)':
+  '@iblai/web-containers@1.1.22(7760d00287b2c015bf63ac98f41a89cb)':
     dependencies:
       '@iblai/data-layer': 1.1.13(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
