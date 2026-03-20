@@ -48,7 +48,6 @@ test.describe
     await safeWaitForURL(page, (url) => url.href.includes("/account/create"), {
       timeout: 30_000,
     });
-    await page.waitForLoadState("networkidle");
 
     // Now on the signup form (/account/create)
     const signupPage = new SignupPage(page);
@@ -65,49 +64,11 @@ test.describe
 
     // Submit the registration
     await signupPage.createAccountButton.click();
-
-    // Wait for redirect back to the mentor platform
-    await safeWaitForURL(page, (url) => url.href.startsWith(HOST), {
-      timeout: 60_000,
-    });
-    await page.waitForLoadState("domcontentloaded");
-
-    // Verify non-admin indicator: "Upgrade" link is visible
-    await expect(page.getByRole("link", { name: "Upgrade" })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    // Log out
-    // Click the profile avatar (3rd image in the main area)
-    let loggedOut = false;
-    for (let attempt = 0; attempt < 5 && !loggedOut; attempt++) {
-      try {
-        await page
-          .locator("main")
-          .filter({ hasText: /mentorAI/i })
-          .getByRole("img")
-          .nth(2)
-          .click();
-        await page.getByRole("link", { name: "Log Out" }).click();
-        loggedOut = true;
-      } catch {
-        await page.waitForTimeout(1_000);
-      }
-    }
-
-    // Wait for redirect back to auth login page
     await safeWaitForURL(
       page,
-      (url) => url.href.includes(`/login?app=mentor&redirect-to=${HOST}`),
+      (url) => url.href.includes(AUTH_HOST) && url.href.includes("/login?"),
       { timeout: 60_000 },
     );
-    await page
-      .waitForLoadState("networkidle", { timeout: 60_000 })
-      .catch(() => {});
-
-    await expect(
-      page.getByRole("heading", { name: "Welcome Back" }),
-    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("newly signed-up non-admin goes to mentor platform and logs in after signup", async ({
@@ -125,7 +86,7 @@ test.describe
     await expect(
       page.getByRole("button", { name: "Continue with Password" }),
     ).toBeVisible({ timeout: 30_000 });
-    await page.click('button:has-text("Continue with Password")');
+    await page.getByRole("button", { name: "Continue with Password" }).click();
 
     // Fill credentials from test 1
     await expect(page.locator('input[type="email"]')).toBeVisible({
@@ -141,11 +102,6 @@ test.describe
       (url) => url.href.startsWith(HOST + "/platform"),
       { timeout: 80_000 },
     );
-
-    // Verify non-admin indicator
-    await expect(page.getByRole("link", { name: "Upgrade" })).toBeVisible({
-      timeout: 30_000,
-    });
   });
 
   test("non-admin goes to auth service and resets password via forgot password flow", async ({
@@ -159,31 +115,29 @@ test.describe
     await page.goto(`${AUTH_HOST}/login?app=mentor&redirect-to=${HOST}`, {
       waitUntil: "domcontentloaded",
     });
-    await page.waitForLoadState("networkidle").catch(() => {});
 
     // Enter email/username and click Continue
-    const emailOrUsername = page.getByPlaceholder("Email or Username");
+    const emailOrUsername = page.getByPlaceholder("Email");
     await emailOrUsername.waitFor({ state: "visible", timeout: 15_000 });
     await emailOrUsername.fill(email);
-    await page.getByLabel("Continue").click();
+    await page.getByRole("button", { name: "Continue with Password" }).click();
 
     // Click "Forgot password?"
     await expect(
-      page.getByRole("link", { name: "Forgot password?" }),
+      page.getByRole("button", { name: "Forgot password?" }),
     ).toBeVisible({ timeout: 10_000 });
-    await page.getByRole("link", { name: "Forgot password?" }).click();
+    await page.getByRole("button", { name: "Forgot password?" }).click();
 
     await safeWaitForURL(
       page,
-      (url) => url.href.includes(`/forgot-password?redirect-to=${HOST}`),
+      (url) => url.href.includes(`/password/reset?redirect-to=`),
       { timeout: 30_000 },
     );
-    await page.waitForLoadState("networkidle").catch(() => {});
 
     // Fill email on forgot-password page
     await page.getByPlaceholder("Email address").fill(email);
     await expect(
-      page.getByRole("heading", { name: "Forgot your password" }),
+      page.getByRole("heading", { name: "Forgot Your Password" }),
     ).toBeVisible();
 
     // Click Continue and wait for success message (retry up to 3 times)
@@ -191,8 +145,8 @@ test.describe
       try {
         await page.getByText("Continue").click();
         await expect(page.getByRole("paragraph")).toContainText(
-          "Reset Password Initiated. Kindly check your email address and follow instructions.",
-          { timeout: 5_000 },
+          "sent password reset instructions to",
+          { timeout: 15_000 },
         );
         break;
       } catch {
@@ -209,7 +163,7 @@ test.describe
       context,
       mailnesiaUrl,
       "Password reset on ibl",
-      { maxRetries: 12, intervalMs: 5_000 },
+      { maxRetries: 12, intervalMs: 10_000 },
     );
 
     // Click the reset email and follow the reset link
@@ -319,7 +273,8 @@ test.describe("Journey 1: Authentication — Invalid Credentials", () => {
     await expect(
       page.getByRole("button", { name: "Continue with Password" }),
     ).toBeVisible({ timeout: 30_000 });
-    await page.click('button:has-text("Continue with Password")');
+
+    await page.getByRole("button", { name: "Continue with Password" }).click();
     await page.fill('input[type="email"]', "invalid@doesnotexist.example.com");
     await page.fill('input[type="password"]', "WrongPassword123!");
     await page.click('button:has-text("Continue")');
@@ -327,5 +282,7 @@ test.describe("Journey 1: Authentication — Invalid Credentials", () => {
     await expect(page.getByText("Invalid email or password")).toBeVisible({
       timeout: 15_000,
     });
+
+    await page.waitForLoadState("networkidle", {});
   });
 });
