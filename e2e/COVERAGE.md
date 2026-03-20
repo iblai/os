@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-18 | 234 checkpoints | 33 journeys | 100% covered
+> Last updated: 2026-03-20 | 236 checkpoints | 33 journeys | 100% covered
 
 ## How This Works
 
@@ -92,7 +92,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (8 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (9 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
 
@@ -104,6 +104,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
 - [x] Admin can edit the system prompt in the Prompts tab
+- [x] Admin can send a message to a newly created mentor and receive a response
 - [x] Admin can delete a mentor from the Settings tab
 
 ---
@@ -136,7 +137,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 9: Voice Chat (5 checkpoints) — `journeys/09-voice-chat.spec.ts`
+## Journey 9: Voice Chat (6 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
 **Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
@@ -144,7 +145,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call dialog opens correctly on Firefox and WebKit
 - [x] Voice call button is hidden when "Show voice call" is toggled off in settings
 - [x] Voice call button reappears after re-enabling the toggle
-- [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
+- [x] Full voice call flow: user speaks and receives an AI audio response *(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)*
+- [x] Full voice call with real LiveKit *(skipped — requires real LiveKit server, audio device, and STT pipeline)*
 
 ---
 
@@ -478,3 +480,7 @@ When adding a new page or modifying an existing user flow:
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`
 
 - [x] Authenticated user goes to the platform URL and sees no render failures or console errors
+
+---
+
+> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.

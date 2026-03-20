@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-18",
+  "lastUpdated": "2026-03-20",
   "summary": {
-    "totalCheckpoints": 234,
-    "coveredCheckpoints": 234,
+    "totalCheckpoints": 236,
+    "coveredCheckpoints": 236,
     "percent": 100,
     "totalJourneys": 33
   },
@@ -103,7 +103,8 @@
         { "id": "mgmt-06", "description": "Admin can reset custom CSS", "status": "covered" },
         { "id": "mgmt-07", "description": "Admin can apply valid custom JavaScript", "status": "covered" },
         { "id": "mgmt-08", "description": "Admin can edit system prompt", "status": "covered" },
-        { "id": "mgmt-09", "description": "Admin can delete a mentor", "status": "covered" }
+        { "id": "mgmt-09", "description": "Admin can delete a mentor", "status": "covered" },
+        { "id": "mgmt-10", "description": "Admin can send a message to a newly created mentor and receive a response", "status": "covered" }
       ]
     },
     {
@@ -146,7 +147,8 @@
         { "id": "vc-02", "description": "Voice call dialog opens on Firefox and WebKit", "status": "covered" },
         { "id": "vc-03", "description": "Voice call button hidden when Show voice call toggled off", "status": "covered" },
         { "id": "vc-04", "description": "Voice call button reappears after re-enabling the toggle", "status": "covered" },
-        { "id": "vc-05", "description": "Full voice call flow using mocked call credentials and STT", "status": "covered" }
+        { "id": "vc-05", "description": "Full voice call flow using mocked call credentials and STT", "status": "covered" },
+        { "id": "vc-06", "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)", "status": "covered" }
       ]
     },
     {

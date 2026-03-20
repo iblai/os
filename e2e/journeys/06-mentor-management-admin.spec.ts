@@ -1,22 +1,24 @@
-import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
-import { waitForPageReady } from '../utils/resilient';
+import { test, expect } from "../fixtures/mentor-test";
+import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
+import { waitForPageReady } from "../utils/resilient";
 
-test.describe('Journey 6: Mentor Management — Admin', () => {
+test.describe("Journey 6: Mentor Management — Admin", () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) test.skip(true, 'Requires admin access');
+    if (!isAdmin) test.skip(true, "Requires admin access");
   });
 
-  test('admin goes to edit mentor modal and updates mentor profile, saves, and closes', async ({
+  test("admin goes to edit mentor modal and updates mentor profile, saves, and closes", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.open("Settings");
     await waitForPageReady(page);
-    await editMentorPage.settings.setVisibility('Anyone');
-    const saveBtn = editMentorPage.dialog.getByRole('button', { name: /save/i }).first();
+    await editMentorPage.settings.setVisibility("Anyone");
+    const saveBtn = editMentorPage.dialog
+      .getByRole("button", { name: /save/i })
+      .first();
     if (await saveBtn.isEnabled({ timeout: 3_000 }).catch(() => false)) {
       await saveBtn.click();
     }
@@ -24,43 +26,45 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await expect(editMentorPage.dialog).not.toBeVisible();
   });
 
-  test('non-admin user goes to mentor dropdown and does not see Settings or Tools menu items', async ({
+  test("non-admin user goes to mentor dropdown and does not see Settings or Tools menu items", async ({
     page,
     navbarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
-    test.skip(isAdmin, 'Targets non-admin users only');
+    test.skip(isAdmin, "Targets non-admin users only");
     await navbarPage.openMentorDropdown();
     await expect(
-      page.getByRole('menuitem', { name: /settings/i }),
+      page.getByRole("menuitem", { name: /settings/i }),
     ).not.toBeVisible();
     await expect(
-      page.getByRole('menuitem', { name: /tools/i }),
+      page.getByRole("menuitem", { name: /tools/i }),
     ).not.toBeVisible();
   });
 
-  test('admin goes to edit mentor LLM tab and changes the LLM provider', async ({
+  test("admin goes to edit mentor LLM tab and changes the LLM provider", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('LLM');
+    await editMentorPage.open("LLM");
     await waitForPageReady(page);
-    await expect(editMentorPage.llm.providerCombobox).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.llm.providerCombobox).toBeVisible({
+      timeout: 10_000,
+    });
     await editMentorPage.llm.providerCombobox.click();
-    const firstOption = page.getByRole('option').first();
+    const firstOption = page.getByRole("option").first();
     if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await firstOption.click();
     } else {
-      await page.keyboard.press('Escape');
+      await page.keyboard.press("Escape");
     }
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor tools tab and toggles a tool on and off', async ({
+  test("admin goes to edit mentor tools tab and toggles a tool on and off", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Tools');
+    await editMentorPage.open("Tools");
     await waitForPageReady(page);
     const count = await editMentorPage.tools.getToolCount();
     expect(count).toBeGreaterThan(0);
@@ -70,17 +74,19 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor settings tab and applies custom CSS via the editor', async ({
+  test("admin goes to edit mentor settings tab and applies custom CSS via the editor", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.open("Settings");
     await waitForPageReady(page);
     const section = editMentorPage.settings.advancedCssSection;
-    const expanded = await section.isVisible({ timeout: 5_000 }).catch(() => false);
+    const expanded = await section
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
     if (!expanded) {
       const expandBtn = editMentorPage.dialog
-        .getByRole('button', { name: /advanced css/i })
+        .getByRole("button", { name: /advanced css/i })
         .first();
       if (await expandBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await expandBtn.click();
@@ -89,54 +95,74 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor settings tab and resets custom CSS back to default', async ({
+  test("admin goes to edit mentor settings tab and resets custom CSS back to default", async ({
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.open("Settings");
     const discardBtn = editMentorPage.settings.advancedCssDiscardButton;
-    const visible = await discardBtn.isVisible({ timeout: 5_000 }).catch(() => false);
-    if (visible && await discardBtn.isEnabled({ timeout: 2_000 }).catch(() => false)) {
+    const visible = await discardBtn
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+    if (
+      visible &&
+      (await discardBtn.isEnabled({ timeout: 2_000 }).catch(() => false))
+    ) {
       await discardBtn.click();
     }
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor settings tab and applies valid custom JavaScript', async ({
+  test("admin goes to edit mentor settings tab and applies valid custom JavaScript", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.open("Settings");
     await waitForPageReady(page);
     const jsEditor = editMentorPage.settings.advancedJsEditor;
-    const visible = await jsEditor.isVisible({ timeout: 5_000 }).catch(() => false);
+    const visible = await jsEditor
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
     if (visible) {
       await expect(jsEditor).toBeVisible();
     }
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor prompts tab and edits the system prompt', async ({
+  test("admin goes to edit mentor prompts tab and edits the system prompt", async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Prompts');
+    await editMentorPage.open("Prompts");
     await waitForPageReady(page);
-    await editMentorPage.prompts.setSystemPrompt('You are a helpful E2E test assistant.');
+    await editMentorPage.prompts.setSystemPrompt(
+      "You are a helpful E2E test assistant.",
+    );
     await editMentorPage.prompts.save();
     await editMentorPage.close();
   });
 
-  test('admin goes to edit mentor settings tab and deletes a mentor', async ({
+  test("admin goes to chat page and sends a message to a newly created mentor and receives a response", async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.sendMessage("Hello, can you help me?");
+    await chatPage.waitForAIResponse();
+    await expect(chatPage.aiMessages.first()).toBeVisible();
+  });
+
+  test("admin goes to edit mentor settings tab and deletes a mentor", async ({
     page,
     editMentorPage,
   }) => {
     // Only run if a deletable test mentor exists — skip gracefully otherwise
-    await editMentorPage.open('Settings');
+    await editMentorPage.open("Settings");
     await waitForPageReady(page);
     const deleteBtn = editMentorPage.settings.deleteButton;
-    const visible = await deleteBtn.isVisible({ timeout: 5_000 }).catch(() => false);
+    const visible = await deleteBtn
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
     if (!visible) {
-      test.skip(true, 'No deletable mentor available in this environment');
+      test.skip(true, "No deletable mentor available in this environment");
       return;
     }
     await editMentorPage.settings.deleteMentor();
