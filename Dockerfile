@@ -14,11 +14,15 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json .
 COPY pnpm-lock.yaml .
 
+# Force git to use HTTPS instead of SSH for GitHub URLs.
+# electron/node-gyp uses git@github.com: which fails in Docker (no SSH keys).
+# Environment-based git config (Git 2.31+) is guaranteed to be inherited by all subprocesses.
+ENV GIT_CONFIG_COUNT=1
+ENV GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf
+ENV GIT_CONFIG_VALUE_0=git@github.com:
+
 # Install dependencies
-# git config: force HTTPS for GitHub (electron/node-gyp uses git+ssh which fails without SSH keys)
-RUN git config --system url."https://github.com/".insteadOf "git@github.com:" \
-    && git config --system url."https://github.com/".insteadOf "ssh://git@github.com/" \
-    && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Stage 1: Builder
 FROM base AS builder
