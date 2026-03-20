@@ -1,15 +1,15 @@
-import '@testing-library/jest-dom';
-import { expect, vi } from 'vitest';
-import * as matchers from 'vitest-axe/matchers';
-import 'vitest-axe/extend-expect';
+import "@testing-library/jest-dom";
+import { expect, vi } from "vitest";
+import * as matchers from "vitest-axe/matchers";
+import "vitest-axe/extend-expect";
 
 expect.extend(matchers);
 
 // Mock URL.createObjectURL and URL.revokeObjectURL for tests that use blob URLs
-if (typeof URL.createObjectURL === 'undefined') {
-  URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+if (typeof URL.createObjectURL === "undefined") {
+  URL.createObjectURL = vi.fn(() => "blob:mock-url");
 }
-if (typeof URL.revokeObjectURL === 'undefined') {
+if (typeof URL.revokeObjectURL === "undefined") {
   URL.revokeObjectURL = vi.fn();
 }
 
@@ -43,13 +43,29 @@ class LocalStorageMock implements Storage {
   }
 }
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: new LocalStorageMock(),
   writable: true,
 });
 
+// Mock pointer capture methods required by Radix UI in jsdom
+if (typeof Element.prototype.hasPointerCapture === "undefined") {
+  Element.prototype.hasPointerCapture = () => false;
+}
+if (typeof Element.prototype.setPointerCapture === "undefined") {
+  Element.prototype.setPointerCapture = () => {};
+}
+if (typeof Element.prototype.releasePointerCapture === "undefined") {
+  Element.prototype.releasePointerCapture = () => {};
+}
+
+// Mock scrollIntoView
+if (typeof Element.prototype.scrollIntoView === "undefined") {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Mock ResizeObserver
-if (typeof global.ResizeObserver === 'undefined') {
+if (typeof global.ResizeObserver === "undefined") {
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
@@ -58,7 +74,7 @@ if (typeof global.ResizeObserver === 'undefined') {
 }
 
 // Mock DOM methods required by ProseMirror/TipTap
-if (typeof document !== 'undefined') {
+if (typeof document !== "undefined") {
   // Mock document.elementFromPoint
   if (!document.elementFromPoint) {
     document.elementFromPoint = () => null;

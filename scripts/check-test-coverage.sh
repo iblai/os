@@ -63,7 +63,11 @@ for file in "${SOURCE_FILES[@]}"; do
     echo_warn "Excluding '${file}' from coverage (in exclusion list)"
     continue
   fi
-  include_args+=("--coverage.include=${file}")
+  # Escape brackets so Istanbul/micromatch treats them as literal chars
+  # (Next.js dynamic routes like [tenantKey] would otherwise be glob character classes)
+  escaped_file="${file//\[/\\[}"
+  escaped_file="${escaped_file//\]/\\]}"
+  include_args+=("--coverage.include=${escaped_file}")
 done
 
 [[ ${#include_args[@]} -eq 0 ]] && { echo_success "All changed files are excluded from coverage."; exit 0; }
@@ -71,13 +75,29 @@ done
 coverage_dir=$(mktemp -d)
 trap "rm -rf '${coverage_dir}'" EXIT
 
-cmd="npx vitest run --coverage --coverage.enabled --coverage.provider=istanbul --coverage.exclude=node_modules/** --coverage.reporter=json --coverage.reporter=text --coverage.reportsDirectory=${coverage_dir} --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 ${include_args[*]}"
+# Build command as an array to avoid eval glob-expansion issues
+# (e.g. node_modules/** or [tenantKey] being interpreted by the shell)
+cmd_args=(
+  npx vitest run
+  --coverage
+  --coverage.enabled
+  --coverage.provider=istanbul
+  --coverage.exclude='node_modules/**'
+  --coverage.reporter=json
+  --coverage.reporter=text
+  "--coverage.reportsDirectory=${coverage_dir}"
+  --coverage.thresholds.lines=0
+  --coverage.thresholds.functions=0
+  --coverage.thresholds.branches=0
+  --coverage.thresholds.statements=0
+  "${include_args[@]}"
+)
 
 echo_step "Running coverage check..."
-echo -e "${BLUE}Running:${NC} ${cmd}\n"
+echo -e "${BLUE}Running:${NC} ${cmd_args[*]}\n"
 
 set +e
-output=$(eval "${cmd}" 2>&1)
+output=$("${cmd_args[@]}" 2>&1)
 exit_code=$?
 set -e
 
