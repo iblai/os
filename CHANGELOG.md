@@ -1,3 +1,7 @@
+## [0.36.2]
+
+- NEXT_IMAGE_PATTERNS updated in github variables with new unified domain
+
 ## [0.36.3]
 
 - bump iblai-js version to 1.0.36
