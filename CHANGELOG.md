@@ -1,4 +1,4 @@
-## [0.36.2]
+## [0.36.4]
 
 - NEXT_IMAGE_PATTERNS updated in github variables with new unified domain
 
