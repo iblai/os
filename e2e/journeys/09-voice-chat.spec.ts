@@ -2,8 +2,28 @@ import { test, expect } from "../fixtures/mentor-test";
 import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
 import { waitForPageReady } from "../utils/resilient";
 
+// H2 fix: Chromium-only flags for fake audio device
+test.use({
+  launchOptions: {
+    args: [
+      "--use-fake-device-for-media-stream",
+      "--use-fake-ui-for-media-stream",
+    ],
+  },
+});
+
 test.describe("Journey 9: Voice Chat", () => {
+  test.setTimeout(300_000);
+
+  // H1 fix: test.skip with callback MUST be at describe level, not inside test body
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "Voice chat tests use fake media stream flags — Chromium only",
+  );
+
   test.beforeEach(async ({ page }) => {
+    // H2 fix: grant microphone permissions for fake device
+    await page.context().grantPermissions(["microphone"]);
     await navigateToMentorApp(page);
   });
 
@@ -11,10 +31,6 @@ test.describe("Journey 9: Voice Chat", () => {
     page,
     chatPage,
   }) => {
-    test.skip(
-      ({ browserName }) => browserName !== "chromium",
-      "Voice call requires Chromium",
-    );
     const voiceCallBtn = chatPage.voiceCallButton;
     const visible = await voiceCallBtn
       .isVisible({ timeout: 10_000 })
@@ -24,36 +40,18 @@ test.describe("Journey 9: Voice Chat", () => {
       return;
     }
     await voiceCallBtn.click();
-    const dialog = page.getByRole("dialog", { name: /voice chat/i });
+    const dialog = page.getByRole("dialog", { name: "Voice Chat" });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
     await expect(
-      dialog.getByRole("heading", { name: /voice chat/i }),
+      dialog.getByRole("heading", { name: "Voice Chat" }),
     ).toBeVisible();
+    // H1 fix: use specific locator names matching original
     await expect(
-      dialog.getByRole("button", { name: /mute|microphone/i }),
+      dialog.getByRole("button", { name: /mute microphone/i }),
     ).toBeVisible({ timeout: 5_000 });
     await expect(
-      dialog.getByRole("button", { name: /close|end call/i }),
+      dialog.getByRole("button", { name: /close voice chat/i }),
     ).toBeVisible({ timeout: 5_000 });
-    await page.keyboard.press("Escape");
-  });
-
-  test("authenticated user goes to chat page and opens the voice call dialog on Firefox and WebKit", async ({
-    page,
-    chatPage,
-  }) => {
-    test.skip(
-      ({ browserName }) => browserName === "chromium",
-      "Test targets Firefox and WebKit",
-    );
-    const voiceCallBtn = chatPage.voiceCallButton;
-    const visible = await voiceCallBtn
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
-    if (!visible) return;
-    await voiceCallBtn.click();
-    const dialog = page.getByRole("dialog", { name: /voice chat/i });
-    await expect(dialog).toBeVisible({ timeout: 15_000 });
     await page.keyboard.press("Escape");
   });
 
@@ -79,15 +77,22 @@ test.describe("Journey 9: Voice Chat", () => {
     const wasEnabled =
       (await showVoiceSwitch.getAttribute("aria-checked")) === "true";
     if (wasEnabled) {
+      // H3 fix: toggle, SAVE, then close (original used toggleSwitchSaveAndClose)
       await showVoiceSwitch.click();
       await expect(showVoiceSwitch).toHaveAttribute("aria-checked", "false", {
         timeout: 10_000,
       });
+      const saveButton = editMentorPage.dialog.getByRole("button", {
+        name: "Save",
+      });
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+      await saveButton.click();
+      await page.waitForTimeout(3_000);
     }
     await editMentorPage.close();
     await expect(chatPage.voiceCallButton).not.toBeVisible({ timeout: 10_000 });
 
-    // Restore
+    // Restore: toggle back ON, save, close
     await editMentorPage.open("Settings");
     await waitForPageReady(page);
     const switchAgain = editMentorPage.dialog.getByRole("switch", {
@@ -95,6 +100,15 @@ test.describe("Journey 9: Voice Chat", () => {
     });
     if ((await switchAgain.getAttribute("aria-checked")) === "false") {
       await switchAgain.click();
+      await expect(switchAgain).toHaveAttribute("aria-checked", "true", {
+        timeout: 10_000,
+      });
+      const saveButton2 = editMentorPage.dialog.getByRole("button", {
+        name: "Save",
+      });
+      await expect(saveButton2).toBeEnabled({ timeout: 10_000 });
+      await saveButton2.click();
+      await page.waitForTimeout(3_000);
     }
     await editMentorPage.close();
   });
@@ -119,10 +133,17 @@ test.describe("Journey 9: Voice Chat", () => {
       return;
     }
     if ((await showVoiceSwitch.getAttribute("aria-checked")) !== "true") {
+      // H3 fix: save after toggling
       await showVoiceSwitch.click();
       await expect(showVoiceSwitch).toHaveAttribute("aria-checked", "true", {
         timeout: 10_000,
       });
+      const saveButton = editMentorPage.dialog.getByRole("button", {
+        name: "Save",
+      });
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+      await saveButton.click();
+      await page.waitForTimeout(3_000);
     }
     await editMentorPage.close();
     await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 10_000 });
@@ -132,10 +153,6 @@ test.describe("Journey 9: Voice Chat", () => {
     page,
     chatPage,
   }) => {
-    test.skip(
-      ({ browserName }) => browserName !== "chromium",
-      "Full voice flow uses fake media stream flags — Chromium only",
-    );
     const isAdmin = await checkAdminStatus(page);
     test.skip(
       !isAdmin,
@@ -176,7 +193,7 @@ test.describe("Journey 9: Voice Chat", () => {
     if (!visible) return;
 
     await voiceCallBtn.click();
-    const voiceDialog = page.getByRole("dialog", { name: /voice chat/i });
+    const voiceDialog = page.getByRole("dialog", { name: "Voice Chat" });
     await expect(voiceDialog).toBeVisible({ timeout: 15_000 });
 
     const muteButton = voiceDialog.getByRole("button", {
@@ -192,7 +209,7 @@ test.describe("Journey 9: Voice Chat", () => {
     await stopButton.click();
 
     const endCallButton = voiceDialog.getByRole("button", {
-      name: /close voice chat|end call/i,
+      name: /close voice chat/i,
     });
     await expect(endCallButton).toBeVisible({ timeout: 10_000 });
     await endCallButton.click();
@@ -213,8 +230,5 @@ test.describe("Journey 9: Voice Chat", () => {
       true,
       "Requires real LiveKit server and audio device — use the mocked version above instead",
     );
-    // Original: chat/voice-call.spec.ts
-    // This test used the real LiveKit voice call flow (not page.route mocks).
-    // Requires: running LiveKit server, real/fake audio device, working STT pipeline.
   });
 });

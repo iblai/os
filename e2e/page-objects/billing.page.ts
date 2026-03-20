@@ -1,10 +1,8 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, expect } from "@playwright/test";
 
 export class BillingPage {
   readonly page: Page;
 
-  readonly billingTab: Locator;
-  readonly mainCard: Locator;
   readonly autoRechargeModal: Locator;
   readonly addCreditsModal: Locator;
   readonly rechargeToggle: Locator;
@@ -14,54 +12,72 @@ export class BillingPage {
   readonly manageUsageButton: Locator;
   readonly addCreditsButton: Locator;
 
+  private accountDialog: Locator;
+
   constructor(page: Page) {
     this.page = page;
-    this.billingTab = page.getByRole('tab', { name: /billing/i })
-      .or(page.getByRole('button', { name: /billing/i }));
-    this.mainCard = page
-      .locator('[data-testid="billing-main-card"]')
-      .or(page.locator('[class*="billing-card"]').first());
+    this.accountDialog = page.getByRole("dialog", { name: "User Profile" });
     this.autoRechargeModal = page
-      .getByRole('dialog')
+      .getByRole("dialog")
       .filter({ hasText: /auto recharge/i });
     this.addCreditsModal = page
-      .getByRole('dialog')
+      .getByRole("dialog")
       .filter({ hasText: /add credits/i });
-    this.rechargeToggle = page.getByRole('switch', {
+    this.rechargeToggle = page.getByRole("switch", {
       name: /auto recharge/i,
     });
-    this.thresholdInput = page.getByLabel(/threshold/i)
-      .or(page.getByPlaceholder(/threshold/i));
-    this.amountInput = page.getByLabel(/amount/i)
-      .or(page.getByPlaceholder(/amount/i));
-    this.cancelButton = this.autoRechargeModal.getByRole('button', {
+    this.thresholdInput = page.locator("input#threshold");
+    this.amountInput = page.locator("input#amount");
+    this.cancelButton = this.autoRechargeModal.getByRole("button", {
       name: /cancel/i,
     });
-    this.manageUsageButton = page.getByRole('button', {
+    this.manageUsageButton = page.getByRole("button", {
       name: /manage usage/i,
     });
-    this.addCreditsButton = page.getByRole('button', { name: /add credits/i });
+    this.addCreditsButton = page.getByRole("button", { name: /add credits/i });
   }
 
+  // H19 fix: navigate via More options → platform name → User Profile dialog → Billing button
+  // (matching the original billing/helpers.ts navigateToBillingSettings)
   async openBillingTab(): Promise<void> {
-    // Open account settings modal first
-    const profileDropdown = this.page.getByRole('button', {
-      name: 'More options',
+    const profileDropdown = this.page.getByRole("button", {
+      name: "More options",
     });
-    await expect(profileDropdown).toBeVisible({ timeout: 10_000 });
+    await expect(profileDropdown).toBeVisible({ timeout: 15_000 });
     await profileDropdown.click();
 
-    const settingsItem = this.page
-      .getByRole('menuitem', { name: /account|settings/i })
-      .first();
-    await expect(settingsItem).toBeVisible({ timeout: 5_000 });
-    await settingsItem.click();
+    const menu = this.page.getByRole("menu", { name: "More options" });
+    await expect(menu).toBeVisible({ timeout: 5_000 });
 
-    const dialog = this.page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    // Read platform name from localStorage to find the right menu item
+    const platformName = await this.page.evaluate(() => {
+      const raw = localStorage.getItem("current_tenant");
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw)?.platform_name ?? null;
+      } catch {
+        return null;
+      }
+    });
 
-    await expect(this.billingTab).toBeVisible({ timeout: 10_000 });
-    await this.billingTab.click();
+    if (platformName) {
+      const tenantMenuItem = menu.getByText(platformName, { exact: true });
+      await expect(tenantMenuItem).toBeVisible({ timeout: 5_000 });
+      await tenantMenuItem.click();
+    } else {
+      // Fallback: click first menu item that isn't Profile/Help/Logout
+      const menuItems = menu.getByRole("menuitem");
+      await menuItems.first().click();
+    }
+
+    await expect(this.accountDialog).toBeVisible({ timeout: 10_000 });
+
+    // Click the Billing button (it's a button role, not a tab role)
+    const billingButton = this.accountDialog.getByRole("button", {
+      name: "Billing",
+    });
+    await expect(billingButton).toBeVisible({ timeout: 10_000 });
+    await billingButton.click();
   }
 
   async openAutoRechargeModal(): Promise<void> {
@@ -74,5 +90,14 @@ export class BillingPage {
     await expect(this.cancelButton).toBeVisible({ timeout: 5_000 });
     await this.cancelButton.click();
     await expect(this.autoRechargeModal).not.toBeVisible({ timeout: 10_000 });
+  }
+
+  async closeAccountDialog(): Promise<void> {
+    const closeButton = this.accountDialog.getByRole("button", {
+      name: "Close",
+    });
+    await expect(closeButton).toBeVisible({ timeout: 5_000 });
+    await closeButton.click();
+    await expect(this.accountDialog).not.toBeVisible({ timeout: 5_000 });
   }
 }

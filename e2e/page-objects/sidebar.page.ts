@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, expect } from "@playwright/test";
 
 export class SidebarPage {
   readonly page: Page;
@@ -18,18 +18,41 @@ export class SidebarPage {
   constructor(page: Page) {
     this.page = page;
     this.toggleButton = page
-      .getByRole('button', { name: /toggle sidebar/i })
+      .getByRole("button", { name: /toggle sidebar/i })
       .or(page.locator('[data-testid="sidebar-toggle"]'));
-    this.exploreLink = page.getByRole('button', { name: /explore/i });
-    this.notificationsLink = page.getByRole('button', { name: 'Notifications', exact: true });
-    this.analyticsButton = page.getByRole('button', { name: 'Analytics', exact: true });
-    this.newProjectButton = page.getByRole('button', { name: 'New Project', exact: true });
-    this.newMentorButton = page.getByRole('button', { name: 'New Mentor', exact: true });
-    this.inviteUsersButton = page.getByRole('button', { name: 'Invite Users', exact: true });
-    this.settingsButton = page.getByRole('button', { name: 'Settings', exact: true });
-    this.helpButton = page.getByRole('button', { name: /help/i });
-    this.logoutButton = page.getByRole('menuitem', { name: /log out/i });
-    this.projectItems = page.locator('[data-testid*="project-item"], [class*="project-item"]');
+    // H26 fix: sidebar button is labeled "Mentors" not "Explore"
+    this.exploreLink = page
+      .getByRole("button", { name: "Mentors", exact: true })
+      .or(page.getByRole("button", { name: /explore/i }));
+    this.notificationsLink = page.getByRole("button", {
+      name: "Notifications",
+      exact: true,
+    });
+    this.analyticsButton = page.getByRole("button", {
+      name: "Analytics",
+      exact: true,
+    });
+    this.newProjectButton = page.getByRole("button", {
+      name: "New Project",
+      exact: true,
+    });
+    this.newMentorButton = page.getByRole("button", {
+      name: "New Mentor",
+      exact: true,
+    });
+    this.inviteUsersButton = page.getByRole("button", {
+      name: "Invite Users",
+      exact: true,
+    });
+    this.settingsButton = page.getByRole("button", {
+      name: "Settings",
+      exact: true,
+    });
+    this.helpButton = page.getByRole("button", { name: /help/i });
+    this.logoutButton = page.getByRole("menuitem", { name: /log out/i });
+    this.projectItems = page.locator(
+      '[data-testid*="project-item"], [class*="project-item"]',
+    );
   }
 
   async toggle(): Promise<void> {
