@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, expect } from "@playwright/test";
 
 export class ChatPage {
   readonly page: Page;
@@ -18,25 +18,29 @@ export class ChatPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.chatInput = page.getByPlaceholder('Ask anything', { exact: true });
-    this.sendButton = page.getByRole('button', { name: 'Send message' });
-    this.newChatButton = page.getByRole('menuitem', { name: 'New chat' });
-    this.userMessages = page.locator('.chat-user-message-query');
-    this.aiMessages = page.locator('.chat-ai-message-response');
-    this.canvasToggle = page.getByRole('button', { name: /canvas/i });
-    this.createMentorDialog = page.getByRole('dialog', { name: /create.*mentor/i });
-    this.loginBanner = page.getByRole('button', { name: /log in/i });
-    this.uploadButton = page.getByRole('button', { name: 'Attach File' });
-    this.voiceCallButton = page.getByRole('button', { name: 'Voice call' });
-    this.voiceInputButton = page.getByRole('button', { name: 'Voice input' });
-    this.dragOverlay = page.locator('[data-testid="drag-overlay"], [class*="drag-overlay"]');
+    this.chatInput = page.getByPlaceholder("Ask anything", { exact: true });
+    this.sendButton = page.getByRole("button", { name: "Send message" });
+    this.newChatButton = page.getByRole("button", { name: "New Chat" });
+    this.userMessages = page.locator(".chat-user-message-query");
+    this.aiMessages = page.locator(".chat-ai-message-response");
+    this.canvasToggle = page.getByRole("button", { name: /canvas/i });
+    this.createMentorDialog = page.getByRole("dialog", {
+      name: /create.*mentor/i,
+    });
+    this.loginBanner = page.getByRole("button", { name: /log in/i });
+    this.uploadButton = page.getByRole("button", { name: "Attach File" });
+    this.voiceCallButton = page.getByRole("button", { name: "Voice call" });
+    this.voiceInputButton = page.getByRole("button", { name: "Voice input" });
+    this.dragOverlay = page.locator(
+      '[data-testid="drag-overlay"], [class*="drag-overlay"]',
+    );
   }
 
   async sendMessage(text: string): Promise<void> {
     await expect(this.chatInput).toBeVisible({ timeout: 15_000 });
     await this.chatInput.fill(text);
     await expect(this.sendButton).toBeEnabled({ timeout: 10_000 });
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(5_000);
     await this.sendButton.click();
   }
 
@@ -46,16 +50,11 @@ export class ChatPage {
 
   async waitForUserMessage(text: string, timeout = 30_000): Promise<void> {
     await expect(
-      this.page.locator('.chat-user-message-query', { hasText: text }),
+      this.page.locator(".chat-user-message-query", { hasText: text }),
     ).toBeVisible({ timeout });
   }
 
   async startNewChat(): Promise<void> {
-    const dropdown = this.page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
-    });
-    await expect(dropdown).toBeVisible({ timeout: 15_000 });
-    await dropdown.click();
     await expect(this.newChatButton).toBeVisible({ timeout: 5_000 });
     await this.newChatButton.click();
   }

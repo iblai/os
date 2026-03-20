@@ -1,26 +1,27 @@
-import { Page } from '@playwright/test';
+import { Page } from "@playwright/test";
 
+import { expect } from "../fixtures/mentor-test";
 export interface SafeWaitForURLOptions {
   timeout?: number;
-  waitUntil?: 'commit' | 'domcontentloaded' | 'load' | 'networkidle';
+  waitUntil?: "commit" | "domcontentloaded" | "load" | "networkidle";
   maxRetries?: number;
 }
 
 function isFirefox(page: Page): boolean {
-  return page.context().browser()?.browserType().name() === 'firefox';
+  return page.context().browser()?.browserType().name() === "firefox";
 }
 
 function isNavigationAbortedError(error: unknown): boolean {
-  const message = (error as Error)?.message ?? '';
+  const message = (error as Error)?.message ?? "";
   return (
-    message.includes('NS_BINDING_ABORTED') ||
-    message.includes('Navigation interrupted')
+    message.includes("NS_BINDING_ABORTED") ||
+    message.includes("Navigation interrupted")
   );
 }
 
 function isSafariNavigationPolicyError(error: unknown): boolean {
-  const message = (error as Error)?.message ?? '';
-  return message.includes('Navigation canceled by policy check');
+  const message = (error as Error)?.message ?? "";
+  return message.includes("Navigation canceled by policy check");
 }
 
 function urlMatchesPattern(
@@ -29,12 +30,12 @@ function urlMatchesPattern(
 ): boolean {
   try {
     const url = new URL(currentUrl);
-    if (typeof pattern === 'function') return pattern(url);
+    if (typeof pattern === "function") return pattern(url);
     if (pattern instanceof RegExp) return pattern.test(currentUrl);
     const regexPattern = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*\*/g, '.*')
-      .replace(/\*/g, '[^/]*');
+      .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+      .replace(/\*\*/g, ".*")
+      .replace(/\*/g, "[^/]*");
     return new RegExp(`^${regexPattern}$`).test(currentUrl);
   } catch {
     return false;
@@ -52,7 +53,7 @@ export async function safeWaitForURL(
 ): Promise<void> {
   const {
     timeout = 60_000,
-    waitUntil = isFirefox(page) ? 'commit' : 'domcontentloaded',
+    waitUntil = isFirefox(page) ? "commit" : "domcontentloaded",
     maxRetries = 3,
   } = options;
 
@@ -60,7 +61,7 @@ export async function safeWaitForURL(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await page.waitForLoadState('load', { timeout });
+      await page.waitForLoadState("load", { timeout });
       await page.waitForURL(urlPattern, { timeout, waitUntil });
       return;
     } catch (error) {
@@ -76,7 +77,7 @@ export async function safeWaitForURL(
 
       if (isSafariNavigationPolicyError(error)) {
         await page.waitForTimeout(3_000);
-        await page.waitForLoadState('domcontentloaded');
+        await page.waitForLoadState("domcontentloaded");
         if (urlMatchesPattern(page.url(), urlPattern)) return;
         if (attempt < maxRetries) continue;
       }
@@ -97,9 +98,9 @@ export interface ParsedPlatformUrl {
  */
 export function parsePlatformUrl(url: string): ParsedPlatformUrl {
   const { pathname } = new URL(url);
-  const parts = pathname.split('/').filter(Boolean);
+  const parts = pathname.split("/").filter(Boolean);
 
-  if (parts[0] !== 'platform' || parts.length < 3) {
+  if (parts[0] !== "platform" || parts.length < 3) {
     throw new Error(
       `Unexpected URL format. Expected /platform/{tenantKey}/{mentorId}, got: ${pathname}`,
     );
@@ -109,4 +110,21 @@ export function parsePlatformUrl(url: string): ParsedPlatformUrl {
     platformKey: parts[1],
     mentorId: parts[2],
   };
+}
+
+export async function openMoreOptionsMenu(page: Page) {
+  const moreOptionsButton = page
+    .locator('nav button[aria-haspopup="menu"]')
+    .last();
+  await expect(moreOptionsButton).toBeVisible({ timeout: 10000 });
+  await moreOptionsButton.click();
+  console.log("✓ More options button clicked");
+
+  const menuModal = page
+    .getByRole("menu", { name: /more options/i })
+    .or(page.getByRole("dialog"));
+  await expect(menuModal).toBeVisible({ timeout: 5000 });
+  console.log("✓ Menu modal visible");
+
+  return menuModal;
 }

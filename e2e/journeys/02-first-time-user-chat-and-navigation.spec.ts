@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/mentor-test";
 import { navigateToMentorApp } from "../utils/auth";
+import { openMoreOptionsMenu } from "../utils/navigation";
 
 test.describe("Journey 2: First-Time User Chat & Navigation", () => {
   test.beforeEach(async ({ nonadminPage }) => {
@@ -61,7 +62,12 @@ test.describe("Journey 2: First-Time User Chat & Navigation", () => {
   }) => {
     const [newPage] = await Promise.all([
       nonadminPage.context().waitForEvent("page", { timeout: 10_000 }),
-      nonadminSidebarPage.helpButton.click(),
+      openMoreOptionsMenu(nonadminPage),
+      nonadminPage
+        .getByRole("menu", { name: /more options/i })
+        .or(nonadminPage.getByRole("dialog"))
+        .getByRole("menuitem", { name: /help/i })
+        .click(),
     ]);
     expect(newPage.url()).toMatch(/ibl|docs|help/i);
     await newPage.close();

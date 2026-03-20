@@ -23,7 +23,7 @@ export class SidebarPage {
     // H26 fix: sidebar button is labeled "Mentors" not "Explore"
     this.exploreLink = page
       .getByRole("button", { name: "Mentors", exact: true })
-      .or(page.getByRole("button", { name: /explore/i }));
+      .or(page.getByRole("button", { name: "Explore", exact: true }));
     this.notificationsLink = page.getByRole("button", {
       name: "Notifications",
       exact: true,
@@ -62,6 +62,7 @@ export class SidebarPage {
 
   async navigateToExplore(): Promise<void> {
     await expect(this.exploreLink).toBeVisible({ timeout: 10_000 });
+    await this.page.waitForTimeout(5_000);
     await this.exploreLink.click();
   }
 
