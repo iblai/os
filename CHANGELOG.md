@@ -1,3 +1,7 @@
+## [0.36.5]
+
+- Update logo to use dm url instead of axd url
+
 ## [0.36.4]
 
 - NEXT_IMAGE_PATTERNS updated in github variables with new unified domain
