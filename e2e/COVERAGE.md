@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-20 | 236 checkpoints | 33 journeys | 100% covered
+> Last updated: 2026-03-20 | 236 checkpoints | 33 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -20,10 +20,10 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `app/sso-login/page.tsx`, `app/sso-login-complete/page.tsx`
 
-- [x] New user can sign up with email and password
-- [x] Newly signed-up user is redirected to the mentor platform
-- [x] User with invalid credentials sees an error message
-- [x] User can reset password via magic link _(requires MAILSAC_API_KEY)_
+- [x] Unauthenticated user can sign up with email and password via the auth service signup form _(uses mailnesia.com for email)_
+- [x] Newly signed-up non-admin can log in and is redirected to the mentor platform
+- [x] Non-admin can reset password via the forgot password flow _(uses mailnesia.com for email verification)_
+- [x] Unauthenticated user with invalid credentials sees an error message
 
 ---
 
@@ -479,7 +479,7 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`
 
-- [x] Authenticated user goes to the platform URL and sees no render failures or console errors
+- [x] Non-admin goes to the platform URL and sees no render failures or console errors
 
 ---
 

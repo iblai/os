@@ -13,7 +13,55 @@ import {
   ENABLE_ADVERTISING_LOGIN_TEST,
 } from "../fixtures/test-data";
 
-test.describe("Journey 32: Multi-Tenancy, Advertising & Auth Customization", () => {
+test.describe("Journey 32: Multi-Tenancy — Non-Admin", () => {
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  test("non-admin goes to enterprise tenant and toggles the sidebar open and close", async ({
+    nonadminPage,
+    nonadminSidebarPage,
+  }) => {
+    await nonadminSidebarPage.toggle();
+    await nonadminPage.waitForTimeout(300);
+    await nonadminSidebarPage.toggle();
+    await nonadminPage.waitForTimeout(300);
+    expect(true).toBe(true);
+  });
+
+  test("non-admin goes to enterprise tenant and the platform logo navigates home", async ({
+    nonadminPage,
+  }) => {
+    const logo = nonadminPage
+      .getByRole("link", { name: /home|logo/i })
+      .or(nonadminPage.locator('[data-testid="platform-logo"]'))
+      .first();
+    if (await logo.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await logo.click();
+      await safeWaitForURL(
+        nonadminPage,
+        (url) => url.href.includes("/platform/"),
+        {
+          timeout: 15_000,
+        },
+      );
+      expect(nonadminPage.url()).toContain("/platform/");
+    }
+  });
+
+  test("non-admin goes to enterprise tenant and New Chat navigation and sidebar items work", async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await nonadminNavbarPage.openMentorDropdown();
+    await expect(nonadminNavbarPage.newChatItem).toBeVisible({
+      timeout: 5_000,
+    });
+    await nonadminPage.keyboard.press("Escape");
+  });
+});
+
+test.describe("Journey 32: Multi-Tenancy — Admin", () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
@@ -140,71 +188,6 @@ test.describe("Journey 32: Multi-Tenancy, Advertising & Auth Customization", () 
     }
   });
 
-  test("authenticated user goes to enterprise tenant and toggles the sidebar open and close", async ({
-    page,
-    sidebarPage,
-  }) => {
-    await sidebarPage.toggle();
-    await page.waitForTimeout(300);
-    await sidebarPage.toggle();
-    await page.waitForTimeout(300);
-    expect(true).toBe(true);
-  });
-
-  test("authenticated user goes to enterprise tenant and the platform logo navigates home", async ({
-    page,
-  }) => {
-    const logo = page
-      .getByRole("link", { name: /home|logo/i })
-      .or(page.locator('[data-testid="platform-logo"]'))
-      .first();
-    if (await logo.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await logo.click();
-      await safeWaitForURL(page, (url) => url.href.includes("/platform/"), {
-        timeout: 15_000,
-      });
-      expect(page.url()).toContain("/platform/");
-    }
-  });
-
-  test("authenticated user goes to enterprise tenant and New Chat navigation and sidebar items work", async ({
-    page,
-    navbarPage,
-  }) => {
-    await navbarPage.openMentorDropdown();
-    await expect(navbarPage.newChatItem).toBeVisible({ timeout: 5_000 });
-    await page.keyboard.press("Escape");
-  });
-
-  test("unauthenticated user goes to advertising tenant mentor page and can access it without logging in", async ({
-    page,
-    browser,
-  }) => {
-    test.skip(
-      !FORDHAM_HOST,
-      "Set FORDHAM_HOST to enable advertising tenant test",
-    );
-    const anonContext = await browser.newContext({ storageState: undefined });
-    const anonPage = await anonContext.newPage();
-    try {
-      await anonPage.goto(FORDHAM_HOST, {
-        waitUntil: "domcontentloaded",
-        timeout: 60_000,
-      });
-      await waitForPageReady(anonPage);
-      const loginButton = anonPage.getByRole("button", { name: /log in/i });
-      const chatInput = anonPage.getByPlaceholder("Ask anything", {
-        exact: true,
-      });
-      const hasLoginOrChat =
-        (await loginButton.isVisible({ timeout: 10_000 }).catch(() => false)) ||
-        (await chatInput.isVisible({ timeout: 10_000 }).catch(() => false));
-      expect(hasLoginOrChat).toBe(true);
-    } finally {
-      await anonContext.close();
-    }
-  });
-
   test("admin goes to auth SPA customization settings and an unauthenticated user sees the customization in the auth SPA", async ({
     page,
     editMentorPage,
@@ -306,6 +289,37 @@ test.describe("Journey 32: Multi-Tenancy, Advertising & Auth Customization", () 
       }
     }
     await editMentorPage.close();
+  });
+});
+
+test.describe("Journey 32: Multi-Tenancy — Unauthenticated", () => {
+  test("unauthenticated user goes to advertising tenant mentor page and can access it without logging in", async ({
+    page,
+    browser,
+  }) => {
+    test.skip(
+      !FORDHAM_HOST,
+      "Set FORDHAM_HOST to enable advertising tenant test",
+    );
+    const anonContext = await browser.newContext({ storageState: undefined });
+    const anonPage = await anonContext.newPage();
+    try {
+      await anonPage.goto(FORDHAM_HOST, {
+        waitUntil: "domcontentloaded",
+        timeout: 60_000,
+      });
+      await waitForPageReady(anonPage);
+      const loginButton = anonPage.getByRole("button", { name: /log in/i });
+      const chatInput = anonPage.getByPlaceholder("Ask anything", {
+        exact: true,
+      });
+      const hasLoginOrChat =
+        (await loginButton.isVisible({ timeout: 10_000 }).catch(() => false)) ||
+        (await chatInput.isVisible({ timeout: 10_000 }).catch(() => false));
+      expect(hasLoginOrChat).toBe(true);
+    } finally {
+      await anonContext.close();
+    }
   });
 
   test("unauthenticated user goes to advertising tenant mentor page and logs in", async ({

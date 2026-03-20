@@ -26,32 +26,46 @@ async function openEditMentorTab(
   await waitForPageReady(page);
 }
 
-test.describe("Journey 29: Accessibility — WCAG 2.1 AA", () => {
+test.describe("Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin", () => {
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  test("non-admin goes to homepage and it has no accessibility violations", async ({
+    nonadminPage,
+  }) => {
+    const mentorButton = nonadminPage
+      .getByRole("button", { name: "Mentors", exact: true })
+      .or(nonadminPage.getByRole("button", { name: /explore/i }));
+    await expect(mentorButton).toBeVisible({ timeout: 120_000 });
+    await expectNoViolations(nonadminPage);
+  });
+
+  test("non-admin goes to explore page and the mentors catalog has no accessibility violations", async ({
+    nonadminPage,
+    nonadminSidebarPage,
+  }) => {
+    await nonadminSidebarPage.navigateToExplore();
+    await expect(
+      nonadminPage.getByRole("heading", { name: /all mentors/i }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expectNoViolations(nonadminPage);
+  });
+
+  test("non-admin goes to My Mentors dialog and it meets accessibility guidelines", async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await nonadminNavbarPage.openMyMentors();
+    await nonadminPage.waitForTimeout(1_000);
+    await expectNoViolations(nonadminPage, '[role="dialog"]');
+    await nonadminPage.keyboard.press("Escape");
+  });
+});
+
+test.describe("Journey 29: Accessibility — WCAG 2.1 AA — Admin", () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
-  });
-
-  test("authenticated user goes to homepage and it has no accessibility violations", async ({
-    page,
-  }) => {
-    // H27 fix: wait for page to be fully loaded before running axe
-    const mentorButton = page
-      .getByRole("button", { name: "Mentors", exact: true })
-      .or(page.getByRole("button", { name: /explore/i }));
-    await expect(mentorButton).toBeVisible({ timeout: 120_000 });
-    await expectNoViolations(page);
-  });
-
-  test("authenticated user goes to explore page and the mentors catalog has no accessibility violations", async ({
-    page,
-    sidebarPage,
-  }) => {
-    await sidebarPage.navigateToExplore();
-    // H27 fix: wait for heading instead of arbitrary timeout
-    await expect(
-      page.getByRole("heading", { name: /all mentors/i }),
-    ).toBeVisible({ timeout: 15_000 });
-    await expectNoViolations(page);
   });
 
   test("admin goes to Create Mentor modal and it meets accessibility guidelines", async ({
@@ -103,16 +117,6 @@ test.describe("Journey 29: Accessibility — WCAG 2.1 AA", () => {
       await expectNoViolations(page, '[role="dialog"]');
       await page.keyboard.press("Escape");
     }
-  });
-
-  test("authenticated user goes to My Mentors dialog and it meets accessibility guidelines", async ({
-    page,
-    navbarPage,
-  }) => {
-    await navbarPage.openMyMentors();
-    await page.waitForTimeout(1_000);
-    await expectNoViolations(page, '[role="dialog"]');
-    await page.keyboard.press("Escape");
   });
 
   test("admin goes to Embed dialog and it is accessible", async ({

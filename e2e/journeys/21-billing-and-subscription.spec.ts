@@ -98,24 +98,8 @@ test.describe("Journey 21: Billing & Subscription", () => {
     await billingPage.page.keyboard.press("Escape");
   });
 
-  test("new user without subscription goes to create mentor and sees the Stripe pricing modal", async ({
-    page,
-    sidebarPage,
-  }) => {
-    // Only test this if the user is non-admin (no subscription)
-    const isAdmin = await checkAdminStatus(page);
-    test.skip(isAdmin, "This test targets non-subscribed users only");
-    const visible = await sidebarPage.newMentorButton
-      .isVisible()
-      .catch(() => false);
-    if (!visible) return;
-    await sidebarPage.newMentorButton.click();
-    const pricingModal = page
-      .getByRole("dialog")
-      .filter({ hasText: /plan|pricing|subscribe/i });
-    await expect(pricingModal).toBeVisible({ timeout: 10_000 });
-    await page.keyboard.press("Escape");
-  });
+  // Intentionally empty — the non-subscribed user test is below,
+  // outside the admin describe block.
 
   test("admin goes to billing tab and sees all Auto Recharge modal elements displayed", async ({
     billingPage,
@@ -271,5 +255,27 @@ test.describe("Journey 21: Billing & Subscription", () => {
     }
     // Available Credits always visible
     await expect(availableCredits).toBeVisible();
+  });
+});
+
+test.describe("Journey 21: Billing & Subscription — Non-Admin", () => {
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  test("non-admin without subscription goes to create mentor and sees the Stripe pricing modal", async ({
+    nonadminPage,
+    nonadminSidebarPage,
+  }) => {
+    const visible = await nonadminSidebarPage.newMentorButton
+      .isVisible()
+      .catch(() => false);
+    if (!visible) return;
+    await nonadminSidebarPage.newMentorButton.click();
+    const pricingModal = nonadminPage
+      .getByRole("dialog")
+      .filter({ hasText: /plan|pricing|subscribe/i });
+    await expect(pricingModal).toBeVisible({ timeout: 10_000 });
+    await nonadminPage.keyboard.press("Escape");
   });
 });

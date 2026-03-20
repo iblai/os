@@ -26,27 +26,8 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
     await expect(editMentorPage.dialog).not.toBeVisible();
   });
 
-  // H15 fix: this test was unreachable because beforeEach skips non-admins.
-  // The original checked isAdmin inline and ran the non-admin branch.
-  // We check isAdmin here and assert based on current role — if admin, skip this test.
-  test("non-admin user goes to mentor dropdown and does not see Settings or Tools menu items", async ({
-    page,
-    navbarPage,
-  }) => {
-    // beforeEach already checked isAdmin and skipped if not admin —
-    // so if we reach here, we ARE admin. Skip this test for admins.
-    test.skip(
-      true,
-      "This test only runs for non-admin users. Skipping because beforeEach requires admin.",
-    );
-    await navbarPage.openMentorDropdown();
-    await expect(
-      page.getByRole("menuitem", { name: /settings/i }),
-    ).not.toBeVisible();
-    await expect(
-      page.getByRole("menuitem", { name: /tools/i }),
-    ).not.toBeVisible();
-  });
+  // Intentionally empty — the non-admin test for this journey is below,
+  // outside the admin describe block.
 
   test("admin goes to edit mentor LLM tab and changes the LLM provider", async ({
     page,
@@ -174,5 +155,24 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
     }
     await editMentorPage.settings.deleteMentor();
     await expect(page).toHaveURL(/\/platform\//, { timeout: 15_000 });
+  });
+});
+
+test.describe("Journey 6: Mentor Management — Non-Admin", () => {
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  test("non-admin user goes to mentor dropdown and does not see Settings or Tools menu items", async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await nonadminNavbarPage.openMentorDropdown();
+    await expect(
+      nonadminPage.getByRole("menuitem", { name: /settings/i }),
+    ).not.toBeVisible();
+    await expect(
+      nonadminPage.getByRole("menuitem", { name: /tools/i }),
+    ).not.toBeVisible();
   });
 });
