@@ -50,25 +50,21 @@ test.describe
     });
     await page.waitForLoadState("networkidle");
 
-    // Now on the signup form
+    // Now on the signup form (/account/create)
     const signupPage = new SignupPage(page);
 
-    // Fill the signup form
+    // Fill email
     await signupPage.fillEmail(email);
-    await signupPage.emailInput.press("Tab");
 
-    // Fill username if the field is visible (some auth configs show it)
-    const usernameInput = page.getByPlaceholder("Username");
-    if (await usernameInput.isVisible().catch(() => false)) {
-      await usernameInput.fill(username);
-    }
-
+    // Click "Continue with Password" to reveal password fields
     await signupPage.clickContinue();
 
-    // Fill passwords
+    // Fill passwords (Step 2)
     await expect(signupPage.passwordInput).toBeVisible({ timeout: 10_000 });
     await signupPage.fillPasswords(password);
-    await signupPage.clickContinue();
+
+    // Submit the registration
+    await signupPage.createAccountButton.click();
 
     // Wait for redirect back to the mentor platform
     await safeWaitForURL(page, (url) => url.href.startsWith(HOST), {

@@ -1,12 +1,12 @@
 import { Page, Locator, expect } from "@playwright/test";
 
 /**
- * Page object for the auth service signup page.
+ * Page object for the auth service create-account page (/account/create).
  * Locators derived from apps/auth/app/account/create/page.tsx.
  *
  * The signup form is a two-step flow:
- *   Step 1: Email input + Continue button (+ "Continue with Password" toggle)
- *   Step 2: Password + Confirm Password + Create Account button
+ *   Step 1: Email input + "Continue with Password" button
+ *   Step 2: Password + Confirm Password + "Create Account" button
  */
 export class SignupPage {
   readonly page: Page;
@@ -14,12 +14,11 @@ export class SignupPage {
   // ── Step 1 ────────────────────────────────────────────────────────────────
   readonly heading: Locator;
   readonly emailInput: Locator;
-  readonly continueButton: Locator;
   readonly continueWithPasswordButton: Locator;
   /** "Log In" button on the create-account form (navigates back to login). */
   readonly logInButton: Locator;
 
-  // ── Step 2 (password fields, shown after Continue with Password) ──────────
+  // ── Step 2 (password fields, shown after "Continue with Password") ────────
   readonly passwordInput: Locator;
   readonly confirmPasswordInput: Locator;
   readonly createAccountButton: Locator;
@@ -34,23 +33,17 @@ export class SignupPage {
     this.page = page;
 
     this.heading = page.locator("h1");
-    this.emailInput = page.getByPlaceholder("Email address");
-    this.continueButton = page
-      .locator("div")
-      .filter({ hasText: /^Continue$/ })
-      .first();
-    // "Log In" is a <button> on the create-account page (navigates back to login)
-    this.logInButton = page.getByRole("button", { name: "Log In" });
+    this.emailInput = page.getByPlaceholder("Email");
     this.continueWithPasswordButton = page.getByRole("button", {
       name: "Continue with Password",
     });
+    this.logInButton = page.getByRole("button", { name: "Log In" });
 
     this.passwordInput = page.getByPlaceholder("Password", { exact: true });
-    this.confirmPasswordInput = page.getByPlaceholder("Confirm password");
-    this.createAccountButton = page
-      .locator("div")
-      .filter({ hasText: /^Continue$/ })
-      .first();
+    this.confirmPasswordInput = page.getByPlaceholder("Confirm Password");
+    this.createAccountButton = page.getByRole("button", {
+      name: "Create Account",
+    });
     this.backButton = page.getByRole("button", { name: "Back" });
 
     this.emailError = page.locator("p").filter({
@@ -71,9 +64,9 @@ export class SignupPage {
     await this.emailInput.fill(email);
   }
 
-  /** Click Continue after filling email. */
+  /** Click "Continue with Password" to reveal password fields. */
   async clickContinue() {
-    await this.continueButton.click();
+    await this.continueWithPasswordButton.click();
   }
 
   /** Fill both password fields. */
@@ -85,15 +78,15 @@ export class SignupPage {
   }
 
   /**
-   * Full signup flow: email → Continue → passwords → Continue.
-   * Assumes the page is already on the signup form.
+   * Full password-based signup flow:
+   *   email → "Continue with Password" → passwords → "Create Account".
+   * Assumes the page is already on /account/create.
    */
   async signUp(email: string, password: string) {
     await this.fillEmail(email);
-    await this.emailInput.press("Tab");
     await this.clickContinue();
     await expect(this.passwordInput).toBeVisible({ timeout: 10_000 });
     await this.fillPasswords(password);
-    await this.clickContinue();
+    await this.createAccountButton.click();
   }
 }
