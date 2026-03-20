@@ -1,3 +1,8 @@
+## [0.35.16]
+
+- feat: derive lmsUrl, dmUrl, axdUrl from NEXT_PUBLIC_PLATFORM_BASE_DOMAIN when API base URL is unset
+- default NEXT_PUBLIC_PLATFORM_BASE_DOMAIN to iblai.app
+
 ## [0.35.15]
 
 - replaces multidomain use for different service with single api base domain
