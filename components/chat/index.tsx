@@ -1,19 +1,31 @@
-'use client';
+"use client";
 
-import React, { useLayoutEffect } from 'react';
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 
-import { addMessage, selectEnableChatActionsPopup } from '@/features/chat/chatSlice';
-import { clearFiles } from '@iblai/iblai-js/web-utils';
-import ErrorBoundary from '@/components/error-boundary';
-import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { RootState } from '@/store';
-import { ChatInputForm } from '@/components/chat-input-form';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LoadingMessage } from '@/components/chat/loading-message';
+import {
+  addMessage,
+  selectEnableChatActionsPopup,
+} from "@/features/chat/chatSlice";
+import { clearFiles } from "@iblai/iblai-js/web-utils";
+import ErrorBoundary from "@/components/error-boundary";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { RootState } from "@/store";
+import { ChatInputForm } from "@/components/chat-input-form";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LoadingMessage } from "@/components/chat/loading-message";
 import {
   ANONYMOUS_USERNAME,
   Message as BaseMessage,
@@ -28,7 +40,7 @@ import {
   CHAT_AREA_SIZE,
   FileReference,
   TOOLS,
-} from '@iblai/iblai-js/web-utils';
+} from "@iblai/iblai-js/web-utils";
 import {
   cn,
   getAuthSpaJoinUrl,
@@ -36,13 +48,13 @@ import {
   isLoggedIn,
   redirectToAuthSpa,
   sendMessageToParentWebsite,
-} from '@/lib/utils';
-import { toast } from 'sonner';
-import { config } from '@/lib/config';
-import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
-import { advancedTabs } from '@iblai/iblai-js/web-utils';
-import { LiveKitChat } from '../live-kit-voice-chat';
-import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
+} from "@/lib/utils";
+import { toast } from "sonner";
+import { config } from "@/lib/config";
+import { AdvancedChatHeader } from "@/components/advanced-chat/advanced-chat-header";
+import { advancedTabs } from "@iblai/iblai-js/web-utils";
+import { LiveKitChat } from "../live-kit-voice-chat";
+import { GuidedSuggestedPrompts } from "../guided-suggested-prompts";
 import {
   Dialog,
   DialogContent,
@@ -50,37 +62,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
-import { useUsername, useUserTenants, useVisitingTenant } from '@/hooks/use-user';
-import { useAxdToken } from '@/hooks/use-tokens';
-import { useParams, useSearchParams } from 'next/navigation';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import { ChatMessages } from './chat-messages';
-import type { CanvasOpenPayload } from './chat-messages/types';
-import { useNavigate } from '@/hooks/user-navigate';
-import { AdvancedStaticChatBuilder } from '../advanced-chat/advanced-chat-builder';
-import eventBus, { RemoteEvents } from '@/lib/eventBus';
-import { useDebouncedCallback } from 'use-debounce';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
-import { useUserAgreement } from '@/hooks/use-user-agreement';
-import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
-import { WelcomeChatNew } from '../welcome-chat-new';
-import { useEmbedMode } from '@/hooks/use-embed-mode';
-import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
-import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
-import { ToastErrorMessage } from './toast-error-message';
-import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { useServiceWorker } from '@/components/service-worker-provider';
-import { FileText } from 'lucide-react';
-import { useFileDragDrop } from '@/hooks/use-file-drag-drop';
-import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
+} from "@/components/ui/dialog";
+import { useAdvancedChat } from "@iblai/iblai-js/web-utils";
+import {
+  useUsername,
+  useUserTenants,
+  useVisitingTenant,
+} from "@/hooks/use-user";
+import { useAxdToken } from "@/hooks/use-tokens";
+import { useParams, useSearchParams } from "next/navigation";
+import { TenantKeyMentorIdParams } from "@/lib/types";
+import { ChatMessages } from "./chat-messages";
+import type { CanvasOpenPayload } from "./chat-messages/types";
+import { useNavigate } from "@/hooks/user-navigate";
+import { AdvancedStaticChatBuilder } from "../advanced-chat/advanced-chat-builder";
+import eventBus, { RemoteEvents } from "@/lib/eventBus";
+import { useDebouncedCallback } from "use-debounce";
+import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
+import { useUserAgreement } from "@/hooks/use-user-agreement";
+import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from "@/lib/constants";
+import { LiveKitScreenSharing } from "../live-kit-screen-sharing";
+import { WelcomeChatNew } from "../welcome-chat-new";
+import { useEmbedMode } from "@/hooks/use-embed-mode";
+import { ChatActionBlockingOverlay } from "../modals/chat-action-blocking-overlay";
+import { use402ErrorCheck } from "@/hooks/subscription/use-402-error-check";
+import { ToastErrorMessage } from "./toast-error-message";
+import { useMentorSettings } from "@/hooks/use-mentors/use-mentor-settings";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useServiceWorker } from "@/components/service-worker-provider";
+import { FileText } from "lucide-react";
+import { useFileDragDrop } from "@/hooks/use-file-drag-drop";
+import { useAccessingPublicRoute } from "@/hooks/use-anonymous-mentor";
 
 /* istanbul ignore next -- @preserve dynamic import */
 const CanvasView = dynamic(
-  () => import('@/components/canvas/canvas-view').then((mod) => mod.CanvasView),
+  () => import("@/components/canvas/canvas-view").then((mod) => mod.CanvasView),
   {
     ssr: false,
   },
@@ -88,7 +104,10 @@ const CanvasView = dynamic(
 
 /* istanbul ignore next -- @preserve dynamic import */
 const DisclaimerModal = dynamic(
-  () => import('@/components/modals/disclaimer-modal').then((mod) => mod.DisclaimerModal),
+  () =>
+    import("@/components/modals/disclaimer-modal").then(
+      (mod) => mod.DisclaimerModal,
+    ),
   {
     ssr: false,
   },
@@ -103,7 +122,7 @@ interface Message extends BaseMessage {
  * Check if running in Tauri desktop app
  */
 function isTauriApp(): boolean {
-  return typeof window !== 'undefined' && '__TAURI__' in window;
+  return typeof window !== "undefined" && "__TAURI__" in window;
 }
 
 /**
@@ -111,9 +130,11 @@ function isTauriApp(): boolean {
  */
 /* istanbul ignore next -- @preserve Tauri-specific function */
 function isOfflineServerOrigin(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   const origin = window.location.origin;
-  return origin === 'http://127.0.0.1:3456' || origin === 'http://localhost:3456';
+  return (
+    origin === "http://127.0.0.1:3456" || origin === "http://localhost:3456"
+  );
 }
 
 /**
@@ -121,15 +142,19 @@ function isOfflineServerOrigin(): boolean {
  */
 /* istanbul ignore next -- @preserve Tauri-specific function */
 function isTauriOfflineMode(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   // Check offline server origin first (works before Tauri scripts run)
   if (isOfflineServerOrigin()) return true;
   if (!isTauriApp()) return false;
   // Check global variable (set by Tauri initialization script)
-  if ((window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__ === true) return true;
+  if (
+    (window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__ ===
+    true
+  )
+    return true;
   // Fallback to localStorage
-  if (typeof localStorage?.getItem !== 'function') return false;
-  return localStorage.getItem('tauri_offline_mode') === 'true';
+  if (typeof localStorage?.getItem !== "function") return false;
+  return localStorage.getItem("tauri_offline_mode") === "true";
 }
 
 /**
@@ -149,7 +174,7 @@ function isLikelyOffline(): boolean {
 }
 
 type Props = {
-  mode?: 'advanced' | 'default';
+  mode?: "advanced" | "default";
   isPreviewMode: boolean;
   hasBorder?: boolean;
   isInCanvasView?: boolean;
@@ -158,7 +183,7 @@ type Props = {
 type CanvasState = {
   title: string;
   content: string;
-  type: 'document' | 'code';
+  type: "document" | "code";
   artifactId?: number;
   org?: string;
   userId?: string;
@@ -167,40 +192,40 @@ type CanvasState = {
 };
 
 const createEmptyCanvasState = (): CanvasState => ({
-  title: '',
-  content: '',
-  type: 'document',
+  title: "",
+  content: "",
+  type: "document",
 });
 
 const CODE_FILE_EXTENSIONS = new Set([
-  'py',
-  'js',
-  'ts',
-  'tsx',
-  'jsx',
-  'c',
-  'cpp',
-  'cs',
-  'java',
-  'rb',
-  'go',
-  'rs',
-  'php',
-  'swift',
-  'kt',
-  'scala',
-  'sql',
-  'json',
-  'yml',
-  'yaml',
-  'xml',
-  'html',
-  'css',
-  'sh',
+  "py",
+  "js",
+  "ts",
+  "tsx",
+  "jsx",
+  "c",
+  "cpp",
+  "cs",
+  "java",
+  "rb",
+  "go",
+  "rs",
+  "php",
+  "swift",
+  "kt",
+  "scala",
+  "sql",
+  "json",
+  "yml",
+  "yaml",
+  "xml",
+  "html",
+  "css",
+  "sh",
 ]);
 
 export function Chat({
-  mode = 'default',
+  mode = "default",
   isPreviewMode = false,
   hasBorder = true,
   isInCanvasView = false,
@@ -211,21 +236,23 @@ export function Chat({
   const { getMentorId } = useNavigate();
   const { metadata } = useTenantContext();
   const isAccessingPublicRoute = useAccessingPublicRoute();
-  const { mentorId: mentorIdParam, tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const { mentorId: mentorIdParam, tenantKey } =
+    useParams<TenantKeyMentorIdParams>();
 
   // Skip tenant metadata API call in Tauri offline mode
   // isTauriOfflineMode() already checks isOfflineServerOrigin() internally
   const isTauriOffline = isTauriOfflineMode();
-  const { platformName: tenantPlatformName, metadata: tenantMetadata } = useTenantMetadataHook({
-    org: tenantKey,
-    skip: isTauriOffline,
-  });
+  const { platformName: tenantPlatformName, metadata: tenantMetadata } =
+    useTenantMetadataHook({
+      org: tenantKey,
+      skip: isTauriOffline,
+    });
 
   // Determine chat area max width based on metadata (in pixels)
   const chatAreaMaxWidth = (() => {
     const sizeValue = tenantMetadata?.chat_area_size as number | undefined;
     if (
-      typeof sizeValue === 'number' &&
+      typeof sizeValue === "number" &&
       sizeValue >= CHAT_AREA_SIZE.MIN &&
       sizeValue <= CHAT_AREA_SIZE.MAX
     ) {
@@ -235,7 +262,7 @@ export function Chat({
   })();
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
-  const isCompactMode = searchParams.get('compact') === 'true';
+  const isCompactMode = searchParams.get("compact") === "true";
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
@@ -247,19 +274,25 @@ export function Chat({
   } = useShowFreeTrialDialog();
 
   const { data: mentorSettings } = useMentorSettings();
-  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<Record<string, string>>(
+  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
+    Record<string, string>
+  >(
     LOCAL_STORAGE_KEYS.SESSION_ID,
     {},
     /* istanbul ignore next -- @preserve localStorage deserializer */
     { deserializer: (value) => JSON.parse(value) },
   );
-  const isNewSession = useRef<boolean>(cachedSessionId?.[mentorId] ? false : true);
+  const isNewSession = useRef<boolean>(
+    cachedSessionId?.[mentorId] ? false : true,
+  );
 
   const { handle402Error } = use402ErrorCheck();
   const tokenEnabled = useAppSelector(selectTokenEnabled);
   const token = useAppSelector(selectToken);
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
-  const attachedFiles = useAppSelector((state: RootState) => state.files.attachedFiles || []);
+  const attachedFiles = useAppSelector(
+    (state: RootState) => state.files.attachedFiles || [],
+  );
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
 
   // Offline mode detection (for Tauri desktop app)
@@ -268,7 +301,7 @@ export function Chat({
 
   // Handler for when user is offline without local LLM enabled
   const handleOfflineWithoutLocalLLM = useCallback(() => {
-    toast.error('You are offline', {
+    toast.error("You are offline", {
       description:
         'Chat is unavailable in offline mode. Enable "Download Local LLMs" in Settings to use chat offline.',
       duration: 10000,
@@ -321,13 +354,18 @@ export function Chat({
       // 2. navigator.onLine - browser API (fast but not always reliable)
       // 3. isLikelyOffline() - combines multiple indicators
       const shouldSuppressError =
-        isTauriApp() && (isOfflineInTauri || !navigator.onLine || isLikelyOffline());
+        isTauriApp() &&
+        (isOfflineInTauri || !navigator.onLine || isLikelyOffline());
       if (shouldSuppressError) {
-        console.log('[offline] Error suppressed in Tauri offline mode:', message, {
-          isOfflineInTauri,
-          navigatorOnLine: navigator.onLine,
-          isLikelyOffline: isLikelyOffline(),
-        });
+        console.log(
+          "[offline] Error suppressed in Tauri offline mode:",
+          message,
+          {
+            isOfflineInTauri,
+            navigatorOnLine: navigator.onLine,
+            isLikelyOffline: isLikelyOffline(),
+          },
+        );
         return;
       }
       if (error) {
@@ -348,8 +386,8 @@ export function Chat({
       (!!visitingTenant &&
         isLoggedIn() &&
         !mentorSettings.allowAnonymous &&
-        !searchParams.get('token')),
-    mentorShareableToken: searchParams.get('token'),
+        !searchParams.get("token")),
+    mentorShareableToken: searchParams.get("token"),
     on402Error: handle402Error,
     cachedSessionId,
     onStartNewChat: (sessionId: string) => {
@@ -360,7 +398,7 @@ export function Chat({
     },
     // OAuth callbacks for per_user MCP servers
     onOAuthRequired: (data) => {
-      window.open(data.authUrl, '_blank');
+      window.open(data.authUrl, "_blank");
       toast.info(
         `Authentication required for ${data.serverName}. Please complete the login in the opened window.`,
         {
@@ -412,7 +450,8 @@ export function Chat({
       );
     },
   });
-  const [mentorAccessibilityMessage, setMentorAccessibilityMessage] = useState<string>('');
+  const [mentorAccessibilityMessage, setMentorAccessibilityMessage] =
+    useState<string>("");
 
   // File drag-and-drop for the entire chat area
   const {
@@ -420,16 +459,18 @@ export function Chat({
     handleDragOver: handleChatDragOver,
     handleDragLeave: handleChatDragLeave,
     handleDrop: handleChatDrop,
-  } = useFileDragDrop({ org: tenantKey, userId: username ?? '' });
+  } = useFileDragDrop({ org: tenantKey, userId: username ?? "" });
 
   useEffect(() => {
     if (isStreaming) {
-      setMentorAccessibilityMessage(`${mentorName} is generating a response...`);
+      setMentorAccessibilityMessage(
+        `${mentorName} is generating a response...`,
+      );
     }
     if (
       !isStreaming &&
       messages.length > 0 &&
-      messages[messages.length - 1]?.role === 'assistant'
+      messages[messages.length - 1]?.role === "assistant"
     ) {
       setMentorAccessibilityMessage(
         `${mentorName} says: ${messages[messages.length - 1]?.content}`,
@@ -464,34 +505,45 @@ export function Chat({
     eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
   }, [showingSharedChat]);
 
-  const isAdvancedMode = mode === 'advanced';
+  const isAdvancedMode = mode === "advanced";
   const [isPhoneCallModalOpen, setIsPhoneCallModalOpen] = useState(false);
-  const [isScreenSharingModalOpen, setIsScreenSharingModalOpen] = useState(false);
-  const [, setInputValue] = useState('');
-  const [showVoiceCallConfirmation, setShowVoiceCallConfirmation] = useState(false);
-  const [showScreenShareConfirmation, setShowScreenShareConfirmation] = useState(false);
-  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
+  const [isScreenSharingModalOpen, setIsScreenSharingModalOpen] =
+    useState(false);
+  const [, setInputValue] = useState("");
+  const [showVoiceCallConfirmation, setShowVoiceCallConfirmation] =
+    useState(false);
+  const [showScreenShareConfirmation, setShowScreenShareConfirmation] =
+    useState(false);
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(
+    null,
+  );
 
   // Track if we're in a popup window for chat action (voice call or screen share)
-  const [chatActionType, setChatActionType] = useState<'voice-call' | 'screen-share' | null>(null);
+  const [chatActionType, setChatActionType] = useState<
+    "voice-call" | "screen-share" | null
+  >(null);
   const [showBlockingOverlay, setShowBlockingOverlay] = useState(false);
 
   // Listen for MENTOR:SCREENSHARING_STOPPED messages from popup/parent to refetch chats
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'MENTOR:SCREENSHARING_STOPPED') {
+      if (event.data?.type === "MENTOR:SCREENSHARING_STOPPED") {
         refetchChats();
       }
     };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, [refetchChats]);
 
-  const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    number | null
+  >(null);
 
   // Canvas state management
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
-  const [canvasState, setCanvasState] = useState<CanvasState>(() => createEmptyCanvasState());
+  const [canvasState, setCanvasState] = useState<CanvasState>(() =>
+    createEmptyCanvasState(),
+  );
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const lastAIMessageCopyButtonRef = useRef<HTMLButtonElement>(null);
@@ -500,14 +552,14 @@ export function Chat({
   const wasStreamingActiveRef = useRef(false);
 
   const [isMdUp, setIsMdUp] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === "undefined") return true;
     return window.innerWidth >= 768;
   });
   useEffect(() => {
     const handleResize = () => setIsMdUp(window.innerWidth >= 768);
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Track current artifact from canvas-active events (for when artifact is loaded from API)
@@ -518,7 +570,9 @@ export function Chat({
   } | null>(null);
 
   // Track currently streaming artifact ID
-  const [streamingArtifactId, setStreamingArtifactId] = useState<number | undefined>(undefined);
+  const [streamingArtifactId, setStreamingArtifactId] = useState<
+    number | undefined
+  >(undefined);
 
   // Clear streaming artifact ID when streaming stops
   useEffect(() => {
@@ -564,10 +618,14 @@ export function Chat({
   const clampChatWidth = useCallback(
     (desiredWidthPercent: number, containerWidth?: number) => {
       const container = resizeRef.current?.parentElement;
-      const width = containerWidth ?? container?.getBoundingClientRect().width ?? 0;
+      const width =
+        containerWidth ?? container?.getBoundingClientRect().width ?? 0;
 
       if (!width) {
-        return Math.min(Math.max(desiredWidthPercent, MIN_CHAT_PERCENT), MAX_CHAT_PERCENT);
+        return Math.min(
+          Math.max(desiredWidthPercent, MIN_CHAT_PERCENT),
+          MAX_CHAT_PERCENT,
+        );
       }
 
       // Responsive calculation requires real viewport - covered via integration tests
@@ -590,9 +648,17 @@ export function Chat({
       }
 
       /* istanbul ignore next */
-      return Math.min(Math.max(desiredWidthPercent, minChatPercent), maxChatPercent);
+      return Math.min(
+        Math.max(desiredWidthPercent, minChatPercent),
+        maxChatPercent,
+      );
     },
-    [MIN_CANVAS_WIDTH_PX, MIN_CHAT_PERCENT, MAX_CHAT_PERCENT, MIN_CHAT_WIDTH_PX],
+    [
+      MIN_CANVAS_WIDTH_PX,
+      MIN_CHAT_PERCENT,
+      MAX_CHAT_PERCENT,
+      MIN_CHAT_WIDTH_PX,
+    ],
   );
 
   // Track previous sessionId to detect when it changes
@@ -606,20 +672,20 @@ export function Chat({
 
   // Check for voice-call query parameter
   useEffect(() => {
-    const chatAction = searchParams.get('chat-action');
-    const sessionId = searchParams.get('session-id');
+    const chatAction = searchParams.get("chat-action");
+    const sessionId = searchParams.get("session-id");
     if (chatAction) {
-      if (chatAction === 'voice-call') {
+      if (chatAction === "voice-call") {
         setShowVoiceCallConfirmation(true);
-        setChatActionType('voice-call');
+        setChatActionType("voice-call");
         if (sessionId) {
           saveCachedSessionId({ [mentorId]: sessionId });
         } else {
           saveCachedSessionId({});
         }
-      } else if (chatAction === 'screen-share') {
+      } else if (chatAction === "screen-share") {
         setShowScreenShareConfirmation(true);
-        setChatActionType('screen-share');
+        setChatActionType("screen-share");
         if (sessionId) {
           saveCachedSessionId({ [mentorId]: sessionId });
         } else {
@@ -635,28 +701,34 @@ export function Chat({
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   }, SCROLLING_DEBOUNCE_TIME);
 
   const handleScroll = () => {
     if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } =
+        chatContainerRef.current;
       // Consider the user scrolled up if they're more than 100px from the bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setIsScrolledUp(!isAtBottom);
     }
   };
 
-  const resolveCanvasType = (payload: CanvasOpenPayload): 'document' | 'code' => {
-    if (payload.toolType === 'code') {
-      return 'code';
+  const resolveCanvasType = (
+    payload: CanvasOpenPayload,
+  ): "document" | "code" => {
+    if (payload.toolType === "code") {
+      return "code";
     }
-    if (payload.fileExtension && CODE_FILE_EXTENSIONS.has(payload.fileExtension.toLowerCase())) {
-      return 'code';
+    if (
+      payload.fileExtension &&
+      CODE_FILE_EXTENSIONS.has(payload.fileExtension.toLowerCase())
+    ) {
+      return "code";
     }
-    return 'document';
+    return "document";
   };
 
   // Handler to open canvas with content
@@ -676,9 +748,9 @@ export function Chat({
 
       // Temporarily fix body to prevent scroll jump
       const originalBodyStyle = document.body.style.cssText;
-      document.body.style.position = 'fixed';
+      document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
+      document.body.style.width = "100%";
 
       // Reset scroll immediately
       window.scrollTo(0, 0);
@@ -695,13 +767,15 @@ export function Chat({
       });
     } else {
       // For subsequent opens, just reset scroll normally
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: "auto" });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     }
 
     /* istanbul ignore next -- @preserve nullish coalescing branches */
-    const resolvedTitle = payload.title?.trim() ? payload.title.trim() : 'Untitled Artifact';
+    const resolvedTitle = payload.title?.trim()
+      ? payload.title.trim()
+      : "Untitled Artifact";
     /* istanbul ignore next */
     const resolvedOrg = payload.org ?? tenantKey ?? undefined;
     /* istanbul ignore next */
@@ -709,7 +783,7 @@ export function Chat({
 
     const newCanvasState = {
       title: resolvedTitle,
-      content: payload.content ?? '',
+      content: payload.content ?? "",
       type: resolveCanvasType(payload),
       artifactId: payload.artifactId,
       org: resolvedOrg,
@@ -734,7 +808,7 @@ export function Chat({
       setCurrentCanvasArtifact({
         artifactId: payload.artifactId,
         title: resolvedTitle,
-        file_extension: payload.fileExtension || 'txt',
+        file_extension: payload.fileExtension || "txt",
       });
     }
 
@@ -755,7 +829,8 @@ export function Chat({
       if (!container) return;
 
       const containerRect = container.getBoundingClientRect();
-      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      const newWidth =
+        ((e.clientX - containerRect.left) / containerRect.width) * 100;
       const constrainedWidth = clampChatWidth(newWidth, containerRect.width);
       setChatWidth(constrainedWidth);
     };
@@ -765,12 +840,12 @@ export function Chat({
       setIsResizing(false);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [clampChatWidth, isResizing]);
 
@@ -778,7 +853,7 @@ export function Chat({
   useEffect(() => {
     if (isResizing) {
       const previousUserSelect = document.body.style.userSelect;
-      document.body.style.userSelect = 'none';
+      document.body.style.userSelect = "none";
       return () => {
         document.body.style.userSelect = previousUserSelect;
       };
@@ -803,10 +878,10 @@ export function Chat({
     };
 
     enforceResponsiveBounds();
-    window.addEventListener('resize', enforceResponsiveBounds);
+    window.addEventListener("resize", enforceResponsiveBounds);
 
     return () => {
-      window.removeEventListener('resize', enforceResponsiveBounds);
+      window.removeEventListener("resize", enforceResponsiveBounds);
     };
   }, [clampChatWidth]);
 
@@ -818,7 +893,7 @@ export function Chat({
     // This must happen BEFORE React applies the layout change to prevent blank space
     const resetScroll = () => {
       // Reset window scroll
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: "auto" });
       window.scrollTo(0, 0); // Force immediate scroll
 
       // Reset document scroll
@@ -884,7 +959,7 @@ export function Chat({
 
       // Ensure window scroll is still at top
       if (window.scrollY !== 0 || window.pageYOffset !== 0) {
-        window.scrollTo({ top: 0, behavior: 'auto' });
+        window.scrollTo({ top: 0, behavior: "auto" });
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
       }
@@ -899,10 +974,10 @@ export function Chat({
         /* istanbul ignore next -- @preserve RAF callbacks not executed in JSDOM */
         if (maxScroll > 0) {
           if (targetChat >= 0 && targetChat <= maxScroll) {
-            container.scrollTo({ top: targetChat, behavior: 'auto' });
+            container.scrollTo({ top: targetChat, behavior: "auto" });
           } else if (targetChat > maxScroll) {
             // If saved position exceeds bounds, scroll to bottom
-            container.scrollTo({ top: maxScroll, behavior: 'auto' });
+            container.scrollTo({ top: maxScroll, behavior: "auto" });
           }
         }
         // If maxScroll <= 0, content fits in container, no scroll needed
@@ -961,12 +1036,12 @@ export function Chat({
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
-      chatContainer.addEventListener('scroll', handleScroll);
+      chatContainer.addEventListener("scroll", handleScroll);
     }
 
     return () => {
       if (chatContainer) {
-        chatContainer.removeEventListener('scroll', handleScroll);
+        chatContainer.removeEventListener("scroll", handleScroll);
       }
     };
   }, []);
@@ -986,37 +1061,55 @@ export function Chat({
       if (artifactId) {
         setCurrentCanvasArtifact({
           artifactId:
-            typeof artifactId === 'number' ? artifactId : parseInt(String(artifactId), 10),
-          title: title || 'Untitled Artifact',
-          file_extension: file_extension || 'txt',
+            typeof artifactId === "number"
+              ? artifactId
+              : parseInt(String(artifactId), 10),
+          title: title || "Untitled Artifact",
+          file_extension: file_extension || "txt",
         });
-        console.log('[Chat] Received canvas-active event with artifact:', artifactId);
+        console.log(
+          "[Chat] Received canvas-active event with artifact:",
+          artifactId,
+        );
       }
     };
 
     /* istanbul ignore next -- @preserve CustomEvent handler */
     const handleCanvasInactive = () => {
       setCurrentCanvasArtifact(null);
-      console.log('[Chat] Received canvas-inactive event');
+      console.log("[Chat] Received canvas-inactive event");
     };
 
-    window.addEventListener('canvas-active' as any, handleCanvasActive as any);
-    window.addEventListener('canvas-inactive' as any, handleCanvasInactive as any);
+    window.addEventListener("canvas-active" as any, handleCanvasActive as any);
+    window.addEventListener(
+      "canvas-inactive" as any,
+      handleCanvasInactive as any,
+    );
 
     return () => {
-      window.removeEventListener('canvas-active' as any, handleCanvasActive as any);
-      window.removeEventListener('canvas-inactive' as any, handleCanvasInactive as any);
+      window.removeEventListener(
+        "canvas-active" as any,
+        handleCanvasActive as any,
+      );
+      window.removeEventListener(
+        "canvas-inactive" as any,
+        handleCanvasInactive as any,
+      );
     };
   }, []);
 
   // Close canvas and disable canvas tool when session changes (e.g., when switching chats from sidebar)
   useEffect(() => {
     // Only close canvas if sessionId actually changed (not on initial mount)
-    if (sessionId && prevSessionIdRef.current && prevSessionIdRef.current !== sessionId) {
+    if (
+      sessionId &&
+      prevSessionIdRef.current &&
+      prevSessionIdRef.current !== sessionId
+    ) {
       // If canvas is open and sessionId changes, close the canvas
       // This ensures canvas doesn't persist when switching between chats
       if (isCanvasOpen) {
-        console.log('[Chat] Session changed, closing canvas', {
+        console.log("[Chat] Session changed, closing canvas", {
           previousSessionId: prevSessionIdRef.current,
           newSessionId: sessionId,
         });
@@ -1026,18 +1119,27 @@ export function Chat({
       // Disable canvas tool if it's enabled when session changes
       // This ensures canvas status is reset when switching chats or starting new chat
       if (artifactsEnabled) {
-        console.log('[Chat] Session changed, disabling canvas tool', {
+        console.log("[Chat] Session changed, disabling canvas tool", {
           previousSessionId: prevSessionIdRef.current,
           newSessionId: sessionId,
         });
         updateSessionTools(TOOLS.CANVAS).catch((error) => {
-          console.error('[Chat] Failed to disable canvas on session change:', error);
+          console.error(
+            "[Chat] Failed to disable canvas on session change:",
+            error,
+          );
         });
       }
     }
     // Update the ref to track the current sessionId
     prevSessionIdRef.current = sessionId;
-  }, [sessionId, isCanvasOpen, artifactsEnabled, handleCloseCanvas, updateSessionTools]);
+  }, [
+    sessionId,
+    isCanvasOpen,
+    artifactsEnabled,
+    handleCloseCanvas,
+    updateSessionTools,
+  ]);
 
   // Listen for artifact update events from websocket (legacy format)
   useEffect(() => {
@@ -1059,7 +1161,7 @@ export function Chat({
         Number(updatedArtifactId) === canvasState.artifactId
       ) {
         console.log(
-          '[Chat] Artifact update received (legacy), refreshing canvas:',
+          "[Chat] Artifact update received (legacy), refreshing canvas:",
           updatedArtifactId,
         );
         setCanvasRefreshTrigger((prev) => prev + 1);
@@ -1075,29 +1177,49 @@ export function Chat({
       }
     };
 
-    window.addEventListener('artifact-update', handleArtifactUpdate as EventListener);
+    window.addEventListener(
+      "artifact-update",
+      handleArtifactUpdate as EventListener,
+    );
     return () => {
-      window.removeEventListener('artifact-update', handleArtifactUpdate as EventListener);
+      window.removeEventListener(
+        "artifact-update",
+        handleArtifactUpdate as EventListener,
+      );
     };
   }, [isCanvasOpen, canvasState.artifactId]);
 
   // Listen for title updates to reflect immediately in chat/canvas state
   useEffect(() => {
-    const handleTitleUpdate = (event: CustomEvent<{ artifactId: number; title: string }>) => {
+    const handleTitleUpdate = (
+      event: CustomEvent<{ artifactId: number; title: string }>,
+    ) => {
       const { artifactId, title } = event.detail || {};
       if (!artifactId || !title) return;
 
-      if (canvasState.artifactId && Number(artifactId) === canvasState.artifactId) {
+      if (
+        canvasState.artifactId &&
+        Number(artifactId) === canvasState.artifactId
+      ) {
         setCanvasState((prev) => ({ ...prev, title }));
       }
-      if (currentCanvasArtifact && Number(artifactId) === currentCanvasArtifact.artifactId) {
+      if (
+        currentCanvasArtifact &&
+        Number(artifactId) === currentCanvasArtifact.artifactId
+      ) {
         setCurrentCanvasArtifact((prev) => (prev ? { ...prev, title } : prev));
       }
     };
 
-    window.addEventListener('artifact-title-updated' as any, handleTitleUpdate as any);
+    window.addEventListener(
+      "artifact-title-updated" as any,
+      handleTitleUpdate as any,
+    );
     return () => {
-      window.removeEventListener('artifact-title-updated' as any, handleTitleUpdate as any);
+      window.removeEventListener(
+        "artifact-title-updated" as any,
+        handleTitleUpdate as any,
+      );
     };
   }, [canvasState.artifactId, currentCanvasArtifact]);
 
@@ -1113,7 +1235,7 @@ export function Chat({
         isUpdate,
       } = event.detail;
 
-      console.log('[Chat] Artifact stream start received:', {
+      console.log("[Chat] Artifact stream start received:", {
         artifactId,
         title,
         isUpdate,
@@ -1127,11 +1249,11 @@ export function Chat({
         setStreamingArtifactId(artifactIdNum); // Track streaming artifact
 
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || 'Untitled Artifact',
-          content: '', // Start with empty content, will be streamed
-          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
-            ? 'code'
-            : 'canvas',
+          title: title || "Untitled Artifact",
+          content: "", // Start with empty content, will be streamed
+          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || "")
+            ? "code"
+            : "canvas",
           artifactId: artifactIdNum,
           org: tenantKey,
           userId: username ?? undefined,
@@ -1159,7 +1281,7 @@ export function Chat({
         versionNumber,
       } = event.detail;
 
-      console.log('[Chat] Artifact stream end received:', {
+      console.log("[Chat] Artifact stream end received:", {
         artifactId,
         isUpdate,
         isPartial,
@@ -1176,11 +1298,11 @@ export function Chat({
       // If canvas is not open yet (fallback case), open it now with the final content
       if (!isUpdate && artifactId && !isCanvasOpen) {
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || 'Untitled Artifact',
-          content: content || '',
-          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
-            ? 'code'
-            : 'canvas',
+          title: title || "Untitled Artifact",
+          content: content || "",
+          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || "")
+            ? "code"
+            : "canvas",
           artifactId: Number(artifactId),
           org: tenantKey,
           userId: username ?? undefined,
@@ -1196,11 +1318,23 @@ export function Chat({
       // If this is an update to the currently open artifact, the canvas component handles it
     };
 
-    window.addEventListener('artifact-stream-start' as any, handleArtifactStreamStart as any);
-    window.addEventListener('artifact-stream-end' as any, handleArtifactStreamEnd as any);
+    window.addEventListener(
+      "artifact-stream-start" as any,
+      handleArtifactStreamStart as any,
+    );
+    window.addEventListener(
+      "artifact-stream-end" as any,
+      handleArtifactStreamEnd as any,
+    );
     return () => {
-      window.removeEventListener('artifact-stream-start' as any, handleArtifactStreamStart as any);
-      window.removeEventListener('artifact-stream-end' as any, handleArtifactStreamEnd as any);
+      window.removeEventListener(
+        "artifact-stream-start" as any,
+        handleArtifactStreamStart as any,
+      );
+      window.removeEventListener(
+        "artifact-stream-end" as any,
+        handleArtifactStreamEnd as any,
+      );
     };
   }, [
     isCanvasOpen,
@@ -1223,7 +1357,7 @@ export function Chat({
       // Add user message with file attachments if present
       dispatch(
         addMessage({
-          role: 'user',
+          role: "user",
           content,
           replyTo: replyingToMessage,
         }),
@@ -1231,7 +1365,7 @@ export function Chat({
 
       // Transform attached files to file references for WebSocket
       const uploadedFiles = attachedFiles.filter(
-        (f) => f.uploadStatus === 'success' && f.fileKey && f.fileId,
+        (f) => f.uploadStatus === "success" && f.fileKey && f.fileId,
       );
 
       const fileReferences: FileReference[] = uploadedFiles.map((f) => ({
@@ -1246,28 +1380,40 @@ export function Chat({
       // Include full artifact reference if canvas is open
       // Use currentCanvasArtifact (from canvas-active event) as primary source,
       // fallback to canvasState.artifactId if available
-      const effectiveArtifactId = currentCanvasArtifact?.artifactId ?? canvasState.artifactId;
+      const effectiveArtifactId =
+        currentCanvasArtifact?.artifactId ?? canvasState.artifactId;
       const effectiveTitle = currentCanvasArtifact?.title ?? canvasState.title;
       const effectiveFileExtension =
         currentCanvasArtifact?.file_extension ?? canvasState.fileExtension;
 
       let artifactPayload:
-        | { title: string; file_extension: string; id: string; is_partial: boolean }
+        | {
+            title: string;
+            file_extension: string;
+            id: string;
+            is_partial: boolean;
+          }
         | undefined;
       if (isCanvasOpen && effectiveArtifactId) {
         artifactPayload = {
-          title: effectiveTitle || 'Untitled Artifact',
-          file_extension: effectiveFileExtension || 'txt',
+          title: effectiveTitle || "Untitled Artifact",
+          file_extension: effectiveFileExtension || "txt",
           id: String(effectiveArtifactId),
           is_partial: false, // Full artifact reference when canvas is open
         };
-        console.log('[Chat] Sending message with artifact reference:', artifactPayload, {
-          source: currentCanvasArtifact ? 'canvas-active-event' : 'canvasState',
-          isCanvasOpen,
-          effectiveArtifactId,
-        });
+        console.log(
+          "[Chat] Sending message with artifact reference:",
+          artifactPayload,
+          {
+            source: currentCanvasArtifact
+              ? "canvas-active-event"
+              : "canvasState",
+            isCanvasOpen,
+            effectiveArtifactId,
+          },
+        );
       } else {
-        console.log('[Chat] Canvas state:', {
+        console.log("[Chat] Canvas state:", {
           isCanvasOpen,
           canvasStateArtifactId: canvasState.artifactId,
           currentCanvasArtifactId: currentCanvasArtifact?.artifactId,
@@ -1291,14 +1437,14 @@ export function Chat({
       setReplyingToMessage(null);
 
       // Reset input value
-      setInputValue('');
+      setInputValue("");
     }, false);
   };
 
   const requireUserToJoinTenantOnChat = (content: string) => {
     const userMessage: Message = {
       id: `user-${Date.now()}`,
-      role: 'user',
+      role: "user",
       content,
       timestamp: new Date().toISOString(),
       visible: true,
@@ -1306,7 +1452,7 @@ export function Chat({
     const email = metadata?.support_email || config.supportEmail();
     const aiMessage: Message = {
       id: `user-${Date.now()}`,
-      role: 'assistant',
+      role: "assistant",
       content: `Whoops! Looks like access to me is restricted to users of <b>${tenantPlatformName ?? tenantKey.toUpperCase()}</b>. If you’d like to join then please reach out to our <a target="_self" href="mailto:${email}">support team</a>`,
       timestamp: new Date().toISOString(),
       visible: true,
@@ -1331,7 +1477,7 @@ export function Chat({
       if (!mentorSettings.allowAnonymous && (!token || !tokenEnabled)) {
         const userMessage: Message = {
           id: `user-${Date.now()}`,
-          role: 'user',
+          role: "user",
           content: content,
           timestamp: new Date().toISOString(),
           visible: true,
@@ -1339,7 +1485,7 @@ export function Chat({
 
         const aiMessage: Message = {
           id: `user-${Date.now()}`,
-          role: 'assistant',
+          role: "assistant",
           content: `It looks like you need to be logged in to chat with me. Please <a target="_self" href="${getAuthSpaJoinUrl(tenantKey)}">log in or sign up for free</a> to get started!`,
           timestamp: new Date().toISOString(),
           visible: true,
@@ -1394,7 +1540,7 @@ export function Chat({
         enabledGuidedPrompts={enabledGuidedPrompts}
         tenantKey={tenantKey}
         sessionId={sessionId}
-        username={username ?? ''}
+        username={username ?? ""}
         isStreaming={isStreaming}
         isPending={isPending}
         onPromptSelect={handleSubmit}
@@ -1406,11 +1552,11 @@ export function Chat({
   return (
     <div
       className={cn(
-        'relative flex h-full flex-col bg-white rounded-t-lg w-full px-2',
-        hasBorder && 'border border-gray-200',
+        "relative flex h-full flex-col bg-white rounded-t-lg w-full px-2",
+        hasBorder && "border border-gray-200",
         CSS_CLASS_NAMES.APP_LAYOUT.MAIN_CONTENT_AREA,
         // In compact mode, prevent external scrolling - only internal chat should scroll
-        isCompactMode && 'overflow-hidden',
+        isCompactMode && "overflow-hidden",
       )}
       onDragOver={handleChatDragOver}
       onDragLeave={handleChatDragLeave}
@@ -1427,12 +1573,18 @@ export function Chat({
       )}
       <div
         className={cn({
-          'flex-1 h-full': messages.length === 0 && !isCanvasOpen,
+          // Fill available space when the messages section won't render
+          // (no messages, or only a single assistant greeting/proactive prompt)
+          "flex-1 h-full":
+            !isCanvasOpen &&
+            (messages.length === 0 ||
+              (messages.length === 1 && messages[0]?.role === "assistant")),
           // In compact mode, don't add overflow-y-auto here - only the messages container should scroll
-          'overflow-y-auto scrollbar-none': !isAdvancedMode && !isCanvasOpen && !isCompactMode,
-          'min-h-0': isCompactMode, // Allow flex shrinking in compact mode
+          "overflow-y-auto scrollbar-none":
+            !isAdvancedMode && !isCanvasOpen && !isCompactMode,
+          "min-h-0": isCompactMode, // Allow flex shrinking in compact mode
         })}
-        style={isCanvasOpen ? { display: 'none' } : undefined}
+        style={isCanvasOpen ? { display: "none" } : undefined}
       >
         {isAdvancedMode && (
           <div
@@ -1457,7 +1609,7 @@ export function Chat({
                 sendMessage={sendMessage}
                 activeTab={activeTab}
                 tenantKey={tenantKey}
-                username={username ?? ''}
+                username={username ?? ""}
                 sessionId={cachedSessionId?.[mentorId] ?? sessionId}
                 mentorUniqueId={uniqueMentorId}
                 // messages={messages}
@@ -1473,23 +1625,28 @@ export function Chat({
          * We'll pass this message as a prop to the WelcomeChatNew component as aiWelcomeMessage prop to show it as the welcome message if it exists.
          */}
         {(messages.length === 0 ||
-          (!isNewSession.current && messages.length === 1 && messages[0]?.role === 'assistant')) &&
+          (!isNewSession.current &&
+            messages.length === 1 &&
+            messages[0]?.role === "assistant")) &&
           !isAdvancedMode && (
             <WelcomeChatNew
               mentorName={mentorName}
               sessionId={cachedSessionId?.[mentorId] ?? sessionId}
-              isNewSession={isNewSession.current || (messages.length === 0 && !isLoadingChats)}
+              isNewSession={
+                isNewSession.current ||
+                (messages.length === 0 && !isLoadingChats)
+              }
               aiWelcomeMessage={
-                messages.length === 1 && messages[0]?.role === 'assistant'
+                messages.length === 1 && messages[0]?.role === "assistant"
                   ? messages[0]?.content
-                  : ''
+                  : ""
               }
               enabledGuidedPrompts={enabledGuidedPrompts}
               onSubmit={handleSubmit}
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                    type: "MENTOR:CHAT_ACTION_SCREENSHARE",
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1504,7 +1661,7 @@ export function Chat({
               onPhoneCallClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                    type: "MENTOR:CHAT_ACTION_VOICECALL",
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1513,7 +1670,7 @@ export function Chat({
               }}
               stopGenerating={stopGenerating}
               tenantKey={tenantKey}
-              username={username ?? ''}
+              username={username ?? ""}
               enableWebBrowsing={enableWebBrowsing}
               setMessage={setMessage}
               isStreaming={isStreaming}
@@ -1546,12 +1703,12 @@ export function Chat({
         <div
           className="flex-1 flex overflow-hidden relative"
           ref={resizeRef}
-          style={{ minHeight: 0, maxHeight: '100%', height: '100%' }}
+          style={{ minHeight: 0, maxHeight: "100%", height: "100%" }}
         >
           {/* Chat section on left - hidden on mobile */}
           <div
             className="border-r border-gray-200 flex-col overflow-hidden hidden md:flex flex-shrink-0"
-            style={{ width: `${chatWidth}%`, minHeight: 0, maxHeight: '100%' }}
+            style={{ width: `${chatWidth}%`, minHeight: 0, maxHeight: "100%" }}
           >
             {/* Chat messages */}
             <div
@@ -1605,10 +1762,16 @@ export function Chat({
                     !currentStreamingMessage?.content &&
                     !(
                       messages.length > 0 &&
-                      messages[messages.length - 1]?.role === 'assistant' &&
+                      messages[messages.length - 1]?.role === "assistant" &&
                       messages[messages.length - 1]?.artifactVersions &&
-                      (messages[messages.length - 1]?.artifactVersions?.length ?? 0) > 0
-                    ) && <LoadingMessage mentorName={mentorName} profileImage={profileImage} />}
+                      (messages[messages.length - 1]?.artifactVersions
+                        ?.length ?? 0) > 0
+                    ) && (
+                      <LoadingMessage
+                        mentorName={mentorName}
+                        profileImage={profileImage}
+                      />
+                    )}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -1626,7 +1789,7 @@ export function Chat({
                 isScreenSharingModalOpen={false}
                 onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas view
                 tenantKey={tenantKey}
-                username={username ?? ''}
+                username={username ?? ""}
                 setMessage={setMessage}
                 enableSafetyDisclaimer={enableSafetyDisclaimer}
                 isPreviewMode={isPreviewMode}
@@ -1669,14 +1832,14 @@ export function Chat({
           <div
             className="flex-1 bg-white overflow-hidden flex flex-col"
             style={{
-              width: isMdUp ? `${100 - chatWidth}%` : '100%',
+              width: isMdUp ? `${100 - chatWidth}%` : "100%",
               minHeight: 0,
-              maxHeight: '100%',
-              height: '100%',
+              maxHeight: "100%",
+              height: "100%",
             }}
           >
             <CanvasView
-              key={`${canvasState.artifactId ?? 'canvas'}-${canvasRefreshTrigger}`}
+              key={`${canvasState.artifactId ?? "canvas"}-${canvasRefreshTrigger}`}
               canvasTitle={canvasState.title}
               canvasContent={canvasState.content}
               canvasType={canvasState.type}
@@ -1704,7 +1867,7 @@ export function Chat({
                 isScreenSharingModalOpen={false}
                 onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas mobile view
                 tenantKey={tenantKey}
-                username={username ?? ''}
+                username={username ?? ""}
                 setMessage={setMessage}
                 enableSafetyDisclaimer={enableSafetyDisclaimer}
                 isPreviewMode={isPreviewMode}
@@ -1732,18 +1895,26 @@ export function Chat({
       ) : (
         /* Normal chat layout when canvas is closed */
         messages.length > 0 &&
-        (messages[0].role === 'assistant' ? messages.slice(1) : messages).length > 0 && (
+        (messages[0].role === "assistant" ? messages.slice(1) : messages)
+          .length > 0 && (
           <div
             ref={chatContainerRef}
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto min-h-0"
           >
-            <div className="py-6 w-full mx-auto" style={{ maxWidth: `${chatAreaMaxWidth}px` }}>
+            <div
+              className="py-6 w-full mx-auto"
+              style={{ maxWidth: `${chatAreaMaxWidth}px` }}
+            >
               <ErrorBoundary>
                 {/* Messages with file attachments */}
                 <ChatMessages
                   ref={lastAIMessageCopyButtonRef}
-                  messages={messages[0].role === 'assistant' ? messages.slice(1) : messages}
+                  messages={
+                    messages[0].role === "assistant"
+                      ? messages.slice(1)
+                      : messages
+                  }
                   highlightedMessageId={highlightedMessageId}
                   profileImage={profileImage}
                   mentorName={mentorName}
@@ -1771,10 +1942,16 @@ export function Chat({
                   !currentStreamingMessage?.content &&
                   !(
                     messages.length > 0 &&
-                    messages[messages.length - 1]?.role === 'assistant' &&
+                    messages[messages.length - 1]?.role === "assistant" &&
                     messages[messages.length - 1]?.artifactVersions &&
-                    (messages[messages.length - 1]?.artifactVersions?.length ?? 0) > 0
-                  ) && <LoadingMessage mentorName={mentorName} profileImage={profileImage} />}
+                    (messages[messages.length - 1]?.artifactVersions?.length ??
+                      0) > 0
+                  ) && (
+                    <LoadingMessage
+                      mentorName={mentorName}
+                      profileImage={profileImage}
+                    />
+                  )}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}
@@ -1785,25 +1962,30 @@ export function Chat({
       )}
 
       {/* Scroll to bottom button - hide when canvas is open */}
-      {isScrolledUp && !isPreviewMode && messages.length > 0 && !isCanvasOpen && (
-        <div className="sticky bottom-4 w-full flex justify-center z-10 pointer-events-none bg-transparent h-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  scrollToBottom();
-                }}
-                className="rounded-md h-10 w-10 bg-white shadow-md border border-gray-200 hover:bg-gray-100 pointer-events-auto absolute bottom-4"
-              >
-                <ChevronDown className="h-5 w-5 text-gray-600" />
-                <span className="sr-only">Scroll to bottom</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="ibl-tooltip-content">Scroll to Bottom</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
+      {isScrolledUp &&
+        !isPreviewMode &&
+        messages.length > 0 &&
+        !isCanvasOpen && (
+          <div className="sticky bottom-4 w-full flex justify-center z-10 pointer-events-none bg-transparent h-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    scrollToBottom();
+                  }}
+                  className="rounded-md h-10 w-10 bg-white shadow-md border border-gray-200 hover:bg-gray-100 pointer-events-auto absolute bottom-4"
+                >
+                  <ChevronDown className="h-5 w-5 text-gray-600" />
+                  <span className="sr-only">Scroll to bottom</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="ibl-tooltip-content">
+                Scroll to Bottom
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
       {/* Show chat input only when canvas is not open */}
       {!isCanvasOpen &&
@@ -1811,7 +1993,8 @@ export function Chat({
         (isAdvancedMode ||
           isEmbeddedMode ||
           (messages.length > 0 &&
-            (messages[0].role === 'assistant' ? messages.slice(1) : messages).length > 0)) && (
+            (messages[0].role === "assistant" ? messages.slice(1) : messages)
+              .length > 0)) && (
           <div className="flex-shrink-0 pb-3.5 overflow-y-auto [scrollbar-gutter:stable]">
             <ChatInputForm
               sessionId={cachedSessionId?.[mentorId] ?? sessionId}
@@ -1820,7 +2003,7 @@ export function Chat({
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                    type: "MENTOR:CHAT_ACTION_SCREENSHARE",
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1835,7 +2018,7 @@ export function Chat({
               onPhoneCallClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                    type: "MENTOR:CHAT_ACTION_VOICECALL",
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1843,7 +2026,7 @@ export function Chat({
                 setIsPhoneCallModalOpen(true);
               }}
               tenantKey={tenantKey}
-              username={username ?? ''}
+              username={username ?? ""}
               setMessage={setMessage}
               enableSafetyDisclaimer={enableSafetyDisclaimer}
               isPreviewMode={isPreviewMode}
@@ -1873,7 +2056,7 @@ export function Chat({
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
-          username={username ?? ''}
+          username={username ?? ""}
           isOpen={isPhoneCallModalOpen}
           onClose={() => {
             if (window.opener) {
@@ -1890,7 +2073,7 @@ export function Chat({
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
-          username={username ?? ''}
+          username={username ?? ""}
           isOpen={isScreenSharingModalOpen}
           mentorName={mentorName}
           onClose={() => {
@@ -1905,7 +2088,10 @@ export function Chat({
       )}
 
       {isFreeTrialModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog isOpen={isFreeTrialModalOpen} onClose={closeFreeTrialModal} />
+        <FreeTrialDialog
+          isOpen={isFreeTrialModalOpen}
+          onClose={closeFreeTrialModal}
+        />
       )}
 
       {showDisclaimerModal && hasUserAgreement && (
@@ -1956,7 +2142,7 @@ export function Chat({
                 setIsPhoneCallModalOpen(true);
                 setShowVoiceCallConfirmation(false);
                 // Show blocking overlay if opened from another window
-                if (window.opener && chatActionType === 'voice-call') {
+                if (window.opener && chatActionType === "voice-call") {
                   setShowBlockingOverlay(true);
                 }
               }}
@@ -2005,7 +2191,7 @@ export function Chat({
                 setIsScreenSharingModalOpen(true);
                 setShowScreenShareConfirmation(false);
                 // Show blocking overlay if opened from another window
-                if (window.opener && chatActionType === 'screen-share') {
+                if (window.opener && chatActionType === "screen-share") {
                   setShowBlockingOverlay(true);
                 }
               }}
@@ -2025,9 +2211,15 @@ export function Chat({
             // Notify the opener that screen sharing was stopped
             if (window.opener && !window.opener.closed) {
               try {
-                window.opener.postMessage({ type: 'MENTOR:SCREENSHARING_STOPPED' }, '*');
+                window.opener.postMessage(
+                  { type: "MENTOR:SCREENSHARING_STOPPED" },
+                  "*",
+                );
               } catch (error) {
-                console.error('Failed to post screen sharing stopped to opener:', error);
+                console.error(
+                  "Failed to post screen sharing stopped to opener:",
+                  error,
+                );
               }
             }
             // Close the screen sharing modal
