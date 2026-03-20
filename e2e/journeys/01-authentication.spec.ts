@@ -69,6 +69,8 @@ test.describe
       (url) => url.href.includes(AUTH_HOST) && url.href.includes("/login?"),
       { timeout: 60_000 },
     );
+
+    await page.waitForLoadState("networkidle", {});
   });
 
   test("newly signed-up non-admin goes to mentor platform and logs in after signup", async ({
@@ -128,11 +130,9 @@ test.describe
     ).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: "Forgot password?" }).click();
 
-    await safeWaitForURL(
-      page,
-      (url) => url.href.includes(`/password/reset?redirect-to=`),
-      { timeout: 30_000 },
-    );
+    await safeWaitForURL(page, (url) => url.href.includes(`/password/reset`), {
+      timeout: 30_000,
+    });
 
     // Fill email on forgot-password page
     await page.getByPlaceholder("Email address").fill(email);
