@@ -8,7 +8,7 @@ declare namespace JSX {
 
 interface Window {
   __ENV__: { [key: string]: string | undefined }; // Define the structure of __ENV__
-  
+
   // Third-party services
   Dropbox: any;
   OneDrive: any;
