@@ -30,8 +30,9 @@
   </Properties>
 
   <Dependencies>
-    <!-- Windows 10 1809 (build 17763) minimum for WebView2 compatibility -->
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22631.0" />
+    <!-- Windows 10 1903 (build 18362) minimum — required for .msix bundle support and full WebView2 compatibility.
+         1809 (17763) reached end of support Nov 2020. -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.18362.0" MaxVersionTested="10.0.22631.0" />
   </Dependencies>
 
   <Resources>

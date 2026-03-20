@@ -1,13 +1,13 @@
-import { Locator, Page } from '@playwright/test';
-import { logger } from '@iblai/iblai-js/playwright';
+import { Locator, Page } from "@playwright/test";
+import { logger } from "@iblai/iblai-js/playwright";
 import {
   expect,
   StepFn,
   waitForPageLoad,
   safeWaitForURL,
-} from '@iblai/iblai-js/playwright';
-import { AUTH_HOST } from './utils';
-import { MENTOR_NEXTJS_HOST, SKILL_HOST } from './utils';
+} from "@iblai/iblai-js/playwright";
+import { AUTH_HOST } from "./utils";
+import { MENTOR_NEXTJS_HOST, SKILL_HOST } from "./utils";
 
 export interface SignUpCredentials {
   email: string;
@@ -17,60 +17,60 @@ export interface SignUpCredentials {
 export async function signUpWithEmailAndPassword(
   page: Page,
   credentials?: SignUpCredentials,
-  alreadyInSignupPage = false
+  alreadyInSignupPage = false,
 ) {
-  logger.info('Checking for user credentials');
+  logger.info("Checking for user credentials");
 
   if (!credentials) {
     const timeStamp = Date.now();
     logger.info(`Generating credentials for test ${timeStamp}`);
     credentials = {
       email: `test+${timeStamp}@ibleducation.com`,
-      password: 'test-password',
+      password: "test-password",
     };
   }
 
   if (!alreadyInSignupPage) {
     // Click on the sign up button
-    const signUpButton = page.getByRole('button', { name: 'Sign Up' });
+    const signUpButton = page.getByRole("button", { name: "Sign Up" });
     await expect(signUpButton).toBeVisible({ timeout: 10000 });
     await signUpButton.click();
 
     // Wait for the sign up page to load
     await safeWaitForURL(
       page,
-      (url) => url.href.startsWith(AUTH_HOST + '/account/create'),
-      { timeout: 60000 }
+      (url) => url.href.startsWith(AUTH_HOST + "/account/create"),
+      { timeout: 60000 },
     );
   }
 
   // Click on the continue with Password button
-  const continueWithPasswordButton = page.getByRole('button', {
-    name: 'continue with Password',
+  const continueWithPasswordButton = page.getByRole("button", {
+    name: "continue with Password",
   });
   await expect(continueWithPasswordButton).toBeVisible({ timeout: 10000 });
   await continueWithPasswordButton.click();
 
   // Fill in Email field
-  const emailInputField = page.getByPlaceholder('Email');
+  const emailInputField = page.getByPlaceholder("Email");
   await expect(emailInputField).toBeVisible();
   await emailInputField.fill(credentials.email);
 
   // Fill in Password field
-  const passwordInputField = page.getByPlaceholder('Password', {
+  const passwordInputField = page.getByPlaceholder("Password", {
     exact: true,
   });
   await expect(passwordInputField).toBeVisible();
   await passwordInputField.fill(credentials.password);
 
   // Fill in Confirm Password field
-  const confirmPasswordInputField = page.getByPlaceholder('Confirm Password');
+  const confirmPasswordInputField = page.getByPlaceholder("Confirm Password");
   await expect(confirmPasswordInputField).toBeVisible();
   await confirmPasswordInputField.fill(credentials.password);
 
   // Click Create Account
-  const createAccountButton = page.getByRole('button', {
-    name: 'Create Account',
+  const createAccountButton = page.getByRole("button", {
+    name: "Create Account",
   });
   await expect(createAccountButton).toBeVisible();
   await createAccountButton.click();
@@ -79,7 +79,7 @@ export async function signUpWithEmailAndPassword(
   await safeWaitForURL(page, (url) => url.href.startsWith(MENTOR_NEXTJS_HOST), {
     timeout: 60000,
   });
-  await page.waitForLoadState('domcontentloaded');
+  await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(15000);
 }
 
@@ -87,7 +87,7 @@ export async function loginWithEmailAndPassword(
   page: Page,
   username: string,
   password: string,
-  hostUrl: string
+  hostUrl: string,
 ) {
   /* logger.info('Checking for email input field');
   const emailInput = page.locator('input[placeholder="Email or Username"]');
@@ -119,16 +119,16 @@ export async function loginWithEmailAndPassword(
   //NEW AUTH FLOW
   await page.click('button:has-text("Continue with Password")');
 
-  logger.info('Waiting for 1 second before waiting for the email input');
+  logger.info("Waiting for 1 second before waiting for the email input");
   await page.waitForTimeout(1000);
 
-  logger.info('Waiting for the password form to appear');
+  logger.info("Waiting for the password form to appear");
   await page.waitForSelector('input[type="email"]');
 
-  logger.info('Filling in the login credentials');
+  logger.info("Filling in the login credentials");
   await page.fill('input[type="email"]', username);
   await page.fill('input[type="password"]', password);
-  logger.info('Clicking the login button');
+  logger.info("Clicking the login button");
   await page.click('button:has-text("Continue")');
   await page.waitForTimeout(500);
 
@@ -144,8 +144,8 @@ export async function loginWithEmailAndPassword(
   if (hostUrl == SKILL_HOST) {
     await safeWaitForURL(
       page,
-      (url) => url.href.includes('/home') || url.href.includes('/start'),
-      { timeout: 80000 }
+      (url) => url.href.includes("/home") || url.href.includes("/start"),
+      { timeout: 80000 },
     );
   }
 }
@@ -153,60 +153,60 @@ export async function loginWithEmailAndPassword(
 export async function loginWithMicrosoftIdp(
   page: Page,
   username: string,
-  password: string
+  password: string,
 ) {
   // Wait for SSO provider page to load (simulate login if needed)
   // This part may need to be customized for your client SSO
   await safeWaitForURL(page, /.*\/oauth2\/v2.0\/authorize.*/, {
     timeout: 60000,
   });
-  await page.waitForLoadState('networkidle');
-  const inputEmailEl = page.getByRole('textbox', { name: 'NetId@syr.edu' });
-  await inputEmailEl.waitFor({ state: 'visible' });
+  await page.waitForLoadState("networkidle");
+  const inputEmailEl = page.getByRole("textbox", { name: "NetId@syr.edu" });
+  await inputEmailEl.waitFor({ state: "visible" });
   inputEmailEl.fill(username);
-  const nextBtnEl = page.getByRole('button', { name: 'Next' });
-  await nextBtnEl.waitFor({ state: 'visible' });
+  const nextBtnEl = page.getByRole("button", { name: "Next" });
+  await nextBtnEl.waitFor({ state: "visible" });
   nextBtnEl.click();
-  const inputPasswordEl = page.getByPlaceholder('Password');
-  await inputPasswordEl.waitFor({ state: 'visible' });
+  const inputPasswordEl = page.getByPlaceholder("Password");
+  await inputPasswordEl.waitFor({ state: "visible" });
   inputPasswordEl.fill(password);
-  const signinBtnEl = page.getByRole('button', { name: 'Sign in' });
-  await signinBtnEl.waitFor({ state: 'visible' });
+  const signinBtnEl = page.getByRole("button", { name: "Sign in" });
+  await signinBtnEl.waitFor({ state: "visible" });
   signinBtnEl.click();
-  const confirmStaySignIn = page.getByRole('button', { name: 'Yes' });
-  await confirmStaySignIn.waitFor({ state: 'visible' });
+  const confirmStaySignIn = page.getByRole("button", { name: "Yes" });
+  await confirmStaySignIn.waitFor({ state: "visible" });
   confirmStaySignIn.click();
 }
 
 export async function canChatWithEmbedMentor(
   page: Page,
-  openChatButton: Locator
+  openChatButton: Locator,
 ) {
   await openChatButton.click();
   await page.waitForTimeout(20000);
-  const widget = page.locator('#ibl-chat-widget-container');
+  const widget = page.locator("#ibl-chat-widget-container");
   await expect(widget).toBeVisible();
 
-  const mentorIframe = widget.frameLocator('iframe').nth(0);
-  const navName = mentorIframe.locator('nav h1');
+  const mentorIframe = widget.frameLocator("iframe").nth(0);
+  const navName = mentorIframe.locator("nav h1");
   await expect(navName).toBeVisible({ timeout: 15000 });
 
-  const closeButton = mentorIframe.getByRole('button', {
+  const closeButton = mentorIframe.getByRole("button", {
     name: /close chat/i,
   });
   await expect(closeButton).toBeVisible();
   const img = mentorIframe.locator('img[data-slot="avatar-image"]').first();
   await expect(img).toBeVisible();
-  await expect(img).toHaveAttribute('src');
+  await expect(img).toHaveAttribute("src");
 
-  const text = 'Whats the context of this page';
+  const text = "Whats the context of this page";
 
   const textArea = mentorIframe.locator(
-    'textarea[placeholder]:not([placeholder=""])'
+    'textarea[placeholder]:not([placeholder=""])',
   );
   await expect(textArea).toBeVisible();
-  await expect(textArea).toHaveAttribute('placeholder', /.+/);
-  const sendButton = mentorIframe.getByRole('button', {
+  await expect(textArea).toHaveAttribute("placeholder", /.+/);
+  const sendButton = mentorIframe.getByRole("button", {
     name: /send message/i,
   });
 
@@ -215,12 +215,12 @@ export async function canChatWithEmbedMentor(
   await sendButton.click();
   await page.waitForTimeout(5000);
 
-  const userMessage = mentorIframe.locator('.chat-user-message-query', {
+  const userMessage = mentorIframe.locator(".chat-user-message-query", {
     hasText: text,
   });
-  const mentorResponse = mentorIframe.locator('.chat-ai-message-response');
+  const mentorResponse = mentorIframe.locator(".chat-ai-message-response");
   await expect(userMessage).toBeVisible({ timeout: 10000 });
-  await mentorResponse.waitFor({ state: 'visible' });
+  await mentorResponse.waitFor({ state: "visible" });
   await expect(mentorResponse).toBeVisible();
 
   await expect(mentorResponse).toContainText(/courses/i);
@@ -258,13 +258,31 @@ export async function canChatWithEmbedMentor(
   await expect(widget).not.toBeVisible();
 }
 
+/**
+ * Resolve browser-specific credentials matching the auth setup pattern.
+ * e.g., project 'mentor-desktop-chrome' -> PLAYWRIGHT_USERNAME_CHROME
+ */
+export function getCredentials(projectName: string) {
+  const browserKey = projectName.replace(/.*-/, "").toUpperCase();
+  return {
+    username:
+      process.env[`PLAYWRIGHT_USERNAME_${browserKey}`] ||
+      process.env.PLAYWRIGHT_USERNAME ||
+      "",
+    password:
+      process.env[`PLAYWRIGHT_PASSWORD_${browserKey}`] ||
+      process.env.PLAYWRIGHT_PASSWORD ||
+      "",
+  };
+}
+
 export function getMentorIdFromUrl(url: string) {
   const { pathname } = new URL(url);
-  const match = pathname.startsWith('/platform/');
+  const match = pathname.startsWith("/platform/");
   if (!match) {
     return null;
   }
 
-  const parts = pathname.split('/').filter(Boolean); // ['platform', '<tenantKey>', '<mentorId>']
+  const parts = pathname.split("/").filter(Boolean); // ['platform', '<tenantKey>', '<mentorId>']
   return parts[2];
 }

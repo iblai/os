@@ -1,24 +1,24 @@
-import { expect, Page } from '@playwright/test';
-import path from 'path';
+import { expect, Page } from "@playwright/test";
+import path from "path";
 
 /**
  * Resolve a fixture file path from the shared testing_folder.
  */
 export function testFile(name: string): string {
-  return path.resolve(__dirname, '../../../../files/testing_folder', name);
+  return path.resolve(__dirname, "../../../files/testing_folder", name);
 }
 
 // ── Accepted files ──────────────────────────────────────────────────
-export const ACCEPTED_IMAGE = testFile('acessibility png.png');
+export const ACCEPTED_IMAGE = testFile("acessibility png.png");
 export const ACCEPTED_PDF = testFile(
-  '0028-oop-object-oriented-programming-using-cpp.pdf'
+  "0028-oop-object-oriented-programming-using-cpp.pdf",
 );
-export const ACCEPTED_TXT = testFile('outerHTML.txt');
-export const ACCEPTED_DOCX = testFile('audrey.docx');
+export const ACCEPTED_TXT = testFile("outerHTML.txt");
+export const ACCEPTED_DOCX = testFile("audrey.docx");
 
 // ── Rejected files ──────────────────────────────────────────────────
-export const REJECTED_JSON = testFile('test-data.json');
-export const REJECTED_PPTM = testFile('ppt1FC3.pptm');
+export const REJECTED_JSON = testFile("test-data.json");
+export const REJECTED_PPTM = testFile("ppt1FC3.pptm");
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ export const REJECTED_PPTM = testFile('ppt1FC3.pptm');
  * Returns the chat container element that holds the drag-and-drop handlers.
  * The selector targets the main content wrapper rendered by the Chat component.
  */
-export const CHAT_CONTAINER_SELECTOR = 'main div.relative.flex.h-full.flex-col';
+export const CHAT_CONTAINER_SELECTOR = "main div.relative.flex.h-full.flex-col";
 
 /**
  * Dispatch a native DragEvent on the chat container.
@@ -35,18 +35,18 @@ export const CHAT_CONTAINER_SELECTOR = 'main div.relative.flex.h-full.flex-col';
  */
 export async function dispatchDragEvent(
   page: Page,
-  eventType: 'dragover' | 'dragleave' | 'drop',
-  files?: { name: string; type: string; content?: string }[]
+  eventType: "dragover" | "dragleave" | "drop",
+  files?: { name: string; type: string; content?: string }[],
 ) {
   await page.evaluate(
     ({ selector, eventType, files }) => {
       const container = document.querySelector(selector);
-      if (!container) throw new Error('Chat container not found');
+      if (!container) throw new Error("Chat container not found");
 
       const dt = new DataTransfer();
       if (files) {
         for (const f of files) {
-          dt.items.add(new File([f.content ?? ''], f.name, { type: f.type }));
+          dt.items.add(new File([f.content ?? ""], f.name, { type: f.type }));
         }
       }
 
@@ -54,12 +54,12 @@ export async function dispatchDragEvent(
         bubbles: true,
         cancelable: true,
         dataTransfer: dt,
-        ...(eventType === 'dragleave' ? { relatedTarget: null } : {}),
+        ...(eventType === "dragleave" ? { relatedTarget: null } : {}),
       });
 
       container.dispatchEvent(event);
     },
-    { selector: CHAT_CONTAINER_SELECTOR, eventType, files }
+    { selector: CHAT_CONTAINER_SELECTOR, eventType, files },
   );
 }
 
@@ -68,16 +68,16 @@ export async function dispatchDragEvent(
  */
 export async function dragAndDropFiles(
   page: Page,
-  files: { name: string; type: string; content?: string }[]
+  files: { name: string; type: string; content?: string }[],
 ) {
   // 1. dragover to show the overlay
-  await dispatchDragEvent(page, 'dragover', files);
-  await expect(page.getByText('Drop your files here')).toBeVisible({
+  await dispatchDragEvent(page, "dragover", files);
+  await expect(page.getByText("Drop your files here")).toBeVisible({
     timeout: 5000,
   });
 
   // 2. drop
-  await dispatchDragEvent(page, 'drop', files);
+  await dispatchDragEvent(page, "drop", files);
 }
 
 /**
@@ -85,18 +85,18 @@ export async function dragAndDropFiles(
  */
 export async function uploadFileViaButton(page: Page, filePath: string) {
   // Open the upload menu and click "Upload File" to ensure the input is ready
-  const attachButton = page.getByRole('button', { name: 'Attach File' });
+  const attachButton = page.getByRole("button", { name: "Attach File" });
   await expect(attachButton).toBeVisible({ timeout: 10000 });
   await attachButton.click();
 
-  const uploadMenuItem = page.getByRole('menuitem', {
-    name: 'Upload File',
+  const uploadMenuItem = page.getByRole("menuitem", {
+    name: "Upload File",
   });
   await expect(uploadMenuItem).toBeVisible({ timeout: 5000 });
 
   // Use Promise.all to handle the fileChooser event
   const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser'),
+    page.waitForEvent("filechooser"),
     uploadMenuItem.click(),
   ]);
   await fileChooser.setFiles(filePath);

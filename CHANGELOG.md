@@ -1,3 +1,20 @@
+## [0.36.0]
+
+- iblai-js package version updated to 1.0.35
+- feat: account deletion component integrated
+- feat: mentor access > updated adding/updating user to sync with rbac & toggle manual/auto mode
+- feat: mentor access > chat role added
+- feat: mentor access > add groups field added
+
+## [0.35.16]
+
+- feat: derive lmsUrl, dmUrl, axdUrl from NEXT_PUBLIC_PLATFORM_BASE_DOMAIN when API base URL is unset
+- default NEXT_PUBLIC_PLATFORM_BASE_DOMAIN to iblai.app
+
+## [0.35.15]
+
+- replaces multidomain use for different service with single api base domain
+
 ## [0.35.14]
 
 - trigger-docker-build.yml: Pass next_image_patterns: ${{ vars.NEXT_IMAGE_PATTERNS }} as input to the reusable workflow
@@ -7,7 +24,7 @@
 
 - fix: chat history > source payload passed to reports download hook
 - feat: report download page calling AnalyticsReportDownload implemented
-- feat: report download page calling AnalyticsReportDownload > playwright tests coverage 
+- feat: report download page calling AnalyticsReportDownload > playwright tests coverage
 - iblai-js bump version to 1.0.24
 
 ## [0.35.12]
@@ -24,11 +41,11 @@
 - fix: analytics and billing issues fixed
 - bump Update ibai-js version to 1.0.19
 
-
 ## [0.35.9]
+
 - Fixes https://github.com/iblai/iblai-platform/issues/283
 - https://github.com/user-attachments/assets/d0069dcf-5ef4-4ec5-abd7-1dba1a735c34
-- fix(mentor): llm image issue on explore when swtiching to community mentors 
+- fix(mentor): llm image issue on explore when swtiching to community mentors
 - Fixes https://github.com/iblai/iblai-platform/issues/472
 - Add RBAC permissions to MCP list
 - bump iblai-js sdk version to 1.0.16
@@ -42,7 +59,6 @@
 - Fixes https://github.com/iblai/iblai-platform/issues/298
 - fix(mentor): student mode seeing billing tab fixed
 - fix(mentor): account component showing on non admin mode fixed
-
 
 ## [0.35.7]
 
@@ -58,7 +74,7 @@
 ## [0.35.5]
 
 - feat(mentor): ecommerce update implemented v2
-- Fixes https://github.com/iblai/iblai-platform/issues/295 
+- Fixes https://github.com/iblai/iblai-platform/issues/295
 - Fixes https://github.com/iblai/iblai-platform/issues/306
 - Fixes https://github.com/iblai/iblai-platform/issues/319
 - Fixes https://github.com/iblai/iblai-platform/issues/486
@@ -119,25 +135,26 @@
 - feat(skills): appropriate playwright & unit tests coverage in
 
 ## [0.35.1]
+
 - feat(mentor): add PIP audio controls, stop sharing button, and message-based mute
 - Fixes https://github.com/iblai/iblai-platform/issues/106
 - feat(web-containers): billing tab > subscription details added https://github.com/iblai/iblai-platform/issues/102
 - https://www.loom.com/share/37a7d3408b5544e38a4fee84c799f406
-- Fixes #1291 
+- Fixes #1291
 - https://github.com/user-attachments/assets/373f293b-da67-4cdb-bfdc-23388f10bd78
-- Fixes #1268 
+- Fixes #1268
 - https://github.com/user-attachments/assets/a7ac3351-55d5-415e-9475-6eddbb2bc5a5
 - New Datasets UI
-- Fixes #1045 
+- Fixes #1045
 - https://github.com/user-attachments/assets/d69cc24d-f993-44f3-a950-9f0a4943f123
 - Fixes https://github.com/iblai/iblai-platform/issues/19
 - feat(web-containers): billing tab > subscription details added https://github.com/iblai/iblai-platform/issues/102
 - https://www.loom.com/share/37a7d3408b5544e38a4fee84c799f406
-- Fixes #1291 
+- Fixes #1291
 - https://github.com/user-attachments/assets/373f293b-da67-4cdb-bfdc-23388f10bd78
 - feat(web-containers): billing tab > subscription details added https://github.com/iblai/iblai-platform/issues/102
 - https://www.loom.com/share/37a7d3408b5544e38a4fee84c799f406
-- Fixes #1291 
+- Fixes #1291
 - https://github.com/user-attachments/assets/373f293b-da67-4cdb-bfdc-23388f10bd78
 
 ## [0.35.0]
@@ -161,18 +178,21 @@
 - fix(mentor): embed > advanced JS validator untightened security wise
 
 ## [0.34.4]
+
 - fix(mentor): allow auth redirect to login.iblai.app in Tauri webview navigation
 - fix(mentor): use separate bundle ID for macOS (ai.ibl.mentorai.macos) for App Store
 - refactor(mentor): remove non-functional "Go Back" button from PIP and popup windows
 - feat(mentor): add instruction banner in PIP for popup screen sharing sessions
 
 ## [0.34.3]
+
 - fix(mentor): use postMessage for opener window focus to fix browser security restrictions
 - feat(mentor): configure macOS App Store deployment with entitlements and signing
 - chore(mentor): add /release command for automated release branch creation
 - fix(mentor): explore page title issue on mobile fixed https://github.com/iblai/iblai-platform/issues/119
 
 ## [0.34.2]
+
 - fix(mentor): explore > created by community sync issue fixed
 - feat(web-containers): profile dropdown > truncate tenant name so we have one line
 - fix(web-containers): analytics > different dates display issue fixed
@@ -199,7 +219,7 @@
 ## [0.33.0]
 
 - feat(mentor): picture in picture mode implementation with screen sharing
-- feat(mentor): Advanced JS feature implemented related to mentor embed #1444 
+- feat(mentor): Advanced JS feature implemented related to mentor embed #1444
 - feat(mentor): explore contents not showcasing main mentors on new users until metadata toggle
 - fix(mentor): access tab not returning all users fixed
 - Updated the dropdown menu items RBAC list and permissions list to be in sync with the tab items.
@@ -241,7 +261,7 @@
 
 - Add internationalization module
 - Add sso-login-complete path to replace sso-login for completing sso
-- fix(mentor): explore > show mentor results directly on search 
+- fix(mentor): explore > show mentor results directly on search
 - Fixed file upload rendering on refresh.
 - Implement comprehensive Canvas artifact editor for document creation and editing
 - Add rich text editing with TipTap editor (bold, italic, headings, code, quote, undo/redo)
@@ -262,14 +282,14 @@
 
 ## [0.31.15]
 
-- Updated chat routing to use local LLM when toggle enabled (online or offline) 
+- Updated chat routing to use local LLM when toggle enabled (online or offline)
 - Removed offline-only restriction from local LLM routing in use-chat-v2.ts
 - Added image caching support with base64 encoding for binary data
 - Updated caching logic to detect and cache images from S3, Gravatar, etc.
 - Fixed Local LLM toggle enable/disable logic for Foundry and Ollama
 - Removed offline mode restriction from Advanced Settings tab visibility
 - Added base64 dependency for proper binary data handling
- 
+
 ## [0.31.14]
 
 - Support for npu models offline
@@ -285,10 +305,10 @@
 ## [0.31.11]
 
 - offline support fix with https
-Mentor
+  Mentor
 - #1401 fixed: fix(mentor): google/onedrive/drive shouldn't display toast notification error when not creds not found
 - fix(mentor): failing test due to getTenantKey on use-mentor-time-tracking hook fixed
-- feat(web-containers): help center switch feature implemented #1476 
+- feat(web-containers): help center switch feature implemented #1476
 - fix(mentor): notifications toast not displaying fixed by updating sonner package version #1413
 - feat(web-containers): notifications validation not firing after fulfilled requirements fixed #1412
 - fix(web-containers): notifications preview on inbox being empty fixed
@@ -371,7 +391,6 @@ Mentor
 - fix(playwright): improve explore tests
 - fix(mentor): service worker provider typecheck issue fixed
 
-
 ## [0.30.4]
 
 - feat(web-containers): advanced tenant css implemented under advanced settings
@@ -430,7 +449,6 @@ Mentor
 - fix(mentor): remove weclomenewchat component when first message is from assistant
 - chore(web-utils): if app is in iframe and requested tenant is not amongst user tenants, redirect
 
-
 ## [0.28.0]
 
 - ensure proactive prompts are not sent when a new session is not created
@@ -458,7 +476,7 @@ Mentor
 
 ## [0.26.7]
 
-- Enables cross context sharing across popup window for mentor AI 
+- Enables cross context sharing across popup window for mentor AI
 - Add console.error logs to the iblFetchBaseQuery function in the mentor app
 
 ## [0.26.6]
@@ -501,7 +519,7 @@ Mentor
 
 ## [0.26.1]
 
-- fix(rbac): get public settings for requested mentor if mentor is saved in tenant metadata without db ID 
+- fix(rbac): get public settings for requested mentor if mentor is saved in tenant metadata without db ID
 - fix(chat): ensures that during session persistence, only hides the first proactive prompt message if it is of type "ai"
 
 ## [0.26.0]

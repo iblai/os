@@ -83,7 +83,7 @@ jobs:
   # ============================================================
   check-resumption:
     needs: [gate]
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-test-resumption.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-test-resumption.yml@main
     with:
       app-name: mentor
       pr-number: ${{ github.event.pull_request.number }}
@@ -99,7 +99,7 @@ jobs:
   # ============================================================
   acquire-domain:
     needs: [gate]
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
       action: acquire
@@ -114,19 +114,19 @@ jobs:
   lint:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-linting.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-linting.yml@main
     secrets: inherit
 
   typecheck:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-typecheck.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-typecheck.yml@main
     secrets: inherit
 
   coverage:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
     with:
       coverage-threshold: 95
     secrets: inherit
@@ -134,7 +134,7 @@ jobs:
   claude-review-quality:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
     with:
       pr-number: ${{ github.event.pull_request.number }}
     secrets:
@@ -143,7 +143,7 @@ jobs:
   claude-review-uiux:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
     with:
       pr-number: ${{ github.event.pull_request.number }}
     secrets:
@@ -164,7 +164,7 @@ jobs:
       - name: Checkout ops
         uses: actions/checkout@v4
         with:
-          repository: iblai/ibl-web-ops
+          repository: iblai/iblai-web-ops
           token: ${{ secrets.GIT_TOKEN || github.token }}
           path: .ops
 
@@ -196,7 +196,7 @@ jobs:
       always() &&
       needs.acquire-domain.result == 'success' &&
       needs.gate.outputs.should-build-app == 'true'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
       dockerfile-path: Dockerfile
@@ -208,7 +208,7 @@ jobs:
   build-playwright-image:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
       dockerfile-path: e2e/Dockerfile
@@ -228,7 +228,7 @@ jobs:
       needs.acquire-domain.result == 'success' &&
       needs.lint.result == 'success' &&
       needs.build-app-image.result != 'failure'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
       app-name: MENTOR
       image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -245,7 +245,7 @@ jobs:
   deploy-auth:
     needs: [gate, acquire-domain, check-prod-versions, deploy-app]
     if: always() && needs.acquire-domain.result == 'success' && needs.deploy-app.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
       app-name: AUTH
       image-uri: ${{ needs.check-prod-versions.outputs.auth-uri }}
@@ -265,7 +265,7 @@ jobs:
   verify-chrome:
     needs: [gate, acquire-domain, deploy-auth, build-app-image, check-prod-versions]
     if: always() && needs.deploy-auth.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -284,7 +284,7 @@ jobs:
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -305,7 +305,7 @@ jobs:
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-chrome.result == 'success' || needs.test-chrome.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -324,7 +324,7 @@ jobs:
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-firefox.result == 'success' &&
       needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -345,7 +345,7 @@ jobs:
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-firefox.result == 'success' || needs.test-firefox.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -364,7 +364,7 @@ jobs:
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-safari.result == 'success' &&
       needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -385,7 +385,7 @@ jobs:
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-safari.result == 'success' || needs.test-safari.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -404,7 +404,7 @@ jobs:
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-edge.result == 'success' &&
       needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -429,7 +429,7 @@ jobs:
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -450,7 +450,7 @@ jobs:
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -471,7 +471,7 @@ jobs:
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -492,7 +492,7 @@ jobs:
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -623,7 +623,7 @@ jobs:
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
       action: release
