@@ -38,17 +38,20 @@ test.describe
       { timeout: 60_000 },
     );
 
-    // Click "Sign Up" link to go to the signup form
-    const signupPage = new SignupPage(page);
-    await signupPage.signUpLink.click();
+    // Click the "Sign Up" button on the login page (it's a <button>, not a link)
+    await expect(page.getByRole("button", { name: "Sign Up" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole("button", { name: "Sign Up" }).click();
 
+    // Wait for redirect to the create-account page
+    await safeWaitForURL(page, (url) => url.href.includes("/account/create"), {
+      timeout: 30_000,
+    });
     await page.waitForLoadState("networkidle");
-    await signupPage.logInLink.waitFor({ timeout: 15_000 });
-    await safeWaitForURL(
-      page,
-      (url) => url.href.includes(`/signup?redirect-to=${HOST}`),
-      { timeout: 30_000 },
-    );
+
+    // Now on the signup form
+    const signupPage = new SignupPage(page);
 
     // Fill the signup form
     await signupPage.fillEmail(email);
@@ -325,9 +328,8 @@ test.describe("Journey 1: Authentication — Invalid Credentials", () => {
     await page.fill('input[type="password"]', "WrongPassword123!");
     await page.click('button:has-text("Continue")');
 
-    const error = page.getByText(
-      /Credentials incorrect|invalid.*credentials|incorrect.*credentials/i,
-    );
-    await expect(error).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Invalid email or password")).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

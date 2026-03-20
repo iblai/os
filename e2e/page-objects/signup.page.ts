@@ -15,9 +15,9 @@ export class SignupPage {
   readonly heading: Locator;
   readonly emailInput: Locator;
   readonly continueButton: Locator;
-  readonly signUpLink: Locator;
-  readonly logInLink: Locator;
   readonly continueWithPasswordButton: Locator;
+  /** "Log In" button on the create-account form (navigates back to login). */
+  readonly logInButton: Locator;
 
   // ── Step 2 (password fields, shown after Continue with Password) ──────────
   readonly passwordInput: Locator;
@@ -39,8 +39,8 @@ export class SignupPage {
       .locator("div")
       .filter({ hasText: /^Continue$/ })
       .first();
-    this.signUpLink = page.getByRole("link", { name: "Sign Up" });
-    this.logInLink = page.getByRole("link", { name: "Log in" });
+    // "Log In" is a <button> on the create-account page (navigates back to login)
+    this.logInButton = page.getByRole("button", { name: "Log In" });
     this.continueWithPasswordButton = page.getByRole("button", {
       name: "Continue with Password",
     });
