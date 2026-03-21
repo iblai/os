@@ -1,3 +1,32 @@
+## [0.36.5]
+
+- Update logo to use dm url instead of axd url
+
+## [0.36.4]
+
+- NEXT_IMAGE_PATTERNS updated in github variables with new unified domain
+
+## [0.36.3]
+
+- bump iblai-js version to 1.0.36
+- fix: use env-based git config for HTTPS rewrite in Docker build
+
+## [0.36.2]
+
+- bump version to 0.36.2
+
+## [0.36.1]
+
+- bump version to 0.36.1
+
+## [0.36.0]
+
+- iblai-js package version updated to 1.0.35
+- feat: account deletion component integrated
+- feat: mentor access > updated adding/updating user to sync with rbac & toggle manual/auto mode
+- feat: mentor access > chat role added
+- feat: mentor access > add groups field added
+
 ## [0.35.16]
 
 - feat: derive lmsUrl, dmUrl, axdUrl from NEXT_PUBLIC_PLATFORM_BASE_DOMAIN when API base URL is unset
