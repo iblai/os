@@ -101,7 +101,7 @@ import {
 } from "@/hooks/use-tauri-offline";
 import { isTauriApp } from "@/types/tauri";
 
-const menuItems = [
+export const menuItems = [
   {
     icon: PenSquare,
     label: "New Chat",
@@ -322,7 +322,7 @@ const menuItems = [
   },
 ];
 
-const getFilteredMenuItems = (
+export const getFilteredMenuItems = (
   isUserTypeAllowed: (item: any) => boolean,
   isAdmin: boolean,
   tenantKey: string | undefined,
