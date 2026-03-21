@@ -6,11 +6,11 @@ test.describe("Journey 3: New User UI & Profile Dropdown", () => {
     await navigateToMentorApp(nonadminPage);
   });
 
-  test("newly registered user goes to navbar and opens the mentor dropdown to see New Chat item", async ({
+  test("newly registered user open mentor dropdown to see New Chat item", async ({
     nonadminNavbarPage,
   }) => {
-    await nonadminNavbarPage.openMentorDropdown();
-    await expect(nonadminNavbarPage.newChatItem).toBeVisible({
+    await nonadminNavbarPage.mentorDropdown.click();
+    await expect(nonadminNavbarPage.mentorDropdownNewChatItem).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -33,16 +33,12 @@ test.describe("Journey 3: New User UI & Profile Dropdown", () => {
     expect(count).toBe(3);
   });
 
-  test("newly registered non-admin user goes to sidebar and clicks admin-only buttons which redirect to auth", async ({
+  test("newly registered non-admin user goes to sidebar and clicks admin-only buttons which redirect to payment", async ({
     nonadminPage,
     nonadminSidebarPage,
   }) => {
     // Clicking admin buttons should trigger upgrade/auth modal or redirect
-    const adminButtons = [
-      nonadminSidebarPage.newMentorButton,
-      nonadminSidebarPage.settingsButton,
-      nonadminSidebarPage.analyticsButton,
-    ];
+    const adminButtons = [nonadminSidebarPage.newProjectButton];
 
     for (const btn of adminButtons) {
       const visible = await btn

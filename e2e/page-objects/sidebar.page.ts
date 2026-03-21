@@ -33,7 +33,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newProjectButton = page.getByRole("button", {
-      name: "New Project",
+      name: "New Project New Project",
       exact: true,
     });
     this.newMentorButton = page.getByRole("button", {
