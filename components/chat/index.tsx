@@ -1532,7 +1532,7 @@ export function Chat({
     if (!isDisclaimersLoading && pendingSubmitContent) {
       checkAgreementAndExecute(pendingSubmitContent, executeSubmit);
     }
-  }, [isDisclaimersLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDisclaimersLoading]);
 
   const handleHighlightMessage = (messageIndex: number) => {
     setHighlightedMessageId(messageIndex);
