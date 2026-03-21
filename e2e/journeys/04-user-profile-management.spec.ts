@@ -175,6 +175,9 @@ test.describe("Journey 4: User Profile Management", () => {
     await expect(nonadminProfilePage.twitterField).toBeVisible({
       timeout: 5_000,
     });
+    await expect(nonadminProfilePage.facebookField).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("non-admin goes to profile social tab and sees URL prefixes on social fields including facebook linkedin and twitter", async ({
