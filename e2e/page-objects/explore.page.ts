@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, expect } from "@playwright/test";
 
 export class ExplorePage {
   readonly page: Page;
@@ -18,21 +18,42 @@ export class ExplorePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /all mentors/i });
+    this.heading = page.getByRole("heading", { name: /all mentors/i });
     this.searchInput = page.getByPlaceholder(/search/i);
-    this.mentorCards = page.locator('[class*="mentor-card"], [data-testid*="mentor-card"]');
-    this.seeMoreButton = page.getByRole('button', { name: /see more/i });
-    this.featuredSection = page.getByRole('region', { name: /featured/i })
-      .or(page.getByText(/featured/i).locator('..').locator('..'));
-    this.favoritesSection = page.getByRole('region', { name: /favorites/i })
-      .or(page.getByText(/favorites/i).locator('..').locator('..'));
-    this.createCustomMentorButton = page.getByRole('button', { name: /create.*mentor/i })
-      .or(page.getByRole('button', { name: /custom mentor/i }));
-    this.llmFilterTrigger = page.getByRole('button', { name: /llm.*provider|provider/i }).first();
-    this.subjectFilterTrigger = page.getByRole('button', { name: /subject/i }).first();
-    this.typeFilterTrigger = page.getByRole('button', { name: /^type$/i }).first();
-    this.createdByFilterTrigger = page.getByRole('button', { name: /created by/i }).first();
-    this.clearFiltersButton = page.getByRole('button', { name: /clear/i });
+    this.mentorCards = page.getByRole("listitem", {
+      name: /^explore mentor:/i,
+    });
+    this.seeMoreButton = page.getByRole("button", { name: /see more/i });
+    this.featuredSection = page.getByRole("region", { name: /featured/i }).or(
+      page
+        .getByText(/featured/i)
+        .locator("..")
+        .locator(".."),
+    );
+    this.favoritesSection = page
+      .getByRole("list", { name: "Favorite mentors", exact: true })
+      .or(
+        page
+          .getByText(/favorites/i)
+          .locator("..")
+          .locator(".."),
+      );
+    this.createCustomMentorButton = page
+      .getByRole("button", { name: "Create Custom Mentor", exact: true })
+      .or(page.getByRole("button", { name: /custom mentor/i }));
+    this.llmFilterTrigger = page
+      .getByRole("button", { name: /llm.*provider|provider/i })
+      .first();
+    this.subjectFilterTrigger = page
+      .getByRole("button", { name: /subject/i })
+      .first();
+    this.typeFilterTrigger = page
+      .getByRole("button", { name: /^type$/i })
+      .first();
+    this.createdByFilterTrigger = page
+      .getByRole("button", { name: /created by/i })
+      .first();
+    this.clearFiltersButton = page.getByRole("button", { name: /clear/i });
   }
 
   async search(query: string): Promise<void> {
@@ -43,16 +64,18 @@ export class ExplorePage {
 
   async starFirstMentor(): Promise<void> {
     const starButton = this.page
-      .getByRole('button', { name: /star|favorite/i })
+      .getByRole("button", { name: "Add to favorites", exact: true })
       .first();
     await expect(starButton).toBeVisible({ timeout: 10_000 });
     await starButton.click();
   }
 
   async selectOption(optionName: string | RegExp): Promise<void> {
-    const option = this.page.getByRole('option', { name: optionName });
-    const menuItem = this.page.getByRole('menuitem', { name: optionName });
-    const visible = await option.isVisible({ timeout: 3_000 }).catch(() => false);
+    const option = this.page.getByRole("option", { name: optionName });
+    const menuItem = this.page.getByRole("menuitem", { name: optionName });
+    const visible = await option
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
     if (visible) {
       await option.click();
     } else {

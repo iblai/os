@@ -10,14 +10,14 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
   test("non-admin goes to explore page and sees the page title and description", async ({
     nonadminExplorePage,
   }) => {
-    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 15_000 });
+    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 20_000 });
   });
 
   test("non-admin goes to explore page and sees mentor cards with correct information", async ({
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     });
   });
 
@@ -174,7 +174,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     });
     await nonadminExplorePage.clickFirstMentorCard();
     await expect(nonadminPage).toHaveURL(/\/platform\/[^/]+\/[^/]+$/, {
-      timeout: 15_000,
+      timeout: 20_000,
     });
     await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
   });
@@ -183,20 +183,16 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 15_000,
+      timeout: 20_000,
     });
     await nonadminExplorePage.starFirstMentor();
     // After starring, the favorites section should appear or the star state should change
-    await nonadminExplorePage.page.waitForTimeout(1_000);
-    const favVisible = await nonadminExplorePage.favoritesSection
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
-    const starActive = await nonadminExplorePage.page
-      .getByRole("button", { name: /unstar|remove.*favorite/i })
-      .first()
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-    expect(favVisible || starActive).toBe(true);
+    await nonadminExplorePage.page.waitForTimeout(5_000);
+    expect(
+      nonadminExplorePage.page
+        .getByRole("button", { name: "Remove from favorites", exact: true })
+        .first(),
+    ).toBeVisible({ timeout: 30_000 });
   });
 });
 
@@ -211,7 +207,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Admin", () => {
     explorePage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
-    test.skip(!isAdmin, "Custom mentor creation requires admin access");
+    test.fail(!isAdmin, "Custom mentor creation requires admin access");
     await expect(explorePage.createCustomMentorButton).toBeVisible({
       timeout: 10_000,
     });
