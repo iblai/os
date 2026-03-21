@@ -317,6 +317,8 @@ export function Chat({
     handleDisclaimerAgree,
     checkAgreementAndExecute,
     executePendingSubmit,
+    isDisclaimersLoading,
+    pendingSubmitContent,
   } = useUserAgreement();
   const {
     changeTab,
@@ -1524,6 +1526,13 @@ export function Chat({
     await handleDisclaimerAgree();
     executePendingSubmit(executeSubmit);
   };
+
+  // Process queued message once disclaimers finish loading
+  useEffect(() => {
+    if (!isDisclaimersLoading && pendingSubmitContent) {
+      checkAgreementAndExecute(pendingSubmitContent, executeSubmit);
+    }
+  }, [isDisclaimersLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleHighlightMessage = (messageIndex: number) => {
     setHighlightedMessageId(messageIndex);
