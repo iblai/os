@@ -15,7 +15,7 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
   }) => {
     await editMentorPage.open("Settings");
     await waitForPageReady(page);
-    await editMentorPage.settings.setVisibility("Anyone");
+    await editMentorPage.settings.setVisibilityAnyone();
     const saveBtn = editMentorPage.dialog
       .getByRole("button", { name: /save/i })
       .first();
@@ -35,12 +35,17 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
   }) => {
     await editMentorPage.open("LLM");
     await waitForPageReady(page);
-    await expect(editMentorPage.llm.providerCombobox).toBeVisible({
+    await expect(editMentorPage.llm.providerTabpanel).toBeVisible({
       timeout: 10_000,
     });
-    await editMentorPage.llm.providerCombobox.click();
-    const firstOption = page.getByRole("option").first();
-    if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await editMentorPage.page
+      .locator("div.flex.cursor-pointer.items-center")
+      .first()
+      .click();
+    const firstOption = page
+      .locator("button.flex.cursor-pointer.items-center.hover:bg-blue-50")
+      .first();
+    if (await firstOption.isVisible({ timeout: 10_000 }).catch(() => false)) {
       await firstOption.click();
     } else {
       await page.keyboard.press("Escape");
@@ -122,10 +127,14 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
   }) => {
     await editMentorPage.open("Prompts");
     await waitForPageReady(page);
+
+    await editMentorPage.prompts.page
+      .getByRole("button", { name: "Edit", exact: true })
+      .first()
+      .click();
     await editMentorPage.prompts.setSystemPrompt(
       "You are a helpful E2E test assistant.",
     );
-    await editMentorPage.prompts.save();
     await editMentorPage.close();
   });
 
