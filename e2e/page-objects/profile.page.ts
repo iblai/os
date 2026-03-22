@@ -106,7 +106,9 @@ export class ProfilePage {
   }
 
   async switchToTab(tabName: string): Promise<void> {
-    const tab = this.modal.getByRole("tab", { name: new RegExp(tabName, "i") });
+    const tab = this.modal
+      .getByRole("tab", { name: new RegExp(tabName, "i") })
+      .first();
     await expect(tab).toBeVisible({ timeout: 5_000 });
     await tab.click();
     await this.page.waitForTimeout(300);

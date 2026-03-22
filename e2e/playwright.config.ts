@@ -33,7 +33,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.MENTOR_NEXTJS_HOST || "http://localhost:3000",
     headless: true,
-    trace: process.env.CI ? "retain-on-failure" : "off",
+    trace: "retain-on-failure",
     screenshot: process.env.CI ? "only-on-failure" : "off",
     actionTimeout: 30_000,
     navigationTimeout: 30_000,

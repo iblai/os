@@ -23,7 +23,9 @@ export class ExplorePage {
     this.mentorCards = page.getByRole("listitem", {
       name: /^explore mentor:/i,
     });
-    this.seeMoreButton = page.getByRole("button", { name: /see more/i });
+    this.seeMoreButton = page
+      .getByRole("button", { name: /load more|see more/i })
+      .first();
     this.featuredSection = page.getByRole("region", { name: /featured/i }).or(
       page
         .getByText(/featured/i)

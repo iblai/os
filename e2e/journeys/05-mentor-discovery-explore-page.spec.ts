@@ -188,7 +188,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     await nonadminExplorePage.starFirstMentor();
     // After starring, the favorites section should appear or the star state should change
     await nonadminExplorePage.page.waitForTimeout(5_000);
-    expect(
+    await expect(
       nonadminExplorePage.page
         .getByRole("button", { name: "Remove from favorites", exact: true })
         .first(),
