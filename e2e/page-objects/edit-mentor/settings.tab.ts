@@ -55,12 +55,31 @@ export class SettingsTab {
     await this.copyButton.click();
   }
 
-  async setVisibilityAnyone(): Promise<void> {
+  async setVisibility(label: string): Promise<void> {
     await expect(this.visibilityCombobox).toBeVisible({ timeout: 5_000 });
     await this.visibilityCombobox.click();
-    const opt = this.page.locator('option[value="viewable_by_anyone"]');
-    await this.page.waitForTimeout(3_000);
-    await opt.click();
+    // Use the Radix UI option (div[role="option"]) rather than native <option>
+    const opt = this.page.locator('div[role="option"]').filter({
+      hasText: new RegExp(`^${label}$`, "i"),
+    });
+    const radixVisible = await opt
+      .first()
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (radixVisible) {
+      await opt.first().click();
+    } else {
+      // Fallback: try any role="option" with matching text
+      const fallback = this.page.getByRole("option", {
+        name: new RegExp(label, "i"),
+      });
+      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
+      await fallback.first().click();
+    }
+  }
+
+  async setVisibilityAnyone(): Promise<void> {
+    await this.setVisibility("Anyone");
   }
 
   async deleteMentor(): Promise<void> {

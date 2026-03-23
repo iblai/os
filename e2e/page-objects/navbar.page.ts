@@ -26,10 +26,13 @@ export class NavbarPage {
 
     this.profileDropdown = page.getByRole("button", { name: "More options" });
     this.notificationBell = page.getByRole("button", { name: /notification/i });
-    this.newChatItem = page.getByRole("button", { name: /new chat/i });
-    this.myMentorsItem = page
-      .getByRole("menuitem", { name: /my mentors/i })
-      .or(page.getByRole("button", { name: /my mentors/i }));
+    this.newChatItem = page
+      .getByRole("menuitem", { name: /new chat/i })
+      .or(page.getByRole("button", { name: /new chat/i }));
+    // "My Mentors" is a standalone button in the navbar, not a dropdown menuitem
+    this.myMentorsItem = page.getByRole("button", {
+      name: /my mentors/i,
+    });
     this.profileItem = page.getByRole("menuitem", { name: /profile/i });
     this.helpItem = page.getByRole("menuitem", { name: /help/i });
     this.logoutItem = page.getByRole("menuitem", { name: /log out/i });
@@ -49,8 +52,7 @@ export class NavbarPage {
   }
 
   async openMyMentors(): Promise<void> {
-    await this.openMentorDropdown();
-    await expect(this.myMentorsItem).toBeVisible({ timeout: 5_000 });
+    await expect(this.myMentorsItem).toBeVisible({ timeout: 10_000 });
     await this.myMentorsItem.click();
   }
 

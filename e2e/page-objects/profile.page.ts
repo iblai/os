@@ -70,12 +70,16 @@ export class ProfilePage {
       .getByRole("textbox", { name: "Facebook" })
       .or(this.modal.getByPlaceholder("Facebook"));
 
-    this.addEducationButton = this.modal.getByRole("button", {
-      name: /add education/i,
-    });
-    this.addExperienceButton = this.modal.getByRole("button", {
-      name: /add experience/i,
-    });
+    this.addEducationButton = this.modal
+      .getByRole("button", {
+        name: /add education/i,
+      })
+      .first();
+    this.addExperienceButton = this.modal
+      .getByRole("button", {
+        name: /add experience/i,
+      })
+      .first();
     this.uploadResumeButton = this.modal
       .getByRole("button", {
         name: "Upload resume",

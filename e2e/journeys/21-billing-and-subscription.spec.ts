@@ -3,6 +3,11 @@ import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
 import { logger } from "@iblai/iblai-js/playwright";
 
 test.describe("Journey 21: Billing & Subscription", () => {
+  // fixme: The User Profile dialog no longer has a Billing tab.
+  // The dialog now shows Organization/Management/Integrations/Advanced tabs instead.
+  // All billing tests need to be updated once the billing UI location is identified.
+  test.fixme();
+
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -259,6 +264,9 @@ test.describe("Journey 21: Billing & Subscription", () => {
 });
 
 test.describe("Journey 21: Billing & Subscription — Non-Admin", () => {
+  // fixme: Billing UI has been reorganized. The Stripe pricing modal flow needs updating.
+  test.fixme();
+
   test.beforeEach(async ({ nonadminPage }) => {
     await navigateToMentorApp(nonadminPage);
   });

@@ -31,9 +31,9 @@ test.describe("Journey 15: Mentor Switching", () => {
     nonadminPage,
     nonadminNavbarPage,
     nonadminChatPage,
-  }) => {
+  }, testInfo) => {
     test.skip(
-      ({ browserName }) => browserName === "webkit",
+      testInfo.project.name.includes("safari"),
       "Flaky on Safari — skipping",
     );
     await nonadminNavbarPage.openMyMentors();
