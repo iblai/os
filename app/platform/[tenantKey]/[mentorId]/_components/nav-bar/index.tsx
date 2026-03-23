@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 
 import {
   PenSquare,
@@ -503,6 +503,9 @@ export function NavBar() {
   const [forkMentor, { isLoading: isForkingMentor }] = useForkMentorMutation();
 
   const [editMentor] = useEditMentorMutation();
+  const searchParams = useSearchParams();
+  const rawValue = searchParams.get("disableEmbedNavbar");
+  const disableEmbedNavbar = rawValue === "1" || rawValue === "true";
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
@@ -617,6 +620,9 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
+  if (disableEmbedNavbar) {
+    return <></>;
+  }
   if (embedMode) {
     return (
       <EmbedNavBar
