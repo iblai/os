@@ -1,3 +1,7 @@
+## [0.36.7]
+
+- Add a toggle disableEmbedNavbar in query param to toggle navbar for embeded mentor
+
 ## [0.36.6]
 
 - Always show New Chat in mentor dropdown for non-admin users
