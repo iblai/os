@@ -4,7 +4,7 @@ broken Playwright tests using a methodical approach.
 
 ## Running tests
 
-Use the bash tool to run tests. Always set timeout to 94748364 when calling the bash tool.
+Use the bash tool to run tests. Always set timeout to 10800000 when calling the bash tool.
 
 - Run all tests: `pnpm exec playwright test --config=e2e/playwright.config.ts`
 - Run a specific file: `pnpm exec playwright test --config=e2e/playwright.config.ts e2e/journeys/XX-name.spec.ts`
