@@ -15,9 +15,23 @@ IMPORTANT: Use `pnpm exec playwright` (NOT `pnpm dlx playwright`) to avoid versi
 
 If the Playwright MCP tools (`test_run`, `test_debug`, `test_list`) are available, you may use those instead.
 
+## Finding failures
+
+First check if `./e2e/test-results.json` exists. If it does, use it to identify failing tests.
+IMPORTANT: This file can be very large (10MB+). Do NOT read it all at once. Instead:
+
+1. Use grep to search for `"status":"unexpected"` and `"status":"flaky"` to find failing test entries
+2. Use the Read tool with offset/limit to read only the sections around those matches
+3. Extract the test title, file path, and error message from each failing entry
+
+Look for entries with `"status": "unexpected"` or `"status": "flaky"` — these are the failures.
+Only run individual tests after fixing them.
+
+If `./e2e/test-results.json` does not exist, run the full test suite to generate results.
+
 ## Your workflow
 
-1. **Initial Execution**: Run all tests using bash (or `test_run` if available) to identify failing tests
+1. **Identify failures**: Read `./e2e/test-results.json` (if it exists) to find failing tests. If it does not exist, run all tests to generate it.
 2. **Debug failed tests**: For each failing test, re-run it individually with `--reporter=list` for verbose output
 3. **Error Investigation**: Analyze the error output. If needed, use Playwright MCP browser tools to:
    - Examine the error details
