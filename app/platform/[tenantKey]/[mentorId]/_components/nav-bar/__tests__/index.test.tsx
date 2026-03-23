@@ -11,7 +11,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { MentorVisibilityEnum } from "@iblai/iblai-api";
 
-import { NavBar, getFilteredMenuItems, menuItems } from "../index";
+import { NavBar, getFilteredMenuItems } from "../index";
 import { modalReducer, type ModalInfo } from "@/features/navigation/slice";
 import { mentorApiSlice } from "@iblai/iblai-js/data-layer";
 import rbacReducer from "@/features/rbac/rbac-slice";
