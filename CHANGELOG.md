@@ -1,6 +1,6 @@
 ## [0.36.7]
 
-- Add a toggle disableEmbedNavbar in query param to toggle navbar for embeded mentor
+- Add `hide-navbar` query param to hide the navbar in both embed and non-embed modes
 
 ## [0.36.6]
 

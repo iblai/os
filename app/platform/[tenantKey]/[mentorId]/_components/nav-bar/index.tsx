@@ -504,8 +504,8 @@ export function NavBar() {
 
   const [editMentor] = useEditMentorMutation();
   const searchParams = useSearchParams();
-  const rawValue = searchParams.get("disableEmbedNavbar");
-  const disableEmbedNavbar = rawValue === "1" || rawValue === "true";
+  const hideNavbarRaw = searchParams.get("hide-navbar");
+  const hideNavbar = hideNavbarRaw === "1" || hideNavbarRaw === "true";
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
@@ -620,11 +620,10 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
+  if (hideNavbar) {
+    return <></>;
+  }
   if (embedMode) {
-    if (disableEmbedNavbar) {
-      return <></>;
-    }
-
     return (
       <EmbedNavBar
         isMobile={isMobile}
