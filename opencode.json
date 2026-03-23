@@ -5,7 +5,7 @@
       "type": "local",
       "command": [
         "pnpm",
-        "dlx",
+        "exec",
         "playwright",
         "run-test-mcp-server",
         "--config=e2e/playwright.config.ts"

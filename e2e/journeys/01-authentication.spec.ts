@@ -11,8 +11,8 @@ const AUTH_HOST = process.env.AUTH_HOST || "";
 
 // ── Sign Up & Password Reset (serial, no auth) ─────────────────────────────
 
-test.describe
-  .serial("Journey 1: Authentication — Sign Up & Password Reset", () => {
+// prettier-ignore
+test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   const timestamp = Date.now();

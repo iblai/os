@@ -8,9 +8,8 @@ const AUTH_HOST = process.env.AUTH_HOST || "";
 const USERNAME = process.env.PLAYWRIGHT_NONADMIN_USERNAME || "";
 const PASSWORD = process.env.PLAYWRIGHT_NONADMIN_PASSWORD || "";
 
-setup.setTimeout(200_000);
-
 setup("authenticate non-admin", async ({ page }, testInfo) => {
+  setup.setTimeout(200_000);
   const browserKey = testInfo.project.name
     .replace("setup-nonadmin-", "")
     .toLowerCase();

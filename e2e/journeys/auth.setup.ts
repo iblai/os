@@ -8,9 +8,8 @@ const AUTH_HOST = process.env.AUTH_HOST || "";
 const USERNAME = process.env.PLAYWRIGHT_USERNAME || "";
 const PASSWORD = process.env.PLAYWRIGHT_PASSWORD || "";
 
-setup.setTimeout(200_000);
-
 setup("authenticate", async ({ page }, testInfo) => {
+  setup.setTimeout(200_000);
   const browserKey = testInfo.project.name.replace("setup-", "").toLowerCase();
   // Save to mentorai/playwright/.auth/ — two levels up from e2e/journeys/
   // This matches where pnpm test:e2e pre-creates the stubs and where
