@@ -222,7 +222,7 @@ export function AddAccessDialog({
   }, [userSearchTerm]);
 
   const handleUserSearchBlur = useCallback(() => {
-    window.setTimeout(() => {
+    setTimeout(() => {
       setShowUserSearchResults(false);
     }, 100);
   }, []);
@@ -298,7 +298,7 @@ export function AddAccessDialog({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    window.setTimeout(() => {
+    setTimeout(() => {
       setShowGroupSearchResults(false);
     }, 100);
   }, []);
