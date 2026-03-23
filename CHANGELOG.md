@@ -1,3 +1,6 @@
+## [0.36.6]
+- Always show New Chat in mentor dropdown for non-admin users
+
 ## [0.36.5]
 
 - Update logo to use dm url instead of axd url
