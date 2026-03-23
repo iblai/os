@@ -22,8 +22,9 @@ on:
           - firefox
           - safari
           - edge
+          - all
       mentor-image:
-        description: 'Mentor image URI to deploy (e.g. <account-id>.dkr.ecr.us-east-1.amazonaws.com/ibl-mentor-spa-pro:<tag>). If blank, uses current prod image.'
+        description: 'Mentor image URI to deploy (e.g. <account-id>.dkr.ecr.us-east-1.amazonaws.com/ibl-mentor-spa-pro:<tag>). If blank, builds from branch.'
         required: false
         type: string
         default: ''
@@ -111,19 +112,36 @@ jobs:
           nodes-json: ${{ vars.NODES_SPA_CHECK }}
 
   # ============================================================
-  # DEPLOY MENTOR APP (only if mentor-image provided)
+  # BUILD MENTOR IMAGE (only if mentor-image not provided)
+  # ============================================================
+  build-app-image:
+    needs: [config, acquire-domain]
+    if: >-
+      always() &&
+      needs.acquire-domain.result == 'success' &&
+      inputs.mentor-image == ''
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      image-name: ibl-mentor-spa-pro
+      registry-type: ecr
+      event-name: workflow_dispatch
+
+  # ============================================================
+  # DEPLOY MENTOR APP
   # ============================================================
   deploy-app:
-    needs: [config, acquire-domain, check-prod-versions]
+    needs: [config, acquire-domain, check-prod-versions, build-app-image]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success' &&
       needs.check-prod-versions.result == 'success' &&
-      inputs.mentor-image != ''
+      needs.build-app-image.result != 'failure'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
       app-name: MENTOR
-      image-uri: ${{ inputs.mentor-image }}
+      image-uri: ${{ inputs.mentor-image != '' && inputs.mentor-image || needs.build-app-image.outputs.image-uri }}
       deployment-path: /ibl/app/ibl-spa/mentor3
       nodes-json: ${{ needs.config.outputs.nodes-json }}
       venv-name: ${{ needs.config.outputs.venv-name }}
@@ -156,12 +174,12 @@ jobs:
   # HEALTH CHECK
   # ============================================================
   health-check:
-    needs: [config, acquire-domain, check-prod-versions, deploy-app, deploy-auth]
+    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth]
     if: always() && needs.deploy-auth.result == 'success'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
-      expected-image-uri: ${{ inputs.mentor-image != '' && inputs.mentor-image || needs.check-prod-versions.outputs.mentor-uri }}
+      expected-image-uri: ${{ inputs.mentor-image != '' && inputs.mentor-image || needs.build-app-image.outputs.image-uri }}
       deployment-path: /ibl/app/ibl-spa/mentor3
       nodes-json: ${{ needs.config.outputs.nodes-json }}
       venv-name: ${{ needs.config.outputs.venv-name }}
@@ -243,13 +261,13 @@ jobs:
           echo "================================================================================"
           echo ""
           echo "  Branch:          ${{ inputs.branch || github.ref_name }}"
-          echo "  Browser:         ${{ inputs.browser }}"
-          echo "  Project:         mentor-desktop-${{ inputs.browser }}"
+          BROWSERS="${{ inputs.browser == 'all' && 'chrome firefox safari edge' || inputs.browser }}"
+          echo "  Browser(s):      $BROWSERS"
           echo "  Workers:         ${{ inputs.workers }}"
           echo ""
           echo "  Mentor domain:   ${{ steps.test-user.outputs.mentor-domain }}"
           echo "  Auth domain:     ${{ steps.test-user.outputs.auth-domain }}"
-          echo "  Mentor image:    ${{ inputs.mentor-image || 'current prod' }}"
+          echo "  Mentor image:    ${{ inputs.mentor-image || 'building from branch' }}"
           echo ""
           echo "  Test user:       iblaiuserchromenew@ibleducation.com"
           echo "  Auth flow:       ${{ vars.AUTH_FLOW }}"
@@ -266,15 +284,39 @@ jobs:
           CI: true
           NODE_ENV: production
           PLAYWRIGHT_HTML_OPEN: never
+          DEBUG: pw:api,pw:browser
         run: |
-          PROJECT="mentor-desktop-${{ inputs.browser }}"
+          BROWSERS="${{ inputs.browser == 'all' && 'chrome firefox safari edge' || inputs.browser }}"
+          OVERALL_EXIT=0
 
-          npx playwright test \
-            ${{ inputs.test-files }} \
-            --config e2e/playwright.config.ts \
-            --project="$PROJECT" \
-            --workers=${{ inputs.workers }} \
-            --reporter=list
+          for BROWSER in $BROWSERS; do
+            PROJECT="mentor-desktop-${BROWSER}"
+            echo ""
+            echo "================================================================================"
+            echo "  Running: $PROJECT"
+            echo "================================================================================"
+            echo ""
+
+            set +e
+            npx playwright test \
+              ${{ inputs.test-files }} \
+              --config e2e/playwright.config.ts \
+              --project="$PROJECT" \
+              --workers=${{ inputs.workers }} \
+              --reporter=list \
+              --trace=on
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "FAILED: $BROWSER (exit: $EXIT_CODE)"
+              OVERALL_EXIT=1
+            else
+              echo "PASSED: $BROWSER"
+            fi
+          done
+
+          exit $OVERALL_EXIT
 
       - name: Upload test results
         if: always()
@@ -290,7 +332,7 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [config, acquire-domain, check-prod-versions, deploy-app, deploy-auth, health-check, run-tests]
+    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth, health-check, run-tests]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
@@ -305,7 +347,7 @@ jobs:
   # SUMMARY
   # ============================================================
   summary:
-    needs: [config, acquire-domain, check-prod-versions, deploy-app, deploy-auth, health-check, run-tests, release-domain]
+    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth, health-check, run-tests, release-domain]
     if: always()
     runs-on: ubuntu-22.04
     steps:
@@ -323,7 +365,7 @@ jobs:
           echo "| Mentor domain | \`https://mentorai3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Auth domain | \`https://login3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Test user | \`iblaiuserchromenew@ibleducation.com\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Mentor image | \`${{ inputs.mentor-image || 'current prod' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mentor image | \`${{ inputs.mentor-image || needs.build-app-image.outputs.image-uri || 'built from branch' }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Test files | \`${{ inputs.test-files }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -334,6 +376,7 @@ jobs:
 
           for PAIR in \
             "Domain Lock:${{ needs.acquire-domain.result }}" \
+            "Build Mentor:${{ needs.build-app-image.result }}" \
             "Deploy Mentor:${{ needs.deploy-app.result }}" \
             "Deploy Auth:${{ needs.deploy-auth.result }}" \
             "Health Check:${{ needs.health-check.result }}" \
