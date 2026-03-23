@@ -52,6 +52,7 @@
       "mode": "subagent",
       "prompt": "{file:.opencode/prompts/playwright-test-healer.md}",
       "tools": {
+        "bash": true,
         "ls": true,
         "glob": true,
         "grep": true,
