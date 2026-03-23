@@ -620,10 +620,11 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
-  if (disableEmbedNavbar) {
-    return <></>;
-  }
   if (embedMode) {
+    if (disableEmbedNavbar) {
+      return <></>;
+    }
+
     return (
       <EmbedNavBar
         isMobile={isMobile}
