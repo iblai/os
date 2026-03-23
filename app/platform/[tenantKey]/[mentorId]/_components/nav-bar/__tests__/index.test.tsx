@@ -671,106 +671,144 @@ describe("NavBar", () => {
 
   // --------------------------------------------------------------------------
   // disableEmbedNavbar Query Param Tests
+  //
+  // The disableEmbedNavbar param only takes effect inside embed mode.
+  // When not in embed mode, the normal NavBar renders regardless of the param.
   // --------------------------------------------------------------------------
 
   describe("disableEmbedNavbar query param", () => {
-    it("renders nothing when disableEmbedNavbar=true", () => {
+    it("has no effect outside embed mode — renders normal navbar with disableEmbedNavbar=true", () => {
       mockSearchParamsRaw = "disableEmbedNavbar=true";
       const store = createTestStore();
 
-      const { container } = render(
+      render(
         <Provider store={store}>
           <NavBar />
         </Provider>,
       );
 
-      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      // Normal navbar still renders because embedMode is false
+      expect(screen.getByRole("navigation")).toBeInTheDocument();
       expect(screen.queryByTestId("embed-nav-bar")).not.toBeInTheDocument();
-      expect(container.innerHTML).toBe("");
     });
 
-    it("renders nothing when disableEmbedNavbar=1", () => {
+    it("has no effect outside embed mode — renders normal navbar with disableEmbedNavbar=1", () => {
       mockSearchParamsRaw = "disableEmbedNavbar=1";
       const store = createTestStore();
 
-      const { container } = render(
+      render(
         <Provider store={store}>
           <NavBar />
         </Provider>,
       );
 
-      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      expect(screen.getByRole("navigation")).toBeInTheDocument();
       expect(screen.queryByTestId("embed-nav-bar")).not.toBeInTheDocument();
-      expect(container.innerHTML).toBe("");
     });
 
-    it("renders normally when disableEmbedNavbar=false", () => {
-      mockSearchParamsRaw = "disableEmbedNavbar=false";
-      const store = createTestStore();
+    it("renders nothing in embed mode when disableEmbedNavbar=true", async () => {
+      mockSearchParamsRaw = "disableEmbedNavbar=true";
 
-      render(
-        <Provider store={store}>
-          <NavBar />
-        </Provider>,
-      );
-
-      expect(screen.getByRole("navigation")).toBeInTheDocument();
-    });
-
-    it("renders normally when disableEmbedNavbar=0", () => {
-      mockSearchParamsRaw = "disableEmbedNavbar=0";
-      const store = createTestStore();
-
-      render(
-        <Provider store={store}>
-          <NavBar />
-        </Provider>,
-      );
-
-      expect(screen.getByRole("navigation")).toBeInTheDocument();
-    });
-
-    it("renders normally when disableEmbedNavbar param is absent", () => {
-      mockSearchParamsRaw = "";
-      const store = createTestStore();
-
-      render(
-        <Provider store={store}>
-          <NavBar />
-        </Provider>,
-      );
-
-      expect(screen.getByRole("navigation")).toBeInTheDocument();
-    });
-
-    it("disableEmbedNavbar=true takes precedence over embed mode", async () => {
-      mockSearchParamsRaw = "disableEmbedNavbar=true&embed=true";
-
-      // Temporarily override useEmbedMode to return true
+      vi.resetModules();
       vi.doMock("@/hooks/use-embed-mode", () => ({
         useEmbedMode: () => true,
       }));
 
-      // Re-import NavBar so it picks up the new mock
-      const { NavBar: NavBarWithEmbed } = await import("../index");
-
+      const { NavBar: NavBarEmbed } = await import("../index");
       const store = createTestStore();
 
       const { container } = render(
         <Provider store={store}>
-          <NavBarWithEmbed />
+          <NavBarEmbed />
         </Provider>,
       );
 
-      // disableEmbedNavbar should win — nothing rendered, not even EmbedNavBar
       expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
       expect(screen.queryByTestId("embed-nav-bar")).not.toBeInTheDocument();
       expect(container.innerHTML).toBe("");
+    });
 
-      // Restore original mock
+    it("renders nothing in embed mode when disableEmbedNavbar=1", async () => {
+      mockSearchParamsRaw = "disableEmbedNavbar=1";
+
+      vi.resetModules();
       vi.doMock("@/hooks/use-embed-mode", () => ({
-        useEmbedMode: () => false,
+        useEmbedMode: () => true,
       }));
+
+      const { NavBar: NavBarEmbed } = await import("../index");
+      const store = createTestStore();
+
+      const { container } = render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("embed-nav-bar")).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe("");
+    });
+
+    it("renders EmbedNavBar in embed mode when disableEmbedNavbar is absent", async () => {
+      mockSearchParamsRaw = "";
+
+      vi.resetModules();
+      vi.doMock("@/hooks/use-embed-mode", () => ({
+        useEmbedMode: () => true,
+      }));
+
+      const { NavBar: NavBarEmbed } = await import("../index");
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId("embed-nav-bar")).toBeInTheDocument();
+      expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    });
+
+    it("renders EmbedNavBar in embed mode when disableEmbedNavbar=false", async () => {
+      mockSearchParamsRaw = "disableEmbedNavbar=false";
+
+      vi.resetModules();
+      vi.doMock("@/hooks/use-embed-mode", () => ({
+        useEmbedMode: () => true,
+      }));
+
+      const { NavBar: NavBarEmbed } = await import("../index");
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId("embed-nav-bar")).toBeInTheDocument();
+    });
+
+    it("renders EmbedNavBar in embed mode when disableEmbedNavbar=0", async () => {
+      mockSearchParamsRaw = "disableEmbedNavbar=0";
+
+      vi.resetModules();
+      vi.doMock("@/hooks/use-embed-mode", () => ({
+        useEmbedMode: () => true,
+      }));
+
+      const { NavBar: NavBarEmbed } = await import("../index");
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId("embed-nav-bar")).toBeInTheDocument();
     });
   });
 });
