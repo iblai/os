@@ -1,4 +1,11 @@
+## [0.36.7]
+
+- Make New Chat menu item in mentor dropdown visible to non-admin users.
+- fix: update condition to call disclaimers when a user accesses the mentor with a shareable link
+- tests: add playwright tests for the shareable link flow with disclaimers
+
 ## [0.36.6]
+
 - Always show New Chat in mentor dropdown for non-admin users
 
 ## [0.36.5]
