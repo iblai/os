@@ -1,3 +1,7 @@
+## [0.36.7]
+
+- Add `hide-navbar` query param to hide the navbar in both embed and non-embed modes
+
 ## [0.36.6]
 
 - Always show New Chat in mentor dropdown for non-admin users
