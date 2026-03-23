@@ -26,7 +26,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   timeout: testTimeout,
   reporter: [
-    ["html", { open: process.env.CI ? "never" : "on-failure" }],
+    ["html", { open: "never" }],
     process.env.CI ? ["list", { printSteps: true }] : ["list"],
     ["json", { outputFile: "test-results.json" }],
   ],
