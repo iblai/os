@@ -7,7 +7,8 @@
         "pnpm",
         "dlx",
         "playwright",
-        "run-test-mcp-server"
+        "run-test-mcp-server",
+        "--config=e2e/playwright.config.ts"
       ],
       "enabled": true
     }
