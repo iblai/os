@@ -1,24 +1,30 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore } from "@reduxjs/toolkit";
 
-import { mentorReducer, coreApiSlice, mentorMiddleware, mcpApiSlice } from '@iblai/iblai-js/data-layer';
-import { userReducer } from '@/features/users/slice';
-import { authApiSlice } from '@/features/auth/api-slice';
-import { authApiSlice as authApiSliceDataLayer } from '@iblai/iblai-js/data-layer';
-import topTrialBannerSlice from '@/features/top-banner/top-banner-slice';
-import subscriptionSlice from '@/features/subscription/subscription-slice';
-import { userApiSlice } from '@/features/users/api-slice';
-import { modalReducer } from '@/features/navigation/slice';
-import { mentorsApiSlice } from '@/features/mentors/api-slice';
-import { tenantsApiSlice } from '@/features/tenants/api-slice';
-import { messagesApiSlice } from '@/features/messages/api-slice';
-import { appSlice } from '@/lib/features/app/app-slice';
-import { providerAssociationApiSlice } from '@/features/provider-association/api-slice';
-import { chatReducer } from '@/features/chat/chatSlice';
-import { filesReducer } from '@iblai/iblai-js/web-utils';
-import { chatSliceReducerShared } from '@iblai/iblai-js/web-utils';
-import { analyticsReducer } from '@/features/analytics/slice';
-import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
-import rbacReducer from '@/features/rbac/rbac-slice';
+import {
+  mentorReducer,
+  coreApiSlice,
+  mentorMiddleware,
+  mcpApiSlice,
+} from "@iblai/iblai-js/data-layer";
+import { userReducer } from "@/features/users/slice";
+import { authApiSlice } from "@/features/auth/api-slice";
+import { authApiSlice as authApiSliceDataLayer } from "@iblai/iblai-js/data-layer";
+import topTrialBannerSlice from "@/features/top-banner/top-banner-slice";
+import subscriptionSlice from "@/features/subscription/subscription-slice";
+import { userApiSlice } from "@/features/users/api-slice";
+import { modalReducer } from "@/features/navigation/slice";
+import { mentorsApiSlice } from "@/features/mentors/api-slice";
+import { tenantsApiSlice } from "@/features/tenants/api-slice";
+import { messagesApiSlice } from "@/features/messages/api-slice";
+import { appSlice } from "@/lib/features/app/app-slice";
+import { providerAssociationApiSlice } from "@/features/provider-association/api-slice";
+import { chatReducer } from "@/features/chat/chatSlice";
+import { filesReducer } from "@iblai/iblai-js/web-utils";
+import { chatSliceReducerShared } from "@iblai/iblai-js/web-utils";
+import { analyticsReducer } from "@/features/analytics/slice";
+import { chatInputSliceReducer } from "@/features/chat-input/api-slice";
+import rbacReducer from "@/features/rbac/rbac-slice";
+import monetizationSlice from "@/features/monetization/monetization-slice";
 
 export const store = configureStore({
   reducer: {
@@ -31,6 +37,7 @@ export const store = configureStore({
     chatInput: chatInputSliceReducer,
     app: appSlice.reducer,
     rbac: rbacReducer,
+    monetization: monetizationSlice.reducer,
 
     [mentorsApiSlice.reducerPath]: mentorsApiSlice.reducer,
     [messagesApiSlice.reducerPath]: messagesApiSlice.reducer,
@@ -42,7 +49,8 @@ export const store = configureStore({
     [mcpApiSlice.reducerPath]: mcpApiSlice.reducer,
     topBanner: topTrialBannerSlice.reducer,
     subscription: subscriptionSlice.reducer,
-    [providerAssociationApiSlice.reducerPath]: providerAssociationApiSlice.reducer,
+    [providerAssociationApiSlice.reducerPath]:
+      providerAssociationApiSlice.reducer,
     ...mentorReducer,
   },
   middleware: (getDefaultMiddleware) =>

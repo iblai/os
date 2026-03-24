@@ -1,15 +1,16 @@
-import { useAppDispatch } from '@/lib/hooks';
-import { toast } from 'sonner';
+import { useAppDispatch } from "@/lib/hooks";
+import { toast } from "sonner";
 import {
   setError402Detected,
   setPricingModalData,
   setOpenPricingModal,
-} from '@/features/subscription/subscription-slice';
-import { Error402MessageData } from '@iblai/iblai-js/web-utils';
-import { getUserEmail } from '@/features/utils';
-import { useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useIsAdmin } from '../use-user';
+} from "@/features/subscription/subscription-slice";
+import { Error402MessageData } from "@iblai/iblai-js/web-utils";
+import { getUserEmail } from "@/features/utils";
+import { useCallback } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useIsAdmin } from "../use-user";
+import { showMonetizationCheckoutModal } from "@/features/monetization/monetization-slice";
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -20,10 +21,17 @@ export const use402ErrorCheck = () => {
 
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
+      if (!messageData?.has_access && messageData?.pricing) {
+        console.log("[MONETIZATION] Showing monetization checkout modal ", {
+          messageData,
+        });
+        dispatch(showMonetizationCheckoutModal(messageData));
+        return;
+      }
       toast.error(
         messageData.error ||
           messageData.message ||
-          'Insufficient balance. Please add credits to continue.',
+          "Insufficient balance. Please add credits to continue.",
         {
           //duration: 1000 * 60 * 2, // 2 minutes
           closeButton: true,
@@ -32,7 +40,7 @@ export const use402ErrorCheck = () => {
       if (isAdmin) {
         // Open the billing tab by injecting profileTab=billing query param
         const params = new URLSearchParams(searchParams.toString());
-        params.set('profileTab', 'billing');
+        params.set("profileTab", "billing");
         router.push(`${pathname}?${params.toString()}`);
         return;
       }
@@ -44,8 +52,8 @@ export const use402ErrorCheck = () => {
       ) {
         dispatch(
           setPricingModalData({
-            referenceId: messageData.pricing_table.client_reference_id || '',
-            customerEmail: getUserEmail() || '',
+            referenceId: messageData.pricing_table.client_reference_id || "",
+            customerEmail: getUserEmail() || "",
             publishableKey: messageData.pricing_table.publishable_key,
             pricingTableId: messageData.pricing_table.pricing_table_id,
           }),
