@@ -24,7 +24,7 @@ const mockEditMentor = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockGetUserTenantsQuery = vi.fn();
 const mockOnClose = vi.fn();
-const mockUsername = vi.fn(() => "testuser");
+const mockUsername = vi.fn<() => string | null>(() => "testuser");
 
 vi.mock("next/navigation", () => ({
   useParams: () => mockUseParams(),
