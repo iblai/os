@@ -77,23 +77,25 @@ vi.mock("next/dynamic", () => {
       const index = counter++;
       if (index === 0) {
         // DeleteMentorModal
-        return (props: any) => {
+        function MockDeleteMentorModal(props: any) {
           if (!props.isOpen) return null;
           return (
             <div data-testid="delete-mentor-modal">
               <button onClick={props.onClose}>Close</button>
             </div>
           );
-        };
+        }
+        return MockDeleteMentorModal;
       }
       // CopyMentorModal
-      return (props: any) => {
+      function MockCopyMentorModal(props: any) {
         return (
           <div data-testid="copy-mentor-modal">
             <button onClick={props.onClose}>Close Copy</button>
           </div>
         );
-      };
+      }
+      return MockCopyMentorModal;
     },
   };
 });
