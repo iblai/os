@@ -1,3 +1,7 @@
+## [0.36.9]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.1
+
 ## [0.36.8]
 
 - chore(iblai-js): bump version of iblai-js to 1.1.0
