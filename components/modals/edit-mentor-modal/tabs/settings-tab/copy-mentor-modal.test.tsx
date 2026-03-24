@@ -24,14 +24,14 @@ const mockEditMentor = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockGetUserTenantsQuery = vi.fn();
 const mockOnClose = vi.fn();
-const mockUsername = "testuser";
+const mockUsername = vi.fn(() => "testuser");
 
 vi.mock("next/navigation", () => ({
   useParams: () => mockUseParams(),
 }));
 
 vi.mock("@/hooks/use-user", () => ({
-  useUsername: () => mockUsername,
+  useUsername: () => mockUsername(),
 }));
 
 vi.mock("@/hooks/user-navigate", () => ({
@@ -261,6 +261,7 @@ describe("CopyMentorModal", () => {
       tenantKey: "test-tenant",
       mentorId: "test-mentor",
     });
+    mockUsername.mockReturnValue("testuser");
     mockGetMentorId.mockReturnValue(null);
     mockForkMentorLoading.mockReturnValue(false);
     mockForkMentor.mockReturnValue({
@@ -697,6 +698,20 @@ describe("CopyMentorModal", () => {
       render(<CopyMentorModal onClose={mockOnClose} />);
 
       expect(screen.getByText("Copy")).toBeDisabled();
+    });
+
+    it("shows error toast when username is missing", async () => {
+      mockUsername.mockReturnValue(null);
+
+      render(<CopyMentorModal onClose={mockOnClose} />);
+
+      fireEvent.click(screen.getByText("Copy"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Unable to copy mentor. Missing context.",
+        );
+      });
     });
 
     it("adjusts visibility when forked mentor is viewable by anyone", async () => {
