@@ -1,3 +1,8 @@
+## [0.36.8]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.0
+- re-introduce legacy lms url and pass to data layer initialization
+
 ## [0.36.7]
 
 - Add `hide-navbar` query param to hide the navbar in both embed and non-embed modes
