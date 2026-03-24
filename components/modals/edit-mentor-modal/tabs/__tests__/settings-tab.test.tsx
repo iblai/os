@@ -442,7 +442,7 @@ describe("SettingsTab", () => {
     it("renders LTI Accessible toggle", () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText("LTI Accessible?")).toBeInTheDocument();
+      expect(screen.getByText("LTI Accessible")).toBeInTheDocument();
     });
 
     it("renders Show Attachment toggle", () => {
