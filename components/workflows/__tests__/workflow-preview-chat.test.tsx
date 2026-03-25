@@ -215,11 +215,9 @@ describe("WorkflowPreviewChat", () => {
       expect(screen.getByTestId("tenant-key")).toHaveTextContent("test-tenant");
     });
 
-    it("should pass mentorId to ChatInputForm", () => {
+    it("should not pass mentorId to ChatInputForm", () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("mentor-id")).toHaveTextContent(
-        "test-mentor-id",
-      );
+      expect(screen.getByTestId("mentor-id")).toHaveTextContent("");
     });
 
     it("should pass username to ChatInputForm", () => {
