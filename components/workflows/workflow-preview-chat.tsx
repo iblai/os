@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAdvancedChat, ANONYMOUS_USERNAME } from '@iblai/iblai-js/web-utils';
-import { toast } from 'sonner';
-import { Bot } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAdvancedChat, ANONYMOUS_USERNAME } from "@iblai/iblai-js/web-utils";
+import { toast } from "sonner";
+import { Bot } from "lucide-react";
 
-import { ChatMessages } from '@/components/chat/chat-messages';
-import { ChatInputForm } from '@/components/chat-input-form';
-import { LoadingMessage } from '@/components/chat/loading-message';
-import { useAxdToken } from '@/hooks/use-tokens';
-import { useUsername } from '@/hooks/use-user';
-import { config } from '@/lib/config';
-import { redirectToAuthSpa } from '@/lib/utils';
-import eventBus, { RemoteEvents } from '@/lib/eventBus';
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { ChatInputForm } from "@/components/chat-input-form";
+import { LoadingMessage } from "@/components/chat/loading-message";
+import { useAxdToken } from "@/hooks/use-tokens";
+import { useUsername } from "@/hooks/use-user";
+import { config } from "@/lib/config";
+import { redirectToAuthSpa } from "@/lib/utils";
+import eventBus, { RemoteEvents } from "@/lib/eventBus";
 
 const noopAsync = async () => {};
 const noop = () => {};
@@ -22,10 +22,15 @@ interface WorkflowPreviewChatProps {
   mentorId?: string;
 }
 
-export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChatProps) {
+export function WorkflowPreviewChat({
+  tenantKey,
+  mentorId,
+}: WorkflowPreviewChatProps) {
   const username = useUsername();
-  const token = useAxdToken() ?? '';
-  const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
+  const token = useAxdToken() ?? "";
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    number | null
+  >(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -44,7 +49,7 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
     isConnected,
     startNewChat,
   } = useAdvancedChat({
-    mentorId: mentorId ?? '',
+    mentorId: mentorId ?? "",
     tenantKey,
     username: username ?? ANONYMOUS_USERNAME,
     token,
@@ -58,7 +63,9 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
   });
 
   const visibleMessages =
-    messages.length > 0 && messages[0].role === 'assistant' ? messages.slice(1) : messages;
+    messages.length > 0 && messages[0].role === "assistant"
+      ? messages.slice(1)
+      : messages;
 
   useEffect(() => {
     const handler = () => startNewChat();
@@ -72,7 +79,7 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
     if (!chatContainerRef.current) return;
     chatContainerRef.current.scrollTo({
       top: chatContainerRef.current.scrollHeight,
-      behavior: 'smooth',
+      behavior: "smooth",
     });
   }, [visibleMessages.length, isStreaming, isPending]);
 
@@ -89,7 +96,9 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
         {visibleMessages.length === 0 && !isPending && !isStreaming ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <Bot className="h-10 w-10 text-muted-foreground mb-3" />
-            <h2 className="text-xl font-semibold text-foreground">Preview your agent</h2>
+            <h2 className="text-xl font-semibold text-foreground">
+              Preview your agent
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Prompt the agent as if you&apos;re the user.
             </p>
@@ -102,14 +111,18 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
               profileImage={profileImage}
               mentorName={mentorName}
               sessionId={sessionId}
-              mentorId={mentorId ?? ''}
+              mentorId={mentorId ?? ""}
               tenantKey={tenantKey}
               handleHighlightMessage={setHighlightedMessageId}
               handleSubmit={handleSubmit}
             />
-            {(isPending || isStreaming) && !currentStreamingMessage?.content && (
-              <LoadingMessage mentorName={mentorName} profileImage={profileImage} />
-            )}
+            {(isPending || isStreaming) &&
+              !currentStreamingMessage?.content && (
+                <LoadingMessage
+                  mentorName={mentorName}
+                  profileImage={profileImage}
+                />
+              )}
           </>
         )}
       </div>
@@ -123,8 +136,7 @@ export function WorkflowPreviewChat({ tenantKey, mentorId }: WorkflowPreviewChat
           isScreenSharingModalOpen={false}
           onPhoneCallClick={noop}
           tenantKey={tenantKey}
-          mentorId={mentorId}
-          username={username ?? ''}
+          username={username ?? ""}
           enableWebBrowsing={false}
           setMessage={setMessage}
           isStreaming={isStreaming}
