@@ -6,8 +6,13 @@ import { ConnectorManagementContent } from './connector-management-content';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import type { MCPServer } from '@iblai/iblai-js/data-layer';
 
-export function McpTab() {
+interface McpTabProps {
+  onSelect?: (server: MCPServer) => void;
+}
+
+export function McpTab({ onSelect }: McpTabProps = {}) {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -34,6 +39,7 @@ export function McpTab() {
           tenantKey={tenantKey}
           username={username ?? ''}
           mentorId={activeMentorId}
+          onSelect={onSelect}
         />
       </div>
     </>

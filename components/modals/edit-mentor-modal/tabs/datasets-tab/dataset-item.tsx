@@ -46,9 +46,11 @@ export type Dataset = {
 
 type Props = {
   dataset: Dataset;
+  onSelect?: (dataset: Dataset) => void;
+  isSelected?: boolean;
 };
 
-export function DatasetItem({ dataset }: Props) {
+export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
   const [isDeleteDatasetModalOpen, setIsDeleteDatasetModalOpen] = React.useState(false);
   const [isRetrainScheduleModalOpen, setIsRetrainScheduleModalOpen] = React.useState(false);
   const [isTrainOrDeleteModalOpen, setIsTrainOrDeleteModalOpen] = React.useState(false);
@@ -116,7 +118,11 @@ export function DatasetItem({ dataset }: Props) {
 
   return (
     <>
-      <TableRow key={dataset.id} className="border-b last:border-0">
+      <TableRow
+        key={dataset.id}
+        className={`border-b last:border-0 ${onSelect ? 'cursor-pointer hover:bg-muted/50' : ''} ${isSelected ? 'bg-blue-50' : ''}`}
+        onClick={onSelect ? () => onSelect(dataset) : undefined}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <TableCell className="p-3 font-medium whitespace-nowrap text-[#646464] truncate max-w-[200px]">

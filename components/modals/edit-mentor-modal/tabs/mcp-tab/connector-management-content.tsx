@@ -61,6 +61,7 @@ interface ConnectorManagementContentProps {
   tenantKey: string;
   username: string;
   mentorId: string;
+  onSelect?: (server: MCPServer) => void;
 }
 
 // Type for pending OAuth server data stored in localStorage
@@ -566,6 +567,7 @@ export function ConnectorManagementContent({
   tenantKey,
   username,
   mentorId,
+  onSelect,
 }: ConnectorManagementContentProps) {
   const itemsPerPage = 12;
 
@@ -1594,6 +1596,23 @@ export function ConnectorManagementContent({
               </>
             )}
           </div>
+          {onSelect && !needsOAuthConnection && (
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full h-8 mt-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 border-0"
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!isActive) {
+                  await handleToggleConnector(server.id, displayName, true);
+                }
+                onSelect(server);
+              }}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Select
+            </Button>
+          )}
           <div className="text-xs text-gray-500 mt-2">
             Created {new Date(server.created_at).toLocaleDateString()}
           </div>
