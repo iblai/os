@@ -12,6 +12,10 @@ on:
         required: false
         type: boolean
         default: false
+      sign_publisher:
+        description: "Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)"
+        required: false
+        type: string
 
 concurrency:
   group: msix-build
@@ -79,6 +83,15 @@ jobs:
 
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
+
+      - name: Override Publisher in AppxManifest for signing
+        if: inputs.sign && inputs.sign_publisher != ''
+        working-directory: src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Publisher="[^"]*"', 'Publisher="${{ inputs.sign_publisher }}"'
+          Set-Content -Path AppxManifest.xml -Value $manifest
+          Write-Host "Patched Publisher to: ${{ inputs.sign_publisher }}"
 
       - name: Override version in AppxManifest
         if: inputs.version != ''
@@ -206,9 +219,8 @@ jobs:
           [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
 
           $securePassword = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
-          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+          $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
 
-          $cert = Get-PfxCertificate -FilePath $pfxPath
           Write-Host "Certificate imported: $($cert.Subject)"
           Write-Host "Thumbprint: $($cert.Thumbprint)"
           echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
