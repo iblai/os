@@ -2,6 +2,7 @@ const env = {
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_AUTH_URL: process.env.NEXT_PUBLIC_AUTH_URL,
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NEXT_PUBLIC_LEGACY_LMS_URL: process.env.NEXT_PUBLIC_LEGACY_LMS_URL,
   NEXT_PUBLIC_MAIN_TENANT_KEY: process.env.NEXT_PUBLIC_MAIN_TENANT_KEY,
   NEXT_PUBLIC_IBL_TEMPLATE_MENTOR: process.env.NEXT_PUBLIC_IBL_TEMPLATE_MENTOR,
   NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL:
@@ -52,18 +53,18 @@ export const getEnv = (key: keyof typeof env, fallback = ""): string => {
   return runtimeEnv()[key] ?? env[key] ?? fallback;
 };
 
-const domain = () =>
-  getEnv("NEXT_PUBLIC_PLATFORM_BASE_DOMAIN", "iblai.app");
+const domain = () => getEnv("NEXT_PUBLIC_PLATFORM_BASE_DOMAIN", "iblai.app");
 
 export const config = {
   environment: () => getEnv("NODE_ENV", "development"),
-  authUrl: () =>
-    getEnv("NEXT_PUBLIC_AUTH_URL", `https://auth.${domain()}/`),
+  authUrl: () => getEnv("NEXT_PUBLIC_AUTH_URL", `https://auth.${domain()}/`),
   lmsUrl: () => {
     const apiBase = getEnv("NEXT_PUBLIC_API_BASE_URL");
     if (apiBase) return `${apiBase}/lms`;
     return `https://learn.${domain()}`;
   },
+  legacyLmsUrl: () =>
+    getEnv("NEXT_PUBLIC_LEGACY_LMS_URL", "https://learn.iblai.org"),
   dmUrl: () => {
     const apiBase = getEnv("NEXT_PUBLIC_API_BASE_URL");
     if (apiBase) return `${apiBase}/dm`;

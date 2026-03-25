@@ -1,3 +1,20 @@
+## [0.36.10]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.5
+
+## [0.36.9]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.1
+
+## [0.36.8]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.0
+- re-introduce legacy lms url and pass to data layer initialization
+
+## [0.36.7]
+
+- Add `hide-navbar` query param to hide the navbar in both embed and non-embed modes
+
 ## [0.36.6]
 
 - Always show New Chat in mentor dropdown for non-admin users
