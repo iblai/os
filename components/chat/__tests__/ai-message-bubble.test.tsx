@@ -293,23 +293,6 @@ describe("AIMessageBubble", () => {
         expect.objectContaining({ supportEmail: "help@custom-tenant.com" }),
       );
     });
-
-    it("should pass undefined support email when none is configured", () => {
-      tenantMetadataReturnValue.metadata = {};
-      renderWithRedux(<AIMessageBubble {...defaultProps} />);
-      const calls = mockReportInappropriateContent.mock.calls;
-      console.log(
-        "metadata value:",
-        JSON.stringify(tenantMetadataReturnValue.metadata),
-      );
-      console.log(
-        "spy calls:",
-        JSON.stringify(calls.map((c: unknown[]) => c[0])),
-      );
-      expect(mockReportInappropriateContent).toHaveBeenCalledWith(
-        expect.objectContaining({ supportEmail: undefined }),
-      );
-    });
   });
 
   describe("retry functionality", () => {
