@@ -14,6 +14,9 @@ build/
 
 # testing
 coverage/
+test-results/
+e2e/playwright-report/
+playwright/.auth/
 
 # environment & secrets
 .env
@@ -76,3 +79,6 @@ src-tauri/gen/apple/
 # playwright
 test-results
 e2e/playwright-report
+
+playwright/.auth
+e2e/playwright/.auth
