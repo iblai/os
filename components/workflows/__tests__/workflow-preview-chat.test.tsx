@@ -292,7 +292,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should show loading message when isPending is true", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -314,7 +314,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should show loading message when isStreaming with no content", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -336,7 +336,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should not show loading message when streaming with content", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -365,7 +365,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass isConnecting true when not connected", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -389,7 +389,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("message filtering", () => {
     it("should filter out first assistant message", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [
           { id: 1, content: "Welcome", role: "assistant" },
@@ -416,7 +416,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should not filter if first message is from user", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [
           { id: 1, content: "Hello", role: "user" },
@@ -442,7 +442,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should handle empty messages array", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -481,7 +481,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("streaming state", () => {
     it("should pass isStreaming to ChatInputForm", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
@@ -505,7 +505,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("errorHandler callback", () => {
     it("should call toast.error when error occurs", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       const { toast } = await import("sonner");
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
@@ -543,7 +543,7 @@ describe("WorkflowPreviewChat", () => {
     it("should pass anonymous username when username is null", async () => {
       mockUseUsername.mockReturnValue(null);
 
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedUsername: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { username?: string }) => {
@@ -574,7 +574,7 @@ describe("WorkflowPreviewChat", () => {
     it("should pass empty string for token when useAxdToken returns null", async () => {
       mockUseAxdToken.mockReturnValue(null);
 
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedToken: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { token?: string }) => {
@@ -613,7 +613,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("scroll behavior", () => {
     it("should scroll to bottom when messages change", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -645,7 +645,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should scroll to bottom when isPending changes", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -674,7 +674,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should scroll to bottom when isStreaming changes", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -705,7 +705,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("highlight message functionality", () => {
     it("should pass handleHighlightMessage to ChatMessages", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -738,7 +738,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("useAdvancedChat configuration", () => {
     it("should pass correct wsUrl to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedWsUrl: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { wsUrl?: string }) => {
@@ -767,7 +767,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass correct stopGenerationWsUrl to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedStopGenerationWsUrl: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { stopGenerationWsUrl?: string }) => {
@@ -798,7 +798,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass redirectToAuthSpa to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedRedirectToAuthSpa: (() => void) | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { redirectToAuthSpa?: () => void }) => {
@@ -827,7 +827,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass mentorId to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedMentorId: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { mentorId?: string }) => {
@@ -856,7 +856,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass empty string for mentorId to useAdvancedChat when undefined", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedMentorId: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { mentorId?: string }) => {
@@ -885,7 +885,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should pass tenantKey to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       let capturedTenantKey: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { tenantKey?: string }) => {
@@ -916,7 +916,7 @@ describe("WorkflowPreviewChat", () => {
 
   describe("loading state with streaming message having empty content", () => {
     it("should show loading message when streaming with empty string content", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -943,7 +943,7 @@ describe("WorkflowPreviewChat", () => {
     });
 
     it("should show loading message when both isPending and isStreaming are true", async () => {
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -1020,7 +1020,7 @@ describe("WorkflowPreviewChat", () => {
       // Note: These noop functions are defined at module level and passed as callbacks
       // They cannot throw errors when called since they are empty functions
       // This test verifies the component doesn't break when these callbacks are invoked
-      const { useAdvancedChat } = await import("@iblai/web-utils");
+      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
