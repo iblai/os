@@ -7,6 +7,15 @@ on:
         description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
         required: false
         type: string
+      sign:
+        description: "Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)"
+        required: false
+        type: boolean
+        default: false
+      sign_publisher:
+        description: "Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)"
+        required: false
+        type: string
 
 concurrency:
   group: msix-build
@@ -75,6 +84,15 @@ jobs:
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
 
+      - name: Override Publisher in AppxManifest for signing
+        if: inputs.sign && inputs.sign_publisher != ''
+        working-directory: src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Publisher="[^"]*"', 'Publisher="${{ inputs.sign_publisher }}"'
+          Set-Content -Path AppxManifest.xml -Value $manifest
+          Write-Host "Patched Publisher to: ${{ inputs.sign_publisher }}"
+
       - name: Override version in AppxManifest
         if: inputs.version != ''
         working-directory: src-tauri
@@ -120,7 +138,7 @@ jobs:
       - name: List downloaded packages
         run: Get-ChildItem -Path msix-packages -Recurse
 
-      - name: Locate MakeAppx.exe
+      - name: Locate SDK tools
         id: sdk
         run: |
           $SdkRoot = "C:\Program Files (x86)\Windows Kits\10\bin"
@@ -131,13 +149,19 @@ jobs:
             Write-Error "Windows 10 SDK not found"
             exit 1
           }
-          $MakeAppx = Join-Path $SdkVersions[0].FullName "x64\makeappx.exe"
+          $SdkBin = Join-Path $SdkVersions[0].FullName "x64"
+          $MakeAppx = Join-Path $SdkBin "makeappx.exe"
+          $SignTool = Join-Path $SdkBin "signtool.exe"
           if (-not (Test-Path $MakeAppx)) {
             Write-Error "makeappx.exe not found at $MakeAppx"
             exit 1
           }
-          Write-Host "Found: $MakeAppx"
+          Write-Host "Found MakeAppx: $MakeAppx"
           echo "MAKEAPPX=$MakeAppx" >> $env:GITHUB_OUTPUT
+          if (Test-Path $SignTool) {
+            Write-Host "Found SignTool: $SignTool"
+            echo "SIGNTOOL=$SignTool" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Rename .msix to .appx for bundle compatibility
         run: |
@@ -177,6 +201,51 @@ jobs:
           }
 
           Write-Host "Bundle created: $bundlePath" -ForegroundColor Green
+
+      - name: Import signing certificate
+        if: inputs.sign
+        id: cert
+        env:
+          MSIX_CERT_PFX: ${{ secrets.MSIX_CERT_PFX }}
+          MSIX_CERT_PASSWORD: ${{ secrets.MSIX_CERT_PASSWORD }}
+        run: |
+          if (-not $env:MSIX_CERT_PFX) {
+            Write-Error "Signing requested but MSIX_CERT_PFX secret is not set"
+            exit 1
+          }
+
+          $pfxBytes = [Convert]::FromBase64String($env:MSIX_CERT_PFX)
+          $pfxPath = Join-Path $env:RUNNER_TEMP "msix-signing-cert.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+          $securePassword = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+
+          Write-Host "Certificate imported: $($cert.Subject)"
+          Write-Host "Thumbprint: $($cert.Thumbprint)"
+          echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+          Remove-Item $pfxPath -Force
+
+      - name: Sign MSIX Bundle
+        if: inputs.sign
+        run: |
+          $bundle = (Get-ChildItem -Path bundle-output -Filter "*.msixbundle")[0]
+          Write-Host "Signing: $($bundle.Name)" -ForegroundColor Yellow
+
+          & "${{ steps.sdk.outputs.SIGNTOOL }}" sign `
+            /fd SHA256 `
+            /sha1 "${{ steps.cert.outputs.CERT_THUMBPRINT }}" `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            $bundle.FullName
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "signtool sign failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+          Write-Host "Bundle signed successfully." -ForegroundColor Green
 
       - name: Upload MSIX Bundle
         uses: actions/upload-artifact@v4

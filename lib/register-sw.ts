@@ -24,7 +24,7 @@ const statusChangeCallbacks: StatusChangeCallback[] = [];
  * Check if service workers are supported
  */
 export function isServiceWorkerSupported(): boolean {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator;
+  return typeof window !== "undefined" && "serviceWorker" in navigator;
 }
 
 /**
@@ -34,7 +34,7 @@ export function getServiceWorkerStatus(): ServiceWorkerStatus {
   return {
     isSupported: isServiceWorkerSupported(),
     isRegistered: swRegistration !== null,
-    isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+    isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
     registration: swRegistration,
     updateAvailable,
   };
@@ -49,37 +49,60 @@ function notifyStatusChange(): void {
 }
 
 /**
- * Register the service worker
+ * Wait for the page to reach a fully loaded state.
+ * Returns immediately if the page is already loaded.
+ */
+function waitForPageLoad(): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+  if (document.readyState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    window.addEventListener("load", () => resolve(), { once: true });
+  });
+}
+
+/**
+ * Register the service worker.
+ * Defers registration until the page is fully loaded to avoid
+ * interfering with chunk loading — especially in WebKit/Safari where
+ * early SW registration can cause ChunkLoadError timeouts.
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isServiceWorkerSupported()) {
-    console.log('[SW Registration] Service workers not supported');
+    console.log("[SW Registration] Service workers not supported");
     return null;
   }
 
+  // Wait for the page to be fully loaded before registering.
+  // This prevents the service worker from intercepting in-flight
+  // chunk requests during initial page load.
+  await waitForPageLoad();
+
   try {
     // Get the base path from environment or default to empty
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const swUrl = `${basePath}/sw.js`;
 
-    console.log('[SW Registration] Registering service worker:', swUrl);
+    console.log("[SW Registration] Registering service worker:", swUrl);
 
     const registration = await navigator.serviceWorker.register(swUrl, {
-      scope: basePath || '/',
+      scope: basePath || "/",
     });
 
     swRegistration = registration;
-    console.log('[SW Registration] Service worker registered successfully');
+    console.log("[SW Registration] Service worker registered successfully");
 
     // Handle updates
-    registration.addEventListener('updatefound', () => {
+    registration.addEventListener("updatefound", () => {
       const newWorker = registration.installing;
 
       if (newWorker) {
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        newWorker.addEventListener("statechange", () => {
+          if (
+            newWorker.state === "installed" &&
+            navigator.serviceWorker.controller
+          ) {
             // New service worker is installed but waiting
-            console.log('[SW Registration] New service worker available');
+            console.log("[SW Registration] New service worker available");
             updateAvailable = true;
             notifyStatusChange();
             updateCallbacks.forEach((callback) => callback(registration));
@@ -99,7 +122,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     notifyStatusChange();
     return registration;
   } catch (error) {
-    console.error('[SW Registration] Registration failed:', error);
+    console.error("[SW Registration] Registration failed:", error);
     return null;
   }
 }
@@ -118,11 +141,11 @@ export async function unregisterServiceWorker(): Promise<boolean> {
       swRegistration = null;
       updateAvailable = false;
       notifyStatusChange();
-      console.log('[SW Registration] Service worker unregistered');
+      console.log("[SW Registration] Service worker unregistered");
     }
     return success;
   } catch (error) {
-    console.error('[SW Registration] Unregistration failed:', error);
+    console.error("[SW Registration] Unregistration failed:", error);
     return false;
   }
 }
@@ -132,7 +155,7 @@ export async function unregisterServiceWorker(): Promise<boolean> {
  */
 export function skipWaiting(): void {
   if (swRegistration?.waiting) {
-    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    swRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
   }
 }
 
@@ -141,7 +164,7 @@ export function skipWaiting(): void {
  */
 export function clearAllCaches(): void {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+    navigator.serviceWorker.controller.postMessage({ type: "CLEAR_CACHE" });
   }
 }
 
@@ -150,8 +173,11 @@ export function clearAllCaches(): void {
  */
 export function setTauriMode(isTauri: boolean): void {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SET_TAURI', data: isTauri });
-    console.log('[SW Registration] Set Tauri mode:', isTauri);
+    navigator.serviceWorker.controller.postMessage({
+      type: "SET_TAURI",
+      data: isTauri,
+    });
+    console.log("[SW Registration] Set Tauri mode:", isTauri);
   }
 }
 
@@ -160,8 +186,11 @@ export function setTauriMode(isTauri: boolean): void {
  */
 export function setOfflineStatus(isOffline: boolean): void {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SET_OFFLINE', data: isOffline });
-    console.log('[SW Registration] Set offline status:', isOffline);
+    navigator.serviceWorker.controller.postMessage({
+      type: "SET_OFFLINE",
+      data: isOffline,
+    });
+    console.log("[SW Registration] Set offline status:", isOffline);
   }
 }
 
@@ -176,18 +205,20 @@ export async function getCacheStatus(): Promise<Record<string, number> | null> {
     }
 
     const messageHandler = (event: MessageEvent) => {
-      if (event.data?.type === 'CACHE_STATUS') {
-        navigator.serviceWorker.removeEventListener('message', messageHandler);
+      if (event.data?.type === "CACHE_STATUS") {
+        navigator.serviceWorker.removeEventListener("message", messageHandler);
         resolve(event.data.status);
       }
     };
 
-    navigator.serviceWorker.addEventListener('message', messageHandler);
-    navigator.serviceWorker.controller.postMessage({ type: 'GET_CACHE_STATUS' });
+    navigator.serviceWorker.addEventListener("message", messageHandler);
+    navigator.serviceWorker.controller.postMessage({
+      type: "GET_CACHE_STATUS",
+    });
 
     // Timeout after 5 seconds
     setTimeout(() => {
-      navigator.serviceWorker.removeEventListener('message', messageHandler);
+      navigator.serviceWorker.removeEventListener("message", messageHandler);
       resolve(null);
     }, 5000);
   });
@@ -227,27 +258,27 @@ export function onStatusChange(callback: StatusChangeCallback): () => void {
  * Setup online/offline listeners
  */
 export function setupNetworkListeners(): () => void {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return () => {};
   }
 
   const handleOnline = () => {
-    console.log('[SW Registration] Back online');
+    console.log("[SW Registration] Back online");
     notifyStatusChange();
   };
 
   const handleOffline = () => {
-    console.log('[SW Registration] Gone offline');
+    console.log("[SW Registration] Gone offline");
     notifyStatusChange();
   };
 
-  window.addEventListener('online', handleOnline);
-  window.addEventListener('offline', handleOffline);
+  window.addEventListener("online", handleOnline);
+  window.addEventListener("offline", handleOffline);
 
   // Return cleanup function
   return () => {
-    window.removeEventListener('online', handleOnline);
-    window.removeEventListener('offline', handleOffline);
+    window.removeEventListener("online", handleOnline);
+    window.removeEventListener("offline", handleOffline);
   };
 }
 
@@ -264,8 +295,8 @@ export async function initServiceWorker(): Promise<ServiceWorkerStatus> {
 
   // Listen for controller changes (new SW activated)
   if (isServiceWorkerSupported()) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('[SW Registration] Controller changed, reloading...');
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      console.log("[SW Registration] Controller changed, reloading...");
       window.location.reload();
     });
   }

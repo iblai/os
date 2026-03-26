@@ -208,6 +208,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const switchingMentor = searchParams.get("switching-mentor");
   const isSsoLoginRoute = /^\/sso-login/.test(pathname);
   const isVersionRoute = /^\/version/.test(pathname);
+  // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
+  // to prevent it from redirecting when the URL's mentorId changes during navigation.
+  const isWorkflowPage = /\/workflows\//.test(pathname);
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -542,22 +545,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 if (!embed) redirectToNoMentorsPage();
               }}
               redirectToCreateMentor={() => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 redirectToCreateMentor();
               }}
               redirectToMentor={(tKey: string, mId: string) => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 redirectToMentor(tKey, mId);
               }}
               onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={mentorId}
+              requestedMentorId={isWorkflowPage ? undefined : mentorId}
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
@@ -582,6 +588,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   );
                   return;
                 }
+                if (isWorkflowPage) return;
                 await handleMentorNotFound();
               }}
               onComplete={() => {
