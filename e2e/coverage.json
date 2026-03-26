@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-20",
+  "lastUpdated": "2026-03-26",
   "summary": {
-    "totalCheckpoints": 236,
-    "coveredCheckpoints": 236,
+    "totalCheckpoints": 251,
+    "coveredCheckpoints": 251,
     "percent": 100,
-    "totalJourneys": 33
+    "totalJourneys": 34
   },
   "journeys": [
     {
@@ -515,6 +515,29 @@
       "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
       "checkpoints": [
         { "id": "ui-err-01", "description": "Authenticated user goes to the platform URL and sees no render failures or console errors", "status": "covered" }
+      ]
+    },
+    {
+      "id": "workflows",
+      "name": "Workflows",
+      "spec": "34-workflows.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/workflows/[mentorId]/page.tsx", "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx", "components/workflows/workflow-canvas.tsx", "components/workflows/node-config-panel.tsx", "components/workflows/workflow-preview-chat.tsx"],
+      "checkpoints": [
+        { "id": "wf-01", "description": "Workflows page displays heading, description, and Create Workflow button", "status": "covered" },
+        { "id": "wf-02", "description": "Search input is visible on the workflows list page", "status": "covered" },
+        { "id": "wf-03", "description": "Search filters the workflows list by name", "status": "covered" },
+        { "id": "wf-04", "description": "A new workflow can be created and shows the canvas with a Start node", "status": "covered" },
+        { "id": "wf-05", "description": "An existing workflow can be opened from the list", "status": "covered" },
+        { "id": "wf-06", "description": "A workflow can be deleted and no longer appears in the list", "status": "covered" },
+        { "id": "wf-07", "description": "Workflow editor displays Save, Publish, and Preview buttons", "status": "covered" },
+        { "id": "wf-08", "description": "New workflow shows Draft status badge", "status": "covered" },
+        { "id": "wf-09", "description": "Workflow name can be renamed inline via the pencil button", "status": "covered" },
+        { "id": "wf-10", "description": "Workflow can be saved without errors", "status": "covered" },
+        { "id": "wf-11", "description": "Default nodes (Start and Mentor) are visible with an edge connecting them", "status": "covered" },
+        { "id": "wf-12", "description": "More options menu shows Activate and Delete items", "status": "covered" },
+        { "id": "wf-13", "description": "Preview mode can be entered and exited", "status": "covered" },
+        { "id": "wf-14", "description": "Canvas and chat panel are visible in preview mode", "status": "covered" },
+        { "id": "wf-15", "description": "Workflow can be published; active workflow can be deactivated back to Draft", "status": "covered" }
       ]
     }
   ]

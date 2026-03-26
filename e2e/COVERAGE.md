@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-20 | 236 checkpoints | 33 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-03-26 | 251 checkpoints | 34 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -480,6 +480,28 @@ When adding a new page or modifying an existing user flow:
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`
 
 - [x] Non-admin goes to the platform URL and sees no render failures or console errors
+
+---
+
+## Journey 34: Workflows (15 checkpoints) — `journeys/34-workflows.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/workflows/workflow-canvas.tsx`, `components/workflows/node-config-panel.tsx`, `components/workflows/workflow-preview-chat.tsx`
+
+- [x] Workflows page displays heading, description, and Create Workflow button
+- [x] Search input is visible on the workflows list page
+- [x] Search filters the workflows list by name
+- [x] A new workflow can be created and shows the canvas with a Start node
+- [x] An existing workflow can be opened from the list
+- [x] A workflow can be deleted and no longer appears in the list
+- [x] Workflow editor displays Save, Publish, and Preview buttons in the toolbar
+- [x] New workflow shows Draft status badge
+- [x] Workflow name can be renamed inline via the pencil button
+- [x] Workflow can be saved without errors
+- [x] Default nodes (Start and Mentor) are visible with an edge connecting them
+- [x] More options menu shows Activate and Delete items
+- [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
+- [x] Canvas and chat panel are visible in preview mode
+- [x] Workflow can be published; active workflow can be deactivated back to Draft
 
 ---
 
