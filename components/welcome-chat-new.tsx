@@ -8,45 +8,11 @@ import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
 import { config } from '@/lib/config';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { WelcomeChat } from './welcome-chat';
-import useWelcome from '@/hooks/use-welcome-message';
+import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { ProjectPageParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { ProjectLandingPage } from './projects/project-landing-page';
-import Markdown from '@/components/markdown';
-
-const WelcomeMessage = ({
-  aiWelcomeMessage,
-  sessionId,
-  username,
-  tenantKey,
-  mentorUniqueId,
-  token,
-  isNewSession,
-}: {
-  aiWelcomeMessage: string;
-  sessionId: string;
-  username: string;
-  tenantKey: string;
-  mentorUniqueId: string;
-  token: string;
-  isNewSession: boolean;
-}) => {
-  const { welcomeMessage } = useWelcome({
-    sessionId,
-    username,
-    tenantKey,
-    mentorUniqueId,
-    token,
-    wsUrl: `${config.baseWsUrl()}/ws/langflow/`,
-    isNewSession,
-  });
-  return (
-    <Markdown className="text-gray-600 text-lg max-w-3xl">
-      {welcomeMessage || aiWelcomeMessage || ''}
-    </Markdown>
-  );
-};
 
 type Props = {
   mentorName: string;
