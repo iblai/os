@@ -42,7 +42,7 @@ export class ExplorePage {
       );
     this.createCustomMentorButton = page
       .getByRole("button", { name: "Create Custom Mentor", exact: true })
-      .or(page.getByRole("button", { name: /custom mentor/i }));
+      .or(page.getByRole("button", { name: /^create\s+custom\s+mentor$/i }));
     this.llmFilterTrigger = page
       .getByRole("button", { name: /llm.*provider|provider/i })
       .first();

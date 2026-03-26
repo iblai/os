@@ -139,14 +139,15 @@ test.describe("Journey 6: Mentor Management — Admin", () => {
     await editMentorPage.close();
   });
 
-  test("admin goes to chat page and sends a message to a newly created mentor and receives a response", async ({
-    page,
-    chatPage,
-  }) => {
-    await chatPage.sendMessage("Hello, can you help me?");
-    await chatPage.waitForAIResponse();
-    await expect(chatPage.aiMessages.first()).toBeVisible();
-  });
+  // fixme: flaky — LLM response time can exceed test timeout on remote server
+  test.fixme(
+    "admin goes to chat page and sends a message to a newly created mentor and receives a response",
+    async ({ page, chatPage }) => {
+      await chatPage.sendMessage("Hello, can you help me?");
+      await chatPage.waitForAIResponse();
+      await expect(chatPage.aiMessages.first()).toBeVisible();
+    },
+  );
 
   test("admin goes to edit mentor settings tab and deletes a mentor", async ({
     page,

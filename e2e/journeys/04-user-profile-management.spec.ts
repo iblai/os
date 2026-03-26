@@ -72,6 +72,9 @@ test.describe("Journey 4: User Profile Management", () => {
     await expect(nonadminProfilePage.fullNameField).toBeVisible({
       timeout: 10_000,
     });
+    await expect(nonadminProfilePage.fullNameField).not.toHaveValue("", {
+      timeout: 15_000,
+    });
     const value = await nonadminProfilePage.fullNameField.inputValue();
     expect(value.length).toBeGreaterThan(0);
     logger.info(`Full Name value: ${value}`);

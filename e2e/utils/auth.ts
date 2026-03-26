@@ -1,12 +1,12 @@
-import { Page, Locator, expect } from '@playwright/test';
-import { safeWaitForURL } from './navigation';
-import { waitForPageReady } from './resilient';
-import { logger } from '@iblai/iblai-js/playwright';
+import { Page, Locator, expect } from "@playwright/test";
+import { safeWaitForURL } from "./navigation";
+import { waitForPageReady } from "./resilient";
+import { logger } from "@iblai/iblai-js/playwright";
 
-const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
-const AUTH_HOST = process.env.AUTH_HOST || '';
-const TEST_EMAIL = process.env.PLAYWRIGHT_USERNAME || '';
-const TEST_PASSWORD = process.env.PLAYWRIGHT_PASSWORD || '';
+const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || "";
+const AUTH_HOST = process.env.AUTH_HOST || "";
+const TEST_EMAIL = process.env.PLAYWRIGHT_USERNAME || "";
+const TEST_PASSWORD = process.env.PLAYWRIGHT_PASSWORD || "";
 
 /**
  * Full login flow: navigate to the mentor app, handle auth redirect if needed,
@@ -18,10 +18,15 @@ export async function navigateToMentorApp(
   locator?: Locator,
 ): Promise<void> {
   const mentorAppUrl = url || MENTOR_NEXTJS_HOST;
-  const startingUrl = url || MENTOR_NEXTJS_HOST + '/platform';
+  const startingUrl = url || MENTOR_NEXTJS_HOST + "/platform";
+
+  // WebKit needs 'load' to ensure all Next.js chunks finish loading
+  // before proceeding, preventing ChunkLoadError on subsequent navigations.
+  const browserName = page.context().browser()?.browserType().name();
+  const waitUntil = browserName === "webkit" ? "load" : "domcontentloaded";
 
   await page.goto(mentorAppUrl, {
-    waitUntil: 'domcontentloaded',
+    waitUntil,
     timeout: 120_000,
   });
 
@@ -40,11 +45,9 @@ export async function navigateToMentorApp(
   }
 
   if (!page.url().startsWith(startingUrl)) {
-    await safeWaitForURL(
-      page,
-      (u) => u.href.startsWith(startingUrl),
-      { timeout: 120_000 },
-    );
+    await safeWaitForURL(page, (u) => u.href.startsWith(startingUrl), {
+      timeout: 120_000,
+    });
   }
 
   // Caller-provided locator overrides default readiness check
@@ -55,7 +58,7 @@ export async function navigateToMentorApp(
 
   // Default readiness: wait for mentor dropdown to be visible
   await expect(
-    page.getByRole('button', { name: 'Selected mentor dropdown button' }),
+    page.getByRole("button", { name: "Selected mentor dropdown button" }),
   ).toBeVisible({ timeout: 120_000 });
 }
 
@@ -64,15 +67,15 @@ export async function navigateToMentorApp(
  */
 export async function authenticate(
   page: Page,
-  initialUrl: string = '/',
+  initialUrl: string = "/",
   email: string = TEST_EMAIL,
   password: string = TEST_PASSWORD,
   navigateToAuthPage = true,
 ): Promise<void> {
   if (navigateToAuthPage) {
-    await page.goto(initialUrl, { waitUntil: 'domcontentloaded' });
+    await page.goto(initialUrl, { waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole('button', { name: 'Continue with Password' }),
+      page.getByRole("button", { name: "Continue with Password" }),
     ).toBeVisible({ timeout: 30_000 });
   }
 
@@ -90,16 +93,16 @@ export async function authenticate(
     await safeWaitForURL(page, `${AUTH_HOST}/login/complete`, {
       timeout: 60_000,
     });
-    logger.info('Waiting for SSO redirect...');
-    await safeWaitForURL(page, '**/sso-login-complete?data=*', {
+    logger.info("Waiting for SSO redirect...");
+    await safeWaitForURL(page, "**/sso-login-complete?data=*", {
       timeout: 60_000,
     });
-    logger.info('Waiting for platform redirect...');
-    await safeWaitForURL(page, '**/platform/*/*', { timeout: 60_000 });
+    logger.info("Waiting for platform redirect...");
+    await safeWaitForURL(page, "**/platform/*/*", { timeout: 60_000 });
     await expect(
-      page.getByRole('button', { name: 'Selected mentor dropdown button' }),
+      page.getByRole("button", { name: "Selected mentor dropdown button" }),
     ).toBeVisible({ timeout: 30_000 });
-    logger.info('Authentication completed successfully');
+    logger.info("Authentication completed successfully");
   }
 }
 
@@ -113,7 +116,7 @@ export async function reAuthenticate(
   email: string = TEST_EMAIL,
   password: string = TEST_PASSWORD,
 ): Promise<void> {
-  logger.info('[reAuthenticate] Tokens expired – re-authenticating…');
+  logger.info("[reAuthenticate] Tokens expired – re-authenticating…");
   await page.click('button:has-text("Continue with Password")');
   await expect(page.locator('input[type="email"]')).toBeVisible({
     timeout: 10_000,
@@ -124,7 +127,7 @@ export async function reAuthenticate(
   await safeWaitForURL(page, (u) => u.href.startsWith(platformUrl), {
     timeout: 80_000,
   });
-  logger.info('[reAuthenticate] Re-authentication completed');
+  logger.info("[reAuthenticate] Re-authentication completed");
 }
 
 /**
@@ -134,11 +137,11 @@ export async function reAuthenticate(
 export async function checkAdminStatus(page: Page): Promise<boolean> {
   try {
     await page.waitForFunction(
-      () => window.localStorage.getItem('current_tenant') !== null,
+      () => window.localStorage.getItem("current_tenant") !== null,
       { timeout: 10_000 },
     );
     return await page.evaluate(() => {
-      const raw = window.localStorage.getItem('current_tenant');
+      const raw = window.localStorage.getItem("current_tenant");
       if (!raw) return false;
       try {
         return JSON.parse(raw).is_admin === true;
@@ -160,8 +163,8 @@ export async function getPlatformContext(
 ): Promise<{ tenantKey: string; mentorId: string }> {
   await waitForPageReady(page);
   const url = page.url();
-  const parts = new URL(url).pathname.split('/').filter(Boolean);
-  if (parts[0] !== 'platform' || parts.length < 3) {
+  const parts = new URL(url).pathname.split("/").filter(Boolean);
+  if (parts[0] !== "platform" || parts.length < 3) {
     throw new Error(`Not on a platform URL: ${url}`);
   }
   return { tenantKey: parts[1], mentorId: parts[2] };

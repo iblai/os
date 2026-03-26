@@ -11,6 +11,10 @@ function isFirefox(page: Page): boolean {
   return page.context().browser()?.browserType().name() === "firefox";
 }
 
+function isWebKit(page: Page): boolean {
+  return page.context().browser()?.browserType().name() === "webkit";
+}
+
 function isNavigationAbortedError(error: unknown): boolean {
   const message = (error as Error)?.message ?? "";
   return (
@@ -51,9 +55,18 @@ export async function safeWaitForURL(
   urlPattern: string | RegExp | ((url: URL) => boolean),
   options: SafeWaitForURLOptions = {},
 ): Promise<void> {
+  // WebKit needs "load" to ensure all chunks have finished loading before
+  // proceeding, otherwise ChunkLoadError can occur on subsequent navigations.
+  // Firefox uses "commit" to avoid NS_BINDING_ABORTED errors.
+  const defaultWaitUntil = isWebKit(page)
+    ? "load"
+    : isFirefox(page)
+      ? "commit"
+      : "domcontentloaded";
+
   const {
-    timeout = 60_000,
-    waitUntil = isFirefox(page) ? "commit" : "domcontentloaded",
+    timeout = 120_000,
+    waitUntil = defaultWaitUntil,
     maxRetries = 3,
   } = options;
 

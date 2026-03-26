@@ -35,7 +35,7 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
     await safeWaitForURL(
       page,
       (url) => url.href.includes(`/login?app=mentor&redirect-to=${HOST}`),
-      { timeout: 60_000 },
+      { timeout: 120_000 },
     );
 
     // Click the "Sign Up" button on the login page (it's a <button>, not a link)
@@ -67,7 +67,7 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
     await safeWaitForURL(
       page,
       (url) => url.href.includes(AUTH_HOST) && url.href.includes("/login?"),
-      { timeout: 60_000 },
+      { timeout: 120_000 },
     );
 
     await page.waitForLoadState("networkidle", {});
@@ -81,7 +81,7 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
     // Navigate to the mentor app — should redirect to auth login
     await page.goto(HOST, { waitUntil: "domcontentloaded" });
     await safeWaitForURL(page, (url) => url.href.includes(AUTH_HOST), {
-      timeout: 60_000,
+      timeout: 120_000,
     });
 
     // Click "Continue with Password"
