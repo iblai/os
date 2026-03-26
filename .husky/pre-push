@@ -16,3 +16,6 @@ pnpm test
 
 echo "Checking test coverage for changed files..."
 bash ./scripts/check-test-coverage.sh
+
+echo "Checking E2E journey coverage for changed files..."
+node e2e/scripts/check-journey-coverage.mjs --no-regress

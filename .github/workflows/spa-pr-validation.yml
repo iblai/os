@@ -131,6 +131,69 @@ jobs:
       coverage-threshold: 95
     secrets: inherit
 
+  e2e-coverage-check:
+    name: "E2E Journey Coverage"
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check journey coverage (no regression)
+        run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
+
+  claude-review-coverage:
+    name: "Claude E2E Coverage Review"
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- app/ components/ hooks/ lib/ providers/ | head -100)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "count=$(echo "$CHANGED" | grep -c . || echo 0)" >> $GITHUB_OUTPUT
+
+      - name: Claude coverage analysis
+        if: steps.changes.outputs.count != '0'
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are an E2E coverage analyst. Analyze the changed files in this PR and determine if e2e/coverage.json and e2e/COVERAGE.md are properly updated.
+
+            Changed files:
+            ${{ steps.changes.outputs.files }}
+
+            Tasks:
+            1. Read e2e/coverage.json and e2e/COVERAGE.md
+            2. For each changed file in app/ or components/:
+               - Check if it's listed in a journey's sourceFiles in coverage.json
+               - If it's a new page.tsx route, verify a journey covers it
+               - If it adds new user-visible behavior, check for corresponding checkpoints
+            3. Compare checkpoint counts: current branch vs base branch
+            4. Post a summary comment on the PR with:
+               - Files covered by existing journeys
+               - Files missing coverage (if any)
+               - Checkpoint count change (regression warning if decreased)
+               - Recommended actions (new journeys or checkpoints to add)
+
+            If all changes are covered, approve. If there are gaps, request changes with specific instructions.
+
   claude-review-quality:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
@@ -619,7 +682,7 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [gate, acquire-domain, lint, typecheck, coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
+    needs: [gate, acquire-domain, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
@@ -634,7 +697,7 @@ jobs:
   # FINAL SUMMARY
   # ============================================================
   summary:
-    needs: [gate, acquire-domain, lint, typecheck, coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
+    needs: [gate, acquire-domain, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
     if: always()
     runs-on: ubuntu-22.04
     env:
@@ -673,6 +736,15 @@ jobs:
           else
             echo "| Unit Coverage | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
           fi
+
+          E2E_COV_RESULT="${{ needs.e2e-coverage-check.result }}"
+          if [[ "$E2E_COV_RESULT" == "success" ]]; then
+            echo "| E2E Journey Coverage | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$E2E_COV_RESULT" == "skipped" ]]; then
+            echo "| E2E Journey Coverage | :fast_forward: SKIPPED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| E2E Journey Coverage | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Claude reviews
@@ -693,6 +765,15 @@ jobs:
             echo "| UI/UX | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| UI/UX | :x: Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          COV_REVIEW_RESULT="${{ needs.claude-review-coverage.result }}"
+          if [[ "$COV_REVIEW_RESULT" == "success" ]]; then
+            echo "| E2E Coverage | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$COV_REVIEW_RESULT" == "skipped" ]]; then
+            echo "| E2E Coverage | :fast_forward: Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| E2E Coverage | :x: Failed |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -758,6 +839,12 @@ jobs:
             echo "Unit coverage FAILED"; FAILED=true
           else
             echo "Unit coverage PASSED"
+          fi
+
+          if [[ "${{ needs.e2e-coverage-check.result }}" == "failure" ]]; then
+            echo "E2E journey coverage FAILED"; FAILED=true
+          else
+            echo "E2E journey coverage PASSED"
           fi
 
           echo ""
