@@ -1573,7 +1573,12 @@ export function Chat({
       )}
       <div
         className={cn({
-          "flex-1 h-full": messages.length === 0 && !isCanvasOpen,
+          // Fill available space when the messages section won't render
+          // (no messages, or only a single assistant greeting/proactive prompt)
+          "flex-1 h-full":
+            !isCanvasOpen &&
+            (messages.length === 0 ||
+              (messages.length === 1 && messages[0]?.role === "assistant")),
           // In compact mode, don't add overflow-y-auto here - only the messages container should scroll
           "overflow-y-auto scrollbar-none":
             !isAdvancedMode && !isCanvasOpen && !isCompactMode,
