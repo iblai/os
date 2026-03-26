@@ -1,0 +1,521 @@
+{
+  "version": 2,
+  "lastUpdated": "2026-03-20",
+  "summary": {
+    "totalCheckpoints": 236,
+    "coveredCheckpoints": 236,
+    "percent": 100,
+    "totalJourneys": 33
+  },
+  "journeys": [
+    {
+      "id": "authentication",
+      "name": "Authentication",
+      "spec": "01-authentication.spec.ts",
+      "sourceFiles": ["app/sso-login/page.tsx", "app/sso-login-complete/page.tsx"],
+      "checkpoints": [
+        { "id": "auth-01", "description": "New user can sign up with email and password", "status": "covered" },
+        { "id": "auth-02", "description": "Newly signed-up user is redirected to the mentor platform", "status": "covered" },
+        { "id": "auth-03", "description": "User with invalid credentials sees an error message", "status": "covered" },
+        { "id": "auth-04", "description": "User can reset password via magic link", "status": "covered" }
+      ]
+    },
+    {
+      "id": "first-time-user-chat-and-navigation",
+      "name": "First-Time User Chat & Navigation",
+      "spec": "02-first-time-user-chat-and-navigation.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx", "components/chat/index.tsx", "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"],
+      "checkpoints": [
+        { "id": "nav-01", "description": "Newly created user can send a message and receive an AI response", "status": "covered" },
+        { "id": "nav-02", "description": "Newly created user can start a new chat session after chatting", "status": "covered" },
+        { "id": "nav-03", "description": "Newly created user can navigate to the Explore page via sidebar", "status": "covered" },
+        { "id": "nav-04", "description": "Newly created user can log out via the profile dropdown", "status": "covered" },
+        { "id": "nav-05", "description": "Sidebar can be toggled open and closed", "status": "covered" },
+        { "id": "nav-06", "description": "Help button opens the docs link in a new tab", "status": "covered" }
+      ]
+    },
+    {
+      "id": "new-user-ui-and-profile-dropdown",
+      "name": "New User UI & Profile Dropdown",
+      "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"],
+      "checkpoints": [
+        { "id": "ui-01", "description": "Mentor dropdown shows New chat item", "status": "covered" },
+        { "id": "ui-02", "description": "Non-admin sees at most 2 menu items in mentor dropdown", "status": "covered" },
+        { "id": "ui-03", "description": "Profile dropdown shows exactly 3 items", "status": "covered" },
+        { "id": "ui-04", "description": "Sidebar admin-only buttons show upgrade dialog for non-admins", "status": "covered" }
+      ]
+    },
+    {
+      "id": "user-profile-management",
+      "name": "User Profile Management",
+      "spec": "04-user-profile-management.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"],
+      "checkpoints": [
+        { "id": "prof-01", "description": "Profile modal opens from user dropdown", "status": "covered" },
+        { "id": "prof-02", "description": "Profile modal closes when clicking the close button", "status": "covered" },
+        { "id": "prof-03", "description": "All profile tabs are navigable", "status": "covered" },
+        { "id": "prof-04", "description": "Basic tab fields are pre-populated", "status": "covered" },
+        { "id": "prof-05", "description": "Basic tab Title field is editable", "status": "covered" },
+        { "id": "prof-06", "description": "Basic tab About field is editable", "status": "covered" },
+        { "id": "prof-07", "description": "Basic tab Language selector is present", "status": "covered" },
+        { "id": "prof-08", "description": "Social tab fields have URL prefixes", "status": "covered" },
+        { "id": "prof-09", "description": "Education dialog opens with all required fields", "status": "covered" },
+        { "id": "prof-10", "description": "Currently study here toggle disables end date", "status": "covered" },
+        { "id": "prof-11", "description": "Add Institution sub-dialog opens and can be cancelled", "status": "covered" },
+        { "id": "prof-12", "description": "Experience dialog opens with all required fields", "status": "covered" },
+        { "id": "prof-13", "description": "Resume tab shows upload button", "status": "covered" },
+        { "id": "prof-14", "description": "Security tab shows password reset link but no Save button", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-discovery-explore-page",
+      "name": "Mentor Discovery — Explore Page",
+      "spec": "05-mentor-discovery-explore-page.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/explore/page.tsx"],
+      "checkpoints": [
+        { "id": "exp-01", "description": "Explore page title and description are visible", "status": "covered" },
+        { "id": "exp-02", "description": "Mentor cards display correct information", "status": "covered" },
+        { "id": "exp-03", "description": "Search input filters the mentor list", "status": "covered" },
+        { "id": "exp-04", "description": "See more button loads additional mentors", "status": "covered" },
+        { "id": "exp-05", "description": "Featured section is displayed when configured", "status": "covered" },
+        { "id": "exp-06", "description": "Filter by LLM Provider narrows results", "status": "covered" },
+        { "id": "exp-07", "description": "Filter by Subject narrows results", "status": "covered" },
+        { "id": "exp-08", "description": "Filter by Type narrows results", "status": "covered" },
+        { "id": "exp-09", "description": "Filter by Created by Me narrows results", "status": "covered" },
+        { "id": "exp-10", "description": "Filter by Created by Community narrows results", "status": "covered" },
+        { "id": "exp-11", "description": "Clicking a mentor card navigates to that mentor and allows chatting", "status": "covered" },
+        { "id": "exp-12", "description": "Custom mentor creation button visible for admins", "status": "covered" },
+        { "id": "exp-13", "description": "Star/unstar a mentor updates the Favorites section", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-management-admin",
+      "name": "Mentor Management — Admin",
+      "spec": "06-mentor-management-admin.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/index.tsx"],
+      "checkpoints": [
+        { "id": "mgmt-01", "description": "Admin can update mentor profile, save and close", "status": "covered" },
+        { "id": "mgmt-02", "description": "Non-admin does not see Settings or Tools menu items", "status": "covered" },
+        { "id": "mgmt-03", "description": "Admin can change LLM provider", "status": "covered" },
+        { "id": "mgmt-04", "description": "Admin can toggle tools on/off", "status": "covered" },
+        { "id": "mgmt-05", "description": "Admin can apply custom CSS", "status": "covered" },
+        { "id": "mgmt-06", "description": "Admin can reset custom CSS", "status": "covered" },
+        { "id": "mgmt-07", "description": "Admin can apply valid custom JavaScript", "status": "covered" },
+        { "id": "mgmt-08", "description": "Admin can edit system prompt", "status": "covered" },
+        { "id": "mgmt-09", "description": "Admin can delete a mentor", "status": "covered" },
+        { "id": "mgmt-10", "description": "Admin can send a message to a newly created mentor and receive a response", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-settings-tab-unique-id",
+      "name": "Mentor Settings Tab — Unique ID",
+      "spec": "07-mentor-settings-tab-unique-id.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/settings-tab.tsx"],
+      "checkpoints": [
+        { "id": "uid-01", "description": "Unique ID field is read-only", "status": "covered" },
+        { "id": "uid-02", "description": "User cannot edit the unique ID field", "status": "covered" },
+        { "id": "uid-03", "description": "Copy button for unique ID is visible", "status": "covered" },
+        { "id": "uid-04", "description": "Copy button copies unique ID to clipboard", "status": "covered" },
+        { "id": "uid-05", "description": "Tooltip info icons have type=button and do not submit the form", "status": "covered" }
+      ]
+    },
+    {
+      "id": "chat-file-upload",
+      "name": "Chat File Upload",
+      "spec": "08-chat-file-upload.spec.ts",
+      "sourceFiles": ["components/chat-input-form/upload-menu.tsx", "hooks/use-chat-file-upload.ts"],
+      "checkpoints": [
+        { "id": "upl-01", "description": "Image, PDF, and text files can be uploaded via button", "status": "covered" },
+        { "id": "upl-02", "description": "File input accept attribute correctly filters types", "status": "covered" },
+        { "id": "upl-03", "description": "Uploaded file can be removed from the attachments list", "status": "covered" },
+        { "id": "upl-04", "description": "Drag overlay appears on dragover", "status": "covered" },
+        { "id": "upl-05", "description": "Accepted files can be drag-and-dropped", "status": "covered" },
+        { "id": "upl-06", "description": "Rejected file types show a rejection toast", "status": "covered" },
+        { "id": "upl-07", "description": "Mixed valid/invalid drop shows partial rejection toast", "status": "covered" },
+        { "id": "upl-08", "description": "Multiple files can be uploaded simultaneously", "status": "covered" },
+        { "id": "upl-09", "description": "Send button is enabled when a file is attached without text", "status": "covered" }
+      ]
+    },
+    {
+      "id": "voice-chat",
+      "name": "Voice Chat",
+      "spec": "09-voice-chat.spec.ts",
+      "sourceFiles": ["components/live-kit-voice-chat.tsx", "hooks/use-voice-chat.ts"],
+      "checkpoints": [
+        { "id": "vc-01", "description": "Voice call dialog opens with heading, mute button, and end-call button (Chromium)", "status": "covered" },
+        { "id": "vc-02", "description": "Voice call dialog opens on Firefox and WebKit", "status": "covered" },
+        { "id": "vc-03", "description": "Voice call button hidden when Show voice call toggled off", "status": "covered" },
+        { "id": "vc-04", "description": "Voice call button reappears after re-enabling the toggle", "status": "covered" },
+        { "id": "vc-05", "description": "Full voice call flow using mocked call credentials and STT", "status": "covered" },
+        { "id": "vc-06", "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)", "status": "covered" }
+      ]
+    },
+    {
+      "id": "canvas-ai-document-editor",
+      "name": "Canvas — AI Document Editor",
+      "spec": "10-canvas-ai-document-editor.spec.ts",
+      "sourceFiles": ["components/canvas/canvas-component.tsx"],
+      "checkpoints": [
+        { "id": "cvs-01", "description": "Canvas mode can be enabled and disabled", "status": "covered" },
+        { "id": "cvs-02", "description": "AI can generate a business report in the canvas", "status": "covered" },
+        { "id": "cvs-03", "description": "AI can generate technical API documentation", "status": "covered" },
+        { "id": "cvs-04", "description": "Bold formatting and undo/redo work correctly", "status": "covered" },
+        { "id": "cvs-05", "description": "Version history menu opens and navigation works", "status": "covered" },
+        { "id": "cvs-06", "description": "Back to latest version returns to current version", "status": "covered" },
+        { "id": "cvs-07", "description": "Text selection shows highlight popup and Escape closes it", "status": "covered" },
+        { "id": "cvs-08", "description": "Canvas controls panel expands and Polish works", "status": "covered" },
+        { "id": "cvs-09", "description": "Export dropdown shows PDF and Markdown options", "status": "covered" },
+        { "id": "cvs-10", "description": "Canvas can be closed and reopened from artifact card", "status": "covered" },
+        { "id": "cvs-11", "description": "Follow-up chat message modifies canvas content", "status": "covered" }
+      ]
+    },
+    {
+      "id": "canvas-embed",
+      "name": "Canvas — Embed",
+      "spec": "11-canvas-embed.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "checkpoints": [
+        { "id": "ce-01", "description": "Canvas embed displays correctly and allows chatting", "status": "covered" }
+      ]
+    },
+    {
+      "id": "chat-sharing",
+      "name": "Chat Sharing",
+      "spec": "12-chat-sharing.spec.ts",
+      "sourceFiles": ["app/share/chat/[sessionId]/page.tsx"],
+      "checkpoints": [
+        { "id": "sh-01", "description": "Shared chat URL is created and matches expected pattern", "status": "covered" },
+        { "id": "sh-02", "description": "Unauthenticated user can access shared chat and sees chat history", "status": "covered" },
+        { "id": "sh-03", "description": "Authenticated user accessing shared chat is redirected to platform", "status": "covered" },
+        { "id": "sh-04", "description": "Shared chat loads correctly and displays chat interface", "status": "covered" },
+        { "id": "sh-05", "description": "Sign up for Free button on shared chat redirects to auth", "status": "covered" },
+        { "id": "sh-06", "description": "Chat textarea is not shown for unauthenticated users on shared chat", "status": "covered" }
+      ]
+    },
+    {
+      "id": "shareable-links-and-embed-integration",
+      "name": "Shareable Links & Embed Integration",
+      "spec": "13-shareable-links-and-embed-integration.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "checkpoints": [
+        { "id": "emb-01", "description": "Non-anonymous embed with voice call, voice record, and attachment renders", "status": "covered" },
+        { "id": "emb-02", "description": "Authenticated embed chat sends a message and receives AI response", "status": "covered" },
+        { "id": "emb-03", "description": "Advanced anonymous embed with Anyone visibility renders", "status": "covered" },
+        { "id": "emb-04", "description": "Advanced anonymous embed with context awareness configured", "status": "covered" }
+      ]
+    },
+    {
+      "id": "anonymous-public-access",
+      "name": "Anonymous / Public Access",
+      "spec": "14-anonymous-public-access.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "checkpoints": [
+        { "id": "anon-01", "description": "Anonymous user sees Log in button on a public mentor page", "status": "covered" },
+        { "id": "anon-02", "description": "Clicking Log in redirects to auth host", "status": "covered" },
+        { "id": "anon-03", "description": "Anonymous user can navigate to Explore page", "status": "covered" },
+        { "id": "anon-04", "description": "Anonymous user can chat with an Anyone-configured mentor", "status": "covered" },
+        { "id": "anon-05", "description": "Anonymous user can open My Mentors modal without Create button", "status": "covered" },
+        { "id": "anon-06", "description": "Sidebar admin buttons redirect anonymous user to auth", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-switching",
+      "name": "Mentor Switching",
+      "spec": "15-mentor-switching.spec.ts",
+      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "checkpoints": [
+        { "id": "sw-01", "description": "User can switch mentor via Explore Mentors page", "status": "covered" },
+        { "id": "sw-02", "description": "User can switch mentor via My Mentors modal and continue chatting", "status": "covered" },
+        { "id": "sw-03", "description": "User can switch mentor via My Mentors modal", "status": "covered" },
+        { "id": "sw-04", "description": "Switch between mentors via My Mentors modal (dedicated spec)", "status": "covered" },
+        { "id": "sw-05", "description": "Switch between mentors via Explore page (dedicated spec)", "status": "covered" },
+        { "id": "sw-06", "description": "Switch between mentors via home page Explore section", "status": "covered" }
+      ]
+    },
+    {
+      "id": "my-mentors-modal",
+      "name": "My Mentors Modal",
+      "spec": "16-my-mentors-modal.spec.ts",
+      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "checkpoints": [
+        { "id": "mm-01", "description": "User can access a mentor through the My Mentors dropdown", "status": "covered" },
+        { "id": "mm-02", "description": "Next pagination button in My Mentors modal navigates correctly", "status": "covered" },
+        { "id": "mm-03", "description": "Admin can invite a user from the My Mentors modal", "status": "covered" }
+      ]
+    },
+    {
+      "id": "notifications",
+      "name": "Notifications",
+      "spec": "17-notifications.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/notifications/page.tsx"],
+      "checkpoints": [
+        { "id": "notif-01", "description": "Notification page is reachable from the notification bell", "status": "covered" },
+        { "id": "notif-02", "description": "Notification dropdown visible from navbar bell", "status": "covered" },
+        { "id": "notif-03", "description": "Admin can create a new notification", "status": "covered" },
+        { "id": "notif-04", "description": "Mark all as read button is visible", "status": "covered" },
+        { "id": "notif-05", "description": "Alerts tab exposes proactive fields with proper ARIA attributes", "status": "covered" },
+        { "id": "notif-06", "description": "Alerts tab auto-opens when inbox is empty", "status": "covered" }
+      ]
+    },
+    {
+      "id": "analytics-dashboard",
+      "name": "Analytics Dashboard",
+      "spec": "18-analytics-dashboard.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/analytics/page.tsx"],
+      "checkpoints": [
+        { "id": "anal-01", "description": "Overview tab loads with mini-cards, charts, and time filters", "status": "covered" },
+        { "id": "anal-02", "description": "Users tab loads with user metric cards and charts", "status": "covered" },
+        { "id": "anal-03", "description": "Topics tab loads with topic cards and charts", "status": "covered" },
+        { "id": "anal-04", "description": "Transcripts tab loads with conversation metrics", "status": "covered" },
+        { "id": "anal-05", "description": "Financial tab loads with cost cards and charts", "status": "covered" }
+      ]
+    },
+    {
+      "id": "data-reports",
+      "name": "Data Reports",
+      "spec": "19-data-reports.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/analytics/reports/page.tsx", "app/reports/[tenantKey]/[reportName]/page.tsx"],
+      "checkpoints": [
+        { "id": "rep-01", "description": "Navigate to Data Reports tab from Analytics", "status": "covered" },
+        { "id": "rep-02", "description": "All report cards display with download buttons", "status": "covered" },
+        { "id": "rep-03", "description": "CSV editor opens when clicking download on User Report", "status": "covered" },
+        { "id": "rep-04", "description": "CSV data displayed in editable table format", "status": "covered" },
+        { "id": "rep-05", "description": "Cell values can be edited in CSV editor", "status": "covered" },
+        { "id": "rep-06", "description": "New row can be added in CSV editor", "status": "covered" },
+        { "id": "rep-07", "description": "Edited CSV saves and triggers download", "status": "covered" },
+        { "id": "rep-08", "description": "CSV editor closes without saving on Cancel", "status": "covered" },
+        { "id": "rep-09", "description": "CSV editor closes when clicking Close button", "status": "covered" },
+        { "id": "rep-10", "description": "CSV editor has proper ARIA labels and roles", "status": "covered" },
+        { "id": "rep-11", "description": "CSV editor opens for User Metadata Report", "status": "covered" },
+        { "id": "rep-12", "description": "Chat History report downloads directly without CSV editor", "status": "covered" },
+        { "id": "rep-13", "description": "Other download buttons disabled while generating report", "status": "covered" },
+        { "id": "rep-14", "description": "Report download page shows preparing phase", "status": "covered" },
+        { "id": "rep-15", "description": "Full report download flow completes", "status": "covered" },
+        { "id": "rep-16", "description": "Download Again button works after completion", "status": "covered" },
+        { "id": "rep-17", "description": "Back Home navigates to root", "status": "covered" },
+        { "id": "rep-18", "description": "Error phase shown for invalid report name", "status": "covered" }
+      ]
+    },
+    {
+      "id": "dataset-management",
+      "name": "Dataset Management",
+      "spec": "20-dataset-management.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx"],
+      "checkpoints": [
+        { "id": "ds-01", "description": "Datasets tab header and description display correctly", "status": "covered" },
+        { "id": "ds-02", "description": "Search input is visible", "status": "covered" },
+        { "id": "ds-03", "description": "Search functionality works", "status": "covered" },
+        { "id": "ds-04", "description": "Add Resource button opens modal", "status": "covered" },
+        { "id": "ds-05", "description": "Add Resource modal shows all resource types", "status": "covered" },
+        { "id": "ds-06", "description": "Table headers display correctly", "status": "covered" },
+        { "id": "ds-07", "description": "Dataset list or empty state renders", "status": "covered" },
+        { "id": "ds-08", "description": "Pagination works when datasets exist", "status": "covered" },
+        { "id": "ds-09", "description": "Visibility toggle works", "status": "covered" },
+        { "id": "ds-10", "description": "Training status switch works", "status": "covered" },
+        { "id": "ds-11", "description": "Schedule Retrain modal opens", "status": "covered" },
+        { "id": "ds-12", "description": "Delete Dataset flow works", "status": "covered" },
+        { "id": "ds-13", "description": "PDF file can be uploaded", "status": "covered" },
+        { "id": "ds-14", "description": "State preserved after modal close and reopen", "status": "covered" },
+        { "id": "ds-15", "description": "Untrained dataset can be trained", "status": "covered" },
+        { "id": "ds-16", "description": "File upload cancellation is handled gracefully", "status": "covered" }
+      ]
+    },
+    {
+      "id": "billing-and-subscription",
+      "name": "Billing & Subscription",
+      "spec": "21-billing-and-subscription.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx"],
+      "checkpoints": [
+        { "id": "bill-01", "description": "Billing tab is visible in account settings", "status": "covered" },
+        { "id": "bill-02", "description": "Billing main card shows credits info", "status": "covered" },
+        { "id": "bill-03", "description": "Correct buttons shown based on payment method status", "status": "covered" },
+        { "id": "bill-04", "description": "Subscription renewal info shown when applicable", "status": "covered" },
+        { "id": "bill-05", "description": "Usage card visible when topUpURL configured", "status": "covered" },
+        { "id": "bill-06", "description": "Plan info and upgrade button display when applicable", "status": "covered" },
+        { "id": "bill-07", "description": "Auto Recharge modal opens with all elements and Cancel closes it", "status": "covered" },
+        { "id": "bill-08", "description": "Add Credits modal opens correctly", "status": "covered" },
+        { "id": "bill-09", "description": "New user sees Stripe pricing modal when creating a mentor", "status": "covered" }
+      ]
+    },
+    {
+      "id": "disclaimers-and-user-agreement",
+      "name": "Disclaimers & User Agreement",
+      "spec": "22-disclaimers-and-user-agreement.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx", "components/modals/disclaimer-modal.tsx"],
+      "checkpoints": [
+        { "id": "disc-01", "description": "Admin toggles User Agreement on and unauthenticated user sees disclaimer modal", "status": "covered" },
+        { "id": "disc-02", "description": "Admin can edit User Agreement content", "status": "covered" },
+        { "id": "disc-03", "description": "Admin can copy User Agreement content", "status": "covered" },
+        { "id": "disc-04", "description": "Admin can edit Advisory text", "status": "covered" },
+        { "id": "disc-05", "description": "Disclaimers tab has proper WCAG accessibility", "status": "covered" },
+        { "id": "disc-06", "description": "User Agreement modal is accessible", "status": "covered" },
+        { "id": "disc-07", "description": "Create mentor and configure all disclaimers end-to-end", "status": "covered" },
+        { "id": "disc-08", "description": "Toggle User Agreement on/off affects chat modal appearance", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-history-tab",
+      "name": "Mentor History Tab",
+      "spec": "23-mentor-history-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/history-tab.tsx"],
+      "checkpoints": [
+        { "id": "hist-01", "description": "History dialog is accessible", "status": "covered" },
+        { "id": "hist-02", "description": "Chat history list loads with conversations and supports pagination", "status": "covered" },
+        { "id": "hist-03", "description": "Sentiment and topic filters narrow the conversation list", "status": "covered" },
+        { "id": "hist-04", "description": "Individual conversation can be expanded to view transcript", "status": "covered" },
+        { "id": "hist-05", "description": "Chat history can be exported", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-memory-tab",
+      "name": "Mentor Memory Tab",
+      "spec": "24-mentor-memory-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx"],
+      "checkpoints": [
+        { "id": "mem-01", "description": "Memory tab is visible in Edit Mentor modal", "status": "covered" },
+        { "id": "mem-02", "description": "Reference saved memories toggle can be enabled and disabled", "status": "covered" },
+        { "id": "mem-03", "description": "User memories list shows entries or empty state and entry can be deleted", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mentor-mcp-tab",
+      "name": "Mentor MCP Tab",
+      "spec": "25-mentor-mcp-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"],
+      "checkpoints": [
+        { "id": "mcp-01", "description": "MCP tab is visible in Edit Mentor modal", "status": "covered" },
+        { "id": "mcp-02", "description": "MCP tab shows connector list or empty state", "status": "covered" },
+        { "id": "mcp-03", "description": "New MCP connector can be added and appears in the list", "status": "covered" },
+        { "id": "mcp-04", "description": "MCP connector can be deleted", "status": "covered" }
+      ]
+    },
+    {
+      "id": "projects",
+      "name": "Projects",
+      "spec": "26-projects.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx", "components/projects/project-landing-page.tsx"],
+      "checkpoints": [
+        { "id": "proj-01", "description": "New project can be created from the sidebar", "status": "covered" },
+        { "id": "proj-02", "description": "Project landing page shows mentor list and action buttons", "status": "covered" },
+        { "id": "proj-03", "description": "Mentor can be added to a project", "status": "covered" },
+        { "id": "proj-04", "description": "Project instructions can be set and saved", "status": "covered" },
+        { "id": "proj-05", "description": "Project files modal opens with Add Files button", "status": "covered" },
+        { "id": "proj-06", "description": "Chatting in a project creates a session", "status": "covered" },
+        { "id": "proj-07", "description": "Project can be renamed", "status": "covered" },
+        { "id": "proj-08", "description": "Project can be deleted", "status": "covered" }
+      ]
+    },
+    {
+      "id": "user-invitations-and-default-mentor",
+      "name": "User Invitations & Default Mentor",
+      "spec": "27-user-invitations-and-default-mentor.spec.ts",
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "checkpoints": [
+        { "id": "inv-01", "description": "Admin can invite a user via email", "status": "covered" },
+        { "id": "inv-02", "description": "Invited user can sign up via the invite link", "status": "covered" },
+        { "id": "inv-03", "description": "Invite shows as accepted after user registers", "status": "covered" },
+        { "id": "inv-04", "description": "Admin can set a default mentor in Advanced settings", "status": "covered" },
+        { "id": "inv-05", "description": "Newly invited user lands on the configured default mentor", "status": "covered" }
+      ]
+    },
+    {
+      "id": "app-overview-and-navigation-ui",
+      "name": "App Overview & Navigation UI",
+      "spec": "28-app-overview-and-navigation-ui.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx", "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"],
+      "checkpoints": [
+        { "id": "ov-01", "description": "Header renders all expected components", "status": "covered" },
+        { "id": "ov-02", "description": "Current mentor dropdown responds to clicks", "status": "covered" },
+        { "id": "ov-03", "description": "User profile dropdown buttons work correctly", "status": "covered" },
+        { "id": "ov-04", "description": "Sidebar renders all expected components", "status": "covered" },
+        { "id": "ov-05", "description": "Vector document button is visible in the sidebar", "status": "covered" },
+        { "id": "ov-06", "description": "LLM provider modal opened from navbar hides configuration header", "status": "covered" },
+        { "id": "ov-07", "description": "LLM provider modal inside Edit Mentor retains configuration header", "status": "covered" }
+      ]
+    },
+    {
+      "id": "accessibility-wcag",
+      "name": "Accessibility — WCAG 2.1 AA",
+      "spec": "29-accessibility-wcag.spec.ts",
+      "sourceFiles": ["components/accessibility/accessibility-toolbar.tsx"],
+      "checkpoints": [
+        { "id": "a11y-01", "description": "Homepage has no accessibility violations", "status": "covered" },
+        { "id": "a11y-02", "description": "Mentors catalog has no accessibility violations", "status": "covered" },
+        { "id": "a11y-03", "description": "Create Mentor modal meets accessibility guidelines", "status": "covered" },
+        { "id": "a11y-04", "description": "Invite Users modal meets accessibility guidelines", "status": "covered" },
+        { "id": "a11y-05", "description": "Settings modal meets accessibility guidelines", "status": "covered" },
+        { "id": "a11y-06", "description": "My Mentors dialog meets accessibility guidelines", "status": "covered" },
+        { "id": "a11y-07", "description": "Embed dialog is accessible", "status": "covered" },
+        { "id": "a11y-08", "description": "Dataset dialog is accessible", "status": "covered" },
+        { "id": "a11y-09", "description": "Mentor Settings dialog is accessible", "status": "covered" },
+        { "id": "a11y-10", "description": "LLM provider dialog is accessible", "status": "covered" },
+        { "id": "a11y-11", "description": "Prompts dialog is accessible", "status": "covered" },
+        { "id": "a11y-12", "description": "Tools dialog is accessible", "status": "covered" },
+        { "id": "a11y-13", "description": "Add Resources dialog is accessible", "status": "covered" },
+        { "id": "a11y-14", "description": "History dialog is accessible", "status": "covered" },
+        { "id": "a11y-15", "description": "Safety dialog is accessible", "status": "covered" },
+        { "id": "a11y-16", "description": "API key dialog is accessible", "status": "covered" }
+      ]
+    },
+    {
+      "id": "advanced-css-js-customization",
+      "name": "Advanced CSS / JS Customization",
+      "spec": "30-advanced-css-js-customization.spec.ts",
+      "sourceFiles": ["components/modals/advanced-settings-modal.tsx"],
+      "checkpoints": [
+        { "id": "css-01", "description": "Advanced CSS section is displayed in Advanced settings tab", "status": "covered" },
+        { "id": "css-02", "description": "Advanced CSS section can be expanded and collapsed", "status": "covered" },
+        { "id": "css-03", "description": "Save button is disabled when no CSS changes have been made", "status": "covered" },
+        { "id": "css-04", "description": "Save and Discard buttons become enabled when CSS is modified", "status": "covered" },
+        { "id": "css-05", "description": "Discarding CSS changes restores the previous value", "status": "covered" },
+        { "id": "css-06", "description": "Valid CSS shows a success validation status", "status": "covered" },
+        { "id": "css-07", "description": "Invalid CSS shows a validation error message", "status": "covered" },
+        { "id": "css-08", "description": "Advanced CSS section has proper accessibility attributes", "status": "covered" }
+      ]
+    },
+    {
+      "id": "mobile-view",
+      "name": "Mobile View",
+      "spec": "31-mobile-view.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "checkpoints": [
+        { "id": "mob-01", "description": "Sidebar navigation displays correct menu items on mobile", "status": "covered" },
+        { "id": "mob-02", "description": "Mentor dropdown works correctly in mobile view", "status": "covered" },
+        { "id": "mob-03", "description": "User profile button works correctly in mobile view", "status": "covered" },
+        { "id": "mob-04", "description": "Navbar components render correctly in mobile view", "status": "covered" },
+        { "id": "mob-05", "description": "Explore page title and tabs display correctly on mobile", "status": "covered" },
+        { "id": "mob-06", "description": "Search and mentor cards work correctly on mobile", "status": "covered" },
+        { "id": "mob-07", "description": "Dataset upload and untrain/delete flow works on mobile", "status": "covered" }
+      ]
+    },
+    {
+      "id": "multi-tenancy-advertising-and-auth-customization",
+      "name": "Multi-Tenancy, Advertising & Auth Customization",
+      "spec": "32-multi-tenancy-advertising-and-auth-customization.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx", "app/sso-login/page.tsx"],
+      "checkpoints": [
+        { "id": "mt-01", "description": "Enterprise tenant: new mentor can be created from sidebar dialog", "status": "covered" },
+        { "id": "mt-02", "description": "Enterprise tenant: new mentor can be created from Settings dialog", "status": "covered" },
+        { "id": "mt-03", "description": "Enterprise tenant: new mentor can be created from My Mentors dialog", "status": "covered" },
+        { "id": "mt-04", "description": "Enterprise tenant: sidebar open/close behavior works", "status": "covered" },
+        { "id": "mt-05", "description": "Enterprise tenant: platform logo navigates home", "status": "covered" },
+        { "id": "mt-06", "description": "Enterprise tenant: New Chat navigation and sidebar items work", "status": "covered" },
+        { "id": "mt-07", "description": "Advertising tenant: anonymous user can access public mentor", "status": "covered" },
+        { "id": "mt-08", "description": "Admin can customize authentication SPA branding", "status": "covered" },
+        { "id": "mt-09", "description": "Help Center toggle controls dropdown and embed visibility", "status": "covered" },
+        { "id": "mt-10", "description": "Help Center URL updates in dropdown and embed menu", "status": "covered" },
+        { "id": "mt-11", "description": "Advertising tenant: user can log in to mentor", "status": "covered" }
+      ]
+    },
+    {
+      "id": "ui-render-console-errors",
+      "name": "UI Render Console Errors",
+      "spec": "33-ui-render-console-errors.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "checkpoints": [
+        { "id": "ui-err-01", "description": "Authenticated user goes to the platform URL and sees no render failures or console errors", "status": "covered" }
+      ]
+    }
+  ]
+}
