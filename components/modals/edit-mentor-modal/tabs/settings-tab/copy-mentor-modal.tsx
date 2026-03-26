@@ -32,6 +32,7 @@ import {
 import { MentorVisibilityEnum } from "@iblai/iblai-api";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { handleTenantSwitch } from "@/lib/utils";
 import React from "react";
 
 interface CopyMentorModalProps {
@@ -124,18 +125,34 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
       toast.success("Mentor copied successfully. Switching to new mentor...");
       onClose();
 
-      const newStack = getUpdatedModalStack(
-        MODALS.EDIT_MENTOR.name,
-        MODALS.EDIT_MENTOR.tabs.settings,
+      const isCrossTenantCopy = destinationTenantKey !== tenantKey;
+
+      if (isCrossTenantCopy) {
         // @ts-ignore unique_id exists on the forked mentor response
-        forkedMentor.unique_id,
-      );
-      navigateToMentor(
-        // @ts-ignore unique_id exists on the forked mentor response
-        forkedMentor.unique_id,
-        `modal=${JSON.stringify(newStack)}`,
-        destinationTenantKey,
-      );
+        const newMentorId = forkedMentor.unique_id;
+        const modalStack = [
+          {
+            name: MODALS.EDIT_MENTOR.name,
+            tab: MODALS.EDIT_MENTOR.tabs.settings,
+          },
+        ];
+        const mentorPath = `/platform/${destinationTenantKey}/${newMentorId}?modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
+        await handleTenantSwitch(
+          destinationTenantKey,
+          false,
+          `${window.location.origin}${mentorPath}`,
+        );
+      } else {
+        const newStack = getUpdatedModalStack(
+          MODALS.EDIT_MENTOR.name,
+          MODALS.EDIT_MENTOR.tabs.settings,
+        );
+        navigateToMentor(
+          // @ts-ignore unique_id exists on the forked mentor response
+          forkedMentor.unique_id,
+          `modal=${JSON.stringify(newStack)}`,
+        );
+      }
     } catch {
       toast.error("Failed to copy mentor");
     }

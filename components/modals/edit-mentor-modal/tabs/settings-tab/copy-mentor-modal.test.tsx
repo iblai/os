@@ -167,8 +167,11 @@ vi.mock("@/lib/constants", () => ({
   },
 }));
 
+const mockHandleTenantSwitch = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@/lib/utils", () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(" "),
+  handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
 }));
 
 // ============================================================================
@@ -623,7 +626,7 @@ describe("CopyMentorModal", () => {
       });
     });
 
-    it("navigates to new mentor on successful copy", async () => {
+    it("navigates to new mentor on same-tenant copy", async () => {
       render(<CopyMentorModal onClose={mockOnClose} />);
 
       fireEvent.click(screen.getByText("Copy"));
@@ -632,12 +635,12 @@ describe("CopyMentorModal", () => {
         expect(mockNavigateToMentor).toHaveBeenCalledWith(
           "new-mentor-id",
           expect.any(String),
-          "test-tenant",
         );
       });
+      expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
     });
 
-    it("navigates to new mentor on different tenant when copied across tenants", async () => {
+    it("switches tenant when copied to a different tenant", async () => {
       mockGetUserTenantsQuery.mockReturnValue({
         data: multipleAdminTenants,
         isLoading: false,
@@ -651,12 +654,16 @@ describe("CopyMentorModal", () => {
       fireEvent.click(screen.getByText("Copy"));
 
       await waitFor(() => {
-        expect(mockNavigateToMentor).toHaveBeenCalledWith(
-          "new-mentor-id",
-          expect.any(String),
+        expect(mockHandleTenantSwitch).toHaveBeenCalledWith(
           "other-tenant",
+          false,
+          expect.stringContaining("/platform/other-tenant/new-mentor-id"),
         );
+        const redirectUrl = mockHandleTenantSwitch.mock.calls[0][2] as string;
+        expect(redirectUrl).toContain("modal=");
+        expect(redirectUrl).toContain("edit_mentor");
       });
+      expect(mockNavigateToMentor).not.toHaveBeenCalled();
     });
 
     it("shows error toast on failed copy", async () => {
