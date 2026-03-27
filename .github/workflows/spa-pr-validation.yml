@@ -11,6 +11,12 @@ concurrency:
   group: pr-validation-mentor-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  id-token: write
+
 jobs:
   # ============================================================
   # GATE: Detect what changed, decide what to build/test
