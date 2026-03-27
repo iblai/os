@@ -18848,5 +18848,67 @@ describe("Chat", () => {
         ).toBeInTheDocument();
       });
     });
+
+    it("should open phone call modal when voice call is clicked in mobile canvas view", async () => {
+      await setupCanvasView();
+
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId("input-phone-call-btn")[1]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("live-kit-chat")).toBeInTheDocument();
+      });
+    });
+
+    it("should open screen sharing modal when screen share is clicked in mobile canvas view", async () => {
+      await setupCanvasView();
+
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId("input-screen-sharing-btn")[1]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("live-kit-screen-sharing"),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should send message to parent in iframe mode when voice call is clicked in canvas view", async () => {
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        "@/lib/utils"
+      );
+      (isInIframe as any).mockReturnValue(true);
+      mockSelectEnableChatActionsPopup.mockReturnValue(true);
+
+      await setupCanvasView();
+
+      fireEvent.click(screen.getAllByTestId("input-phone-call-btn")[0]);
+
+      expect(sendMessageToParentWebsite).toHaveBeenCalledWith({
+        type: "MENTOR:CHAT_ACTION_VOICECALL",
+        sessionId: "session-123",
+      });
+
+      mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    });
+
+    it("should send message to parent in iframe mode when screen share is clicked in canvas view", async () => {
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        "@/lib/utils"
+      );
+      (isInIframe as any).mockReturnValue(true);
+      mockSelectEnableChatActionsPopup.mockReturnValue(true);
+
+      await setupCanvasView();
+
+      fireEvent.click(screen.getAllByTestId("input-screen-sharing-btn")[0]);
+
+      expect(sendMessageToParentWebsite).toHaveBeenCalledWith({
+        type: "MENTOR:CHAT_ACTION_SCREENSHARE",
+        sessionId: "session-123",
+      });
+
+      mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    });
   });
 });
