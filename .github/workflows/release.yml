@@ -42,4 +42,5 @@ jobs:
       - name: Run release-it
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          HUSKY: '0'
         run: pnpm release --ci
