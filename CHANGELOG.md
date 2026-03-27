@@ -1,3 +1,7 @@
+## [0.36.12]
+
+- iblai-js bump version to 1.1.6
+
 ## [0.36.11]
 
 - ⁠Fixed chat height when empty
