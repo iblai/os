@@ -60,6 +60,7 @@ import { MentorTimeTrackingProvider } from "@/hooks/use-mentor-time-tracking";
 import { useSelector } from "react-redux";
 import { updateRbacPermissions } from "@/features/rbac/rbac-slice";
 import { useAppDispatch } from "@/lib/hooks";
+import { useMonetizationCheck } from "@/hooks/monetization/use-monetization-check";
 import { toast } from "sonner";
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
 import { useTenantMetadata } from "@iblai/iblai-js/web-utils";
@@ -156,6 +157,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { tenantKey: tenantKeyParams, mentorId } =
     useParams<TenantKeyMentorIdParams>();
   const [getMentorPublicSettings] = useLazyGetMentorPublicSettingsQuery();
+  const { checkMentorAccess } = useMonetizationCheck();
 
   // Check if we're in Tauri offline mode early - needed to skip API calls
   // Use isOfflineServerOrigin() as primary check since it works before Tauri scripts run
@@ -590,7 +592,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 }
                 await handleMentorNotFound();
               }}
-              onComplete={() => {
+              onComplete={async () => {
                 // Hide initial loader when mentor provider is ready
                 hideInitialLoader();
 
@@ -603,6 +605,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   setTimeout(() => {
                     toast.success("Mentor switched successfully");
                   }, 1000);
+                }
+
+                // Check if the current mentor requires purchase
+                if (tenantKeyParams && mentorId) {
+                  checkMentorAccess(tenantKeyParams, mentorId);
                 }
               }}
             >
