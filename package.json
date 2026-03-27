@@ -204,6 +204,7 @@
     "postcss-loader": "^8.2.0",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.11",
+    "release-it": "^19.2.4",
     "tailwind-scrollbar": "4.0.2",
     "tailwindcss": "^4.1.18",
     "turbo": "2.5.3",
