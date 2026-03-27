@@ -1,3 +1,7 @@
+## [0.36.12]
+
+- fix(web-containers): data reports > overall optimization > tests updated
+
 ## [0.36.11]
 
 - ⁠Fixed chat height when empty
