@@ -1,3 +1,9 @@
+# Changelog
+
+* fix(ci): disable husky hooks in release workflow to prevent OOM on CI (50aa7ed)
+* fix(ci): add release-it devDep, fix node version; skip custom domain check on mentor origin (118bfa7)
+* fix(e2e): increase timeout and re-enable Safari browser tests (4cc718d)
+
 ## [0.36.12]
 
 - iblai-js bump version to 1.1.6
