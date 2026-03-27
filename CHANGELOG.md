@@ -1,3 +1,8 @@
+## [0.36.11]
+
+- ⁠Fixed chat height when empty
+- Fixed welcome proactive messages in iframed anonymous mentors
+
 ## [0.36.10]
 
 - chore(iblai-js): bump version of iblai-js to 1.1.5

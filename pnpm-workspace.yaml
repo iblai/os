@@ -1,2 +1,9 @@
-overrides:
-  list: link:../../../Library/pnpm/global/5/node_modules/list
+onlyBuiltDependencies:
+  - '@sentry/cli'
+  - canvas
+  - core-js
+  - electron
+  - electron-winstaller
+  - esbuild
+  - sharp
+  - unrs-resolver
