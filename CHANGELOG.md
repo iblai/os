@@ -1,6 +1,6 @@
 ## [0.36.12]
 
-- fix(web-containers): data reports > overall optimization > tests updated
+- iblai-js bump version to 1.1.6
 
 ## [0.36.11]
 
