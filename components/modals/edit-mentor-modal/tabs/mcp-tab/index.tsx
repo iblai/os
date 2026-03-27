@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useParams } from 'next/navigation';
-import { ConnectorManagementContent } from './connector-management-content';
-import { useUsername } from '@/hooks/use-user';
-import { useNavigate } from '@/hooks/user-navigate';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import type { MCPServer } from '@iblai/iblai-js/data-layer';
+import React from "react";
+import { useParams } from "next/navigation";
+import { ConnectorManagementContent } from "./connector-management-content";
+import { useUsername } from "@/hooks/use-user";
+import { useNavigate } from "@/hooks/user-navigate";
+import { TenantKeyMentorIdParams } from "@/lib/types";
+import type { MCPServer } from "@iblai/iblai-js/data-layer";
 
 interface McpTabProps {
   onSelect?: (server: MCPServer) => void;
@@ -31,13 +31,13 @@ export function McpTab({ onSelect }: McpTabProps = {}) {
       <div
         className="flex-1 p-3 lg:p-4"
         style={{
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          overflowY: "auto",
+          overflowX: "hidden",
         }}
       >
         <ConnectorManagementContent
           tenantKey={tenantKey}
-          username={username ?? ''}
+          username={username ?? ""}
           mentorId={activeMentorId}
           onSelect={onSelect}
         />

@@ -1,18 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Search, Plus, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
-import { CreateWorkflowModal } from '@iblai/iblai-js/web-containers';
-import { useGetWorkflowsQuery, useCreateWorkflowMutation} from '@iblai/iblai-js/data-layer';
-import type { Workflow } from '@iblai/iblai-js/data-layer';
-import { toast } from 'sonner';
+import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Search,
+  Plus,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { CreateWorkflowModal } from "@iblai/iblai-js/web-containers";
+import {
+  useGetWorkflowsQuery,
+  useCreateWorkflowMutation,
+} from "@iblai/iblai-js/data-layer";
+import type { Workflow } from "@iblai/iblai-js/data-layer";
+import { toast } from "sonner";
 
 export default function WorkflowsPage() {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
   const params = useParams<{ tenantKey: string; mentorId: string }>();
@@ -22,23 +32,30 @@ export default function WorkflowsPage() {
     { skip: !params.tenantKey },
   );
 
-  const [createWorkflow, { isLoading: isCreating }] = useCreateWorkflowMutation();
+  const [createWorkflow, { isLoading: isCreating }] =
+    useCreateWorkflowMutation();
 
   const workflows = useMemo(() => data?.results ?? [], [data]);
 
   const getStatusColor = (isActive: boolean) => {
-    return isActive ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-100';
+    return isActive
+      ? "text-green-600 bg-green-50"
+      : "text-gray-600 bg-gray-100";
   };
 
   const getStatusIcon = (isActive: boolean) => {
-    return isActive ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />;
+    return isActive ? (
+      <CheckCircle2 className="h-3 w-3" />
+    ) : (
+      <Clock className="h-3 w-3" />
+    );
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -59,37 +76,46 @@ export default function WorkflowsPage() {
   const handleCreateWorkflow = async (name: string) => {
     const defaultNodes = [
       {
-        id: 'start',
-        type: 'start',
+        id: "start",
+        type: "start",
         position: { x: 100, y: 250 },
-        data: { label: 'Start' },
+        data: { label: "Start" },
         draggable: true,
         selectable: true,
         connectable: true,
       },
       {
-        id: 'mentor-1',
-        type: 'mentor',
+        id: "mentor-1",
+        type: "mentor",
         position: { x: 350, y: 250 },
-        data: { label: 'Mentor', subtitle: 'Mentor', mentor_id: params.mentorId },
+        data: {
+          label: "Mentor",
+          subtitle: "Mentor",
+          mentor_id: params.mentorId,
+        },
         draggable: true,
         selectable: true,
         connectable: true,
       },
     ];
-    const defaultEdges = [{ id: 'e-start-mentor-1', source: 'start', target: 'mentor-1' }];
+    const defaultEdges = [
+      { id: "e-start-mentor-1", source: "start", target: "mentor-1" },
+    ];
 
     try {
       const workflow = await createWorkflow({
         org: params.tenantKey,
-        data: { name, definition: { nodes: defaultNodes, edges: defaultEdges } },
+        data: {
+          name,
+          definition: { nodes: defaultNodes, edges: defaultEdges },
+        },
       }).unwrap();
       setIsCreateModalOpen(false);
       router.push(
         `/platform/${params.tenantKey}/workflows/${workflow.entry_mentor_id}/${workflow.unique_id}?listMentorId=${params.mentorId}`,
       );
     } catch {
-      toast.error('Failed to create workflow');
+      toast.error("Failed to create workflow");
     }
   };
 
@@ -115,9 +141,12 @@ export default function WorkflowsPage() {
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="px-3 md:px-6 py-6 md:py-8 max-w-[920px] mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-gray-700 mb-2">Workflows</h1>
+            <h1 className="text-2xl font-semibold text-gray-700 mb-2">
+              Workflows
+            </h1>
             <p className="text-sm text-gray-600">
-              Create and manage automated workflows for your mentors and learning experiences
+              Create and manage automated workflows for your mentors and
+              learning experiences
             </p>
           </div>
 
@@ -155,19 +184,23 @@ export default function WorkflowsPage() {
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-semibold text-base text-gray-900">{workflow.name}</h3>
+                        <h3 className="font-semibold text-base text-gray-900">
+                          {workflow.name}
+                        </h3>
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(workflow.is_active ?? false)}`}
                         >
                           {getStatusIcon(workflow.is_active ?? false)}
-                          {workflow.is_active ? 'Active' : 'Draft'}
+                          {workflow.is_active ? "Active" : "Draft"}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">
-                        {workflow.description || 'No description'}
+                        {workflow.description || "No description"}
                       </p>
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>Modified {getRelativeTime(workflow.updated_at)}</span>
+                        <span>
+                          Modified {getRelativeTime(workflow.updated_at)}
+                        </span>
                         <span>Created {formatDate(workflow.created_at)}</span>
                       </div>
                     </CardContent>

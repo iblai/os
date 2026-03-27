@@ -1,32 +1,54 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Copy, Plus, X, Trash2, Settings, Info, Plug, Cable } from 'lucide-react';
-import { useGetMentorSettingsQuery, useGetToolsQuery } from '@iblai/iblai-js/data-layer';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useState, useCallback, useEffect, useRef } from "react";
+import {
+  Copy,
+  Plus,
+  X,
+  Trash2,
+  Settings,
+  Info,
+  Plug,
+  Cable,
+} from "lucide-react";
+import {
+  useGetMentorSettingsQuery,
+  useGetToolsQuery,
+} from "@iblai/iblai-js/data-layer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid';
-import { DatasetsTab } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab';
-import WithFormPermissions from '@/hoc/withPermissions';
-import { pushModal, popModal } from '@/features/navigation/slice';
-import { useUsername } from '@/hooks/use-user';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
-import { useAppDispatch } from '@/lib/hooks';
-import { McpTab } from '@/components/modals/edit-mentor-modal/tabs/mcp-tab';
-import type { MCPServer } from '@iblai/iblai-js/data-layer';
-import type { NodeConfig } from './workflow-canvas';
+} from "@/components/ui/select";
+import { MentorSelectionGrid } from "@/components/mentors/mentor-selection-grid";
+import { DatasetsTab } from "@/components/modals/edit-mentor-modal/tabs/datasets-tab";
+import WithFormPermissions from "@/hoc/withPermissions";
+import { pushModal, popModal } from "@/features/navigation/slice";
+import { useUsername } from "@/hooks/use-user";
+import { useToggleTools } from "@/hooks/use-tools/use-toggle-tools";
+import { useAppDispatch } from "@/lib/hooks";
+import { McpTab } from "@/components/modals/edit-mentor-modal/tabs/mcp-tab";
+import type { MCPServer } from "@iblai/iblai-js/data-layer";
+import type { NodeConfig } from "./workflow-canvas";
 
 interface Variable {
   id: string;
@@ -69,8 +91,8 @@ interface NodeConfigPanelProps {
   defaultMentorId?: string;
 }
 
-const DEFAULT_INSTRUCTIONS = 'You are a helpful assistant.';
-const DEFAULT_MENTOR_LABELS = new Set(['my mentor', 'mentor', 'mentor node']);
+const DEFAULT_INSTRUCTIONS = "You are a helpful assistant.";
+const DEFAULT_MENTOR_LABELS = new Set(["my mentor", "mentor", "mentor node"]);
 
 const isDefaultMentorLabel = (label?: string) => {
   if (!label) return true;
@@ -90,14 +112,20 @@ export function NodeConfigPanel({
 
   // Initialize state from nodeData
   const [nodeName, setNodeName] = useState(nodeData.label);
-  const [instructions, setInstructions] = useState(nodeData.instructions ?? DEFAULT_INSTRUCTIONS);
-  const [model, setModel] = useState(nodeData.model ?? '');
-  const [continueOnError, setContinueOnError] = useState(nodeData.continueOnError ?? false);
+  const [instructions, setInstructions] = useState(
+    nodeData.instructions ?? DEFAULT_INSTRUCTIONS,
+  );
+  const [model, setModel] = useState(nodeData.model ?? "");
+  const [continueOnError, setContinueOnError] = useState(
+    nodeData.continueOnError ?? false,
+  );
 
   const [inputVariables] = useState<Variable[]>([
-    { id: '1', name: 'input_as_text', type: 'string' },
+    { id: "1", name: "input_as_text", type: "string" },
   ]);
-  const [stateVariables, setStateVariables] = useState<Variable[]>(nodeData.stateVariables ?? []);
+  const [stateVariables, setStateVariables] = useState<Variable[]>(
+    nodeData.stateVariables ?? [],
+  );
 
   // Track if we're in the middle of a local update to avoid sync loops
   const isLocalUpdate = useRef(false);
@@ -114,82 +142,103 @@ export function NodeConfigPanel({
     // Sync all state values with incoming nodeData
     setNodeName(nodeData.label);
     setInstructions(nodeData.instructions ?? DEFAULT_INSTRUCTIONS);
-    setModel(nodeData.model ?? '');
+    setModel(nodeData.model ?? "");
     setContinueOnError(nodeData.continueOnError ?? false);
     setStateVariables(nodeData.stateVariables ?? []);
-    setConditions(nodeData.conditions ?? [{ id: '1', caseName: '', expression: '' }]);
-    setWhileExpression(nodeData.whileExpression ?? '');
-    setUserApprovalMessage(nodeData.userApprovalMessage ?? '');
-    setTransformMode(nodeData.transformMode ?? 'expressions');
+    setConditions(
+      nodeData.conditions ?? [{ id: "1", caseName: "", expression: "" }],
+    );
+    setWhileExpression(nodeData.whileExpression ?? "");
+    setUserApprovalMessage(nodeData.userApprovalMessage ?? "");
+    setTransformMode(nodeData.transformMode ?? "expressions");
     setTransformExpressions(
-      nodeData.transformExpressions ?? [{ id: '1', key: 'result', value: 'input.foo + 1' }],
+      nodeData.transformExpressions ?? [
+        { id: "1", key: "result", value: "input.foo + 1" },
+      ],
     );
     setSetStateAssignments(
-      nodeData.setStateAssignments ?? [{ id: '1', value: 'input.foo + 1', variable: '' }],
+      nodeData.setStateAssignments ?? [
+        { id: "1", value: "input.foo + 1", variable: "" },
+      ],
     );
     setMcpConnectors(nodeData.mcpConnectors ?? []);
-    setDatasetId(nodeData.datasetId ?? '');
-    setDatasetName(nodeData.datasetName ?? '');
+    setDatasetId(nodeData.datasetId ?? "");
+    setDatasetName(nodeData.datasetName ?? "");
     setMaxResults(nodeData.maxResults ?? 10);
-    setFileSearchQuery(nodeData.fileSearchQuery ?? '');
+    setFileSearchQuery(nodeData.fileSearchQuery ?? "");
   }, [nodeData]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedType, setSelectedType] = useState<
-    'String' | 'Number' | 'Boolean' | 'Object' | 'List'
-  >('String');
-  const [newVarName, setNewVarName] = useState('');
-  const [newVarDefault, setNewVarDefault] = useState('');
+    "String" | "Number" | "Boolean" | "Object" | "List"
+  >("String");
+  const [newVarName, setNewVarName] = useState("");
+  const [newVarDefault, setNewVarDefault] = useState("");
 
   const [showMentorModal, setShowMentorModal] = useState(false);
-  const [mentorSearchQuery, setMentorSearchQuery] = useState('');
+  const [mentorSearchQuery, setMentorSearchQuery] = useState("");
   const [conditions, setConditions] = useState<Condition[]>(
-    nodeData.conditions ?? [{ id: '1', caseName: '', expression: '' }],
+    nodeData.conditions ?? [{ id: "1", caseName: "", expression: "" }],
   );
 
-  const [whileExpression, setWhileExpression] = useState(nodeData.whileExpression ?? '');
+  const [whileExpression, setWhileExpression] = useState(
+    nodeData.whileExpression ?? "",
+  );
   const [userApprovalMessage, setUserApprovalMessage] = useState(
-    nodeData.userApprovalMessage ?? '',
+    nodeData.userApprovalMessage ?? "",
   );
-  const [transformMode, setTransformMode] = useState<'expressions' | 'object'>(
-    nodeData.transformMode ?? 'expressions',
+  const [transformMode, setTransformMode] = useState<"expressions" | "object">(
+    nodeData.transformMode ?? "expressions",
   );
-  const [transformExpressions, setTransformExpressions] = useState<TransformExpression[]>(
-    nodeData.transformExpressions ?? [{ id: '1', key: 'result', value: 'input.foo + 1' }],
+  const [transformExpressions, setTransformExpressions] = useState<
+    TransformExpression[]
+  >(
+    nodeData.transformExpressions ?? [
+      { id: "1", key: "result", value: "input.foo + 1" },
+    ],
   );
-  const [setStateAssignments, setSetStateAssignments] = useState<SetStateAssignment[]>(
-    nodeData.setStateAssignments ?? [{ id: '1', value: 'input.foo + 1', variable: '' }],
+  const [setStateAssignments, setSetStateAssignments] = useState<
+    SetStateAssignment[]
+  >(
+    nodeData.setStateAssignments ?? [
+      { id: "1", value: "input.foo + 1", variable: "" },
+    ],
   );
 
   const [showConnectorManagement, setShowConnectorManagement] = useState(false);
-  const [mcpConnectors, setMcpConnectors] = useState<McpConnector[]>(nodeData.mcpConnectors ?? []);
+  const [mcpConnectors, setMcpConnectors] = useState<McpConnector[]>(
+    nodeData.mcpConnectors ?? [],
+  );
 
   // File-search node state
-  const [datasetId, setDatasetId] = useState(nodeData.datasetId ?? '');
-  const [datasetName, setDatasetName] = useState(nodeData.datasetName ?? '');
+  const [datasetId, setDatasetId] = useState(nodeData.datasetId ?? "");
+  const [datasetName, setDatasetName] = useState(nodeData.datasetName ?? "");
   const [maxResults, setMaxResults] = useState(nodeData.maxResults ?? 10);
-  const [fileSearchQuery, setFileSearchQuery] = useState(nodeData.fileSearchQuery ?? '');
+  const [fileSearchQuery, setFileSearchQuery] = useState(
+    nodeData.fileSearchQuery ?? "",
+  );
   const [showDatasetDialog, setShowDatasetDialog] = useState(false);
 
   const username = useUsername();
 
   const selectedMentorId = nodeData.mentor_id ?? nodeData.entry_mentor_id;
   const shouldFetchMentorSettings = Boolean(
-    nodeType === 'mentor' && selectedMentorId && org && username,
+    nodeType === "mentor" && selectedMentorId && org && username,
   );
 
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } = useGetMentorSettingsQuery(
-    {
-      mentor: selectedMentorId ?? '',
-      org: org ?? '',
-    },
-    { skip: !shouldFetchMentorSettings },
-  );
+  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
+    useGetMentorSettingsQuery(
+      {
+        mentor: selectedMentorId ?? "",
+        org: org ?? "",
+      },
+      { skip: !shouldFetchMentorSettings },
+    );
 
   const { data: tools, isLoading: isToolsLoading } = useGetToolsQuery(
     {
-      mentor: selectedMentorId ?? '',
-      org: org ?? '',
+      mentor: selectedMentorId ?? "",
+      org: org ?? "",
     },
     { skip: !shouldFetchMentorSettings },
   );
@@ -202,9 +251,9 @@ export function NodeConfigPanel({
 
   const { toggleTools, isLoading: isToggleToolsLoading } = useToggleTools({
     tools: mentorToolSlugs,
-    activeMentorId: selectedMentorId ?? '',
-    tenantKey: org ?? '',
-    username: username ?? '',
+    activeMentorId: selectedMentorId ?? "",
+    tenantKey: org ?? "",
+    username: username ?? "",
   });
 
   const isToolsDisabled =
@@ -230,12 +279,14 @@ export function NodeConfigPanel({
   );
 
   useEffect(() => {
-    if (nodeType !== 'mentor' || !mentorSettings) return;
+    if (nodeType !== "mentor" || !mentorSettings) return;
 
-    const mentorName = mentorSettings.mentor_name || mentorSettings.display_name || nodeData.label;
-    const mentorPrompt = (mentorSettings as Record<string, unknown>).system_prompt as
-      | string
-      | undefined;
+    const mentorName =
+      mentorSettings.mentor_name ||
+      mentorSettings.display_name ||
+      nodeData.label;
+    const mentorPrompt = (mentorSettings as Record<string, unknown>)
+      .system_prompt as string | undefined;
     const mentorModel = mentorSettings.llm_name;
     const forcePrefill = forceMentorPrefill.current;
 
@@ -250,7 +301,9 @@ export function NodeConfigPanel({
 
     if (
       mentorPrompt &&
-      (forcePrefill || !nodeData.instructions || nodeData.instructions === DEFAULT_INSTRUCTIONS)
+      (forcePrefill ||
+        !nodeData.instructions ||
+        nodeData.instructions === DEFAULT_INSTRUCTIONS)
     ) {
       if (mentorPrompt !== nodeData.instructions) {
         setInstructions(mentorPrompt);
@@ -290,9 +343,9 @@ export function NodeConfigPanel({
     setStateVariables(newStateVariables);
     updateNodeConfig({ stateVariables: newStateVariables });
     setShowAddModal(false);
-    setNewVarName('');
-    setNewVarDefault('');
-    setSelectedType('String');
+    setNewVarName("");
+    setNewVarDefault("");
+    setSelectedType("String");
   };
 
   const handleNameChange = (newName: string) => {
@@ -300,12 +353,18 @@ export function NodeConfigPanel({
     updateNodeConfig({ label: newName });
   };
 
-  const handleMentorSelect = (mentor: { unique_id?: string; name?: string }) => {
+  const handleMentorSelect = (mentor: {
+    unique_id?: string;
+    name?: string;
+  }) => {
     const mentorId = mentor.unique_id;
     if (!mentorId) return;
 
     forceMentorPrefill.current = true;
-    const updates: Partial<NodeConfig> = { entry_mentor_id: mentorId, mentor_id: mentorId };
+    const updates: Partial<NodeConfig> = {
+      entry_mentor_id: mentorId,
+      mentor_id: mentorId,
+    };
 
     if (mentor.name) {
       setNodeName(mentor.name);
@@ -314,11 +373,15 @@ export function NodeConfigPanel({
 
     updateNodeConfig(updates);
     setShowMentorModal(false);
-    setMentorSearchQuery('');
+    setMentorSearchQuery("");
   };
 
   const handleAddCondition = () => {
-    const newCondition = { id: Date.now().toString(), caseName: '', expression: '' };
+    const newCondition = {
+      id: Date.now().toString(),
+      caseName: "",
+      expression: "",
+    };
     const newConditions = [...conditions, newCondition];
     setConditions(newConditions);
     updateNodeConfig({
@@ -337,7 +400,9 @@ export function NodeConfigPanel({
   };
 
   const handleUpdateCondition = (id: string, updates: Partial<Condition>) => {
-    const newConditions = conditions.map((c) => (c.id === id ? { ...c, ...updates } : c));
+    const newConditions = conditions.map((c) =>
+      c.id === id ? { ...c, ...updates } : c,
+    );
     setConditions(newConditions);
     updateNodeConfig({ conditions: newConditions });
   };
@@ -345,7 +410,7 @@ export function NodeConfigPanel({
   const handleAddTransformExpression = () => {
     const newExpressions = [
       ...transformExpressions,
-      { id: Date.now().toString(), key: '', value: '' },
+      { id: Date.now().toString(), key: "", value: "" },
     ];
     setTransformExpressions(newExpressions);
     updateNodeConfig({ transformExpressions: newExpressions });
@@ -359,7 +424,10 @@ export function NodeConfigPanel({
     }
   };
 
-  const handleUpdateTransformExpression = (id: string, updates: Partial<TransformExpression>) => {
+  const handleUpdateTransformExpression = (
+    id: string,
+    updates: Partial<TransformExpression>,
+  ) => {
     const newExpressions = transformExpressions.map((e) =>
       e.id === id ? { ...e, ...updates } : e,
     );
@@ -370,7 +438,7 @@ export function NodeConfigPanel({
   const handleAddSetStateAssignment = () => {
     const newAssignments = [
       ...setStateAssignments,
-      { id: Date.now().toString(), value: '', variable: '' },
+      { id: Date.now().toString(), value: "", variable: "" },
     ];
     setSetStateAssignments(newAssignments);
     updateNodeConfig({ setStateAssignments: newAssignments });
@@ -384,8 +452,13 @@ export function NodeConfigPanel({
     }
   };
 
-  const handleUpdateSetStateAssignment = (id: string, updates: Partial<SetStateAssignment>) => {
-    const newAssignments = setStateAssignments.map((a) => (a.id === id ? { ...a, ...updates } : a));
+  const handleUpdateSetStateAssignment = (
+    id: string,
+    updates: Partial<SetStateAssignment>,
+  ) => {
+    const newAssignments = setStateAssignments.map((a) =>
+      a.id === id ? { ...a, ...updates } : a,
+    );
     setSetStateAssignments(newAssignments);
     updateNodeConfig({ setStateAssignments: newAssignments });
   };
@@ -417,12 +490,12 @@ export function NodeConfigPanel({
     updateNodeConfig({ userApprovalMessage: value });
   };
 
-  const handleTransformModeChange = (value: 'expressions' | 'object') => {
+  const handleTransformModeChange = (value: "expressions" | "object") => {
     setTransformMode(value);
     updateNodeConfig({ transformMode: value });
   };
 
-  if (nodeType === 'start') {
+  if (nodeType === "start") {
     return (
       <>
         <div
@@ -435,21 +508,32 @@ export function NodeConfigPanel({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h3 className="text-base font-semibold text-foreground">Start</h3>
+                  <h3 className="text-base font-semibold text-foreground">
+                    Start
+                  </h3>
                   <Button variant="ghost" size="icon" className="h-5 w-5">
                     <Copy className="h-3 w-3 text-muted-foreground" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Define the workflow inputs</p>
+                <p className="text-xs text-muted-foreground">
+                  Define the workflow inputs
+                </p>
               </div>
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
 
             {/* Input Variables */}
             <div className="space-y-1.5">
-              <h4 className="text-xs font-medium text-foreground">Input variables</h4>
+              <h4 className="text-xs font-medium text-foreground">
+                Input variables
+              </h4>
               <div className="space-y-1">
                 {inputVariables.map((variable) => (
                   <div
@@ -458,11 +542,17 @@ export function NodeConfigPanel({
                   >
                     <div className="flex items-center gap-1.5">
                       <div className="w-3.5 h-3.5 rounded flex items-center justify-center bg-green-500/20">
-                        <span className="text-[10px] text-green-500 font-mono">=</span>
+                        <span className="text-[10px] text-green-500 font-mono">
+                          =
+                        </span>
                       </div>
-                      <span className="text-xs font-mono text-foreground">{variable.name}</span>
+                      <span className="text-xs font-mono text-foreground">
+                        {variable.name}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{variable.type}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {variable.type}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -470,7 +560,9 @@ export function NodeConfigPanel({
 
             {/* State Variables */}
             <div className="space-y-1.5">
-              <h4 className="text-xs font-medium text-foreground">State variables</h4>
+              <h4 className="text-xs font-medium text-foreground">
+                State variables
+              </h4>
               <div className="space-y-1">
                 {stateVariables.map((variable) => (
                   <div
@@ -479,11 +571,17 @@ export function NodeConfigPanel({
                   >
                     <div className="flex items-center gap-1.5">
                       <div className="w-3.5 h-3.5 rounded flex items-center justify-center bg-purple-500/20">
-                        <span className="text-[10px] text-purple-500 font-mono">$</span>
+                        <span className="text-[10px] text-purple-500 font-mono">
+                          $
+                        </span>
                       </div>
-                      <span className="text-xs font-mono text-foreground">{variable.name}</span>
+                      <span className="text-xs font-mono text-foreground">
+                        {variable.name}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{variable.type}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {variable.type}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -513,28 +611,30 @@ export function NodeConfigPanel({
             <div className="space-y-6 pt-4">
               {/* Type Selection */}
               <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                {(['String', 'Number', 'Boolean', 'Object', 'List'] as const).map((type) => (
+                {(
+                  ["String", "Number", "Boolean", "Object", "List"] as const
+                ).map((type) => (
                   <button
                     key={type}
                     onClick={() => {
                       setSelectedType(type);
                       // Reset default value when type changes to avoid invalid data
-                      if (type === 'Boolean') {
-                        setNewVarDefault('false');
-                      } else if (type === 'Number') {
-                        setNewVarDefault('');
-                      } else if (type === 'Object') {
-                        setNewVarDefault('{}');
-                      } else if (type === 'List') {
-                        setNewVarDefault('[]');
+                      if (type === "Boolean") {
+                        setNewVarDefault("false");
+                      } else if (type === "Number") {
+                        setNewVarDefault("");
+                      } else if (type === "Object") {
+                        setNewVarDefault("{}");
+                      } else if (type === "List") {
+                        setNewVarDefault("[]");
                       } else {
-                        setNewVarDefault('');
+                        setNewVarDefault("");
                       }
                     }}
                     className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                       selectedType === type
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {type}
@@ -559,20 +659,25 @@ export function NodeConfigPanel({
               {/* Default Value Input - Dynamic based on type */}
               <div className="space-y-2">
                 <Label htmlFor="var-default" className="text-sm font-medium">
-                  Default value <span className="text-muted-foreground font-normal">Optional</span>
+                  Default value{" "}
+                  <span className="text-muted-foreground font-normal">
+                    Optional
+                  </span>
                 </Label>
-                {selectedType === 'Boolean' ? (
+                {selectedType === "Boolean" ? (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-muted border border-border">
                     <Switch
                       id="var-default"
-                      checked={newVarDefault === 'true'}
-                      onCheckedChange={(checked) => setNewVarDefault(checked ? 'true' : 'false')}
+                      checked={newVarDefault === "true"}
+                      onCheckedChange={(checked) =>
+                        setNewVarDefault(checked ? "true" : "false")
+                      }
                     />
                     <span className="text-sm text-muted-foreground">
-                      {newVarDefault === 'true' ? 'True' : 'False'}
+                      {newVarDefault === "true" ? "True" : "False"}
                     </span>
                   </div>
-                ) : selectedType === 'Number' ? (
+                ) : selectedType === "Number" ? (
                   <Input
                     id="var-default"
                     type="number"
@@ -581,7 +686,7 @@ export function NodeConfigPanel({
                     onChange={(e) => setNewVarDefault(e.target.value)}
                     className="bg-muted border-border"
                   />
-                ) : selectedType === 'Object' ? (
+                ) : selectedType === "Object" ? (
                   <Textarea
                     id="var-default"
                     placeholder='{ "key": "value" }'
@@ -589,7 +694,7 @@ export function NodeConfigPanel({
                     onChange={(e) => setNewVarDefault(e.target.value)}
                     className="bg-muted border-border min-h-[100px] font-mono text-sm"
                   />
-                ) : selectedType === 'List' ? (
+                ) : selectedType === "List" ? (
                   <Textarea
                     id="var-default"
                     placeholder='["item1", "item2"]'
@@ -625,9 +730,9 @@ export function NodeConfigPanel({
     );
   }
 
-  if (nodeType === 'mentor') {
+  if (nodeType === "mentor") {
     const modelDisplay = mentorSettings?.llm_provider
-      ? `${mentorSettings.llm_provider}${model ? ` · ${model}` : ''}`
+      ? `${mentorSettings.llm_provider}${model ? ` · ${model}` : ""}`
       : model;
     const enabledToolSlugs = new Set(mentorToolSlugs);
 
@@ -642,7 +747,9 @@ export function NodeConfigPanel({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+                <h3 className="text-base font-semibold text-foreground mb-0.5">
+                  {nodeData.label}
+                </h3>
                 <p className="text-[11px] text-muted-foreground">
                   Configure the mentor instructions, model, and tools
                 </p>
@@ -651,7 +758,12 @@ export function NodeConfigPanel({
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Copy className="h-3 w-3 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={onClose}
+                >
                   <X className="h-3 w-3 text-muted-foreground" />
                 </Button>
               </div>
@@ -660,14 +772,16 @@ export function NodeConfigPanel({
             {/* Name Field */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-medium text-foreground">Name</Label>
+                <Label className="text-[11px] font-medium text-foreground">
+                  Name
+                </Label>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-6 text-[11px] px-2"
                   onClick={() => setShowMentorModal(true)}
                 >
-                  {selectedMentorId ? 'Change' : 'Select'}
+                  {selectedMentorId ? "Change" : "Select"}
                 </Button>
               </div>
               <Input
@@ -684,7 +798,9 @@ export function NodeConfigPanel({
 
             {/* Instructions */}
             <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-foreground">Instructions</Label>
+              <Label className="text-[11px] font-medium text-foreground">
+                Instructions
+              </Label>
               <Textarea
                 value={instructions}
                 onChange={(e) => handleInstructionsChange(e.target.value)}
@@ -694,16 +810,18 @@ export function NodeConfigPanel({
 
             {/* Model */}
             <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-foreground">Model</Label>
+              <Label className="text-[11px] font-medium text-foreground">
+                Model
+              </Label>
               <Input
                 value={modelDisplay}
                 readOnly
                 placeholder={
                   selectedMentorId
                     ? isMentorSettingsLoading
-                      ? 'Loading model...'
-                      : 'No model configured'
-                    : 'Select a mentor to load model'
+                      ? "Loading model..."
+                      : "No model configured"
+                    : "Select a mentor to load model"
                 }
                 className="bg-muted border-border h-8 text-sm"
               />
@@ -711,17 +829,24 @@ export function NodeConfigPanel({
 
             {/* Tools */}
             <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-foreground">Tools</Label>
+              <Label className="text-[11px] font-medium text-foreground">
+                Tools
+              </Label>
               {!selectedMentorId && (
                 <p className="text-[10px] text-muted-foreground">
                   Select a mentor to configure tools.
                 </p>
               )}
-              {selectedMentorId && (isToolsLoading || isMentorSettingsLoading) && (
-                <p className="text-[10px] text-muted-foreground">Loading tools...</p>
-              )}
+              {selectedMentorId &&
+                (isToolsLoading || isMentorSettingsLoading) && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Loading tools...
+                  </p>
+                )}
               {selectedMentorId && !isToolsLoading && tools?.length === 0 && (
-                <p className="text-[10px] text-muted-foreground">No tools available.</p>
+                <p className="text-[10px] text-muted-foreground">
+                  No tools available.
+                </p>
               )}
               {selectedMentorId && !isToolsLoading && tools?.length ? (
                 <WithFormPermissions
@@ -732,8 +857,9 @@ export function NodeConfigPanel({
                   {({ disabled }) => (
                     <div className="space-y-1">
                       {tools?.map((tool) => {
-                        const slug = tool?.slug ?? '';
-                        const toolLabel = tool?.display_name || tool?.name || 'Tool';
+                        const slug = tool?.slug ?? "";
+                        const toolLabel =
+                          tool?.display_name || tool?.name || "Tool";
                         const isEnabled = enabledToolSlugs.has(slug);
                         const isDisabled = isToolsDisabled || disabled || !slug;
 
@@ -743,11 +869,15 @@ export function NodeConfigPanel({
                             className="flex items-center justify-between p-1.5 rounded-lg bg-muted/50 border border-border"
                           >
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-foreground">{toolLabel}</span>
+                              <span className="text-xs text-foreground">
+                                {toolLabel}
+                              </span>
                               {tool?.description ? (
                                 <TooltipProvider>
                                   <Tooltip>
-                                    <TooltipTrigger aria-label={`More info about ${toolLabel}`}>
+                                    <TooltipTrigger
+                                      aria-label={`More info about ${toolLabel}`}
+                                    >
                                       <Info className="h-3 w-3 text-muted-foreground" />
                                     </TooltipTrigger>
                                     <TooltipContent className="ibl-tooltip-content">
@@ -764,7 +894,7 @@ export function NodeConfigPanel({
                                 toggleTools(slug);
                               }}
                               disabled={isDisabled}
-                              aria-label={`${toolLabel} ${isEnabled ? 'enabled' : 'disabled'}`}
+                              aria-label={`${toolLabel} ${isEnabled ? "enabled" : "disabled"}`}
                             />
                           </div>
                         );
@@ -782,7 +912,7 @@ export function NodeConfigPanel({
           onOpenChange={(open) => {
             setShowMentorModal(open);
             if (!open) {
-              setMentorSearchQuery('');
+              setMentorSearchQuery("");
             }
           }}
         >
@@ -813,7 +943,7 @@ export function NodeConfigPanel({
     );
   }
 
-  if (nodeType === 'guardrails') {
+  if (nodeType === "guardrails") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -824,7 +954,9 @@ export function NodeConfigPanel({
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
               <p className="text-[11px] text-muted-foreground">
                 Run moderation, PII, jailbreak, or hallucination checks
               </p>
@@ -833,7 +965,12 @@ export function NodeConfigPanel({
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -841,7 +978,9 @@ export function NodeConfigPanel({
 
           {/* Name Field */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Name</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Name
+            </Label>
             <Input
               value={nodeName}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -851,12 +990,16 @@ export function NodeConfigPanel({
 
           {/* Input Field */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Input</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Input
+            </Label>
             <div className="flex items-center gap-2 p-2 rounded-lg bg-muted border border-border">
               <div className="w-4 h-4 rounded flex items-center justify-center bg-green-500/20">
                 <span className="text-[10px] text-green-500 font-mono">=</span>
               </div>
-              <span className="text-xs font-mono text-foreground">input_as_text</span>
+              <span className="text-xs font-mono text-foreground">
+                input_as_text
+              </span>
               <Select defaultValue="STRING">
                 <SelectTrigger className="w-[90px] h-6 bg-background border-border text-xs ml-auto">
                   <SelectValue />
@@ -889,7 +1032,9 @@ export function NodeConfigPanel({
 
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
-                <Label className="text-[11px] font-medium text-foreground">Moderation</Label>
+                <Label className="text-[11px] font-medium text-foreground">
+                  Moderation
+                </Label>
                 <Info className="h-3 w-3 text-muted-foreground" />
               </div>
               <div className="flex items-center gap-1">
@@ -902,7 +1047,9 @@ export function NodeConfigPanel({
 
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
-                <Label className="text-[11px] font-medium text-foreground">Jailbreak</Label>
+                <Label className="text-[11px] font-medium text-foreground">
+                  Jailbreak
+                </Label>
                 <Info className="h-3 w-3 text-muted-foreground" />
               </div>
               <div className="flex items-center gap-1">
@@ -915,7 +1062,9 @@ export function NodeConfigPanel({
 
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
-                <Label className="text-[11px] font-medium text-foreground">Hallucination</Label>
+                <Label className="text-[11px] font-medium text-foreground">
+                  Hallucination
+                </Label>
                 <Info className="h-3 w-3 text-muted-foreground" />
               </div>
               <div className="flex items-center gap-1">
@@ -929,16 +1078,25 @@ export function NodeConfigPanel({
 
           {/* Continue on error */}
           <div className="flex items-center justify-between py-1 pt-2 border-t border-border">
-            <Label className="text-[11px] font-medium text-foreground">Continue on error</Label>
-            <Switch checked={continueOnError} onCheckedChange={handleContinueOnErrorChange} />
+            <Label className="text-[11px] font-medium text-foreground">
+              Continue on error
+            </Label>
+            <Switch
+              checked={continueOnError}
+              onCheckedChange={handleContinueOnErrorChange}
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  if (nodeType === 'file-search') {
-    const handleDatasetSelect = (dataset: { id: string; document_name: string; url: string }) => {
+  if (nodeType === "file-search") {
+    const handleDatasetSelect = (dataset: {
+      id: string;
+      document_name: string;
+      url: string;
+    }) => {
       const name = dataset.document_name || dataset.url;
       setDatasetId(dataset.id);
       setDatasetName(name);
@@ -962,7 +1120,9 @@ export function NodeConfigPanel({
       // Push mentor context so DatasetsTab (via useDatasetsWithPagination -> getMentorId())
       // and its AddResourceModal both use the entry_mentor_id
       if (defaultMentorId) {
-        dispatch(pushModal({ name: 'SELECT_DATASET', mentorId: defaultMentorId }));
+        dispatch(
+          pushModal({ name: "SELECT_DATASET", mentorId: defaultMentorId }),
+        );
       }
       setShowDatasetDialog(true);
     };
@@ -984,7 +1144,9 @@ export function NodeConfigPanel({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+                <h3 className="text-base font-semibold text-foreground mb-0.5">
+                  {nodeData.label}
+                </h3>
                 <p className="text-[11px] text-muted-foreground">
                   Search datasets for relevant information
                 </p>
@@ -993,7 +1155,12 @@ export function NodeConfigPanel({
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Copy className="h-3 w-3 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={onClose}
+                >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
@@ -1002,14 +1169,16 @@ export function NodeConfigPanel({
             {/* Dataset */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-medium text-foreground">Dataset</Label>
+                <Label className="text-[11px] font-medium text-foreground">
+                  Dataset
+                </Label>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-6 text-[11px] px-2"
                   onClick={openDatasetDialog}
                 >
-                  {datasetId ? 'Change' : 'Select'}
+                  {datasetId ? "Change" : "Select"}
                 </Button>
               </div>
               {datasetId ? (
@@ -1025,7 +1194,9 @@ export function NodeConfigPanel({
 
             {/* Max results */}
             <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-foreground">Max results</Label>
+              <Label className="text-[11px] font-medium text-foreground">
+                Max results
+              </Label>
               <Input
                 type="number"
                 value={maxResults}
@@ -1036,7 +1207,9 @@ export function NodeConfigPanel({
 
             {/* Query */}
             <div className="space-y-1">
-              <Label className="text-[11px] font-medium text-foreground">Query</Label>
+              <Label className="text-[11px] font-medium text-foreground">
+                Query
+              </Label>
               <Textarea
                 value={fileSearchQuery}
                 onChange={(e) => handleFileSearchQueryChange(e.target.value)}
@@ -1062,17 +1235,20 @@ export function NodeConfigPanel({
             <DialogHeader className="sr-only">
               <DialogTitle>Select Dataset</DialogTitle>
             </DialogHeader>
-            <DatasetsTab onSelect={handleDatasetSelect} selectedDatasetId={datasetId} />
+            <DatasetsTab
+              onSelect={handleDatasetSelect}
+              selectedDatasetId={datasetId}
+            />
           </DialogContent>
         </Dialog>
       </>
     );
   }
 
-  if (nodeType === 'mcp') {
+  if (nodeType === "mcp") {
     const openMcpDialog = () => {
       if (defaultMentorId) {
-        dispatch(pushModal({ name: 'SELECT_MCP', mentorId: defaultMentorId }));
+        dispatch(pushModal({ name: "SELECT_MCP", mentorId: defaultMentorId }));
       }
       setShowConnectorManagement(true);
     };
@@ -1110,7 +1286,9 @@ export function NodeConfigPanel({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+                <h3 className="text-base font-semibold text-foreground mb-0.5">
+                  {nodeData.label}
+                </h3>
                 <p className="text-[11px] text-muted-foreground">
                   Invoke a Model Context Protocol tool
                 </p>
@@ -1119,7 +1297,12 @@ export function NodeConfigPanel({
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Copy className="h-3 w-3 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={onClose}
+                >
                   <X className="h-3 w-3" />
                 </Button>
               </div>
@@ -1148,8 +1331,15 @@ export function NodeConfigPanel({
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-medium text-foreground">Connected Tools</Label>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={openMcpDialog}>
+                  <Label className="text-[11px] font-medium text-foreground">
+                    Connected Tools
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={openMcpDialog}
+                  >
                     <Plus className="h-3 w-3 text-muted-foreground" />
                   </Button>
                 </div>
@@ -1171,7 +1361,9 @@ export function NodeConfigPanel({
                             <span className="text-sm">🔌</span>
                           )}
                         </div>
-                        <span className="text-xs text-foreground">{connector.name}</span>
+                        <span className="text-xs text-foreground">
+                          {connector.name}
+                        </span>
                       </div>
                       <Button
                         variant="ghost"
@@ -1211,7 +1403,7 @@ export function NodeConfigPanel({
   }
 
   // While node configuration panel
-  if (nodeType === 'while') {
+  if (nodeType === "while") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1221,21 +1413,32 @@ export function NodeConfigPanel({
         <div className="p-3 space-y-2 overflow-y-auto flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
-              <p className="text-[11px] text-muted-foreground">Loop while a condition is true</p>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
+              <p className="text-[11px] text-muted-foreground">
+                Loop while a condition is true
+              </p>
             </div>
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Expression</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Expression
+            </Label>
             <Textarea
               value={whileExpression}
               onChange={(e) => handleWhileExpressionChange(e.target.value)}
@@ -1243,7 +1446,7 @@ export function NodeConfigPanel({
               className="bg-muted border-border min-h-[100px] resize-none text-xs font-mono"
             />
             <p className="text-[10px] text-muted-foreground">
-              Use Common Expression Language to create a custom expression.{' '}
+              Use Common Expression Language to create a custom expression.{" "}
               <a href="#" className="underline">
                 Learn more.
               </a>
@@ -1255,7 +1458,7 @@ export function NodeConfigPanel({
   }
 
   // User Approval node configuration panel
-  if (nodeType === 'user-approval') {
+  if (nodeType === "user-approval") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1265,7 +1468,9 @@ export function NodeConfigPanel({
         <div className="p-3 space-y-2 overflow-y-auto flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
               <p className="text-[11px] text-muted-foreground">
                 Pause for a human to approve or reject a step
               </p>
@@ -1274,14 +1479,21 @@ export function NodeConfigPanel({
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Name</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Name
+            </Label>
             <Input
               value={nodeName}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -1290,7 +1502,9 @@ export function NodeConfigPanel({
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Message</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Message
+            </Label>
             <Textarea
               value={userApprovalMessage}
               onChange={(e) => handleUserApprovalMessageChange(e.target.value)}
@@ -1304,7 +1518,7 @@ export function NodeConfigPanel({
   }
 
   // Transform node configuration panel
-  if (nodeType === 'transform') {
+  if (nodeType === "transform") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1314,21 +1528,30 @@ export function NodeConfigPanel({
         <div className="p-3 space-y-2 overflow-y-auto flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
               <p className="text-[11px] text-muted-foreground">Reshape data</p>
             </div>
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Name</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Name
+            </Label>
             <Input
               value={nodeName}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -1339,28 +1562,28 @@ export function NodeConfigPanel({
           {/* Mode Toggle */}
           <div className="flex gap-1 p-0.5 bg-muted rounded-lg">
             <button
-              onClick={() => handleTransformModeChange('expressions')}
+              onClick={() => handleTransformModeChange("expressions")}
               className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                transformMode === 'expressions'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                transformMode === "expressions"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Expressions
             </button>
             <button
-              onClick={() => handleTransformModeChange('object')}
+              onClick={() => handleTransformModeChange("object")}
               className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                transformMode === 'object'
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                transformMode === "object"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Object
             </button>
           </div>
 
-          {transformMode === 'expressions' ? (
+          {transformMode === "expressions" ? (
             <div className="space-y-2">
               {transformExpressions.map((expr) => (
                 <div
@@ -1368,7 +1591,9 @@ export function NodeConfigPanel({
                   className="space-y-1.5 p-2 rounded-lg border border-border bg-muted/30"
                 >
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-medium text-foreground">Key</Label>
+                    <Label className="text-[10px] font-medium text-foreground">
+                      Key
+                    </Label>
                     {transformExpressions.length > 1 && (
                       <Button
                         variant="ghost"
@@ -1383,22 +1608,28 @@ export function NodeConfigPanel({
                   <Input
                     value={expr.key}
                     onChange={(e) =>
-                      handleUpdateTransformExpression(expr.id, { key: e.target.value })
+                      handleUpdateTransformExpression(expr.id, {
+                        key: e.target.value,
+                      })
                     }
                     placeholder="result"
                     className="bg-background border-border h-7 text-xs"
                   />
-                  <Label className="text-[10px] font-medium text-foreground">Value</Label>
+                  <Label className="text-[10px] font-medium text-foreground">
+                    Value
+                  </Label>
                   <Textarea
                     value={expr.value}
                     onChange={(e) =>
-                      handleUpdateTransformExpression(expr.id, { value: e.target.value })
+                      handleUpdateTransformExpression(expr.id, {
+                        value: e.target.value,
+                      })
                     }
                     placeholder="input.foo + 1"
                     className="min-h-[60px] bg-background border-border text-xs font-mono"
                   />
                   <p className="text-[9px] text-muted-foreground">
-                    Use Common Expression Language.{' '}
+                    Use Common Expression Language.{" "}
                     <a href="#" className="underline">
                       Learn more.
                     </a>
@@ -1418,7 +1649,11 @@ export function NodeConfigPanel({
             </div>
           ) : (
             <div className="space-y-2">
-              <Button variant="secondary" size="sm" className="w-full h-7 text-xs">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full h-7 text-xs"
+              >
                 <Plus className="h-3 w-3 mr-1" />
                 Add schema
               </Button>
@@ -1430,7 +1665,7 @@ export function NodeConfigPanel({
   }
 
   // Set State node configuration panel
-  if (nodeType === 'set-state') {
+  if (nodeType === "set-state") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1440,7 +1675,9 @@ export function NodeConfigPanel({
         <div className="p-3 space-y-2 overflow-y-auto flex-1">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
               <p className="text-[11px] text-muted-foreground">
                 Assign values to workflow's state variables
               </p>
@@ -1449,7 +1686,12 @@ export function NodeConfigPanel({
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -1462,13 +1704,17 @@ export function NodeConfigPanel({
                 className="space-y-1.5 p-2 rounded-lg border border-border bg-muted/30"
               >
                 <div className="flex items-center justify-between">
-                  <Label className="text-[10px] font-medium text-foreground">Assign value</Label>
+                  <Label className="text-[10px] font-medium text-foreground">
+                    Assign value
+                  </Label>
                   {setStateAssignments.length > 1 && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-4 w-4"
-                      onClick={() => handleRemoveSetStateAssignment(assignment.id)}
+                      onClick={() =>
+                        handleRemoveSetStateAssignment(assignment.id)
+                      }
                     >
                       <Trash2 className="h-2.5 w-2.5 text-muted-foreground" />
                     </Button>
@@ -1477,23 +1723,29 @@ export function NodeConfigPanel({
                 <Textarea
                   value={assignment.value}
                   onChange={(e) =>
-                    handleUpdateSetStateAssignment(assignment.id, { value: e.target.value })
+                    handleUpdateSetStateAssignment(assignment.id, {
+                      value: e.target.value,
+                    })
                   }
                   placeholder="input.foo + 1"
                   className="min-h-[60px] bg-background border-border text-xs font-mono"
                 />
                 <p className="text-[9px] text-muted-foreground">
-                  Use Common Expression Language.{' '}
+                  Use Common Expression Language.{" "}
                   <a href="#" className="underline">
                     Learn more.
                   </a>
                 </p>
-                <Label className="text-[10px] font-medium text-foreground">To variable</Label>
+                <Label className="text-[10px] font-medium text-foreground">
+                  To variable
+                </Label>
                 <div className="flex gap-1">
                   <Select
                     value={assignment.variable}
                     onValueChange={(value) =>
-                      handleUpdateSetStateAssignment(assignment.id, { variable: value })
+                      handleUpdateSetStateAssignment(assignment.id, {
+                        variable: value,
+                      })
                     }
                   >
                     <SelectTrigger className="flex-1 bg-background border-border h-7 text-xs">
@@ -1505,7 +1757,11 @@ export function NodeConfigPanel({
                       <SelectItem value="var3">Variable 3</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" className="h-7 text-xs px-2 bg-transparent">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2 bg-transparent"
+                  >
                     <Plus className="h-2.5 w-2.5 mr-0.5" />
                     New
                   </Button>
@@ -1528,7 +1784,7 @@ export function NodeConfigPanel({
     );
   }
 
-  if (nodeType === 'if-else' || nodeType === 'conditional') {
+  if (nodeType === "if-else" || nodeType === "conditional") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1539,7 +1795,9 @@ export function NodeConfigPanel({
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
               <p className="text-[11px] text-muted-foreground">
                 Create conditions to branch your workflow
               </p>
@@ -1548,7 +1806,12 @@ export function NodeConfigPanel({
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -1562,7 +1825,7 @@ export function NodeConfigPanel({
             >
               <div className="flex items-center justify-between">
                 <Label className="text-[11px] font-medium text-foreground">
-                  {index === 0 ? 'If' : `Else if ${index}`}
+                  {index === 0 ? "If" : `Else if ${index}`}
                 </Label>
                 {conditions.length > 1 && (
                   <Button
@@ -1579,21 +1842,27 @@ export function NodeConfigPanel({
                 placeholder="Case name (optional)"
                 className="bg-background border-border h-8 text-sm"
                 value={condition.caseName}
-                onChange={(e) => handleUpdateCondition(condition.id, { caseName: e.target.value })}
+                onChange={(e) =>
+                  handleUpdateCondition(condition.id, {
+                    caseName: e.target.value,
+                  })
+                }
               />
               <Textarea
                 placeholder="Enter condition, e.g. input == 5"
                 className="bg-background border-border min-h-[60px] resize-none text-xs"
                 value={condition.expression}
                 onChange={(e) =>
-                  handleUpdateCondition(condition.id, { expression: e.target.value })
+                  handleUpdateCondition(condition.id, {
+                    expression: e.target.value,
+                  })
                 }
               />
             </div>
           ))}
 
           <p className="text-[10px] text-muted-foreground">
-            Use Common Expression Language to create a custom expression.{' '}
+            Use Common Expression Language to create a custom expression.{" "}
             <a href="#" className="underline">
               Learn more.
             </a>
@@ -1613,7 +1882,7 @@ export function NodeConfigPanel({
     );
   }
 
-  if (nodeType === 'end') {
+  if (nodeType === "end") {
     return (
       <div
         className="absolute top-4 right-4 w-[320px] max-h-[calc(100vh-14rem)] bg-card border border-border rounded-xl shadow-xl z-[22] flex flex-col"
@@ -1624,14 +1893,23 @@ export function NodeConfigPanel({
           {/* Header */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-foreground mb-0.5">{nodeData.label}</h3>
-              <p className="text-[11px] text-muted-foreground">Define the workflow output</p>
+              <h3 className="text-base font-semibold text-foreground mb-0.5">
+                {nodeData.label}
+              </h3>
+              <p className="text-[11px] text-muted-foreground">
+                Define the workflow output
+              </p>
             </div>
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={onClose}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -1639,7 +1917,9 @@ export function NodeConfigPanel({
 
           {/* Output */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-medium text-foreground">Output</Label>
+            <Label className="text-[11px] font-medium text-foreground">
+              Output
+            </Label>
             <Textarea
               placeholder="Enter output value. Use {{ curly braces }} to insert variables."
               className="bg-muted border-border min-h-[100px] resize-none text-xs"

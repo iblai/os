@@ -1,18 +1,18 @@
-import { AppSyncBanner } from '@/components/welcome-chat/app-sync-banner';
-import { ExploreMentors } from '@/components/welcome-chat/explore-mentors';
-import { ConversationStarters } from '@/components/welcome-chat/conversation-starters';
-import { ChatInputForm } from '@/components/chat-input-form';
-import { useGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer';
-import { Message } from '@iblai/iblai-js/web-utils';
-import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
-import { config } from '@/lib/config';
-import { useEmbedMode } from '@/hooks/use-embed-mode';
-import { WelcomeChat } from './welcome-chat';
-import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
-import { useAxdToken } from '@/hooks/use-tokens';
-import { ProjectPageParams } from '@/lib/types';
-import { useParams } from 'next/navigation';
-import { ProjectLandingPage } from './projects/project-landing-page';
+import { AppSyncBanner } from "@/components/welcome-chat/app-sync-banner";
+import { ExploreMentors } from "@/components/welcome-chat/explore-mentors";
+import { ConversationStarters } from "@/components/welcome-chat/conversation-starters";
+import { ChatInputForm } from "@/components/chat-input-form";
+import { useGetUserProjectDetailsQuery } from "@iblai/iblai-js/data-layer";
+import { Message } from "@iblai/iblai-js/web-utils";
+import { CHAT_AREA_SIZE } from "@iblai/iblai-js/web-utils";
+import { config } from "@/lib/config";
+import { useEmbedMode } from "@/hooks/use-embed-mode";
+import { WelcomeChat } from "./welcome-chat";
+import { WelcomeMessage } from "@/components/welcome-chat/welcome-message";
+import { useAxdToken } from "@/hooks/use-tokens";
+import { ProjectPageParams } from "@/lib/types";
+import { useParams } from "next/navigation";
+import { ProjectLandingPage } from "./projects/project-landing-page";
 
 type Props = {
   mentorName: string;
@@ -83,7 +83,7 @@ export function WelcomeChatNew({
   artifactsEnabled,
   chatAreaMaxWidth = CHAT_AREA_SIZE.DEFAULT,
   isNewSession = true,
-  aiWelcomeMessage = '',
+  aiWelcomeMessage = "",
   isConnecting = false,
   compactMode = false,
 }: Props) {
@@ -164,9 +164,8 @@ export function WelcomeChatNew({
     <div className="overflow-y-auto">
       <div className="py-6 w-full">
         {/* GitHub Sync Banner */}
-        {tenantKey === config.mainTenantKey() && config.showAppBanner() === 'true' && (
-          <AppSyncBanner />
-        )}
+        {tenantKey === config.mainTenantKey() &&
+          config.showAppBanner() === "true" && <AppSyncBanner />}
 
         {/* mentorAI Logo and Branding */}
         <div className="flex flex-col items-center mb-8">
@@ -198,7 +197,7 @@ export function WelcomeChatNew({
               isScreenSharingModalOpen={isScreenSharingModalOpen}
               onPhoneCallClick={onPhoneCallClick}
               tenantKey={tenantKey}
-              username={username ?? ''}
+              username={username ?? ""}
               setMessage={setMessage}
               enableSafetyDisclaimer={enableSafetyDisclaimer}
               isPreviewMode={isPreviewMode}

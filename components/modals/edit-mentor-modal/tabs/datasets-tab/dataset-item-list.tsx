@@ -1,5 +1,5 @@
-import { DatasetItem, Dataset } from './dataset-item';
-import { TableCell, TableRow, TableBody } from '@/components/ui/table';
+import { DatasetItem, Dataset } from "./dataset-item";
+import { TableCell, TableRow, TableBody } from "@/components/ui/table";
 
 type Props = {
   datasets: Dataset[];
@@ -7,7 +7,11 @@ type Props = {
   selectedDatasetId?: string;
 };
 
-export function DatasetItemList({ datasets, onSelect, selectedDatasetId }: Props) {
+export function DatasetItemList({
+  datasets,
+  onSelect,
+  selectedDatasetId,
+}: Props) {
   return (
     <TableBody>
       {datasets?.length > 0 ? (

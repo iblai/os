@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAxdToken } from '@/hooks/use-tokens';
-import { CSS_CLASS_NAMES } from '@/lib/constants';
-import { useGetGuidedPromptsQuery, useGetPromptsSearchQuery } from '@iblai/iblai-js/data-layer';
-import { cn } from '@/lib/utils';
-import { useParams } from 'next/navigation';
-import { useUsername } from '@/hooks/use-user';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
-import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAxdToken } from "@/hooks/use-tokens";
+import { CSS_CLASS_NAMES } from "@/lib/constants";
+import {
+  useGetGuidedPromptsQuery,
+  useGetPromptsSearchQuery,
+} from "@iblai/iblai-js/data-layer";
+import { cn } from "@/lib/utils";
+import { useParams } from "next/navigation";
+import { useUsername } from "@/hooks/use-user";
+import { TenantKeyMentorIdParams } from "@/lib/types";
+import { WelcomeMessage } from "@/components/welcome-chat/welcome-message";
+import { useMentorSettings } from "@/hooks/use-mentors/use-mentor-settings";
 
 interface Props {
   onPromptSelect: (prompt: string) => void;
@@ -30,14 +33,15 @@ export function WelcomeChat({
   sessionId,
   mentorUniqueId,
   isNewSession = true,
-  aiWelcomeMessage = '',
+  aiWelcomeMessage = "",
 }: Props) {
   const username = useUsername();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  const realUsername = username ?? 'anonymous';
+  const realUsername = username ?? "anonymous";
   const axdToken = useAxdToken();
   const mentorSettings = useMentorSettings();
-  const isSuggestedPrompts = mentorSettings?.data?.starterPrompts === 'suggested_prompt';
+  const isSuggestedPrompts =
+    mentorSettings?.data?.starterPrompts === "suggested_prompt";
 
   const { data: guidedPrompts } = useGetGuidedPromptsQuery(
     {
@@ -48,7 +52,11 @@ export function WelcomeChat({
     },
     {
       skip:
-        isSuggestedPrompts || !enabledGuidedPrompts || !tenantKey || !sessionId || !realUsername,
+        isSuggestedPrompts ||
+        !enabledGuidedPrompts ||
+        !tenantKey ||
+        !sessionId ||
+        !realUsername,
     },
   );
 
@@ -56,32 +64,34 @@ export function WelcomeChat({
     {
       org: tenantKey,
       username: realUsername,
-      category: '',
+      category: "",
       limit: 4,
       offset: 0,
       mentor: mentorId,
-      orderDirection: 'asc',
+      orderDirection: "asc",
     },
     {
       skip: !isSuggestedPrompts || !tenantKey || !realUsername || !mentorId,
     },
   );
 
-  const hasGuidedPrompts = !isSuggestedPrompts && (guidedPrompts?.ai_prompts?.length ?? 0) > 0;
-  const hasSuggestedPrompts = isSuggestedPrompts && (suggestedPrompts?.results?.length ?? 0) > 0;
+  const hasGuidedPrompts =
+    !isSuggestedPrompts && (guidedPrompts?.ai_prompts?.length ?? 0) > 0;
+  const hasSuggestedPrompts =
+    isSuggestedPrompts && (suggestedPrompts?.results?.length ?? 0) > 0;
   const hasPrompts = hasGuidedPrompts || hasSuggestedPrompts;
 
   return (
     <div
-      className={cn('rounded-lg p-4 max-w-2xl mx-auto h-full flex flex-col', {
-        'justify-center': !hasPrompts,
+      className={cn("rounded-lg p-4 max-w-2xl mx-auto h-full flex flex-col", {
+        "justify-center": !hasPrompts,
       })}
     >
       {hasPrompts ? null : (
         <div className="mb-6 flex items-center gap-4">
           <Avatar
             className={cn(
-              'h-14 w-14 border-2 border-blue-500',
+              "h-14 w-14 border-2 border-blue-500",
               CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
             )}
           >
@@ -95,7 +105,7 @@ export function WelcomeChat({
             <WelcomeMessage
               aiWelcomeMessage={aiWelcomeMessage}
               sessionId={sessionId}
-              username={username ?? ''}
+              username={username ?? ""}
               tenantKey={tenantKey}
               mentorUniqueId={mentorUniqueId}
               token={axdToken}
@@ -114,7 +124,7 @@ export function WelcomeChat({
               key={prompt}
               type="button"
               className={cn(
-                'flex h-full flex-col justify-start rounded-lg bg-[#EDF3FF] p-4 text-left shadow-sm transition-colors hover:bg-gray-50',
+                "flex h-full flex-col justify-start rounded-lg bg-[#EDF3FF] p-4 text-left shadow-sm transition-colors hover:bg-gray-50",
                 CSS_CLASS_NAMES.APP_LAYOUT.WELCOME_CHAT_BUTTON,
               )}
               onClick={() => onPromptSelect(prompt)}
@@ -128,7 +138,7 @@ export function WelcomeChat({
               key={item.id}
               type="button"
               className={cn(
-                'flex h-full flex-col justify-start rounded-lg bg-[#EDF3FF] p-4 text-left shadow-sm transition-colors hover:bg-gray-50',
+                "flex h-full flex-col justify-start rounded-lg bg-[#EDF3FF] p-4 text-left shadow-sm transition-colors hover:bg-gray-50",
                 CSS_CLASS_NAMES.APP_LAYOUT.WELCOME_CHAT_BUTTON,
               )}
               onClick={() => onPromptSelect(item.prompt)}
