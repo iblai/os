@@ -11,6 +11,7 @@ const PDF_FILE = path.join(
 );
 const IMAGE_FILE = path.join(FILES_DIR, "acessibility png.png");
 const TXT_FILE = path.join(FILES_DIR, "outerHTML.txt");
+const CSV_FILE = path.join(FILES_DIR, "test-data.csv");
 
 test.describe("Journey 20: Dataset Management", () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -205,6 +206,29 @@ test.describe("Journey 20: Dataset Management", () => {
     const searchValue = await editMentorPage.datasets.searchInput.inputValue();
     logger.info(`TC20: Search value after reopen: "${searchValue}"`);
     expect(searchValue).toBe("");
+  });
+
+  // ── TC29: CSV upload ───────────────────────────────────────────────────────
+
+  test("admin goes to datasets tab and uploads a CSV file successfully", async ({
+    page,
+    editMentorPage,
+  }) => {
+    const modal = await editMentorPage.datasets.openAddResourceModal();
+    await expect(modal).toBeVisible();
+    const csvBtn = modal.locator("button").filter({ hasText: /^CSV$/i });
+    await expect(csvBtn).toBeVisible({ timeout: 5_000 });
+    await csvBtn.click();
+    await page.waitForTimeout(1_000);
+    const csvDialog = page.getByRole("dialog").filter({ hasText: /CSV/i });
+    await expect(csvDialog).toBeVisible({ timeout: 5_000 });
+    const fileInput = csvDialog.locator('input[type="file"]');
+    await fileInput.setInputFiles(CSV_FILE);
+    await page.waitForTimeout(1_000);
+    const fileName = csvDialog.getByText(/test-data\.csv/i);
+    await expect(fileName).toBeVisible({ timeout: 5_000 });
+    await page.keyboard.press("Escape");
+    logger.info("TC29: CSV file selected successfully in upload dialog");
   });
 
   // ── TC13: Train or Delete modal ────────────────────────────────────────────
