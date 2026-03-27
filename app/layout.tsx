@@ -1,28 +1,29 @@
-import type { Metadata } from 'next';
-import { Open_Sans } from 'next/font/google';
-import { Suspense } from 'react';
+import type { Metadata } from "next";
+import { Open_Sans } from "next/font/google";
+import { Suspense } from "react";
 
-import Providers from '@/providers';
-import { Toaster } from '@/components/ui/sonner';
+import Providers from "@/providers";
+import { Toaster } from "@/components/ui/sonner";
 
-import './globals.css';
+import "./globals.css";
 
-import Script from 'next/script';
-import { StoreProvider } from '@/providers/store-provider';
-import { Spinner } from '@/components/spinner';
-import ConsoleSetup from '@/lib/logger';
-import { IblDataHandler } from '@/components/ibl-data-handler';
-import { ServiceWorkerProvider } from '@/components/service-worker-provider';
+import Script from "next/script";
+import { StoreProvider } from "@/providers/store-provider";
+import { Spinner } from "@/components/spinner";
+import ConsoleSetup from "@/lib/logger";
+import { IblDataHandler } from "@/components/ibl-data-handler";
+import { ServiceWorkerProvider } from "@/components/service-worker-provider";
+import { ChunkErrorRecovery } from "@/components/chunk-error-recovery";
 
 const openSans = Open_Sans({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-open-sans',
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-open-sans",
 });
 
 export const metadata: Metadata = {
-  title: 'mentorAI',
-  description: 'mentorAI',
+  title: "mentorAI",
+  description: "mentorAI",
 };
 
 export default function RootLayout({
@@ -88,6 +89,7 @@ export default function RootLayout({
         <ConsoleSetup />
         <Script src="/env.js" strategy="afterInteractive" />
         <StoreProvider>
+          <ChunkErrorRecovery />
           <ServiceWorkerProvider>
             <Suspense
               fallback={

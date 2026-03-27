@@ -7,6 +7,15 @@ on:
         description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
         required: false
         type: string
+      sign:
+        description: "Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)"
+        required: false
+        type: boolean
+        default: false
+      sign_publisher:
+        description: "Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)"
+        required: false
+        type: string
 
 concurrency:
   group: msix-build
@@ -75,12 +84,23 @@ jobs:
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
 
+      - name: Override Publisher in AppxManifest for signing
+        if: inputs.sign && inputs.sign_publisher != ''
+        working-directory: src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Publisher="[^"]*"', 'Publisher="${{ inputs.sign_publisher }}"'
+          Set-Content -Path AppxManifest.xml -Value $manifest
+          Write-Host "Patched Publisher to: ${{ inputs.sign_publisher }}"
+
       - name: Override version in AppxManifest
         if: inputs.version != ''
         working-directory: src-tauri
         run: |
           $manifest = Get-Content AppxManifest.xml -Raw
-          $manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
+          # Negative lookbehind ensures we only replace the Identity Version attribute,
+          # not MinVersion or MaxVersionTested in TargetDeviceFamily
+          $manifest = $manifest -replace '(?<![A-Za-z])Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"${{ inputs.version }}.0`""
           Set-Content -Path AppxManifest.xml -Value $manifest
 
       - name: Build MSIX package (unsigned)
@@ -118,7 +138,7 @@ jobs:
       - name: List downloaded packages
         run: Get-ChildItem -Path msix-packages -Recurse
 
-      - name: Locate MakeAppx.exe
+      - name: Locate SDK tools
         id: sdk
         run: |
           $SdkRoot = "C:\Program Files (x86)\Windows Kits\10\bin"
@@ -129,25 +149,42 @@ jobs:
             Write-Error "Windows 10 SDK not found"
             exit 1
           }
-          $MakeAppx = Join-Path $SdkVersions[0].FullName "x64\makeappx.exe"
+          $SdkBin = Join-Path $SdkVersions[0].FullName "x64"
+          $MakeAppx = Join-Path $SdkBin "makeappx.exe"
+          $SignTool = Join-Path $SdkBin "signtool.exe"
           if (-not (Test-Path $MakeAppx)) {
             Write-Error "makeappx.exe not found at $MakeAppx"
             exit 1
           }
-          Write-Host "Found: $MakeAppx"
+          Write-Host "Found MakeAppx: $MakeAppx"
           echo "MAKEAPPX=$MakeAppx" >> $env:GITHUB_OUTPUT
+          if (Test-Path $SignTool) {
+            Write-Host "Found SignTool: $SignTool"
+            echo "SIGNTOOL=$SignTool" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Rename .msix to .appx for bundle compatibility
+        run: |
+          # makeappx.exe bundle rejects .msix extensions for packages targeting older
+          # MinVersion platforms (error 0x80080215). The .msix and .appx formats are
+          # binary-identical — only the extension differs. Renaming to .appx before
+          # bundling is the standard workaround.
+          Get-ChildItem -Path msix-packages -Filter "*.msix" | ForEach-Object {
+            $newName = $_.FullName -replace '\.msix$', '.appx'
+            Rename-Item $_.FullName $newName
+            Write-Host "Renamed: $($_.Name) -> $(Split-Path $newName -Leaf)"
+          }
 
       - name: Create MSIX Bundle
         run: |
           New-Item -ItemType Directory -Path bundle-output -Force | Out-Null
 
-          # Determine bundle filename from one of the packages
-          $msixFiles = Get-ChildItem -Path msix-packages -Filter "*.msix"
-          Write-Host "Bundling $($msixFiles.Count) packages:"
-          $msixFiles | ForEach-Object { Write-Host "  $_" }
+          $appxFiles = Get-ChildItem -Path msix-packages -Filter "*.appx"
+          Write-Host "Bundling $($appxFiles.Count) packages:"
+          $appxFiles | ForEach-Object { Write-Host "  $_" }
 
-          # Extract version from filename (e.g. ibl-ai-os-1.1.9.0-x64.msix)
-          $sampleName = $msixFiles[0].Name
+          # Extract version from filename (e.g. ibl-ai-os-0.35.14.0-x64.appx)
+          $sampleName = $appxFiles[0].Name
           if ($sampleName -match '(\d+\.\d+\.\d+\.\d+)') {
             $version = $Matches[1]
           } else {
@@ -165,9 +202,101 @@ jobs:
 
           Write-Host "Bundle created: $bundlePath" -ForegroundColor Green
 
+      - name: Import signing certificate
+        if: inputs.sign
+        id: cert
+        env:
+          MSIX_CERT_PFX: ${{ secrets.MSIX_CERT_PFX }}
+          MSIX_CERT_PASSWORD: ${{ secrets.MSIX_CERT_PASSWORD }}
+        run: |
+          if (-not $env:MSIX_CERT_PFX) {
+            Write-Error "Signing requested but MSIX_CERT_PFX secret is not set"
+            exit 1
+          }
+
+          $pfxBytes = [Convert]::FromBase64String($env:MSIX_CERT_PFX)
+          $pfxPath = Join-Path $env:RUNNER_TEMP "msix-signing-cert.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+          $securePassword = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+
+          Write-Host "Certificate imported: $($cert.Subject)"
+          Write-Host "Thumbprint: $($cert.Thumbprint)"
+          echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+          Remove-Item $pfxPath -Force
+
+      - name: Export public certificate for sideload distribution
+        if: inputs.sign
+        run: |
+          $thumbprint = "${{ steps.cert.outputs.CERT_THUMBPRINT }}"
+          $cert = Get-ChildItem "Cert:\CurrentUser\My\$thumbprint"
+          $cerPath = "bundle-output\ibl-ai-os-signing-cert.cer"
+          Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          Write-Host "Exported public certificate to $cerPath"
+
+      - name: Create sideload install script
+        if: inputs.sign
+        run: |
+          $script = @'
+          #Requires -RunAsAdministrator
+          <#
+          .SYNOPSIS
+            Installs the ibl.ai OS MSIX bundle with its signing certificate.
+          .DESCRIPTION
+            This script imports the self-signed certificate into the Trusted People
+            store so Windows will accept the MSIX package, then installs the app.
+            Must be run as Administrator.
+          #>
+
+          $ErrorActionPreference = "Stop"
+          $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+          # Find the certificate and bundle in the same folder
+          $cert = Get-ChildItem $scriptDir -Filter "*.cer" | Select-Object -First 1
+          $bundle = Get-ChildItem $scriptDir -Filter "*.msixbundle" | Select-Object -First 1
+
+          if (-not $cert) { Write-Error "No .cer certificate file found in $scriptDir"; exit 1 }
+          if (-not $bundle) { Write-Error "No .msixbundle file found in $scriptDir"; exit 1 }
+
+          Write-Host "Importing certificate: $($cert.Name)" -ForegroundColor Yellow
+          Import-Certificate -FilePath $cert.FullName -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+          Write-Host "Certificate imported successfully." -ForegroundColor Green
+
+          Write-Host "Installing: $($bundle.Name)" -ForegroundColor Yellow
+          Add-AppxPackage -Path $bundle.FullName
+          Write-Host "Installation complete!" -ForegroundColor Green
+          '@
+          Set-Content -Path "bundle-output\Install-IblAiOS.ps1" -Value $script
+          Write-Host "Created sideload install script"
+
+      - name: Sign MSIX Bundle
+        if: inputs.sign
+        run: |
+          $bundle = (Get-ChildItem -Path bundle-output -Filter "*.msixbundle")[0]
+          Write-Host "Signing: $($bundle.Name)" -ForegroundColor Yellow
+
+          & "${{ steps.sdk.outputs.SIGNTOOL }}" sign `
+            /fd SHA256 `
+            /sha1 "${{ steps.cert.outputs.CERT_THUMBPRINT }}" `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            $bundle.FullName
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "signtool sign failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+          Write-Host "Bundle signed successfully." -ForegroundColor Green
+
       - name: Upload MSIX Bundle
         uses: actions/upload-artifact@v4
         with:
           name: ibl-ai-os-msixbundle
-          path: bundle-output/*.msixbundle
+          path: |
+            bundle-output/*.msixbundle
+            bundle-output/*.cer
+            bundle-output/*.ps1
           if-no-files-found: error

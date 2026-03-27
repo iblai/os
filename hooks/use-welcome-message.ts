@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
-import { useLazyGetGuidedPromptsQuery } from '@iblai/iblai-js/data-layer';
-import { useMentorSettings } from './use-mentors/use-mentor-settings';
+import { useLazyGetGuidedPromptsQuery } from "@iblai/iblai-js/data-layer";
+import { useMentorSettings } from "./use-mentors/use-mentor-settings";
 
 type Props = {
   sessionId: string;
@@ -22,7 +22,7 @@ export default function useWelcome({
   wsUrl,
   isNewSession = true,
 }: Props) {
-  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const webSocket = React.useRef<WebSocket | null>(null);
 
   const [loadGuidedPrompts] = useLazyGetGuidedPromptsQuery();
@@ -66,7 +66,7 @@ export default function useWelcome({
   const _handleIncomingMessage = (event: MessageEvent) => {
     let response = JSON.parse(event.data);
 
-    if (response?.detail === 'Connected.') {
+    if (response?.detail === "Connected.") {
       _handleSendTextQuery();
     }
 
@@ -94,8 +94,8 @@ export default function useWelcome({
   };
 
   useEffect(() => {
-    if (greetingMethod === 'proactive_response') {
-      setWelcomeMessage(proactiveResponse ?? '');
+    if (greetingMethod === "proactive_response") {
+      setWelcomeMessage(proactiveResponse ?? "");
     }
   }, [proactiveResponse]);
 
@@ -106,8 +106,7 @@ export default function useWelcome({
   };
 
   const handleSendProactivePrompt = () => {
-    console.log('######################## handling send proactive prompt');
-    if (greetingMethod === 'proactive_prompt') {
+    if (greetingMethod === "proactive_prompt") {
       webSocket.current = new WebSocket(wsUrl);
 
       webSocket.current.onmessage = _handleIncomingMessage;
@@ -117,18 +116,26 @@ export default function useWelcome({
 
   useEffect(() => {
     _endConnection();
-    setWelcomeMessage('');
+    setWelcomeMessage("");
     if (mentorUniqueId) {
-      if (greetingMethod === 'proactive_prompt') {
+      if (greetingMethod === "proactive_prompt") {
         isNewSession && handleSendProactivePrompt();
-      } else if (greetingMethod === 'proactive_response') {
-        setWelcomeMessage(proactiveResponse ?? '');
+      } else if (greetingMethod === "proactive_response") {
+        setWelcomeMessage(proactiveResponse ?? "");
       }
     }
     return () => {
       _endConnection();
     };
-  }, [sessionId, tenantKey, username, mentorUniqueId, greetingMethod, proactiveResponse]);
+  }, [
+    sessionId,
+    tenantKey,
+    username,
+    mentorUniqueId,
+    greetingMethod,
+    proactiveResponse,
+    isNewSession,
+  ]);
 
   return { welcomeMessage, handleSendProactivePrompt };
 }

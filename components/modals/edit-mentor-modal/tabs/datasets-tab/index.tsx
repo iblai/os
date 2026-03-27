@@ -1,20 +1,29 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus } from "lucide-react";
 
-import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { DatasetItemList } from './dataset-item-list';
-import IblPagination from '@/components/ibl-pagination';
-import { useDatasetsWithPagination } from '@/hooks/use-datasets';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
-import { AddResourceModal } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
-import { Spinner } from '@/components/spinner';
+import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DatasetItemList } from "./dataset-item-list";
+import IblPagination from "@/components/ibl-pagination";
+import { useDatasetsWithPagination } from "@/hooks/use-datasets";
+import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
+import { AddResourceModal } from "@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal";
+import { Spinner } from "@/components/spinner";
+import type { Dataset } from "./dataset-item";
 
-export function DatasetsTab() {
+interface DatasetsTabProps {
+  onSelect?: (dataset: Dataset) => void;
+  selectedDatasetId?: string;
+}
+
+export function DatasetsTab({
+  onSelect,
+  selectedDatasetId,
+}: DatasetsTabProps = {}) {
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
 
   const openAddResourceModal = () => setShowAddResourceModal(true);
@@ -39,14 +48,16 @@ export function DatasetsTab() {
       <div className="lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
         <div>
           <h3 className="text-base font-medium text-gray-900 mb-1">Datasets</h3>
-          <p className="text-gray-600 text-xs">Manage training datasets and knowledge sources.</p>
+          <p className="text-gray-600 text-xs">
+            Manage training datasets and knowledge sources.
+          </p>
         </div>
       </div>
       <div
         className="flex-1 p-3 lg:p-4 space-y-4"
         style={{
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          overflowY: "auto",
+          overflowX: "hidden",
         }}
       >
         <div className="space-y-4">
@@ -66,7 +77,9 @@ export function DatasetsTab() {
               />
             </div>
             <Button
-              onClick={() => executeWithTrialCheck(() => openAddResourceModal())}
+              onClick={() =>
+                executeWithTrialCheck(() => openAddResourceModal())
+              }
               size="sm"
               className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
             >
@@ -105,8 +118,12 @@ export function DatasetsTab() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    {/* @ts-expect-error - Type mismatch between RetrieverDocumentEmbedding[] and Dataset[], id property type difference */}
-                    <DatasetItemList datasets={datasets?.results ?? []} />
+                    <DatasetItemList
+                      // @ts-ignore - Type mismatch between RetrieverDocumentEmbedding[] and Dataset[], id property type difference
+                      datasets={datasets?.results ?? []}
+                      onSelect={onSelect}
+                      selectedDatasetId={selectedDatasetId}
+                    />
                   </Table>
                 )}
               </div>
