@@ -75,15 +75,21 @@ fn get_app_url() -> String {
         return url;
     }
 
-    // Mobile platforms: production URL by default
+    // Mobile platforms: .org for debug, .app for release
     #[cfg(any(target_os = "ios", target_os = "android"))]
-    return "https://mentorai.iblai.app".to_string();
+    {
+        #[cfg(debug_assertions)]
+        return "https://mentorai.iblai.org".to_string();
 
-    // Desktop: localhost for debug, production URL for release
+        #[cfg(not(debug_assertions))]
+        return "https://mentorai.iblai.app".to_string();
+    }
+
+    // Desktop: .org for debug, .app for release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         #[cfg(debug_assertions)]
-        return "https://mentorai.iblai.app".to_string();
+        return "https://mentorai.iblai.org".to_string();
 
         #[cfg(not(debug_assertions))]
         return "https://mentorai.iblai.app".to_string();

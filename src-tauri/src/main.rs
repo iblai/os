@@ -168,7 +168,7 @@ fn get_app_url() -> String {
 
     // Default: localhost for debug, production URL for release
     #[cfg(debug_assertions)]
-    return "https://mentorai.iblai.app".to_string();
+    return "https://mentorai.iblai.org".to_string();
 
     #[cfg(not(debug_assertions))]
     return "https://mentorai.iblai.app".to_string();
