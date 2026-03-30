@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-31",
   "summary": {
-    "totalCheckpoints": 260,
-    "coveredCheckpoints": 260,
+    "totalCheckpoints": 267,
+    "coveredCheckpoints": 267,
     "percent": 100,
-    "totalJourneys": 35
+    "totalJourneys": 36
   },
   "journeys": [
     {
@@ -555,6 +555,21 @@
         { "id": "tep-07", "description": "Explore Mentors button in No Mentor Selected modal navigates to explore", "status": "covered" },
         { "id": "tep-08", "description": "Notifications button navigates to notifications page with sidebar and navbar", "status": "covered" },
         { "id": "tep-09", "description": "No 404 API calls for mentor public settings when mentorId is undefined", "status": "covered" }
+      ]
+    },
+    {
+      "id": "copy-mentor",
+      "name": "Copy Mentor",
+      "spec": "36-copy-mentor.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/settings-tab.tsx", "components/modals/copy-mentor-modal.tsx"],
+      "checkpoints": [
+        { "id": "cpm-01", "description": "Allow Copies toggle shows Copy button when enabled and hides it when disabled", "status": "covered" },
+        { "id": "cpm-02", "description": "Copy Mentor modal opens with correct defaults", "status": "covered" },
+        { "id": "cpm-03", "description": "Copy Mentor modal closes via Escape key", "status": "covered" },
+        { "id": "cpm-04", "description": "Mentor can be copied with default name and user navigates to new mentor", "status": "covered" },
+        { "id": "cpm-05", "description": "Mentor can be copied with a custom name", "status": "covered" },
+        { "id": "cpm-06", "description": "Copy button is disabled when mentor name is empty", "status": "covered" },
+        { "id": "cpm-07", "description": "Mentor can be copied to a different tenant", "status": "covered" }
       ]
     }
   ]
