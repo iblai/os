@@ -577,6 +577,10 @@ export function useSidebarNavigation() {
       label: "Workflows",
       icon: Workflow,
       onClick: () => {
+        if (!mentorId) {
+          openNoMentorSelectedModal();
+          return;
+        }
         executeWithTrialCheck(navigateToWorkflows);
       },
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
