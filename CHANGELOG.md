@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.40.1](https://github.com/iblai/mentorai/compare/v0.40.0...v0.40.1) (2026-03-30)
+
+### Chores
+
+* add debug logging to useOS hook ([5e9b4d6](https://github.com/iblai/mentorai/commit/5e9b4d609f4566e450c84616fd5d57807f8dd018))
+
 ## [0.40.0](https://github.com/iblai/mentorai/compare/v0.39.2...v0.40.0) (2026-03-30)
 
 ### Features
