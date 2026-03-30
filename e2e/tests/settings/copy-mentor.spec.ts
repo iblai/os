@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { logger, safeWaitForURL } from "@iblai/iblai-js/playwright";
 import { navigateToMentorApp, openSettingsTab } from "./helpers";
 import { fillCreateMentorForm } from "../utils/create-mentor";
-import { MENTOR_NEXTJS_HOST, waitForPageReady } from "../utils";
+import { waitForPageReady } from "../utils";
 
 /**
  * Helper: Enable "Allow Copies" toggle on the current mentor and save.
@@ -53,53 +53,6 @@ async function openCopyMentorModal(
 
   logger.info("Copy Mentor modal opened");
   return copyDialog;
-}
-
-/**
- * Helper: Close any open dialogs before proceeding.
- */
-async function closeAllDialogs(page: import("@playwright/test").Page) {
-  // Try closing dialogs by pressing Escape multiple times
-  for (let i = 0; i < 3; i++) {
-    const dialog = page.getByRole("dialog").first();
-    const isVisible = await dialog.isVisible().catch(() => false);
-    if (isVisible) {
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-    } else {
-      break;
-    }
-  }
-}
-
-/**
- * Helper: Delete the current mentor via settings.
- */
-async function deleteCurrentMentor(page: import("@playwright/test").Page) {
-  // Close any open dialogs first (e.g. edit modal opened after copy)
-  await closeAllDialogs(page);
-  await page.waitForTimeout(500);
-
-  const editMentorDialog = await openSettingsTab(page);
-
-  const deleteButton = editMentorDialog.getByRole("button", {
-    name: "Delete",
-  });
-  await expect(deleteButton).toBeVisible({ timeout: 10_000 });
-  await deleteButton.click();
-
-  const deleteDialog = page.getByRole("alertdialog", {
-    name: "Delete Mentor",
-  });
-  await expect(deleteDialog).toBeVisible({ timeout: 5_000 });
-  await deleteDialog.getByRole("button", { name: "Delete" }).click();
-
-  await page.waitForURL(
-    new RegExp(`^${MENTOR_NEXTJS_HOST}/platform/[^/]+/explore$`),
-  );
-  await page.waitForLoadState("networkidle");
-
-  logger.info("Mentor deleted");
 }
 
 test.describe("Copy Mentor Feature", () => {
@@ -175,11 +128,6 @@ test.describe("Copy Mentor Feature", () => {
       });
       await expect(copyButtonAfterDisable).not.toBeVisible({ timeout: 5_000 });
       logger.info("Copy button is hidden after disabling Allow Copies");
-
-      // Cleanup: delete the mentor
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      await deleteCurrentMentor(page);
     });
   });
 
@@ -225,11 +173,6 @@ test.describe("Copy Mentor Feature", () => {
       await copyDialog.getByRole("button", { name: "Cancel" }).click();
       await expect(copyDialog).not.toBeVisible({ timeout: 5_000 });
       logger.info("Modal closed via Cancel");
-
-      // Cleanup
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      await deleteCurrentMentor(page);
     });
 
     test("should close modal via Escape key", async ({ page }) => {
@@ -243,11 +186,6 @@ test.describe("Copy Mentor Feature", () => {
       await page.keyboard.press("Escape");
       await expect(copyDialog).not.toBeVisible({ timeout: 5_000 });
       logger.info("Modal closed via Escape key");
-
-      // Cleanup
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      await deleteCurrentMentor(page);
     });
   });
 
@@ -285,9 +223,6 @@ test.describe("Copy Mentor Feature", () => {
         .filter({ hasText: new RegExp(expectedCopyName) });
       await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
       logger.info(`Navigated to copied mentor: ${expectedCopyName}`);
-
-      // Cleanup: delete the copied mentor
-      await deleteCurrentMentor(page);
     });
 
     test("should copy mentor with a custom name", async ({ page }) => {
@@ -321,9 +256,6 @@ test.describe("Copy Mentor Feature", () => {
         .filter({ hasText: new RegExp(`^${customName}$`) });
       await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
       logger.info(`Navigated to custom-named copy: ${customName}`);
-
-      // Cleanup
-      await deleteCurrentMentor(page);
     });
   });
 
@@ -346,13 +278,6 @@ test.describe("Copy Mentor Feature", () => {
       });
       await expect(copyButton).toBeDisabled();
       logger.info("Copy button is disabled when name is empty");
-
-      // Close and cleanup
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      await deleteCurrentMentor(page);
     });
   });
 
@@ -376,12 +301,10 @@ test.describe("Copy Mentor Feature", () => {
         logger.info(
           "User is admin in only one tenant — skipping cross-tenant copy test",
         );
-        // Close and cleanup
         await page.keyboard.press("Escape");
         await page.waitForTimeout(500);
         await page.keyboard.press("Escape");
         await page.waitForTimeout(500);
-        await deleteCurrentMentor(page);
         test.skip();
         return;
       }
@@ -428,7 +351,6 @@ test.describe("Copy Mentor Feature", () => {
         await page.waitForTimeout(500);
         await page.keyboard.press("Escape");
         await page.waitForTimeout(500);
-        await deleteCurrentMentor(page);
         test.skip();
         return;
       }
