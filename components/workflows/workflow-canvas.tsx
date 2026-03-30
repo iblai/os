@@ -1203,7 +1203,10 @@ export function WorkflowCanvas({
   const selectedMentorIds = activeMentorId ? [activeMentorId] : [];
 
   return (
-    <div className="h-full w-full relative bg-background overflow-hidden select-none">
+    <div
+      data-testid="workflow-canvas"
+      className="h-full w-full relative bg-background overflow-hidden select-none"
+    >
       <div
         ref={canvasRef}
         className={`absolute inset-0 ${tool === "hand" ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}

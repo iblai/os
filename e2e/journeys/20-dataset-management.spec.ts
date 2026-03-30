@@ -301,7 +301,7 @@ test.describe("Journey 20: Dataset Management", () => {
     editMentorPage,
   }) => {
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     const dialogVisible = await editMentorPage.dialog
       .isVisible()
       .catch(() => false);

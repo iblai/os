@@ -34,8 +34,7 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
           <div className="flex w-full flex-col gap-3">
             <a
               href="https://www.ibl.ai/pricing"
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={onClose}
               className="ibl-button-primary flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold"
             >
               Go to ibl.ai/pricing

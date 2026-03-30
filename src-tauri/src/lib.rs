@@ -75,15 +75,21 @@ fn get_app_url() -> String {
         return url;
     }
 
-    // Mobile platforms: production URL by default
+    // Mobile platforms: .org for debug, .app for release
     #[cfg(any(target_os = "ios", target_os = "android"))]
-    return "https://mentorai.iblai.app".to_string();
+    {
+        #[cfg(debug_assertions)]
+        return "https://mentorai.iblai.org".to_string();
 
-    // Desktop: localhost for debug, production URL for release
+        #[cfg(not(debug_assertions))]
+        return "https://mentorai.iblai.app".to_string();
+    }
+
+    // Desktop: .org for debug, .app for release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         #[cfg(debug_assertions)]
-        return "https://mentorai.iblai.app".to_string();
+        return "https://mentorai.iblai.org".to_string();
 
         #[cfg(not(debug_assertions))]
         return "https://mentorai.iblai.app".to_string();
@@ -122,6 +128,53 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
 
 fn is_oauth_url(url: &str) -> bool {
     OAUTH_URL_PATTERNS.iter().any(|pattern| url.contains(pattern))
+}
+
+/// App-related domains that should always stay inside the webview.
+const APP_INTERNAL_DOMAINS: &[&str] = &[
+    "iblai.app",
+    "iblai.org",
+    "iblai.tech",
+    "localhost",
+    "127.0.0.1",
+];
+
+/// Check if a URL is truly external (not part of the app or its ecosystem).
+/// URLs on iblai domains, localhost, and the dev server stay in the webview.
+fn is_external_url(url: &str) -> bool {
+    let parsed = match Url::parse(url) {
+        Ok(u) => u,
+        Err(_) => return false,
+    };
+
+    let host = match parsed.host_str() {
+        Some(h) => h,
+        None => return false,
+    };
+
+    // Dev server IP — always internal
+    let app_url = get_app_url();
+    if let Ok(app_parsed) = Url::parse(&app_url) {
+        if let Some(app_host) = app_parsed.host_str() {
+            if host == app_host {
+                return false;
+            }
+        }
+    }
+
+    // Check against known internal domains
+    for domain in APP_INTERNAL_DOMAINS {
+        if host == *domain || host.ends_with(&format!(".{}", domain)) {
+            return false;
+        }
+    }
+
+    // Also treat any private IP as internal (192.168.x.x, 10.x.x.x, etc.)
+    if host.starts_with("192.168.") || host.starts_with("10.") || host.starts_with("172.") {
+        return false;
+    }
+
+    true
 }
 
 #[cfg(any(target_os = "ios", target_os = "macos"))]
@@ -1886,6 +1939,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai OS] ============================================");
@@ -2394,29 +2448,46 @@ pub fn run() {
                 .initialization_script(&combined_script)
                 .on_navigation(move |url| {
                     let url_str = url.as_str();
-                    let log_msg = format!("[ibl.ai OS] [MOBILE] on_navigation called with URL: {}", url_str);
-                    println!("{}", log_msg);
+                    println!("[ibl.ai OS] [MOBILE] on_navigation called with URL: {}", url_str);
 
-                    let is_oauth = is_oauth_url(url_str);
-                    let oauth_check_msg = format!("[ibl.ai OS] [MOBILE] is_oauth_url result: {}", is_oauth);
-                    println!("{}", oauth_check_msg);
-
-                    if is_oauth {
-                        let intercept_msg = format!(
-                            "[ibl.ai OS] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
-                            url_str
-                        );
-                        println!("{}", intercept_msg);
-
+                    // OAuth URLs → open in auth session (Safari VC)
+                    if is_oauth_url(url_str) {
+                        println!("[ibl.ai OS] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}", url_str);
                         if let Err(e) = open_oauth_url(&app_handle, url_str) {
-                            let error_msg = format!("[ibl.ai OS] [MOBILE] Failed to open external URL: {}", e);
-                            println!("{}", error_msg);
+                            println!("[ibl.ai OS] [MOBILE] Failed to open OAuth URL: {}", e);
                             return true;
                         }
-
-                        println!("[ibl.ai OS] [MOBILE] Returning false to prevent webview navigation");
                         return false;
                     }
+
+                    // External URLs (different host than app) → open in system browser
+                    if is_external_url(url_str) {
+                        println!("[ibl.ai OS] [MOBILE] External URL detected, opening in system browser: {}", url_str);
+                        #[cfg(target_os = "ios")]
+                        {
+                            let url_string = url_str.to_string();
+                            let _ = app_handle.run_on_main_thread(move || {
+                                if let Ok(c_url) = CString::new(url_string) {
+                                    unsafe {
+                                        let ns_string: *mut Object = msg_send![class!(NSString), alloc];
+                                        let ns_string: *mut Object = msg_send![ns_string, initWithUTF8String: c_url.as_ptr()];
+                                        let ns_url: *mut Object = msg_send![class!(NSURL), URLWithString: ns_string];
+                                        if !ns_url.is_null() {
+                                            let _ = open_url_via_application(ns_url);
+                                        }
+                                        let _: () = msg_send![ns_string, release];
+                                    }
+                                }
+                            });
+                            return false;
+                        }
+                        #[cfg(not(target_os = "ios"))]
+                        {
+                            let _ = app_handle.opener().open_url(url_str, None::<&str>);
+                            return false;
+                        }
+                    }
+
                     println!("[ibl.ai OS] [MOBILE] Allowing normal navigation");
                     true
                 })

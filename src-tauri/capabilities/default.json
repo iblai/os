@@ -5,7 +5,16 @@
   "windows": ["main"],
   "local": true,
   "remote": {
-    "urls": ["https://*.iblai.app/*", "https://*.iblai.org/*", "http://127.0.0.1:*/*", "http://localhost:*/*", "http://localhost:3456", "http://localhost:3456/*", "mentor://localhost/*"]
+    "urls": [
+      "https://*.iblai.app/*",
+      "https://*.iblai.org/*",
+      "http://127.0.0.1:*/*",
+      "http://192.168.*.*:*/*",
+      "http://localhost:*/*",
+      "http://localhost:3456",
+      "http://localhost:3456/*",
+      "mentor://localhost/*"
+    ]
   },
   "permissions": [
     "core:webview:allow-internal-toggle-devtools",
@@ -27,9 +36,25 @@
     "core:webview:default",
     "core:webview:allow-create-webview-window",
     "opener:default",
-    "shell:allow-open",
+    "shell:default",
     "allow-open-external-url",
     "allow-navigate-to",
-    "allow-get-os-type"
+    "allow-get-os-type",
+    "os:default",
+    "opener:allow-default-urls",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://www.ibl.ai/*"
+        },
+        {
+          "url": "*.iblai.app/*"
+        },
+        {
+          "url": "*.iblai.org/*"
+        }
+      ]
+    }
   ]
 }
