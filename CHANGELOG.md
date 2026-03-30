@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.38.1]
+
+- fix(web-containers): profile > basic > validation needed for fullname field 
+
 ## [0.38.0](https://github.com/iblai/mentorai/compare/v0.37.2...v0.38.0) (2026-03-30)
 
 ### Features
