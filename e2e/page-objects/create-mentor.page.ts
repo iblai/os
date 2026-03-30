@@ -60,7 +60,7 @@ export class CreateMentorPage {
    * Fill the required fields on the Settings tab and advance to Prompts.
    */
   async fillRequiredFields(name: string, description?: string): Promise<void> {
-    await expect(this.nameInput).toBeVisible({ timeout: 5_000 });
+    await expect(this.nameInput).toBeEnabled({ timeout: 30_000 });
     await this.nameInput.fill(name);
 
     await this.descriptionInput.fill(
