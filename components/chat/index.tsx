@@ -262,6 +262,7 @@ export function Chat({
   })();
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
+  const isCustomApp = searchParams.get("custom-app") === "true";
   const isCompactMode = searchParams.get("compact") === "true";
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
@@ -383,7 +384,8 @@ export function Chat({
     sendMessageToParentWebsite,
     isPreviewMode:
       isPreviewMode ||
-      (!!visitingTenant &&
+      (!isCustomApp &&
+        !!visitingTenant &&
         isLoggedIn() &&
         !mentorSettings.allowAnonymous &&
         !searchParams.get("token")),
