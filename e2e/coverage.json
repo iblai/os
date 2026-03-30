@@ -548,10 +548,10 @@
       "checkpoints": [
         { "id": "tep-01", "description": "Tenant explore page renders with sidebar and navbar visible", "status": "covered" },
         { "id": "tep-02", "description": "Mentor cards render on tenant explore page", "status": "covered" },
-        { "id": "tep-03", "description": "New Chat button shows No Mentor Selected modal on tenant explore page", "status": "covered" },
-        { "id": "tep-04", "description": "Mentors button stays on explore page", "status": "covered" },
-        { "id": "tep-05", "description": "Clicking a mentor card navigates to that mentor from tenant explore page", "status": "covered" },
-        { "id": "tep-06", "description": "Workflows button shows No Mentor Selected modal on tenant explore page", "status": "covered" },
+        { "id": "tep-03", "description": "Mentors button stays on explore page", "status": "covered" },
+        { "id": "tep-04", "description": "Clicking a mentor card navigates to that mentor from tenant explore page", "status": "covered" },
+        { "id": "tep-05", "description": "New Chat button shows No Mentor Selected modal on tenant explore page (admin)", "status": "covered" },
+        { "id": "tep-06", "description": "Workflows button shows No Mentor Selected modal on tenant explore page (admin)", "status": "covered" },
         { "id": "tep-07", "description": "Explore Mentors button in No Mentor Selected modal navigates to explore", "status": "covered" },
         { "id": "tep-08", "description": "Notifications button navigates to notifications page with sidebar and navbar", "status": "covered" },
         { "id": "tep-09", "description": "No 404 API calls for mentor public settings when mentorId is undefined", "status": "covered" }

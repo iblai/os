@@ -511,9 +511,9 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Tenant explore page renders with sidebar and navbar visible
 - [x] Mentor cards render on tenant explore page
-- [x] New Chat button shows "No Mentor Selected" modal on tenant explore page
 - [x] Mentors button stays on explore page
 - [x] Clicking a mentor card navigates to that mentor from tenant explore page
+- [x] New Chat button shows "No Mentor Selected" modal on tenant explore page (admin)
 - [x] Workflows button shows "No Mentor Selected" modal on tenant explore page (admin)
 - [x] "Explore Mentors" button in No Mentor Selected modal navigates to explore
 - [x] Notifications button navigates to notifications page with sidebar and navbar
