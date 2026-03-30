@@ -1,5 +1,5 @@
 # Stage 0: Base
-FROM node:20 AS base
+FROM node:25 AS base
 WORKDIR /app
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
@@ -48,7 +48,7 @@ RUN echo "NEXT_PUBLIC_BASE_PATH=/${NEXT_PUBLIC_BASE_PATH}" > .env.production
 RUN pnpm run build
 
 # Stage 2: Runner (Standalone)
-FROM node:20-alpine AS runner
+FROM node:25-alpine AS runner
 WORKDIR /app
 
 # Install Node 25.3.0 (download official musl binary for Alpine)
