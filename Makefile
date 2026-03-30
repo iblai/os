@@ -97,3 +97,9 @@ e2e-install:
 # run e2e tests in debug mode
 e2e-debug:
 	npx playwright test --config=e2e/playwright.config.ts --debug
+
+# Release a new version (usage: make release VERSION=0.40.0)
+release:
+	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make release VERSION=0.40.0"; exit 1; fi
+	git tag -a v$(VERSION) -m 'chore: release v$(VERSION)'
+	git push origin v$(VERSION) --no-verify
