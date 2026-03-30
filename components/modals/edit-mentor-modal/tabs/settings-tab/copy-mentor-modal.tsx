@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Dialog,
@@ -7,33 +7,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useUsername } from "@/hooks/use-user";
-import { useNavigate } from "@/hooks/user-navigate";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { MODALS } from "@/lib/constants";
-import { useGetUserTenantsQuery } from "@/features/tenants/api-slice";
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useUsername } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { MODALS } from '@/lib/constants';
+import { useGetUserTenantsQuery } from '@/features/tenants/api-slice';
 import {
   useForkMentorMutation,
   useEditMentorMutation,
   useGetMentorSettingsQuery,
-} from "@iblai/iblai-js/data-layer";
-import { MentorVisibilityEnum } from "@iblai/iblai-api";
-import { useParams } from "next/navigation";
-import { toast } from "sonner";
-import { handleTenantSwitch } from "@/lib/utils";
-import React from "react";
+} from '@iblai/iblai-js/data-layer';
+import { MentorVisibilityEnum } from '@iblai/iblai-api';
+import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { handleTenantSwitch } from '@/lib/utils';
+import React from 'react';
 
 interface CopyMentorModalProps {
   onClose: () => void;
@@ -48,7 +48,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
   const { data: mentor } = useGetMentorSettingsQuery(
     // @ts-ignore
-    { mentor: activeMentorId, org: tenantKey, userId: username ?? "" },
+    { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
     { skip: !activeMentorId || !tenantKey || !username },
   );
 
@@ -65,10 +65,10 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
   const hasMultipleAdminTenants = adminTenants.length > 1;
 
-  const defaultName = `Copy of ${mentor?.mentor_name ?? "Mentor"}`;
+  const defaultName = `Copy of ${mentor?.mentor_name ?? 'Mentor'}`;
   const [newMentorName, setNewMentorName] = React.useState(defaultName);
   const [destinationTenantKey, setDestinationTenantKey] =
-    React.useState<string>(tenantKey ?? "");
+    React.useState<string>(tenantKey ?? '');
   // @ts-ignore forkable_with_training_data is not part of the mentor settings type
   const canCloneDocuments = !!mentor?.forkable_with_training_data;
   const [cloneDocuments, setCloneDocuments] = React.useState(canCloneDocuments);
@@ -89,7 +89,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
       !destinationTenantKey ||
       !newMentorName.trim()
     ) {
-      toast.error("Unable to copy mentor. Missing context.");
+      toast.error('Unable to copy mentor. Missing context.');
       return;
     }
     try {
@@ -122,7 +122,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         }).unwrap();
       }
 
-      toast.success("Mentor copied successfully. Switching to new mentor...");
+      toast.success('Mentor copied successfully. Switching to new mentor');
       onClose();
 
       const isCrossTenantCopy = destinationTenantKey !== tenantKey;
@@ -154,7 +154,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         );
       }
     } catch {
-      toast.error("Failed to copy mentor");
+      toast.error('Failed to copy mentor');
     }
   };
 
@@ -194,8 +194,8 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
                   <SelectValue
                     placeholder={
                       isLoadingTenants
-                        ? "Loading tenants..."
-                        : "Select a tenant"
+                        ? 'Loading tenants...'
+                        : 'Select a tenant'
                     }
                   />
                 </SelectTrigger>
@@ -218,7 +218,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
               checked={canCloneDocuments && cloneDocuments}
               onCheckedChange={setCloneDocuments}
               disabled={isCopying || !canCloneDocuments}
-              aria-label={`Include training data ${canCloneDocuments && cloneDocuments ? "enabled" : "disabled"}`}
+              aria-label={`Include training data ${canCloneDocuments && cloneDocuments ? 'enabled' : 'disabled'}`}
             />
           </div>
         </div>
@@ -240,7 +240,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
             }
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
           >
-            {isCopying ? "Copying..." : "Copy"}
+            {isCopying ? 'Copying...' : 'Copy'}
           </Button>
         </DialogFooter>
       </DialogContent>
