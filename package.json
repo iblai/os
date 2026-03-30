@@ -212,7 +212,7 @@
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.4",
     "vitest-axe": "^0.1.0",
-    "wait-on": "9.0.3"
+    "wait-on": "9.0.4"
   },
   "lint-staged": {
     "*.ts?(x)": [
