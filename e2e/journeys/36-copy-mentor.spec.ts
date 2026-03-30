@@ -249,9 +249,13 @@ test.describe('Journey 36: Copy Mentor', () => {
     const destinationCombobox = copyDialog.getByRole('combobox', {
       name: 'Select destination tenant',
     });
-    const hasMultipleTenants = await destinationCombobox
-      .isVisible({ timeout: 60_000 })
-      .catch(() => false);
+    let hasMultipleTenants = false;
+    try {
+      await destinationCombobox.waitFor({ state: 'visible', timeout: 120_000 });
+      hasMultipleTenants = true;
+    } catch {
+      hasMultipleTenants = false;
+    }
 
     if (!hasMultipleTenants) {
       logger.info(
