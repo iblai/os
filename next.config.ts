@@ -49,6 +49,22 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns,
   },
+  // Prevent CDN/browser from serving stale HTML that references old chunk hashes.
+  // Static assets under /_next/static/ already get immutable caching from Next.js.
+  async headers() {
+    return [
+      {
+        // HTML pages — always revalidate so chunk references are fresh
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+    ];
+  },
   serverExternalPackages: [
     "import-in-the-middle",
     "require-in-the-middle",
