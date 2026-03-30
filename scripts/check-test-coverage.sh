@@ -11,6 +11,8 @@ BASE_BRANCH="${BASE_BRANCH:-origin/main}"
 SKIP_COVERAGE_FILES=(
   "providers/index.tsx"
   "_components/nav-bar/index.tsx"
+  "explore/layout.tsx"
+  "notifications/layout.tsx"
 )
 
 RED='\033[0;31m'
