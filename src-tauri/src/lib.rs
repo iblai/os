@@ -79,7 +79,7 @@ fn get_app_url() -> String {
     #[cfg(any(target_os = "ios", target_os = "android"))]
     {
         #[cfg(debug_assertions)]
-        return "https://mentorai.iblai.org".to_string();
+        return "http://192.168.1.46:3001".to_string();
 
         #[cfg(not(debug_assertions))]
         return "https://mentorai.iblai.app".to_string();
