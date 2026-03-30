@@ -1,5 +1,10 @@
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Smartphone } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Smartphone } from "lucide-react";
 
 type Props = {
   isOpen: boolean;
@@ -25,8 +30,9 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
               You can&apos;t subscribe here
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-gray-500">
-              Due to Apple guidelines, we&apos;re not able to offer purchases inside the app on
-              iPhone and iPad. You can subscribe on the web instead.
+              Due to Apple guidelines, we&apos;re not able to offer purchases
+              inside the app on iPhone and iPad. You can subscribe on the web
+              instead.
             </DialogDescription>
           </div>
 

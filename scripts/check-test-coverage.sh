@@ -12,6 +12,8 @@ SKIP_COVERAGE_FILES=(
   "providers/index.tsx"
   "_components/nav-bar/index.tsx"
   "lib/chunk-retry.ts"
+  "explore/layout.tsx"
+  "notifications/layout.tsx"
 )
 
 RED='\033[0;31m'

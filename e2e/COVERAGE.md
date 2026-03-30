@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-26 | 251 checkpoints | 34 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-03-30 | 260 checkpoints | 35 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -502,6 +502,22 @@ When adding a new page or modifying an existing user flow:
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
 - [x] Workflow can be published; active workflow can be deactivated back to Draft
+
+---
+
+## Journey 35: Tenant Explore Page (9 checkpoints) — `journeys/35-tenant-explore-page.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/explore/page.tsx`, `app/platform/[tenantKey]/notifications/layout.tsx`, `hooks/user-navigate.ts`
+
+- [x] Tenant explore page renders with sidebar and navbar visible
+- [x] Mentor cards render on tenant explore page
+- [x] Mentors button stays on explore page
+- [x] Clicking a mentor card navigates to that mentor from tenant explore page
+- [x] New Chat button shows "No Mentor Selected" modal on tenant explore page (admin)
+- [x] Workflows button shows "No Mentor Selected" modal on tenant explore page (admin)
+- [x] "Explore Mentors" button in No Mentor Selected modal navigates to explore
+- [x] Notifications button navigates to notifications page with sidebar and navbar
+- [x] No 404 API calls for mentor public settings when mentorId is undefined
 
 ---
 

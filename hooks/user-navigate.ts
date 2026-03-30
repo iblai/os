@@ -504,12 +504,17 @@ export function useSidebarNavigation() {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { executeWithTrialCheck, isNewlyUserOnPreFreeOrAdvertisingMode } =
     useShowFreeTrialDialog();
-  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery({
-    mentor: mentorId,
-    org: tenantKey,
-    // @ts-ignore
-    userId: ANONYMOUS_USERNAME,
-  });
+  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
+    {
+      mentor: mentorId,
+      org: tenantKey,
+      // @ts-ignore
+      userId: ANONYMOUS_USERNAME,
+    },
+    {
+      skip: !mentorId || !tenantKey,
+    },
+  );
 
   const contentItems = [
     {
@@ -577,6 +582,10 @@ export function useSidebarNavigation() {
       label: "Workflows",
       icon: Workflow,
       onClick: () => {
+        if (!mentorId) {
+          openNoMentorSelectedModal();
+          return;
+        }
         executeWithTrialCheck(navigateToWorkflows);
       },
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
