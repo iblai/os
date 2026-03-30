@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-03-31",
   "summary": {
-    "totalCheckpoints": 267,
-    "coveredCheckpoints": 267,
+    "totalCheckpoints": 268,
+    "coveredCheckpoints": 268,
     "percent": 100,
     "totalJourneys": 36
   },
@@ -569,7 +569,8 @@
         { "id": "cpm-04", "description": "Mentor can be copied with default name and user navigates to new mentor", "status": "covered" },
         { "id": "cpm-05", "description": "Mentor can be copied with a custom name", "status": "covered" },
         { "id": "cpm-06", "description": "Copy button is disabled when mentor name is empty", "status": "covered" },
-        { "id": "cpm-07", "description": "Mentor can be copied to a different tenant", "status": "covered" }
+        { "id": "cpm-07", "description": "Mentor can be copied without including training data", "status": "covered" },
+        { "id": "cpm-08", "description": "Mentor can be copied to a different tenant", "status": "covered" }
       ]
     }
   ]

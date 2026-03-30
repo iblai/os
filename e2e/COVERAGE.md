@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-31 | 267 checkpoints | 36 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-03-31 | 268 checkpoints | 36 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -521,7 +521,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 36: Copy Mentor (7 checkpoints) — `journeys/36-copy-mentor.spec.ts`
+## Journey 36: Copy Mentor (8 checkpoints) — `journeys/36-copy-mentor.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/copy-mentor-modal.tsx`
 
@@ -531,6 +531,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Mentor can be copied with default name and user navigates to the new mentor
 - [x] Mentor can be copied with a custom name
 - [x] Copy button is disabled when mentor name is empty
+- [x] Mentor can be copied without including training data
 - [x] Mentor can be copied to a different tenant _(env-gated: requires user with multiple admin tenants)_
 
 ---

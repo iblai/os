@@ -230,6 +230,52 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.close();
   });
 
+  test('admin copies a mentor without including training data', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    const mentorName = await createMentorPage.openAndCreate();
+
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.enableAllowCopies();
+
+    await editMentorPage.settings.copyMentorButton.click();
+    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
+    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+
+    // Toggle off "Include training data"
+    const trainingDataToggle = copyDialog.locator('button[role="switch"]');
+    await expect(trainingDataToggle).toBeVisible({ timeout: 5_000 });
+
+    const isChecked = await trainingDataToggle.getAttribute('aria-checked');
+    if (isChecked === 'true') {
+      await trainingDataToggle.click();
+    }
+    await expect(trainingDataToggle).toHaveAttribute('aria-checked', 'false');
+    logger.info('Include training data toggled off');
+
+    // Click Copy
+    await copyDialog.getByRole('button', { name: 'Copy', exact: true }).click();
+
+    // Wait for the copy dialog to close (indicates success)
+    logger.info('Waiting for copy without training data to complete...');
+    await expect(copyDialog).not.toBeVisible({ timeout: 60_000 });
+
+    // Wait for navigation to the new mentor
+    await waitForPageReady(page);
+    await page.waitForLoadState('networkidle');
+
+    // Verify we landed on the copied mentor
+    const expectedCopyName = `Copy of ${mentorName}`;
+    const mentorHeading = page
+      .locator('h1')
+      .filter({ hasText: new RegExp(expectedCopyName) });
+    await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
+    logger.info(`Copied mentor without training data: ${expectedCopyName}`);
+  });
+
   test('admin copies a mentor to a different tenant if user has multiple admin tenants', async ({
     page,
     createMentorPage,
