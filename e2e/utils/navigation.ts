@@ -125,6 +125,35 @@ export function parsePlatformUrl(url: string): ParsedPlatformUrl {
   };
 }
 
+/**
+ * Navigate directly to the tenant-level explore page (/platform/{tenantKey}/explore).
+ * First lands on the platform to resolve the tenant key, then navigates to
+ * the explore page and waits for the heading to confirm stability.
+ */
+export async function navigateToTenantExplorePage(page: Page): Promise<string> {
+  const host = process.env.MENTOR_NEXTJS_HOST || "";
+
+  // Navigate to the platform root to resolve tenant key via auth/redirect
+  await page.goto(host, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await safeWaitForURL(page, (url) => url.pathname.startsWith("/platform/"), {
+    timeout: 120_000,
+  });
+
+  const { platformKey: tenantKey } = parsePlatformUrl(page.url());
+
+  // Navigate to the tenant explore page
+  await page.goto(`${host}/platform/${tenantKey}/explore`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+
+  // Wait for explore heading to confirm the page is stable
+  const heading = page.getByRole("heading", { name: /all mentors/i });
+  await expect(heading).toBeVisible({ timeout: 60_000 });
+
+  return tenantKey;
+}
+
 export async function openMoreOptionsMenu(page: Page) {
   const moreOptionsButton = page
     .locator('nav button[aria-haspopup="menu"]')
