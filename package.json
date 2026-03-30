@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.36.11-patch-1",
+  "version": "0.39.2",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "1.1.5",
+    "@iblai/iblai-js": "1.1.9",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
