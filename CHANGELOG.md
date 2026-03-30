@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.40.0](https://github.com/iblai/mentorai/compare/v0.39.2...v0.40.0) (2026-03-30)
+
+### Features
+
+* ios restiction message modal feature ([e7f44d5](https://github.com/iblai/mentorai/commit/e7f44d5ed82bcbcfb4d674fbfee61597a36e2846))
+* ios restiction message modal feature > pnpm lock update ([f7699b0](https://github.com/iblai/mentorai/commit/f7699b0b152772d764341f9a699bf404f4692eff))
+* ios restiction message modal feature > test coverage ([9356132](https://github.com/iblai/mentorai/commit/93561324369fec93661e01669e2cd50c6d57cd30))
+* ios restriction on progress ([c91bcaf](https://github.com/iblai/mentorai/commit/c91bcafb7e7eed65a66d60a6d7c3245c5e51d713))
+* ios restriction on progress ([9c3637b](https://github.com/iblai/mentorai/commit/9c3637b4e49b51ce74ce0c5cf633d3a6a98a6954))
+
+### Bug Fixes
+
+* regenerate app icons, fix fetch interceptor crash, fix iOS bundle validation ([37e75d3](https://github.com/iblai/mentorai/commit/37e75d380f665bd289e96adffea263186ab10a94))
+* restore useOS isTauriApp guard and bump iblai-js to 1.1.9 ([9bd8fd4](https://github.com/iblai/mentorai/commit/9bd8fd4886eb4fc16845f393601073e192d1deb8))
+
+### Chores
+
+* add release-it as devDependency ([8776c87](https://github.com/iblai/mentorai/commit/8776c87e5988bb163f2e3a69a1e741f71070e86b))
+* bump package version to patch ([2fd6e7a](https://github.com/iblai/mentorai/commit/2fd6e7aacb9f3698ac3073c6292ebed5952a9338))
+
 ## [0.39.2](https://github.com/iblai/mentorai/compare/v0.39.0...v0.39.2) (2026-03-30)
 
 ### Chores
