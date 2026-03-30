@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.39.2](https://github.com/iblai/mentorai/compare/v0.39.0...v0.39.2) (2026-03-30)
+
+### Chores
+
+* release 0.39.1 ([7a91886](https://github.com/iblai/mentorai/commit/7a9188683ba9db3b7e889fccabf7705b3e65a1ec))
+
 ## [0.39.1]
 
 - bump iblai-js version to 1.1.9
