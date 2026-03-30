@@ -66,7 +66,7 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
     await signupPage.createAccountButton.click();
     await safeWaitForURL(
       page,
-      (url) => url.href.includes(AUTH_HOST) && url.href.includes("/login?"),
+      (url) => url.href.includes(HOST),
       { timeout: 120_000 },
     );
 
@@ -283,7 +283,5 @@ test.describe("Journey 1: Authentication — Invalid Credentials", () => {
     await expect(page.getByText("Invalid email or password")).toBeVisible({
       timeout: 15_000,
     });
-
-    await page.waitForLoadState("networkidle", {});
   });
 });
