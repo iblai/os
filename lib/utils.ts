@@ -1,50 +1,55 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import { format, isToday } from 'date-fns';
-import rehypeParse from 'rehype-parse';
-import rehypeRemark from 'rehype-remark';
-import remarkStringify from 'remark-stringify';
-import remarkGfm from 'remark-gfm';
-import { remark } from 'remark';
-import { Marked } from 'marked';
-import markedKatex from 'marked-katex-extension';
-import { gfmHeadingId } from 'marked-gfm-heading-id';
-import { markedHighlight } from 'marked-highlight';
-import hljs from 'highlight.js';
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { format, isToday } from "date-fns";
+import rehypeParse from "rehype-parse";
+import rehypeRemark from "rehype-remark";
+import remarkStringify from "remark-stringify";
+import remarkGfm from "remark-gfm";
+import { remark } from "remark";
+import { Marked } from "marked";
+import markedKatex from "marked-katex-extension";
+import { gfmHeadingId } from "marked-gfm-heading-id";
+import { markedHighlight } from "marked-highlight";
+import hljs from "highlight.js";
 
 import {
   LOCAL_STORAGE_KEYS,
   QUERY_PARAMS,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   URL_PATTERNS,
-} from '@/lib/constants';
-import { config } from '@/lib/config';
-import type { StorageService } from '@iblai/iblai-js/data-layer';
-import { isTauriApp } from '@/types/tauri';
-import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
-import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
-import type { Tenant } from '@iblai/iblai-js/web-utils';
+} from "@/lib/constants";
+import { config } from "@/lib/config";
+import type { StorageService } from "@iblai/iblai-js/data-layer";
+import { isTauriApp } from "@/types/tauri";
+import { isTauriOfflineMode } from "@/lib/tauri-api-cache";
+import { isOfflineServerOrigin } from "@/hooks/use-tauri-offline";
+import type { Tenant } from "@iblai/iblai-js/web-utils";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function isSafariBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false;
+  if (typeof navigator === "undefined") return false;
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
 export function hasNonExpiredAuthToken() {
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
-    console.log('################### [hasNonExpiredAuthToken] axd token is not defined', token);
+    console.log(
+      "################### [hasNonExpiredAuthToken] axd token is not defined",
+      token,
+    );
     return true;
   }
 
-  const tokenExpiry = window.localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY);
+  const tokenExpiry = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
+  );
   if (!tokenExpiry) {
     console.log(
-      '################### [hasNonExpiredAuthToken] axd token expiry is not defined',
+      "################### [hasNonExpiredAuthToken] axd token expiry is not defined",
       tokenExpiry,
     );
     return true;
@@ -52,14 +57,17 @@ export function hasNonExpiredAuthToken() {
 
   const expiryDate = new Date(tokenExpiry);
   if (isNaN(expiryDate.getTime())) {
-    console.log('################### [hasNonExpiredAuthToken] axd token expiry date', expiryDate);
+    console.log(
+      "################### [hasNonExpiredAuthToken] axd token expiry date",
+      expiryDate,
+    );
     return false;
   }
 
   const currentDate = new Date();
   if (expiryDate <= currentDate) {
     console.log(
-      '################### [hasNonExpiredAuthToken] axd token expiry date is less than current date ',
+      "################### [hasNonExpiredAuthToken] axd token expiry date is less than current date ",
       expiryDate,
       currentDate,
     );
@@ -78,7 +86,7 @@ export async function redirectToAuthSpa(
   // Don't redirect to auth when in Tauri offline mode
   // Check origin first (most reliable) or Tauri offline flags
   if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
-    console.log('[redirectToAuthSpa] Skipping redirect - Tauri offline mode', {
+    console.log("[redirectToAuthSpa] Skipping redirect - Tauri offline mode", {
       isOfflineServerOrigin: isOfflineServerOrigin(),
       isTauriApp: isTauriApp(),
       isTauriOfflineMode: isTauriOfflineMode(),
@@ -87,35 +95,36 @@ export async function redirectToAuthSpa(
   }
 
   // Save JWT token before clearing localStorage (needed for Tauri mode)
-  const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
+  const edxJwtToken = window.localStorage.getItem("edx_jwt_token");
 
   localStorage.clear();
 
   if (logout || isInIframe()) {
     // Delete authentication cookies for cross-SPA synchronization
     const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_current_tenant', currentDomain);
-    deleteCookieOnAllDomains('ibl_user_data', currentDomain);
-    deleteCookieOnAllDomains('ibl_tenant', currentDomain);
+    deleteCookieOnAllDomains("ibl_current_tenant", currentDomain);
+    deleteCookieOnAllDomains("ibl_user_data", currentDomain);
+    deleteCookieOnAllDomains("ibl_tenant", currentDomain);
 
     // Set logout timestamp cookie to trigger logout on other SPAs
     if (!isInIframe()) {
-      setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
+      setCookieForAuth("ibl_logout_timestamp", Date.now().toString());
     }
   }
 
   if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
+    console.log("[redirectToAuthSpa]: sending authExpired to parent");
     sendMessageToParentWebsite({ authExpired: true });
     return;
   }
 
-  const redirectPath = redirectTo ?? `${window.location.pathname}${window.location.search}`;
+  const redirectPath =
+    redirectTo ?? `${window.location.pathname}${window.location.search}`;
 
   // Never save sso-login routes as redirect paths
   if (
-    !redirectPath.startsWith('/sso-login') &&
-    !redirectPath.startsWith('/sso-login-complete') &&
+    !redirectPath.startsWith("/sso-login") &&
+    !redirectPath.startsWith("/sso-login-complete") &&
     saveRedirect
   ) {
     window.localStorage.setItem(LOCAL_STORAGE_KEYS.REDIRECT_TO, redirectPath);
@@ -133,7 +142,7 @@ export async function redirectToAuthSpa(
     authRedirectUrl += `&${QUERY_PARAMS.TENANT}=${platform}`;
   }
   if (logout) {
-    authRedirectUrl += '&logout=1';
+    authRedirectUrl += "&logout=1";
   }
 
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -141,11 +150,14 @@ export async function redirectToAuthSpa(
     // On Tauri (mobile), pass the JWT token as a query param so the auth app can use it
     if (edxJwtToken) {
       authRedirectUrl += `&token=${encodeURIComponent(edxJwtToken)}`;
-      console.log('[redirectToAuthSpa] Added edx_jwt_token to auth URL');
+      console.log("[redirectToAuthSpa] Added edx_jwt_token to auth URL");
     }
     // Navigate the main webview directly to the auth URL
     // This keeps the user within the app
-    console.log('[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:', authRedirectUrl);
+    console.log(
+      "[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:",
+      authRedirectUrl,
+    );
     window.location.href = authRedirectUrl;
   } else {
     // window.location.href = authRedirectUrl;
@@ -155,10 +167,11 @@ export async function redirectToAuthSpa(
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
-  const resolvedTenant = tenantKey || getPlatformKey(window.location.pathname) || '';
+  const resolvedTenant =
+    tenantKey || getPlatformKey(window.location.pathname) || "";
 
   if (!resolvedTenant) {
-    return '';
+    return "";
   }
 
   const targetUrl = redirectUrl ?? window.location.href;
@@ -168,11 +181,18 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
   return joinUrl;
 }
 
-export function redirectToAuthSpaJoinTenant(tenantKey?: string, redirectUrl?: string) {
-  const resolvedTenant = tenantKey || getPlatformKey(window.location.pathname) || '';
+export function redirectToAuthSpaJoinTenant(
+  tenantKey?: string,
+  redirectUrl?: string,
+) {
+  const resolvedTenant =
+    tenantKey || getPlatformKey(window.location.pathname) || "";
 
   if (!resolvedTenant) {
-    console.log('[auth-redirect] Missing tenant key for join', { tenantKey, redirectUrl });
+    console.log("[auth-redirect] Missing tenant key for join", {
+      tenantKey,
+      redirectUrl,
+    });
     redirectToAuthSpa(redirectUrl);
     return;
   }
@@ -206,18 +226,18 @@ export function formatDateString(dateString: string) {
   const date = new Date(dateString);
 
   const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const month = months[date.getMonth()];
@@ -268,15 +288,15 @@ export class LocalStorageService implements StorageService {
 }
 
 export function getHostFromUrl(url: string) {
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   return a.hostname;
 }
 
 export function preprocessLaTeX(content: string) {
   // Handle non-string inputs
-  if (typeof content !== 'string') {
-    return '';
+  if (typeof content !== "string") {
+    return "";
   }
 
   // Helper function to process tabular/array content into markdown table
@@ -287,36 +307,36 @@ export function preprocessLaTeX(content: string) {
       .map((row: string) => row.trim())
       .filter((row: string) => row && !row.match(/^\\hline\s*$/));
 
-    if (rows.length === 0) return '';
+    if (rows.length === 0) return "";
 
     // Process each row: split by & (column separator) and clean up
     const processedRows = rows
       .map((row: string) => {
         // Remove \hline from the row content
-        let cleanRow = row.replace(/\\hline\s*/g, '').trim();
+        let cleanRow = row.replace(/\\hline\s*/g, "").trim();
         if (!cleanRow) return null;
 
         // Convert \text{...} to plain text
-        cleanRow = cleanRow.replace(/\\text\{([^}]*)\}/g, '$1');
+        cleanRow = cleanRow.replace(/\\text\{([^}]*)\}/g, "$1");
 
         // Remove {,} (LaTeX thousands separator formatting)
-        cleanRow = cleanRow.replace(/\{,\}/g, ',');
+        cleanRow = cleanRow.replace(/\{,\}/g, ",");
 
         // Split by & and trim each cell
-        const cells = cleanRow.split('&').map((cell: string) => cell.trim());
-        return `| ${cells.join(' | ')} |`;
+        const cells = cleanRow.split("&").map((cell: string) => cell.trim());
+        return `| ${cells.join(" | ")} |`;
       })
       .filter(Boolean);
 
-    if (processedRows.length === 0) return '';
+    if (processedRows.length === 0) return "";
 
     // Insert header separator after first row
     const firstRow = processedRows[0] as string;
-    const columnCount = firstRow.split('|').length - 2;
-    const headerSeparator = `|${' --- |'.repeat(columnCount)}`;
+    const columnCount = firstRow.split("|").length - 2;
+    const headerSeparator = `|${" --- |".repeat(columnCount)}`;
     processedRows.splice(1, 0, headerSeparator);
 
-    return `\n${processedRows.join('\n')}\n`;
+    return `\n${processedRows.join("\n")}\n`;
   };
 
   // Process tabular inside \[...\] first (before converting math delimiters)
@@ -358,7 +378,10 @@ export function preprocessLaTeX(content: string) {
   // Escape currency dollar signs: if a $ is directly followed by a digit,
   // prepend a backslash so that it is rendered as a literal dollar sign.
   // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(/(?<!\\)\$(\d)/g, (_, digit) => `\\$${digit}`);
+  processedContent = processedContent.replace(
+    /(?<!\\)\$(\d)/g,
+    (_, digit) => `\\$${digit}`,
+  );
 
   // Replace block-level LaTeX delimiters \[ \] with $$ $$.
   processedContent = processedContent.replace(
@@ -374,19 +397,22 @@ export function preprocessLaTeX(content: string) {
 
   // Convert LaTeX text formatting commands to Markdown
   // \textbf{text} -> **text**
-  processedContent = processedContent.replace(/\\textbf\{([^}]+)\}/g, '**$1**');
+  processedContent = processedContent.replace(/\\textbf\{([^}]+)\}/g, "**$1**");
 
   // \textit{text} -> *text*
-  processedContent = processedContent.replace(/\\textit\{([^}]+)\}/g, '*$1*');
+  processedContent = processedContent.replace(/\\textit\{([^}]+)\}/g, "*$1*");
 
   // \emph{text} -> *text*
-  processedContent = processedContent.replace(/\\emph\{([^}]+)\}/g, '*$1*');
+  processedContent = processedContent.replace(/\\emph\{([^}]+)\}/g, "*$1*");
 
   // \texttt{text} -> `text`
-  processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, '`$1`');
+  processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, "`$1`");
 
   // \underline{text} -> <u>text</u> (requires rehype-raw)
-  processedContent = processedContent.replace(/\\underline\{([^}]+)\}/g, '<u>$1</u>');
+  processedContent = processedContent.replace(
+    /\\underline\{([^}]+)\}/g,
+    "<u>$1</u>",
+  );
 
   // Convert LaTeX environments to Markdown/HTML
   // \begin{itemize} ... \end{itemize} -> convert to unordered list
@@ -398,7 +424,7 @@ export function preprocessLaTeX(content: string) {
         .split(/\\item\s+/)
         .filter((item: string) => item.trim())
         .map((item: string) => `- ${item.trim()}`)
-        .join('\n');
+        .join("\n");
       return `\n${listItems}\n`;
     },
   );
@@ -412,7 +438,7 @@ export function preprocessLaTeX(content: string) {
         .split(/\\item\s+/)
         .filter((item: string) => item.trim())
         .map((item: string, index: number) => `${index + 1}. ${item.trim()}`)
-        .join('\n');
+        .join("\n");
       return `\n${listItems}\n`;
     },
   );
@@ -426,26 +452,36 @@ export function preprocessLaTeX(content: string) {
   // \begin{center} ... \end{center} -> convert to centered div
   processedContent = processedContent.replace(
     /\\begin\{center\}([\s\S]*?)\\end\{center\}/g,
-    (_, content) => `\n<div style="text-align: center;">${content.trim()}</div>\n`,
+    (_, content) =>
+      `\n<div style="text-align: center;">${content.trim()}</div>\n`,
   );
 
   // Convert section headings (with optional * for unnumbered variants)
   // \section{text} or \section*{text} -> ## text
-  processedContent = processedContent.replace(/\\section\*?\{([^}]+)\}/g, '\n## $1\n');
+  processedContent = processedContent.replace(
+    /\\section\*?\{([^}]+)\}/g,
+    "\n## $1\n",
+  );
 
   // \subsection{text} or \subsection*{text} -> ### text
-  processedContent = processedContent.replace(/\\subsection\*?\{([^}]+)\}/g, '\n### $1\n');
+  processedContent = processedContent.replace(
+    /\\subsection\*?\{([^}]+)\}/g,
+    "\n### $1\n",
+  );
 
   // \subsubsection{text} or \subsubsection*{text} -> #### text
-  processedContent = processedContent.replace(/\\subsubsection\*?\{([^}]+)\}/g, '\n#### $1\n');
+  processedContent = processedContent.replace(
+    /\\subsubsection\*?\{([^}]+)\}/g,
+    "\n#### $1\n",
+  );
 
   // Handle line breaks
   // \\ or \newline -> line break
-  processedContent = processedContent.replace(/\\\\|\n\\newline/g, '  \n');
+  processedContent = processedContent.replace(/\\\\|\n\\newline/g, "  \n");
 
   // Handle verbatim text
   // \verb|text| -> `text`
-  processedContent = processedContent.replace(/\\verb\|([^|]+)\|/g, '`$1`');
+  processedContent = processedContent.replace(/\\verb\|([^|]+)\|/g, "`$1`");
 
   // Handle quotes
   // `` and '' -> proper quotes
@@ -454,26 +490,30 @@ export function preprocessLaTeX(content: string) {
 
   // Handle common LaTeX symbols that should remain as-is or convert
   // \& -> &
-  processedContent = processedContent.replace(/\\&/g, '&');
+  processedContent = processedContent.replace(/\\&/g, "&");
 
   // \% -> %
-  processedContent = processedContent.replace(/\\%/g, '%');
+  processedContent = processedContent.replace(/\\%/g, "%");
 
   // \# -> #
-  processedContent = processedContent.replace(/\\#/g, '#');
+  processedContent = processedContent.replace(/\\#/g, "#");
 
   // \_ -> _
-  processedContent = processedContent.replace(/\\_/g, '_');
+  processedContent = processedContent.replace(/\\_/g, "_");
 
   return processedContent;
 }
 
-export const textTruncate = function (str: string, length: number, ending?: string) {
+export const textTruncate = function (
+  str: string,
+  length: number,
+  ending?: string,
+) {
   if (length == null) {
     length = 50;
   }
   if (ending == null) {
-    ending = '...';
+    ending = "...";
   }
   if (str?.length > length) {
     return str.substring(0, length - ending.length) + ending;
@@ -487,7 +527,7 @@ export const mentorIsIframe = () => {
 };
 
 export const isJSON = (text: string) => {
-  if (typeof text !== 'string') {
+  if (typeof text !== "string") {
     return false;
   }
   try {
@@ -499,7 +539,7 @@ export const isJSON = (text: string) => {
 };
 
 export function isInIframe() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return false;
   }
   return window?.self !== window?.top;
@@ -507,48 +547,48 @@ export function isInIframe() {
 
 export function deleteCookie(name: string, path: string, domain: string) {
   // Set the cookie expiration date to the past
-  const expires = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+  const expires = "expires=Thu, 01 Jan 1970 00:00:00 UTC;";
   // Set the cookie value to empty
-  const cookieValue = name + '=;';
+  const cookieValue = name + "=;";
   // Set the path attribute
-  const pathValue = path ? 'path=' + path + ';' : '';
+  const pathValue = path ? "path=" + path + ";" : "";
   // Set the domain attribute
-  const domainValue = domain ? 'domain=' + domain + ';' : '';
+  const domainValue = domain ? "domain=" + domain + ";" : "";
 
   // Delete the cookie for the given path and domain
   document.cookie = cookieValue + expires + pathValue + domainValue;
 }
 
 export function getDomainParts(domain: string): string[] {
-  const parts = domain.split('.');
+  const parts = domain.split(".");
   const domains: string[] = [];
   for (let i = parts.length - 1; i >= 0; i--) {
-    domains.push(parts.slice(i).join('.'));
+    domains.push(parts.slice(i).join("."));
   }
   return domains;
 }
 
 export function deleteCookieOnAllDomains(name: string, childDomain: string) {
   getDomainParts(childDomain).forEach((domainPart) => {
-    deleteCookie(name, '/', domainPart);
-    deleteCookie(name, '', domainPart);
+    deleteCookie(name, "/", domainPart);
+    deleteCookie(name, "", domainPart);
   });
 }
 
 export function getParentDomain(domain?: string) {
   if (!domain) {
-    return '';
+    return "";
   }
-  const parts = domain.split('.');
-  return parts.length > 1 ? `.${parts.slice(-2).join('.')}` : domain;
+  const parts = domain.split(".");
+  return parts.length > 1 ? `.${parts.slice(-2).join(".")}` : domain;
 }
 
 export function clearCookies() {
   // Clear cookies
-  const cookies = document.cookie.split(';');
+  const cookies = document.cookie.split(";");
   for (let i = 0; i < cookies.length; i++) {
     const cookie = cookies[i];
-    const eqPos = cookie.indexOf('=');
+    const eqPos = cookie.indexOf("=");
     const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
     deleteCookieOnAllDomains(name, window.location.hostname);
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;Domain=${getParentDomain(
@@ -563,18 +603,21 @@ export const onAccountDeleted = () => {
   }, 3000);
 };
 
-export const handleLogout = (redirectUrl = window.location.origin, callback?: () => void) => {
-  const tenant = window.localStorage.getItem('tenant');
+export const handleLogout = (
+  redirectUrl = window.location.origin,
+  callback?: () => void,
+) => {
+  const tenant = window.localStorage.getItem("tenant");
   window.localStorage.clear();
-  window.localStorage.setItem('tenant', tenant ?? '');
+  window.localStorage.setItem("tenant", tenant ?? "");
 
   clearCookies();
   callback?.();
 
   if (!isInIframe()) {
-    window.location.href = `${config.authUrl()}/logout?redirect-to=${redirectUrl}${tenant ? '&tenant=' + tenant : ''}`;
+    window.location.href = `${config.authUrl()}/logout?redirect-to=${redirectUrl}${tenant ? "&tenant=" + tenant : ""}`;
     // Set logout timestamp cookie to trigger logout on other SPAs
-    setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
+    setCookieForAuth("ibl_logout_timestamp", Date.now().toString());
   }
 };
 
@@ -594,12 +637,14 @@ export const handleTenantSwitch = async (
   redirectUrl?: string,
 ) => {
   // Clear current tenant cookie before switching
-  const { clearCurrentTenantCookie } = await import('@iblai/iblai-js/web-utils');
+  const { clearCurrentTenantCookie } = await import(
+    "@iblai/iblai-js/web-utils"
+  );
   clearCurrentTenantCookie();
   // Preserve the current path before clearing localStorage
   const currentPath = `${window.location.pathname}${window.location.search}`;
   // Get JWT token before clearing localStorage
-  const jwtToken = localStorage.getItem('edx_jwt_token');
+  const jwtToken = localStorage.getItem("edx_jwt_token");
   localStorage.clear();
 
   const url = `${config.authUrl()}/login/complete`;
@@ -615,7 +660,7 @@ export const handleTenantSwitch = async (
 
   const param = new URLSearchParams(params).toString();
 
-  localStorage.setItem('tenant', tenant);
+  localStorage.setItem("tenant", tenant);
   if (saveRedirect) {
     // Restore the redirect path after setting tenant
     localStorage.setItem(REDIRECT_PATH_LOCAL_STORAGE_KEY, currentPath);
@@ -635,14 +680,15 @@ export const canSwitchLLm = (llm: {
 
   return (
     llm?.can_use_main_keys &&
-    (llm?.main_has_credentials === true || llm?.main_has_credentials === undefined)
+    (llm?.main_has_credentials === true ||
+      llm?.main_has_credentials === undefined)
   );
 };
 
 export function convertFromBytes(bytes: number) {
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
 
-  if (bytes === 0) return { value: 0, unit: 'B' };
+  if (bytes === 0) return { value: 0, unit: "B" };
 
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   const value = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
@@ -654,67 +700,73 @@ export function formatRelativeDate(date: string) {
   const dateObj = new Date(date);
 
   if (isToday(dateObj)) {
-    return format(dateObj, 'h:mmaaa'); // "10:44AM"
+    return format(dateObj, "h:mmaaa"); // "10:44AM"
   }
 
-  const daysDiff = Math.floor((new Date().getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.floor(
+    (new Date().getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   if (daysDiff <= 7) {
-    return format(dateObj, 'EEEE h:mmaaa'); // "Monday 10:44AM"
+    return format(dateObj, "EEEE h:mmaaa"); // "Monday 10:44AM"
   } else if (daysDiff <= 30) {
-    return format(dateObj, 'MMM d, h:mmaaa'); // "Jan 15, 10:44AM"
+    return format(dateObj, "MMM d, h:mmaaa"); // "Jan 15, 10:44AM"
   } else {
-    return format(dateObj, 'MMM d, yyyy'); // "Jan 15, 2024"
+    return format(dateObj, "MMM d, yyyy"); // "Jan 15, 2024"
   }
 }
 
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
   switch (llmProvider) {
-    case 'groq':
-      return { logo: '/llm-groq-provider.png', name: 'Groq' };
-    case 'IBLChatNvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'azure_openai':
-      return { logo: '/llm-microsoft-provider.png', name: 'Microsoft' };
-    case 'openai':
-      if (llmName) return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-      return { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' };
-    case 'mistral':
-      return { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' };
-    case 'google':
-      if (llmName) return { logo: '/llm-gemini-provider.png', name: 'Google' };
-      return { logo: '/llm-google-provider.svg', name: 'Google' };
-    case 'llama':
-      return { logo: '/llm-llama-provider.jpeg', name: 'Meta' };
-    case 'IBLChatAnthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'perplexity':
-      return { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' };
-    case 'deepseek':
-      return { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' };
-    case 'xai':
-      return { logo: '/llm-xai-provider.jpg', name: 'xAI' };
-    case 'anthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'nvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
+    case "groq":
+      return { logo: "/llm-groq-provider.png", name: "Groq" };
+    case "IBLChatNvidia":
+      return { logo: "/llm-nvidia-provider.webp", name: "NVIDIA" };
+    case "azure_openai":
+      return { logo: "/llm-microsoft-provider.png", name: "Microsoft" };
+    case "openai":
+      if (llmName) return { logo: "/llm-openai-provider.jpg", name: "OpenAI" };
+      return { logo: "/llm-openai-provider-2.svg", name: "OpenAI" };
+    case "mistral":
+      return { logo: "/llm-mistral-provider.jpeg", name: "Mistral" };
+    case "google":
+      if (llmName) return { logo: "/llm-gemini-provider.png", name: "Google" };
+      return { logo: "/llm-google-provider.svg", name: "Google" };
+    case "llama":
+      return { logo: "/llm-llama-provider.jpeg", name: "Meta" };
+    case "IBLChatAnthropic":
+      return { logo: "/llm-claude-provider.png", name: "Anthropic" };
+    case "perplexity":
+      return { logo: "/llm-perplexity-provider.webp", name: "Perplexity" };
+    case "deepseek":
+      return { logo: "/llm-deepseek-provider.png", name: "DeepSeek" };
+    case "xai":
+      return { logo: "/llm-xai-provider.jpg", name: "xAI" };
+    case "anthropic":
+      return { logo: "/llm-claude-provider.png", name: "Anthropic" };
+    case "nvidia":
+      return { logo: "/llm-nvidia-provider.webp", name: "NVIDIA" };
     default:
-      return { logo: '/llm-generic-provider.png', name: llmProvider };
+      return { logo: "/llm-generic-provider.png", name: llmProvider };
   }
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  window.parent.postMessage(payload, "*");
 }
 
 export function isLoggedIn() {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return false;
-  return !!localStorage.getItem('axd_token');
+  if (
+    typeof window === "undefined" ||
+    typeof localStorage?.getItem !== "function"
+  )
+    return false;
+  return !!localStorage.getItem("axd_token");
 }
 
 export function htmlToMarkdown(htmlText: string) {
-  if (!htmlText || typeof htmlText !== 'string') {
-    return '';
+  if (!htmlText || typeof htmlText !== "string") {
+    return "";
   }
 
   try {
@@ -751,16 +803,16 @@ export function htmlToMarkdown(htmlText: string) {
       .use(rehypeRemark)
       .use(remarkGfm)
       .use(remarkStringify, {
-        bullet: '-',
-        emphasis: '_',
-        strong: '*',
+        bullet: "-",
+        emphasis: "_",
+        strong: "*",
         fences: true,
       })
       .processSync(processedHtml);
 
     return String(file).trimEnd();
   } catch (error) {
-    console.error('[Markdown] Failed to convert HTML to markdown:', error);
+    console.error("[Markdown] Failed to convert HTML to markdown:", error);
     return htmlText;
   }
 }
@@ -769,17 +821,17 @@ export function htmlToMarkdown(htmlText: string) {
  * Decode HTML entities in a string
  */
 function decodeHtmlEntities(text: string): string {
-  if (typeof document === 'undefined') {
+  if (typeof document === "undefined") {
     // Server-side fallback - decode common entities manually
     return text
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ');
+      .replace(/&nbsp;/g, " ");
   }
-  const textarea = document.createElement('textarea');
+  const textarea = document.createElement("textarea");
   textarea.innerHTML = text;
   return textarea.value;
 }
@@ -790,9 +842,9 @@ export function isHtml(str: string) {
   const trimmed = str?.trim();
 
   return (
-    trimmed.startsWith('<') &&
-    trimmed.endsWith('>') &&
-    (trimmed.includes('</') || trimmed.includes('/>'))
+    trimmed.startsWith("<") &&
+    trimmed.endsWith(">") &&
+    (trimmed.includes("</") || trimmed.includes("/>"))
   );
 }
 
@@ -849,51 +901,67 @@ function preprocessMarkdownForHtml(markdown: string): string {
 
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
-  processed = processed.replace(/\\\[([^\]]+?)\\\]\s*\(([^)]+)\)/g, (match, label, href) => {
-    const trimmedHref = String(href ?? '').trim();
-    if (/^(https?:\/\/|mailto:|tel:|www\.)/i.test(trimmedHref) || EMAIL_PATTERN.test(trimmedHref)) {
-      return `[${label}](${trimmedHref})`;
-    }
-    return match;
-  });
+  processed = processed.replace(
+    /\\\[([^\]]+?)\\\]\s*\(([^)]+)\)/g,
+    (match, label, href) => {
+      const trimmedHref = String(href ?? "").trim();
+      if (
+        /^(https?:\/\/|mailto:|tel:|www\.)/i.test(trimmedHref) ||
+        EMAIL_PATTERN.test(trimmedHref)
+      ) {
+        return `[${label}](${trimmedHref})`;
+      }
+      return match;
+    },
+  );
 
   // Handle ```markdown code blocks - extract content and render as actual markdown
   // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(/```(?:markdown|md)\s*\n([\s\S]*?)```/gi, (_match, content) =>
-    content.trim(),
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
   );
 
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
   // This handles cases where LLM outputs malformed heading syntax
-  processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, '$1 $2');
+  processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, "$1 $2");
 
   // Remove excessive newlines after headings (keep max 1 newline)
-  processed = processed.replace(/^(#{1,6}\s+.+)\n{3,}/gm, '$1\n\n');
+  processed = processed.replace(/^(#{1,6}\s+.+)\n{3,}/gm, "$1\n\n");
 
   // Ensure proper spacing around bold/italic markers within headings
   // Fix cases like "# **Title**\n" to work correctly
-  processed = processed.replace(/^(#{1,6})\s*(\*\*|__)/gm, '$1 $2');
+  processed = processed.replace(/^(#{1,6})\s*(\*\*|__)/gm, "$1 $2");
 
   // Ensure list items have proper line breaks
   // Fix consecutive list items that might be on same line
-  processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, '$1\n\n$3 ');
+  processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, "$1\n\n$3 ");
 
   return processed;
 }
 
-const LINKIFY_SKIP_TAGS = new Set(['A', 'CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
+const LINKIFY_SKIP_TAGS = new Set([
+  "A",
+  "CODE",
+  "PRE",
+  "SCRIPT",
+  "STYLE",
+  "TEXTAREA",
+]);
 const LINKIFY_PATTERN_SOURCE =
-  '(?:https?:\\/\\/[^\\s<]+|www\\.[^\\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|(?<!\\w)(?:\\+?\\d|\\(\\d)[\\d\\s().-]{6,}\\d(?!\\w))';
-const MARKDOWN_LINK_PATTERN = '\\[([^\\]]+)\\]\\s*\\(([^)]+)\\)';
+  "(?:https?:\\/\\/[^\\s<]+|www\\.[^\\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|(?<!\\w)(?:\\+?\\d|\\(\\d)[\\d\\s().-]{6,}\\d(?!\\w))";
+const MARKDOWN_LINK_PATTERN = "\\[([^\\]]+)\\]\\s*\\(([^)]+)\\)";
 const EMAIL_PATTERN = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 const SUP_SUB_PATTERN_SOURCE =
-  '([A-Za-z0-9\\)\\]\\}])(?:\\^\\(([^)]+)\\)|\\^\\{([^}]+)\\}|\\^([A-Za-z0-9]+)|_([0-9]+))';
+  "([A-Za-z0-9\\)\\]\\}])(?:\\^\\(([^)]+)\\)|\\^\\{([^}]+)\\}|\\^([A-Za-z0-9]+)|_([0-9]+))";
 
-const getLinkifyRegex = () => new RegExp(LINKIFY_PATTERN_SOURCE, 'gi');
-const getMarkdownLinkRegex = () => new RegExp(MARKDOWN_LINK_PATTERN, 'g');
-const hasMarkdownLink = (text: string) => new RegExp(MARKDOWN_LINK_PATTERN).test(text);
-const getSupSubRegex = () => new RegExp(SUP_SUB_PATTERN_SOURCE, 'g');
-const hasSupSubPattern = (text: string) => new RegExp(SUP_SUB_PATTERN_SOURCE).test(text);
+const getLinkifyRegex = () => new RegExp(LINKIFY_PATTERN_SOURCE, "gi");
+const getMarkdownLinkRegex = () => new RegExp(MARKDOWN_LINK_PATTERN, "g");
+const hasMarkdownLink = (text: string) =>
+  new RegExp(MARKDOWN_LINK_PATTERN).test(text);
+const getSupSubRegex = () => new RegExp(SUP_SUB_PATTERN_SOURCE, "g");
+const hasSupSubPattern = (text: string) =>
+  new RegExp(SUP_SUB_PATTERN_SOURCE).test(text);
 
 const shouldSkipLinkify = (element: Element | null): boolean => {
   let current: Element | null = element;
@@ -909,10 +977,13 @@ const shouldSkipLinkify = (element: Element | null): boolean => {
 const shouldSkipSupSub = (element: Element | null): boolean => {
   let current: Element | null = element;
   while (current) {
-    if (LINKIFY_SKIP_TAGS.has(current.tagName) || current.tagName === 'MATH') {
+    if (LINKIFY_SKIP_TAGS.has(current.tagName) || current.tagName === "MATH") {
       return true;
     }
-    if (current.classList?.contains('katex') || current.classList?.contains('katex-display')) {
+    if (
+      current.classList?.contains("katex") ||
+      current.classList?.contains("katex-display")
+    ) {
       return true;
     }
     current = current.parentElement;
@@ -920,9 +991,11 @@ const shouldSkipSupSub = (element: Element | null): boolean => {
   return false;
 };
 
-const stripTrailingPunctuation = (text: string): { linkText: string; trailing: string } => {
+const stripTrailingPunctuation = (
+  text: string,
+): { linkText: string; trailing: string } => {
   let linkText = text;
-  let trailing = '';
+  let trailing = "";
 
   const punctuationMatch = linkText.match(/[.,!?;:]+$/);
   if (punctuationMatch) {
@@ -931,15 +1004,17 @@ const stripTrailingPunctuation = (text: string): { linkText: string; trailing: s
   }
 
   const bracketPairs = [
-    { open: '(', close: ')' },
-    { open: '[', close: ']' },
-    { open: '{', close: '}' },
+    { open: "(", close: ")" },
+    { open: "[", close: "]" },
+    { open: "{", close: "}" },
   ];
 
   for (const { open, close } of bracketPairs) {
     while (linkText.endsWith(close)) {
-      const openCount = (linkText.match(new RegExp(`\\${open}`, 'g')) ?? []).length;
-      const closeCount = (linkText.match(new RegExp(`\\${close}`, 'g')) ?? []).length;
+      const openCount = (linkText.match(new RegExp(`\\${open}`, "g")) ?? [])
+        .length;
+      const closeCount = (linkText.match(new RegExp(`\\${close}`, "g")) ?? [])
+        .length;
       if (closeCount > openCount) {
         trailing = close + trailing;
         linkText = linkText.slice(0, -1);
@@ -954,8 +1029,8 @@ const stripTrailingPunctuation = (text: string): { linkText: string; trailing: s
 
 const normalizePhoneNumber = (text: string): string | null => {
   const trimmed = text.trim();
-  const hasPlus = trimmed.startsWith('+');
-  const digits = trimmed.replace(/\D/g, '');
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
 
   if (digits.length < 7 || digits.length > 15) {
     return null;
@@ -996,7 +1071,10 @@ const resolveLinkMatch = (
   return null;
 };
 
-const linkifyTextNode = (text: string, doc: Document): DocumentFragment | null => {
+const linkifyTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
   const matches = Array.from(text.matchAll(getLinkifyRegex()));
   /* istanbul ignore next -- @preserve early return when no matches */
   if (matches.length === 0) {
@@ -1016,8 +1094,8 @@ const linkifyTextNode = (text: string, doc: Document): DocumentFragment | null =
     const resolved = resolveLinkMatch(rawMatch);
 
     if (resolved) {
-      const anchor = doc.createElement('a');
-      anchor.setAttribute('href', resolved.href);
+      const anchor = doc.createElement("a");
+      anchor.setAttribute("href", resolved.href);
       anchor.textContent = resolved.text;
       fragment.appendChild(anchor);
       /* istanbul ignore next -- @preserve trailing text after link */
@@ -1040,14 +1118,14 @@ const linkifyTextNode = (text: string, doc: Document): DocumentFragment | null =
 };
 
 const normalizeMarkdownLinkText = (text: string): string => {
-  return text.replace(/\\([\\[\]()])/g, '$1');
+  return text.replace(/\\([\\[\]()])/g, "$1");
 };
 
 /* istanbul ignore next -- @preserve internal href normalization helper */
 const normalizeMarkdownLinkHref = (text: string): string => {
   let href = text.trim();
   if (
-    (href.startsWith('<') && href.endsWith('>')) ||
+    (href.startsWith("<") && href.endsWith(">")) ||
     (href.startsWith('"') && href.endsWith('"'))
   ) {
     href = href.slice(1, -1);
@@ -1057,12 +1135,16 @@ const normalizeMarkdownLinkHref = (text: string): string => {
   }
   const firstToken = href.split(/\s+/)[0];
   href = firstToken ?? href;
-  href = href.replace(/\\:/g, ':').replace(/\\\)/g, ')').replace(/\\\(/g, '(');
+  href = href.replace(/\\:/g, ":").replace(/\\\)/g, ")").replace(/\\\(/g, "(");
   return href;
 };
 
 /* istanbul ignore next -- @preserve internal helper for linkifying text */
-const appendLinkifiedText = (fragment: DocumentFragment, text: string, doc: Document) => {
+const appendLinkifiedText = (
+  fragment: DocumentFragment,
+  text: string,
+  doc: Document,
+) => {
   if (!text) return;
   const linkified = linkifyTextNode(text, doc);
   if (linkified) {
@@ -1072,8 +1154,11 @@ const appendLinkifiedText = (fragment: DocumentFragment, text: string, doc: Docu
   }
 };
 
-const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment | null => {
-  const sourceText = text.replace(/\\([\\[\]()])/g, '$1');
+const linkifyMarkdownTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
+  const sourceText = text.replace(/\\([\\[\]()])/g, "$1");
   if (!hasMarkdownLink(sourceText)) {
     return null;
   }
@@ -1085,11 +1170,14 @@ const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment 
 
   while ((match = regex.exec(sourceText)) !== null) {
     const matchIndex = match.index ?? 0;
-    const isImage = matchIndex > 0 && sourceText[matchIndex - 1] === '!';
+    const isImage = matchIndex > 0 && sourceText[matchIndex - 1] === "!";
 
     /* istanbul ignore next -- @preserve image link handling (![alt](url)) */
     if (isImage) {
-      const before = sourceText.slice(lastIndex, matchIndex > 0 ? matchIndex - 1 : 0);
+      const before = sourceText.slice(
+        lastIndex,
+        matchIndex > 0 ? matchIndex - 1 : 0,
+      );
       appendLinkifiedText(fragment, before, doc);
       fragment.appendChild(doc.createTextNode(`!${match[0]}`));
       lastIndex = matchIndex + match[0].length;
@@ -1103,8 +1191,8 @@ const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment 
     const href = normalizeMarkdownLinkHref(match[2]);
 
     if (href) {
-      const anchor = doc.createElement('a');
-      anchor.setAttribute('href', href);
+      const anchor = doc.createElement("a");
+      anchor.setAttribute("href", href);
       anchor.textContent = label;
       fragment.appendChild(anchor);
       /* istanbul ignore next -- @preserve fallback for invalid href */
@@ -1123,7 +1211,10 @@ const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment 
   return fragment;
 };
 
-const supSubTextNode = (text: string, doc: Document): DocumentFragment | null => {
+const supSubTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
   const matches = Array.from(text.matchAll(getSupSubRegex()));
   /* istanbul ignore next -- @preserve early return when no sup/sub patterns */
   if (matches.length === 0) {
@@ -1142,8 +1233,8 @@ const supSubTextNode = (text: string, doc: Document): DocumentFragment | null =>
     const base = match[1];
     const supValue = match[2] ?? match[3] ?? match[4];
     const subValue = match[5];
-    const value = supValue ?? subValue ?? '';
-    const tag = supValue ? 'sup' : 'sub';
+    const value = supValue ?? subValue ?? "";
+    const tag = supValue ? "sup" : "sub";
 
     fragment.appendChild(doc.createTextNode(base));
     const node = doc.createElement(tag);
@@ -1162,11 +1253,11 @@ const supSubTextNode = (text: string, doc: Document): DocumentFragment | null =>
 
 const linkifyHtml = (html: string): string => {
   /* istanbul ignore next -- @preserve SSR check for server-side rendering */
-  if (typeof document === 'undefined') {
+  if (typeof document === "undefined") {
     return html;
   }
 
-  const container = document.createElement('div');
+  const container = document.createElement("div");
   container.innerHTML = html;
 
   const replaceTextNode = (textNode: Text) => {
@@ -1174,13 +1265,16 @@ const linkifyHtml = (html: string): string => {
     if (!textNode.parentElement || shouldSkipLinkify(textNode.parentElement)) {
       return;
     }
-    const value = textNode.nodeValue ?? '';
+    const value = textNode.nodeValue ?? "";
     /* istanbul ignore next -- @preserve defensive check for empty text nodes */
     if (!value) {
       return;
     }
 
-    const markdownFragment = linkifyMarkdownTextNode(value, container.ownerDocument);
+    const markdownFragment = linkifyMarkdownTextNode(
+      value,
+      container.ownerDocument,
+    );
     if (markdownFragment && textNode.parentNode) {
       textNode.parentNode.replaceChild(markdownFragment, textNode);
       return;
@@ -1197,7 +1291,7 @@ const linkifyHtml = (html: string): string => {
     }
   };
 
-  if (typeof document.createTreeWalker === 'function') {
+  if (typeof document.createTreeWalker === "function") {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
         /* istanbul ignore next -- @preserve defensive check for orphan nodes */
@@ -1249,7 +1343,7 @@ const linkifyHtml = (html: string): string => {
     if (!textNode.parentElement || shouldSkipSupSub(textNode.parentElement)) {
       return;
     }
-    const value = textNode.nodeValue ?? '';
+    const value = textNode.nodeValue ?? "";
     /* istanbul ignore next -- @preserve defensive check for empty text nodes */
     if (!value || !hasSupSubPattern(value)) {
       return;
@@ -1261,7 +1355,7 @@ const linkifyHtml = (html: string): string => {
     }
   };
 
-  if (typeof document.createTreeWalker === 'function') {
+  if (typeof document.createTreeWalker === "function") {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
         /* istanbul ignore next -- @preserve defensive check for orphan nodes */
@@ -1315,14 +1409,14 @@ const linkifyHtml = (html: string): string => {
 const configuredMarked = new Marked(
   markedKatex({
     throwOnError: false,
-    output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
+    output: "htmlAndMathml", // Accessibility-friendly output with MathML fallback
   }),
   gfmHeadingId(),
   markedHighlight({
-    langPrefix: 'hljs language-',
+    langPrefix: "hljs language-",
     /* istanbul ignore next -- @preserve callback invoked by markedHighlight during code block parsing */
     highlight(code: string, lang: string, _info: string) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      const language = hljs.getLanguage(lang) ? lang : "plaintext";
       return hljs.highlight(code, { language }).value;
     },
   }),
@@ -1333,20 +1427,22 @@ const configuredMarked = new Marked(
 );
 
 export function markdownToHtml(markdownText: string) {
-  if (!markdownText || typeof markdownText !== 'string') {
-    return '';
+  if (!markdownText || typeof markdownText !== "string") {
+    return "";
   }
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(preprocessMarkdownForHtml(markdownText));
+    const cleanedMarkdown = preprocessLaTeX(
+      preprocessMarkdownForHtml(markdownText),
+    );
 
     const result = configuredMarked.parse(cleanedMarkdown);
-    const html = typeof result === 'string' ? result : String(result);
+    const html = typeof result === "string" ? result : String(result);
     return linkifyHtml(html);
   } catch (error) {
     /* istanbul ignore next -- @preserve defensive error handling */
-    console.error('[Markdown] Failed to convert markdown to HTML:', error);
+    console.error("[Markdown] Failed to convert markdown to HTML:", error);
     /* istanbul ignore next -- @preserve */
     return markdownText;
   }
@@ -1355,29 +1451,33 @@ export function markdownToHtml(markdownText: string) {
 export function getUserOS() {
   const userAgent = navigator.userAgent;
 
-  if (userAgent.includes('Win')) {
-    return 'Windows';
+  if (userAgent.includes("Win")) {
+    return "Windows";
   } else if (
-    userAgent.includes('iPhone') ||
-    userAgent.includes('iPad') ||
-    userAgent.includes('iPod')
+    userAgent.includes("iPhone") ||
+    userAgent.includes("iPad") ||
+    userAgent.includes("iPod")
   ) {
     // Check for iOS devices before Mac, since iOS user agents contain "like Mac OS X"
-    return 'iOS';
-  } else if (userAgent.includes('Mac')) {
-    return 'macOS';
-  } else if (userAgent.includes('Linux')) {
-    return 'Linux';
-  } else if (userAgent.includes('Android')) {
-    return 'Android';
+    return "iOS";
+  } else if (userAgent.includes("Mac")) {
+    return "macOS";
+  } else if (userAgent.includes("Linux")) {
+    return "Linux";
+  } else if (userAgent.includes("Android")) {
+    return "Android";
   }
-  return 'Unknown OS';
+  return "Unknown OS";
 }
 
 /**
  * Helper to set a cookie with base domain for cross-SPA sharing
  */
-function setCookieForAuth(name: string, value: string, days: number = 365): void {
+function setCookieForAuth(
+  name: string,
+  value: string,
+  days: number = 365,
+): void {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
 
@@ -1385,14 +1485,14 @@ function setCookieForAuth(name: string, value: string, days: number = 365): void
   let baseDomain = hostname;
 
   // Calculate base domain
-  if (hostname !== 'localhost' && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-    const parts = hostname.split('.');
+  if (hostname !== "localhost" && !/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    const parts = hostname.split(".");
     if (parts.length > 2) {
-      baseDomain = `.${parts.slice(-2).join('.')}`;
+      baseDomain = `.${parts.slice(-2).join(".")}`;
     }
   }
 
-  const domainAttr = baseDomain ? `;domain=${baseDomain}` : '';
+  const domainAttr = baseDomain ? `;domain=${baseDomain}` : "";
   document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=None;Secure${domainAttr}`;
 }
 
@@ -1402,17 +1502,26 @@ function setCookieForAuth(name: string, value: string, days: number = 365): void
 function syncAuthDataToCookies(userObject: Record<string, any>): void {
   // Sync current_tenant
   if (userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]) {
-    setCookieForAuth('ibl_current_tenant', String(userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]));
+    setCookieForAuth(
+      "ibl_current_tenant",
+      String(userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]),
+    );
   }
 
   // Sync user_data
   if (userObject[LOCAL_STORAGE_KEYS.USER_DATA]) {
-    setCookieForAuth('ibl_user_data', String(userObject[LOCAL_STORAGE_KEYS.USER_DATA]));
+    setCookieForAuth(
+      "ibl_user_data",
+      String(userObject[LOCAL_STORAGE_KEYS.USER_DATA]),
+    );
   }
 
   // Sync tenants
   if (userObject[LOCAL_STORAGE_KEYS.TENANTS]) {
-    setCookieForAuth('ibl_tenant', String(userObject[LOCAL_STORAGE_KEYS.TENANTS]));
+    setCookieForAuth(
+      "ibl_tenant",
+      String(userObject[LOCAL_STORAGE_KEYS.TENANTS]),
+    );
   }
 }
 
@@ -1420,10 +1529,10 @@ export function saveUserObjectToLocalStorage(userObject: object) {
   localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       try {
         const parsed = JSON.parse(value);
-        if (typeof parsed === 'object' && parsed !== null) {
+        if (typeof parsed === "object" && parsed !== null) {
           toStore = JSON.stringify(parsed);
         }
       } catch {
@@ -1431,7 +1540,7 @@ export function saveUserObjectToLocalStorage(userObject: object) {
       }
     }
     localStorage.setItem(key, String(toStore));
-    window.dispatchEvent(new StorageEvent('local-storage', { key }));
+    window.dispatchEvent(new StorageEvent("local-storage", { key }));
   }
 
   // Sync auth data to cookies for cross-SPA synchronization
@@ -1444,18 +1553,23 @@ export const maxDatasetFileSizeInMegaBytes = () => {
 };
 
 // Helper function to format date to dd-mm-yyyy
-export const formatDateToYYYYMMDD = (date: Date | undefined): string | undefined => {
+export const formatDateToYYYYMMDD = (
+  date: Date | undefined,
+): string | undefined => {
   if (!date) return undefined;
 
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const year = date.getFullYear();
 
   return `${year}-${month}-${day}`;
 };
 
 // Helper function to format date to "Oct 13" format or "Aug 15 2:00" if time is included
-export const formatDateToShortFormat = (dateString: string, displayOnlyTime?: boolean): string => {
+export const formatDateToShortFormat = (
+  dateString: string,
+  displayOnlyTime?: boolean,
+): string => {
   try {
     const date = new Date(dateString);
 
@@ -1463,20 +1577,20 @@ export const formatDateToShortFormat = (dateString: string, displayOnlyTime?: bo
     if (displayOnlyTime) {
       const hours = date.getHours();
       const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const ampm = hours >= 12 ? "PM" : "AM";
       const displayHours = hours % 12 || 12; // Convert to 12-hour format
-      return `${displayHours}:${minutes.toString().padStart(2, '0')}${ampm}`;
+      return `${displayHours}:${minutes.toString().padStart(2, "0")}${ampm}`;
     }
 
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
     const day = date.getDate();
 
     // Check if the original string includes time (contains space and colon)
-    if (dateString.includes(' ') && dateString.includes(':')) {
+    if (dateString.includes(" ") && dateString.includes(":")) {
       const hours = date.getHours();
       const minutes = date.getMinutes();
       // Format time as "2:00" (12-hour format without AM/PM)
-      const timeString = `${hours}:${minutes.toString().padStart(2, '0')}`;
+      const timeString = `${hours}:${minutes.toString().padStart(2, "0")}`;
       return `${month} ${day} ${timeString}`;
     }
 
@@ -1494,44 +1608,44 @@ export const formatRelativeTime = (timestamp: string): string => {
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
   if (diffInSeconds < 60) {
-    return 'Just now';
+    return "Just now";
   }
 
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
-    return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+    return `${diffInMinutes} minute${diffInMinutes === 1 ? "" : "s"} ago`;
   }
 
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
-    return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+    return `${diffInHours} hour${diffInHours === 1 ? "" : "s"} ago`;
   }
 
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) {
-    return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+    return `${diffInDays} day${diffInDays === 1 ? "" : "s"} ago`;
   }
 
   const diffInWeeks = Math.floor(diffInDays / 7);
   if (diffInWeeks < 4) {
-    return `${diffInWeeks} week${diffInWeeks === 1 ? '' : 's'} ago`;
+    return `${diffInWeeks} week${diffInWeeks === 1 ? "" : "s"} ago`;
   }
 
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) {
-    return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+    return `${diffInMonths} month${diffInMonths === 1 ? "" : "s"} ago`;
   }
 
   const diffInYears = Math.floor(diffInDays / 365);
-  return `${diffInYears} year${diffInYears === 1 ? '' : 's'} ago`;
+  return `${diffInYears} year${diffInYears === 1 ? "" : "s"} ago`;
 };
 
 export function getMentorIdFromUrl() {
   const url = window.location.pathname;
-  const match = url.startsWith('/platform/');
+  const match = url.startsWith("/platform/");
   if (!match) return null;
 
-  const parts = url.split('/');
+  const parts = url.split("/");
   return parts[3];
 }
 
@@ -1543,8 +1657,8 @@ export function getTenantKeyFromUrl() {
 
 export function isStripeActivated(currentTenant: Tenant) {
   return (
-    config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    config.stripeEnabled() === "true" &&
+    (!currentTenant?.is_enterprise || currentTenant?.key === "main")
   );
 }
 
@@ -1553,10 +1667,10 @@ export function isStripeActivated(currentTenant: Tenant) {
  * Useful when the first message in a conversation might be empty.
  */
 export function getFirstMessageWithContent(messages: any[]): string {
-  if (!messages?.length) return '';
+  if (!messages?.length) return "";
   for (const msg of messages) {
     const content = msg?.message?.data?.content;
     if (content) return content;
   }
-  return '';
+  return "";
 }

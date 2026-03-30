@@ -168,7 +168,7 @@ fn get_app_url() -> String {
 
     // Default: localhost for debug, production URL for release
     #[cfg(debug_assertions)]
-    return "https://mentorai.iblai.app".to_string();
+    return "https://mentorai.iblai.org".to_string();
 
     #[cfg(not(debug_assertions))]
     return "https://mentorai.iblai.app".to_string();
@@ -1771,6 +1771,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             // Initialize web cache with app data directory
             let app_data_dir = app

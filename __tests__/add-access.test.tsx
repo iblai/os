@@ -369,7 +369,8 @@ describe("AddAccessDialog", () => {
 
       // Stage one, leave another in the input
       const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
+      await user.type(input, "alice@test.com");
+      await user.click(screen.getByRole("button", { name: /add entry/i }));
       await user.type(input, "bob@test.com");
       // Don't press Enter - just click Create
 
@@ -390,9 +391,9 @@ describe("AddAccessDialog", () => {
 
       // Stage entries
       const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-
-      expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+      await user.type(input, "alice@test.com");
+      await user.click(screen.getByRole("button", { name: /add entry/i }));
+      expect(await screen.findByText("alice@test.com")).toBeInTheDocument();
 
       // Click cancel
       await user.click(screen.getByRole("button", { name: /cancel/i }));

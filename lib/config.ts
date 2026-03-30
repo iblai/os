@@ -109,7 +109,8 @@ export const config = {
     ),
   helpCenterUrl: () =>
     getEnv("NEXT_PUBLIC_HELP_CENTER_URL", "https://docs.ibl.ai"),
-  supportEmail: () => getEnv("NEXT_PUBLIC_SUPPORT_EMAIL", "support@ibl.ai"),
+  supportEmail: () =>
+    getEnv("NEXT_PUBLIC_SUPPORT_EMAIL", "support@iblai.zendesk.com"),
   enableGravatarOnProfilePic: () =>
     getEnv("NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC", "true"),
   defaultEmbedCssUrl: () => getEnv("NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL", ""),

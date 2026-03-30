@@ -12,6 +12,10 @@ on:
         required: false
         type: boolean
         default: false
+      sign_publisher:
+        description: "Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)"
+        required: false
+        type: string
 
 concurrency:
   group: msix-build
@@ -79,6 +83,15 @@ jobs:
 
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
+
+      - name: Override Publisher in AppxManifest for signing
+        if: inputs.sign && inputs.sign_publisher != ''
+        working-directory: src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Publisher="[^"]*"', 'Publisher="${{ inputs.sign_publisher }}"'
+          Set-Content -Path AppxManifest.xml -Value $manifest
+          Write-Host "Patched Publisher to: ${{ inputs.sign_publisher }}"
 
       - name: Override version in AppxManifest
         if: inputs.version != ''
@@ -206,14 +219,57 @@ jobs:
           [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
 
           $securePassword = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
-          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+          $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
 
-          $cert = Get-PfxCertificate -FilePath $pfxPath
           Write-Host "Certificate imported: $($cert.Subject)"
           Write-Host "Thumbprint: $($cert.Thumbprint)"
           echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
 
           Remove-Item $pfxPath -Force
+
+      - name: Export public certificate for sideload distribution
+        if: inputs.sign
+        run: |
+          $thumbprint = "${{ steps.cert.outputs.CERT_THUMBPRINT }}"
+          $cert = Get-ChildItem "Cert:\CurrentUser\My\$thumbprint"
+          $cerPath = "bundle-output\ibl-ai-os-signing-cert.cer"
+          Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          Write-Host "Exported public certificate to $cerPath"
+
+      - name: Create sideload install script
+        if: inputs.sign
+        run: |
+          $script = @'
+          #Requires -RunAsAdministrator
+          <#
+          .SYNOPSIS
+            Installs the ibl.ai OS MSIX bundle with its signing certificate.
+          .DESCRIPTION
+            This script imports the self-signed certificate into the Trusted People
+            store so Windows will accept the MSIX package, then installs the app.
+            Must be run as Administrator.
+          #>
+
+          $ErrorActionPreference = "Stop"
+          $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+          # Find the certificate and bundle in the same folder
+          $cert = Get-ChildItem $scriptDir -Filter "*.cer" | Select-Object -First 1
+          $bundle = Get-ChildItem $scriptDir -Filter "*.msixbundle" | Select-Object -First 1
+
+          if (-not $cert) { Write-Error "No .cer certificate file found in $scriptDir"; exit 1 }
+          if (-not $bundle) { Write-Error "No .msixbundle file found in $scriptDir"; exit 1 }
+
+          Write-Host "Importing certificate: $($cert.Name)" -ForegroundColor Yellow
+          Import-Certificate -FilePath $cert.FullName -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+          Write-Host "Certificate imported successfully." -ForegroundColor Green
+
+          Write-Host "Installing: $($bundle.Name)" -ForegroundColor Yellow
+          Add-AppxPackage -Path $bundle.FullName
+          Write-Host "Installation complete!" -ForegroundColor Green
+          '@
+          Set-Content -Path "bundle-output\Install-IblAiOS.ps1" -Value $script
+          Write-Host "Created sideload install script"
 
       - name: Sign MSIX Bundle
         if: inputs.sign
@@ -239,5 +295,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ibl-ai-os-msixbundle
-          path: bundle-output/*.msixbundle
+          path: |
+            bundle-output/*.msixbundle
+            bundle-output/*.cer
+            bundle-output/*.ps1
           if-no-files-found: error

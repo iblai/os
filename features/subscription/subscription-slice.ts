@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction, Slice } from '@reduxjs/toolkit';
-import { SUBSCRIPTION_V2_TRIGGERS } from '@iblai/iblai-js/web-utils';
-import { SUBSCRIPTION_USER_CAPABILITIES } from './constants';
+import { createSlice, PayloadAction, Slice } from "@reduxjs/toolkit";
+import { SUBSCRIPTION_V2_TRIGGERS } from "@iblai/iblai-js/web-utils";
+import { SUBSCRIPTION_USER_CAPABILITIES } from "./constants";
 
 // Local type definition until web-utils build is fixed
 interface PricingModalData {
@@ -24,6 +24,7 @@ interface SubscriptionStatus {
 
 interface SubscriptionState {
   openPricingModal: boolean;
+  openAppleRestrictionModal: boolean;
   freeTrialUsageOptions: FreeTrialUsageOptions;
   pricingModalData: PricingModalData;
   subscriptionStatus: SubscriptionStatus;
@@ -32,33 +33,40 @@ interface SubscriptionState {
 
 const initialState: SubscriptionState = {
   openPricingModal: false,
+  openAppleRestrictionModal: false,
   freeTrialUsageOptions: {
     count: 0,
     limitReached: false,
-    message: '',
+    message: "",
   },
   pricingModalData: {
-    referenceId: '',
-    customerEmail: '',
-    publishableKey: '',
-    pricingTableId: '',
+    referenceId: "",
+    customerEmail: "",
+    publishableKey: "",
+    pricingTableId: "",
   },
   subscriptionStatus: {
     creditExhausted: false,
     userCapability: SUBSCRIPTION_USER_CAPABILITIES.FREE_TRIAL,
     callToAction: SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
   },
-  error402Detected: '',
+  error402Detected: "",
 };
 
 export const subscriptionSlice: Slice = createSlice({
-  name: 'subscription',
+  name: "subscription",
   initialState,
   reducers: {
     setOpenPricingModal(state, action: PayloadAction<boolean>) {
       state.openPricingModal = action.payload;
     },
-    setFreeTrialUsageOptions(state, action: PayloadAction<FreeTrialUsageOptions>) {
+    setOpenAppleRestrictionModal(state, action: PayloadAction<boolean>) {
+      state.openAppleRestrictionModal = action.payload;
+    },
+    setFreeTrialUsageOptions(
+      state,
+      action: PayloadAction<FreeTrialUsageOptions>,
+    ) {
       state.freeTrialUsageOptions = action.payload;
     },
     setPricingModalData(state, action: PayloadAction<PricingModalData>) {
@@ -75,6 +83,7 @@ export const subscriptionSlice: Slice = createSlice({
 
 export const {
   setOpenPricingModal,
+  setOpenAppleRestrictionModal,
   setFreeTrialUsageOptions,
   setPricingModalData,
   setSubscriptionStatus,
