@@ -42,7 +42,9 @@ clean:
 	rm -rf dist-electron
 	rm -rf .turbo
 	rm -rf playwright-report
+	rm -rf e2e/playwright-report
 	rm -rf test-results
+	rm -rf e2e/test-results
 	rm -rf coverage
 
 # Clean everything and reinstall
