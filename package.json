@@ -157,7 +157,7 @@
     "remark-html": "^16.0.1",
     "remark-math": "6.0.0",
     "remark-stringify": "^11.0.0",
-    "require-in-the-middle": "^7.5.2",
+    "require-in-the-middle": "^8.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "3.2.0",
     "tw-animate-css": "1.2.5",
