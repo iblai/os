@@ -2,6 +2,14 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { safeWaitForURL, logger } from '@iblai/iblai-js/playwright';
+import path from 'path';
+
+const FILES_DIR = path.resolve(__dirname, '../files/testing_folder');
+const PDF_FILE = path.join(
+  FILES_DIR,
+  '0028-oop-object-oriented-programming-using-cpp.pdf',
+);
+const IMAGE_FILE = path.join(FILES_DIR, 'acessibility png.png');
 
 test.describe('Journey 36: Copy Mentor', () => {
   test.setTimeout(200_000);
@@ -22,7 +30,6 @@ test.describe('Journey 36: Copy Mentor', () => {
   }) => {
     await createMentorPage.openAndCreate();
 
-    // Open settings — Copy button should NOT be visible (forkable defaults to false)
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
@@ -30,10 +37,8 @@ test.describe('Journey 36: Copy Mentor', () => {
     });
     logger.info('Copy button is hidden for non-forkable mentor');
 
-    // Enable Allow Copies
     await editMentorPage.settings.enableAllowCopies();
 
-    // Close and reopen to verify persistence
     await editMentorPage.close();
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
@@ -42,10 +47,8 @@ test.describe('Journey 36: Copy Mentor', () => {
     });
     logger.info('Copy button is visible after enabling Allow Copies');
 
-    // Disable Allow Copies
     await editMentorPage.settings.disableAllowCopies();
 
-    // Close and reopen to verify Copy button is gone
     await editMentorPage.close();
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
@@ -67,40 +70,28 @@ test.describe('Journey 36: Copy Mentor', () => {
     await waitForPageReady(page);
     await editMentorPage.settings.enableAllowCopies();
 
-    // Open Copy Mentor modal
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
 
-    // Verify title and description
-    await expect(copyDialog.getByText('Copy Mentor')).toBeVisible();
     await expect(
-      copyDialog.getByText(/Create a copy of this mentor/),
+      copyMentorDialog.dialog.getByText('Copy Mentor'),
+    ).toBeVisible();
+    await expect(
+      copyMentorDialog.dialog.getByText(/Create a copy of this mentor/),
     ).toBeVisible();
 
-    // Verify name input is pre-filled with "Copy of {mentor_name}"
-    const nameInput = copyDialog.getByRole('textbox', {
-      name: 'Mentor Name',
-    });
-    await expect(nameInput).toBeVisible({ timeout: 10_000 });
-    const nameValue = await nameInput.inputValue();
+    const nameValue = await copyMentorDialog.getName();
     expect(nameValue).toContain(`Copy of ${mentorName}`);
     logger.info(`Name input pre-filled with: ${nameValue}`);
 
-    // Verify training data toggle is visible
-    await expect(copyDialog.getByText('Include training data')).toBeVisible();
-
-    // Verify Cancel and Copy buttons
     await expect(
-      copyDialog.getByRole('button', { name: 'Cancel' }),
+      copyMentorDialog.dialog.getByText('Include training data'),
     ).toBeVisible();
-    await expect(
-      copyDialog.getByRole('button', { name: 'Copy', exact: true }),
-    ).toBeVisible();
+    await expect(copyMentorDialog.cancelButton).toBeVisible();
+    await expect(copyMentorDialog.copyButton).toBeVisible();
 
-    // Close via Cancel
-    await copyDialog.getByRole('button', { name: 'Cancel' }).click();
-    await expect(copyDialog).not.toBeVisible({ timeout: 5_000 });
+    await copyMentorDialog.close();
     logger.info('Modal closed via Cancel');
     await editMentorPage.close();
   });
@@ -117,11 +108,9 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    await editMentorPage.copyMentorDialog.waitForOpen();
 
-    await page.keyboard.press('Escape');
-    await expect(copyDialog).not.toBeVisible({ timeout: 5_000 });
+    await editMentorPage.copyMentorDialog.closeViaEscape();
     logger.info('Modal closed via Escape key');
     await editMentorPage.close();
   });
@@ -138,21 +127,11 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    await editMentorPage.copyMentorDialog.waitForOpen();
 
-    // Click Copy
-    await copyDialog.getByRole('button', { name: 'Copy', exact: true }).click();
-
-    // Wait for the copy dialog to close (indicates success)
     logger.info('Waiting for copy to complete...');
-    await expect(copyDialog).not.toBeVisible({ timeout: 60_000 });
+    await editMentorPage.copyMentorDialog.submitCopy();
 
-    // Wait for navigation to the new mentor
-    await waitForPageReady(page);
-    await page.waitForLoadState('networkidle');
-
-    // The new mentor should have "Copy of {mentorName}" in the page
     const expectedCopyName = `Copy of ${mentorName}`;
     const mentorHeading = page
       .locator('h1')
@@ -173,26 +152,13 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
 
-    // Change the name
     const customName = `Custom Copy ${Date.now()}`;
-    const nameInput = copyDialog.getByRole('textbox', {
-      name: 'Mentor Name',
-    });
-    await nameInput.clear();
-    await nameInput.fill(customName);
+    await copyMentorDialog.setName(customName);
+    await copyMentorDialog.submitCopy();
 
-    // Click Copy
-    await copyDialog.getByRole('button', { name: 'Copy', exact: true }).click();
-
-    // Wait for navigation
-    await expect(copyDialog).not.toBeVisible({ timeout: 60_000 });
-    await waitForPageReady(page);
-    await page.waitForLoadState('networkidle');
-
-    // Verify the custom name
     const mentorHeading = page
       .locator('h1')
       .filter({ hasText: new RegExp(`^${customName}$`) });
@@ -212,21 +178,14 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
 
-    const nameInput = copyDialog.getByRole('textbox', {
-      name: 'Mentor Name',
-    });
-    await nameInput.clear();
-
-    const copyButton = copyDialog.getByRole('button', {
-      name: 'Copy',
-      exact: true,
-    });
-    await expect(copyButton).toBeDisabled();
+    await copyMentorDialog.nameInput.clear();
+    await expect(copyMentorDialog.copyButton).toBeDisabled();
     logger.info('Copy button is disabled when name is empty');
-    await page.keyboard.press('Escape');
+
+    await copyMentorDialog.closeViaEscape();
     await editMentorPage.close();
   });
 
@@ -242,38 +201,112 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
 
-    // Toggle off "Include training data"
-    const trainingDataToggle = copyDialog.locator('button[role="switch"]');
-    await expect(trainingDataToggle).toBeVisible({ timeout: 5_000 });
-
-    const isChecked = await trainingDataToggle.getAttribute('aria-checked');
-    if (isChecked === 'true') {
-      await trainingDataToggle.click();
-    }
-    await expect(trainingDataToggle).toHaveAttribute('aria-checked', 'false');
+    await copyMentorDialog.setIncludeTrainingData(false);
     logger.info('Include training data toggled off');
 
-    // Click Copy
-    await copyDialog.getByRole('button', { name: 'Copy', exact: true }).click();
+    await copyMentorDialog.submitCopy();
 
-    // Wait for the copy dialog to close (indicates success)
-    logger.info('Waiting for copy without training data to complete...');
-    await expect(copyDialog).not.toBeVisible({ timeout: 60_000 });
-
-    // Wait for navigation to the new mentor
-    await waitForPageReady(page);
-    await page.waitForLoadState('networkidle');
-
-    // Verify we landed on the copied mentor
     const expectedCopyName = `Copy of ${mentorName}`;
     const mentorHeading = page
       .locator('h1')
       .filter({ hasText: new RegExp(expectedCopyName) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
     logger.info(`Copied mentor without training data: ${expectedCopyName}`);
+  });
+
+  test('admin copies a mentor with training data and the copied mentor has datasets', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    test.setTimeout(400_000);
+    await createMentorPage.openAndCreate();
+
+    // Upload 2 files to the Datasets tab
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    await editMentorPage.datasets.uploadFile(PDF_FILE, 'PDF');
+    logger.info('Uploaded PDF file');
+
+    await editMentorPage.datasets.uploadFile(IMAGE_FILE, 'Image');
+    logger.info('Uploaded Image file');
+
+    const hasDatasets = await editMentorPage.datasets.hasDatasets();
+    expect(hasDatasets).toBe(true);
+    logger.info('Verified datasets exist on source mentor');
+
+    // Copy with training data
+    await editMentorPage.navigateToTab('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.enableAllowCopies();
+
+    await editMentorPage.settings.copyMentorButton.click();
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
+
+    await copyMentorDialog.setIncludeTrainingData(true);
+    logger.info('Include training data is ON');
+
+    await copyMentorDialog.submitCopy();
+    logger.info('Mentor copied with training data');
+
+    // Verify the copied mentor has datasets
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+    const copiedHasDatasets = await editMentorPage.datasets.hasDatasets();
+    expect(copiedHasDatasets).toBe(true);
+    logger.info('Copied mentor has datasets — training data was included');
+    await editMentorPage.close();
+  });
+
+  test('admin copies a mentor without training data and the copied mentor has no datasets', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    test.setTimeout(400_000);
+    await createMentorPage.openAndCreate();
+
+    // Upload 2 files to the Datasets tab
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    await editMentorPage.datasets.uploadFile(PDF_FILE, 'PDF');
+    logger.info('Uploaded PDF file');
+
+    await editMentorPage.datasets.uploadFile(IMAGE_FILE, 'Image');
+    logger.info('Uploaded Image file');
+
+    const hasDatasets = await editMentorPage.datasets.hasDatasets();
+    expect(hasDatasets).toBe(true);
+    logger.info('Verified datasets exist on source mentor');
+
+    // Copy without training data
+    await editMentorPage.navigateToTab('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.enableAllowCopies();
+
+    await editMentorPage.settings.copyMentorButton.click();
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
+
+    await copyMentorDialog.setIncludeTrainingData(false);
+    logger.info('Include training data is OFF');
+
+    await copyMentorDialog.submitCopy();
+    logger.info('Mentor copied without training data');
+
+    // Verify the copied mentor has NO datasets
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+    const copiedHasDatasets = await editMentorPage.datasets.hasDatasets();
+    expect(copiedHasDatasets).toBe(false);
+    logger.info('Copied mentor has no datasets — training data was excluded');
+    await editMentorPage.close();
   });
 
   test('admin copies a mentor to a different tenant if user has multiple admin tenants', async ({
@@ -288,26 +321,16 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.settings.enableAllowCopies();
 
     await editMentorPage.settings.copyMentorButton.click();
-    const copyDialog = page.getByRole('dialog', { name: /Copy Mentor/i });
-    await expect(copyDialog).toBeVisible({ timeout: 10_000 });
+    const { copyMentorDialog } = editMentorPage;
+    await copyMentorDialog.waitForOpen();
 
-    // Wait up to 60s for the Destination tenant selector to appear
-    const destinationCombobox = copyDialog.getByRole('combobox', {
-      name: 'Select destination tenant',
-    });
-    let hasMultipleTenants = false;
-    try {
-      await destinationCombobox.waitFor({ state: 'visible', timeout: 120_000 });
-      hasMultipleTenants = true;
-    } catch {
-      hasMultipleTenants = false;
-    }
+    const hasMultipleTenants = await copyMentorDialog.hasDestinationSelector();
 
     if (!hasMultipleTenants) {
       logger.info(
         'User is admin in only one tenant — skipping cross-tenant copy test',
       );
-      await page.keyboard.press('Escape');
+      await copyMentorDialog.closeViaEscape();
       await editMentorPage.close();
       test.skip();
       return;
@@ -315,44 +338,27 @@ test.describe('Journey 36: Copy Mentor', () => {
 
     logger.info('Destination dropdown found — user has multiple admin tenants');
 
-    // Get the current tenant from the URL
     const currentUrl = new URL(page.url());
     const currentTenantKey = currentUrl.pathname.split('/')[2];
     logger.info(`Current tenant: ${currentTenantKey}`);
 
-    // Open the destination dropdown and pick a different tenant
-    await destinationCombobox.click();
-    await page.waitForTimeout(1_000);
-
-    // Find an option that is NOT the current tenant
-    const options = page.locator('[role="option"]');
-    const optionCount = await options.count();
-    let selectedTenantName = '';
-
-    for (let i = 0; i < optionCount; i++) {
-      const optionText = await options.nth(i).textContent();
-      if (optionText && !optionText.includes(currentTenantKey)) {
-        selectedTenantName = optionText.trim();
-        await options.nth(i).click();
-        logger.info(`Selected destination tenant: ${selectedTenantName}`);
-        break;
-      }
-    }
+    const selectedTenantName =
+      await copyMentorDialog.selectDifferentTenant(currentTenantKey);
 
     if (!selectedTenantName) {
       logger.info(
         'Could not find a different tenant option — skipping cross-tenant test',
       );
-      await page.keyboard.press('Escape');
+      await copyMentorDialog.closeViaEscape();
       await editMentorPage.close();
       test.skip();
       return;
     }
 
-    // Click Copy
-    await copyDialog.getByRole('button', { name: 'Copy', exact: true }).click();
+    logger.info(`Selected destination tenant: ${selectedTenantName}`);
 
-    // Cross-tenant copy triggers a tenant switch (full page redirect via auth)
+    await copyMentorDialog.copyButton.click();
+
     await safeWaitForURL(
       page,
       (url) =>
@@ -366,7 +372,6 @@ test.describe('Journey 36: Copy Mentor', () => {
 
     logger.info(`Tenant switch completed — landed at: ${page.url()}`);
 
-    // Verify we are no longer on the original tenant
     expect(page.url()).not.toContain(`/platform/${currentTenantKey}/`);
     logger.info('Cross-tenant copy verified — no longer on original tenant');
   });
