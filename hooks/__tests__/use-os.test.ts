@@ -5,6 +5,10 @@ vi.mock('@tauri-apps/plugin-os', () => ({
   platform: vi.fn(),
 }));
 
+vi.mock('@/types/tauri', () => ({
+  isTauriApp: vi.fn(() => true),
+}));
+
 import { platform } from '@tauri-apps/plugin-os';
 import { useOS } from '../use-os';
 
