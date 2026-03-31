@@ -220,7 +220,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button
             type="button"
             variant="outline"
