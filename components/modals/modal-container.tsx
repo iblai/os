@@ -1,38 +1,38 @@
-"use client";
+'use client';
 
-import React from "react";
+import React from 'react';
 
-import { useSelector } from "react-redux";
+import { useSelector } from 'react-redux';
 
-import { RootState } from "@/store";
-import { MODALS } from "@/lib/constants";
-import { useNavigate } from "@/hooks/user-navigate";
+import { RootState } from '@/store';
+import { MODALS } from '@/lib/constants';
+import { useNavigate } from '@/hooks/user-navigate';
 import {
   selectIsModalOpen,
   selectShortcutsModal,
   shortcutsModalUpdated,
-} from "@/features/navigation/slice";
+} from '@/features/navigation/slice';
 
 // Modals
-import { SettingsModal } from "@/components/modals/settings-modal";
+import { SettingsModal } from '@/components/modals/settings-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
-import { CustomAlertDialog } from "../custom-alert-dialog";
-import { ExternalPricingModal } from "./external-pricing-modal";
+import { CustomAlertDialog } from '../custom-alert-dialog';
+import { ExternalPricingModal } from './external-pricing-modal';
 import {
   setOpenPricingModal,
   setOpenAppleRestrictionModal,
-} from "@/features/subscription/subscription-slice";
-import { AppleRestrictionModal } from "@/components/modals/apple-restriction-modal";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+} from '@/features/subscription/subscription-slice';
+import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
   InviteUserDialog,
-} from "@iblai/iblai-js/web-containers";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { useParams } from "next/navigation";
-import { ShortcutsModal } from "./shortcuts-modal";
-import { MyMentorsModal } from "./my-mentors-modal";
-import { NoMentorSelectedModal } from "./no-mentor-selected-modal";
+} from '@iblai/iblai-js/web-containers';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useParams } from 'next/navigation';
+import { ShortcutsModal } from './shortcuts-modal';
+import { MyMentorsModal } from './my-mentors-modal';
+import { NoMentorSelectedModal } from './no-mentor-selected-modal';
 
 export const ModalContainer = () => {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();

@@ -1459,7 +1459,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
     // Intercept fetch to cache API responses for offline use (GET and POST)
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
-        var url = typeof input === 'string' ? input : input.url;
+        var url = typeof input === 'string' ? input : (input && input.url ? input.url : (input && input.href ? input.href : String(input)));
         var method = (init && init.method) ? init.method.toUpperCase() : 'GET';
         var requestBody = (init && init.body) ? init.body : null;
 
@@ -1892,6 +1892,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai OS] ============================================");

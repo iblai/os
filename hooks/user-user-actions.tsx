@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { FreeTrialDialog as IblFreeTrialDialog } from "@/components/free-trial-dialog";
-import { useAppDispatch } from "@/lib/hooks";
-import { useAppSelector } from "@/lib/hooks";
-import { setOpenAppleRestrictionModal } from "@/features/subscription/subscription-slice";
-import { MentorSubscriptionFlowV2 } from "@/hooks/subscription/subscription-flow-v2";
-import { config } from "@/lib/config";
-import { getUserEmail, getUserName } from "@/features/utils";
-import { useUserTenants } from "@/hooks/use-user";
-import { useCurrentTenant } from "@/hooks/use-user";
+import { useState } from 'react';
+import { FreeTrialDialog as IblFreeTrialDialog } from '@/components/free-trial-dialog';
+import { useAppDispatch } from '@/lib/hooks';
+import { useAppSelector } from '@/lib/hooks';
+import { setOpenAppleRestrictionModal } from '@/features/subscription/subscription-slice';
+import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
+import { config } from '@/lib/config';
+import { getUserEmail, getUserName } from '@/features/utils';
+import { useUserTenants } from '@/hooks/use-user';
+import { useCurrentTenant } from '@/hooks/use-user';
 import {
   SUBSCRIPTION_V2_TRIGGERS,
   useSubscriptionHandlerV2,
-} from "@iblai/iblai-js/web-utils";
-import { useOS } from "@/hooks/use-os";
+} from '@iblai/iblai-js/web-utils';
+import { useOS } from '@/hooks/use-os';
 
 // Custom hook to handle trial user actions
 export const useShowFreeTrialDialog = (
@@ -29,9 +29,9 @@ export const useShowFreeTrialDialog = (
   );
   const subscriptionFlow = new MentorSubscriptionFlowV2({
     platformName: config.iblPlatform(),
-    currentTenantKey: currentTenant?.key || "",
+    currentTenantKey: currentTenant?.key || '',
     username: getUserName(),
-    currentTenantOrg: currentTenant?.org || "",
+    currentTenantOrg: currentTenant?.org || '',
     userTenants,
     isAdmin: currentTenant?.is_admin || false,
     mainTenantKey: config.mainTenantKey(),

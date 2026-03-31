@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.40.3](https://github.com/iblai/mentorai/compare/v0.40.2...v0.40.3) (2026-03-31)
+
+### Bug Fixes
+
+* open pricing link in system browser via Tauri opener plugin ([db6f010](https://github.com/iblai/mentorai/commit/db6f010fb832ba0164f1cde5fc108f9e50404d02))
+
+## [0.40.2](https://github.com/iblai/mentorai/compare/v0.40.1...v0.40.2) (2026-03-31)
+
+### Bug Fixes
+
+* init tauri OS plugin and update apple restriction modal ([fd72a30](https://github.com/iblai/mentorai/commit/fd72a3029cb5cab8c8cf14b3a9967d76d5feae72))
+
+## [0.40.1](https://github.com/iblai/mentorai/compare/v0.40.0...v0.40.1) (2026-03-30)
+
+### Chores
+
+* add debug logging to useOS hook ([5e9b4d6](https://github.com/iblai/mentorai/commit/5e9b4d609f4566e450c84616fd5d57807f8dd018))
+
+## [0.40.0](https://github.com/iblai/mentorai/compare/v0.39.2...v0.40.0) (2026-03-30)
+
+### Features
+
+* ios restiction message modal feature ([e7f44d5](https://github.com/iblai/mentorai/commit/e7f44d5ed82bcbcfb4d674fbfee61597a36e2846))
+* ios restiction message modal feature > pnpm lock update ([f7699b0](https://github.com/iblai/mentorai/commit/f7699b0b152772d764341f9a699bf404f4692eff))
+* ios restiction message modal feature > test coverage ([9356132](https://github.com/iblai/mentorai/commit/93561324369fec93661e01669e2cd50c6d57cd30))
+* ios restriction on progress ([c91bcaf](https://github.com/iblai/mentorai/commit/c91bcafb7e7eed65a66d60a6d7c3245c5e51d713))
+* ios restriction on progress ([9c3637b](https://github.com/iblai/mentorai/commit/9c3637b4e49b51ce74ce0c5cf633d3a6a98a6954))
+
+### Bug Fixes
+
+* regenerate app icons, fix fetch interceptor crash, fix iOS bundle validation ([37e75d3](https://github.com/iblai/mentorai/commit/37e75d380f665bd289e96adffea263186ab10a94))
+* restore useOS isTauriApp guard and bump iblai-js to 1.1.9 ([9bd8fd4](https://github.com/iblai/mentorai/commit/9bd8fd4886eb4fc16845f393601073e192d1deb8))
+
+### Chores
+
+* add release-it as devDependency ([8776c87](https://github.com/iblai/mentorai/commit/8776c87e5988bb163f2e3a69a1e741f71070e86b))
+* bump package version to patch ([2fd6e7a](https://github.com/iblai/mentorai/commit/2fd6e7aacb9f3698ac3073c6292ebed5952a9338))
+
+## [0.39.2](https://github.com/iblai/mentorai/compare/v0.39.0...v0.39.2) (2026-03-30)
+
+### Chores
+
+* release 0.39.1 ([7a91886](https://github.com/iblai/mentorai/commit/7a9188683ba9db3b7e889fccabf7705b3e65a1ec))
+
+## [0.39.1]
+
+- bump iblai-js version to 1.1.9
+
 ## [0.39.0](https://github.com/iblai/mentorai/compare/v0.38.2...v0.39.0) (2026-03-30)
 
 ### Features
