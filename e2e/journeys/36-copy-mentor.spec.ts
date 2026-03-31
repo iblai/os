@@ -254,8 +254,8 @@ test.describe('Journey 36: Copy Mentor', () => {
     await copyMentorDialog.submitCopy();
     logger.info('Mentor copied with training data');
 
-    // Verify the copied mentor has datasets
-    await editMentorPage.open('Datasets');
+    // Verify the copied mentor has datasets (dialog stays open after copy)
+    await editMentorPage.navigateToTab('Datasets');
     await waitForPageReady(page);
     const copiedHasDatasets = await editMentorPage.datasets.hasDatasets();
     expect(copiedHasDatasets).toBe(true);
@@ -300,8 +300,8 @@ test.describe('Journey 36: Copy Mentor', () => {
     await copyMentorDialog.submitCopy();
     logger.info('Mentor copied without training data');
 
-    // Verify the copied mentor has NO datasets
-    await editMentorPage.open('Datasets');
+    // Verify the copied mentor has NO datasets (dialog stays open after copy)
+    await editMentorPage.navigateToTab('Datasets');
     await waitForPageReady(page);
     const copiedHasDatasets = await editMentorPage.datasets.hasDatasets();
     expect(copiedHasDatasets).toBe(false);
