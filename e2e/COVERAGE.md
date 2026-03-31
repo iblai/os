@@ -523,7 +523,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 36: Copy Mentor (8 checkpoints) — `journeys/36-copy-mentor.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/copy-mentor-modal.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx`
 
 - [x] Allow Copies toggle shows Copy button when enabled and hides it when disabled
 - [x] Copy Mentor modal opens with correct defaults (pre-filled name, training data toggle, Cancel/Copy buttons)

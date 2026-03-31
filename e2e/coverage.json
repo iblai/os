@@ -561,7 +561,7 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/settings-tab.tsx", "components/modals/copy-mentor-modal.tsx"],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/settings-tab.tsx", "components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx"],
       "checkpoints": [
         { "id": "cpm-01", "description": "Allow Copies toggle shows Copy button when enabled and hides it when disabled", "status": "covered" },
         { "id": "cpm-02", "description": "Copy Mentor modal opens with correct defaults", "status": "covered" },
