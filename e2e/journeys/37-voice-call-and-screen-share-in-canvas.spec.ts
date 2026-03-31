@@ -18,43 +18,15 @@ async function createMentorAndEnableTools(
   await createMentorPage.openAndCreate();
   await waitForPageReady(page);
 
-  // Open Tools tab and enable screen sharing (auto-saves on toggle)
+  // Enable screen sharing (Tools tab auto-saves on toggle)
   await editMentorPage.open('Tools');
   await waitForPageReady(page);
-  await editMentorPage.tools.toggleTool('Screen Sharing');
-  await page.waitForTimeout(2_000);
+  await editMentorPage.tools.enableTool('Screen Sharing');
 
-  // Navigate to Settings tab and enable voice call
+  // Enable voice call (Settings tab requires explicit save)
   await editMentorPage.navigateToTab('Settings');
   await waitForPageReady(page);
-
-  const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-    name: /show voice call/i,
-  });
-  let voiceSwitchVisible = false;
-  try {
-    await showVoiceSwitch.waitFor({ state: 'visible', timeout: 10_000 });
-    voiceSwitchVisible = true;
-  } catch {
-    voiceSwitchVisible = false;
-  }
-
-  if (voiceSwitchVisible) {
-    const isChecked =
-      (await showVoiceSwitch.getAttribute('aria-checked')) === 'true';
-    if (!isChecked) {
-      await showVoiceSwitch.click();
-      await expect(showVoiceSwitch).toHaveAttribute('aria-checked', 'true', {
-        timeout: 5_000,
-      });
-      const settingsSaveBtn = editMentorPage.dialog.getByRole('button', {
-        name: 'Save',
-      });
-      await expect(settingsSaveBtn).toBeEnabled({ timeout: 10_000 });
-      await settingsSaveBtn.click();
-      await page.waitForTimeout(2_000);
-    }
-  }
+  await editMentorPage.settings.enableVoiceCall();
 
   await editMentorPage.close();
   await waitForPageReady(page);
