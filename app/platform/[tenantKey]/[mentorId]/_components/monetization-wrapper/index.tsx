@@ -26,6 +26,8 @@ export function MonetizationWrapper() {
   useEffect(() => {
     if (displayMonetizationCheckoutModal) {
       setModalOpen(true);
+    } else {
+      handleTopBannerClose();
     }
   }, [displayMonetizationCheckoutModal]);
 

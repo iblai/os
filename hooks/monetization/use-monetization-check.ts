@@ -19,31 +19,36 @@ export function useMonetizationCheck() {
       if (!isLoggedIn() || !platformKey || !mentorId) return;
 
       try {
-        const result = await checkAccess({
-          platform_key: platformKey,
-          item_type: "mentor",
-          item_id: mentorId,
-        }).unwrap();
-
-        if (!result.has_access && result.pricing) {
-          dispatch(showMonetizationCheckoutModal(result));
-        } else {
-          dispatch(setDisplayMonetizationCheckoutModal(false));
-        }
-      } catch (error: unknown) {
-        const err = error as { status?: number; data?: AccessCheckResponse };
-        console.log("[MONETIZATION] Error checking mentor access", {
-          error,
+        const result = await checkAccess(
+          {
+            platform_key: platformKey,
+            item_type: "mentor",
+            item_id: mentorId,
+          },
+          false,
+        );
+        console.log("[MONETIZATION] checkMentorAccess status: ", {
+          error: result.isError,
+          success: result.isSuccess,
         });
-        if (err?.status === 402 && err.data?.pricing) {
-          dispatch(showMonetizationCheckoutModal(err.data));
-        } else {
-          dispatch(setDisplayMonetizationCheckoutModal(false));
+        if (
+          result.isError &&
+          !result.data?.has_access &&
+          result.data?.pricing
+        ) {
+          dispatch(showMonetizationCheckoutModal(result));
         }
-      }
+        if (result.isSuccess && result.data?.has_access) {
+          handleUnsetDisplayMonetizationCheckoutModal();
+        }
+      } catch (error: unknown) {}
     },
     [checkAccess, dispatch],
   );
 
-  return { checkMentorAccess };
+  const handleUnsetDisplayMonetizationCheckoutModal = useCallback(() => {
+    dispatch(setDisplayMonetizationCheckoutModal(false));
+  }, [dispatch]);
+
+  return { checkMentorAccess, handleUnsetDisplayMonetizationCheckoutModal };
 }
