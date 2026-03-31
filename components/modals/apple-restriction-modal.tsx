@@ -4,6 +4,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isTauriApp } from "@/types/tauri";
 import { Smartphone } from "lucide-react";
 
 type Props = {
@@ -40,7 +41,16 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
           <div className="flex w-full flex-col gap-3">
             <a
               href="https://www.ibl.ai/pricing"
-              onClick={onClose}
+              onClick={async (e) => {
+                if (isTauriApp()) {
+                  e.preventDefault();
+                  const { openUrl } = await import("@tauri-apps/plugin-opener");
+                  await openUrl("https://www.ibl.ai/pricing");
+                }
+                onClose();
+              }}
+              target="_blank"
+              rel="noopener noreferrer"
               className="ibl-button-primary flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold"
             >
               Go to ibl.ai/pricing
