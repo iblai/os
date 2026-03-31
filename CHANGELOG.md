@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.40.3](https://github.com/iblai/mentorai/compare/v0.40.2...v0.40.3) (2026-03-31)
+
+### Bug Fixes
+
+* open pricing link in system browser via Tauri opener plugin ([db6f010](https://github.com/iblai/mentorai/commit/db6f010fb832ba0164f1cde5fc108f9e50404d02))
+
 ## [0.40.2](https://github.com/iblai/mentorai/compare/v0.40.1...v0.40.2) (2026-03-31)
 
 ### Bug Fixes
