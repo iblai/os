@@ -42,7 +42,7 @@ interface CopyMentorModalProps {
 export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
-  const { getMentorId, getUpdatedModalStack, navigateToMentor } = useNavigate();
+  const { getMentorId, navigateToMentor } = useNavigate();
 
   const activeMentorId = getMentorId() ?? mentorId;
 
@@ -127,15 +127,16 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
       const isCrossTenantCopy = destinationTenantKey !== tenantKey;
 
+      const modalStack = [
+        {
+          name: MODALS.EDIT_MENTOR.name,
+          tab: MODALS.EDIT_MENTOR.tabs.settings,
+        },
+      ];
+
       if (isCrossTenantCopy) {
         // @ts-ignore unique_id exists on the forked mentor response
         const newMentorId = forkedMentor.unique_id;
-        const modalStack = [
-          {
-            name: MODALS.EDIT_MENTOR.name,
-            tab: MODALS.EDIT_MENTOR.tabs.settings,
-          },
-        ];
         const mentorPath = `/platform/${destinationTenantKey}/${newMentorId}?modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
         await handleTenantSwitch(
           destinationTenantKey,
@@ -143,14 +144,10 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
           `${window.location.origin}${mentorPath}`,
         );
       } else {
-        const newStack = getUpdatedModalStack(
-          MODALS.EDIT_MENTOR.name,
-          MODALS.EDIT_MENTOR.tabs.settings,
-        );
         navigateToMentor(
           // @ts-ignore unique_id exists on the forked mentor response
           forkedMentor.unique_id,
-          `modal=${JSON.stringify(newStack)}`,
+          `modal=${JSON.stringify(modalStack)}`,
         );
       }
     } catch {
