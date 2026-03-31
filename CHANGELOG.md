@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.40.2](https://github.com/iblai/mentorai/compare/v0.40.1...v0.40.2) (2026-03-31)
+
+### Bug Fixes
+
+* init tauri OS plugin and update apple restriction modal ([fd72a30](https://github.com/iblai/mentorai/commit/fd72a3029cb5cab8c8cf14b3a9967d76d5feae72))
+
 ## [0.40.1](https://github.com/iblai/mentorai/compare/v0.40.0...v0.40.1) (2026-03-30)
 
 ### Chores
