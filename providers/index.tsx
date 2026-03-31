@@ -523,6 +523,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }}
           setUseMentorProvider={setUseMentorProvider}
           onLoadPlatformPermissions={onLoadPlatformpermissions}
+          skipCustomDomainCheck={window.location.origin === config.mentorUrl()}
         >
           {useMentorProvider ? (
             <MentorProvider

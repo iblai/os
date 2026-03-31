@@ -79,12 +79,10 @@ test.describe("Journey 34: Workflows", () => {
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
-    const startNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Start" });
+    const startNode = canvas.locator("span").filter({ hasText: "Start" });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
     await deleteCurrentWorkflow(page);
@@ -100,7 +98,7 @@ test.describe("Journey 34: Workflows", () => {
     await navigateBackToWorkflowsList(page);
     await openWorkflowByName(page, workflowName);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
     await deleteCurrentWorkflow(page);
@@ -192,17 +190,16 @@ test.describe("Journey 34: Workflows", () => {
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    const startNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Start" });
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
+    const startNode = canvas.locator("span").filter({ hasText: "Start" });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
-    const mentorNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Mentor" });
+    const mentorNode = canvas.locator("span").filter({ hasText: "Mentor" });
     await expect(mentorNode).toBeVisible({ timeout: 15_000 });
 
-    const edges = page.locator(".react-flow__edge");
+    const edges = canvas.locator(
+      'path[stroke="#38A1E5"]:not([stroke-dasharray])',
+    );
     const edgeCount = await edges.count();
     expect(edgeCount).toBeGreaterThanOrEqual(1);
 
@@ -267,7 +264,7 @@ test.describe("Journey 34: Workflows", () => {
 
     await enterPreviewMode(page);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
     await exitPreviewMode(page);

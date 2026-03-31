@@ -75,15 +75,21 @@ fn get_app_url() -> String {
         return url;
     }
 
-    // Mobile platforms: production URL by default
+    // Mobile platforms: .org for debug, .app for release
     #[cfg(any(target_os = "ios", target_os = "android"))]
-    return "https://mentorai.iblai.app".to_string();
+    {
+        #[cfg(debug_assertions)]
+        return "http://192.168.1.46:3001".to_string();
 
-    // Desktop: localhost for debug, production URL for release
+        #[cfg(not(debug_assertions))]
+        return "https://mentorai.iblai.app".to_string();
+    }
+
+    // Desktop: .org for debug, .app for release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         #[cfg(debug_assertions)]
-        return "https://mentorai.iblai.app".to_string();
+        return "https://mentorai.iblai.org".to_string();
 
         #[cfg(not(debug_assertions))]
         return "https://mentorai.iblai.app".to_string();
@@ -1453,7 +1459,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
     // Intercept fetch to cache API responses for offline use (GET and POST)
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
-        var url = typeof input === 'string' ? input : input.url;
+        var url = typeof input === 'string' ? input : (input && input.url ? input.url : (input && input.href ? input.href : String(input)));
         var method = (init && init.method) ? init.method.toUpperCase() : 'GET';
         var requestBody = (init && init.body) ? init.body : null;
 
@@ -1886,6 +1892,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai OS] ============================================");

@@ -53,11 +53,11 @@ export default defineConfig({
     // Safari/WebKit disabled: Next.js chunks fail to load in Playwright's WebKit engine
     // causing ChunkLoadError timeouts. See: https://mentorai.iblai.org/_next/static/chunks/
     // Re-enable once the app's WebKit chunk-loading compatibility is resolved.
-    // {
-    //   name: "setup-safari",
-    //   testMatch: /auth\.setup\.ts/,
-    //   use: { ...devices["Desktop Safari"] },
-    // },
+    {
+      name: "setup-safari",
+      testMatch: /auth\.setup\.ts/,
+      use: { ...devices["Desktop Safari"] },
+    },
     {
       name: "setup-edge",
       testMatch: /auth\.setup\.ts/,
@@ -75,11 +75,11 @@ export default defineConfig({
       testMatch: /auth-nonadmin\.setup\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
-    // {
-    //   name: "setup-nonadmin-safari",
-    //   testMatch: /auth-nonadmin\.setup\.ts/,
-    //   use: { ...devices["Desktop Safari"] },
-    // },
+    {
+      name: "setup-nonadmin-safari",
+      testMatch: /auth-nonadmin\.setup\.ts/,
+      use: { ...devices["Desktop Safari"] },
+    },
     {
       name: "setup-nonadmin-edge",
       testMatch: /auth-nonadmin\.setup\.ts/,
@@ -103,14 +103,14 @@ export default defineConfig({
       },
       dependencies: ["setup-firefox", "setup-nonadmin-firefox"],
     },
-    // {
-    //   name: "mentor-desktop-safari",
-    //   use: {
-    //     ...devices["Desktop Safari"],
-    //     storageState: "playwright/.auth/user-safari.json",
-    //   },
-    //   dependencies: ["setup-safari", "setup-nonadmin-safari"],
-    // },
+    {
+      name: "mentor-desktop-safari",
+      use: {
+        ...devices["Desktop Safari"],
+        storageState: "playwright/.auth/user-safari.json",
+      },
+      dependencies: ["setup-safari", "setup-nonadmin-safari"],
+    },
     {
       name: "mentor-desktop-edge",
       use: {

@@ -5,7 +5,15 @@
   "windows": ["main"],
   "local": true,
   "remote": {
-    "urls": ["https://*.iblai.app/*", "https://*.iblai.org/*", "http://127.0.0.1:*/*", "http://localhost:*/*", "http://localhost:3456", "http://localhost:3456/*", "mentor://localhost/*"]
+    "urls": [
+      "https://*.iblai.app/*",
+      "https://*.iblai.org/*",
+      "http://127.0.0.1:*/*",
+      "http://localhost:*/*",
+      "http://localhost:3456",
+      "http://localhost:3456/*",
+      "mentor://localhost/*"
+    ]
   },
   "permissions": [
     "core:webview:allow-internal-toggle-devtools",
@@ -30,6 +38,7 @@
     "shell:allow-open",
     "allow-open-external-url",
     "allow-navigate-to",
-    "allow-get-os-type"
+    "allow-get-os-type",
+    "os:default"
   ]
 }

@@ -64,7 +64,7 @@ export async function waitForWorkflowEditorReady(page: Page): Promise<void> {
   const saveButton = page.getByRole("button", { name: "Save" });
   await expect(saveButton).toBeVisible({ timeout: 30_000 });
 
-  const canvas = page.locator(".react-flow");
+  const canvas = page.locator('[data-testid="workflow-canvas"]');
   await expect(canvas).toBeVisible({ timeout: 30_000 });
 
   logger.info("Workflow editor is ready");

@@ -9,7 +9,9 @@ export class SidebarPage {
   readonly analyticsButton: Locator;
   readonly newProjectButton: Locator;
   readonly newMentorButton: Locator;
+  readonly newChatButton: Locator;
   readonly inviteUsersButton: Locator;
+  readonly workflowsButton: Locator;
   readonly settingsButton: Locator;
   readonly helpButton: Locator;
   readonly logoutButton: Locator;
@@ -40,8 +42,16 @@ export class SidebarPage {
       name: "New Mentor",
       exact: true,
     });
+    this.newChatButton = page.getByRole("button", {
+      name: "New Chat",
+      exact: true,
+    });
     this.inviteUsersButton = page.getByRole("button", {
       name: "Invite Users",
+      exact: true,
+    });
+    this.workflowsButton = page.getByRole("button", {
+      name: "Workflows",
       exact: true,
     });
     this.settingsButton = page.getByRole("button", {
