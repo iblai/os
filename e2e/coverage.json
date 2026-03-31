@@ -574,6 +574,23 @@
         { "id": "cpm-09", "description": "Mentor copied without training data has no datasets on the copy", "status": "covered" },
         { "id": "cpm-10", "description": "Mentor can be copied to a different tenant", "status": "covered" }
       ]
+    },
+    {
+      "id": "voice-call-screen-share-canvas",
+      "name": "Voice Call and Screen Share in Canvas View",
+      "spec": "37-voice-call-and-screen-share-in-canvas.spec.ts",
+      "sourceFiles": ["components/chat-input-form/screen-sharing-button.tsx", "components/chat/index.tsx"],
+      "checkpoints": [
+        { "id": "vsc-01", "description": "Non-admin screen share button has type=button and does not submit chat form", "status": "covered" },
+        { "id": "vsc-02", "description": "Non-admin clicking screen share activates screen sharing not form submit", "status": "covered" },
+        { "id": "vsc-03", "description": "Non-admin voice call button has type=button", "status": "covered" },
+        { "id": "vsc-04", "description": "Admin screen share button has type=button and does not submit chat form", "status": "covered" },
+        { "id": "vsc-05", "description": "Admin clicking screen share activates screen sharing not form submit", "status": "covered" },
+        { "id": "vsc-06", "description": "Admin voice call button has type=button", "status": "covered" },
+        { "id": "vsc-07", "description": "Admin creates mentor, enables tools, opens canvas, voice call opens dialog", "status": "covered" },
+        { "id": "vsc-08", "description": "Admin creates mentor, enables tools, opens canvas, screen share activates", "status": "covered" },
+        { "id": "vsc-09", "description": "Admin creates mentor, enables tools, opens canvas, screen share does not submit form", "status": "covered" }
+      ]
     }
   ]
 }
