@@ -20,7 +20,13 @@ vi.mock('@/lib/config', () => ({
 }));
 
 vi.mock('@/components/markdown', () => ({
-  default: ({ children, className }: { children: string; className?: string }) => (
+  default: ({
+    children,
+    className,
+  }: {
+    children: string;
+    className?: string;
+  }) => (
     <div data-testid="markdown-content" className={className}>
       {children}
     </div>
@@ -61,21 +67,29 @@ describe('WelcomeMessage', () => {
 
       render(<WelcomeMessage {...defaultProps} />);
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('From hook');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'From hook',
+      );
     });
 
     it('should render aiWelcomeMessage when welcomeMessage is empty', () => {
       mockUseWelcome.mockReturnValue({ welcomeMessage: '' });
 
-      render(<WelcomeMessage {...defaultProps} aiWelcomeMessage="AI fallback" />);
+      render(
+        <WelcomeMessage {...defaultProps} aiWelcomeMessage="AI fallback" />,
+      );
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('AI fallback');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'AI fallback',
+      );
     });
 
     it('should prioritize welcomeMessage over aiWelcomeMessage', () => {
       mockUseWelcome.mockReturnValue({ welcomeMessage: 'Hook message' });
 
-      render(<WelcomeMessage {...defaultProps} aiWelcomeMessage="AI message" />);
+      render(
+        <WelcomeMessage {...defaultProps} aiWelcomeMessage="AI message" />,
+      );
 
       const markdown = screen.getByTestId('markdown-content');
       expect(markdown).toHaveTextContent('Hook message');
@@ -95,7 +109,9 @@ describe('WelcomeMessage', () => {
 
       render(<WelcomeMessage {...defaultProps} aiWelcomeMessage="Fallback" />);
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('Fallback');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'Fallback',
+      );
     });
 
     it('should handle undefined welcomeMessage from hook', () => {
@@ -103,12 +119,15 @@ describe('WelcomeMessage', () => {
 
       render(<WelcomeMessage {...defaultProps} aiWelcomeMessage="Fallback" />);
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('Fallback');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'Fallback',
+      );
     });
 
     it('should handle special characters in welcome message', () => {
       mockUseWelcome.mockReturnValue({
-        welcomeMessage: 'Hello! How can I help? 🤖 <script>alert("xss")</script>',
+        welcomeMessage:
+          'Hello! How can I help? 🤖 <script>alert("xss")</script>',
       });
 
       render(<WelcomeMessage {...defaultProps} />);
@@ -143,7 +162,12 @@ describe('WelcomeMessage', () => {
     });
 
     it('should use custom className when provided', () => {
-      render(<WelcomeMessage {...defaultProps} className="mt-1 text-[14px] text-gray-600" />);
+      render(
+        <WelcomeMessage
+          {...defaultProps}
+          className="mt-1 text-[14px] text-gray-600"
+        />,
+      );
 
       const markdown = screen.getByTestId('markdown-content');
       expect(markdown).toHaveClass('mt-1');
@@ -295,7 +319,9 @@ describe('WelcomeMessage', () => {
 
       rerender(<WelcomeMessage {...defaultProps} aiWelcomeMessage="Updated" />);
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('Updated');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'Updated',
+      );
     });
 
     it('should re-render when welcomeMessage from hook changes', () => {
@@ -307,7 +333,9 @@ describe('WelcomeMessage', () => {
       mockUseWelcome.mockReturnValue({ welcomeMessage: 'Second' });
 
       rerender(<WelcomeMessage {...defaultProps} />);
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('Second');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'Second',
+      );
     });
   });
 });

@@ -20,9 +20,19 @@ import {
 import { useLazyGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
 import { NodeConfigPanel } from './node-config-panel';
@@ -73,7 +83,8 @@ const isDefaultMentorLabel = (label?: string) => {
 };
 
 // API may use 'conditional' as the node type key for if-else nodes
-const isConditionalType = (type?: string) => type === 'if-else' || type === 'conditional';
+const isConditionalType = (type?: string) =>
+  type === 'if-else' || type === 'conditional';
 
 export interface NodeConfig {
   // Common
@@ -225,7 +236,9 @@ export function WorkflowCanvas({
     initialNodes && initialNodes.length > 0 ? initialNodes : DEFAULT_NODES,
   );
 
-  const [edges, setEdges] = useState<Edge[]>(initialEdges ? initialEdges : DEFAULT_EDGES);
+  const [edges, setEdges] = useState<Edge[]>(
+    initialEdges ? initialEdges : DEFAULT_EDGES,
+  );
   const [tool, setTool] = useState<'hand' | 'pointer'>('hand');
   const [zoom, setZoom] = useState(initialViewport?.zoom || 1);
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([
@@ -236,7 +249,9 @@ export function WorkflowCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState(
-    initialViewport ? { x: initialViewport.x, y: initialViewport.y } : { x: 0, y: 0 },
+    initialViewport
+      ? { x: initialViewport.x, y: initialViewport.y }
+      : { x: 0, y: 0 },
   );
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -244,7 +259,10 @@ export function WorkflowCanvas({
     nodeId: string;
     handle: string;
   } | null>(null);
-  const [tempConnectionPos, setTempConnectionPos] = useState<{ x: number; y: number } | null>(null);
+  const [tempConnectionPos, setTempConnectionPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [resizingNote, setResizingNote] = useState<{
     nodeId: string;
@@ -260,11 +278,15 @@ export function WorkflowCanvas({
     currentX: number;
     currentY: number;
   } | null>(null);
-  const [selectedNodeForConfig, setSelectedNodeForConfig] = useState<string | null>(null);
+  const [selectedNodeForConfig, setSelectedNodeForConfig] = useState<
+    string | null
+  >(null);
   const processedClickRef = useRef<typeof onClickedItem>(null);
   const [showMentorModal, setShowMentorModal] = useState(false);
   const [mentorSearchQuery, setMentorSearchQuery] = useState('');
-  const [activeMentorNodeId, setActiveMentorNodeId] = useState<string | null>(null);
+  const [activeMentorNodeId, setActiveMentorNodeId] = useState<string | null>(
+    null,
+  );
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const dragMovedRef = useRef(false);
@@ -295,7 +317,11 @@ export function WorkflowCanvas({
     }
 
     // In edit mode, only sync on first load (when data comes from API)
-    if (!hasLoadedInitialData.current && initialNodes && initialNodes.length > 0) {
+    if (
+      !hasLoadedInitialData.current &&
+      initialNodes &&
+      initialNodes.length > 0
+    ) {
       setNodes(initialNodes);
       if (initialEdges) {
         setEdges(initialEdges);
@@ -389,7 +415,8 @@ export function WorkflowCanvas({
           org,
         }).unwrap()) as Record<string, unknown>;
 
-        const mentorLabel = (settings.display_name as string) || (settings.mentor_name as string);
+        const mentorLabel =
+          (settings.display_name as string) || (settings.mentor_name as string);
         const mentorInstructions = settings.system_prompt as string | undefined;
         const mentorModel = settings.llm_name as string | undefined;
 
@@ -420,7 +447,10 @@ export function WorkflowCanvas({
   useEffect(() => {
     if (!defaultMentorId || previewMode) return;
     const mentorNodesMissingId = nodes.filter(
-      (node) => node.type === 'mentor' && !node.data.entry_mentor_id && !node.data.mentor_id,
+      (node) =>
+        node.type === 'mentor' &&
+        !node.data.entry_mentor_id &&
+        !node.data.mentor_id,
     );
     if (mentorNodesMissingId.length === 0) return;
 
@@ -480,14 +510,18 @@ export function WorkflowCanvas({
               mentor.name ||
               currentData?.label ||
               'Mentor',
-            instructions: (settings.system_prompt as string) || currentData?.instructions,
+            instructions:
+              (settings.system_prompt as string) || currentData?.instructions,
             model: (settings.llm_name as string) || currentData?.model,
           };
         } else if (mentor.name) {
           updates = { ...updates, label: mentor.name };
         }
       } catch (error) {
-        console.error('Failed to load mentor settings for workflow node:', error);
+        console.error(
+          'Failed to load mentor settings for workflow node:',
+          error,
+        );
         if (mentor.name) {
           updates = { ...updates, label: mentor.name };
         }
@@ -578,10 +612,22 @@ export function WorkflowCanvas({
         { x: baseX, y: baseY + nodeHeight + SPACING * 2 }, // Below
         { x: baseX - nodeWidth - SPACING * 2, y: baseY }, // Left
         { x: baseX, y: baseY - nodeHeight - SPACING * 2 }, // Above
-        { x: baseX + nodeWidth + SPACING * 2, y: baseY + nodeHeight + SPACING * 2 }, // Bottom-right
-        { x: baseX - nodeWidth - SPACING * 2, y: baseY + nodeHeight + SPACING * 2 }, // Bottom-left
-        { x: baseX + nodeWidth + SPACING * 2, y: baseY - nodeHeight - SPACING * 2 }, // Top-right
-        { x: baseX - nodeWidth - SPACING * 2, y: baseY - nodeHeight - SPACING * 2 }, // Top-left
+        {
+          x: baseX + nodeWidth + SPACING * 2,
+          y: baseY + nodeHeight + SPACING * 2,
+        }, // Bottom-right
+        {
+          x: baseX - nodeWidth - SPACING * 2,
+          y: baseY + nodeHeight + SPACING * 2,
+        }, // Bottom-left
+        {
+          x: baseX + nodeWidth + SPACING * 2,
+          y: baseY - nodeHeight - SPACING * 2,
+        }, // Top-right
+        {
+          x: baseX - nodeWidth - SPACING * 2,
+          y: baseY - nodeHeight - SPACING * 2,
+        }, // Top-left
       ];
 
       for (const pos of attempts) {
@@ -591,7 +637,10 @@ export function WorkflowCanvas({
       }
 
       // If all attempts fail, offset further to the right and down
-      return { x: baseX + (nodeWidth + SPACING) * 2, y: baseY + (nodeHeight + SPACING) * 2 };
+      return {
+        x: baseX + (nodeWidth + SPACING) * 2,
+        y: baseY + (nodeHeight + SPACING) * 2,
+      };
     },
     [nodes],
   );
@@ -611,7 +660,11 @@ export function WorkflowCanvas({
 
       const baseX = centerX - 70;
       const baseY = centerY - 25;
-      const { x, y } = findNonOverlappingPosition(baseX, baseY, onClickedItem.id);
+      const { x, y } = findNonOverlappingPosition(
+        baseX,
+        baseY,
+        onClickedItem.id,
+      );
 
       const newNode: Node = {
         id: `${onClickedItem.id}-${Date.now()}`,
@@ -652,13 +705,19 @@ export function WorkflowCanvas({
     if (!node) return;
 
     if (e.ctrlKey || e.metaKey) {
-      setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, selected: !n.selected } : n)));
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === nodeId ? { ...n, selected: !n.selected } : n,
+        ),
+      );
       if (node.type === 'mentor') {
         setSelectedNodeForConfig(null);
       }
       suppressMentorClickRef.current = true;
     } else {
-      setNodes((prev) => prev.map((n) => ({ ...n, selected: n.id === nodeId })));
+      setNodes((prev) =>
+        prev.map((n) => ({ ...n, selected: n.id === nodeId })),
+      );
       if (node.type !== 'mentor') {
         setSelectedNodeForConfig(nodeId);
       } else {
@@ -676,13 +735,21 @@ export function WorkflowCanvas({
     });
   };
 
-  const handleConnectionStart = (e: React.MouseEvent, nodeId: string, handle: string) => {
+  const handleConnectionStart = (
+    e: React.MouseEvent,
+    nodeId: string,
+    handle: string,
+  ) => {
     if (previewMode) return; // Prevent connection creation in preview mode
     e.stopPropagation();
     setConnectingFrom({ nodeId, handle });
   };
 
-  const handleResizeStart = (e: React.MouseEvent, nodeId: string, corner: string) => {
+  const handleResizeStart = (
+    e: React.MouseEvent,
+    nodeId: string,
+    corner: string,
+  ) => {
     if (previewMode) return; // Prevent resizing in preview mode
     e.stopPropagation();
     const node = nodes.find((n) => n.id === nodeId);
@@ -703,7 +770,9 @@ export function WorkflowCanvas({
 
     const target = e.target as HTMLElement;
     const isCanvasClick =
-      target === e.currentTarget || target.tagName === 'svg' || target.tagName === 'rect';
+      target === e.currentTarget ||
+      target.tagName === 'svg' ||
+      target.tagName === 'rect';
 
     if (isCanvasClick && !previewMode) {
       setSelectedNodeForConfig(null);
@@ -736,15 +805,20 @@ export function WorkflowCanvas({
         const draggedNodeData = nodes.find((n) => n.id === draggedNode);
         if (!draggedNodeData) return;
 
-        const deltaX = e.clientX / zoom - dragOffset.x - draggedNodeData.position.x;
-        const deltaY = e.clientY / zoom - dragOffset.y - draggedNodeData.position.y;
+        const deltaX =
+          e.clientX / zoom - dragOffset.x - draggedNodeData.position.x;
+        const deltaY =
+          e.clientY / zoom - dragOffset.y - draggedNodeData.position.y;
 
         setNodes((prev) =>
           prev.map((node) => {
             if (node.selected) {
               return {
                 ...node,
-                position: { x: node.position.x + deltaX, y: node.position.y + deltaY },
+                position: {
+                  x: node.position.x + deltaX,
+                  y: node.position.y + deltaY,
+                },
                 dragging: true,
               };
             }
@@ -788,7 +862,9 @@ export function WorkflowCanvas({
         const rect = canvasRef.current.getBoundingClientRect();
         const currentX = (e.clientX - rect.left - panOffset.x) / zoom;
         const currentY = (e.clientY - rect.top - panOffset.y) / zoom;
-        setSelectionBox((prev) => (prev ? { ...prev, currentX, currentY } : null));
+        setSelectionBox((prev) =>
+          prev ? { ...prev, currentX, currentY } : null,
+        );
 
         const minX = Math.min(selectionBox.startX, currentX);
         const maxX = Math.max(selectionBox.startX, currentX);
@@ -839,7 +915,11 @@ export function WorkflowCanvas({
   );
 
   const handleMouseUp = useCallback(() => {
-    if (connectingFrom && hoveredNode && connectingFrom.nodeId !== hoveredNode) {
+    if (
+      connectingFrom &&
+      hoveredNode &&
+      connectingFrom.nodeId !== hoveredNode
+    ) {
       const newEdge: Edge = {
         id: `e-${connectingFrom.nodeId}-${hoveredNode}`,
         source: connectingFrom.nodeId,
@@ -855,7 +935,11 @@ export function WorkflowCanvas({
       setNodes((prev) => prev.map((n) => ({ ...n, dragging: false })));
       saveToHistory(nodes, edges);
 
-      if (!previewMode && !dragMovedRef.current && !suppressMentorClickRef.current) {
+      if (
+        !previewMode &&
+        !dragMovedRef.current &&
+        !suppressMentorClickRef.current
+      ) {
         const clickedNode = nodes.find((node) => node.id === draggedNode);
         if (clickedNode?.type === 'mentor') {
           openEditMentorModal(
@@ -887,7 +971,13 @@ export function WorkflowCanvas({
   ]);
 
   useEffect(() => {
-    if (draggedNode || isPanning || connectingFrom || resizingNote || selectionBox) {
+    if (
+      draggedNode ||
+      isPanning ||
+      connectingFrom ||
+      resizingNote ||
+      selectionBox
+    ) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -981,14 +1071,20 @@ export function WorkflowCanvas({
 
     switch (handle) {
       case 'left':
-        return { x: node.position.x - HANDLE_OFFSET, y: node.position.y + nodeHeight / 2 };
+        return {
+          x: node.position.x - HANDLE_OFFSET,
+          y: node.position.y + nodeHeight / 2,
+        };
       case 'right':
         return {
           x: node.position.x + nodeWidth + HANDLE_OFFSET,
           y: node.position.y + nodeHeight / 2,
         };
       case 'top':
-        return { x: node.position.x + nodeWidth / 2, y: node.position.y - HANDLE_OFFSET };
+        return {
+          x: node.position.x + nodeWidth / 2,
+          y: node.position.y - HANDLE_OFFSET,
+        };
       case 'bottom':
         return {
           x: node.position.x + nodeWidth / 2,
@@ -1011,7 +1107,10 @@ export function WorkflowCanvas({
     }
   };
 
-  const getConnectionPath = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+  const getConnectionPath = (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ) => {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1034,7 +1133,9 @@ export function WorkflowCanvas({
 
     // Remove edges connected to deleted nodes
     const newEdges = edges.filter(
-      (edge) => !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target),
+      (edge) =>
+        !selectedNodeIds.includes(edge.source) &&
+        !selectedNodeIds.includes(edge.target),
     );
 
     setNodes(newNodes);
@@ -1076,7 +1177,10 @@ export function WorkflowCanvas({
       // Strip UI-only properties for comparison to avoid triggering on selection changes
       const strippedNodes = stripUiProperties(nodes);
       const strippedEdges = stripEdgeUiProperties(edges);
-      const stateKey = JSON.stringify({ nodes: strippedNodes, edges: strippedEdges });
+      const stateKey = JSON.stringify({
+        nodes: strippedNodes,
+        edges: strippedEdges,
+      });
 
       // Only trigger onStateChange if actual data changed (not just selection/dragging)
       if (stateKey !== lastEmittedStateRef.current) {
@@ -1094,11 +1198,15 @@ export function WorkflowCanvas({
   const activeMentorNode = activeMentorNodeId
     ? nodes.find((node) => node.id === activeMentorNodeId)
     : undefined;
-  const activeMentorId = activeMentorNode?.data.mentor_id ?? activeMentorNode?.data.entry_mentor_id;
+  const activeMentorId =
+    activeMentorNode?.data.mentor_id ?? activeMentorNode?.data.entry_mentor_id;
   const selectedMentorIds = activeMentorId ? [activeMentorId] : [];
 
   return (
-    <div className="h-full w-full relative bg-background overflow-hidden select-none">
+    <div
+      data-testid="workflow-canvas"
+      className="bg-background relative h-full w-full overflow-hidden select-none"
+    >
       <div
         ref={canvasRef}
         className={`absolute inset-0 ${tool === 'hand' ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'}`}
@@ -1106,22 +1214,40 @@ export function WorkflowCanvas({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        <svg className="w-full h-full pointer-events-none">
+        <svg className="pointer-events-none h-full w-full">
           <defs>
-            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.5" fill="hsl(var(--muted-foreground) / 0.2)" />
+            <pattern
+              id="grid"
+              width="20"
+              height="20"
+              patternUnits="userSpaceOnUse"
+            >
+              <circle
+                cx="1"
+                cy="1"
+                r="0.5"
+                fill="hsl(var(--muted-foreground) / 0.2)"
+              />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
 
-          <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}>
+          <g
+            transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}
+          >
             {edges.map((edge) => {
               const fromNode = nodes.find((n) => n.id === edge.source);
               const toNode = nodes.find((n) => n.id === edge.target);
               if (!fromNode || !toNode) return null;
 
-              const fromPos = getHandlePosition(fromNode, edge.sourceHandle || 'right');
-              const toPos = getHandlePosition(toNode, edge.targetHandle || 'left');
+              const fromPos = getHandlePosition(
+                fromNode,
+                edge.sourceHandle || 'right',
+              );
+              const toPos = getHandlePosition(
+                toNode,
+                edge.targetHandle || 'left',
+              );
 
               return (
                 <path
@@ -1138,9 +1264,14 @@ export function WorkflowCanvas({
             {connectingFrom &&
               tempConnectionPos &&
               (() => {
-                const fromNode = nodes.find((n) => n.id === connectingFrom.nodeId);
+                const fromNode = nodes.find(
+                  (n) => n.id === connectingFrom.nodeId,
+                );
                 if (!fromNode) return null;
-                const fromPos = getHandlePosition(fromNode, connectingFrom.handle);
+                const fromPos = getHandlePosition(
+                  fromNode,
+                  connectingFrom.handle,
+                );
                 return (
                   <path
                     d={getConnectionPath(fromPos, tempConnectionPos)}
@@ -1169,7 +1300,7 @@ export function WorkflowCanvas({
         </svg>
 
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="pointer-events-none absolute inset-0"
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
             transformOrigin: '0 0',
@@ -1178,7 +1309,7 @@ export function WorkflowCanvas({
           {nodes.map((node) => (
             <div
               key={node.id}
-              className={`absolute pointer-events-auto group ${node.selected ? 'ring-2 ring-[#38A1E5] ring-offset-2 ring-offset-background rounded-xl' : ''}`}
+              className={`group pointer-events-auto absolute ${node.selected ? 'ring-offset-background rounded-xl ring-2 ring-[#38A1E5] ring-offset-2' : ''}`}
               style={{
                 left: `${node.position.x}px`,
                 top: `${node.position.y}px`,
@@ -1192,49 +1323,64 @@ export function WorkflowCanvas({
               onMouseLeave={() => setHoveredNode(null)}
             >
               {node.type === 'start' ? (
-                <div className="relative flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing">
+                <div className="bg-card border-border relative flex cursor-grab items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
                   <div
-                    className="w-6 h-6 rounded flex items-center justify-center"
+                    className="flex h-6 w-6 items-center justify-center rounded"
                     style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                   >
                     <Play className="h-4 w-4" style={{ color: '#38A1E5' }} />
                   </div>
-                  <span className="text-foreground font-medium">{node.data.label}</span>
+                  <span className="text-foreground font-medium">
+                    {node.data.label}
+                  </span>
 
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'right')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'right')
+                    }
                   />
                 </div>
               ) : node.type === 'while' ? (
                 <div
-                  className="relative rounded-2xl border-2 border-dashed border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card/50"
+                  className="border-border bg-card/50 relative cursor-grab rounded-2xl border-2 border-dashed transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
                   style={{
                     width: `${node.width || 400}px`,
                     height: `${node.height || 180}px`,
                   }}
                 >
                   <div className="flex items-center gap-2 p-4">
-                    <RefreshCw className="h-5 w-5" style={{ color: '#38A1E5' }} />
-                    <span className="text-foreground font-medium">{node.data.label}</span>
+                    <RefreshCw
+                      className="h-5 w-5"
+                      style={{ color: '#38A1E5' }}
+                    />
+                    <span className="text-foreground font-medium">
+                      {node.data.label}
+                    </span>
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'left')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'left')
+                    }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'right')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'right')
+                    }
                   />
 
                   <div
-                    className="absolute -right-1 -bottom-1 w-4 h-4 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+                    className="border-background absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleResizeStart(e, node.id, 'bottom-right')}
+                    onMouseDown={(e) =>
+                      handleResizeStart(e, node.id, 'bottom-right')
+                    }
                   />
                 </div>
               ) : isConditionalType(node.type) ? (
@@ -1244,93 +1390,121 @@ export function WorkflowCanvas({
 
                   return (
                     <div
-                      className="relative rounded-2xl border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card"
+                      className="border-border bg-card relative cursor-grab rounded-2xl border transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
                       style={{ width: '280px', minHeight: `${nodeHeight}px` }}
                     >
                       <div className="flex items-center gap-3 p-4 pb-3">
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg"
                           style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                         >
-                          <GitBranch className="h-5 w-5" style={{ color: '#38A1E5' }} />
+                          <GitBranch
+                            className="h-5 w-5"
+                            style={{ color: '#38A1E5' }}
+                          />
                         </div>
-                        <span className="text-foreground font-medium">{node.data.label}</span>
+                        <span className="text-foreground font-medium">
+                          {node.data.label}
+                        </span>
                       </div>
-                      <div className="px-4 pb-4 space-y-2">
+                      <div className="space-y-2 px-4 pb-4">
                         {/* Render each condition */}
-                        {Array.from({ length: conditionCount }).map((_, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50 relative"
-                          >
-                            <span className="text-muted-foreground text-sm">
-                              {index === 0 ? 'If' : `Else if ${index}`}
-                            </span>
+                        {Array.from({ length: conditionCount }).map(
+                          (_, index) => (
                             <div
-                              className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair absolute -right-[18px] top-1/2 -translate-y-1/2"
-                              style={{ backgroundColor: '#38A1E5' }}
-                              onMouseDown={(e) =>
-                                handleConnectionStart(e, node.id, `condition-${index}`)
-                              }
-                            />
-                          </div>
-                        ))}
+                              key={index}
+                              className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3"
+                            >
+                              <span className="text-muted-foreground text-sm">
+                                {index === 0 ? 'If' : `Else if ${index}`}
+                              </span>
+                              <div
+                                className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                                style={{ backgroundColor: '#38A1E5' }}
+                                onMouseDown={(e) =>
+                                  handleConnectionStart(
+                                    e,
+                                    node.id,
+                                    `condition-${index}`,
+                                  )
+                                }
+                              />
+                            </div>
+                          ),
+                        )}
                         {/* Else condition */}
-                        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50 relative">
-                          <span className="text-muted-foreground text-sm">Else</span>
+                        <div className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3">
+                          <span className="text-muted-foreground text-sm">
+                            Else
+                          </span>
                           <div
-                            className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair absolute -right-[18px] top-1/2 -translate-y-1/2"
+                            className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                             style={{ backgroundColor: '#38A1E5' }}
-                            onMouseDown={(e) => handleConnectionStart(e, node.id, 'else')}
+                            onMouseDown={(e) =>
+                              handleConnectionStart(e, node.id, 'else')
+                            }
                           />
                         </div>
                       </div>
 
                       <div
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                        className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                         style={{ backgroundColor: '#38A1E5' }}
-                        onMouseDown={(e) => handleConnectionStart(e, node.id, 'left')}
+                        onMouseDown={(e) =>
+                          handleConnectionStart(e, node.id, 'left')
+                        }
                       />
                     </div>
                   );
                 })()
               ) : node.type === 'user-approval' ? (
                 <div
-                  className="relative rounded-2xl border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card"
+                  className="border-border bg-card relative cursor-grab rounded-2xl border transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
                   style={{ width: '280px' }}
                 >
                   <div className="flex items-center gap-3 p-4 pb-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg"
                       style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
-                      <ThumbsUp className="h-5 w-5" style={{ color: '#38A1E5' }} />
-                    </div>
-                    <span className="text-foreground font-medium">{node.data.label}</span>
-                  </div>
-                  <div className="px-4 pb-4 space-y-2">
-                    <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
-                      <span className="text-muted-foreground">Approve</span>
-                      <div
-                        className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                        style={{ backgroundColor: '#38A1E5' }}
-                        onMouseDown={(e) => handleConnectionStart(e, node.id, 'approve')}
+                      <ThumbsUp
+                        className="h-5 w-5"
+                        style={{ color: '#38A1E5' }}
                       />
                     </div>
-                    <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
+                    <span className="text-foreground font-medium">
+                      {node.data.label}
+                    </span>
+                  </div>
+                  <div className="space-y-2 px-4 pb-4">
+                    <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
+                      <span className="text-muted-foreground">Approve</span>
+                      <div
+                        className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        style={{ backgroundColor: '#38A1E5' }}
+                        onMouseDown={(e) =>
+                          handleConnectionStart(e, node.id, 'approve')
+                        }
+                      />
+                    </div>
+                    <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
                       <span className="text-muted-foreground">Reject</span>
                       <div
-                        className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                        className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                         style={{ backgroundColor: '#38A1E5' }}
-                        onMouseDown={(e) => handleConnectionStart(e, node.id, 'reject')}
+                        onMouseDown={(e) =>
+                          handleConnectionStart(e, node.id, 'reject')
+                        }
                       />
                     </div>
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'left')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'left')
+                    }
                   />
                 </div>
               ) : node.type === 'transform' ||
@@ -1338,41 +1512,51 @@ export function WorkflowCanvas({
                 node.type === 'guardrails' ||
                 node.type === 'file-search' ||
                 node.type === 'mcp' ? (
-                <div className="relative px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing min-w-[140px]">
+                <div className="bg-card border-border relative min-w-[140px] cursor-grab rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-5 h-5 rounded flex items-center justify-center"
+                      className="flex h-5 w-5 items-center justify-center rounded"
                       style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
                       <Bot className="h-3 w-3" style={{ color: '#38A1E5' }} />
                     </div>
-                    <span className="text-foreground font-medium text-sm">{node.data.label}</span>
+                    <span className="text-foreground text-sm font-medium">
+                      {node.data.label}
+                    </span>
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'left')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'left')
+                    }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'right')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'right')
+                    }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -top-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'top')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'top')
+                    }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'bottom')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'bottom')
+                    }
                   />
                 </div>
               ) : node.type === 'note' ? (
                 <div
-                  className="relative rounded-lg border border-border hover:border-[#38A1E5] transition-colors bg-amber-50 dark:bg-amber-950/20 cursor-grab active:cursor-grabbing"
+                  className="border-border relative cursor-grab rounded-lg border bg-amber-50 transition-colors hover:border-[#38A1E5] active:cursor-grabbing dark:bg-amber-950/20"
                   style={{
                     width: `${node.width || 200}px`,
                     height: `${node.height || 120}px`,
@@ -1385,13 +1569,16 @@ export function WorkflowCanvas({
                   {editingNote === node.id ? (
                     <Textarea
                       autoFocus
-                      className="w-full h-full resize-none border-0 bg-transparent focus-visible:ring-0 text-sm"
+                      className="h-full w-full resize-none border-0 bg-transparent text-sm focus-visible:ring-0"
                       value={node.data.content || ''}
                       onChange={(e) => {
                         setNodes((prev) =>
                           prev.map((n) =>
                             n.id === node.id
-                              ? { ...n, data: { ...n.data, content: e.target.value } }
+                              ? {
+                                  ...n,
+                                  data: { ...n.data, content: e.target.value },
+                                }
                               : n,
                           ),
                         );
@@ -1399,27 +1586,31 @@ export function WorkflowCanvas({
                       onBlur={() => setEditingNote(null)}
                     />
                   ) : (
-                    <div className="p-3 text-sm text-foreground whitespace-pre-wrap">
+                    <div className="text-foreground p-3 text-sm whitespace-pre-wrap">
                       {node.data.content || 'Sticky Note'}
                     </div>
                   )}
 
                   <div
-                    className="absolute -right-1 -bottom-1 w-4 h-4 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
+                    className="border-background absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleResizeStart(e, node.id, 'bottom-right')}
+                    onMouseDown={(e) =>
+                      handleResizeStart(e, node.id, 'bottom-right')
+                    }
                   />
                 </div>
               ) : (
-                <div className="relative px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing min-w-[140px]">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="bg-card border-border relative min-w-[140px] cursor-grab rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
+                  <div className="mb-1 flex items-center gap-2">
                     <div
-                      className="w-5 h-5 rounded flex items-center justify-center"
+                      className="flex h-5 w-5 items-center justify-center rounded"
                       style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
                       <Bot className="h-3 w-3" style={{ color: '#38A1E5' }} />
                     </div>
-                    <span className="text-foreground font-medium text-sm">{node.data.label}</span>
+                    <span className="text-foreground text-sm font-medium">
+                      {node.data.label}
+                    </span>
                     {node.type === 'mentor' && !previewMode && (
                       <TooltipProvider>
                         <Tooltip>
@@ -1427,7 +1618,7 @@ export function WorkflowCanvas({
                             <button
                               type="button"
                               aria-label="Change mentor"
-                              className="ml-auto rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 ml-auto cursor-pointer rounded-full p-1 transition-colors"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1443,28 +1634,38 @@ export function WorkflowCanvas({
                     )}
                   </div>
                   {node.data.subtitle && (
-                    <p className="text-xs text-muted-foreground ml-7">{node.data.subtitle}</p>
+                    <p className="text-muted-foreground ml-7 text-xs">
+                      {node.data.subtitle}
+                    </p>
                   )}
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'left')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'left')
+                    }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'right')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'right')
+                    }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -top-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'top')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'top')
+                    }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
+                    className="border-background absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                     style={{ backgroundColor: '#38A1E5' }}
-                    onMouseDown={(e) => handleConnectionStart(e, node.id, 'bottom')}
+                    onMouseDown={(e) =>
+                      handleConnectionStart(e, node.id, 'bottom')
+                    }
                   />
                 </div>
               )}
@@ -1517,8 +1718,8 @@ export function WorkflowCanvas({
       </div>
 
       {!previewMode && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border shadow-lg">
+        <div className="pointer-events-auto absolute bottom-6 left-1/2 -translate-x-1/2 transform">
+          <div className="bg-card border-border flex items-center gap-2 rounded-full border px-3 py-2 shadow-lg">
             <Button
               variant={tool === 'hand' ? 'default' : 'ghost'}
               size="icon"
@@ -1536,11 +1737,11 @@ export function WorkflowCanvas({
             >
               <MousePointer className="h-4 w-4" />
             </Button>
-            <div className="w-px h-6 bg-border mx-1" />
+            <div className="bg-border mx-1 h-6 w-px" />
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 disabled:opacity-30"
               onClick={handleUndo}
               disabled={historyIndex <= 0}
             >
@@ -1549,28 +1750,28 @@ export function WorkflowCanvas({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 disabled:opacity-30"
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
             >
               <Redo className="h-4 w-4" />
             </Button>
-            <div className="w-px h-6 bg-border mx-1" />
+            <div className="bg-border mx-1 h-6 w-px" />
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={handleZoomOut}
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className="text-xs text-muted-foreground min-w-[3ch] text-center">
+            <span className="text-muted-foreground min-w-[3ch] text-center text-xs">
               {Math.round(zoom * 100)}%
             </span>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={handleZoomIn}
             >
               <ZoomIn className="h-4 w-4" />

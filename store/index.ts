@@ -1,6 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 
-import { mentorReducer, coreApiSlice, mentorMiddleware, mcpApiSlice, workflowsApiSlice } from '@iblai/iblai-js/data-layer';
+import {
+  mentorReducer,
+  coreApiSlice,
+  mentorMiddleware,
+  mcpApiSlice,
+  workflowsApiSlice,
+} from '@iblai/iblai-js/data-layer';
 import { userReducer } from '@/features/users/slice';
 import { authApiSlice } from '@/features/auth/api-slice';
 import { authApiSlice as authApiSliceDataLayer } from '@iblai/iblai-js/data-layer';
@@ -43,7 +49,8 @@ export const store = configureStore({
     [workflowsApiSlice.reducerPath]: workflowsApiSlice.reducer,
     topBanner: topTrialBannerSlice.reducer,
     subscription: subscriptionSlice.reducer,
-    [providerAssociationApiSlice.reducerPath]: providerAssociationApiSlice.reducer,
+    [providerAssociationApiSlice.reducerPath]:
+      providerAssociationApiSlice.reducer,
     ...mentorReducer,
   },
   middleware: (getDefaultMiddleware) =>

@@ -4,7 +4,13 @@ import React from 'react';
 
 // Mock AppLayout before importing the component
 vi.mock('../../../_components/app-layout', () => ({
-  default: ({ children, defaultOpen }: { children: React.ReactNode; defaultOpen: boolean }) => (
+  default: ({
+    children,
+    defaultOpen,
+  }: {
+    children: React.ReactNode;
+    defaultOpen: boolean;
+  }) => (
     <div data-testid="app-layout" data-default-open={defaultOpen}>
       {children}
     </div>
@@ -328,7 +334,10 @@ describe('WorkflowsLayout', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('app-layout')).toHaveAttribute('data-default-open', 'true');
+        expect(screen.getByTestId('app-layout')).toHaveAttribute(
+          'data-default-open',
+          'true',
+        );
       });
 
       const initialReadCount = cookieReadCount;

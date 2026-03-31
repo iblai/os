@@ -29,14 +29,21 @@ vi.mock('@/components/ui/button', () => ({
     className,
     ...props
   }: React.ComponentProps<'button'>) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
-  Textarea: (props: React.ComponentProps<'textarea'>) => <textarea {...props} />,
+  Textarea: (props: React.ComponentProps<'textarea'>) => (
+    <textarea {...props} />
+  ),
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
@@ -77,7 +84,9 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="tooltip-content">{children}</div>
   ),
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   TooltipTrigger: ({
     children,
     asChild: _asChild,
@@ -98,7 +107,9 @@ vi.mock('@/components/mentors/mentor-selection-grid', () => ({
     <div data-testid="mentor-selection-grid">
       <button
         data-testid="select-mentor"
-        onClick={() => onMentorSelect({ unique_id: 'new-mentor', name: 'New Mentor' })}
+        onClick={() =>
+          onMentorSelect({ unique_id: 'new-mentor', name: 'New Mentor' })
+        }
       >
         Select
       </button>
@@ -124,7 +135,10 @@ vi.mock('../node-config-panel', () => ({
       <button data-testid="close-config" onClick={onClose}>
         Close Config
       </button>
-      <button data-testid="update-node" onClick={() => onUpdateNode(nodeId, { label: 'Updated' })}>
+      <button
+        data-testid="update-node"
+        onClick={() => onUpdateNode(nodeId, { label: 'Updated' })}
+      >
         Update
       </button>
     </div>
@@ -244,7 +258,9 @@ describe('WorkflowCanvas', () => {
     it('should use initial viewport if provided', () => {
       const initialViewport = { x: 50, y: 50, zoom: 1.5 };
 
-      render(<WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />);
+      render(
+        <WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />,
+      );
 
       // Zoom should be 150%
       expect(screen.getByText('150%')).toBeInTheDocument();
@@ -303,7 +319,9 @@ describe('WorkflowCanvas', () => {
 
       const zoomInButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-zoom-in'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-zoom-in'),
+        );
 
       if (zoomInButton) {
         await user.click(zoomInButton);
@@ -319,7 +337,9 @@ describe('WorkflowCanvas', () => {
 
       const zoomOutButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-zoom-out'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-zoom-out'),
+        );
 
       if (zoomOutButton) {
         await user.click(zoomOutButton);
@@ -331,13 +351,17 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       const initialViewport = { x: 0, y: 0, zoom: 0.5 };
 
-      render(<WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />);
+      render(
+        <WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />,
+      );
 
       expect(screen.getByText('50%')).toBeInTheDocument();
 
       const zoomOutButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-zoom-out'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-zoom-out'),
+        );
 
       if (zoomOutButton) {
         await user.click(zoomOutButton);
@@ -349,13 +373,17 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       const initialViewport = { x: 0, y: 0, zoom: 2 };
 
-      render(<WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />);
+      render(
+        <WorkflowCanvas {...defaultProps} initialViewport={initialViewport} />,
+      );
 
       expect(screen.getByText('200%')).toBeInTheDocument();
 
       const zoomInButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-zoom-in'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-zoom-in'),
+        );
 
       if (zoomInButton) {
         await user.click(zoomInButton);
@@ -370,7 +398,9 @@ describe('WorkflowCanvas', () => {
 
       const undoButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-undo'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-undo'),
+        );
 
       expect(undoButton).toBeDisabled();
     });
@@ -380,7 +410,9 @@ describe('WorkflowCanvas', () => {
 
       const redoButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-redo'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-redo'),
+        );
 
       expect(redoButton).toBeDisabled();
     });
@@ -431,7 +463,9 @@ describe('WorkflowCanvas', () => {
     });
 
     it('should not add nodes in preview mode', () => {
-      const { rerender } = render(<WorkflowCanvas {...defaultProps} previewMode={true} />);
+      const { rerender } = render(
+        <WorkflowCanvas {...defaultProps} previewMode={true} />,
+      );
 
       rerender(
         <WorkflowCanvas
@@ -465,7 +499,9 @@ describe('WorkflowCanvas', () => {
       if (mentorNode) {
         await user.click(mentorNode);
         // Config panel should not be shown for mentor nodes
-        expect(screen.queryByTestId('node-config-panel')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('node-config-panel'),
+        ).not.toBeInTheDocument();
       }
     });
   });
@@ -633,7 +669,9 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
       // Change mentor button should be visible
-      const changeButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       expect(changeButton).toBeInTheDocument();
     });
 
@@ -641,7 +679,9 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} previewMode={true} />);
 
       // Change mentor button should not be visible
-      expect(screen.queryByRole('button', { name: 'Change mentor' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Change mentor' }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -649,7 +689,9 @@ describe('WorkflowCanvas', () => {
     it('should call onStateChange when state changes', async () => {
       const onStateChange = vi.fn();
 
-      render(<WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />);
+      render(
+        <WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />,
+      );
 
       // onStateChange should be called on initial render
       await waitFor(() => {
@@ -660,7 +702,9 @@ describe('WorkflowCanvas', () => {
     it('should include nodes, edges, and viewport in state', async () => {
       const onStateChange = vi.fn();
 
-      render(<WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />);
+      render(
+        <WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />,
+      );
 
       await waitFor(() => {
         expect(onStateChange).toHaveBeenCalled();
@@ -674,7 +718,13 @@ describe('WorkflowCanvas', () => {
     it('should not call onStateChange in preview mode', () => {
       const onStateChange = vi.fn();
 
-      render(<WorkflowCanvas {...defaultProps} previewMode={true} onStateChange={onStateChange} />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          previewMode={true}
+          onStateChange={onStateChange}
+        />,
+      );
 
       expect(onStateChange).not.toHaveBeenCalled();
     });
@@ -751,7 +801,13 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} previewMode={true} />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          initialNodes={initialNodes}
+          previewMode={true}
+        />,
+      );
 
       await user.keyboard('{Delete}');
 
@@ -766,7 +822,9 @@ describe('WorkflowCanvas', () => {
       const canvas = document.querySelector('.absolute.inset-0');
       if (canvas) {
         const dragOverEvent = new Event('dragover', { bubbles: true });
-        Object.defineProperty(dragOverEvent, 'preventDefault', { value: vi.fn() });
+        Object.defineProperty(dragOverEvent, 'preventDefault', {
+          value: vi.fn(),
+        });
 
         canvas.dispatchEvent(dragOverEvent);
 
@@ -816,7 +874,11 @@ describe('WorkflowCanvas', () => {
       ];
 
       const { rerender } = render(
-        <WorkflowCanvas {...defaultProps} previewMode={true} initialNodes={initialNodes} />,
+        <WorkflowCanvas
+          {...defaultProps}
+          previewMode={true}
+          initialNodes={initialNodes}
+        />,
       );
 
       expect(screen.getByText('Start')).toBeInTheDocument();
@@ -831,7 +893,13 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      rerender(<WorkflowCanvas {...defaultProps} previewMode={true} initialNodes={updatedNodes} />);
+      rerender(
+        <WorkflowCanvas
+          {...defaultProps}
+          previewMode={true}
+          initialNodes={updatedNodes}
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText('Updated Start')).toBeInTheDocument();
@@ -842,13 +910,21 @@ describe('WorkflowCanvas', () => {
       const initialViewport = { x: 0, y: 0, zoom: 1 };
 
       const { rerender } = render(
-        <WorkflowCanvas {...defaultProps} previewMode={true} initialViewport={initialViewport} />,
+        <WorkflowCanvas
+          {...defaultProps}
+          previewMode={true}
+          initialViewport={initialViewport}
+        />,
       );
 
       const updatedViewport = { x: 50, y: 50, zoom: 1.2 };
 
       rerender(
-        <WorkflowCanvas {...defaultProps} previewMode={true} initialViewport={updatedViewport} />,
+        <WorkflowCanvas
+          {...defaultProps}
+          previewMode={true}
+          initialViewport={updatedViewport}
+        />,
       );
 
       // Viewport should be synced (no zoom display in preview mode though)
@@ -920,11 +996,17 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       expect(transformNode).toBeInTheDocument();
 
       // Simulate mousedown on node
-      fireEvent.mouseDown(transformNode!, { button: 0, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(transformNode!, {
+        button: 0,
+        clientX: 350,
+        clientY: 125,
+      });
 
       // Simulate mousemove (dragging)
       fireEvent.mouseMove(window, { clientX: 400, clientY: 150 });
@@ -948,10 +1030,16 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Right-click should not initiate drag
-      fireEvent.mouseDown(transformNode!, { button: 2, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(transformNode!, {
+        button: 2,
+        clientX: 350,
+        clientY: 125,
+      });
 
       // Node should not have the selection ring
       expect(transformNode).not.toHaveClass('ring-2');
@@ -967,12 +1055,24 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} previewMode={true} />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          initialNodes={initialNodes}
+          previewMode={true}
+        />,
+      );
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Attempt drag in preview mode
-      fireEvent.mouseDown(transformNode!, { button: 0, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(transformNode!, {
+        button: 0,
+        clientX: 350,
+        clientY: 125,
+      });
       fireEvent.mouseMove(window, { clientX: 400, clientY: 150 });
       fireEvent.mouseUp(window);
 
@@ -992,10 +1092,16 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Start drag
-      fireEvent.mouseDown(transformNode!, { button: 0, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(transformNode!, {
+        button: 0,
+        clientX: 350,
+        clientY: 125,
+      });
 
       // Move more than 3 pixels to trigger drag detection
       fireEvent.mouseMove(window, { clientX: 360, clientY: 135 });
@@ -1025,8 +1131,12 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Select first node
       await user.click(startNode!);
@@ -1059,8 +1169,12 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Select first node
       await user.click(startNode!);
@@ -1085,7 +1199,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Select node
       await user.click(transformNode!);
@@ -1163,7 +1279,9 @@ describe('WorkflowCanvas', () => {
       );
 
       // Get the start node's right handle
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
       const startHandle = startNode?.querySelector('.cursor-crosshair');
 
       expect(startHandle).toBeInTheDocument();
@@ -1172,7 +1290,9 @@ describe('WorkflowCanvas', () => {
       fireEvent.mouseDown(startHandle!, { button: 0 });
 
       // Move towards transform node
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Simulate mouse enter on target node
       fireEvent.mouseEnter(transformNode!);
@@ -1199,7 +1319,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
       const startHandle = startNode?.querySelector('.cursor-crosshair');
 
       // Start connection
@@ -1223,7 +1345,13 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} previewMode={true} />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          initialNodes={initialNodes}
+          previewMode={true}
+        />,
+      );
 
       const connectionHandles = document.querySelectorAll('.cursor-crosshair');
 
@@ -1265,7 +1393,9 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       render(<WorkflowCanvas {...defaultProps} />);
 
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
 
       // Click on node instead of canvas
       await user.click(startNode!);
@@ -1295,7 +1425,9 @@ describe('WorkflowCanvas', () => {
       fireEvent.mouseMove(window, { clientX: 500, clientY: 400 });
 
       // A selection rectangle should be rendered in SVG
-      const selectionRect = document.querySelector('rect[fill="rgba(56, 161, 229, 0.1)"]');
+      const selectionRect = document.querySelector(
+        'rect[fill="rgba(56, 161, 229, 0.1)"]',
+      );
       expect(selectionRect).toBeInTheDocument();
 
       // Complete selection
@@ -1335,8 +1467,12 @@ describe('WorkflowCanvas', () => {
       fireEvent.mouseUp(window);
 
       // Both nodes should be selected
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       expect(startNode).toHaveClass('ring-2');
       expect(transformNode).toHaveClass('ring-2');
@@ -1405,7 +1541,11 @@ describe('WorkflowCanvas', () => {
       rerender(
         <WorkflowCanvas
           {...defaultProps}
-          onClickedItem={{ id: 'transform', label: 'Transform', type: 'transform' }}
+          onClickedItem={{
+            id: 'transform',
+            label: 'Transform',
+            type: 'transform',
+          }}
         />,
       );
 
@@ -1416,7 +1556,9 @@ describe('WorkflowCanvas', () => {
       // Undo button should now be enabled (we may need to wait for state update)
       const undoButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-undo'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-undo'),
+        );
 
       // After adding a node, undo should be enabled
       expect(undoButton).toBeInTheDocument();
@@ -1430,7 +1572,11 @@ describe('WorkflowCanvas', () => {
       rerender(
         <WorkflowCanvas
           {...defaultProps}
-          onClickedItem={{ id: 'transform', label: 'Transform', type: 'transform' }}
+          onClickedItem={{
+            id: 'transform',
+            label: 'Transform',
+            type: 'transform',
+          }}
         />,
       );
 
@@ -1441,7 +1587,9 @@ describe('WorkflowCanvas', () => {
       // Click undo
       const undoButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-undo'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-undo'),
+        );
 
       if (undoButton && !undoButton.hasAttribute('disabled')) {
         await user.click(undoButton);
@@ -1454,7 +1602,9 @@ describe('WorkflowCanvas', () => {
         // Click redo
         const redoButton = screen
           .getAllByRole('button')
-          .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-redo'));
+          .find((btn) =>
+            btn.querySelector('svg')?.classList.contains('lucide-redo'),
+          );
 
         if (redoButton && !redoButton.hasAttribute('disabled')) {
           await user.click(redoButton);
@@ -1502,7 +1652,9 @@ describe('WorkflowCanvas', () => {
       );
 
       // Select transform node
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       await user.click(transformNode!);
 
       // Delete with Backspace
@@ -1559,7 +1711,8 @@ describe('WorkflowCanvas', () => {
       Object.defineProperty(dropEvent, 'clientY', { value: 300 });
       Object.defineProperty(dropEvent, 'dataTransfer', {
         value: {
-          getData: () => JSON.stringify({ id: 'transform', label: 'Transform' }),
+          getData: () =>
+            JSON.stringify({ id: 'transform', label: 'Transform' }),
         },
       });
 
@@ -1631,7 +1784,9 @@ describe('WorkflowCanvas', () => {
     });
 
     it('should handle invalid drop data gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       render(<WorkflowCanvas {...defaultProps} />);
 
@@ -1649,7 +1804,10 @@ describe('WorkflowCanvas', () => {
 
       fireEvent(canvas!, dropEvent);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to parse dropped data:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to parse dropped data:',
+        expect.any(Error),
+      );
       consoleSpy.mockRestore();
     });
 
@@ -1664,7 +1822,8 @@ describe('WorkflowCanvas', () => {
       Object.defineProperty(dropEvent, 'clientY', { value: 300 });
       Object.defineProperty(dropEvent, 'dataTransfer', {
         value: {
-          getData: () => JSON.stringify({ id: 'transform', label: 'Transform' }),
+          getData: () =>
+            JSON.stringify({ id: 'transform', label: 'Transform' }),
         },
       });
 
@@ -1695,7 +1854,11 @@ describe('WorkflowCanvas', () => {
       expect(resizeHandle).toBeInTheDocument();
 
       // Start resize
-      fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 500, clientY: 420 });
+      fireEvent.mouseDown(resizeHandle!, {
+        button: 0,
+        clientX: 500,
+        clientY: 420,
+      });
 
       // Move to resize
       fireEvent.mouseMove(window, { clientX: 550, clientY: 470 });
@@ -1723,7 +1886,11 @@ describe('WorkflowCanvas', () => {
       const resizeHandle = document.querySelector('.cursor-nwse-resize');
 
       // Try to resize to very small size
-      fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 500, clientY: 420 });
+      fireEvent.mouseDown(resizeHandle!, {
+        button: 0,
+        clientX: 500,
+        clientY: 420,
+      });
       fireEvent.mouseMove(window, { clientX: 300, clientY: 300 }); // Move far left and up
       fireEvent.mouseUp(window);
 
@@ -1743,12 +1910,22 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} previewMode={true} />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          initialNodes={initialNodes}
+          previewMode={true}
+        />,
+      );
 
       const resizeHandle = document.querySelector('.cursor-nwse-resize');
 
       if (resizeHandle) {
-        fireEvent.mouseDown(resizeHandle, { button: 0, clientX: 500, clientY: 420 });
+        fireEvent.mouseDown(resizeHandle, {
+          button: 0,
+          clientX: 500,
+          clientY: 420,
+        });
         fireEvent.mouseMove(window, { clientX: 550, clientY: 470 });
         fireEvent.mouseUp(window);
       }
@@ -1776,7 +1953,11 @@ describe('WorkflowCanvas', () => {
       expect(resizeHandle).toBeInTheDocument();
 
       // Start resize
-      fireEvent.mouseDown(resizeHandle!, { button: 0, clientX: 700, clientY: 480 });
+      fireEvent.mouseDown(resizeHandle!, {
+        button: 0,
+        clientX: 700,
+        clientY: 480,
+      });
       fireEvent.mouseMove(window, { clientX: 750, clientY: 530 });
       fireEvent.mouseUp(window);
 
@@ -1789,7 +1970,9 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       render(<WorkflowCanvas {...defaultProps} />);
 
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       // Modal should open
@@ -1801,7 +1984,9 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       render(<WorkflowCanvas {...defaultProps} />);
 
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
@@ -1817,7 +2002,9 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       render(<WorkflowCanvas {...defaultProps} org="test-org" />);
 
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       // Select a mentor from the grid
@@ -1943,13 +2130,19 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       await user.click(transformNode!);
 
       // Config panel should appear
       expect(screen.getByTestId('node-config-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('config-node-id')).toHaveTextContent('transform-1');
-      expect(screen.getByTestId('config-node-type')).toHaveTextContent('transform');
+      expect(screen.getByTestId('config-node-id')).toHaveTextContent(
+        'transform-1',
+      );
+      expect(screen.getByTestId('config-node-type')).toHaveTextContent(
+        'transform',
+      );
     });
 
     it('should close config panel when clicking close button', async () => {
@@ -1965,7 +2158,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       await user.click(transformNode!);
 
       // Close config panel
@@ -1995,7 +2190,9 @@ describe('WorkflowCanvas', () => {
         />,
       );
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       await user.click(transformNode!);
 
       // Click update button in config panel
@@ -2004,7 +2201,8 @@ describe('WorkflowCanvas', () => {
 
       // onStateChange should be called with updated node
       await waitFor(() => {
-        const lastCall = onStateChange.mock.calls[onStateChange.mock.calls.length - 1];
+        const lastCall =
+          onStateChange.mock.calls[onStateChange.mock.calls.length - 1];
         expect(lastCall).toBeDefined();
       });
     });
@@ -2022,7 +2220,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
       await user.click(transformNode!);
 
       expect(screen.getByTestId('node-config-panel')).toBeInTheDocument();
@@ -2038,7 +2238,9 @@ describe('WorkflowCanvas', () => {
   describe('onStateChange callback details', () => {
     it('should not emit duplicate state changes', async () => {
       const onStateChange = vi.fn();
-      render(<WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />);
+      render(
+        <WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />,
+      );
 
       // Wait for initial state emission
       await waitFor(() => {
@@ -2048,11 +2250,15 @@ describe('WorkflowCanvas', () => {
       const initialCallCount = onStateChange.mock.calls.length;
 
       // Re-render with same props
-      render(<WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />);
+      render(
+        <WorkflowCanvas {...defaultProps} onStateChange={onStateChange} />,
+      );
 
       // Should not trigger additional calls for same state
       // Note: This depends on the deduplication logic in the component
-      expect(onStateChange.mock.calls.length).toBeGreaterThanOrEqual(initialCallCount);
+      expect(onStateChange.mock.calls.length).toBeGreaterThanOrEqual(
+        initialCallCount,
+      );
     });
 
     it('should update zoom display when zoom in button is clicked', async () => {
@@ -2065,7 +2271,9 @@ describe('WorkflowCanvas', () => {
       // Zoom in
       const zoomInButton = screen
         .getAllByRole('button')
-        .find((btn) => btn.querySelector('svg')?.classList.contains('lucide-zoom-in'));
+        .find((btn) =>
+          btn.querySelector('svg')?.classList.contains('lucide-zoom-in'),
+        );
 
       if (zoomInButton) {
         await user.click(zoomInButton);
@@ -2180,13 +2388,16 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       // Mouse enter
       fireEvent.mouseEnter(transformNode!);
 
       // Connection handles should become visible (opacity-100 class is applied via CSS)
-      const connectionHandles = transformNode?.querySelectorAll('.cursor-crosshair');
+      const connectionHandles =
+        transformNode?.querySelectorAll('.cursor-crosshair');
       expect(connectionHandles?.length).toBeGreaterThan(0);
     });
 
@@ -2202,7 +2413,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const transformNode = screen.getByText('Transform').closest('.absolute.pointer-events-auto');
+      const transformNode = screen
+        .getByText('Transform')
+        .closest('.absolute.pointer-events-auto');
 
       fireEvent.mouseEnter(transformNode!);
       fireEvent.mouseLeave(transformNode!);
@@ -2251,7 +2464,8 @@ describe('WorkflowCanvas', () => {
       const approvalNode = screen
         .getByText('User approval')
         .closest('.absolute.pointer-events-auto');
-      const connectionHandles = approvalNode?.querySelectorAll('.cursor-crosshair');
+      const connectionHandles =
+        approvalNode?.querySelectorAll('.cursor-crosshair');
       expect(connectionHandles?.length).toBeGreaterThan(0);
     });
   });
@@ -2274,14 +2488,20 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      const { rerender } = render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
+      const { rerender } = render(
+        <WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />,
+      );
 
       // Add a node that would overlap
       rerender(
         <WorkflowCanvas
           {...defaultProps}
           initialNodes={initialNodes}
-          onClickedItem={{ id: 'transform', label: 'Transform', type: 'transform' }}
+          onClickedItem={{
+            id: 'transform',
+            label: 'Transform',
+            type: 'transform',
+          }}
         />,
       );
 
@@ -2298,25 +2518,37 @@ describe('WorkflowCanvas', () => {
   describe('mentor node click behavior', () => {
     it('should open edit mentor modal on click without drag', async () => {
       const mockOpenEditMentorModal = vi.fn();
-      vi.mocked(await import('@/hooks/user-navigate')).useNavigate = vi.fn(() => ({
-        openEditMentorModal: mockOpenEditMentorModal,
-      })) as any;
+      vi.mocked(await import('@/hooks/user-navigate')).useNavigate = vi.fn(
+        () => ({
+          openEditMentorModal: mockOpenEditMentorModal,
+        }),
+      ) as any;
 
       const initialNodes = [
         {
           id: 'mentor-1',
           type: 'mentor',
           position: { x: 300, y: 100 },
-          data: { label: 'Test Mentor', subtitle: 'Mentor', mentor_id: 'mentor-123' },
+          data: {
+            label: 'Test Mentor',
+            subtitle: 'Mentor',
+            mentor_id: 'mentor-123',
+          },
         },
       ];
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const mentorNode = screen.getByText('Test Mentor').closest('.absolute.pointer-events-auto');
+      const mentorNode = screen
+        .getByText('Test Mentor')
+        .closest('.absolute.pointer-events-auto');
 
       // Click without dragging
-      fireEvent.mouseDown(mentorNode!, { button: 0, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(mentorNode!, {
+        button: 0,
+        clientX: 350,
+        clientY: 125,
+      });
       fireEvent.mouseUp(window);
 
       // Should trigger edit mentor modal
@@ -2330,16 +2562,27 @@ describe('WorkflowCanvas', () => {
           id: 'mentor-1',
           type: 'mentor',
           position: { x: 300, y: 100 },
-          data: { label: 'Test Mentor', subtitle: 'Mentor', mentor_id: 'mentor-123' },
+          data: {
+            label: 'Test Mentor',
+            subtitle: 'Mentor',
+            mentor_id: 'mentor-123',
+          },
         },
       ];
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const mentorNode = screen.getByText('Test Mentor').closest('.absolute.pointer-events-auto');
+      const mentorNode = screen
+        .getByText('Test Mentor')
+        .closest('.absolute.pointer-events-auto');
 
       // Ctrl+click
-      fireEvent.mouseDown(mentorNode!, { button: 0, ctrlKey: true, clientX: 350, clientY: 125 });
+      fireEvent.mouseDown(mentorNode!, {
+        button: 0,
+        ctrlKey: true,
+        clientX: 350,
+        clientY: 125,
+      });
       fireEvent.mouseUp(window);
 
       // Config panel should not appear for mentor nodes even with selection
@@ -2360,7 +2603,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const startNode = screen.getByText('Start').closest('.absolute.pointer-events-auto');
+      const startNode = screen
+        .getByText('Start')
+        .closest('.absolute.pointer-events-auto');
       const startHandle = startNode?.querySelector('.cursor-crosshair');
 
       // Start connection
@@ -2377,7 +2622,9 @@ describe('WorkflowCanvas', () => {
       fireEvent.mouseUp(window);
 
       // Dashed line should be removed
-      expect(document.querySelector('path[stroke-dasharray="5,5"]')).not.toBeInTheDocument();
+      expect(
+        document.querySelector('path[stroke-dasharray="5,5"]'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -2408,7 +2655,9 @@ describe('WorkflowCanvas', () => {
     });
 
     it('should handle API error when prefilling mentor node', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       mockFetchMentorSettings.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
@@ -2452,7 +2701,13 @@ describe('WorkflowCanvas', () => {
         },
       ];
 
-      render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} org="test-org" />);
+      render(
+        <WorkflowCanvas
+          {...defaultProps}
+          initialNodes={initialNodes}
+          org="test-org"
+        />,
+      );
 
       // fetchMentorSettings should not be called without defaultMentorId
       expect(mockFetchMentorSettings).not.toHaveBeenCalled();
@@ -2464,7 +2719,11 @@ describe('WorkflowCanvas', () => {
           id: 'mentor-1',
           type: 'mentor',
           position: { x: 300, y: 250 },
-          data: { label: 'Existing Mentor', subtitle: 'Mentor', mentor_id: 'existing-id' },
+          data: {
+            label: 'Existing Mentor',
+            subtitle: 'Mentor',
+            mentor_id: 'existing-id',
+          },
         },
       ];
 
@@ -2512,7 +2771,9 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} org="test-org" />);
 
       // Open mentor modal
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       // Select mentor from grid
@@ -2530,7 +2791,9 @@ describe('WorkflowCanvas', () => {
 
     it('should use mentor name as fallback when API fails', async () => {
       const user = userEvent.setup();
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       mockFetchMentorSettings.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
@@ -2539,7 +2802,9 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} org="test-org" />);
 
       // Open mentor modal
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       // Select mentor from grid
@@ -2571,7 +2836,9 @@ describe('WorkflowCanvas', () => {
       );
 
       // Open mentor modal
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       // Select mentor from grid
@@ -2718,7 +2985,9 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
       // Open mentor modal
-      const changeMentorButton = screen.getByRole('button', { name: 'Change mentor' });
+      const changeMentorButton = screen.getByRole('button', {
+        name: 'Change mentor',
+      });
       await user.click(changeMentorButton);
 
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
@@ -2766,7 +3035,10 @@ describe('WorkflowCanvas', () => {
           id: 'mentor-1',
           type: 'mentor',
           position: { x: 300, y: 250 },
-          data: { label: 'Custom Label That Is Not Default', subtitle: 'Mentor' },
+          data: {
+            label: 'Custom Label That Is Not Default',
+            subtitle: 'Mentor',
+          },
         },
       ];
 
@@ -2780,7 +3052,9 @@ describe('WorkflowCanvas', () => {
       );
 
       // The custom label should be preserved
-      expect(screen.getByText('Custom Label That Is Not Default')).toBeInTheDocument();
+      expect(
+        screen.getByText('Custom Label That Is Not Default'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -2866,7 +3140,10 @@ describe('WorkflowCanvas', () => {
 
     it('should add mentor node with defaultMentorId via onClickedItem', async () => {
       const { rerender } = render(
-        <WorkflowCanvas {...defaultProps} defaultMentorId="default-mentor-123" />,
+        <WorkflowCanvas
+          {...defaultProps}
+          defaultMentorId="default-mentor-123"
+        />,
       );
 
       rerender(
@@ -3089,7 +3366,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const ifElseNode = screen.getByText('If-Else').closest('.absolute.pointer-events-auto');
+      const ifElseNode = screen
+        .getByText('If-Else')
+        .closest('.absolute.pointer-events-auto');
       fireEvent.mouseEnter(ifElseNode!);
 
       // Find condition handles
@@ -3113,7 +3392,9 @@ describe('WorkflowCanvas', () => {
 
       render(<WorkflowCanvas {...defaultProps} initialNodes={initialNodes} />);
 
-      const ifElseNode = screen.getByText('If-Else').closest('.absolute.pointer-events-auto');
+      const ifElseNode = screen
+        .getByText('If-Else')
+        .closest('.absolute.pointer-events-auto');
       fireEvent.mouseEnter(ifElseNode!);
 
       // Get all handles

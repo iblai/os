@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../../_components/app-layout';
 
-export default function WorkflowsLayout({ children }: { children: React.ReactNode }) {
+export default function WorkflowsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [defaultOpen, setDefaultOpen] = useState<boolean>(false);
 
   useEffect(() => {

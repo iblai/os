@@ -20,10 +20,10 @@ export function McpTab({ onSelect }: McpTabProps = {}) {
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">MCP</h3>
-          <p className="text-gray-700 text-xs">
+          <h3 className="mb-1 text-base font-medium text-gray-900">MCP</h3>
+          <p className="text-xs text-gray-700">
             Manage Model Context Protocol connectors for your mentor.
           </p>
         </div>

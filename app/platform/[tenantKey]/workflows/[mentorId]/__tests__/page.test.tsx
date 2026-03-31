@@ -55,7 +55,13 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ onChange, value, placeholder, className, ...props }: React.ComponentProps<'input'>) => (
+  Input: ({
+    onChange,
+    value,
+    placeholder,
+    className,
+    ...props
+  }: React.ComponentProps<'input'>) => (
     <input
       onChange={onChange}
       value={value}
@@ -67,12 +73,28 @@ vi.mock('@/components/ui/input', () => ({
 }));
 
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, onClick, className, ...props }: React.ComponentProps<'div'>) => (
-    <div onClick={onClick} className={className} data-testid="workflow-card" {...props}>
+  Card: ({
+    children,
+    onClick,
+    className,
+    ...props
+  }: React.ComponentProps<'div'>) => (
+    <div
+      onClick={onClick}
+      className={className}
+      data-testid="workflow-card"
+      {...props}
+    >
       {children}
     </div>
   ),
-  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  CardContent: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <div className={className} data-testid="card-content">
       {children}
     </div>
@@ -101,7 +123,10 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
         >
           {isCreating ? 'Creating...' : 'Create'}
         </button>
-        <button data-testid="create-workflow-cancel" onClick={() => onOpenChange(false)}>
+        <button
+          data-testid="create-workflow-cancel"
+          onClick={() => onOpenChange(false)}
+        >
           Cancel
         </button>
       </div>
@@ -146,7 +171,9 @@ describe('WorkflowsPage', () => {
 
     it('should render search input', () => {
       render(<WorkflowsPage />);
-      expect(screen.getByPlaceholderText('Search workflows...')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search workflows...'),
+      ).toBeInTheDocument();
     });
 
     it('should render Create Workflow button', () => {
@@ -192,7 +219,9 @@ describe('WorkflowsPage', () => {
 
       render(<WorkflowsPage />);
       expect(screen.getByText('No workflows found')).toBeInTheDocument();
-      expect(screen.getByText('Create your first workflow')).toBeInTheDocument();
+      expect(
+        screen.getByText('Create your first workflow'),
+      ).toBeInTheDocument();
     });
 
     it('should open create modal when clicking "Create your first workflow"', async () => {
@@ -438,7 +467,9 @@ describe('WorkflowsPage', () => {
       expect(screen.getByTestId('create-workflow-modal')).toBeInTheDocument();
 
       await user.click(screen.getByTestId('create-workflow-cancel'));
-      expect(screen.queryByTestId('create-workflow-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('create-workflow-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('should call createWorkflow and navigate on success', async () => {
@@ -470,7 +501,10 @@ describe('WorkflowsPage', () => {
                 }),
               ]),
               edges: expect.arrayContaining([
-                expect.objectContaining({ source: 'start', target: 'mentor-1' }),
+                expect.objectContaining({
+                  source: 'start',
+                  target: 'mentor-1',
+                }),
               ]),
             },
           },

@@ -48,7 +48,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { useDebounce } from 'use-debounce';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -100,14 +104,21 @@ function transformNodeTypesToSections(
 
   // Sort categories by order and filter out empty ones
   return Array.from(categoryMap.entries())
-    .sort(([a], [b]) => (categoryConfig[a]?.order ?? 99) - (categoryConfig[b]?.order ?? 99))
+    .sort(
+      ([a], [b]) =>
+        (categoryConfig[a]?.order ?? 99) - (categoryConfig[b]?.order ?? 99),
+    )
     .map(([, section]) => section)
     .filter((section) => section.items.length > 0);
 }
 
 export default function WorkflowDetailPage() {
   const router = useRouter();
-  const params = useParams<{ tenantKey: string; mentorId: string; id: string }>();
+  const params = useParams<{
+    tenantKey: string;
+    mentorId: string;
+    id: string;
+  }>();
   const searchParams = useSearchParams();
   const listMentorId = searchParams.get('listMentorId') || params.mentorId;
   const workflowId = params.id;
@@ -138,7 +149,9 @@ export default function WorkflowDetailPage() {
 
   const mentorIdsFromDefinition = useMemo(() => {
     const ids = new Set<string>();
-    const nodes = (workflow?.definition?.nodes ?? []) as Array<Record<string, unknown>>;
+    const nodes = (workflow?.definition?.nodes ?? []) as Array<
+      Record<string, unknown>
+    >;
     nodes.forEach((node) => {
       if (node.type !== 'mentor') return;
       const nodeData = node.data as Record<string, unknown> | undefined;
@@ -156,7 +169,8 @@ export default function WorkflowDetailPage() {
   const missingMentorIds = useMemo(
     () =>
       mentorIdsFromDefinition.filter(
-        (mentorId) => !Object.prototype.hasOwnProperty.call(mentorSettingsById, mentorId),
+        (mentorId) =>
+          !Object.prototype.hasOwnProperty.call(mentorSettingsById, mentorId),
       ),
     [mentorIdsFromDefinition, mentorSettingsById],
   );
@@ -205,11 +219,14 @@ export default function WorkflowDetailPage() {
     (!username || missingMentorIds.length > 0 || isMentorSettingsLoading);
 
   const [patchWorkflow, { isLoading: isSaving }] = usePatchWorkflowMutation();
-  const [publishWorkflow, { isLoading: isPublishing }] = usePublishWorkflowMutation();
+  const [publishWorkflow, { isLoading: isPublishing }] =
+    usePublishWorkflowMutation();
   const [deactivateWorkflow] = useDeactivateWorkflowMutation();
   const [validateWorkflow] = useValidateWorkflowMutation();
-  const [activateWorkflow, { isLoading: isActivating }] = useActivateWorkflowMutation();
-  const [deleteWorkflow, { isLoading: isDeleting }] = useDeleteWorkflowMutation();
+  const [activateWorkflow, { isLoading: isActivating }] =
+    useActivateWorkflowMutation();
+  const [deleteWorkflow, { isLoading: isDeleting }] =
+    useDeleteWorkflowMutation();
 
   const [workflowName, setWorkflowName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -226,7 +243,9 @@ export default function WorkflowDetailPage() {
   } | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
-  const [workflowData, setWorkflowData] = useState<ReactFlowJsonObject | null>(null);
+  const [workflowData, setWorkflowData] = useState<ReactFlowJsonObject | null>(
+    null,
+  );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     errors: string[];
@@ -234,7 +253,9 @@ export default function WorkflowDetailPage() {
   } | null>(null);
   const [isValidationBannerOpen, setIsValidationBannerOpen] = useState(true);
   const isInitialLoad = useRef(true);
-  const { activeTab: _activeTab, chats: _chats } = useAppSelector((state) => state.chatSliceShared);
+  const { activeTab: _activeTab, chats: _chats } = useAppSelector(
+    (state) => state.chatSliceShared,
+  );
 
   // Debounce workflow data for auto-save
   const [debouncedWorkflowData] = useDebounce(workflowData, 1000);
@@ -293,7 +314,10 @@ export default function WorkflowDetailPage() {
     const autoSave = async () => {
       try {
         const patchData: Parameters<typeof patchWorkflow>[0]['data'] = {
-          definition: { nodes: debouncedWorkflowData.nodes, edges: debouncedWorkflowData.edges },
+          definition: {
+            nodes: debouncedWorkflowData.nodes,
+            edges: debouncedWorkflowData.edges,
+          },
         };
 
         await patchWorkflow({
@@ -312,7 +336,10 @@ export default function WorkflowDetailPage() {
             uniqueId: workflowId,
           }).unwrap();
           if (result.errors.length > 0 || result.warnings.length > 0) {
-            setValidationResult({ errors: result.errors, warnings: result.warnings });
+            setValidationResult({
+              errors: result.errors,
+              warnings: result.warnings,
+            });
             setIsValidationBannerOpen(true);
           } else {
             setValidationResult(null);
@@ -335,7 +362,11 @@ export default function WorkflowDetailPage() {
     validateWorkflow,
   ]);
 
-  const handleItemClick = (item: { id: string; label: string; type: string }) => {
+  const handleItemClick = (item: {
+    id: string;
+    label: string;
+    type: string;
+  }) => {
     setClickedItem(item);
     setTimeout(() => setClickedItem(null), 100);
   };
@@ -347,10 +378,13 @@ export default function WorkflowDetailPage() {
   const handleClosePreview = () => setIsPreviewMode(false);
   const handleNewChat = () => eventBus.emit(RemoteEvents.newChat);
 
-  const handleWorkflowStateChange = useCallback((state: ReactFlowJsonObject) => {
-    setWorkflowData(state);
-    setHasUnsavedChanges(true);
-  }, []);
+  const handleWorkflowStateChange = useCallback(
+    (state: ReactFlowJsonObject) => {
+      setWorkflowData(state);
+      setHasUnsavedChanges(true);
+    },
+    [],
+  );
 
   const handleNameSave = async () => {
     setIsEditingName(false);
@@ -393,13 +427,21 @@ export default function WorkflowDetailPage() {
       ? { definition: { nodes: workflowData.nodes, edges: workflowData.edges } }
       : undefined;
     try {
-      await publishWorkflow({ org: params.tenantKey, uniqueId: workflowId, data }).unwrap();
+      await publishWorkflow({
+        org: params.tenantKey,
+        uniqueId: workflowId,
+        data,
+      }).unwrap();
       setHasUnsavedChanges(false);
       setValidationResult(null);
       toast.success('Workflow published');
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
-      if (errorData && typeof errorData === 'object' && 'is_valid' in errorData) {
+      if (
+        errorData &&
+        typeof errorData === 'object' &&
+        'is_valid' in errorData
+      ) {
         const validation = errorData as WorkflowValidationResponse;
         setValidationResult({
           errors: validation.errors,
@@ -415,7 +457,10 @@ export default function WorkflowDetailPage() {
 
   const handleDeactivate = async () => {
     try {
-      await deactivateWorkflow({ org: params.tenantKey, uniqueId: workflowId }).unwrap();
+      await deactivateWorkflow({
+        org: params.tenantKey,
+        uniqueId: workflowId,
+      }).unwrap();
       toast.success('Workflow deactivated');
     } catch {
       toast.error('Failed to deactivate workflow');
@@ -432,13 +477,20 @@ export default function WorkflowDetailPage() {
         setValidationResult(null);
         toast.success('Workflow activated');
       } else {
-        setValidationResult({ errors: result.errors, warnings: result.warnings });
+        setValidationResult({
+          errors: result.errors,
+          warnings: result.warnings,
+        });
         setIsValidationBannerOpen(true);
         toast.error('Workflow has validation issues');
       }
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
-      if (errorData && typeof errorData === 'object' && 'is_valid' in errorData) {
+      if (
+        errorData &&
+        typeof errorData === 'object' &&
+        'is_valid' in errorData
+      ) {
         const validation = errorData as WorkflowValidationResponse;
         setValidationResult({
           errors: validation.errors,
@@ -454,7 +506,10 @@ export default function WorkflowDetailPage() {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteWorkflow({ org: params.tenantKey, uniqueId: workflowId }).unwrap();
+      await deleteWorkflow({
+        org: params.tenantKey,
+        uniqueId: workflowId,
+      }).unwrap();
       toast.success('Workflow deleted');
       setIsDeleteModalOpen(false);
       router.push(`/platform/${params.tenantKey}/workflows/${listMentorId}`);
@@ -476,10 +531,10 @@ export default function WorkflowDetailPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">Failed to load workflow</p>
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+          <p className="mb-4 text-gray-600">Failed to load workflow</p>
           <Button variant="outline" onClick={() => router.back()}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
+            <ChevronLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
         </div>
@@ -487,61 +542,62 @@ export default function WorkflowDetailPage() {
     );
   }
 
-  const initialNodes = ((workflow.definition?.nodes ?? []) as Array<Record<string, unknown>>).map(
-    (n) => {
-      const nodeData = n.data as Record<string, unknown>;
+  const initialNodes = (
+    (workflow.definition?.nodes ?? []) as Array<Record<string, unknown>>
+  ).map((n) => {
+    const nodeData = n.data as Record<string, unknown>;
 
-      // For mentor nodes, prefill with mentor settings if available
-      if (n.type === 'mentor') {
-        const mentorId =
-          (nodeData?.mentor_id as string | undefined) ||
-          (nodeData?.entry_mentor_id as string | undefined) ||
-          entryMentorId;
-        const mentorData = mentorId ? mentorSettingsById[mentorId] : null;
-        return {
-          ...n,
-          draggable: true,
-          selectable: true,
-          connectable: true,
-          data: {
-            ...nodeData,
-            ...(mentorId ? { entry_mentor_id: mentorId } : {}),
-            // Prefill from mentor settings - prioritize mentor data over default node data
-            ...(mentorData && {
-              label:
-                (mentorData.display_name as string) ||
-                (mentorData.mentor_name as string) ||
-                nodeData?.label,
-              instructions: (mentorData.system_prompt as string) || nodeData?.instructions,
-              model: (mentorData.llm_name as string) || nodeData?.model,
-            }),
-          },
-        };
-      }
-
+    // For mentor nodes, prefill with mentor settings if available
+    if (n.type === 'mentor') {
+      const mentorId =
+        (nodeData?.mentor_id as string | undefined) ||
+        (nodeData?.entry_mentor_id as string | undefined) ||
+        entryMentorId;
+      const mentorData = mentorId ? mentorSettingsById[mentorId] : null;
       return {
         ...n,
         draggable: true,
         selectable: true,
         connectable: true,
+        data: {
+          ...nodeData,
+          ...(mentorId ? { entry_mentor_id: mentorId } : {}),
+          // Prefill from mentor settings - prioritize mentor data over default node data
+          ...(mentorData && {
+            label:
+              (mentorData.display_name as string) ||
+              (mentorData.mentor_name as string) ||
+              nodeData?.label,
+            instructions:
+              (mentorData.system_prompt as string) || nodeData?.instructions,
+            model: (mentorData.llm_name as string) || nodeData?.model,
+          }),
+        },
       };
-    },
-  ) as Parameters<typeof WorkflowCanvas>[0]['initialNodes'];
+    }
+
+    return {
+      ...n,
+      draggable: true,
+      selectable: true,
+      connectable: true,
+    };
+  }) as Parameters<typeof WorkflowCanvas>[0]['initialNodes'];
   const initialEdges = (workflow.definition?.edges ?? []) as Parameters<
     typeof WorkflowCanvas
   >[0]['initialEdges'];
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex h-screen flex-col bg-white">
       <div
-        className={`flex items-center justify-between px-4 py-3 ${isPreviewMode ? 'bg-white border-b border-gray-200' : 'bg-background border-b border-border'}`}
+        className={`flex items-center justify-between px-4 py-3 ${isPreviewMode ? 'border-b border-gray-200 bg-white' : 'bg-background border-border border-b'}`}
       >
         <div className="flex items-center gap-3">
           {isPreviewMode ? (
             <div className="flex items-center gap-2">
               <h1 className="text-foreground font-medium">{workflowName}</h1>
               <span
-                className={`px-2 py-0.5 text-xs rounded-md ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
+                className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
               >
                 {workflow.is_active ? 'Active' : 'Draft'}
               </span>
@@ -563,25 +619,25 @@ export default function WorkflowDetailPage() {
                     onChange={(e) => setWorkflowName(e.target.value)}
                     onBlur={handleNameSave}
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
-                    className="h-8 w-[200px] text-foreground font-medium"
+                    className="text-foreground h-8 w-[200px] font-medium"
                     autoFocus
                   />
                 ) : (
                   <button
                     onClick={() => setIsEditingName(true)}
-                    className="flex items-center gap-1 text-foreground font-medium hover:text-foreground/80"
+                    className="text-foreground hover:text-foreground/80 flex items-center gap-1 font-medium"
                   >
                     {workflowName}
                     <Pencil className="h-3 w-3 opacity-50" />
                   </button>
                 )}
                 <span
-                  className={`px-2 py-0.5 text-xs rounded-md ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
+                  className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                 >
                   {workflow.is_active ? 'Active' : 'Draft'}
                 </span>
                 {hasUnsavedChanges && (
-                  <span className="text-xs text-muted-foreground">Unsaved</span>
+                  <span className="text-muted-foreground text-xs">Unsaved</span>
                 )}
               </div>
             </>
@@ -597,7 +653,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleClosePreview}
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="mr-2 h-4 w-4" />
                 Close preview
               </Button>
               <Button
@@ -606,7 +662,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleNewChat}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <RotateCcw className="mr-2 h-4 w-4" />
                 New Chat
               </Button>
               <Button
@@ -615,7 +671,11 @@ export default function WorkflowDetailPage() {
                 onClick={handlePublish}
                 disabled={isPublishing}
               >
-                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publish'}
+                {isPublishing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Publish'
+                )}
               </Button>
             </>
           ) : (
@@ -633,12 +693,15 @@ export default function WorkflowDetailPage() {
                 <DropdownMenuContent align="end">
                   {workflow.is_active ? (
                     <DropdownMenuItem onClick={handleDeactivate}>
-                      <Power className="h-4 w-4 mr-2" />
+                      <Power className="mr-2 h-4 w-4" />
                       Deactivate
                     </DropdownMenuItem>
                   ) : (
-                    <DropdownMenuItem onClick={handleActivate} disabled={isActivating}>
-                      <Power className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem
+                      onClick={handleActivate}
+                      disabled={isActivating}
+                    >
+                      <Power className="mr-2 h-4 w-4" />
                       {isActivating ? 'Activating...' : 'Activate'}
                     </DropdownMenuItem>
                   )}
@@ -646,7 +709,7 @@ export default function WorkflowDetailPage() {
                     onClick={() => setIsDeleteModalOpen(true)}
                     className="text-red-600"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -657,7 +720,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground border-border hover:bg-accent bg-transparent"
                 onClick={handlePreviewClick}
               >
-                <Eye className="h-4 w-4 mr-2" />
+                <Eye className="mr-2 h-4 w-4" />
                 Preview
               </Button>
               <Button
@@ -666,7 +729,11 @@ export default function WorkflowDetailPage() {
                 onClick={handleSave}
                 disabled={isSaving}
               >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Save'
+                )}
               </Button>
               <Button
                 size="sm"
@@ -674,7 +741,11 @@ export default function WorkflowDetailPage() {
                 onClick={handlePublish}
                 disabled={isPublishing}
               >
-                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publish'}
+                {isPublishing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Publish'
+                )}
               </Button>
             </>
           )}
@@ -683,9 +754,13 @@ export default function WorkflowDetailPage() {
 
       {/* Validation Banner */}
       {validationResult &&
-        (validationResult.errors.length > 0 || validationResult.warnings.length > 0) && (
-          <Collapsible open={isValidationBannerOpen} onOpenChange={setIsValidationBannerOpen}>
-            <div className="border-b border-border bg-background px-4 py-2">
+        (validationResult.errors.length > 0 ||
+          validationResult.warnings.length > 0) && (
+          <Collapsible
+            open={isValidationBannerOpen}
+            onOpenChange={setIsValidationBannerOpen}
+          >
+            <div className="border-border bg-background border-b px-4 py-2">
               <CollapsibleTrigger asChild>
                 <button className="flex w-full items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
@@ -696,7 +771,9 @@ export default function WorkflowDetailPage() {
                     )}
                     <span
                       className={
-                        validationResult.errors.length > 0 ? 'text-red-700' : 'text-amber-700'
+                        validationResult.errors.length > 0
+                          ? 'text-red-700'
+                          : 'text-amber-700'
                       }
                     >
                       {validationResult.errors.length > 0 &&
@@ -710,9 +787,9 @@ export default function WorkflowDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {isValidationBannerOpen ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      <ChevronUp className="text-muted-foreground h-4 w-4" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="text-muted-foreground h-4 w-4" />
                     )}
                     <span
                       role="button"
@@ -737,8 +814,11 @@ export default function WorkflowDetailPage() {
               <CollapsibleContent>
                 <div className="mt-2 space-y-1 pb-1">
                   {validationResult.errors.map((error, i) => (
-                    <div key={`error-${i}`} className="flex items-start gap-2 text-sm text-red-600">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <div
+                      key={`error-${i}`}
+                      className="flex items-start gap-2 text-sm text-red-600"
+                    >
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>{error}</span>
                     </div>
                   ))}
@@ -747,7 +827,7 @@ export default function WorkflowDetailPage() {
                       key={`warning-${i}`}
                       className="flex items-start gap-2 text-sm text-amber-600"
                     >
-                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>{warning}</span>
                     </div>
                   ))}
@@ -767,7 +847,11 @@ export default function WorkflowDetailPage() {
         )}
 
         <div
-          className={isPreviewMode ? 'w-[60%] h-full border-r border-gray-200' : 'flex-1 h-full'}
+          className={
+            isPreviewMode
+              ? 'h-full w-[60%] border-r border-gray-200'
+              : 'h-full flex-1'
+          }
         >
           <WorkflowCanvas
             onDraggedItem={isPreviewMode ? null : draggedItem}
@@ -782,8 +866,12 @@ export default function WorkflowDetailPage() {
         </div>
 
         {isPreviewMode && (
-          <div className="w-[40%] h-full flex flex-col bg-white">
-            <WorkflowPreviewChat key={previewKey} tenantKey={params.tenantKey} mentorId={entryMentorId} />
+          <div className="flex h-full w-[40%] flex-col bg-white">
+            <WorkflowPreviewChat
+              key={previewKey}
+              tenantKey={params.tenantKey}
+              mentorId={entryMentorId}
+            />
           </div>
         )}
       </div>

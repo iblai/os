@@ -1,15 +1,16 @@
-import { test as base, expect } from "@playwright/test";
-import path from "path";
-import { ChatPage } from "../page-objects/chat.page";
-import { SidebarPage } from "../page-objects/sidebar.page";
-import { NavbarPage } from "../page-objects/navbar.page";
-import { ExplorePage } from "../page-objects/explore.page";
-import { EditMentorPage } from "../page-objects/edit-mentor/edit-mentor.page";
-import { AnalyticsPage } from "../page-objects/analytics.page";
-import { ProfilePage } from "../page-objects/profile.page";
-import { ProjectPage } from "../page-objects/project.page";
-import { NotificationsPage } from "../page-objects/notifications.page";
-import { BillingPage } from "../page-objects/billing.page";
+import { test as base, expect } from '@playwright/test';
+import path from 'path';
+import { ChatPage } from '../page-objects/chat.page';
+import { SidebarPage } from '../page-objects/sidebar.page';
+import { NavbarPage } from '../page-objects/navbar.page';
+import { ExplorePage } from '../page-objects/explore.page';
+import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+import { AnalyticsPage } from '../page-objects/analytics.page';
+import { ProfilePage } from '../page-objects/profile.page';
+import { ProjectPage } from '../page-objects/project.page';
+import { NotificationsPage } from '../page-objects/notifications.page';
+import { BillingPage } from '../page-objects/billing.page';
+import { CreateMentorPage } from '../page-objects/create-mentor.page';
 
 export type StepFn = (title: string, fn: () => unknown) => Promise<void>;
 
@@ -38,18 +39,20 @@ export const test = base.extend<{
   navbarPage: NavbarPage;
   explorePage: ExplorePage;
   editMentorPage: EditMentorPage;
+  createMentorPage: CreateMentorPage;
   analyticsPage: AnalyticsPage;
   profilePage: ProfilePage;
   projectPage: ProjectPage;
   notificationsPage: NotificationsPage;
   billingPage: BillingPage;
   // ── Non-admin page + page objects ──────────────────────────────────────────
-  nonadminPage: import("@playwright/test").Page;
+  nonadminPage: import('@playwright/test').Page;
   nonadminChatPage: ChatPage;
   nonadminSidebarPage: SidebarPage;
   nonadminNavbarPage: NavbarPage;
   nonadminExplorePage: ExplorePage;
   nonadminEditMentorPage: EditMentorPage;
+  nonadminCreateMentorPage: CreateMentorPage;
   nonadminAnalyticsPage: AnalyticsPage;
   nonadminProfilePage: ProfilePage;
   nonadminProjectPage: ProjectPage;
@@ -78,6 +81,9 @@ export const test = base.extend<{
   editMentorPage: async ({ page }, use) => {
     await use(new EditMentorPage(page));
   },
+  createMentorPage: async ({ page }, use) => {
+    await use(new CreateMentorPage(page));
+  },
   analyticsPage: async ({ page }, use) => {
     await use(new AnalyticsPage(page));
   },
@@ -97,7 +103,7 @@ export const test = base.extend<{
   // ── Non-admin page (separate browser context with non-admin storageState) ──
   nonadminPage: async ({ browser }, use, testInfo) => {
     const browserKey = testInfo.project.name
-      .replace("mentor-desktop-", "")
+      .replace('mentor-desktop-', '')
       .toLowerCase();
     const authFile = path.join(
       __dirname,
@@ -124,6 +130,9 @@ export const test = base.extend<{
   },
   nonadminEditMentorPage: async ({ nonadminPage }, use) => {
     await use(new EditMentorPage(nonadminPage));
+  },
+  nonadminCreateMentorPage: async ({ nonadminPage }, use) => {
+    await use(new CreateMentorPage(nonadminPage));
   },
   nonadminAnalyticsPage: async ({ nonadminPage }, use) => {
     await use(new AnalyticsPage(nonadminPage));

@@ -1,9 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NodeConfigPanel } from '../node-config-panel';
 import type { NodeConfig } from '../workflow-canvas';
-import { useGetMentorSettingsQuery, useGetToolsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetMentorSettingsQuery,
+  useGetToolsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
 import { useUsername } from '@/hooks/use-user';
 
@@ -46,7 +55,12 @@ vi.mock('@/hooks/use-tools/use-toggle-tools', () => ({
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, disabled, ...props }: React.ComponentProps<'button'>) => (
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    ...props
+  }: React.ComponentProps<'button'>) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
@@ -64,7 +78,9 @@ vi.mock('@/components/ui/label', () => ({
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
-  Textarea: (props: React.ComponentProps<'textarea'>) => <textarea {...props} />,
+  Textarea: (props: React.ComponentProps<'textarea'>) => (
+    <textarea {...props} />
+  ),
 }));
 
 vi.mock('@/components/ui/switch', () => ({
@@ -130,16 +146,24 @@ vi.mock('@/components/ui/select', () => ({
     value?: string;
     onValueChange?: (value: string) => void;
   }) => (
-    <div data-testid="select" data-value={value} onClick={() => onValueChange?.('var1')}>
+    <div
+      data-testid="select"
+      data-value={value}
+      onClick={() => onValueChange?.('var1')}
+    >
       {children}
     </div>
   ),
   SelectContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="select-content">{children}</div>
   ),
-  SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
-    <div data-testid={`select-item-${value}`}>{children}</div>
-  ),
+  SelectItem: ({
+    children,
+    value,
+  }: {
+    children: React.ReactNode;
+    value: string;
+  }) => <div data-testid={`select-item-${value}`}>{children}</div>,
   SelectTrigger: ({ children, ...props }: React.ComponentProps<'button'>) => (
     <button data-testid="select-trigger" {...props}>
       {children}
@@ -155,8 +179,12 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="tooltip-content">{children}</div>
   ),
-  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock('@/components/mentors/mentor-selection-grid', () => ({
@@ -168,10 +196,14 @@ vi.mock('@/components/mentors/mentor-selection-grid', () => ({
     selectedMentorIds: string[];
   }) => (
     <div data-testid="mentor-selection-grid">
-      <span data-testid="selected-mentor-ids">{selectedMentorIds.join(',')}</span>
+      <span data-testid="selected-mentor-ids">
+        {selectedMentorIds.join(',')}
+      </span>
       <button
         data-testid="select-mentor"
-        onClick={() => onMentorSelect({ unique_id: 'new-mentor-id', name: 'New Mentor' })}
+        onClick={() =>
+          onMentorSelect({ unique_id: 'new-mentor-id', name: 'New Mentor' })
+        }
       >
         Select Mentor
       </button>
@@ -184,14 +216,24 @@ vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab', () => ({
     onSelect,
     selectedDatasetId,
   }: {
-    onSelect: (dataset: { id: string; document_name: string; url: string }) => void;
+    onSelect: (dataset: {
+      id: string;
+      document_name: string;
+      url: string;
+    }) => void;
     selectedDatasetId?: string;
   }) => (
     <div data-testid="datasets-tab">
       <span data-testid="selected-dataset-id">{selectedDatasetId}</span>
       <button
         data-testid="select-dataset"
-        onClick={() => onSelect({ id: 'dataset-123', document_name: 'Test Dataset', url: '' })}
+        onClick={() =>
+          onSelect({
+            id: 'dataset-123',
+            document_name: 'Test Dataset',
+            url: '',
+          })
+        }
       >
         Select Dataset
       </button>
@@ -208,7 +250,9 @@ vi.mock('@/components/modals/edit-mentor-modal/tabs/mcp-tab', () => ({
     <div data-testid="mcp-tab">
       <button
         data-testid="select-mcp-server"
-        onClick={() => onSelect({ id: 1, name: 'Test MCP Server', image: '/test.png' })}
+        onClick={() =>
+          onSelect({ id: 1, name: 'Test MCP Server', image: '/test.png' })
+        }
       >
         Select MCP Server
       </button>
@@ -217,8 +261,11 @@ vi.mock('@/components/modals/edit-mentor-modal/tabs/mcp-tab', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  default: ({ children }: { children: (props: { disabled: boolean }) => React.ReactNode }) =>
-    children({ disabled: false }),
+  default: ({
+    children,
+  }: {
+    children: (props: { disabled: boolean }) => React.ReactNode;
+  }) => children({ disabled: false }),
 }));
 
 describe('NodeConfigPanel', () => {
@@ -240,14 +287,28 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render start node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={startNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={startNodeData}
+        />,
+      );
 
       expect(screen.getByText('Start')).toBeInTheDocument();
-      expect(screen.getByText('Define the workflow inputs')).toBeInTheDocument();
+      expect(
+        screen.getByText('Define the workflow inputs'),
+      ).toBeInTheDocument();
     });
 
     it('should display input variables section', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={startNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={startNodeData}
+        />,
+      );
 
       expect(screen.getByText('Input variables')).toBeInTheDocument();
       expect(screen.getByText('input_as_text')).toBeInTheDocument();
@@ -255,14 +316,26 @@ describe('NodeConfigPanel', () => {
     });
 
     it('should display state variables section', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={startNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={startNodeData}
+        />,
+      );
 
       expect(screen.getByText('State variables')).toBeInTheDocument();
     });
 
     it('should open add variable modal when Add button is clicked', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={startNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={startNodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -284,7 +357,9 @@ describe('NodeConfigPanel', () => {
       // Find the close button - it's the button with an X icon (lucide-x class)
       const closeButtons = screen.getAllByRole('button');
       // The close button contains an SVG with lucide-x class
-      const closeButton = closeButtons.find((btn) => btn.querySelector('svg.lucide-x'));
+      const closeButton = closeButtons.find((btn) =>
+        btn.querySelector('svg.lucide-x'),
+      );
       expect(closeButton).toBeTruthy();
       await user.click(closeButton!);
       expect(onClose).toHaveBeenCalled();
@@ -293,10 +368,18 @@ describe('NodeConfigPanel', () => {
     it('should display existing state variables', () => {
       const nodeDataWithVars: NodeConfig = {
         label: 'Start',
-        stateVariables: [{ id: '1', name: 'myVar', type: 'string', defaultValue: 'test' }],
+        stateVariables: [
+          { id: '1', name: 'myVar', type: 'string', defaultValue: 'test' },
+        ],
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={nodeDataWithVars} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={nodeDataWithVars}
+        />,
+      );
 
       expect(screen.getByText('myVar')).toBeInTheDocument();
     });
@@ -311,7 +394,13 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render mentor node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={mentorNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={mentorNodeData}
+        />,
+      );
 
       expect(screen.getByText('My Mentor')).toBeInTheDocument();
       expect(
@@ -320,21 +409,41 @@ describe('NodeConfigPanel', () => {
     });
 
     it('should display name input', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={mentorNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={mentorNodeData}
+        />,
+      );
 
       expect(screen.getByText('Name')).toBeInTheDocument();
       expect(screen.getByDisplayValue('My Mentor')).toBeInTheDocument();
     });
 
     it('should display instructions textarea', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={mentorNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={mentorNodeData}
+        />,
+      );
 
       expect(screen.getByText('Instructions')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('You are a helpful assistant.')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('You are a helpful assistant.'),
+      ).toBeInTheDocument();
     });
 
     it('should display model input', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={mentorNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={mentorNodeData}
+        />,
+      );
 
       expect(screen.getByText('Model')).toBeInTheDocument();
     });
@@ -360,7 +469,13 @@ describe('NodeConfigPanel', () => {
 
     it('should open mentor selection modal when Change button is clicked', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={mentorNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={mentorNodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Change'));
 
@@ -373,7 +488,13 @@ describe('NodeConfigPanel', () => {
         label: 'Mentor',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeDataNoMentor} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeDataNoMentor}
+        />,
+      );
 
       expect(screen.getByText('Select')).toBeInTheDocument();
     });
@@ -386,21 +507,33 @@ describe('NodeConfigPanel', () => {
 
     it('should render guardrails node configuration panel', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="guardrails" nodeData={guardrailsNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="guardrails"
+          nodeData={guardrailsNodeData}
+        />,
       );
 
       expect(screen.getByText('Guardrails')).toBeInTheDocument();
       expect(
-        screen.getByText('Run moderation, PII, jailbreak, or hallucination checks'),
+        screen.getByText(
+          'Run moderation, PII, jailbreak, or hallucination checks',
+        ),
       ).toBeInTheDocument();
     });
 
     it('should display guardrail options', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="guardrails" nodeData={guardrailsNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="guardrails"
+          nodeData={guardrailsNodeData}
+        />,
       );
 
-      expect(screen.getByText('Personally identifiable information')).toBeInTheDocument();
+      expect(
+        screen.getByText('Personally identifiable information'),
+      ).toBeInTheDocument();
       expect(screen.getByText('Moderation')).toBeInTheDocument();
       expect(screen.getByText('Jailbreak')).toBeInTheDocument();
       expect(screen.getByText('Hallucination')).toBeInTheDocument();
@@ -408,7 +541,11 @@ describe('NodeConfigPanel', () => {
 
     it('should display continue on error option', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="guardrails" nodeData={guardrailsNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="guardrails"
+          nodeData={guardrailsNodeData}
+        />,
       );
 
       expect(screen.getByText('Continue on error')).toBeInTheDocument();
@@ -422,16 +559,26 @@ describe('NodeConfigPanel', () => {
 
     it('should render file-search node configuration panel', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={fileSearchNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={fileSearchNodeData}
+        />,
       );
 
       expect(screen.getByText('File search')).toBeInTheDocument();
-      expect(screen.getByText('Search datasets for relevant information')).toBeInTheDocument();
+      expect(
+        screen.getByText('Search datasets for relevant information'),
+      ).toBeInTheDocument();
     });
 
     it('should display dataset selection', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={fileSearchNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={fileSearchNodeData}
+        />,
       );
 
       expect(screen.getByText('Dataset')).toBeInTheDocument();
@@ -440,7 +587,11 @@ describe('NodeConfigPanel', () => {
 
     it('should display max results input', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={fileSearchNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={fileSearchNodeData}
+        />,
       );
 
       expect(screen.getByText('Max results')).toBeInTheDocument();
@@ -449,7 +600,11 @@ describe('NodeConfigPanel', () => {
 
     it('should display query textarea', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={fileSearchNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={fileSearchNodeData}
+        />,
       );
 
       expect(screen.getByText('Query')).toBeInTheDocument();
@@ -463,7 +618,11 @@ describe('NodeConfigPanel', () => {
       };
 
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={nodeDataWithDataset} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={nodeDataWithDataset}
+        />,
       );
 
       expect(screen.getByText('Change')).toBeInTheDocument();
@@ -473,7 +632,11 @@ describe('NodeConfigPanel', () => {
     it('should open dataset dialog when Select is clicked', async () => {
       const user = userEvent.setup();
       render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={fileSearchNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={fileSearchNodeData}
+        />,
       );
 
       await user.click(screen.getByText('Select'));
@@ -489,14 +652,28 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render mcp node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={mcpNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mcp"
+          nodeData={mcpNodeData}
+        />,
+      );
 
       expect(screen.getByText('MCP')).toBeInTheDocument();
-      expect(screen.getByText('Invoke a Model Context Protocol tool')).toBeInTheDocument();
+      expect(
+        screen.getByText('Invoke a Model Context Protocol tool'),
+      ).toBeInTheDocument();
     });
 
     it('should display empty state when no connectors', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={mcpNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mcp"
+          nodeData={mcpNodeData}
+        />,
+      );
 
       expect(screen.getByText('Add')).toBeInTheDocument();
     });
@@ -510,7 +687,13 @@ describe('NodeConfigPanel', () => {
         ],
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeDataWithConnectors} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mcp"
+          nodeData={nodeDataWithConnectors}
+        />,
+      );
 
       expect(screen.getByText('Connected Tools')).toBeInTheDocument();
       expect(screen.getByText('Gmail')).toBeInTheDocument();
@@ -519,7 +702,13 @@ describe('NodeConfigPanel', () => {
 
     it('should open mcp dialog when Add is clicked', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={mcpNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mcp"
+          nodeData={mcpNodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -534,14 +723,28 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render while node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="while" nodeData={whileNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="while"
+          nodeData={whileNodeData}
+        />,
+      );
 
       expect(screen.getByText('While')).toBeInTheDocument();
-      expect(screen.getByText('Loop while a condition is true')).toBeInTheDocument();
+      expect(
+        screen.getByText('Loop while a condition is true'),
+      ).toBeInTheDocument();
     });
 
     it('should display expression textarea', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="while" nodeData={whileNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="while"
+          nodeData={whileNodeData}
+        />,
+      );
 
       expect(screen.getByText('Expression')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('input.foo == 5')).toBeInTheDocument();
@@ -573,16 +776,26 @@ describe('NodeConfigPanel', () => {
 
     it('should render user-approval node configuration panel', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="user-approval" nodeData={userApprovalNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="user-approval"
+          nodeData={userApprovalNodeData}
+        />,
       );
 
       expect(screen.getByText('User approval')).toBeInTheDocument();
-      expect(screen.getByText('Pause for a human to approve or reject a step')).toBeInTheDocument();
+      expect(
+        screen.getByText('Pause for a human to approve or reject a step'),
+      ).toBeInTheDocument();
     });
 
     it('should display name input', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="user-approval" nodeData={userApprovalNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="user-approval"
+          nodeData={userApprovalNodeData}
+        />,
       );
 
       expect(screen.getByText('Name')).toBeInTheDocument();
@@ -590,7 +803,11 @@ describe('NodeConfigPanel', () => {
 
     it('should display message textarea', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="user-approval" nodeData={userApprovalNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="user-approval"
+          nodeData={userApprovalNodeData}
+        />,
       );
 
       expect(screen.getByText('Message')).toBeInTheDocument();
@@ -603,21 +820,39 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render transform node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="transform" nodeData={transformNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="transform"
+          nodeData={transformNodeData}
+        />,
+      );
 
       expect(screen.getByText('Transform')).toBeInTheDocument();
       expect(screen.getByText('Reshape data')).toBeInTheDocument();
     });
 
     it('should display mode toggle buttons', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="transform" nodeData={transformNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="transform"
+          nodeData={transformNodeData}
+        />,
+      );
 
       expect(screen.getByText('Expressions')).toBeInTheDocument();
       expect(screen.getByText('Object')).toBeInTheDocument();
     });
 
     it('should display key and value inputs in expressions mode', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="transform" nodeData={transformNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="transform"
+          nodeData={transformNodeData}
+        />,
+      );
 
       expect(screen.getByText('Key')).toBeInTheDocument();
       expect(screen.getByText('Value')).toBeInTheDocument();
@@ -625,7 +860,13 @@ describe('NodeConfigPanel', () => {
 
     it('should switch to object mode when clicked', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="transform" nodeData={transformNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="transform"
+          nodeData={transformNodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Object'));
 
@@ -656,14 +897,28 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render set-state node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="set-state" nodeData={setStateNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="set-state"
+          nodeData={setStateNodeData}
+        />,
+      );
 
       expect(screen.getByText('Set state')).toBeInTheDocument();
-      expect(screen.getByText("Assign values to workflow's state variables")).toBeInTheDocument();
+      expect(
+        screen.getByText("Assign values to workflow's state variables"),
+      ).toBeInTheDocument();
     });
 
     it('should display assign value and to variable inputs', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="set-state" nodeData={setStateNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="set-state"
+          nodeData={setStateNodeData}
+        />,
+      );
 
       expect(screen.getByText('Assign value')).toBeInTheDocument();
       expect(screen.getByText('To variable')).toBeInTheDocument();
@@ -693,18 +948,36 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render if-else node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={ifElseNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="if-else"
+          nodeData={ifElseNodeData}
+        />,
+      );
 
       expect(screen.getByText('If / else')).toBeInTheDocument();
-      expect(screen.getByText('Create conditions to branch your workflow')).toBeInTheDocument();
+      expect(
+        screen.getByText('Create conditions to branch your workflow'),
+      ).toBeInTheDocument();
     });
 
     it('should display If condition by default', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={ifElseNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="if-else"
+          nodeData={ifElseNodeData}
+        />,
+      );
 
       expect(screen.getByText('If')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Case name (optional)')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter condition, e.g. input == 5')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Case name (optional)'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter condition, e.g. input == 5'),
+      ).toBeInTheDocument();
     });
 
     it('should add new condition when Add is clicked', async () => {
@@ -725,7 +998,13 @@ describe('NodeConfigPanel', () => {
     });
 
     it('should render conditional node same as if-else', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="conditional" nodeData={ifElseNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="conditional"
+          nodeData={ifElseNodeData}
+        />,
+      );
 
       expect(screen.getByText('If / else')).toBeInTheDocument();
     });
@@ -740,7 +1019,11 @@ describe('NodeConfigPanel', () => {
       };
 
       render(
-        <NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={nodeDataWithConditions} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="if-else"
+          nodeData={nodeDataWithConditions}
+        />,
       );
 
       expect(screen.getByText('If')).toBeInTheDocument();
@@ -754,14 +1037,28 @@ describe('NodeConfigPanel', () => {
     };
 
     it('should render end node configuration panel', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="end" nodeData={endNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="end"
+          nodeData={endNodeData}
+        />,
+      );
 
       expect(screen.getByText('End')).toBeInTheDocument();
-      expect(screen.getByText('Define the workflow output')).toBeInTheDocument();
+      expect(
+        screen.getByText('Define the workflow output'),
+      ).toBeInTheDocument();
     });
 
     it('should display output textarea', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="end" nodeData={endNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="end"
+          nodeData={endNodeData}
+        />,
+      );
 
       expect(screen.getByText('Output')).toBeInTheDocument();
       expect(
@@ -779,7 +1076,11 @@ describe('NodeConfigPanel', () => {
       };
 
       const { container } = render(
-        <NodeConfigPanel {...baseProps} nodeType="unknown-type" nodeData={unknownNodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="unknown-type"
+          nodeData={unknownNodeData}
+        />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -792,7 +1093,13 @@ describe('NodeConfigPanel', () => {
         label: 'Start',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={startNodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={startNodeData}
+        />,
+      );
 
       const panel = document.querySelector('.absolute');
       if (panel) {
@@ -833,7 +1140,8 @@ describe('NodeConfigPanel', () => {
           .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
@@ -854,7 +1162,11 @@ describe('NodeConfigPanel', () => {
         };
 
         render(
-          <NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={nodeDataWithOneCondition} />,
+          <NodeConfigPanel
+            {...baseProps}
+            nodeType="if-else"
+            nodeData={nodeDataWithOneCondition}
+          />,
         );
 
         // Trash button should not be visible when only one condition
@@ -862,7 +1174,8 @@ describe('NodeConfigPanel', () => {
           .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
@@ -886,7 +1199,9 @@ describe('NodeConfigPanel', () => {
           />,
         );
 
-        const caseNameInput = screen.getByPlaceholderText('Case name (optional)');
+        const caseNameInput = screen.getByPlaceholderText(
+          'Case name (optional)',
+        );
         await user.type(caseNameInput, 'New Case');
 
         expect(onUpdateNode).toHaveBeenCalledWith(
@@ -916,7 +1231,9 @@ describe('NodeConfigPanel', () => {
           />,
         );
 
-        const expressionInput = screen.getByPlaceholderText('Enter condition, e.g. input == 5');
+        const expressionInput = screen.getByPlaceholderText(
+          'Enter condition, e.g. input == 5',
+        );
         await user.type(expressionInput, 'x > 10');
 
         expect(onUpdateNode).toHaveBeenCalled();
@@ -948,7 +1265,8 @@ describe('NodeConfigPanel', () => {
           .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
@@ -983,7 +1301,8 @@ describe('NodeConfigPanel', () => {
           .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
@@ -995,7 +1314,9 @@ describe('NodeConfigPanel', () => {
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
           label: 'Transform',
-          transformExpressions: [{ id: '1', key: 'result', value: 'input.foo + 1' }],
+          transformExpressions: [
+            { id: '1', key: 'result', value: 'input.foo + 1' },
+          ],
         };
 
         render(
@@ -1019,7 +1340,9 @@ describe('NodeConfigPanel', () => {
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
           label: 'Transform',
-          transformExpressions: [{ id: '1', key: 'result', value: 'input.foo + 1' }],
+          transformExpressions: [
+            { id: '1', key: 'result', value: 'input.foo + 1' },
+          ],
         };
 
         render(
@@ -1064,7 +1387,8 @@ describe('NodeConfigPanel', () => {
           .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
@@ -1083,13 +1407,20 @@ describe('NodeConfigPanel', () => {
           setStateAssignments: [{ id: '1', value: 'value1', variable: 'var1' }],
         };
 
-        render(<NodeConfigPanel {...baseProps} nodeType="set-state" nodeData={nodeData} />);
+        render(
+          <NodeConfigPanel
+            {...baseProps}
+            nodeType="set-state"
+            nodeData={nodeData}
+          />,
+        );
 
         const trashButtons = screen
           .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector('svg.lucide-trash2') || btn.querySelector('svg.lucide-trash-2'),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
@@ -1101,7 +1432,9 @@ describe('NodeConfigPanel', () => {
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
           label: 'Set state',
-          setStateAssignments: [{ id: '1', value: 'input.foo + 1', variable: '' }],
+          setStateAssignments: [
+            { id: '1', value: 'input.foo + 1', variable: '' },
+          ],
         };
 
         render(
@@ -1169,7 +1502,11 @@ describe('NodeConfigPanel', () => {
         // Find X buttons in connector list (not the panel close button)
         const removeButtons = screen
           .getAllByRole('button')
-          .filter((btn) => btn.querySelector('svg.lucide-x') && btn.classList.contains('h-4'));
+          .filter(
+            (btn) =>
+              btn.querySelector('svg.lucide-x') &&
+              btn.classList.contains('h-4'),
+          );
         expect(removeButtons.length).toBeGreaterThan(0);
         await user.click(removeButtons[0]);
 
@@ -1203,7 +1540,13 @@ describe('NodeConfigPanel', () => {
         stateVariables: [{ id: '1', name: 'newVar', type: 'string' }],
       };
 
-      rerender(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={newNodeData} />);
+      rerender(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={newNodeData}
+        />,
+      );
 
       // Check that the new variable is displayed
       expect(screen.getByText('newVar')).toBeInTheDocument();
@@ -1216,7 +1559,11 @@ describe('NodeConfigPanel', () => {
       };
 
       const { rerender } = render(
-        <NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={nodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="if-else"
+          nodeData={nodeData}
+        />,
       );
 
       const newNodeData: NodeConfig = {
@@ -1227,7 +1574,13 @@ describe('NodeConfigPanel', () => {
         ],
       };
 
-      rerender(<NodeConfigPanel {...baseProps} nodeType="if-else" nodeData={newNodeData} />);
+      rerender(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="if-else"
+          nodeData={newNodeData}
+        />,
+      );
 
       expect(screen.getByText('Else if 1')).toBeInTheDocument();
     });
@@ -1240,7 +1593,11 @@ describe('NodeConfigPanel', () => {
       };
 
       const { rerender } = render(
-        <NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={nodeData} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={nodeData}
+        />,
       );
 
       const newNodeData: NodeConfig = {
@@ -1251,7 +1608,13 @@ describe('NodeConfigPanel', () => {
         fileSearchQuery: 'search query',
       };
 
-      rerender(<NodeConfigPanel {...baseProps} nodeType="file-search" nodeData={newNodeData} />);
+      rerender(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="file-search"
+          nodeData={newNodeData}
+        />,
+      );
 
       expect(screen.getByText('New Dataset')).toBeInTheDocument();
       expect(screen.getByDisplayValue('20')).toBeInTheDocument();
@@ -1278,8 +1641,18 @@ describe('NodeConfigPanel', () => {
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [
-          { slug: 'tool-1', name: 'Tool 1', display_name: 'Tool One', description: 'First tool' },
-          { slug: 'tool-2', name: 'Tool 2', display_name: 'Tool Two', description: 'Second tool' },
+          {
+            slug: 'tool-1',
+            name: 'Tool 1',
+            display_name: 'Tool One',
+            description: 'First tool',
+          },
+          {
+            slug: 'tool-2',
+            name: 'Tool 2',
+            display_name: 'Tool Two',
+            description: 'Second tool',
+          },
         ],
         isLoading: false,
         refetch: vi.fn(),
@@ -1292,7 +1665,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('Tool One')).toBeInTheDocument();
       expect(screen.getByText('Tool Two')).toBeInTheDocument();
@@ -1304,7 +1683,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('First tool')).toBeInTheDocument();
       expect(screen.getByText('Second tool')).toBeInTheDocument();
@@ -1317,7 +1702,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       const switches = screen.getAllByTestId('switch');
       await user.click(switches[0]);
@@ -1337,7 +1728,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('Loading tools...')).toBeInTheDocument();
     });
@@ -1354,7 +1751,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('No tools available.')).toBeInTheDocument();
     });
@@ -1366,7 +1769,13 @@ describe('NodeConfigPanel', () => {
         model: 'gpt-4',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Model input should show provider and model
       const modelInput = screen.getByDisplayValue(/OpenAI/);
@@ -1385,9 +1794,17 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
-      expect(screen.getByPlaceholderText('Loading model...')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Loading model...'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -1711,10 +2128,14 @@ describe('NodeConfigPanel', () => {
     it('should display connector with icon', () => {
       const nodeData: NodeConfig = {
         label: 'MCP',
-        mcpConnectors: [{ id: '1', name: 'Gmail', icon: 'https://example.com/gmail.png' }],
+        mcpConnectors: [
+          { id: '1', name: 'Gmail', icon: 'https://example.com/gmail.png' },
+        ],
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />,
+      );
 
       const img = screen.getByAltText('Gmail');
       expect(img).toBeInTheDocument();
@@ -1727,7 +2148,9 @@ describe('NodeConfigPanel', () => {
         mcpConnectors: [{ id: '1', name: 'No Icon Tool' }],
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />,
+      );
 
       expect(screen.getByText('No Icon Tool')).toBeInTheDocument();
     });
@@ -1770,7 +2193,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Change'));
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
@@ -1786,7 +2215,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       await user.click(screen.getByText('Change'));
 
@@ -1990,7 +2425,13 @@ describe('NodeConfigPanel', () => {
 
     it('should disable save button when name is empty', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -2139,7 +2580,9 @@ describe('NodeConfigPanel', () => {
         />,
       );
 
-      const instructionsTextarea = screen.getByDisplayValue('Initial instructions');
+      const instructionsTextarea = screen.getByDisplayValue(
+        'Initial instructions',
+      );
       await user.clear(instructionsTextarea);
       await user.type(instructionsTextarea, 'New instructions');
 
@@ -2159,7 +2602,9 @@ describe('NodeConfigPanel', () => {
         whileExpression: 'counter < 10',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="while" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel {...baseProps} nodeType="while" nodeData={nodeData} />,
+      );
 
       expect(screen.getByDisplayValue('counter < 10')).toBeInTheDocument();
     });
@@ -2258,7 +2703,13 @@ describe('NodeConfigPanel', () => {
         entry_mentor_id: 'entry-mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Should show Change button since entry_mentor_id is set
       expect(screen.getByText('Change')).toBeInTheDocument();
@@ -2313,7 +2764,13 @@ describe('NodeConfigPanel', () => {
 
   describe('event propagation on all node types', () => {
     it('should stop propagation on end node panel click', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="end" nodeData={{ label: 'End' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="end"
+          nodeData={{ label: 'End' }}
+        />,
+      );
 
       const panel = document.querySelector('.absolute');
       if (panel) {
@@ -2326,7 +2783,11 @@ describe('NodeConfigPanel', () => {
 
     it('should stop propagation on transform node panel mousedown', () => {
       render(
-        <NodeConfigPanel {...baseProps} nodeType="transform" nodeData={{ label: 'Transform' }} />,
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="transform"
+          nodeData={{ label: 'Transform' }}
+        />,
       );
 
       const panel = document.querySelector('.absolute');
@@ -2352,7 +2813,11 @@ describe('NodeConfigPanel', () => {
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [
-          { slug: 'tool-no-desc', name: 'Tool No Desc', display_name: 'Tool Without Description' },
+          {
+            slug: 'tool-no-desc',
+            name: 'Tool No Desc',
+            display_name: 'Tool Without Description',
+          },
         ],
         isLoading: false,
         refetch: vi.fn(),
@@ -2363,7 +2828,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('Tool Without Description')).toBeInTheDocument();
       // Tooltip content should not be rendered for tools without description
@@ -2393,7 +2864,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Should render the tool even without slug
       expect(screen.getByText('No Slug Tool')).toBeInTheDocument();
@@ -2424,7 +2901,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       expect(screen.getByText('Loading tools...')).toBeInTheDocument();
     });
@@ -2442,10 +2925,20 @@ describe('NodeConfigPanel', () => {
         label: 'Mentor',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
-      expect(screen.getByText('Select a mentor to configure tools.')).toBeInTheDocument();
-      expect(screen.getByText('Select a mentor to load configuration.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a mentor to configure tools.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a mentor to load configuration.'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -2507,7 +3000,13 @@ describe('NodeConfigPanel', () => {
         model: 'gpt-4',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       const modelInput = screen.getByDisplayValue('gpt-4');
       expect(modelInput).toBeInTheDocument();
@@ -2527,9 +3026,17 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
-      expect(screen.getByPlaceholderText('No model configured')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('No model configured'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -2596,7 +3103,11 @@ describe('NodeConfigPanel', () => {
         expect.objectContaining({
           conditions: expect.arrayContaining([
             expect.objectContaining({ id: '1' }),
-            expect.objectContaining({ id: expect.any(String), caseName: '', expression: '' }),
+            expect.objectContaining({
+              id: expect.any(String),
+              caseName: '',
+              expression: '',
+            }),
           ]),
           conditionCount: 2,
         }),
@@ -2657,7 +3168,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Should render without crashing
       expect(screen.getByText('Mentor')).toBeInTheDocument();
@@ -2670,7 +3187,13 @@ describe('NodeConfigPanel', () => {
   describe('variable type change handlers in modal', () => {
     it('should update default value when switching to Object type', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -2678,7 +3201,9 @@ describe('NodeConfigPanel', () => {
       await user.click(screen.getByText('Object'));
 
       // The textarea for object should be visible with placeholder
-      expect(screen.getByPlaceholderText('{ "key": "value" }')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('{ "key": "value" }'),
+      ).toBeInTheDocument();
     });
 
     it('should update default value input for List type', async () => {
@@ -2766,7 +3291,13 @@ describe('NodeConfigPanel', () => {
   describe('MCP dialog close via onOpenChange', () => {
     it('should close MCP dialog when onOpenChange is called with false', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={{ label: 'MCP' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mcp"
+          nodeData={{ label: 'MCP' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
@@ -2847,7 +3378,9 @@ describe('NodeConfigPanel', () => {
         );
 
         const closeButtons = screen.getAllByRole('button');
-        const closeButton = closeButtons.find((btn) => btn.querySelector('svg.lucide-x'));
+        const closeButton = closeButtons.find((btn) =>
+          btn.querySelector('svg.lucide-x'),
+        );
 
         if (closeButton) {
           await user.click(closeButton);
@@ -2953,7 +3486,13 @@ describe('NodeConfigPanel', () => {
   describe('Object and List textarea onChange', () => {
     it('should call onChange when typing in Object textarea', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
       await user.click(screen.getByText('Object'));
@@ -2969,7 +3508,13 @@ describe('NodeConfigPanel', () => {
 
     it('should call onChange when typing in List textarea', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
       await user.click(screen.getByText('List'));
@@ -2986,7 +3531,13 @@ describe('NodeConfigPanel', () => {
 
   describe('End node mousedown event', () => {
     it('should stop mousedown propagation on end node', () => {
-      render(<NodeConfigPanel {...baseProps} nodeType="end" nodeData={{ label: 'End' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="end"
+          nodeData={{ label: 'End' }}
+        />,
+      );
 
       const panel = document.querySelector('.absolute');
       if (panel) {
@@ -3003,7 +3554,12 @@ describe('NodeConfigPanel', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
           mentor_name: 'Test Mentor',
-          mentor_tools: [{ slug: 'valid-tool' }, { slug: undefined }, { slug: '' }, { slug: null }],
+          mentor_tools: [
+            { slug: 'valid-tool' },
+            { slug: undefined },
+            { slug: '' },
+            { slug: null },
+          ],
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3020,7 +3576,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Only valid-tool should be shown as enabled
       expect(screen.getByText('Valid Tool')).toBeInTheDocument();
@@ -3054,7 +3616,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Switch should be disabled
       const switches = screen.getAllByTestId('switch');
@@ -3071,7 +3639,13 @@ describe('NodeConfigPanel', () => {
   describe('dialog content event propagation', () => {
     it('should stop click propagation in dialog content', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -3085,7 +3659,13 @@ describe('NodeConfigPanel', () => {
 
     it('should stop mousedown propagation in dialog content', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -3114,7 +3694,13 @@ describe('NodeConfigPanel', () => {
         mentor_id: 'mentor-123',
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
       // Should not crash
       expect(screen.getByText('My Mentor')).toBeInTheDocument();
@@ -3134,9 +3720,17 @@ describe('NodeConfigPanel', () => {
         // No mentor_id
       };
 
-      render(<NodeConfigPanel {...baseProps} nodeType="mentor" nodeData={nodeData} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="mentor"
+          nodeData={nodeData}
+        />,
+      );
 
-      expect(screen.getByPlaceholderText('Select a mentor to load model')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Select a mentor to load model'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -3190,7 +3784,13 @@ describe('NodeConfigPanel', () => {
   describe('variable type change back to String', () => {
     it('should reset default value when switching from Number back to String', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -3201,12 +3801,20 @@ describe('NodeConfigPanel', () => {
       await user.click(screen.getByText('String'));
 
       // Should show string input
-      expect(screen.getByPlaceholderText('Enter default value')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter default value'),
+      ).toBeInTheDocument();
     });
 
     it('should reset default value when switching from Boolean to Number', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -3222,7 +3830,13 @@ describe('NodeConfigPanel', () => {
 
     it('should reset default value when switching from Object to List', async () => {
       const user = userEvent.setup();
-      render(<NodeConfigPanel {...baseProps} nodeType="start" nodeData={{ label: 'Start' }} />);
+      render(
+        <NodeConfigPanel
+          {...baseProps}
+          nodeType="start"
+          nodeData={{ label: 'Start' }}
+        />,
+      );
 
       await user.click(screen.getByText('Add'));
 
@@ -3233,7 +3847,9 @@ describe('NodeConfigPanel', () => {
       await user.click(screen.getByText('List'));
 
       // Should show list textarea
-      expect(screen.getByPlaceholderText('["item1", "item2"]')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('["item1", "item2"]'),
+      ).toBeInTheDocument();
     });
   });
 });

@@ -7,7 +7,11 @@ type Props = {
   selectedDatasetId?: string;
 };
 
-export function DatasetItemList({ datasets, onSelect, selectedDatasetId }: Props) {
+export function DatasetItemList({
+  datasets,
+  onSelect,
+  selectedDatasetId,
+}: Props) {
   return (
     <TableBody>
       {datasets?.length > 0 ? (

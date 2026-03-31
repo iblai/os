@@ -127,7 +127,15 @@ export default function useWelcome({
     return () => {
       _endConnection();
     };
-  }, [sessionId, tenantKey, username, mentorUniqueId, greetingMethod, proactiveResponse, isNewSession]);
+  }, [
+    sessionId,
+    tenantKey,
+    username,
+    mentorUniqueId,
+    greetingMethod,
+    proactiveResponse,
+    isNewSession,
+  ]);
 
   return { welcomeMessage, handleSendProactivePrompt };
 }

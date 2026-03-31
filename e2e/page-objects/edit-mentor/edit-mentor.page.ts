@@ -1,14 +1,15 @@
-import { Page, Locator, expect } from "@playwright/test";
-import { SettingsTab } from "./settings.tab";
-import { LlmTab } from "./llm.tab";
-import { ToolsTab } from "./tools.tab";
-import { PromptsTab } from "./prompts.tab";
-import { DisclaimersTab } from "./disclaimers.tab";
-import { DatasetsTab } from "./datasets.tab";
-import { HistoryTab } from "./history.tab";
-import { MemoryTab } from "./memory.tab";
-import { McpTab } from "./mcp.tab";
-import { EmbedTab } from "./embed.tab";
+import { Page, Locator, expect } from '@playwright/test';
+import { SettingsTab } from './settings.tab';
+import { LlmTab } from './llm.tab';
+import { ToolsTab } from './tools.tab';
+import { PromptsTab } from './prompts.tab';
+import { DisclaimersTab } from './disclaimers.tab';
+import { DatasetsTab } from './datasets.tab';
+import { HistoryTab } from './history.tab';
+import { MemoryTab } from './memory.tab';
+import { McpTab } from './mcp.tab';
+import { EmbedTab } from './embed.tab';
+import { CopyMentorPage } from './copy-mentor.page';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -26,12 +27,13 @@ export class EditMentorPage {
   readonly memory: MemoryTab;
   readonly mcp: McpTab;
   readonly embed: EmbedTab;
+  readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole("dialog").filter({ hasText: "Edit Mentor" });
-    this.closeButton = this.dialog.getByRole("button", {
-      name: "Close",
+    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Mentor' });
+    this.closeButton = this.dialog.getByRole('button', {
+      name: 'Close',
       exact: true,
     });
 
@@ -45,6 +47,7 @@ export class EditMentorPage {
     this.memory = new MemoryTab(page, this.dialog);
     this.mcp = new McpTab(page, this.dialog);
     this.embed = new EmbedTab(page, this.dialog);
+    this.copyMentorDialog = new CopyMentorPage(page);
   }
 
   /**
@@ -52,16 +55,16 @@ export class EditMentorPage {
    * Pass the tab name to navigate directly to a specific tab.
    */
   async open(tabName?: string): Promise<void> {
-    const dropdown = this.page.getByRole("button", {
-      name: "Selected mentor dropdown button",
+    const dropdown = this.page.getByRole('button', {
+      name: 'Selected mentor dropdown button',
     });
     await expect(dropdown).toBeVisible({ timeout: 15_000 });
     await dropdown.click();
 
     // Find the menu item — the dropdown now shows "Modify" to open the edit dialog
     const menuTarget = this.page
-      .getByRole("menuitem", { name: /modify/i })
-      .or(this.page.getByRole("menuitem", { name: /settings/i }).first());
+      .getByRole('menuitem', { name: /modify/i })
+      .or(this.page.getByRole('menuitem', { name: /settings/i }).first());
 
     await expect(menuTarget).toBeVisible({ timeout: 10_000 });
     await menuTarget.click();
@@ -74,9 +77,9 @@ export class EditMentorPage {
   }
 
   async navigateToTab(tabName: string): Promise<void> {
-    const tab = this.dialog.getByRole("tab", { name: tabName });
+    const tab = this.dialog.getByRole('tab', { name: tabName });
     const isActive =
-      (await tab.getAttribute("data-state").catch(() => null)) === "active";
+      (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {
       await tab.click();
       await this.page.waitForTimeout(500);

@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-26",
+  "lastUpdated": "2026-03-31",
   "summary": {
-    "totalCheckpoints": 251,
-    "coveredCheckpoints": 251,
+    "totalCheckpoints": 270,
+    "coveredCheckpoints": 270,
     "percent": 100,
-    "totalJourneys": 34
+    "totalJourneys": 36
   },
   "journeys": [
     {
@@ -538,6 +538,41 @@
         { "id": "wf-13", "description": "Preview mode can be entered and exited", "status": "covered" },
         { "id": "wf-14", "description": "Canvas and chat panel are visible in preview mode", "status": "covered" },
         { "id": "wf-15", "description": "Workflow can be published; active workflow can be deactivated back to Draft", "status": "covered" }
+      ]
+    },
+    {
+      "id": "tenant-explore-page",
+      "name": "Tenant Explore Page",
+      "spec": "35-tenant-explore-page.spec.ts",
+      "sourceFiles": ["app/platform/[tenantKey]/explore/page.tsx", "app/platform/[tenantKey]/notifications/layout.tsx", "hooks/user-navigate.ts"],
+      "checkpoints": [
+        { "id": "tep-01", "description": "Tenant explore page renders with sidebar and navbar visible", "status": "covered" },
+        { "id": "tep-02", "description": "Mentor cards render on tenant explore page", "status": "covered" },
+        { "id": "tep-03", "description": "Mentors button stays on explore page", "status": "covered" },
+        { "id": "tep-04", "description": "Clicking a mentor card navigates to that mentor from tenant explore page", "status": "covered" },
+        { "id": "tep-05", "description": "New Chat button shows No Mentor Selected modal on tenant explore page (admin)", "status": "covered" },
+        { "id": "tep-06", "description": "Workflows button shows No Mentor Selected modal on tenant explore page (admin)", "status": "covered" },
+        { "id": "tep-07", "description": "Explore Mentors button in No Mentor Selected modal navigates to explore", "status": "covered" },
+        { "id": "tep-08", "description": "Notifications button navigates to notifications page with sidebar and navbar", "status": "covered" },
+        { "id": "tep-09", "description": "No 404 API calls for mentor public settings when mentorId is undefined", "status": "covered" }
+      ]
+    },
+    {
+      "id": "copy-mentor",
+      "name": "Copy Mentor",
+      "spec": "36-copy-mentor.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/settings-tab.tsx", "components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx"],
+      "checkpoints": [
+        { "id": "cpm-01", "description": "Allow Copies toggle shows Copy button when enabled and hides it when disabled", "status": "covered" },
+        { "id": "cpm-02", "description": "Copy Mentor modal opens with correct defaults", "status": "covered" },
+        { "id": "cpm-03", "description": "Copy Mentor modal closes via Escape key", "status": "covered" },
+        { "id": "cpm-04", "description": "Mentor can be copied with default name and user navigates to new mentor", "status": "covered" },
+        { "id": "cpm-05", "description": "Mentor can be copied with a custom name", "status": "covered" },
+        { "id": "cpm-06", "description": "Copy button is disabled when mentor name is empty", "status": "covered" },
+        { "id": "cpm-07", "description": "Mentor can be copied without including training data", "status": "covered" },
+        { "id": "cpm-08", "description": "Mentor copied with training data has datasets on the copy", "status": "covered" },
+        { "id": "cpm-09", "description": "Mentor copied without training data has no datasets on the copy", "status": "covered" },
+        { "id": "cpm-10", "description": "Mentor can be copied to a different tenant", "status": "covered" }
       ]
     }
   ]

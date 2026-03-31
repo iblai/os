@@ -3,7 +3,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
-import { useGetGuidedPromptsQuery, useGetPromptsSearchQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetGuidedPromptsQuery,
+  useGetPromptsSearchQuery,
+} from '@iblai/iblai-js/data-layer';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
@@ -37,7 +40,8 @@ export function WelcomeChat({
   const realUsername = username ?? 'anonymous';
   const axdToken = useAxdToken();
   const mentorSettings = useMentorSettings();
-  const isSuggestedPrompts = mentorSettings?.data?.starterPrompts === 'suggested_prompt';
+  const isSuggestedPrompts =
+    mentorSettings?.data?.starterPrompts === 'suggested_prompt';
 
   const { data: guidedPrompts } = useGetGuidedPromptsQuery(
     {
@@ -48,7 +52,11 @@ export function WelcomeChat({
     },
     {
       skip:
-        isSuggestedPrompts || !enabledGuidedPrompts || !tenantKey || !sessionId || !realUsername,
+        isSuggestedPrompts ||
+        !enabledGuidedPrompts ||
+        !tenantKey ||
+        !sessionId ||
+        !realUsername,
     },
   );
 
@@ -67,13 +75,15 @@ export function WelcomeChat({
     },
   );
 
-  const hasGuidedPrompts = !isSuggestedPrompts && (guidedPrompts?.ai_prompts?.length ?? 0) > 0;
-  const hasSuggestedPrompts = isSuggestedPrompts && (suggestedPrompts?.results?.length ?? 0) > 0;
+  const hasGuidedPrompts =
+    !isSuggestedPrompts && (guidedPrompts?.ai_prompts?.length ?? 0) > 0;
+  const hasSuggestedPrompts =
+    isSuggestedPrompts && (suggestedPrompts?.results?.length ?? 0) > 0;
   const hasPrompts = hasGuidedPrompts || hasSuggestedPrompts;
 
   return (
     <div
-      className={cn('rounded-lg p-4 max-w-2xl mx-auto h-full flex flex-col', {
+      className={cn('mx-auto flex h-full max-w-2xl flex-col rounded-lg p-4', {
         'justify-center': !hasPrompts,
       })}
     >

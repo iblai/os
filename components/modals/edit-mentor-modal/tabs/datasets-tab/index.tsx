@@ -20,7 +20,10 @@ interface DatasetsTabProps {
   selectedDatasetId?: string;
 }
 
-export function DatasetsTab({ onSelect, selectedDatasetId }: DatasetsTabProps = {}) {
+export function DatasetsTab({
+  onSelect,
+  selectedDatasetId,
+}: DatasetsTabProps = {}) {
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
 
   const openAddResourceModal = () => setShowAddResourceModal(true);
@@ -42,14 +45,16 @@ export function DatasetsTab({ onSelect, selectedDatasetId }: DatasetsTabProps = 
 
   return (
     <>
-      <div className="lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Datasets</h3>
-          <p className="text-gray-600 text-xs">Manage training datasets and knowledge sources.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Datasets</h3>
+          <p className="text-xs text-gray-600">
+            Manage training datasets and knowledge sources.
+          </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -72,7 +77,9 @@ export function DatasetsTab({ onSelect, selectedDatasetId }: DatasetsTabProps = 
               />
             </div>
             <Button
-              onClick={() => executeWithTrialCheck(() => openAddResourceModal())}
+              onClick={() =>
+                executeWithTrialCheck(() => openAddResourceModal())
+              }
               size="sm"
               className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
             >
@@ -84,7 +91,7 @@ export function DatasetsTab({ onSelect, selectedDatasetId }: DatasetsTabProps = 
             <div className="overflow-x-auto sm:mx-0">
               <div className="inline-block min-w-full align-middle">
                 {isDatasetsLoading ? (
-                  <div className="flex items-center justify-center w-full py-10">
+                  <div className="flex w-full items-center justify-center py-10">
                     <Spinner />
                   </div>
                 ) : (

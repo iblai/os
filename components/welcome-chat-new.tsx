@@ -104,7 +104,7 @@ export function WelcomeChatNew({
 
   if (embedMode) {
     return (
-      <div className="flex-1 h-full">
+      <div className="h-full flex-1">
         <WelcomeChat
           onPromptSelect={onSubmit}
           mentorName={mentorName}
@@ -162,21 +162,20 @@ export function WelcomeChatNew({
 
   return (
     <div className="overflow-y-auto">
-      <div className="py-6 w-full">
+      <div className="w-full py-6">
         {/* GitHub Sync Banner */}
-        {tenantKey === config.mainTenantKey() && config.showAppBanner() === 'true' && (
-          <AppSyncBanner />
-        )}
+        {tenantKey === config.mainTenantKey() &&
+          config.showAppBanner() === 'true' && <AppSyncBanner />}
 
         {/* mentorAI Logo and Branding */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-center bg-gradient-to-r from-[#38A1E5] to-[#7284FF] text-transparent bg-clip-text font-bold text-3xl">
+        <div className="mb-8 flex flex-col items-center">
+          <div className="mb-6 flex items-center gap-3">
+            <h1 className="bg-gradient-to-r from-[#38A1E5] to-[#7284FF] bg-clip-text text-center text-3xl font-bold text-transparent">
               {mentorName}
             </h1>
           </div>
 
-          <div className="text-center mb-6">
+          <div className="mb-6 text-center">
             <WelcomeMessage
               aiWelcomeMessage={aiWelcomeMessage}
               sessionId={sessionId}
