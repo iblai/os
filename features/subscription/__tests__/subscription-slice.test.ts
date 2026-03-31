@@ -35,20 +35,31 @@ describe('subscription/subscription-slice', () => {
 
   describe('reducer', () => {
     it('should return the initial state', () => {
-      expect(subscriptionSlice.reducer(undefined, { type: 'unknown' })).toEqual(initialState);
+      expect(subscriptionSlice.reducer(undefined, { type: 'unknown' })).toEqual(
+        initialState,
+      );
     });
   });
 
   describe('setOpenAppleRestrictionModal', () => {
     it('should set openAppleRestrictionModal to true', () => {
-      const state = subscriptionSlice.reducer(initialState, setOpenAppleRestrictionModal(true));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setOpenAppleRestrictionModal(true),
+      );
 
       expect(state.openAppleRestrictionModal).toBe(true);
     });
 
     it('should set openAppleRestrictionModal to false', () => {
-      const modifiedState = { ...initialState, openAppleRestrictionModal: true };
-      const state = subscriptionSlice.reducer(modifiedState, setOpenAppleRestrictionModal(false));
+      const modifiedState = {
+        ...initialState,
+        openAppleRestrictionModal: true,
+      };
+      const state = subscriptionSlice.reducer(
+        modifiedState,
+        setOpenAppleRestrictionModal(false),
+      );
 
       expect(state.openAppleRestrictionModal).toBe(false);
     });
@@ -56,14 +67,20 @@ describe('subscription/subscription-slice', () => {
 
   describe('setOpenPricingModal', () => {
     it('should set openPricingModal to true', () => {
-      const state = subscriptionSlice.reducer(initialState, setOpenPricingModal(true));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setOpenPricingModal(true),
+      );
 
       expect(state.openPricingModal).toBe(true);
     });
 
     it('should set openPricingModal to false', () => {
       const modifiedState = { ...initialState, openPricingModal: true };
-      const state = subscriptionSlice.reducer(modifiedState, setOpenPricingModal(false));
+      const state = subscriptionSlice.reducer(
+        modifiedState,
+        setOpenPricingModal(false),
+      );
 
       expect(state.openPricingModal).toBe(false);
     });
@@ -77,7 +94,10 @@ describe('subscription/subscription-slice', () => {
         message: 'Limit reached',
       };
 
-      const state = subscriptionSlice.reducer(initialState, setFreeTrialUsageOptions(usageOptions));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setFreeTrialUsageOptions(usageOptions),
+      );
 
       expect(state.freeTrialUsageOptions).toEqual(usageOptions);
     });
@@ -89,7 +109,10 @@ describe('subscription/subscription-slice', () => {
         message: 'New message',
       };
 
-      const state = subscriptionSlice.reducer(initialState, setFreeTrialUsageOptions(newOptions));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setFreeTrialUsageOptions(newOptions),
+      );
 
       expect(state.freeTrialUsageOptions.count).toBe(10);
       expect(state.freeTrialUsageOptions.limitReached).toBe(false);
@@ -106,7 +129,10 @@ describe('subscription/subscription-slice', () => {
         pricingTableId: 'table-123',
       };
 
-      const state = subscriptionSlice.reducer(initialState, setPricingModalData(modalData));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setPricingModalData(modalData),
+      );
 
       expect(state.pricingModalData).toEqual(modalData);
     });
@@ -119,7 +145,10 @@ describe('subscription/subscription-slice', () => {
         pricingTableId: 'new-table',
       };
 
-      const state = subscriptionSlice.reducer(initialState, setPricingModalData(newData));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setPricingModalData(newData),
+      );
 
       expect(state.pricingModalData.referenceId).toBe('new-ref');
       expect(state.pricingModalData.customerEmail).toBe('new@example.com');
@@ -136,7 +165,10 @@ describe('subscription/subscription-slice', () => {
         callToAction: SUBSCRIPTION_V2_TRIGGERS.TOP_UP_CREDIT,
       };
 
-      const state = subscriptionSlice.reducer(initialState, setSubscriptionStatus(status));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setSubscriptionStatus(status),
+      );
 
       expect(state.subscriptionStatus).toEqual(status);
     });
@@ -146,7 +178,10 @@ describe('subscription/subscription-slice', () => {
         creditExhausted: true,
       };
 
-      const state = subscriptionSlice.reducer(initialState, setSubscriptionStatus(status as any));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setSubscriptionStatus(status as any),
+      );
 
       expect(state.subscriptionStatus.creditExhausted).toBe(true);
     });
@@ -156,14 +191,23 @@ describe('subscription/subscription-slice', () => {
     it('should set error 402 detected message', () => {
       const errorMessage = 'Payment required';
 
-      const state = subscriptionSlice.reducer(initialState, setError402Detected(errorMessage));
+      const state = subscriptionSlice.reducer(
+        initialState,
+        setError402Detected(errorMessage),
+      );
 
       expect(state.error402Detected).toBe(errorMessage);
     });
 
     it('should clear error 402 detected message', () => {
-      const modifiedState = { ...initialState, error402Detected: 'Previous error' };
-      const state = subscriptionSlice.reducer(modifiedState, setError402Detected(''));
+      const modifiedState = {
+        ...initialState,
+        error402Detected: 'Previous error',
+      };
+      const state = subscriptionSlice.reducer(
+        modifiedState,
+        setError402Detected(''),
+      );
 
       expect(state.error402Detected).toBe('');
     });

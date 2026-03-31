@@ -99,7 +99,10 @@ describe('useShowFreeTrialDialog', () => {
 
     it('should return FreeTrialDialog component when enableFallbackModal is true', () => {
       const { result } = renderHook(() =>
-        useShowFreeTrialDialog({ modalComponent: null, enableFallbackModal: true }),
+        useShowFreeTrialDialog({
+          modalComponent: null,
+          enableFallbackModal: true,
+        }),
       );
 
       expect(result.current.FreeTrialDialog).not.toBeNull();
@@ -107,7 +110,10 @@ describe('useShowFreeTrialDialog', () => {
 
     it('should return null for FreeTrialDialog when enableFallbackModal is false', () => {
       const { result } = renderHook(() =>
-        useShowFreeTrialDialog({ modalComponent: null, enableFallbackModal: false }),
+        useShowFreeTrialDialog({
+          modalComponent: null,
+          enableFallbackModal: false,
+        }),
       );
 
       expect(result.current.FreeTrialDialog).toBeNull();
@@ -117,7 +123,10 @@ describe('useShowFreeTrialDialog', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const CustomModal = (() => <div>Custom Modal</div>) as any;
       const { result } = renderHook(() =>
-        useShowFreeTrialDialog({ modalComponent: CustomModal, enableFallbackModal: true }),
+        useShowFreeTrialDialog({
+          modalComponent: CustomModal,
+          enableFallbackModal: true,
+        }),
       );
 
       expect(result.current.FreeTrialDialog).toBe(CustomModal);
@@ -169,7 +178,10 @@ describe('useShowFreeTrialDialog', () => {
 
     it('should dispatch setOpenAppleRestrictionModal and return null on Apple device when credit exhausted', () => {
       mockIsAppleDevice = true;
-      mockSubscriptionState = { creditExhausted: true, callToAction: 'PRICING_MODAL' };
+      mockSubscriptionState = {
+        creditExhausted: true,
+        callToAction: 'PRICING_MODAL',
+      };
       const { result } = renderHook(() => useShowFreeTrialDialog());
       const mockAction = vi.fn();
 
@@ -181,7 +193,10 @@ describe('useShowFreeTrialDialog', () => {
       expect(mockAction).not.toHaveBeenCalled();
       expect(actionResult).toBeNull();
       expect(mockDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'subscription/setOpenAppleRestrictionModal', payload: true }),
+        expect.objectContaining({
+          type: 'subscription/setOpenAppleRestrictionModal',
+          payload: true,
+        }),
       );
     });
 
@@ -199,7 +214,9 @@ describe('useShowFreeTrialDialog', () => {
       expect(mockAction).toHaveBeenCalled();
       expect(actionResult).toBe('done');
       expect(mockDispatch).not.toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'subscription/setOpenAppleRestrictionModal' }),
+        expect.objectContaining({
+          type: 'subscription/setOpenAppleRestrictionModal',
+        }),
       );
     });
   });

@@ -3,9 +3,9 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { isTauriApp } from "@/types/tauri";
-import { Smartphone } from "lucide-react";
+} from '@/components/ui/dialog';
+import { isTauriApp } from '@/types/tauri';
+import { Smartphone } from 'lucide-react';
 
 type Props = {
   isOpen: boolean;
@@ -17,7 +17,7 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-sm gap-0 p-0 overflow-hidden rounded-2xl"
+        className="max-w-sm gap-0 overflow-hidden rounded-2xl p-0"
       >
         <div className="flex flex-col items-center gap-6 px-8 py-10 text-center">
           {/* Icon */}
@@ -44,8 +44,8 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
               onClick={async (e) => {
                 if (isTauriApp()) {
                   e.preventDefault();
-                  const { openUrl } = await import("@tauri-apps/plugin-opener");
-                  await openUrl("https://www.ibl.ai/pricing");
+                  const { openUrl } = await import('@tauri-apps/plugin-opener');
+                  await openUrl('https://www.ibl.ai/pricing');
                 }
                 onClose();
               }}
@@ -57,7 +57,7 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
             </a>
             <button
               onClick={onClose}
-              className="text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-sm font-medium text-gray-400 transition-colors hover:text-gray-600"
             >
               Not now
             </button>

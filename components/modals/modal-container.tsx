@@ -18,7 +18,10 @@ import { SettingsModal } from '@/components/modals/settings-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { ExternalPricingModal } from './external-pricing-modal';
-import { setOpenPricingModal, setOpenAppleRestrictionModal } from '@/features/subscription/subscription-slice';
+import {
+  setOpenPricingModal,
+  setOpenAppleRestrictionModal,
+} from '@/features/subscription/subscription-slice';
 import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
@@ -59,7 +62,9 @@ export const ModalContainer = () => {
   // );
   const showInviteUserModal = selectIsModalOpen(MODALS.INVITE_USER.name)(state);
   const showSettingsModal = selectIsModalOpen(MODALS.SETTINGS.name)(state);
-  const showNoMentorSelectedModal = selectIsModalOpen(MODALS.NO_MENTOR_SELECTED.name)(state);
+  const showNoMentorSelectedModal = selectIsModalOpen(
+    MODALS.NO_MENTOR_SELECTED.name,
+  )(state);
 
   const closeShortcutsModal = () => {
     dispatch(shortcutsModalUpdated(false));

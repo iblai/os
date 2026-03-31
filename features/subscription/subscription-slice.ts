@@ -63,7 +63,10 @@ export const subscriptionSlice: Slice = createSlice({
     setOpenAppleRestrictionModal(state, action: PayloadAction<boolean>) {
       state.openAppleRestrictionModal = action.payload;
     },
-    setFreeTrialUsageOptions(state, action: PayloadAction<FreeTrialUsageOptions>) {
+    setFreeTrialUsageOptions(
+      state,
+      action: PayloadAction<FreeTrialUsageOptions>,
+    ) {
       state.freeTrialUsageOptions = action.payload;
     },
     setPricingModalData(state, action: PayloadAction<PricingModalData>) {

@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AppleRestrictionModal } from '../apple-restriction-modal';
 
+const mockOpenUrl = vi.fn();
+
+vi.mock('@/types/tauri', () => ({
+  isTauriApp: vi.fn(() => false),
+}));
+
+vi.mock('@tauri-apps/plugin-opener', () => ({
+  openUrl: (...args: unknown[]) => mockOpenUrl(...args),
+}));
+
+import { isTauriApp } from '@/types/tauri';
+
 describe('AppleRestrictionModal', () => {
   const onClose = vi.fn();
 
@@ -39,12 +51,16 @@ describe('AppleRestrictionModal', () => {
 
     it('renders the "Not now" dismiss button', () => {
       renderModal();
-      expect(screen.getByRole('button', { name: /not now/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /not now/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not render a close (X) button', () => {
       renderModal();
-      expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /close/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -59,6 +75,26 @@ describe('AppleRestrictionModal', () => {
       renderModal();
       fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
       expect(onClose).toHaveBeenCalled();
+    });
+
+    it('calls onClose when the pricing link is clicked in a browser (non-Tauri)', () => {
+      renderModal();
+      const link = screen.getByRole('link', { name: /ibl\.ai\/pricing/i });
+      fireEvent.click(link);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens external URL via Tauri opener and calls onClose when in Tauri app', async () => {
+      vi.mocked(isTauriApp).mockReturnValue(true);
+      renderModal();
+      const link = screen.getByRole('link', { name: /ibl\.ai\/pricing/i });
+      fireEvent.click(link);
+
+      // Wait for the async handler to complete
+      await vi.waitFor(() => {
+        expect(mockOpenUrl).toHaveBeenCalledWith('https://www.ibl.ai/pricing');
+      });
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 

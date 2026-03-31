@@ -63,7 +63,6 @@ export const use402ErrorCheck = () => {
         dispatch(setOpenPricingModal(true));
         return;
       } else {
-
         //students use case
         dispatch(setError402Detected(new Date().toISOString()));
       }

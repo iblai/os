@@ -70,18 +70,35 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("next/dynamic", () => ({
-  default: () => {
-    return (props: any) => {
-      if (!props.isOpen) return null;
-      return (
-        <div data-testid="delete-mentor-modal">
-          <button onClick={props.onClose}>Close</button>
-        </div>
-      );
-    };
-  },
-}));
+vi.mock("next/dynamic", () => {
+  let counter = 0;
+  return {
+    default: () => {
+      const index = counter++;
+      if (index === 0) {
+        // DeleteMentorModal
+        function MockDeleteMentorModal(props: any) {
+          if (!props.isOpen) return null;
+          return (
+            <div data-testid="delete-mentor-modal">
+              <button onClick={props.onClose}>Close</button>
+            </div>
+          );
+        }
+        return MockDeleteMentorModal;
+      }
+      // CopyMentorModal
+      function MockCopyMentorModal(props: any) {
+        return (
+          <div data-testid="copy-mentor-modal">
+            <button onClick={props.onClose}>Close Copy</button>
+          </div>
+        );
+      }
+      return MockCopyMentorModal;
+    },
+  };
+});
 
 vi.mock("next/image", () => ({
   default: (props: any) => <img alt="" {...props} />,
@@ -234,6 +251,8 @@ const defaultMentorSettings = {
   show_voice_call: true,
   show_voice_record: false,
   is_lti_accessible: false,
+  forkable: true,
+  forkable_with_training_data: true,
   permissions: {
     field: {
       mentor_name: { read: true, write: true },
@@ -342,7 +361,7 @@ describe("SettingsTab", () => {
     it("renders LTI Accessible toggle", () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText("LTI Accessible?")).toBeInTheDocument();
+      expect(screen.getByText("LTI Accessible")).toBeInTheDocument();
     });
 
     it("renders Show Attachment toggle", () => {
@@ -1048,10 +1067,135 @@ describe("SettingsTab", () => {
               show_voice_call: true,
               show_voice_record: false,
               is_lti_accessible: false,
+              forkable: true,
             }),
           }),
         );
       });
+    });
+  });
+
+  describe("Allow Copies Toggle", () => {
+    it("renders Allow Copies toggle", () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText("Allow Copies")).toBeInTheDocument();
+    });
+
+    it("reflects forkable checked state", () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText("Allow copies enabled");
+      expect(toggle).toBeChecked();
+    });
+
+    it("reflects forkable unchecked state", () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText("Allow copies disabled");
+      expect(toggle).not.toBeChecked();
+    });
+
+    it("toggles forkable switch", () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText("Allow copies enabled");
+      fireEvent.click(toggle);
+
+      expect(screen.getByLabelText("Allow copies disabled")).not.toBeChecked();
+    });
+
+    it("submits forkable value when saving", async () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText("Allow copies enabled");
+      fireEvent.click(toggle);
+
+      const saveButton = screen.getByText("Save");
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              forkable: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it("has tooltip with description", () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText("More info about allow copies"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("Copy Mentor Button", () => {
+    it("renders Copy button when mentor is forkable", () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText("Copy")).toBeInTheDocument();
+    });
+
+    it("hides Copy button when mentor is not forkable", () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.queryByText("Copy")).not.toBeInTheDocument();
+    });
+
+    it("opens copy modal when Copy button is clicked", async () => {
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByText("Copy");
+      fireEvent.click(copyButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("copy-mentor-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("closes copy modal when close is clicked", async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText("Copy"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("copy-mentor-modal")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText("Close Copy"));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("copy-mentor-modal"),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("disables Copy button when loading", () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: defaultMentorSettings,
+        isLoading: true,
+      });
+
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByText("Copy");
+      expect(copyButton).toBeDisabled();
     });
   });
 });
