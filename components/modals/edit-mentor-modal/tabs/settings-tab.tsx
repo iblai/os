@@ -11,6 +11,15 @@ const DeleteMentorModal = dynamic(
     })),
   { ssr: false },
 );
+
+/* istanbul ignore next -- @preserve dynamic import is not testable in unit tests */
+const CopyMentorModal = dynamic(
+  () =>
+    import('./settings-tab/copy-mentor-modal').then((module) => ({
+      default: module.CopyMentorModal,
+    })),
+  { ssr: false },
+);
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 
@@ -36,7 +45,11 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { useUsername } from '@/hooks/use-user';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -51,7 +64,12 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn } from '@/lib/utils';
 import WithFormPermissions from '@/hoc/withPermissions';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 
 interface SettingsForm {
@@ -66,6 +84,7 @@ interface SettingsForm {
   show_voice_call: boolean;
   show_voice_record: boolean;
   is_lti_accessible: boolean;
+  forkable: boolean;
 }
 
 export function SettingsTab() {
@@ -75,23 +94,26 @@ export function SettingsTab() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const activeMentorId = getMentorId() ?? mentorId;
 
-  const { data: categories, isLoading: isLoadingCategories } = useGetMentorCategoriesQuery(
-    // @ts-ignore
-    { org: tenantKey, userId: username ?? '' },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
+  const { data: categories, isLoading: isLoadingCategories } =
+    useGetMentorCategoriesQuery(
+      // @ts-ignore
+      { org: tenantKey, userId: username ?? '' },
+      {
+        skip: !tenantKey || !username,
+      },
+    );
 
-  const { data: mentor, isLoading: isLoadingMentor } = useGetMentorSettingsQuery(
-    // @ts-ignore
-    { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
-    {
-      skip: !activeMentorId || !tenantKey || !username || isLoadingCategories,
-    },
-  );
+  const { data: mentor, isLoading: isLoadingMentor } =
+    useGetMentorSettingsQuery(
+      // @ts-ignore
+      { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
+      {
+        skip: !activeMentorId || !tenantKey || !username || isLoadingCategories,
+      },
+    );
 
-  const [editMentor, { isLoading: isLoadingEditMentor }] = useEditMentorMutation();
+  const [editMentor, { isLoading: isLoadingEditMentor }] =
+    useEditMentorMutation();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -99,6 +121,7 @@ export function SettingsTab() {
   const { copy, status: copyStatus } = useCopyToClipboard(1000);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [isCopyModalOpen, setIsCopyModalOpen] = React.useState(false);
   const isDeletingMentor = false;
 
   const openDeleteMentorModal = () => {
@@ -109,11 +132,24 @@ export function SettingsTab() {
     setIsDeleteModalOpen(false);
   };
 
+  const openCopyMentorModal = () => {
+    setIsCopyModalOpen(true);
+  };
+
+  const closeCopyMentorModal = () => {
+    setIsCopyModalOpen(false);
+  };
+
   const isDisabled =
-    isLoadingCategories || isLoadingMentor || isLoadingEditMentor || isDeletingMentor;
+    isLoadingCategories ||
+    isLoadingMentor ||
+    isLoadingEditMentor ||
+    isDeletingMentor;
 
   const firstCategory =
-    mentor?.categories && mentor?.categories?.length > 0 ? mentor?.categories[0] : null;
+    mentor?.categories && mentor?.categories?.length > 0
+      ? mentor?.categories[0]
+      : null;
 
   const form = useForm({
     defaultValues: {
@@ -133,6 +169,8 @@ export function SettingsTab() {
       show_voice_record: mentor?.show_voice_record ?? true,
       // @ts-expect-error - is_lti_accessible exists in API response but not in type
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
+      // @ts-ignore - forkable exists in API response but not in type
+      forkable: mentor?.forkable ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -184,6 +222,10 @@ export function SettingsTab() {
         values.is_lti_accessible = value.is_lti_accessible;
       }
 
+      if (value.forkable !== undefined) {
+        values.forkable = value.forkable;
+      }
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -206,16 +248,16 @@ export function SettingsTab() {
 
   return (
     <>
-      <div className="flex lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] items-center">
+      <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Settings</h3>
-          <p className="text-gray-600 text-xs">
+          <h3 className="mb-1 text-base font-medium text-gray-900">Settings</h3>
+          <p className="text-xs text-gray-600">
             Configure your mentor's basic settings and preferences.
           </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -257,7 +299,9 @@ export function SettingsTab() {
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
-                            <p className="text-red-500 text-xs">Mentor name is required</p>
+                            <p className="text-xs text-red-500">
+                              Mentor name is required
+                            </p>
                           )}
                         </div>
                       );
@@ -275,7 +319,7 @@ export function SettingsTab() {
                     value={activeMentorId || ''}
                     readOnly
                     disabled
-                    className="bg-gray-50 cursor-not-allowed flex-1"
+                    className="flex-1 cursor-not-allowed bg-gray-50"
                     placeholder="Unique ID"
                   />
                   <Button
@@ -325,7 +369,9 @@ export function SettingsTab() {
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
-                            <p className="text-red-500 text-xs">Mentor description is required</p>
+                            <p className="text-xs text-red-500">
+                              Mentor description is required
+                            </p>
                           )}
                         </div>
                       );
@@ -348,7 +394,10 @@ export function SettingsTab() {
                           <span className="ml-1 text-red-500">*</span>
                         </Label>
                         <Popover>
-                          <PopoverTrigger asChild aria-label="Select a category">
+                          <PopoverTrigger
+                            asChild
+                            aria-label="Select a category"
+                          >
                             <Button
                               variant="outline"
                               role="combobox"
@@ -356,15 +405,20 @@ export function SettingsTab() {
                               disabled={isDisabled || disabled}
                             >
                               {field.state.value
-                                ? categories?.find((category) => category.id === field.state.value)
-                                    ?.name
+                                ? categories?.find(
+                                    (category) =>
+                                      category.id === field.state.value,
+                                  )?.name
                                 : 'Select category...'}
                               <ChevronsUpDown className="opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 max-w-[490px] w-full sm:w-[400px] lg:w-[490px]">
+                          <PopoverContent className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]">
                             <Command>
-                              <CommandInput placeholder="Search category..." className="h-9" />
+                              <CommandInput
+                                placeholder="Search category..."
+                                className="h-9"
+                              />
                               <CommandList>
                                 <CommandEmpty>No Category found.</CommandEmpty>
                                 <CommandGroup>
@@ -373,7 +427,9 @@ export function SettingsTab() {
                                       key={category.id}
                                       value={category.id.toString()}
                                       onSelect={(currentValue) => {
-                                        field.handleChange(Number(currentValue));
+                                        field.handleChange(
+                                          Number(currentValue),
+                                        );
                                       }}
                                     >
                                       {category.name}
@@ -427,7 +483,9 @@ export function SettingsTab() {
                         </div>
                         <Select
                           value={field.state.value}
-                          onValueChange={(value) => value && field.handleChange(value)}
+                          onValueChange={(value) =>
+                            value && field.handleChange(value)
+                          }
                           required
                           disabled={isDisabled || disabled}
                         >
@@ -436,7 +494,10 @@ export function SettingsTab() {
                           </SelectTrigger>
                           <SelectContent>
                             {MENTOR_VISIBILITY.map((visibility) => (
-                              <SelectItem key={visibility.value} value={visibility.value}>
+                              <SelectItem
+                                key={visibility.value}
+                                value={visibility.value}
+                              >
                                 {visibility.label}
                               </SelectItem>
                             ))}
@@ -477,7 +538,9 @@ export function SettingsTab() {
                         </div>
                         <Select
                           value={field.state.value}
-                          onValueChange={(value) => value && field.handleChange(value)}
+                          onValueChange={(value) =>
+                            value && field.handleChange(value)
+                          }
                           disabled={isDisabled || disabled}
                         >
                           <SelectTrigger aria-label="Select who can chat">
@@ -485,7 +548,9 @@ export function SettingsTab() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="true">Anyone</SelectItem>
-                            <SelectItem value="false">Authenticated Users</SelectItem>
+                            <SelectItem value="false">
+                              Authenticated Users
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -503,21 +568,28 @@ export function SettingsTab() {
                     {(field) => (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#646464]">Featured</span>
+                          <span className="text-sm font-medium text-[#646464]">
+                            Featured
+                          </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger aria-label="More info about featured">
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Feature this mentor to highlight it in listings.</p>
+                                <p>
+                                  Feature this mentor to highlight it in
+                                  listings.
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={isDisabled || disabled}
                           aria-label={`Featured ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
@@ -537,7 +609,7 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            LTI Accessible?
+                            LTI Accessible
                           </span>
                           <TooltipProvider>
                             <Tooltip>
@@ -549,8 +621,9 @@ export function SettingsTab() {
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
                                 <p>
-                                  Allows this mentor to be accessible via LTI launches. Unselecting
-                                  this will immediately remove access for any users users that have
+                                  Allows this mentor to be accessible via LTI
+                                  launches. Unselecting this will immediately
+                                  remove access for any users users that have
                                   launched this via LTI.
                                 </p>
                               </TooltipContent>
@@ -559,7 +632,9 @@ export function SettingsTab() {
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={isDisabled || disabled}
                           aria-label={`Is lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
@@ -598,7 +673,9 @@ export function SettingsTab() {
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={isDisabled || disabled}
                           aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
@@ -637,7 +714,9 @@ export function SettingsTab() {
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={isDisabled || disabled}
                           aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
@@ -669,14 +748,18 @@ export function SettingsTab() {
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Show Voice Recording Options in Chat Interface</p>
+                                <p>
+                                  Show Voice Recording Options in Chat Interface
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={isDisabled || disabled}
                           aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
@@ -685,6 +768,40 @@ export function SettingsTab() {
                   </form.Field>
                 )}
               </WithFormPermissions>
+
+              <form.Field name="forkable">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Allow Copies
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about allow copies"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              Allow other admins to create a copy of this
+                              mentor.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
             </div>
 
             <WithFormPermissions
@@ -696,7 +813,9 @@ export function SettingsTab() {
                 <form.Field name="profile_image">
                   {(field) => (
                     <div className="order-1 mb-6 space-y-2 sm:order-2 sm:mb-0">
-                      <Label className="text-sm font-medium text-[#646464]">Image</Label>
+                      <Label className="text-sm font-medium text-[#646464]">
+                        Image
+                      </Label>
                       <div
                         className="flex h-[200px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
                         onClick={(event) => {
@@ -741,7 +860,9 @@ export function SettingsTab() {
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-500">+ Upload</span>
+                          <span className="text-sm text-gray-500">
+                            + Upload
+                          </span>
                         )}
                         <input
                           type="file"
@@ -763,9 +884,11 @@ export function SettingsTab() {
               )}
             </WithFormPermissions>
           </div>
-          <div className="my-4 flex items-end justify-between">
+          <div className="mt-6 flex items-center">
             <div className="flex gap-2">
-              <form.Subscribe selector={(state) => ({ isFormValid: state.canSubmit })}>
+              <form.Subscribe
+                selector={(state) => ({ isFormValid: state.canSubmit })}
+              >
                 {({ isFormValid }) => (
                   <WithFormPermissions
                     name="object"
@@ -786,6 +909,18 @@ export function SettingsTab() {
                   </WithFormPermissions>
                 )}
               </form.Subscribe>
+
+              {/* @ts-ignore forkable exists in API response but not in type */}
+              {mentor?.forkable && (
+                <Button
+                  onClick={openCopyMentorModal}
+                  type="button"
+                  disabled={isDisabled}
+                  variant="outline"
+                >
+                  Copy
+                </Button>
+              )}
 
               <WithFormPermissions
                 name="object"
@@ -815,8 +950,13 @@ export function SettingsTab() {
       )}
 
       {isDeleteModalOpen && (
-        <DeleteMentorModal isOpen={isDeleteModalOpen} onClose={closeDeleteMentorModal} />
+        <DeleteMentorModal
+          isOpen={isDeleteModalOpen}
+          onClose={closeDeleteMentorModal}
+        />
       )}
+
+      {isCopyModalOpen && <CopyMentorModal onClose={closeCopyMentorModal} />}
     </>
   );
 }

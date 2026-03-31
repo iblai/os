@@ -73,7 +73,9 @@ clean:
 	rm -rf dist-electron
 	rm -rf .turbo
 	rm -rf playwright-report
+	rm -rf e2e/playwright-report
 	rm -rf test-results
+	rm -rf e2e/test-results
 	rm -rf coverage
 
 # Clean everything and reinstall
@@ -328,3 +330,9 @@ help:
 	@echo "    make tauri-update     - Update Tauri CLI and deps"
 	@echo "    make tauri-clean      - Clean Rust build artifacts"
 	@echo "    make tauri-icons      - Generate icons from source image"
+
+# Release a new version (usage: make release VERSION=0.40.0)
+release:
+	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make release VERSION=0.40.0"; exit 1; fi
+	git tag -a v$(VERSION) -m 'chore: release v$(VERSION)'
+	git push origin v$(VERSION) --no-verify

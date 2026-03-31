@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest';
 import subscriptionSlice, {
   setOpenPricingModal,
   setOpenAppleRestrictionModal,
@@ -6,43 +6,43 @@ import subscriptionSlice, {
   setPricingModalData,
   setSubscriptionStatus,
   setError402Detected,
-} from "../subscription-slice";
-import { SUBSCRIPTION_USER_CAPABILITIES } from "../constants";
-import { SUBSCRIPTION_V2_TRIGGERS } from "@iblai/iblai-js/web-utils";
+} from '../subscription-slice';
+import { SUBSCRIPTION_USER_CAPABILITIES } from '../constants';
+import { SUBSCRIPTION_V2_TRIGGERS } from '@iblai/iblai-js/web-utils';
 
-describe("subscription/subscription-slice", () => {
+describe('subscription/subscription-slice', () => {
   const initialState = {
     openPricingModal: false,
     openAppleRestrictionModal: false,
     freeTrialUsageOptions: {
       count: 0,
       limitReached: false,
-      message: "",
+      message: '',
     },
     pricingModalData: {
-      referenceId: "",
-      customerEmail: "",
-      publishableKey: "",
-      pricingTableId: "",
+      referenceId: '',
+      customerEmail: '',
+      publishableKey: '',
+      pricingTableId: '',
     },
     subscriptionStatus: {
       creditExhausted: false,
       userCapability: SUBSCRIPTION_USER_CAPABILITIES.FREE_TRIAL,
       callToAction: SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
     },
-    error402Detected: "",
+    error402Detected: '',
   };
 
-  describe("reducer", () => {
-    it("should return the initial state", () => {
-      expect(subscriptionSlice.reducer(undefined, { type: "unknown" })).toEqual(
+  describe('reducer', () => {
+    it('should return the initial state', () => {
+      expect(subscriptionSlice.reducer(undefined, { type: 'unknown' })).toEqual(
         initialState,
       );
     });
   });
 
-  describe("setOpenAppleRestrictionModal", () => {
-    it("should set openAppleRestrictionModal to true", () => {
+  describe('setOpenAppleRestrictionModal', () => {
+    it('should set openAppleRestrictionModal to true', () => {
       const state = subscriptionSlice.reducer(
         initialState,
         setOpenAppleRestrictionModal(true),
@@ -51,7 +51,7 @@ describe("subscription/subscription-slice", () => {
       expect(state.openAppleRestrictionModal).toBe(true);
     });
 
-    it("should set openAppleRestrictionModal to false", () => {
+    it('should set openAppleRestrictionModal to false', () => {
       const modifiedState = {
         ...initialState,
         openAppleRestrictionModal: true,
@@ -65,8 +65,8 @@ describe("subscription/subscription-slice", () => {
     });
   });
 
-  describe("setOpenPricingModal", () => {
-    it("should set openPricingModal to true", () => {
+  describe('setOpenPricingModal', () => {
+    it('should set openPricingModal to true', () => {
       const state = subscriptionSlice.reducer(
         initialState,
         setOpenPricingModal(true),
@@ -75,7 +75,7 @@ describe("subscription/subscription-slice", () => {
       expect(state.openPricingModal).toBe(true);
     });
 
-    it("should set openPricingModal to false", () => {
+    it('should set openPricingModal to false', () => {
       const modifiedState = { ...initialState, openPricingModal: true };
       const state = subscriptionSlice.reducer(
         modifiedState,
@@ -86,12 +86,12 @@ describe("subscription/subscription-slice", () => {
     });
   });
 
-  describe("setFreeTrialUsageOptions", () => {
-    it("should update free trial usage options", () => {
+  describe('setFreeTrialUsageOptions', () => {
+    it('should update free trial usage options', () => {
       const usageOptions = {
         count: 5,
         limitReached: true,
-        message: "Limit reached",
+        message: 'Limit reached',
       };
 
       const state = subscriptionSlice.reducer(
@@ -102,11 +102,11 @@ describe("subscription/subscription-slice", () => {
       expect(state.freeTrialUsageOptions).toEqual(usageOptions);
     });
 
-    it("should override all usage option fields", () => {
+    it('should override all usage option fields', () => {
       const newOptions = {
         count: 10,
         limitReached: false,
-        message: "New message",
+        message: 'New message',
       };
 
       const state = subscriptionSlice.reducer(
@@ -116,17 +116,17 @@ describe("subscription/subscription-slice", () => {
 
       expect(state.freeTrialUsageOptions.count).toBe(10);
       expect(state.freeTrialUsageOptions.limitReached).toBe(false);
-      expect(state.freeTrialUsageOptions.message).toBe("New message");
+      expect(state.freeTrialUsageOptions.message).toBe('New message');
     });
   });
 
-  describe("setPricingModalData", () => {
-    it("should update pricing modal data", () => {
+  describe('setPricingModalData', () => {
+    it('should update pricing modal data', () => {
       const modalData = {
-        referenceId: "ref-123",
-        customerEmail: "test@example.com",
-        publishableKey: "pk_test_123",
-        pricingTableId: "table-123",
+        referenceId: 'ref-123',
+        customerEmail: 'test@example.com',
+        publishableKey: 'pk_test_123',
+        pricingTableId: 'table-123',
       };
 
       const state = subscriptionSlice.reducer(
@@ -137,12 +137,12 @@ describe("subscription/subscription-slice", () => {
       expect(state.pricingModalData).toEqual(modalData);
     });
 
-    it("should override all modal data fields", () => {
+    it('should override all modal data fields', () => {
       const newData = {
-        referenceId: "new-ref",
-        customerEmail: "new@example.com",
-        publishableKey: "pk_new",
-        pricingTableId: "new-table",
+        referenceId: 'new-ref',
+        customerEmail: 'new@example.com',
+        publishableKey: 'pk_new',
+        pricingTableId: 'new-table',
       };
 
       const state = subscriptionSlice.reducer(
@@ -150,15 +150,15 @@ describe("subscription/subscription-slice", () => {
         setPricingModalData(newData),
       );
 
-      expect(state.pricingModalData.referenceId).toBe("new-ref");
-      expect(state.pricingModalData.customerEmail).toBe("new@example.com");
-      expect(state.pricingModalData.publishableKey).toBe("pk_new");
-      expect(state.pricingModalData.pricingTableId).toBe("new-table");
+      expect(state.pricingModalData.referenceId).toBe('new-ref');
+      expect(state.pricingModalData.customerEmail).toBe('new@example.com');
+      expect(state.pricingModalData.publishableKey).toBe('pk_new');
+      expect(state.pricingModalData.pricingTableId).toBe('new-table');
     });
   });
 
-  describe("setSubscriptionStatus", () => {
-    it("should update subscription status", () => {
+  describe('setSubscriptionStatus', () => {
+    it('should update subscription status', () => {
       const status = {
         creditExhausted: true,
         userCapability: SUBSCRIPTION_USER_CAPABILITIES.PAID_PACKAGE,
@@ -173,7 +173,7 @@ describe("subscription/subscription-slice", () => {
       expect(state.subscriptionStatus).toEqual(status);
     });
 
-    it("should handle partial status updates", () => {
+    it('should handle partial status updates', () => {
       const status = {
         creditExhausted: true,
       };
@@ -187,9 +187,9 @@ describe("subscription/subscription-slice", () => {
     });
   });
 
-  describe("setError402Detected", () => {
-    it("should set error 402 detected message", () => {
-      const errorMessage = "Payment required";
+  describe('setError402Detected', () => {
+    it('should set error 402 detected message', () => {
+      const errorMessage = 'Payment required';
 
       const state = subscriptionSlice.reducer(
         initialState,
@@ -199,26 +199,26 @@ describe("subscription/subscription-slice", () => {
       expect(state.error402Detected).toBe(errorMessage);
     });
 
-    it("should clear error 402 detected message", () => {
+    it('should clear error 402 detected message', () => {
       const modifiedState = {
         ...initialState,
-        error402Detected: "Previous error",
+        error402Detected: 'Previous error',
       };
       const state = subscriptionSlice.reducer(
         modifiedState,
-        setError402Detected(""),
+        setError402Detected(''),
       );
 
-      expect(state.error402Detected).toBe("");
+      expect(state.error402Detected).toBe('');
     });
   });
 
-  describe("slice metadata", () => {
-    it("should have correct slice name", () => {
-      expect(subscriptionSlice.name).toBe("subscription");
+  describe('slice metadata', () => {
+    it('should have correct slice name', () => {
+      expect(subscriptionSlice.name).toBe('subscription');
     });
 
-    it("should export all action creators", () => {
+    it('should export all action creators', () => {
       expect(setOpenPricingModal).toBeDefined();
       expect(setOpenAppleRestrictionModal).toBeDefined();
       expect(setFreeTrialUsageOptions).toBeDefined();
