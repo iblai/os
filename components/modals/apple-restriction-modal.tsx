@@ -1,5 +1,10 @@
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Smartphone } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Smartphone } from "lucide-react";
 
 type Props = {
   isOpen: boolean;
@@ -25,8 +30,9 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
               You can&apos;t subscribe here
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-gray-500">
-              Due to Apple guidelines, we&apos;re not able to offer purchases inside the app on
-              iPhone and iPad. You can subscribe on the web instead.
+              Due to Apple guidelines, we&apos;re not able to offer purchases
+              inside the app on iPhone and iPad. You can subscribe on the web
+              instead.
             </DialogDescription>
           </div>
 
@@ -34,8 +40,7 @@ export function AppleRestrictionModal({ isOpen, onClose }: Props) {
           <div className="flex w-full flex-col gap-3">
             <a
               href="https://www.ibl.ai/pricing"
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={onClose}
               className="ibl-button-primary flex w-full items-center justify-center rounded-full py-3 text-sm font-semibold"
             >
               Go to ibl.ai/pricing
