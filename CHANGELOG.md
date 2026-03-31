@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.41.0](https://github.com/iblai/mentorai/compare/v0.40.3...v0.41.0) (2026-03-31)
+
+### Features
+
+* **copy-mentor:** add functionality to copy mentor without including training data and coverage ([67eccb7](https://github.com/iblai/mentorai/commit/67eccb77ccae5be9c422b74e4217166dc01bacc1))
+* **copy-mentor:** expand Copy Mentor journey with additional checkpoints and update coverage metric ([a388ed5](https://github.com/iblai/mentorai/commit/a388ed5ff56d69906c940ee5356581eb276f691c))
+* **copy-mentor:** implement Allow Copies toggle and enhance Copy Mentor functionality ([2dc3daf](https://github.com/iblai/mentorai/commit/2dc3daf16e4a32c47b629708aa9f48f57ae0d36a))
+* **copy-mentor:** implement Copy Mentor journey with 7 checkpoints and update coverage metrics ([0e48905](https://github.com/iblai/mentorai/commit/0e48905cebd2e6402806d93204cd69d746dcff67))
+* **create-mentor:** add CreateMentorPage class and integrate into Copy Mentor journey ([c440d7e](https://github.com/iblai/mentorai/commit/c440d7e35fb2aa34c638cce60099f4d8a385950b))
+* **mentor-copy:** add CopyMentorModal component with associated tests ([0d728fc](https://github.com/iblai/mentorai/commit/0d728fc22ad25bf1848fd96edf37e18e80c40b42))
+* **playwright:** enhance video reporting and cleanup test results in Makefile ([bedccd0](https://github.com/iblai/mentorai/commit/bedccd0314eaf21cea4c276a0f06e4e9a0bdb355))
+* **release:** add Makefile target for versioned releases with tagging ([b1bc902](https://github.com/iblai/mentorai/commit/b1bc902d623a12939c1e87945d310b11a17aeca0))
+* **settings-tab:** implement Allow Copies feature with associated tests and update dynamic modal ([f52ea6d](https://github.com/iblai/mentorai/commit/f52ea6db85875f5f07bc5cb2d58948162f8d7338))
+
+### Bug Fixes
+
+* **copy-mentor.spec:** improve visibility check for destination tenant combobox in Copy Mentor ([1260e14](https://github.com/iblai/mentorai/commit/1260e143e740e86581d8d97f05cf47aa36a4e6d6))
+* **copy-mentor:** add gap class to DialogFooter for improved layout ([b563453](https://github.com/iblai/mentorai/commit/b5634539d4061d984c686660bfdb5c6634466e85))
+* **copy-mentor:** update source file path in coverage documentation for accuracy ([1c96f86](https://github.com/iblai/mentorai/commit/1c96f86a281e3ed9b8b20311182ba7921dc85284))
+* **copy-mentor:** update success toast message to remove ellipsis ([bf0804f](https://github.com/iblai/mentorai/commit/bf0804fdf40843a26c7f8a28d03552badc17ce25))
+* **create-mentor:** update name input visibility check to be enabled with extended timeout ([65e6dc0](https://github.com/iblai/mentorai/commit/65e6dc0c0e29823b89b85cf93bbed444aad7ed9c))
+* **edit-mentor-modal:** standardize modal title to 'Edit Mentor' ([7f7acfc](https://github.com/iblai/mentorai/commit/7f7acfc903d294b6d6bc0f066eb9a3a603cdf696))
+* **settings-tab.test:** specify return type for mockUsername function in CopyMentorModal tests ([b381a92](https://github.com/iblai/mentorai/commit/b381a923e13ee6cc57ead0bb1e80754d449ce31f))
+* **settings-tab.test:** update LTI Accessible toggle text for consistency in tests ([b4d8da0](https://github.com/iblai/mentorai/commit/b4d8da096a98f46be92866b19cf9b347a8a39acd))
+
+### Refactors
+
+* **copy-mentor-modal:** enhance tenant handling during mentor copy process ([2e3e129](https://github.com/iblai/mentorai/commit/2e3e129b45784269407a5b34eee54a8cd2f8b41e))
+* **copy-mentor.spec:** remove unused dialog handling functions and cleanup code ([52a5e01](https://github.com/iblai/mentorai/commit/52a5e01af63c079bb30c83b83d5dbffbcae5a0d1))
+* **copy-mentor:** simplify modal stack handling in CopyMentorModal component ([a595ca6](https://github.com/iblai/mentorai/commit/a595ca6319c4c4a5f349eeb864be487ea5d28c89))
+* **copy-mentor:** update dataset verification method to use navigateToTab for clarity ([38e8c3a](https://github.com/iblai/mentorai/commit/38e8c3ace44704ef6e38e955f0d9464c6fd11f84))
+* **settings-tab.test:** replace inline modal mocks with named functions for better readability ([d29b196](https://github.com/iblai/mentorai/commit/d29b196c3faca9324352a8233d765e27e942d140))
+
+### Chores
+
+* add Prettier configuration and ignore file for code formatting ([e192b83](https://github.com/iblai/mentorai/commit/e192b834eda7c7cd811cce18bc2ebad047916ebc))
+
+### Tests
+
+* **apple-restriction-modal:** enhance tests for pricing link interactions and Tauri app behavior ([7d9f3ba](https://github.com/iblai/mentorai/commit/7d9f3ba193e50b9a927ed15d6bc89bd4b9f672c9))
+* **edit-mentor-modal:** update test to reflect standardized modal title 'Edit Mentor' ([103db66](https://github.com/iblai/mentorai/commit/103db66e16739f8ea1b742ae8efdd5b0ae279d14))
+* **settings-tab:** add error handling test for missing username in CopyMentorModal ([b2da8a4](https://github.com/iblai/mentorai/commit/b2da8a41378afb774e44341d08e5c0b1c23af220))
+* **settings-tab:** add Playwright tests for Copy Mentor functionality in settings tab ([461a60b](https://github.com/iblai/mentorai/commit/461a60ba2c562e28929b4af16803c18301af9f8f))
+* **use-os:** mock isTauriApp in use-os tests for accurate platform detection ([102f0d7](https://github.com/iblai/mentorai/commit/102f0d7779a3236e90641ea3cf0ea419f4354a03))
+
 ## [0.40.3](https://github.com/iblai/mentorai/compare/v0.40.2...v0.40.3) (2026-03-31)
 
 ### Bug Fixes
