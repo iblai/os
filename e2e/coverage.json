@@ -301,7 +301,7 @@
       "id": "dataset-management",
       "name": "Dataset Management",
       "spec": "20-dataset-management.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx"],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx", "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"],
       "checkpoints": [
         { "id": "ds-01", "description": "Datasets tab header and description display correctly", "status": "covered" },
         { "id": "ds-02", "description": "Search input is visible", "status": "covered" },
