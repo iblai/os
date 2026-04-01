@@ -1,4 +1,4 @@
-name: Build MSIX (x64 + arm64)
+name: Build Windows Packages (MSIX + EXE)
 
 on:
   workflow_dispatch:
@@ -7,6 +7,11 @@ on:
         description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
         required: false
         type: string
+      build_exe:
+        description: "Also produce NSIS .exe installers"
+        required: false
+        type: boolean
+        default: false
       sign:
         description: "Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)"
         required: false
@@ -110,6 +115,37 @@ jobs:
         with:
           name: ibl-ai-os-msix-${{ matrix.arch }}
           path: src-tauri/msix-output/*.msix
+          if-no-files-found: error
+
+      - name: Find NSIS installer
+        if: inputs.build_exe
+        id: nsis
+        run: |
+          $searchPaths = @(
+            "src-tauri\target\${{ matrix.rust_target }}\release\bundle\nsis",
+            "target\${{ matrix.rust_target }}\release\bundle\nsis"
+          )
+          foreach ($dir in $searchPaths) {
+            if (Test-Path $dir) {
+              $exe = Get-ChildItem -Path $dir -Filter "*.exe" | Select-Object -First 1
+              if ($exe) {
+                Write-Host "Found NSIS installer: $($exe.FullName)" -ForegroundColor Green
+                echo "NSIS_DIR=$dir" >> $env:GITHUB_OUTPUT
+                break
+              }
+            }
+          }
+          if (-not $env:GITHUB_OUTPUT -or -not (Select-String -Path $env:GITHUB_OUTPUT -Pattern "NSIS_DIR" -Quiet)) {
+            Write-Error "NSIS installer not found in:`n  $($searchPaths -join "`n  ")"
+            exit 1
+          }
+
+      - name: Upload EXE installer (${{ matrix.arch }})
+        if: inputs.build_exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-os-exe-${{ matrix.arch }}
+          path: ${{ steps.nsis.outputs.NSIS_DIR }}/*.exe
           if-no-files-found: error
 
   bundle-msix:
