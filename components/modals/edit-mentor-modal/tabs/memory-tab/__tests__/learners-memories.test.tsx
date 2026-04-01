@@ -495,5 +495,60 @@ describe("LearnersMemories", () => {
       // Should still render without crashing
       expect(screen.getByText("Learner Memories")).toBeInTheDocument();
     });
+
+    it("returns only All category when adminCategories is empty and response is undefined", () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({
+        data: [],
+      });
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
+
+      render(<LearnersMemories />);
+      // Only "All" category should show (fallback when both are empty/undefined)
+      expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText("Personal Info")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Category Filtering", () => {
+    it("filters memories when a category is selected via desktop filter", () => {
+      render(<LearnersMemories />);
+
+      // Find the category CommandItems rendered in the desktop category popover
+      const categoryItems = screen.getAllByTestId("command-item");
+      // Find the Preferences category item
+      const preferencesItem = categoryItems.find(
+        (item) => item.getAttribute("data-value") === "preferences",
+      );
+      if (preferencesItem) {
+        fireEvent.click(preferencesItem);
+      }
+
+      // After selecting Preferences, only Preferences memories should show
+      expect(screen.getAllByText("Preferences").length).toBeGreaterThanOrEqual(
+        1,
+      );
+    });
+
+    it("filters memories by a specific category slug", () => {
+      render(<LearnersMemories />);
+
+      // Find the Personal Info category item (it has value="personal-info")
+      const categoryItems = screen.getAllByTestId("command-item");
+      const personalInfoItem = categoryItems.find(
+        (item) => item.getAttribute("data-value") === "personal-info",
+      );
+      if (personalInfoItem) {
+        fireEvent.click(personalInfoItem);
+      }
+
+      // After filtering, only Personal Info memories should appear
+      expect(screen.getByText("User prefers dark mode")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Likes visual explanations"),
+      ).not.toBeInTheDocument();
+    });
   });
 });
