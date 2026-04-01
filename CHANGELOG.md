@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.42.0](https://github.com/iblai/mentorai/compare/v0.41.2...v0.42.0) (2026-04-01)
+
+### Features
+
+* add optional NSIS EXE installer output to Windows build workflow ([3dcd340](https://github.com/iblai/mentorai/commit/3dcd340ef80dc46c341ecdbaad273d2ed2e8da81))
+
 ## [0.41.2](https://github.com/iblai/mentorai/compare/v0.41.1...v0.41.2) (2026-04-01)
 
 ### Performance
