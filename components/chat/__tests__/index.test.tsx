@@ -18861,7 +18861,6 @@ describe('Chat', () => {
 
       // Override selectIsReasoning to return true
       (selectIsReasoning as any).mockReturnValue = undefined;
-      const origMock = vi.mocked(selectIsReasoning as any);
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
