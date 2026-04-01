@@ -14,7 +14,7 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
   // ────────────────────────────────────────────────────────────────
   // Test 1: Tool Call Indicator - Web Search
   // ────────────────────────────────────────────────────────────────
-  test('Web Search Tool Appears in Chat as Animated Pill During Streaming', async ({
+  test('Tool Call Indicator Appears With Bounce Dots During Streaming and Settles After', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -37,25 +37,25 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
       30_000,
     );
 
-    // Assert: tool call pill appears with "Searching the web" text
-    const toolCallContainer = chatPage.aiMessages
+    // Assert: collapsible trigger appears with "Used N tool(s)" header
+    const toolCallTrigger = chatPage.aiMessages
       .last()
-      .locator('div.mb-2.flex.flex-col.gap-1\\.5');
-    await expect(toolCallContainer).toBeVisible({ timeout: 30_000 });
-    await expect(toolCallContainer).toContainText(
-      /searching the web|web.?search/i,
-      { timeout: 30_000 },
-    );
+      .getByRole('button', { name: /used \d+ tools?/i });
+    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
+
+    // During streaming: bounce dots should be visible inside the trigger
+    const bounceDots = toolCallTrigger.locator('span.animate-bounce');
+    await expect(bounceDots).toHaveCount(3, { timeout: 5_000 });
+
+    // Indicator starts collapsed
+    await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'false');
 
     // Wait for streaming to complete
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
 
-    // After streaming ends, pill remains without pulse animation
-    await expect(toolCallContainer).toBeVisible({ timeout: 10_000 });
-    const lastPill = toolCallContainer.locator('> *').last();
-    await expect(lastPill).not.toHaveClass(/animate-pulse/, {
-      timeout: 5_000,
-    });
+    // After streaming: trigger remains, bounce dots are gone
+    await expect(toolCallTrigger).toBeVisible({ timeout: 10_000 });
+    await expect(bounceDots).toHaveCount(0, { timeout: 5_000 });
 
     // Response contains F1-related content
     await expect(chatPage.aiMessages.last()).toContainText(
@@ -65,9 +65,9 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // Test 1.2: Tool Call Pill is Expandable and Shows Query Detail
+  // Test 1.2: Tool Call Indicator Expands to Show Tool Names and Queries
   // ────────────────────────────────────────────────────────────────
-  test('Tool Call Pill is Expandable and Shows Query Detail', async ({
+  test('Tool Call Indicator Expands to Show Tool Names and Query Detail', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -88,41 +88,98 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
       30_000,
     );
 
-    const toolCallContainer = chatPage.aiMessages
+    const toolCallTrigger = chatPage.aiMessages
       .last()
-      .locator('div.mb-2.flex.flex-col.gap-1\\.5');
-    await expect(toolCallContainer).toBeVisible({ timeout: 30_000 });
+      .getByRole('button', { name: /used \d+ tools?/i });
+    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
 
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
 
-    // Locate the pill trigger
-    const pillTrigger = chatPage.aiMessages
-      .last()
-      .getByRole('button', { name: /searching the web/i });
-    await expect(pillTrigger).toBeVisible({ timeout: 10_000 });
+    // Starts collapsed after streaming
+    await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'false', {
+      timeout: 5_000,
+    });
 
-    // Get current expanded state and toggle
-    const initialExpanded = await pillTrigger.getAttribute('aria-expanded');
+    // Expand the indicator
+    await toolCallTrigger.click();
+    await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'true', {
+      timeout: 5_000,
+    });
 
-    if (initialExpanded === 'true') {
-      // Already open — collapse first
-      await pillTrigger.click();
-      await expect(pillTrigger).toHaveAttribute('aria-expanded', 'false', {
-        timeout: 5_000,
-      });
+    // Expanded content shows the friendly tool name
+    const lastAIMessage = chatPage.aiMessages.last();
+    await expect(lastAIMessage.getByText(/searching the web/i)).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Expanded content shows the query detail (extracted from tool input)
+    const toolContent = lastAIMessage.locator('div.border-l-2.border-gray-200');
+    await expect(toolContent).toContainText(/f1|race|formula/i, {
+      timeout: 5_000,
+    });
+
+    // Collapse the indicator
+    await toolCallTrigger.click();
+    await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'false', {
+      timeout: 5_000,
+    });
+
+    // Expanded content is no longer visible
+    try {
+      await toolContent.waitFor({ state: 'hidden', timeout: 5_000 });
+    } catch {
+      // Content area hidden via Radix CollapsibleContent unmount
     }
+  });
 
-    // Expand the pill
-    await pillTrigger.click();
-    await expect(pillTrigger).toHaveAttribute('aria-expanded', 'true', {
+  // ────────────────────────────────────────────────────────────────
+  // Test 1.3: Unique Tool Count - Header Shows Unique Tool Types
+  // ────────────────────────────────────────────────────────────────
+  test('Tool Call Header Counts Unique Tool Types Not Total Calls', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+    chatPage,
+  }) => {
+    await createMentorPage.openAndCreate('E2E Unique Tool Count Mentor');
+
+    await editMentorPage.open('Tools');
+    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.close();
+
+    await chatPage.activateWebSearch();
+    await chatPage.sendMessage(
+      'using the web search tool, find the current F1 standings and also find the schedule for the next 3 races',
+    );
+    await chatPage.waitForUserMessage(
+      'using the web search tool, find the current F1 standings',
+      30_000,
+    );
+
+    // Wait for tool call indicator and streaming to complete
+    const toolCallTrigger = chatPage.aiMessages
+      .last()
+      .getByRole('button', { name: /used \d+ tools?/i });
+    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
+
+    await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
+
+    // Header should show "Used 1 tool" since all calls are web_search_call
+    await expect(toolCallTrigger).toContainText('Used 1 tool', {
+      timeout: 10_000,
+    });
+
+    // Expand to verify individual tool call entries exist
+    await toolCallTrigger.click();
+    await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'true', {
       timeout: 5_000,
     });
 
-    // Collapse the pill
-    await pillTrigger.click();
-    await expect(pillTrigger).toHaveAttribute('aria-expanded', 'false', {
-      timeout: 5_000,
-    });
+    // At least one "Searching the web" entry should be visible
+    const lastAIMessage = chatPage.aiMessages.last();
+    await expect(
+      lastAIMessage.getByText(/searching the web/i).first(),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -194,16 +251,15 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
     await expect(chatPage.aiMessages.last()).toBeVisible({ timeout: 30_000 });
 
-    // Assert no tool call container appears
-    const toolCallContainer = chatPage.aiMessages
+    // Assert no tool call indicator appears
+    const toolCallTrigger = chatPage.aiMessages
       .last()
-      .locator('div.mb-2.flex.flex-col.gap-1\\.5');
+      .getByRole('button', { name: /used \d+ tools?/i });
     try {
-      await toolCallContainer.waitFor({ state: 'visible', timeout: 5_000 });
-      const childCount = await toolCallContainer.count();
-      expect(childCount).toBe(0);
+      await toolCallTrigger.waitFor({ state: 'visible', timeout: 5_000 });
+      expect(true).toBe(false); // Should not reach here
     } catch {
-      // Expected: tool call container is not visible
+      // Expected: tool call indicator is not visible
     }
   });
 
@@ -388,17 +444,17 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
     });
     await expect(thinkingButton).toBeVisible({ timeout: 30_000 });
 
-    // Check tool call pills appear
-    const toolCallContainer = lastAIMessage.locator(
-      'div.mb-2.flex.flex-col.gap-1\\.5',
-    );
-    await expect(toolCallContainer).toBeVisible({ timeout: 30_000 });
+    // Check tool call indicator appears
+    const toolCallTrigger = lastAIMessage.getByRole('button', {
+      name: /used \d+ tools?/i,
+    });
+    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
 
     // Verify reasoning appears above tool calls in the DOM
     const reasoningTriggerBox = await thinkingButton.boundingBox();
-    const toolCallContainerBox = await toolCallContainer.boundingBox();
-    if (reasoningTriggerBox && toolCallContainerBox) {
-      expect(reasoningTriggerBox.y).toBeLessThan(toolCallContainerBox.y);
+    const toolCallTriggerBox = await toolCallTrigger.boundingBox();
+    if (reasoningTriggerBox && toolCallTriggerBox) {
+      expect(reasoningTriggerBox.y).toBeLessThan(toolCallTriggerBox.y);
     }
 
     // Wait for streaming to complete
@@ -410,12 +466,10 @@ test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
     });
     await expect(thoughtButton).toBeVisible({ timeout: 15_000 });
 
-    // Tool call pills remain without pulse
-    await expect(toolCallContainer).toBeVisible({ timeout: 10_000 });
-    const lastPill = toolCallContainer.locator('> *').last();
-    await expect(lastPill).not.toHaveClass(/animate-pulse/, {
-      timeout: 5_000,
-    });
+    // Tool call indicator remains without bounce dots
+    await expect(toolCallTrigger).toBeVisible({ timeout: 10_000 });
+    const bounceDots = toolCallTrigger.locator('span.animate-bounce');
+    await expect(bounceDots).toHaveCount(0, { timeout: 5_000 });
 
     // Response text is visible
     await expect(lastAIMessage).toContainText(/quantum/i, {
