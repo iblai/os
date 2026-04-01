@@ -58,28 +58,26 @@ jobs:
           targets: ${{ matrix.rust_target }}
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/${{ matrix.rust_target }}
-          key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            rust-msix-${{ matrix.rust_target }}-
+          workspaces: src-tauri
+          cache-targets: true
+          cache-all-crates: true
+          prefix-key: rust-msix-${{ matrix.rust_target }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Install Tauri CLI
         run: |
-          cargo install cargo-binstall --locked
-          try {
-            cargo binstall tauri-cli --no-confirm
-          } catch {
-            Write-Host "cargo-binstall tauri-cli failed; falling back to cargo install tauri-cli..."
-            cargo install tauri-cli --locked
+          $url = "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-pc-windows-msvc.zip"
+          if ("${{ matrix.rust_target }}" -eq "aarch64-pc-windows-msvc") {
+            $url = "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-aarch64-pc-windows-msvc.zip"
           }
+          Invoke-WebRequest -Uri $url -OutFile binstall.zip
+          Expand-Archive -Path binstall.zip -DestinationPath "$env:USERPROFILE\.cargo\bin" -Force
+          Remove-Item binstall.zip
+          cargo binstall tauri-cli --no-confirm
 
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
