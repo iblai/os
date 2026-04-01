@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-31 | 270 checkpoints | 36 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-01 | 277 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -535,6 +535,20 @@ When adding a new page or modifying an existing user flow:
 - [x] Mentor copied with training data has datasets on the copy
 - [x] Mentor copied without training data has no datasets on the copy
 - [x] Mentor can be copied to a different tenant _(env-gated: requires user with multiple admin tenants)_
+
+---
+
+## Journey 37: Tool Call Indicator & Reasoning Section (7 checkpoints) — `journeys/37-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
 
 ---
 

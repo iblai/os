@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-31",
+  "lastUpdated": "2026-04-01",
   "summary": {
-    "totalCheckpoints": 270,
-    "coveredCheckpoints": 270,
+    "totalCheckpoints": 277,
+    "coveredCheckpoints": 277,
     "percent": 100,
-    "totalJourneys": 36
+    "totalJourneys": 37
   },
   "journeys": [
     {
@@ -573,6 +573,28 @@
         { "id": "cpm-08", "description": "Mentor copied with training data has datasets on the copy", "status": "covered" },
         { "id": "cpm-09", "description": "Mentor copied without training data has no datasets on the copy", "status": "covered" },
         { "id": "cpm-10", "description": "Mentor can be copied to a different tenant", "status": "covered" }
+      ]
+    },
+    {
+      "id": "tool-call-indicator-and-reasoning",
+      "name": "Tool Call Indicator & Reasoning Section",
+      "spec": "37-tool-call-indicator-and-reasoning.spec.ts",
+      "sourceFiles": [
+        "components/chat/tool-call-indicator.tsx",
+        "components/chat/tool-call-item.tsx",
+        "components/chat/tool-call-utils.ts",
+        "components/chat/reasoning-section.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/chat-messages/index.tsx"
+      ],
+      "checkpoints": [
+        { "id": "tcr-01", "description": "Web Search tool pill appears during streaming with tool name and pulse animation", "status": "covered" },
+        { "id": "tcr-02", "description": "Tool call pill is expandable and shows query detail", "status": "covered" },
+        { "id": "tcr-03", "description": "Web Search button is not visible when tool is disabled on mentor", "status": "covered" },
+        { "id": "tcr-04", "description": "Tool call indicator does not appear when Web Search is enabled but not activated in session", "status": "covered" },
+        { "id": "tcr-05", "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after", "status": "covered" },
+        { "id": "tcr-06", "description": "Reasoning section does not appear for non-reasoning model", "status": "covered" },
+        { "id": "tcr-07", "description": "Tool call indicator and reasoning section both render in correct order in same message", "status": "covered" }
       ]
     }
   ]
