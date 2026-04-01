@@ -82,7 +82,7 @@ jobs:
           Invoke-WebRequest -Uri $url -OutFile binstall.zip
           Expand-Archive -Path binstall.zip -DestinationPath "$env:USERPROFILE\.cargo\bin" -Force
           Remove-Item binstall.zip
-          cargo binstall tauri-cli --no-confirm
+          cargo binstall tauri-cli --no-confirm --force
 
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
