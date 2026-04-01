@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.43.0](https://github.com/iblai/mentorai/compare/v0.42.0...v0.43.0) (2026-04-01)
+
+### Features
+
+* add playwright-e2e-engineer agent for Playwright E2E testing ([466fc72](https://github.com/iblai/mentorai/commit/466fc7296f4fd76252a206af8e99412a99d82482))
+* **dataset:** add CSV resource type to datasets tab in edit mentor modal ([c45115a](https://github.com/iblai/mentorai/commit/c45115a72c5fe975b0349457984168a1c3c68866))
+* **e2e:** add CSV file upload tests for chat and dataset management journeys ([0780a68](https://github.com/iblai/mentorai/commit/0780a68d63eaf670c45e1840a5aec864b253c949))
+* **playwright:** add test-data.csv for CSV file upload tests and update resource types ([588e41f](https://github.com/iblai/mentorai/commit/588e41f8d92c75496bca64804f3b6c09d71659b0))
+
+### Bug Fixes
+
+* force reinstall tauri-cli to avoid stale rust-cache metadata ([2e0d8f6](https://github.com/iblai/mentorai/commit/2e0d8f6ea2a035c9b1e5dca4048c46ccc4cffe99))
+* replace yalc @iblai/iblai-js with registry version 1.0.36 ([561ee2a](https://github.com/iblai/mentorai/commit/561ee2ad4e38dc974c1ae306c046cdc260e427a1))
+* update sourceFiles for dataset-management journey to include resource-types.tsx ([9d9b16b](https://github.com/iblai/mentorai/commit/9d9b16b9ec2935b81b3908156a64e5155dc24ba5))
+* window.setTimeout replaced with setTimeout ([89c2ae6](https://github.com/iblai/mentorai/commit/89c2ae69f43af7847dae7d23495ef6ca9e12d610))
+* window.setTimeout replaced with setTimeout ([9590fa9](https://github.com/iblai/mentorai/commit/9590fa95fce2ae0ddab2b6425416d82d4df50bfc))
+* window.setTimeout replaced with setTimeout ([acb9da9](https://github.com/iblai/mentorai/commit/acb9da9871ef2a64aea629f6257724f5629b3e4a))
+
+### Refactors
+
+* **nav-bar:** remove unused import of menuItems in tests ([ca13261](https://github.com/iblai/mentorai/commit/ca132614875ea50660c92734af18989b56b46aba))
+* streamline CSV file upload process in dataset management tests ([d7c036e](https://github.com/iblai/mentorai/commit/d7c036e7e54ae8b167fa76a54fac4d3dddcc822b))
+* update playwright-e2e-engineer agent description and capabilities ([3d5cc56](https://github.com/iblai/mentorai/commit/3d5cc56b1ee1a393658b7413a3189aabf5cf7484))
+
+### Chores
+
+* **ci:** update pnpm lock file ([ab5f663](https://github.com/iblai/mentorai/commit/ab5f663e8bebb87c02f85820b1488937f4f5cad8))
+* update dependencies in pnpm-lock.yaml ([eaf368d](https://github.com/iblai/mentorai/commit/eaf368d89b4d67133a0632f56869218f23cadaf4))
+* update dependencies in pnpm-lock.yaml ([8242d18](https://github.com/iblai/mentorai/commit/8242d18942820e5bca8b6eb459fdf97f8fcbcf17))
+
+### Tests
+
+* **add-access-dialog:** enhance focus event handling in search input tests ([24c1eec](https://github.com/iblai/mentorai/commit/24c1eecf98d08df86f1e57e6d7072874f950154f))
+* **dataset:** add comprehensive tests for resource types and local file upload modal ([848df2b](https://github.com/iblai/mentorai/commit/848df2b352131387b81b0d7fb2b09a435783b9bf))
+* **providers:** add legacyLmsUrl to config mock and update error handler index ([696b0ef](https://github.com/iblai/mentorai/commit/696b0efcf41cc55694ca130cb70305edef1944d3))
+
+## [0.42.0](https://github.com/iblai/mentorai/compare/v0.41.2...v0.42.0) (2026-04-01)
+
+### Features
+
+* add optional NSIS EXE installer output to Windows build workflow ([3dcd340](https://github.com/iblai/mentorai/commit/3dcd340ef80dc46c341ecdbaad273d2ed2e8da81))
+
+## [0.41.2](https://github.com/iblai/mentorai/compare/v0.41.1...v0.41.2) (2026-04-01)
+
+### Performance
+
+* speed up MSIX workflow by using rust-cache and pre-built cargo-binstall ([715abed](https://github.com/iblai/mentorai/commit/715abedc58becc7e9ea21a8208abc0f77c881fa4))
+
 ## [0.41.1](https://github.com/iblai/mentorai/compare/v0.41.0...v0.41.1) (2026-03-31)
 
 ### Bug Fixes
