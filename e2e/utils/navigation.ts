@@ -1,31 +1,31 @@
-import { Page } from "@playwright/test";
+import { Page } from '@playwright/test';
 
-import { expect } from "../fixtures/mentor-test";
+import { expect } from '../fixtures/mentor-test';
 export interface SafeWaitForURLOptions {
   timeout?: number;
-  waitUntil?: "commit" | "domcontentloaded" | "load" | "networkidle";
+  waitUntil?: 'commit' | 'domcontentloaded' | 'load' | 'networkidle';
   maxRetries?: number;
 }
 
 function isFirefox(page: Page): boolean {
-  return page.context().browser()?.browserType().name() === "firefox";
+  return page.context().browser()?.browserType().name() === 'firefox';
 }
 
 function isWebKit(page: Page): boolean {
-  return page.context().browser()?.browserType().name() === "webkit";
+  return page.context().browser()?.browserType().name() === 'webkit';
 }
 
 function isNavigationAbortedError(error: unknown): boolean {
-  const message = (error as Error)?.message ?? "";
+  const message = (error as Error)?.message ?? '';
   return (
-    message.includes("NS_BINDING_ABORTED") ||
-    message.includes("Navigation interrupted")
+    message.includes('NS_BINDING_ABORTED') ||
+    message.includes('Navigation interrupted')
   );
 }
 
 function isSafariNavigationPolicyError(error: unknown): boolean {
-  const message = (error as Error)?.message ?? "";
-  return message.includes("Navigation canceled by policy check");
+  const message = (error as Error)?.message ?? '';
+  return message.includes('Navigation canceled by policy check');
 }
 
 function urlMatchesPattern(
@@ -34,12 +34,12 @@ function urlMatchesPattern(
 ): boolean {
   try {
     const url = new URL(currentUrl);
-    if (typeof pattern === "function") return pattern(url);
+    if (typeof pattern === 'function') return pattern(url);
     if (pattern instanceof RegExp) return pattern.test(currentUrl);
     const regexPattern = pattern
-      .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-      .replace(/\*\*/g, ".*")
-      .replace(/\*/g, "[^/]*");
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*\*/g, '.*')
+      .replace(/\*/g, '[^/]*');
     return new RegExp(`^${regexPattern}$`).test(currentUrl);
   } catch {
     return false;
@@ -59,10 +59,10 @@ export async function safeWaitForURL(
   // proceeding, otherwise ChunkLoadError can occur on subsequent navigations.
   // Firefox uses "commit" to avoid NS_BINDING_ABORTED errors.
   const defaultWaitUntil = isWebKit(page)
-    ? "load"
+    ? 'load'
     : isFirefox(page)
-      ? "commit"
-      : "domcontentloaded";
+      ? 'commit'
+      : 'domcontentloaded';
 
   const {
     timeout = 120_000,
@@ -74,7 +74,7 @@ export async function safeWaitForURL(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      await page.waitForLoadState("load", { timeout });
+      await page.waitForLoadState('load', { timeout });
       await page.waitForURL(urlPattern, { timeout, waitUntil });
       return;
     } catch (error) {
@@ -90,7 +90,7 @@ export async function safeWaitForURL(
 
       if (isSafariNavigationPolicyError(error)) {
         await page.waitForTimeout(3_000);
-        await page.waitForLoadState("domcontentloaded");
+        await page.waitForLoadState('domcontentloaded');
         if (urlMatchesPattern(page.url(), urlPattern)) return;
         if (attempt < maxRetries) continue;
       }
@@ -111,9 +111,9 @@ export interface ParsedPlatformUrl {
  */
 export function parsePlatformUrl(url: string): ParsedPlatformUrl {
   const { pathname } = new URL(url);
-  const parts = pathname.split("/").filter(Boolean);
+  const parts = pathname.split('/').filter(Boolean);
 
-  if (parts[0] !== "platform" || parts.length < 3) {
+  if (parts[0] !== 'platform' || parts.length < 3) {
     throw new Error(
       `Unexpected URL format. Expected /platform/{tenantKey}/{mentorId}, got: ${pathname}`,
     );
@@ -131,11 +131,11 @@ export function parsePlatformUrl(url: string): ParsedPlatformUrl {
  * the explore page and waits for the heading to confirm stability.
  */
 export async function navigateToTenantExplorePage(page: Page): Promise<string> {
-  const host = process.env.MENTOR_NEXTJS_HOST || "";
+  const host = process.env.MENTOR_NEXTJS_HOST || '';
 
   // Navigate to the platform root to resolve tenant key via auth/redirect
-  await page.goto(host, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await safeWaitForURL(page, (url) => url.pathname.startsWith("/platform/"), {
+  await page.goto(host, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await safeWaitForURL(page, (url) => url.pathname.startsWith('/platform/'), {
     timeout: 120_000,
   });
 
@@ -143,12 +143,12 @@ export async function navigateToTenantExplorePage(page: Page): Promise<string> {
 
   // Navigate to the tenant explore page
   await page.goto(`${host}/platform/${tenantKey}/explore`, {
-    waitUntil: "domcontentloaded",
+    waitUntil: 'domcontentloaded',
     timeout: 60_000,
   });
 
   // Wait for explore heading to confirm the page is stable
-  const heading = page.getByRole("heading", { name: /all mentors/i });
+  const heading = page.getByRole('heading', { name: /all mentors/i });
   await expect(heading).toBeVisible({ timeout: 60_000 });
 
   return tenantKey;
@@ -160,13 +160,13 @@ export async function openMoreOptionsMenu(page: Page) {
     .last();
   await expect(moreOptionsButton).toBeVisible({ timeout: 10000 });
   await moreOptionsButton.click();
-  console.log("✓ More options button clicked");
+  console.log('✓ More options button clicked');
 
   const menuModal = page
-    .getByRole("menu", { name: /more options/i })
-    .or(page.getByRole("dialog"));
+    .getByRole('menu', { name: /more options/i })
+    .or(page.getByRole('dialog'));
   await expect(menuModal).toBeVisible({ timeout: 5000 });
-  console.log("✓ Menu modal visible");
+  console.log('✓ Menu modal visible');
 
   return menuModal;
 }

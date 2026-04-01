@@ -16,7 +16,7 @@
  * Call `setupChunkErrorRecovery()` early in the app lifecycle.
  */
 
-const RELOAD_KEY = "__chunk_reload";
+const RELOAD_KEY = '__chunk_reload';
 const MAX_RELOADS = 2;
 const MAX_CHUNK_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1000;
@@ -33,7 +33,7 @@ const RETRY_BASE_DELAY_MS = 1000;
  * Returns a cleanup function that restores the originals.
  */
 function patchWebpackChunkLoading(): () => void {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === 'undefined') return () => {};
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = window as any;
@@ -58,9 +58,9 @@ function patchWebpackChunkLoading(): () => void {
   }
 
   // Patch __webpack_chunk_load__ (Next.js / webpack 5)
-  if (typeof g.__webpack_chunk_load__ === "function") {
+  if (typeof g.__webpack_chunk_load__ === 'function') {
     const orig = g.__webpack_chunk_load__;
-    g.__webpack_chunk_load__ = wrapWithRetry(orig, "__webpack_chunk_load__");
+    g.__webpack_chunk_load__ = wrapWithRetry(orig, '__webpack_chunk_load__');
     cleanups.push(() => {
       g.__webpack_chunk_load__ = orig;
     });
@@ -69,10 +69,10 @@ function patchWebpackChunkLoading(): () => void {
   // Patch __webpack_require__.e (webpack 4 / 5 ensure-chunk)
   if (
     g.__webpack_require__?.e &&
-    typeof g.__webpack_require__.e === "function"
+    typeof g.__webpack_require__.e === 'function'
   ) {
     const orig = g.__webpack_require__.e;
-    g.__webpack_require__.e = wrapWithRetry(orig, "__webpack_require__.e");
+    g.__webpack_require__.e = wrapWithRetry(orig, '__webpack_require__.e');
     cleanups.push(() => {
       g.__webpack_require__.e = orig;
     });
@@ -112,7 +112,7 @@ function retryPromise(
  * Returns a cleanup function.
  */
 export function setupChunkErrorRecovery(): () => void {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === 'undefined') return () => {};
 
   // Layer 1 — webpack-level retry
   const restoreWebpack = patchWebpackChunkLoading();
@@ -123,7 +123,7 @@ export function setupChunkErrorRecovery(): () => void {
     if (!isChunkLoadError(error)) return;
 
     console.warn(
-      "[ChunkRetry] ChunkLoadError reached global handler, attempting page reload…",
+      '[ChunkRetry] ChunkLoadError reached global handler, attempting page reload…',
       error,
     );
 
@@ -134,7 +134,7 @@ export function setupChunkErrorRecovery(): () => void {
       window.location.reload();
     } else {
       console.error(
-        "[ChunkRetry] Max reload attempts reached. The chunk may be permanently unavailable.",
+        '[ChunkRetry] Max reload attempts reached. The chunk may be permanently unavailable.',
       );
       clearReloadCount();
     }
@@ -144,7 +144,7 @@ export function setupChunkErrorRecovery(): () => void {
     if (!isChunkLoadError(event.error)) return;
 
     console.warn(
-      "[ChunkRetry] ChunkLoadError (sync) reached global handler, attempting page reload…",
+      '[ChunkRetry] ChunkLoadError (sync) reached global handler, attempting page reload…',
     );
 
     const reloadCount = getReloadCount();
@@ -157,25 +157,25 @@ export function setupChunkErrorRecovery(): () => void {
     }
   };
 
-  window.addEventListener("unhandledrejection", handler);
-  window.addEventListener("error", errorHandler);
+  window.addEventListener('unhandledrejection', handler);
+  window.addEventListener('error', errorHandler);
 
   // Clear reload counter on successful page load (chunks loaded fine)
   const loadHandler = () => {
     setTimeout(() => clearReloadCount(), 5000);
   };
 
-  if (document.readyState === "complete") {
+  if (document.readyState === 'complete') {
     setTimeout(() => clearReloadCount(), 5000);
   } else {
-    window.addEventListener("load", loadHandler, { once: true });
+    window.addEventListener('load', loadHandler, { once: true });
   }
 
   return () => {
     restoreWebpack();
-    window.removeEventListener("unhandledrejection", handler);
-    window.removeEventListener("error", errorHandler);
-    window.removeEventListener("load", loadHandler);
+    window.removeEventListener('unhandledrejection', handler);
+    window.removeEventListener('error', errorHandler);
+    window.removeEventListener('load', loadHandler);
   };
 }
 
@@ -184,18 +184,18 @@ export function setupChunkErrorRecovery(): () => void {
 // ---------------------------------------------------------------------------
 
 function isChunkLoadError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
+  if (!error || typeof error !== 'object') return false;
   const e = error as { name?: string; message?: string };
   return (
-    e.name === "ChunkLoadError" ||
-    (typeof e.message === "string" && e.message.includes("ChunkLoadError")) ||
-    (typeof e.message === "string" && e.message.includes("Loading chunk"))
+    e.name === 'ChunkLoadError' ||
+    (typeof e.message === 'string' && e.message.includes('ChunkLoadError')) ||
+    (typeof e.message === 'string' && e.message.includes('Loading chunk'))
   );
 }
 
 function getReloadCount(): number {
   try {
-    return parseInt(sessionStorage.getItem(RELOAD_KEY) || "0", 10);
+    return parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10);
   } catch {
     return 0;
   }

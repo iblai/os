@@ -16,6 +16,7 @@ export class SettingsTab {
   readonly advancedJsEditor: Locator;
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
+  readonly showVoiceCallToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -56,6 +57,9 @@ export class SettingsTab {
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
       exact: true,
+    });
+    this.showVoiceCallToggle = dialog.getByRole('switch', {
+      name: /show voice call/i,
     });
   }
 
@@ -113,6 +117,30 @@ export class SettingsTab {
     await this.saveButton.click();
     await this.page.waitForLoadState('networkidle');
     await this.page.waitForTimeout(1_000);
+  }
+
+  async enableVoiceCall(): Promise<void> {
+    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
+    if (!isChecked) {
+      await this.showVoiceCallToggle.click();
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click();
+      await this.page.waitForTimeout(2_000);
+    }
+  }
+
+  async disableVoiceCall(): Promise<void> {
+    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked) {
+      await this.showVoiceCallToggle.click();
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click();
+      await this.page.waitForTimeout(2_000);
+    }
   }
 
   async deleteMentor(): Promise<void> {

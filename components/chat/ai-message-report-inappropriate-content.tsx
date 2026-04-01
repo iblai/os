@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { Flag } from "lucide-react";
+import { Flag } from 'lucide-react';
 
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { Message } from "@iblai/iblai-js/web-utils";
+} from '@/components/ui/tooltip';
+import type { Message } from '@iblai/iblai-js/web-utils';
 
-const DEFAULT_SUPPORT_EMAIL = "support@iblai.zendesk.com";
+const DEFAULT_SUPPORT_EMAIL = 'support@iblai.zendesk.com';
 
 type Props = {
   mentorName: string;
@@ -19,8 +19,8 @@ type Props = {
 
 function formatConversationForEmail(messages: Message[]): string {
   return messages
-    .map((msg) => `[${msg.role === "user" ? "User" : "AI"}]: ${msg.content}`)
-    .join("\n\n");
+    .map((msg) => `[${msg.role === 'user' ? 'User' : 'AI'}]: ${msg.content}`)
+    .join('\n\n');
 }
 
 export function AIMessageReportInappropriateContent({
@@ -37,7 +37,7 @@ export function AIMessageReportInappropriateContent({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <a href={mailtoUrl} className="text-gray-500 hover:text-gray-700 -ml-1">
+        <a href={mailtoUrl} className="-ml-1 text-gray-500 hover:text-gray-700">
           <span className="sr-only">Report Inappropriate Content</span>
           <Flag className="h-4 w-4" />
         </a>

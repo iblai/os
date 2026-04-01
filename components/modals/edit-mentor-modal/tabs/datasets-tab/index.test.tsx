@@ -1,14 +1,14 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
   fireEvent,
   waitFor,
   cleanup,
-} from "@testing-library/react";
+} from '@testing-library/react';
 
-import { DatasetsTab } from "./index";
+import { DatasetsTab } from './index';
 
 // ============================================================================
 // MOCKS
@@ -41,7 +41,7 @@ let mockPaginationState: {
   },
   isDatasetsLoading: false,
   isDatasetsFetching: false,
-  searchQuery: "",
+  searchQuery: '',
   setSearchQuery: mockSetSearchQuery,
   currentPage: 1,
   totalPages: 1,
@@ -66,18 +66,18 @@ let mockFreeTrialState: {
 /**
  * Mock custom hooks
  */
-vi.mock("@/hooks/use-datasets", () => ({
+vi.mock('@/hooks/use-datasets', () => ({
   useDatasetsWithPagination: () => mockPaginationState,
 }));
 
-vi.mock("@/hooks/user-user-actions", () => ({
+vi.mock('@/hooks/user-user-actions', () => ({
   useShowFreeTrialDialog: () => mockFreeTrialState,
 }));
 
 /**
  * Mock UI components
  */
-vi.mock("@/components/ui/table", () => ({
+vi.mock('@/components/ui/table', () => ({
   Table: ({ children, ...props }: any) => <table {...props}>{children}</table>,
   TableHead: ({ children, ...props }: any) => <th {...props}>{children}</th>,
   TableHeader: ({ children, ...props }: any) => (
@@ -86,7 +86,7 @@ vi.mock("@/components/ui/table", () => ({
   TableRow: ({ children, ...props }: any) => <tr {...props}>{children}</tr>,
 }));
 
-vi.mock("@/components/ui/input", () => ({
+vi.mock('@/components/ui/input', () => ({
   Input: ({ value, onChange, placeholder, ...props }: any) => (
     <input
       value={value}
@@ -98,7 +98,7 @@ vi.mock("@/components/ui/input", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/button", () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
@@ -106,7 +106,7 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
-vi.mock("@/components/spinner", () => ({
+vi.mock('@/components/spinner', () => ({
   Spinner: ({ className }: any) => (
     <div data-testid="spinner" className={className}>
       Loading...
@@ -117,7 +117,7 @@ vi.mock("@/components/spinner", () => ({
 /**
  * Mock child components
  */
-vi.mock("./dataset-item-list", () => ({
+vi.mock('./dataset-item-list', () => ({
   DatasetItemList: ({ datasets }: any) => (
     <tbody data-testid="dataset-item-list">
       {datasets.map((d: any) => (
@@ -129,7 +129,7 @@ vi.mock("./dataset-item-list", () => ({
   ),
 }));
 
-vi.mock("./add-resource-modal", () => ({
+vi.mock('./add-resource-modal', () => ({
   AddResourceModal: ({ isOpen, onClose }: any) =>
     isOpen ? (
       <div data-testid="add-resource-modal">
@@ -138,7 +138,7 @@ vi.mock("./add-resource-modal", () => ({
     ) : null,
 }));
 
-vi.mock("@/components/ibl-pagination", () => ({
+vi.mock('@/components/ibl-pagination', () => ({
   default: ({ currentPage, totalPages, onPageChange, disabled }: any) => (
     <div data-testid="pagination">
       <button
@@ -165,7 +165,7 @@ vi.mock("@/components/ibl-pagination", () => ({
 /**
  * Mock icons
  */
-vi.mock("lucide-react", () => ({
+vi.mock('lucide-react', () => ({
   Search: () => <span data-testid="search-icon">Search</span>,
   Plus: () => <span data-testid="plus-icon">Plus</span>,
 }));
@@ -179,26 +179,26 @@ vi.mock("lucide-react", () => ({
  */
 const mockDatasets = [
   {
-    id: "dataset-1",
-    url: "https://example.com/doc1",
-    document_name: "Document 1",
-    document_type: "url",
+    id: 'dataset-1',
+    url: 'https://example.com/doc1',
+    document_name: 'Document 1',
+    document_type: 'url',
     tokens: 1000,
     is_trained: true,
-    access: "public",
-    pathway: "pathway-1",
-    training_status: "trained",
+    access: 'public',
+    pathway: 'pathway-1',
+    training_status: 'trained',
   },
   {
-    id: "dataset-2",
-    url: "https://example.com/doc2",
-    document_name: "Document 2",
-    document_type: "pdf",
+    id: 'dataset-2',
+    url: 'https://example.com/doc2',
+    document_name: 'Document 2',
+    document_type: 'pdf',
     tokens: 2000,
     is_trained: false,
-    access: "private",
-    pathway: "pathway-2",
-    training_status: "untrained",
+    access: 'private',
+    pathway: 'pathway-2',
+    training_status: 'untrained',
   },
 ];
 
@@ -206,7 +206,7 @@ const mockDatasets = [
 // TESTS
 // ============================================================================
 
-describe("DatasetsTab", () => {
+describe('DatasetsTab', () => {
   beforeEach(() => {
     cleanup();
 
@@ -222,7 +222,7 @@ describe("DatasetsTab", () => {
       datasets: { results: [] },
       isDatasetsLoading: false,
       isDatasetsFetching: false,
-      searchQuery: "",
+      searchQuery: '',
       setSearchQuery: mockSetSearchQuery,
       currentPage: 1,
       totalPages: 1,
@@ -248,17 +248,17 @@ describe("DatasetsTab", () => {
   // Rendering Tests
   // --------------------------------------------------------------------------
 
-  describe("Rendering", () => {
+  describe('Rendering', () => {
     /**
      * Test: Component should render header section with title and description
      * Verifies the main heading and description are displayed
      */
-    it("renders header with title and description", () => {
+    it('renders header with title and description', () => {
       render(<DatasetsTab />);
 
-      expect(screen.getByText("Datasets")).toBeInTheDocument();
+      expect(screen.getByText('Datasets')).toBeInTheDocument();
       expect(
-        screen.getByText("Manage training datasets and knowledge sources."),
+        screen.getByText('Manage training datasets and knowledge sources.'),
       ).toBeInTheDocument();
     });
 
@@ -266,12 +266,12 @@ describe("DatasetsTab", () => {
      * Test: Component should render search input
      * Verifies search functionality is available
      */
-    it("renders search input with placeholder", () => {
+    it('renders search input with placeholder', () => {
       render(<DatasetsTab />);
 
-      const searchInput = screen.getByTestId("search-input");
+      const searchInput = screen.getByTestId('search-input');
       expect(searchInput).toBeInTheDocument();
-      expect(searchInput).toHaveAttribute("placeholder", "Search datasets...");
+      expect(searchInput).toHaveAttribute('placeholder', 'Search datasets...');
     });
 
     /**
@@ -281,36 +281,36 @@ describe("DatasetsTab", () => {
     it('renders "Add Resource" button with icon', () => {
       render(<DatasetsTab />);
 
-      expect(screen.getByText("Add Resource")).toBeInTheDocument();
-      expect(screen.getByTestId("plus-icon")).toBeInTheDocument();
+      expect(screen.getByText('Add Resource')).toBeInTheDocument();
+      expect(screen.getByTestId('plus-icon')).toBeInTheDocument();
     });
 
     /**
      * Test: Component should render table headers correctly
      * Verifies all column headers are present in correct order
      */
-    it("renders table headers in correct order", () => {
+    it('renders table headers in correct order', () => {
       mockPaginationState.datasets = { results: mockDatasets };
 
       render(<DatasetsTab />);
 
       // Verify all headers
-      expect(screen.getByText("NAME")).toBeInTheDocument();
-      expect(screen.getByText("TYPE")).toBeInTheDocument();
-      expect(screen.getByText("TOKENS")).toBeInTheDocument();
-      expect(screen.getByText("INTERVAL")).toBeInTheDocument();
-      expect(screen.getByText("VISIBILITY")).toBeInTheDocument();
-      expect(screen.getByText("STATUS")).toBeInTheDocument();
+      expect(screen.getByText('NAME')).toBeInTheDocument();
+      expect(screen.getByText('TYPE')).toBeInTheDocument();
+      expect(screen.getByText('TOKENS')).toBeInTheDocument();
+      expect(screen.getByText('INTERVAL')).toBeInTheDocument();
+      expect(screen.getByText('VISIBILITY')).toBeInTheDocument();
+      expect(screen.getByText('STATUS')).toBeInTheDocument();
     });
 
     /**
      * Test: Component should render pagination controls
      * Verifies pagination is displayed
      */
-    it("renders pagination controls", () => {
+    it('renders pagination controls', () => {
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("pagination")).toBeInTheDocument();
+      expect(screen.getByTestId('pagination')).toBeInTheDocument();
     });
   });
 
@@ -318,44 +318,44 @@ describe("DatasetsTab", () => {
   // Search Functionality Tests
   // --------------------------------------------------------------------------
 
-  describe("Search Functionality", () => {
+  describe('Search Functionality', () => {
     /**
      * Test: Search input should display current search query
      * Verifies two-way binding for search input
      */
-    it("displays current search query in input", () => {
-      mockPaginationState.searchQuery = "test query";
+    it('displays current search query in input', () => {
+      mockPaginationState.searchQuery = 'test query';
 
       render(<DatasetsTab />);
 
-      const searchInput = screen.getByTestId("search-input");
-      expect(searchInput).toHaveValue("test query");
+      const searchInput = screen.getByTestId('search-input');
+      expect(searchInput).toHaveValue('test query');
     });
 
     /**
      * Test: Typing in search input should call setSearchQuery
      * Verifies search query updates are propagated
      */
-    it("calls setSearchQuery when typing in search input", () => {
+    it('calls setSearchQuery when typing in search input', () => {
       render(<DatasetsTab />);
 
-      const searchInput = screen.getByTestId("search-input");
-      fireEvent.change(searchInput, { target: { value: "new search" } });
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'new search' } });
 
-      expect(mockSetSearchQuery).toHaveBeenCalledWith("new search");
+      expect(mockSetSearchQuery).toHaveBeenCalledWith('new search');
     });
 
     /**
      * Test: Should show spinner icon when fetching search results
      * Verifies loading state during search
      */
-    it("shows spinner icon when fetching datasets", () => {
+    it('shows spinner icon when fetching datasets', () => {
       mockPaginationState.isDatasetsFetching = true;
 
       render(<DatasetsTab />);
 
       // Should show spinner instead of search icon
-      const spinners = screen.getAllByTestId("spinner");
+      const spinners = screen.getAllByTestId('spinner');
       expect(spinners.length).toBeGreaterThan(0);
     });
 
@@ -363,12 +363,12 @@ describe("DatasetsTab", () => {
      * Test: Should show search icon when not fetching
      * Verifies normal state shows search icon
      */
-    it("shows search icon when not fetching", () => {
+    it('shows search icon when not fetching', () => {
       mockPaginationState.isDatasetsFetching = false;
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("search-icon")).toBeInTheDocument();
+      expect(screen.getByTestId('search-icon')).toBeInTheDocument();
     });
   });
 
@@ -376,43 +376,43 @@ describe("DatasetsTab", () => {
   // Loading State Tests
   // --------------------------------------------------------------------------
 
-  describe("Loading States", () => {
+  describe('Loading States', () => {
     /**
      * Test: Should show loading spinner when datasets are loading
      * Verifies initial loading state
      */
-    it("shows loading spinner when datasets are loading", () => {
+    it('shows loading spinner when datasets are loading', () => {
       mockPaginationState.isDatasetsLoading = true;
 
       render(<DatasetsTab />);
 
-      const spinners = screen.getAllByTestId("spinner");
-      expect(spinners.some((s) => s.textContent === "Loading...")).toBe(true);
+      const spinners = screen.getAllByTestId('spinner');
+      expect(spinners.some((s) => s.textContent === 'Loading...')).toBe(true);
     });
 
     /**
      * Test: Should not show table when loading
      * Verifies table is hidden during loading
      */
-    it("does not render table when loading", () => {
+    it('does not render table when loading', () => {
       mockPaginationState.isDatasetsLoading = true;
 
       render(<DatasetsTab />);
 
-      expect(screen.queryByTestId("dataset-item-list")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dataset-item-list')).not.toBeInTheDocument();
     });
 
     /**
      * Test: Should show table when not loading
      * Verifies table appears after loading completes
      */
-    it("renders table when not loading", () => {
+    it('renders table when not loading', () => {
       mockPaginationState.isDatasetsLoading = false;
       mockPaginationState.datasets = { results: [] };
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
     });
   });
 
@@ -420,44 +420,44 @@ describe("DatasetsTab", () => {
   // Dataset List Tests
   // --------------------------------------------------------------------------
 
-  describe("Dataset List", () => {
+  describe('Dataset List', () => {
     /**
      * Test: Should render DatasetItemList with datasets
      * Verifies dataset list is populated
      */
-    it("renders DatasetItemList with provided datasets", () => {
+    it('renders DatasetItemList with provided datasets', () => {
       mockPaginationState.datasets = { results: mockDatasets };
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
-      expect(screen.getByText("Document 1")).toBeInTheDocument();
-      expect(screen.getByText("Document 2")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
+      expect(screen.getByText('Document 1')).toBeInTheDocument();
+      expect(screen.getByText('Document 2')).toBeInTheDocument();
     });
 
     /**
      * Test: Should render DatasetItemList with empty array when no results
      * Verifies empty state handling
      */
-    it("renders DatasetItemList with empty array when no datasets", () => {
+    it('renders DatasetItemList with empty array when no datasets', () => {
       mockPaginationState.datasets = { results: [] };
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
     });
 
     /**
      * Test: Should handle undefined datasets gracefully
      * Verifies null-safety for missing data
      */
-    it("handles undefined datasets gracefully", () => {
+    it('handles undefined datasets gracefully', () => {
       mockPaginationState.datasets = undefined as any;
 
       render(<DatasetsTab />);
 
       // Should render empty list
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
     });
   });
 
@@ -465,7 +465,7 @@ describe("DatasetsTab", () => {
   // Add Resource Button Tests
   // --------------------------------------------------------------------------
 
-  describe("Add Resource Button", () => {
+  describe('Add Resource Button', () => {
     /**
      * Test: Clicking "Add Resource" should execute with trial check
      * Verifies free trial validation before opening modal
@@ -473,7 +473,7 @@ describe("DatasetsTab", () => {
     it('executes with trial check when clicking "Add Resource"', () => {
       render(<DatasetsTab />);
 
-      const addButton = screen.getByText("Add Resource");
+      const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
       expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
@@ -483,14 +483,14 @@ describe("DatasetsTab", () => {
      * Test: Should open Add Resource modal after trial check passes
      * Verifies modal opens when user has access
      */
-    it("opens Add Resource modal when trial check passes", async () => {
+    it('opens Add Resource modal when trial check passes', async () => {
       render(<DatasetsTab />);
 
-      const addButton = screen.getByText("Add Resource");
+      const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId("add-resource-modal")).toBeInTheDocument();
+        expect(screen.getByTestId('add-resource-modal')).toBeInTheDocument();
       });
     });
 
@@ -498,17 +498,17 @@ describe("DatasetsTab", () => {
      * Test: Should not open modal if trial check fails
      * Verifies modal doesn't open when user doesn't have access
      */
-    it("does not open modal if trial check blocks action", () => {
+    it('does not open modal if trial check blocks action', () => {
       // Mock trial check to not execute callback
       mockExecuteWithTrialCheck.mockImplementation(() => {});
 
       render(<DatasetsTab />);
 
-      const addButton = screen.getByText("Add Resource");
+      const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
       expect(
-        screen.queryByTestId("add-resource-modal"),
+        screen.queryByTestId('add-resource-modal'),
       ).not.toBeInTheDocument();
     });
 
@@ -516,24 +516,24 @@ describe("DatasetsTab", () => {
      * Test: Should close Add Resource modal when close is clicked
      * Verifies modal can be dismissed
      */
-    it("closes Add Resource modal when close button is clicked", async () => {
+    it('closes Add Resource modal when close button is clicked', async () => {
       render(<DatasetsTab />);
 
       // Open modal
-      const addButton = screen.getByText("Add Resource");
+      const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId("add-resource-modal")).toBeInTheDocument();
+        expect(screen.getByTestId('add-resource-modal')).toBeInTheDocument();
       });
 
       // Close modal
-      const closeButton = screen.getByText("Close Add Resource");
+      const closeButton = screen.getByText('Close Add Resource');
       fireEvent.click(closeButton);
 
       await waitFor(() => {
         expect(
-          screen.queryByTestId("add-resource-modal"),
+          screen.queryByTestId('add-resource-modal'),
         ).not.toBeInTheDocument();
       });
     });
@@ -542,18 +542,18 @@ describe("DatasetsTab", () => {
      * Test: Add Resource modal should keep parent open
      * Verifies keepParentOpen prop is set correctly
      */
-    it("passes keepParentOpen prop to Add Resource modal", async () => {
+    it('passes keepParentOpen prop to Add Resource modal', async () => {
       render(<DatasetsTab />);
 
-      const addButton = screen.getByText("Add Resource");
+      const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId("add-resource-modal")).toBeInTheDocument();
+        expect(screen.getByTestId('add-resource-modal')).toBeInTheDocument();
       });
 
       // Modal should be present (keepParentOpen=true is implicit in the mock)
-      expect(screen.getByTestId("add-resource-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('add-resource-modal')).toBeInTheDocument();
     });
   });
 
@@ -561,31 +561,31 @@ describe("DatasetsTab", () => {
   // Pagination Tests
   // --------------------------------------------------------------------------
 
-  describe("Pagination", () => {
+  describe('Pagination', () => {
     /**
      * Test: Should display current page and total pages
      * Verifies pagination state is displayed correctly
      */
-    it("displays current page and total pages", () => {
+    it('displays current page and total pages', () => {
       mockPaginationState.currentPage = 2;
       mockPaginationState.totalPages = 5;
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("page-info")).toHaveTextContent("2 / 5");
+      expect(screen.getByTestId('page-info')).toHaveTextContent('2 / 5');
     });
 
     /**
      * Test: Should call handlePageChange when clicking next page
      * Verifies pagination navigation works
      */
-    it("calls handlePageChange when clicking next page", () => {
+    it('calls handlePageChange when clicking next page', () => {
       mockPaginationState.currentPage = 1;
       mockPaginationState.totalPages = 3;
 
       render(<DatasetsTab />);
 
-      const nextButton = screen.getByTestId("next-page");
+      const nextButton = screen.getByTestId('next-page');
       fireEvent.click(nextButton);
 
       expect(mockHandlePageChange).toHaveBeenCalledWith(2);
@@ -595,13 +595,13 @@ describe("DatasetsTab", () => {
      * Test: Should call handlePageChange when clicking previous page
      * Verifies backward navigation works
      */
-    it("calls handlePageChange when clicking previous page", () => {
+    it('calls handlePageChange when clicking previous page', () => {
       mockPaginationState.currentPage = 3;
       mockPaginationState.totalPages = 5;
 
       render(<DatasetsTab />);
 
-      const prevButton = screen.getByTestId("prev-page");
+      const prevButton = screen.getByTestId('prev-page');
       fireEvent.click(prevButton);
 
       expect(mockHandlePageChange).toHaveBeenCalledWith(2);
@@ -611,15 +611,15 @@ describe("DatasetsTab", () => {
      * Test: Should disable pagination when fetching
      * Verifies pagination is disabled during loading
      */
-    it("disables pagination when fetching datasets", () => {
+    it('disables pagination when fetching datasets', () => {
       mockPaginationState.isDatasetsFetching = true;
       mockPaginationState.currentPage = 2;
       mockPaginationState.totalPages = 5;
 
       render(<DatasetsTab />);
 
-      const nextButton = screen.getByTestId("next-page");
-      const prevButton = screen.getByTestId("prev-page");
+      const nextButton = screen.getByTestId('next-page');
+      const prevButton = screen.getByTestId('prev-page');
 
       expect(nextButton).toBeDisabled();
       expect(prevButton).toBeDisabled();
@@ -629,12 +629,12 @@ describe("DatasetsTab", () => {
      * Test: Should disable pagination when loading
      * Verifies pagination is disabled during initial load
      */
-    it("disables pagination when loading datasets", () => {
+    it('disables pagination when loading datasets', () => {
       mockPaginationState.isDatasetsLoading = true;
 
       render(<DatasetsTab />);
 
-      const nextButton = screen.getByTestId("next-page");
+      const nextButton = screen.getByTestId('next-page');
       expect(nextButton).toBeDisabled();
     });
   });
@@ -643,12 +643,12 @@ describe("DatasetsTab", () => {
   // Free Trial Dialog Tests
   // --------------------------------------------------------------------------
 
-  describe("Free Trial Dialog", () => {
+  describe('Free Trial Dialog', () => {
     /**
      * Test: Should render FreeTrialDialog when modal is open
      * Verifies free trial dialog integration
      */
-    it("renders FreeTrialDialog when isModalOpen is true", () => {
+    it('renders FreeTrialDialog when isModalOpen is true', () => {
       const FreeTrialDialogComponent = ({ isOpen, onClose }: any) =>
         isOpen ? (
           <div data-testid="free-trial-dialog">
@@ -660,14 +660,14 @@ describe("DatasetsTab", () => {
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("free-trial-dialog")).toBeInTheDocument();
+      expect(screen.getByTestId('free-trial-dialog')).toBeInTheDocument();
     });
 
     /**
      * Test: Should not render FreeTrialDialog when modal is closed
      * Verifies dialog is hidden when not needed
      */
-    it("does not render FreeTrialDialog when isModalOpen is false", () => {
+    it('does not render FreeTrialDialog when isModalOpen is false', () => {
       const FreeTrialDialogComponent = ({ isOpen }: any) =>
         isOpen ? <div data-testid="free-trial-dialog">Dialog</div> : null;
       mockFreeTrialState.FreeTrialDialog = FreeTrialDialogComponent;
@@ -675,27 +675,27 @@ describe("DatasetsTab", () => {
 
       render(<DatasetsTab />);
 
-      expect(screen.queryByTestId("free-trial-dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('free-trial-dialog')).not.toBeInTheDocument();
     });
 
     /**
      * Test: Should not render anything when FreeTrialDialog is null
      * Verifies graceful handling of missing dialog component
      */
-    it("does not render when FreeTrialDialog is null", () => {
+    it('does not render when FreeTrialDialog is null', () => {
       mockFreeTrialState.FreeTrialDialog = null;
       mockFreeTrialState.isModalOpen = true;
 
       render(<DatasetsTab />);
 
-      expect(screen.queryByTestId("free-trial-dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('free-trial-dialog')).not.toBeInTheDocument();
     });
 
     /**
      * Test: Should call closeModal when FreeTrialDialog is closed
      * Verifies dialog close handler is wired correctly
      */
-    it("calls closeModal when FreeTrialDialog close is clicked", async () => {
+    it('calls closeModal when FreeTrialDialog close is clicked', async () => {
       const FreeTrialDialogComponent = ({ isOpen, onClose }: any) =>
         isOpen ? (
           <div data-testid="free-trial-dialog">
@@ -707,7 +707,7 @@ describe("DatasetsTab", () => {
 
       render(<DatasetsTab />);
 
-      const closeButton = screen.getByText("Close Trial Dialog");
+      const closeButton = screen.getByText('Close Trial Dialog');
       fireEvent.click(closeButton);
 
       expect(mockCloseModal).toHaveBeenCalled();
@@ -718,18 +718,18 @@ describe("DatasetsTab", () => {
   // Edge Cases
   // --------------------------------------------------------------------------
 
-  describe("Edge Cases", () => {
+  describe('Edge Cases', () => {
     /**
      * Test: Should handle very long search queries
      * Verifies input handles long text
      */
-    it("handles very long search queries", () => {
-      const longQuery = "a".repeat(1000);
+    it('handles very long search queries', () => {
+      const longQuery = 'a'.repeat(1000);
       mockPaginationState.searchQuery = longQuery;
 
       render(<DatasetsTab />);
 
-      const searchInput = screen.getByTestId("search-input");
+      const searchInput = screen.getByTestId('search-input');
       expect(searchInput).toHaveValue(longQuery);
     });
 
@@ -737,48 +737,48 @@ describe("DatasetsTab", () => {
      * Test: Should handle page 0 gracefully
      * Verifies edge case for pagination bounds
      */
-    it("handles edge case pagination values", () => {
+    it('handles edge case pagination values', () => {
       mockPaginationState.currentPage = 0;
       mockPaginationState.totalPages = 0;
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("pagination")).toBeInTheDocument();
+      expect(screen.getByTestId('pagination')).toBeInTheDocument();
     });
 
     /**
      * Test: Should handle large number of datasets
      * Verifies performance with many items
      */
-    it("handles large number of datasets", () => {
+    it('handles large number of datasets', () => {
       const manyDatasets = Array.from({ length: 1000 }, (_, i) => ({
         id: `dataset-${i}`,
         url: `https://example.com/doc${i}`,
         document_name: `Document ${i}`,
-        document_type: "url",
+        document_type: 'url',
         tokens: 1000,
         is_trained: false,
-        access: "public",
+        access: 'public',
         pathway: `pathway-${i}`,
-        training_status: "untrained",
+        training_status: 'untrained',
       }));
 
       mockPaginationState.datasets = { results: manyDatasets };
 
       render(<DatasetsTab />);
 
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
     });
 
     /**
      * Test: Should maintain scroll position when data changes
      * Verifies overflow styles are applied
      */
-    it("applies overflow styles for scrolling", () => {
+    it('applies overflow styles for scrolling', () => {
       const { container } = render(<DatasetsTab />);
 
       // Check for the div with overflow styles (inline or class-based)
-      const scrollableDiv = container.querySelector(".flex-1");
+      const scrollableDiv = container.querySelector('.flex-1');
       expect(scrollableDiv).toBeInTheDocument();
     });
   });
@@ -787,21 +787,21 @@ describe("DatasetsTab", () => {
   // Styling Tests
   // --------------------------------------------------------------------------
 
-  describe("Styling", () => {
+  describe('Styling', () => {
     /**
      * Test: Add Resource button should have gradient styling
      * Verifies theme consistency
      */
-    it("applies gradient styling to Add Resource button", () => {
+    it('applies gradient styling to Add Resource button', () => {
       render(<DatasetsTab />);
 
-      const addButton = screen.getByText("Add Resource").closest("button");
+      const addButton = screen.getByText('Add Resource').closest('button');
       expect(addButton).toHaveClass(
-        "bg-gradient-to-r",
-        "from-[#2563EB]",
-        "to-[#93C5FD]",
-        "text-white",
-        "hover:opacity-90",
+        'bg-gradient-to-r',
+        'from-[#2563EB]',
+        'to-[#93C5FD]',
+        'text-white',
+        'hover:opacity-90',
       );
     });
 
@@ -809,13 +809,13 @@ describe("DatasetsTab", () => {
      * Test: Table should have proper border and rounding
      * Verifies table styling
      */
-    it("applies proper styling to table container", () => {
+    it('applies proper styling to table container', () => {
       mockPaginationState.datasets = { results: [] };
 
       render(<DatasetsTab />);
 
       // Check that the table is rendered (container classes are applied by parent)
-      expect(screen.getByTestId("dataset-item-list")).toBeInTheDocument();
+      expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
     });
   });
 
@@ -823,27 +823,27 @@ describe("DatasetsTab", () => {
   // Integration Tests
   // --------------------------------------------------------------------------
 
-  describe("Integration", () => {
+  describe('Integration', () => {
     /**
      * Test: Complete user flow - search and navigate
      * Verifies multiple features work together
      */
-    it("handles complete user flow: search -> results -> pagination", async () => {
+    it('handles complete user flow: search -> results -> pagination', async () => {
       mockPaginationState.datasets = { results: mockDatasets };
       mockPaginationState.totalPages = 3;
 
       render(<DatasetsTab />);
 
       // Search
-      const searchInput = screen.getByTestId("search-input");
-      fireEvent.change(searchInput, { target: { value: "test" } });
-      expect(mockSetSearchQuery).toHaveBeenCalledWith("test");
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'test' } });
+      expect(mockSetSearchQuery).toHaveBeenCalledWith('test');
 
       // Results are displayed
-      expect(screen.getByText("Document 1")).toBeInTheDocument();
+      expect(screen.getByText('Document 1')).toBeInTheDocument();
 
       // Navigate to next page
-      const nextButton = screen.getByTestId("next-page");
+      const nextButton = screen.getByTestId('next-page');
       fireEvent.click(nextButton);
       expect(mockHandlePageChange).toHaveBeenCalledWith(2);
     });
@@ -852,13 +852,13 @@ describe("DatasetsTab", () => {
      * Test: Loading -> Loaded state transition
      * Verifies state transitions work correctly
      */
-    it("transitions from loading to loaded state correctly", () => {
+    it('transitions from loading to loaded state correctly', () => {
       mockPaginationState.isDatasetsLoading = true;
 
       const { rerender } = render(<DatasetsTab />);
 
       // Should show spinner
-      expect(screen.getAllByTestId("spinner")).toBeTruthy();
+      expect(screen.getAllByTestId('spinner')).toBeTruthy();
 
       // Update to loaded state
       mockPaginationState.isDatasetsLoading = false;
@@ -867,8 +867,8 @@ describe("DatasetsTab", () => {
       rerender(<DatasetsTab />);
 
       // Should show data
-      expect(screen.getByText("Document 1")).toBeInTheDocument();
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+      expect(screen.getByText('Document 1')).toBeInTheDocument();
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
     });
   });
 });

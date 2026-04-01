@@ -1,1 +1,1 @@
-export { default } from "../../_components/platform-layout";
+export { default } from '../../_components/platform-layout';

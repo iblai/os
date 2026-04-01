@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus,
   Plug,
@@ -11,19 +11,19 @@ import {
   Trash2,
   Link2,
   Unlink,
-} from "lucide-react";
-import type { DateRange } from "react-day-picker";
-import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+} from 'lucide-react';
+import type { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Command,
   CommandInput,
@@ -31,9 +31,9 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from "@/components/ui/command";
-import { ConnectorDialogs } from "@/components/modals/edit-mentor-modal/tabs/mcp-tab/connector-dialogs";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+} from '@/components/ui/command';
+import { ConnectorDialogs } from '@/components/modals/edit-mentor-modal/tabs/mcp-tab/connector-dialogs';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import {
   useGetMCPServersQuery,
   useCreateMCPServerMutation,
@@ -46,20 +46,20 @@ import {
   useCreateMCPServerConnectionMutation,
   useGetConnectedServicesQuery,
   useGetMCPServerConnectionsQuery,
-} from "@iblai/iblai-js/data-layer";
+} from '@iblai/iblai-js/data-layer';
 import type {
   MCPServer,
   GetMCPServersParams,
   ConnectedService,
   MCPServerConnection,
-} from "@iblai/iblai-js/data-layer";
-import { TransportEnum } from "@iblai/iblai-api";
-import { toast } from "sonner";
-import { Spinner } from "@/components/spinner";
-import { DialogHeader } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import IblPagination from "@/components/ibl-pagination";
-import WithFormPermissions, { WithPermissions } from "@/hoc/withPermissions";
+} from '@iblai/iblai-js/data-layer';
+import { TransportEnum } from '@iblai/iblai-api';
+import { toast } from 'sonner';
+import { Spinner } from '@/components/spinner';
+import { DialogHeader } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import IblPagination from '@/components/ibl-pagination';
+import WithFormPermissions, { WithPermissions } from '@/hoc/withPermissions';
 
 interface ConnectorManagementContentProps {
   tenantKey: string;
@@ -76,16 +76,16 @@ interface PendingOAuthServer {
   timestamp: number;
 }
 
-export const MCP_SERVER_PERMISSION_NAME = "server";
+export const MCP_SERVER_PERMISSION_NAME = 'server';
 
 export const TRANSPORT_OPTIONS: Array<{
-  value: "" | TransportEnum;
+  value: '' | TransportEnum;
   label: string;
 }> = [
-  { value: "", label: "All Transports" },
-  { value: TransportEnum.SSE, label: "SSE" },
-  { value: TransportEnum.WEBSOCKET, label: "WebSocket" },
-  { value: TransportEnum.STREAMABLE_HTTP, label: "Streamable HTTP" },
+  { value: '', label: 'All Transports' },
+  { value: TransportEnum.SSE, label: 'SSE' },
+  { value: TransportEnum.WEBSOCKET, label: 'WebSocket' },
+  { value: TransportEnum.STREAMABLE_HTTP, label: 'Streamable HTTP' },
 ];
 
 export const getTransportLabel = (
@@ -93,10 +93,10 @@ export const getTransportLabel = (
 ): string => {
   const normalized = transport?.toString().toLowerCase();
   const option = TRANSPORT_OPTIONS.find((opt) => {
-    const optVal = opt.value ? opt.value.toString().toLowerCase() : "";
-    return optVal === "" ? !normalized : optVal === normalized;
+    const optVal = opt.value ? opt.value.toString().toLowerCase() : '';
+    return optVal === '' ? !normalized : optVal === normalized;
   });
-  return option?.label || transport?.toString() || "Streamable HTTP";
+  return option?.label || transport?.toString() || 'Streamable HTTP';
 };
 
 export const normalizeTransportValue = (
@@ -127,9 +127,9 @@ export const findMCPServerConnection = (
   );
 
   for (const conn of active) {
-    if (conn.scope === "tenant") return conn;
-    if (conn.scope === "user" && conn.user === currentUser) return conn;
-    if (conn.scope === "mentor" && conn.mentor === currentMentorId) return conn;
+    if (conn.scope === 'tenant') return conn;
+    if (conn.scope === 'user' && conn.user === currentUser) return conn;
+    if (conn.scope === 'mentor' && conn.mentor === currentMentorId) return conn;
   }
 
   return null;
@@ -148,15 +148,15 @@ export const createMCPServerFormData = (data: {
   mentor?: string | null;
 }): FormData => {
   const formData = new FormData();
-  formData.append("name", data.name);
-  formData.append("url", data.url);
-  formData.append("transport", data.transport);
-  if (data.description) formData.append("description", data.description);
-  if (data.auth_type) formData.append("auth_type", data.auth_type);
-  if (data.auth_scope) formData.append("auth_scope", data.auth_scope);
-  if (data.credentials) formData.append("credentials", data.credentials);
-  if (data.image) formData.append("image", data.image);
-  if (data.mentor !== undefined) formData.append("mentor", data.mentor ?? "");
+  formData.append('name', data.name);
+  formData.append('url', data.url);
+  formData.append('transport', data.transport);
+  if (data.description) formData.append('description', data.description);
+  if (data.auth_type) formData.append('auth_type', data.auth_type);
+  if (data.auth_scope) formData.append('auth_scope', data.auth_scope);
+  if (data.credentials) formData.append('credentials', data.credentials);
+  if (data.image) formData.append('image', data.image);
+  if (data.mentor !== undefined) formData.append('mentor', data.mentor ?? '');
   return formData;
 };
 
@@ -218,7 +218,7 @@ export const createOAuthConnection = async (
     return false;
   }
 
-  const scope = authScope || "user";
+  const scope = authScope || 'user';
 
   try {
     await createMCPServerConnection({
@@ -226,10 +226,10 @@ export const createOAuthConnection = async (
       userId: username,
       server: serverId,
       scope,
-      auth_type: "oauth2",
-      ...(scope !== "mentor" ? { user: username } : {}),
+      auth_type: 'oauth2',
+      ...(scope !== 'mentor' ? { user: username } : {}),
       connected_service: connectedServiceId,
-      ...(scope === "mentor" && mentorId ? { mentor: mentorId } : {}),
+      ...(scope === 'mentor' && mentorId ? { mentor: mentorId } : {}),
     }).unwrap();
 
     await Promise.all([
@@ -246,7 +246,7 @@ export const createOAuthConnection = async (
   } catch (error: unknown) {
     const err = error as { data?: { detail?: string } };
     toast.error(
-      `Failed to create connection: ${err?.data?.detail || "Unknown error"}`,
+      `Failed to create connection: ${err?.data?.detail || 'Unknown error'}`,
     );
     onError(error);
     return false;
@@ -259,12 +259,12 @@ export const processOAuthStorageEvent = (
   expectedProvider: string,
   expectedServiceName: string,
 ): { connectedServiceId: number; isMatch: boolean } | null => {
-  if (event.key !== "oauth_connection_complete") {
+  if (event.key !== 'oauth_connection_complete') {
     return null;
   }
 
   try {
-    const data = JSON.parse(event.newValue || "{}");
+    const data = JSON.parse(event.newValue || '{}');
     if (data.connectedServiceId) {
       const isMatch =
         data.provider === expectedProvider &&
@@ -289,7 +289,7 @@ export const processOAuthMessageEvent = (
   }
 
   if (
-    event.data?.type === "GOOGLE_AUTH_SUCCESS" &&
+    event.data?.type === 'GOOGLE_AUTH_SUCCESS' &&
     event.data?.connectedServiceId
   ) {
     if (
@@ -358,7 +358,7 @@ export const validateDisconnectOAuthParams = (
   if (!tenantKey || !username) {
     return {
       isValid: false,
-      error: "Missing required parameters",
+      error: 'Missing required parameters',
       connectedServiceId: null,
     };
   }
@@ -366,7 +366,7 @@ export const validateDisconnectOAuthParams = (
   if (!connectedServiceId) {
     return {
       isValid: false,
-      error: "No connected service to disconnect",
+      error: 'No connected service to disconnect',
       connectedServiceId: null,
     };
   }
@@ -381,10 +381,10 @@ export const validateDisconnectOAuthParams = (
 // Helper for checkConnection flow result
 export interface CheckConnectionFlowResult {
   action:
-    | "create_and_cleanup"
-    | "continue_polling"
-    | "max_polls_cleanup"
-    | "skip";
+    | 'create_and_cleanup'
+    | 'continue_polling'
+    | 'max_polls_cleanup'
+    | 'skip';
   connectedServiceId: number | null;
 }
 
@@ -397,23 +397,23 @@ export const determineCheckConnectionAction = (
   maxPolls: number,
 ): CheckConnectionFlowResult => {
   if (isCreatingConnection) {
-    return { action: "skip", connectedServiceId: null };
+    return { action: 'skip', connectedServiceId: null };
   }
 
   if (connectedServiceId && createConnectionSuccess) {
-    return { action: "create_and_cleanup", connectedServiceId };
+    return { action: 'create_and_cleanup', connectedServiceId };
   }
 
   if (pollCount >= maxPolls) {
-    return { action: "max_polls_cleanup", connectedServiceId: null };
+    return { action: 'max_polls_cleanup', connectedServiceId: null };
   }
 
-  return { action: "continue_polling", connectedServiceId };
+  return { action: 'continue_polling', connectedServiceId };
 };
 
 // Helper for message event flow result
 export interface MessageEventFlowResult {
-  action: "create_and_cleanup" | "ignore";
+  action: 'create_and_cleanup' | 'ignore';
   connectedServiceId: number | null;
 }
 
@@ -423,23 +423,23 @@ export const determineMessageEventAction = (
   connectedServiceId: number | null,
 ): MessageEventFlowResult => {
   if (shouldCreate && connectedServiceId) {
-    return { action: "create_and_cleanup", connectedServiceId };
+    return { action: 'create_and_cleanup', connectedServiceId };
   }
-  return { action: "ignore", connectedServiceId: null };
+  return { action: 'ignore', connectedServiceId: null };
 };
 
 // Helper to check if cleanup should happen after check connection
 export const shouldCleanupAfterCheckConnection = (
   actionResult: CheckConnectionFlowResult,
 ): boolean => {
-  return actionResult.action === "create_and_cleanup";
+  return actionResult.action === 'create_and_cleanup';
 };
 
 // Helper to check if max polls cleanup should happen
 export const shouldCleanupAtMaxPolls = (
   actionResult: CheckConnectionFlowResult,
 ): boolean => {
-  return actionResult.action === "max_polls_cleanup";
+  return actionResult.action === 'max_polls_cleanup';
 };
 
 // Helper to check if message event should trigger cleanup and create
@@ -447,7 +447,7 @@ export const shouldExecuteMessageAction = (
   actionResult: MessageEventFlowResult,
 ): boolean => {
   return (
-    actionResult.action === "create_and_cleanup" &&
+    actionResult.action === 'create_and_cleanup' &&
     actionResult.connectedServiceId !== null
   );
 };
@@ -470,7 +470,7 @@ export const executeCheckConnectionFlowLogic = (
   if (connectedServiceId && createConnectionSuccess) {
     return {
       executed: true,
-      action: "create_and_cleanup",
+      action: 'create_and_cleanup',
       connectedServiceId,
     };
   }
@@ -479,14 +479,14 @@ export const executeCheckConnectionFlowLogic = (
   if (pollCount >= maxPolls) {
     return {
       executed: true,
-      action: "max_polls_cleanup",
+      action: 'max_polls_cleanup',
       connectedServiceId: null,
     };
   }
 
   return {
     executed: false,
-    action: "continue_polling",
+    action: 'continue_polling',
     connectedServiceId: null,
   };
 };
@@ -513,14 +513,14 @@ export const executeMessageEventFlowLogic = (
   if (shouldExecuteMessageAction(actionResult)) {
     return {
       executed: true,
-      action: "create_and_cleanup",
+      action: 'create_and_cleanup',
       connectedServiceId: actionResult.connectedServiceId,
     };
   }
 
   return {
     executed: false,
-    action: "ignore",
+    action: 'ignore',
     connectedServiceId: null,
   };
 };
@@ -614,11 +614,11 @@ export function ConnectorManagementContent({
   const itemsPerPage = 12;
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedTransport, setSelectedTransport] = useState<
-    "" | TransportEnum
-  >("");
+    '' | TransportEnum
+  >('');
 
   // Pagination state
   const [featuredPage, setFeaturedPage] = useState(1);
@@ -644,7 +644,7 @@ export function ConnectorManagementContent({
 
   // Use localStorage hook for pending OAuth server data
   const [, setPendingOAuthServer, removePendingOAuthServer] =
-    useLocalStorage<PendingOAuthServer | null>("oauth_pending_server", null);
+    useLocalStorage<PendingOAuthServer | null>('oauth_pending_server', null);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -720,42 +720,42 @@ export function ConnectorManagementContent({
 
   // Get active MCP server IDs from mentor settings
   const activeMcpServerIds = useMemo(() => {
-    if (!mentorSettings || typeof mentorSettings !== "object")
+    if (!mentorSettings || typeof mentorSettings !== 'object')
       return [] as number[];
     const maybeServers = (mentorSettings as { mcp_servers?: unknown })
       .mcp_servers;
     if (!Array.isArray(maybeServers)) return [] as number[];
     return maybeServers
       .map((entry) => {
-        if (typeof entry === "number" && Number.isFinite(entry)) return entry;
-        if (typeof entry === "object" && entry !== null && "id" in entry) {
+        if (typeof entry === 'number' && Number.isFinite(entry)) return entry;
+        if (typeof entry === 'object' && entry !== null && 'id' in entry) {
           const id = (entry as { id?: unknown }).id;
-          if (typeof id === "number") return id;
+          if (typeof id === 'number') return id;
         }
         return null;
       })
       .filter(
-        (id): id is number => typeof id === "number" && Number.isFinite(id),
+        (id): id is number => typeof id === 'number' && Number.isFinite(id),
       );
   }, [mentorSettings]);
 
   // Get current tool_slugs from mentor_tools in mentor settings
   // mentor_tools is an array of objects like: [{ name: "MCP", slug: "mcp", ... }]
   const currentToolSlugs = useMemo(() => {
-    if (!mentorSettings || typeof mentorSettings !== "object")
+    if (!mentorSettings || typeof mentorSettings !== 'object')
       return [] as string[];
     const maybeTools = (mentorSettings as { mentor_tools?: unknown })
       .mentor_tools;
     if (!Array.isArray(maybeTools)) return [] as string[];
     return maybeTools
       .map((tool) => {
-        if (typeof tool === "object" && tool !== null && "slug" in tool) {
+        if (typeof tool === 'object' && tool !== null && 'slug' in tool) {
           const slug = (tool as { slug?: unknown }).slug;
-          if (typeof slug === "string") return slug;
+          if (typeof slug === 'string') return slug;
         }
         return null;
       })
-      .filter((slug): slug is string => typeof slug === "string");
+      .filter((slug): slug is string => typeof slug === 'string');
   }, [mentorSettings]);
 
   // Field-level permissions from mentor settings (for mcp_servers write check)
@@ -834,7 +834,7 @@ export function ConnectorManagementContent({
       filteredFeaturedServers.filter((s) => {
         const authType = s.auth_type?.toLowerCase();
         return (
-          (authType === "oauth2" || authType === "token") &&
+          (authType === 'oauth2' || authType === 'token') &&
           s.oauth_service_data
         );
       }),
@@ -846,7 +846,7 @@ export function ConnectorManagementContent({
       filteredFeaturedServers.filter((s) => {
         const authType = s.auth_type?.toLowerCase();
         return !(
-          (authType === "oauth2" || authType === "token") &&
+          (authType === 'oauth2' || authType === 'token') &&
           s.oauth_service_data
         );
       }),
@@ -858,7 +858,7 @@ export function ConnectorManagementContent({
     return servers.filter((s) => {
       const authType = s.auth_type?.toLowerCase();
       if (
-        (authType === "oauth2" || authType === "token") &&
+        (authType === 'oauth2' || authType === 'token') &&
         s.connected_service
       )
         return false;
@@ -882,7 +882,7 @@ export function ConnectorManagementContent({
         canUseTools?: boolean;
       },
     ) => {
-      if (!mentorId) throw new Error("Invalid mentor ID");
+      if (!mentorId) throw new Error('Invalid mentor ID');
       const uniqueIds = [
         ...new Set(serverIds.filter((id) => Number.isFinite(id) && id > 0)),
       ];
@@ -913,7 +913,7 @@ export function ConnectorManagementContent({
   const handleToggleConnector = useCallback(
     async (serverId: number, serverName: string, isActive: boolean) => {
       if (!Number.isFinite(serverId) || serverId <= 0) {
-        toast.error("Invalid server ID");
+        toast.error('Invalid server ID');
         return;
       }
 
@@ -939,14 +939,14 @@ export function ConnectorManagementContent({
         }
 
         // Prepare options for tool_slugs and can_use_tools updates
-        const hasMcpInToolSlugs = currentToolSlugs.includes("mcp");
+        const hasMcpInToolSlugs = currentToolSlugs.includes('mcp');
 
         if (isActive) {
           // When enabling a connector:
           // - If tool_slugs doesn't have 'mcp', add it
           // - Always set can_use_tools to true
           if (!hasMcpInToolSlugs) {
-            const updatedToolSlugs = [...currentToolSlugs, "mcp"];
+            const updatedToolSlugs = [...currentToolSlugs, 'mcp'];
             await updateMCPServers(updatedIds, {
               toolSlugs: updatedToolSlugs,
               canUseTools: true,
@@ -964,7 +964,7 @@ export function ConnectorManagementContent({
 
           if (isLastConnector && hasMcpInToolSlugs) {
             const updatedToolSlugs = currentToolSlugs.filter(
-              (slug) => slug !== "mcp",
+              (slug) => slug !== 'mcp',
             );
             await updateMCPServers(updatedIds, {
               toolSlugs: updatedToolSlugs,
@@ -979,21 +979,21 @@ export function ConnectorManagementContent({
 
         await refetchMentorSettings();
         toast.success(
-          `${serverName} ${isActive ? "activated" : "deactivated"} successfully`,
+          `${serverName} ${isActive ? 'activated' : 'deactivated'} successfully`,
         );
       } catch (error: unknown) {
         const err = error as {
           data?: { detail?: string; error?: string };
           message?: string;
         };
-        const msg = err?.data?.detail || err?.data?.error || err?.message || "";
-        if (msg.includes("does not exist") || msg.includes("not accessible")) {
+        const msg = err?.data?.detail || err?.data?.error || err?.message || '';
+        if (msg.includes('does not exist') || msg.includes('not accessible')) {
           toast.error(
             `${serverName} does not exist or is not accessible. Please refresh the page.`,
           );
         } else {
           toast.error(
-            `Failed to ${isActive ? "activate" : "deactivate"} ${serverName}. ${msg}`,
+            `Failed to ${isActive ? 'activate' : 'deactivate'} ${serverName}. ${msg}`,
           );
         }
       } finally {
@@ -1026,7 +1026,7 @@ export function ConnectorManagementContent({
       mentor?: string | null;
     }) => {
       if (!tenantKey || !username) {
-        toast.error("Missing required parameters");
+        toast.error('Missing required parameters');
         return;
       }
 
@@ -1034,7 +1034,7 @@ export function ConnectorManagementContent({
         const hasFileImage = connector.image instanceof File;
         const trimmedCredentials = connector.credentials?.trim();
         const authType =
-          connector.authType ?? (trimmedCredentials ? "token" : "none");
+          connector.authType ?? (trimmedCredentials ? 'token' : 'none');
         const resolvedTransport = normalizeTransportValue(connector.transport);
 
         const basePayload = {
@@ -1044,7 +1044,7 @@ export function ConnectorManagementContent({
             `https://api.${connector.name.toLowerCase()}.com/mcp`,
           transport: resolvedTransport,
           auth_type: authType,
-          description: connector.description || "",
+          description: connector.description || '',
           // Only include credentials if provided (for edits, undefined means keep existing)
           ...(trimmedCredentials !== undefined && {
             credentials: trimmedCredentials,
@@ -1093,11 +1093,11 @@ export function ConnectorManagementContent({
             const newId = Number(newServer.id);
             if (Number.isFinite(newId)) {
               const updatedIds = [...activeMcpServerIds, newId];
-              const hasMcpInToolSlugs = currentToolSlugs.includes("mcp");
+              const hasMcpInToolSlugs = currentToolSlugs.includes('mcp');
 
               // When auto-activating, also add 'mcp' to tool_slugs if not present
               if (!hasMcpInToolSlugs) {
-                const updatedToolSlugs = [...currentToolSlugs, "mcp"];
+                const updatedToolSlugs = [...currentToolSlugs, 'mcp'];
                 await updateMCPServers(updatedIds, {
                   toolSlugs: updatedToolSlugs,
                   canUseTools: true,
@@ -1121,7 +1121,7 @@ export function ConnectorManagementContent({
         await Promise.all([refetchFeatured(), refetchMy()]);
       } catch {
         toast.error(
-          `Failed to ${editingServer ? "update" : "add"} ${connector.name} connector`,
+          `Failed to ${editingServer ? 'update' : 'add'} ${connector.name} connector`,
         );
       }
     },
@@ -1144,7 +1144,7 @@ export function ConnectorManagementContent({
   const handleDeleteConnector = useCallback(
     async (serverId: number, serverName: string) => {
       if (!tenantKey || !username) {
-        toast.error("Missing required parameters");
+        toast.error('Missing required parameters');
         return;
       }
 
@@ -1191,7 +1191,7 @@ export function ConnectorManagementContent({
   const handleConnectOAuth = useCallback(
     async (server: MCPServer) => {
       if (!tenantKey || !username || !server.oauth_service_data) {
-        toast.error("Missing required parameters or OAuth data");
+        toast.error('Missing required parameters or OAuth data');
         return;
       }
 
@@ -1218,9 +1218,9 @@ export function ConnectorManagementContent({
           service: name,
         }).unwrap();
 
-        if (!result.auth_url) throw new Error("No authorization URL returned");
+        if (!result.auth_url) throw new Error('No authorization URL returned');
 
-        const popup = window.open(result.auth_url, "_blank");
+        const popup = window.open(result.auth_url, '_blank');
 
         let pollCount = 0;
         const maxPolls = 60;
@@ -1232,9 +1232,9 @@ export function ConnectorManagementContent({
         const cleanup = () => {
           if (pollInterval) clearInterval(pollInterval);
           if (popupCheckInterval) clearInterval(popupCheckInterval);
-          window.removeEventListener("focus", handleFocus);
-          window.removeEventListener("storage", handleStorageChange);
-          window.removeEventListener("message", handleMessage);
+          window.removeEventListener('focus', handleFocus);
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('message', handleMessage);
           setConnectingServiceIds((prev) => {
             const next = new Set(prev);
             next.delete(serviceKey);
@@ -1288,7 +1288,7 @@ export function ConnectorManagementContent({
             pollCount,
             maxPolls,
           );
-          if (earlyCheck.action === "skip") return;
+          if (earlyCheck.action === 'skip') return;
 
           try {
             const connectedServiceId = await checkOAuthConnectionComplete(
@@ -1349,15 +1349,15 @@ export function ConnectorManagementContent({
             } else {
               await checkConnection();
             }
-          } else if (e.key === "oauth_connection_complete") {
+          } else if (e.key === 'oauth_connection_complete') {
             /* istanbul ignore next */ // Fallback for parse errors or missing data
             await checkConnection();
           }
         };
 
-        window.addEventListener("storage", handleStorageChange);
-        window.addEventListener("message", handleMessage);
-        window.addEventListener("focus", handleFocus);
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('message', handleMessage);
+        window.addEventListener('focus', handleFocus);
 
         pollInterval = setInterval(checkConnection, 5000);
         setTimeout(cleanup, 5 * 60 * 1000);
@@ -1415,7 +1415,7 @@ export function ConnectorManagementContent({
 
       /* istanbul ignore next -- @preserve validation error branch */
       if (!validation.isValid) {
-        toast.error(validation.error || "Validation failed");
+        toast.error(validation.error || 'Validation failed');
         return;
       }
 
@@ -1437,9 +1437,9 @@ export function ConnectorManagementContent({
           refetchMCPServerConnections(),
           refetchMentorSettings(),
         ]);
-        toast.success("Service disconnected successfully");
+        toast.success('Service disconnected successfully');
       } catch {
-        toast.error("Failed to disconnect service");
+        toast.error('Failed to disconnect service');
       } finally {
         setDisconnectingServiceIds((prev) => {
           const next = new Set(prev);
@@ -1482,10 +1482,10 @@ export function ConnectorManagementContent({
   const renderServerCard = (server: MCPServer, isFeatured: boolean) => {
     const oauthData = server.oauth_service_data;
     const displayName =
-      server.name || oauthData?.display_name || "Unknown Connector";
+      server.name || oauthData?.display_name || 'Unknown Connector';
     const authType = server.auth_type?.toLowerCase();
-    const isOAuth2 = authType === "oauth2";
-    const isToken = authType === "token";
+    const isOAuth2 = authType === 'oauth2';
+    const isToken = authType === 'token';
     const isConnected = isOAuth2 && isOAuthServerConnected(server);
     const connectedServiceId = getConnectedServiceId(server);
     const serviceKey = `server-${server.id}`;
@@ -1502,19 +1502,19 @@ export function ConnectorManagementContent({
     return (
       <div
         key={server.id}
-        className="overflow-hidden rounded-lg bg-gray-50 border border-gray-200 flex flex-col"
+        className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-gray-100">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-white">
               {oauthData?.image || server.image ? (
                 <img
                   src={oauthData?.image || server.image}
                   alt={displayName}
-                  className="w-6 h-6 object-contain"
+                  className="h-6 w-6 object-contain"
                 />
               ) : (
-                <Plug className="w-5 h-5 text-gray-400" />
+                <Plug className="h-5 w-5 text-gray-400" />
               )}
             </div>
             <h4 className="text-sm font-medium text-gray-900">{displayName}</h4>
@@ -1531,7 +1531,7 @@ export function ConnectorManagementContent({
                   disabled ? null : (
                     <>
                       <span className="text-xs text-gray-600">
-                        {isActive ? "Active" : "Inactive"}
+                        {isActive ? 'Active' : 'Inactive'}
                       </span>
                       <Switch
                         checked={isActive}
@@ -1539,7 +1539,7 @@ export function ConnectorManagementContent({
                           handleToggleConnector(server.id, displayName, checked)
                         }
                         disabled={togglingServerIds.has(server.id)}
-                        aria-label={`${displayName} ${isActive ? "enabled" : "disabled"}`}
+                        aria-label={`${displayName} ${isActive ? 'enabled' : 'disabled'}`}
                       />
                     </>
                   )
@@ -1548,37 +1548,37 @@ export function ConnectorManagementContent({
             )}
           </div>
         </div>
-        <div className="p-4 flex flex-col flex-1">
-          <div className="text-sm text-gray-600 mb-3 max-h-20 overflow-y-auto">
+        <div className="flex flex-1 flex-col p-4">
+          <div className="mb-3 max-h-20 overflow-y-auto text-sm text-gray-600">
             {oauthData?.description || server.description || server.url}
           </div>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="mb-3 flex items-center gap-2">
             {isOAuth2 && (
-              <span className="text-xs px-2 py-1 bg-blue-100 rounded text-blue-600">
+              <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-600">
                 OAuth
               </span>
             )}
             {isOAuth2 && server.auth_scope && (
-              <span className="text-xs px-2 py-1 bg-amber-100 rounded text-amber-700">
-                {server.auth_scope === "user"
-                  ? "User"
-                  : server.auth_scope === "mentor"
-                    ? "Mentor"
-                    : "Tenant"}
+              <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-700">
+                {server.auth_scope === 'user'
+                  ? 'User'
+                  : server.auth_scope === 'mentor'
+                    ? 'Mentor'
+                    : 'Tenant'}
               </span>
             )}
             {isToken && (
-              <span className="text-xs px-2 py-1 bg-purple-100 rounded text-purple-600">
+              <span className="rounded bg-purple-100 px-2 py-1 text-xs text-purple-600">
                 Token
               </span>
             )}
             {isFeatured && oauthData?.oauth_provider && (
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
+              <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
                 {oauthData.oauth_provider}
               </span>
             )}
             {!isFeatured && (
-              <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
+              <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
                 {getTransportLabel(server.transport)}
               </span>
             )}
@@ -1593,7 +1593,7 @@ export function ConnectorManagementContent({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-8 w-full text-red-600 hover:bg-red-50 hover:text-red-700"
                         onClick={() => handleDisconnectOAuth(server)}
                         disabled={isDisconnecting}
                       >
@@ -1613,7 +1613,7 @@ export function ConnectorManagementContent({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full h-8 bg-[#38A1E5] text-white border-[#38A1E5] hover:bg-[#2d8bc7] hover:text-white"
+                        className="h-8 w-full border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2d8bc7] hover:text-white"
                         onClick={() => handleConnectOAuth(server)}
                         disabled={isConnecting}
                       >
@@ -1667,7 +1667,7 @@ export function ConnectorManagementContent({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 flex-1 text-red-600 hover:bg-red-50 hover:text-red-700"
                           onClick={() =>
                             setConnectorToDelete({
                               id: server.id,
@@ -1691,7 +1691,7 @@ export function ConnectorManagementContent({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="h-8 w-full text-red-600 hover:bg-red-50 hover:text-red-700"
                     onClick={() => handleDisconnectOAuth(server)}
                     disabled={isDisconnecting}
                   >
@@ -1711,7 +1711,7 @@ export function ConnectorManagementContent({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full h-8 bg-[#38A1E5] text-white border-[#38A1E5] hover:bg-[#2d8bc7] hover:text-white"
+                    className="h-8 w-full border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2d8bc7] hover:text-white"
                     onClick={() => handleConnectOAuth(server)}
                     disabled={isConnecting}
                   >
@@ -1735,7 +1735,7 @@ export function ConnectorManagementContent({
             <Button
               variant="default"
               size="sm"
-              className="w-full h-8 mt-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 border-0"
+              className="mt-2 h-8 w-full border-0 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
               onClick={async (e) => {
                 e.stopPropagation();
                 if (!isActive) {
@@ -1748,7 +1748,7 @@ export function ConnectorManagementContent({
               Select
             </Button>
           )}
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="mt-2 text-xs text-gray-500">
             Created {new Date(server.created_at).toLocaleDateString()}
           </div>
         </div>
@@ -1760,9 +1760,9 @@ export function ConnectorManagementContent({
     <>
       <div className="space-y-6">
         {/* Filters Section */}
-        <div className="border rounded-lg p-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="relative flex-1 min-w-[200px]">
+        <div className="rounded-lg border p-4">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative min-w-[200px] flex-1">
               <Input
                 type="text"
                 placeholder="Search by name..."
@@ -1776,13 +1776,13 @@ export function ConnectorManagementContent({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="flex items-center gap-2 whitespace-nowrap font-normal bg-transparent w-full lg:w-auto"
+                  className="flex w-full items-center gap-2 bg-transparent font-normal whitespace-nowrap lg:w-auto"
                 >
                   <Calendar className="h-4 w-4" />
                   {
                     /* istanbul ignore next */ dateRange?.from && dateRange?.to
-                      ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                      : "Pick a Date Range"
+                      ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
+                      : 'Pick a Date Range'
                   }
                 </Button>
               </PopoverTrigger>
@@ -1803,13 +1803,13 @@ export function ConnectorManagementContent({
                   variant="outline"
                   role="combobox"
                   aria-label="Select Transport"
-                  className="w-full lg:w-[200px] justify-between font-normal bg-transparent"
+                  className="w-full justify-between bg-transparent font-normal lg:w-[200px]"
                 >
                   {selectedTransport
                     ? TRANSPORT_OPTIONS.find(
                         (opt) => opt.value === selectedTransport,
                       )?.label
-                    : "All Transports"}
+                    : 'All Transports'}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -1821,16 +1821,16 @@ export function ConnectorManagementContent({
                     <CommandGroup>
                       {TRANSPORT_OPTIONS.map((option) => (
                         <CommandItem
-                          key={option.value || "all"}
+                          key={option.value || 'all'}
                           value={String(option.value)}
                           onSelect={() => setSelectedTransport(option.value)}
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
+                              'mr-2 h-4 w-4',
                               selectedTransport === option.value
-                                ? "opacity-100"
-                                : "opacity-0",
+                                ? 'opacity-100'
+                                : 'opacity-0',
                             )}
                           />
                           {option.label}
@@ -1848,7 +1848,7 @@ export function ConnectorManagementContent({
         {(featuredOAuthServers.length > 0 ||
           featuredRegularServers.length > 0) && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 Featured Connectors
               </h3>
@@ -1856,17 +1856,17 @@ export function ConnectorManagementContent({
             {/* c8 ignore next 5 */}
             {isLoadingFeatured ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Spinner className="w-8 h-8 mb-4" />
+                <Spinner className="mb-4 h-8 w-8" />
                 <p className="text-sm text-gray-500">
                   Loading featured connectors...
                 </p>
               </div>
             ) : featuredError ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                  <Plug className="w-8 h-8 text-red-400" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                  <Plug className="h-8 w-8 text-red-400" />
                 </div>
-                <p className="text-sm text-red-600 mb-2">
+                <p className="mb-2 text-sm text-red-600">
                   Failed to load featured connectors
                 </p>
                 <Button
@@ -1880,7 +1880,7 @@ export function ConnectorManagementContent({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {featuredOAuthServers.map((server) =>
                     renderServerCard(server, true),
                   )}
@@ -1905,7 +1905,7 @@ export function ConnectorManagementContent({
 
         {/* Connectors Section */}
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Connectors</h3>
             <WithPermissions rbacResource="/mcpservers/#create">
               {({ hasPermission }) =>
@@ -1915,7 +1915,7 @@ export function ConnectorManagementContent({
                     variant="outline"
                     className="ibl-button-primary shrink-0"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Add Connector
                   </Button>
                 ) : null
@@ -1924,15 +1924,15 @@ export function ConnectorManagementContent({
           </div>
           {isLoadingMy ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Spinner className="w-8 h-8 mb-4" />
+              <Spinner className="mb-4 h-8 w-8" />
               <p className="text-sm text-gray-500">Loading connectors...</p>
             </div>
           ) : myError ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                <Plug className="w-8 h-8 text-red-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <Plug className="h-8 w-8 text-red-400" />
               </div>
-              <p className="text-sm text-red-600 mb-2">
+              <p className="mb-2 text-sm text-red-600">
                 Failed to load connectors
               </p>
               <Button
@@ -1946,14 +1946,14 @@ export function ConnectorManagementContent({
             </div>
           ) : !filteredMyServers.length ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                <Plug className="w-8 h-8 text-gray-400" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200">
+                <Plug className="h-8 w-8 text-gray-400" />
               </div>
               <p className="text-sm text-gray-500">No connectors configured</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredMyServers.map((server) =>
                   renderServerCard(server, false),
                 )}
@@ -1995,7 +1995,7 @@ export function ConnectorManagementContent({
       {connectorToDelete && (
         <Dialog open={true} onOpenChange={() => setConnectorToDelete(null)}>
           <DialogContent
-            className="sm:max-w-[425px] bg-white"
+            className="bg-white sm:max-w-[425px]"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -2006,7 +2006,7 @@ export function ConnectorManagementContent({
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Are you sure you want to remove{" "}
+                Are you sure you want to remove{' '}
                 <strong>{connectorToDelete.name}</strong>? This action cannot be
                 undone.
               </p>
@@ -2029,8 +2029,8 @@ export function ConnectorManagementContent({
                   className="ibl-button-primary"
                 >
                   {deletingServerId === connectorToDelete.id
-                    ? "Deleting..."
-                    : "Delete"}
+                    ? 'Deleting...'
+                    : 'Delete'}
                 </Button>
               </div>
             </div>

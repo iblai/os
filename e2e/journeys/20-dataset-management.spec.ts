@@ -5,6 +5,10 @@ import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
 const FILES_DIR = path.resolve(__dirname, '../../e2e/files/testing_folder');
+const PDF_FILE = path.join(
+  FILES_DIR,
+  '0028-oop-object-oriented-programming-using-cpp.pdf',
+);
 const IMAGE_FILE = path.join(FILES_DIR, 'acessibility png.png');
 const TXT_FILE = path.join(FILES_DIR, 'outerHTML.txt');
 const CSV_FILE = path.join(FILES_DIR, 'test-data.csv');

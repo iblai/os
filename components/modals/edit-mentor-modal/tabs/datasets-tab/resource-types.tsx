@@ -16,7 +16,8 @@ export const resourceTypes: ResourceType[] = [
     bgColor: 'bg-blue-100',
     isActive: true,
     type: 'local',
-    accept: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    accept:
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     icon: (
       <svg
         width="24"
@@ -127,7 +128,10 @@ export const resourceTypes: ResourceType[] = [
         <path d="M6 6.75L12 2.25L18 6.75L12 11.25L6 6.75Z" fill="#0061FF" />
         <path d="M18 6.75L12 11.25L18 15.75L24 11.25L18 6.75Z" fill="#0061FF" />
         <path d="M0 11.25L6 6.75L12 11.25L6 15.75L0 11.25Z" fill="#0061FF" />
-        <path d="M12 21.75L6 17.25L12 12.75L18 17.25L12 21.75Z" fill="#0061FF" />
+        <path
+          d="M12 21.75L6 17.25L12 12.75L18 17.25L12 21.75Z"
+          fill="#0061FF"
+        />
       </svg>
     ),
   },
@@ -205,7 +209,8 @@ export const resourceTypes: ResourceType[] = [
     bgColor: 'bg-blue-100',
     isActive: true,
     type: 'local',
-    accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    accept:
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     icon: (
       <svg
         width="24"
@@ -406,7 +411,9 @@ export const resourceTypes: ResourceType[] = [
     isActive: true,
     type: 'webcrawler',
     accept: 'url',
-    icon: <img src="/la-toile.png" alt="Website Crawler" width={24} height={24} />,
+    icon: (
+      <img src="/la-toile.png" alt="Website Crawler" width={24} height={24} />
+    ),
   },
   {
     id: 'zip',

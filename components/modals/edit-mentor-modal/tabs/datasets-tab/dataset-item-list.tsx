@@ -1,5 +1,5 @@
-import { DatasetItem, Dataset } from "./dataset-item";
-import { TableCell, TableRow, TableBody } from "@/components/ui/table";
+import { DatasetItem, Dataset } from './dataset-item';
+import { TableCell, TableRow, TableBody } from '@/components/ui/table';
 
 type Props = {
   datasets: Dataset[];

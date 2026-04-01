@@ -21,7 +21,9 @@ describe('resourceTypes', () => {
         expect(resource.bgColor).toBeDefined();
         expect(typeof resource.isActive).toBe('boolean');
         expect(resource.icon).toBeDefined();
-        expect(['url', 'github', 'local', 'link', 'webcrawler']).toContain(resource.type);
+        expect(['url', 'github', 'local', 'link', 'webcrawler']).toContain(
+          resource.type,
+        );
       });
     });
 

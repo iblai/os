@@ -1,13 +1,13 @@
-import { test, expect } from "@playwright/test";
-import { safeWaitForURL } from "../utils/navigation";
+import { test, expect } from '@playwright/test';
+import { safeWaitForURL } from '../utils/navigation';
 import {
   waitForMailnesiaEmail,
   getMailnesiaMailboxUrl,
-} from "../utils/mailnesia";
-import { SignupPage } from "../page-objects/signup.page";
+} from '../utils/mailnesia';
+import { SignupPage } from '../page-objects/signup.page';
 
-const HOST = process.env.MENTOR_NEXTJS_HOST || "";
-const AUTH_HOST = process.env.AUTH_HOST || "";
+const HOST = process.env.MENTOR_NEXTJS_HOST || '';
+const AUTH_HOST = process.env.AUTH_HOST || '';
 
 // ── Sign Up & Password Reset (serial, no auth) ─────────────────────────────
 
@@ -262,25 +262,25 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
 
 // ── Invalid Credentials (independent, no auth) ─────────────────────────────
 
-test.describe("Journey 1: Authentication — Invalid Credentials", () => {
+test.describe('Journey 1: Authentication — Invalid Credentials', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("unauthenticated user goes to login page and sees an error with invalid credentials", async ({
+  test('unauthenticated user goes to login page and sees an error with invalid credentials', async ({
     page,
   }) => {
-    test.skip(!AUTH_HOST, "Requires AUTH_HOST");
+    test.skip(!AUTH_HOST, 'Requires AUTH_HOST');
 
-    await page.goto(`${AUTH_HOST}/login`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${AUTH_HOST}/login`, { waitUntil: 'domcontentloaded' });
     await expect(
-      page.getByRole("button", { name: "Continue with Password" }),
+      page.getByRole('button', { name: 'Continue with Password' }),
     ).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole("button", { name: "Continue with Password" }).click();
-    await page.fill('input[type="email"]', "invalid@doesnotexist.example.com");
-    await page.fill('input[type="password"]', "WrongPassword123!");
+    await page.getByRole('button', { name: 'Continue with Password' }).click();
+    await page.fill('input[type="email"]', 'invalid@doesnotexist.example.com');
+    await page.fill('input[type="password"]', 'WrongPassword123!');
     await page.click('button:has-text("Continue")');
 
-    await expect(page.getByText("Invalid email or password")).toBeVisible({
+    await expect(page.getByText('Invalid email or password')).toBeVisible({
       timeout: 15_000,
     });
   });

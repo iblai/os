@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   ChevronLeft,
   MoreHorizontal,
@@ -17,18 +17,18 @@ import {
   ChevronUp,
   Power,
   Trash2,
-} from "lucide-react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { WorkflowPreviewChat } from "@/components/workflows/workflow-preview-chat";
+} from 'lucide-react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { WorkflowPreviewChat } from '@/components/workflows/workflow-preview-chat';
 import {
   WorkflowCanvas,
   type ReactFlowJsonObject,
-} from "@/components/workflows";
+} from '@/components/workflows';
 import {
   WorkflowSidebar,
   DeleteWorkflowModal,
   type NodeTypeSection,
-} from "@iblai/iblai-js/web-containers";
+} from '@iblai/iblai-js/web-containers';
 import {
   useGetWorkflowQuery,
   usePatchWorkflowMutation,
@@ -41,35 +41,35 @@ import {
   useLazyGetMentorSettingsQuery,
   type NodeTypesResponse,
   type WorkflowValidationResponse,
-} from "@iblai/iblai-js/data-layer";
+} from '@iblai/iblai-js/data-layer';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "@/components/ui/collapsible";
-import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
-import eventBus, { RemoteEvents } from "@/lib/eventBus";
-import { useAppSelector } from "@/lib/hooks";
-import { useUsername } from "@/hooks/use-user";
+} from '@/components/ui/collapsible';
+import { toast } from 'sonner';
+import { useDebounce } from 'use-debounce';
+import eventBus, { RemoteEvents } from '@/lib/eventBus';
+import { useAppSelector } from '@/lib/hooks';
+import { useUsername } from '@/hooks/use-user';
 
 // Category display names and order
 const categoryConfig: Record<string, { title: string; order: number }> = {
-  core: { title: "Core", order: 1 },
-  tools: { title: "Tools", order: 2 },
-  logic: { title: "Logic", order: 3 },
-  data: { title: "Data", order: 4 },
+  core: { title: 'Core', order: 1 },
+  tools: { title: 'Tools', order: 2 },
+  logic: { title: 'Logic', order: 3 },
+  data: { title: 'Data', order: 4 },
 };
 
 // Override category mapping for specific nodes to match UI design
 const nodeCategoryOverride: Record<string, string> = {
-  note: "core", // API has it in 'visual' but UI shows it in 'Core'
+  note: 'core', // API has it in 'visual' but UI shows it in 'Core'
 };
 
 // Transform API node types response to sidebar format
@@ -88,7 +88,7 @@ function transformNodeTypesToSections(
   // Add node types to their categories (node_types is an object keyed by node ID)
   Object.entries(nodeTypes.node_types).forEach(([nodeId, nodeInfo]) => {
     // Skip 'start' as it's auto-added by default
-    if (nodeId === "start") return;
+    if (nodeId === 'start') return;
 
     // Use override category if defined, otherwise use the API category
     const targetCategory = nodeCategoryOverride[nodeId] || nodeInfo.category;
@@ -120,7 +120,7 @@ export default function WorkflowDetailPage() {
     id: string;
   }>();
   const searchParams = useSearchParams();
-  const listMentorId = searchParams.get("listMentorId") || params.mentorId;
+  const listMentorId = searchParams.get('listMentorId') || params.mentorId;
   const workflowId = params.id;
   const username = useUsername();
 
@@ -153,7 +153,7 @@ export default function WorkflowDetailPage() {
       Record<string, unknown>
     >;
     nodes.forEach((node) => {
-      if (node.type !== "mentor") return;
+      if (node.type !== 'mentor') return;
       const nodeData = node.data as Record<string, unknown> | undefined;
       const mentorId =
         (nodeData?.mentor_id as string | undefined) ||
@@ -228,7 +228,7 @@ export default function WorkflowDetailPage() {
   const [deleteWorkflow, { isLoading: isDeleting }] =
     useDeleteWorkflowMutation();
 
-  const [workflowName, setWorkflowName] = useState("");
+  const [workflowName, setWorkflowName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{
@@ -313,7 +313,7 @@ export default function WorkflowDetailPage() {
 
     const autoSave = async () => {
       try {
-        const patchData: Parameters<typeof patchWorkflow>[0]["data"] = {
+        const patchData: Parameters<typeof patchWorkflow>[0]['data'] = {
           definition: {
             nodes: debouncedWorkflowData.nodes,
             edges: debouncedWorkflowData.edges,
@@ -395,9 +395,9 @@ export default function WorkflowDetailPage() {
           uniqueId: workflowId,
           data: { name: workflowName },
         }).unwrap();
-        toast.success("Workflow name updated");
+        toast.success('Workflow name updated');
       } catch {
-        toast.error("Failed to update name");
+        toast.error('Failed to update name');
         setWorkflowName(workflow.name);
       }
     }
@@ -406,7 +406,7 @@ export default function WorkflowDetailPage() {
   const handleSave = async () => {
     if (!workflowData) return;
     try {
-      const patchData: Parameters<typeof patchWorkflow>[0]["data"] = {
+      const patchData: Parameters<typeof patchWorkflow>[0]['data'] = {
         definition: { nodes: workflowData.nodes, edges: workflowData.edges },
       };
 
@@ -416,9 +416,9 @@ export default function WorkflowDetailPage() {
         data: patchData,
       }).unwrap();
       setHasUnsavedChanges(false);
-      toast.success("Workflow saved");
+      toast.success('Workflow saved');
     } catch {
-      toast.error("Failed to save workflow");
+      toast.error('Failed to save workflow');
     }
   };
 
@@ -434,13 +434,13 @@ export default function WorkflowDetailPage() {
       }).unwrap();
       setHasUnsavedChanges(false);
       setValidationResult(null);
-      toast.success("Workflow published");
+      toast.success('Workflow published');
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
       if (
         errorData &&
-        typeof errorData === "object" &&
-        "is_valid" in errorData
+        typeof errorData === 'object' &&
+        'is_valid' in errorData
       ) {
         const validation = errorData as WorkflowValidationResponse;
         setValidationResult({
@@ -448,9 +448,9 @@ export default function WorkflowDetailPage() {
           warnings: validation.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error("Workflow has validation issues");
+        toast.error('Workflow has validation issues');
       } else {
-        toast.error("Failed to publish workflow");
+        toast.error('Failed to publish workflow');
       }
     }
   };
@@ -461,9 +461,9 @@ export default function WorkflowDetailPage() {
         org: params.tenantKey,
         uniqueId: workflowId,
       }).unwrap();
-      toast.success("Workflow deactivated");
+      toast.success('Workflow deactivated');
     } catch {
-      toast.error("Failed to deactivate workflow");
+      toast.error('Failed to deactivate workflow');
     }
   };
 
@@ -475,21 +475,21 @@ export default function WorkflowDetailPage() {
       }).unwrap();
       if (result.is_valid) {
         setValidationResult(null);
-        toast.success("Workflow activated");
+        toast.success('Workflow activated');
       } else {
         setValidationResult({
           errors: result.errors,
           warnings: result.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error("Workflow has validation issues");
+        toast.error('Workflow has validation issues');
       }
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
       if (
         errorData &&
-        typeof errorData === "object" &&
-        "is_valid" in errorData
+        typeof errorData === 'object' &&
+        'is_valid' in errorData
       ) {
         const validation = errorData as WorkflowValidationResponse;
         setValidationResult({
@@ -497,9 +497,9 @@ export default function WorkflowDetailPage() {
           warnings: validation.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error("Workflow has validation issues");
+        toast.error('Workflow has validation issues');
       } else {
-        toast.error("Failed to activate workflow");
+        toast.error('Failed to activate workflow');
       }
     }
   };
@@ -510,11 +510,11 @@ export default function WorkflowDetailPage() {
         org: params.tenantKey,
         uniqueId: workflowId,
       }).unwrap();
-      toast.success("Workflow deleted");
+      toast.success('Workflow deleted');
       setIsDeleteModalOpen(false);
       router.push(`/platform/${params.tenantKey}/workflows/${listMentorId}`);
     } catch {
-      toast.error("Failed to delete workflow");
+      toast.error('Failed to delete workflow');
     }
   };
 
@@ -531,10 +531,10 @@ export default function WorkflowDetailPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">Failed to load workflow</p>
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+          <p className="mb-4 text-gray-600">Failed to load workflow</p>
           <Button variant="outline" onClick={() => router.back()}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
+            <ChevronLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
         </div>
@@ -548,7 +548,7 @@ export default function WorkflowDetailPage() {
     const nodeData = n.data as Record<string, unknown>;
 
     // For mentor nodes, prefill with mentor settings if available
-    if (n.type === "mentor") {
+    if (n.type === 'mentor') {
       const mentorId =
         (nodeData?.mentor_id as string | undefined) ||
         (nodeData?.entry_mentor_id as string | undefined) ||
@@ -582,24 +582,24 @@ export default function WorkflowDetailPage() {
       selectable: true,
       connectable: true,
     };
-  }) as Parameters<typeof WorkflowCanvas>[0]["initialNodes"];
+  }) as Parameters<typeof WorkflowCanvas>[0]['initialNodes'];
   const initialEdges = (workflow.definition?.edges ?? []) as Parameters<
     typeof WorkflowCanvas
-  >[0]["initialEdges"];
+  >[0]['initialEdges'];
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex h-screen flex-col bg-white">
       <div
-        className={`flex items-center justify-between px-4 py-3 ${isPreviewMode ? "bg-white border-b border-gray-200" : "bg-background border-b border-border"}`}
+        className={`flex items-center justify-between px-4 py-3 ${isPreviewMode ? 'border-b border-gray-200 bg-white' : 'bg-background border-border border-b'}`}
       >
         <div className="flex items-center gap-3">
           {isPreviewMode ? (
             <div className="flex items-center gap-2">
               <h1 className="text-foreground font-medium">{workflowName}</h1>
               <span
-                className={`px-2 py-0.5 text-xs rounded-md ${workflow.is_active ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}
+                className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
               >
-                {workflow.is_active ? "Active" : "Draft"}
+                {workflow.is_active ? 'Active' : 'Draft'}
               </span>
             </div>
           ) : (
@@ -618,26 +618,26 @@ export default function WorkflowDetailPage() {
                     value={workflowName}
                     onChange={(e) => setWorkflowName(e.target.value)}
                     onBlur={handleNameSave}
-                    onKeyDown={(e) => e.key === "Enter" && handleNameSave()}
-                    className="h-8 w-[200px] text-foreground font-medium"
+                    onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                    className="text-foreground h-8 w-[200px] font-medium"
                     autoFocus
                   />
                 ) : (
                   <button
                     onClick={() => setIsEditingName(true)}
-                    className="flex items-center gap-1 text-foreground font-medium hover:text-foreground/80"
+                    className="text-foreground hover:text-foreground/80 flex items-center gap-1 font-medium"
                   >
                     {workflowName}
                     <Pencil className="h-3 w-3 opacity-50" />
                   </button>
                 )}
                 <span
-                  className={`px-2 py-0.5 text-xs rounded-md ${workflow.is_active ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}
+                  className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                 >
-                  {workflow.is_active ? "Active" : "Draft"}
+                  {workflow.is_active ? 'Active' : 'Draft'}
                 </span>
                 {hasUnsavedChanges && (
-                  <span className="text-xs text-muted-foreground">Unsaved</span>
+                  <span className="text-muted-foreground text-xs">Unsaved</span>
                 )}
               </div>
             </>
@@ -653,7 +653,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleClosePreview}
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="mr-2 h-4 w-4" />
                 Close preview
               </Button>
               <Button
@@ -662,7 +662,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleNewChat}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <RotateCcw className="mr-2 h-4 w-4" />
                 New Chat
               </Button>
               <Button
@@ -674,7 +674,7 @@ export default function WorkflowDetailPage() {
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Publish"
+                  'Publish'
                 )}
               </Button>
             </>
@@ -693,7 +693,7 @@ export default function WorkflowDetailPage() {
                 <DropdownMenuContent align="end">
                   {workflow.is_active ? (
                     <DropdownMenuItem onClick={handleDeactivate}>
-                      <Power className="h-4 w-4 mr-2" />
+                      <Power className="mr-2 h-4 w-4" />
                       Deactivate
                     </DropdownMenuItem>
                   ) : (
@@ -701,15 +701,15 @@ export default function WorkflowDetailPage() {
                       onClick={handleActivate}
                       disabled={isActivating}
                     >
-                      <Power className="h-4 w-4 mr-2" />
-                      {isActivating ? "Activating..." : "Activate"}
+                      <Power className="mr-2 h-4 w-4" />
+                      {isActivating ? 'Activating...' : 'Activate'}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
                     onClick={() => setIsDeleteModalOpen(true)}
                     className="text-red-600"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -720,7 +720,7 @@ export default function WorkflowDetailPage() {
                 className="text-foreground border-border hover:bg-accent bg-transparent"
                 onClick={handlePreviewClick}
               >
-                <Eye className="h-4 w-4 mr-2" />
+                <Eye className="mr-2 h-4 w-4" />
                 Preview
               </Button>
               <Button
@@ -732,7 +732,7 @@ export default function WorkflowDetailPage() {
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Save"
+                  'Save'
                 )}
               </Button>
               <Button
@@ -744,7 +744,7 @@ export default function WorkflowDetailPage() {
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Publish"
+                  'Publish'
                 )}
               </Button>
             </>
@@ -760,7 +760,7 @@ export default function WorkflowDetailPage() {
             open={isValidationBannerOpen}
             onOpenChange={setIsValidationBannerOpen}
           >
-            <div className="border-b border-border bg-background px-4 py-2">
+            <div className="border-border bg-background border-b px-4 py-2">
               <CollapsibleTrigger asChild>
                 <button className="flex w-full items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
@@ -772,24 +772,24 @@ export default function WorkflowDetailPage() {
                     <span
                       className={
                         validationResult.errors.length > 0
-                          ? "text-red-700"
-                          : "text-amber-700"
+                          ? 'text-red-700'
+                          : 'text-amber-700'
                       }
                     >
                       {validationResult.errors.length > 0 &&
-                        `${validationResult.errors.length} error${validationResult.errors.length !== 1 ? "s" : ""}`}
+                        `${validationResult.errors.length} error${validationResult.errors.length !== 1 ? 's' : ''}`}
                       {validationResult.errors.length > 0 &&
                         validationResult.warnings.length > 0 &&
-                        ", "}
+                        ', '}
                       {validationResult.warnings.length > 0 &&
-                        `${validationResult.warnings.length} warning${validationResult.warnings.length !== 1 ? "s" : ""}`}
+                        `${validationResult.warnings.length} warning${validationResult.warnings.length !== 1 ? 's' : ''}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {isValidationBannerOpen ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      <ChevronUp className="text-muted-foreground h-4 w-4" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="text-muted-foreground h-4 w-4" />
                     )}
                     <span
                       role="button"
@@ -800,7 +800,7 @@ export default function WorkflowDetailPage() {
                         setValidationResult(null);
                       }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
+                        if (e.key === 'Enter' || e.key === ' ') {
                           e.stopPropagation();
                           setValidationResult(null);
                         }
@@ -818,7 +818,7 @@ export default function WorkflowDetailPage() {
                       key={`error-${i}`}
                       className="flex items-start gap-2 text-sm text-red-600"
                     >
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>{error}</span>
                     </div>
                   ))}
@@ -827,7 +827,7 @@ export default function WorkflowDetailPage() {
                       key={`warning-${i}`}
                       className="flex items-start gap-2 text-sm text-amber-600"
                     >
-                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>{warning}</span>
                     </div>
                   ))}
@@ -849,8 +849,8 @@ export default function WorkflowDetailPage() {
         <div
           className={
             isPreviewMode
-              ? "w-[60%] h-full border-r border-gray-200"
-              : "flex-1 h-full"
+              ? 'h-full w-[60%] border-r border-gray-200'
+              : 'h-full flex-1'
           }
         >
           <WorkflowCanvas
@@ -866,7 +866,7 @@ export default function WorkflowDetailPage() {
         </div>
 
         {isPreviewMode && (
-          <div className="w-[40%] h-full flex flex-col bg-white">
+          <div className="flex h-full w-[40%] flex-col bg-white">
             <WorkflowPreviewChat
               key={previewKey}
               tenantKey={params.tenantKey}

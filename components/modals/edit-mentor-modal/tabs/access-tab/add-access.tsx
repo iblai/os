@@ -1,8 +1,8 @@
-import * as React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDebounce } from "use-debounce";
-import { Loader2, Plus, X } from "lucide-react";
-import { toast } from "sonner";
+import * as React from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { Loader2, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   usePlatformUsersQuery,
@@ -11,10 +11,10 @@ import {
   isPoliciesResponse,
   useGetMentorSettingsQuery,
   useGetRbacGroupsQuery,
-} from "@iblai/iblai-js/data-layer";
-import type { MentorPolicy } from "@iblai/iblai-api";
+} from '@iblai/iblai-js/data-layer';
+import type { MentorPolicy } from '@iblai/iblai-api';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -23,29 +23,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 import type {
   DefaultMentorRole,
   GroupOption,
   PlatformUserOption,
-} from "./shared";
-import { formatRoleName, getErrorMessage } from "./shared";
-import { useParams } from "next/navigation";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { useUsername } from "@/hooks/use-user";
-import { useAppSelector } from "@/lib/hooks";
-import { selectRbacPermissions } from "@/features/rbac/rbac-slice";
-import { checkRbacPermission } from "@/hoc/withPermissions";
+} from './shared';
+import { formatRoleName, getErrorMessage } from './shared';
+import { useParams } from 'next/navigation';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useUsername } from '@/hooks/use-user';
+import { useAppSelector } from '@/lib/hooks';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 
 type AddAccessDialogProps = {
   availableRoles: DefaultMentorRole[];
@@ -70,18 +70,18 @@ export function AddAccessDialog({
     `/groups/#list`,
   );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<DefaultMentorRole | "">("");
+  const [selectedRole, setSelectedRole] = useState<DefaultMentorRole | ''>('');
   const [selectedUsers, setSelectedUsers] = useState<PlatformUserOption[]>([]);
-  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserSearchResults, setShowUserSearchResults] = useState(false);
   const [debouncedUserSearchTerm] = useDebounce(userSearchTerm, 300);
-  const [manualInputType, setManualInputType] = useState<"username" | "email">(
-    "email",
+  const [manualInputType, setManualInputType] = useState<'username' | 'email'>(
+    'email',
   );
-  const [manualInputValue, setManualInputValue] = useState("");
+  const [manualInputValue, setManualInputValue] = useState('');
   const [manualEntries, setManualEntries] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<GroupOption[]>([]);
-  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+  const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
   const [debouncedGroupSearchTerm] = useDebounce(groupSearchTerm, 300);
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
@@ -89,10 +89,10 @@ export function AddAccessDialog({
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
-      mentor: mentorId ?? "",
+      mentor: mentorId ?? '',
       org: tenantKey,
       // @ts-expect-error userId is not part of the query type definition
-      userId: username ?? "",
+      userId: username ?? '',
     },
     {
       skip: !mentorId || !tenantKey || !username,
@@ -110,15 +110,15 @@ export function AddAccessDialog({
     (open: boolean) => {
       setIsCreateDialogOpen(open);
       if (!open) {
-        setSelectedRole("");
+        setSelectedRole('');
         setSelectedUsers([]);
-        setUserSearchTerm("");
+        setUserSearchTerm('');
         setShowUserSearchResults(false);
-        setManualInputType("email");
-        setManualInputValue("");
+        setManualInputType('email');
+        setManualInputValue('');
         setManualEntries([]);
         setSelectedGroups([]);
-        setGroupSearchTerm("");
+        setGroupSearchTerm('');
         setShowGroupSearchResults(false);
       }
     },
@@ -127,15 +127,15 @@ export function AddAccessDialog({
 
   const handleCancelCreate = useCallback(() => {
     setIsCreateDialogOpen(false);
-    setSelectedRole("");
+    setSelectedRole('');
     setSelectedUsers([]);
-    setUserSearchTerm("");
+    setUserSearchTerm('');
     setShowUserSearchResults(false);
-    setManualInputType("email");
-    setManualInputValue("");
+    setManualInputType('email');
+    setManualInputValue('');
     setManualEntries([]);
     setSelectedGroups([]);
-    setGroupSearchTerm("");
+    setGroupSearchTerm('');
     setShowGroupSearchResults(false);
   }, []);
 
@@ -155,8 +155,8 @@ export function AddAccessDialog({
       page_size: 20,
       platform_key: platformKey,
       platform_org: platformKey,
-      query: shouldFetchCreationUsers ? debouncedUserSearchTerm : "",
-      return_policies: "false",
+      query: shouldFetchCreationUsers ? debouncedUserSearchTerm : '',
+      return_policies: 'false',
     },
     {
       skip: !shouldFetchCreationUsers,
@@ -180,19 +180,19 @@ export function AddAccessDialog({
 
     return candidates
       .map<PlatformUserOption | null>((rawCandidate) => {
-        if (!rawCandidate || typeof rawCandidate !== "object") {
+        if (!rawCandidate || typeof rawCandidate !== 'object') {
           return null;
         }
 
         const candidate = rawCandidate as Record<string, unknown>;
         const rawId = candidate.user_id ?? candidate.id;
         const id =
-          typeof rawId === "string"
+          typeof rawId === 'string'
             ? Number(rawId)
-            : typeof rawId === "number"
+            : typeof rawId === 'number'
               ? rawId
               : undefined;
-        const name = (candidate.name as string | null | undefined) ?? "";
+        const name = (candidate.name as string | null | undefined) ?? '';
         if (!id) {
           return null;
         }
@@ -233,7 +233,7 @@ export function AddAccessDialog({
       if (prev.some((existing) => existing.id === user.id)) return prev;
       return [...prev, user];
     });
-    setUserSearchTerm("");
+    setUserSearchTerm('');
     setShowUserSearchResults(false);
   }, []);
 
@@ -278,8 +278,8 @@ export function AddAccessDialog({
       .filter(
         (g): g is { id: number; name?: string } =>
           !!g &&
-          typeof g === "object" &&
-          typeof (g as Record<string, unknown>).id === "number",
+          typeof g === 'object' &&
+          typeof (g as Record<string, unknown>).id === 'number',
       )
       .map((g) => ({ id: g.id, name: g.name ?? `Group ${g.id}` }))
       .filter((g) => !selectedGroupIds.has(g.id));
@@ -308,7 +308,7 @@ export function AddAccessDialog({
       if (prev.some((g) => g.id === group.id)) return prev;
       return [...prev, group];
     });
-    setGroupSearchTerm("");
+    setGroupSearchTerm('');
     setShowGroupSearchResults(false);
   }, []);
 
@@ -319,13 +319,13 @@ export function AddAccessDialog({
   const handleCreateRoleAccess = useCallback(async () => {
     /* istanbul ignore if -- defensive: Create button is disabled when no role selected */
     if (!selectedRole) {
-      toast.error("Select a role to create access.");
+      toast.error('Select a role to create access.');
       return;
     }
 
     /* istanbul ignore if -- defensive: Create button is disabled when mentor context missing */
     if (!mentorDbId || !tenantKey) {
-      toast.error("Mentor context is missing. Close the modal and try again.");
+      toast.error('Mentor context is missing. Close the modal and try again.');
       return;
     }
 
@@ -350,7 +350,7 @@ export function AddAccessDialog({
           ? { users_to_add: selectedUsers.map((user) => user.id) }
           : {}
         : allEntries.length > 0
-          ? manualInputType === "email"
+          ? manualInputType === 'email'
             ? { emails_to_add: allEntries }
             : { usernames_to_add: allEntries }
           : {};
@@ -371,21 +371,21 @@ export function AddAccessDialog({
       } as unknown as { requestBody: MentorPolicy }).unwrap();
 
       toast.success(`${formatRoleName(selectedRole)} access created.`);
-      setSelectedRole("");
+      setSelectedRole('');
       setSelectedUsers([]);
-      setUserSearchTerm("");
+      setUserSearchTerm('');
       setShowUserSearchResults(false);
-      setManualInputType("email");
-      setManualInputValue("");
+      setManualInputType('email');
+      setManualInputValue('');
       setManualEntries([]);
       setSelectedGroups([]);
-      setGroupSearchTerm("");
+      setGroupSearchTerm('');
       setShowGroupSearchResults(false);
       setIsCreateDialogOpen(false);
       await onAccessCreated();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "Unable to create mentor role access."),
+        getErrorMessage(error, 'Unable to create mentor role access.'),
       );
     }
   }, [
@@ -406,7 +406,7 @@ export function AddAccessDialog({
 
   useEffect(() => {
     if (selectedRole && !availableRoles.includes(selectedRole)) {
-      setSelectedRole("");
+      setSelectedRole('');
     }
   }, [availableRoles, selectedRole]);
 
@@ -510,7 +510,7 @@ export function AddAccessDialog({
                     aria-expanded={showUserSearchResults}
                   />
                   {showUserSearchResults && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                    <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                       {userSearchTerm.trim().length < 2 ? (
                         <div className="px-3 py-2 text-sm text-gray-600">
                           Type at least two characters to search.
@@ -538,7 +538,7 @@ export function AddAccessDialog({
                             {user.name && (
                               <span className="text-xs text-gray-600">
                                 {user.username}
-                                {user.username && user.email ? " • " : ""}
+                                {user.username && user.email ? ' • ' : ''}
                                 {user.email}
                               </span>
                             )}
@@ -565,7 +565,7 @@ export function AddAccessDialog({
                     <Select
                       value={manualInputType}
                       onValueChange={(value) =>
-                        setManualInputType(value as "username" | "email")
+                        setManualInputType(value as 'username' | 'email')
                       }
                     >
                       <SelectTrigger
@@ -584,20 +584,20 @@ export function AddAccessDialog({
                       value={manualInputValue}
                       onChange={(e) => setManualInputValue(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === 'Enter') {
                           e.preventDefault();
                           const value = manualInputValue.trim();
                           if (!value) return;
                           setManualEntries((prev) =>
                             prev.includes(value) ? prev : [...prev, value],
                           );
-                          setManualInputValue("");
+                          setManualInputValue('');
                         }
                       }}
                       placeholder={
-                        manualInputType === "email"
-                          ? "user@example.com"
-                          : "username"
+                        manualInputType === 'email'
+                          ? 'user@example.com'
+                          : 'username'
                       }
                       autoComplete="off"
                       className="flex-1"
@@ -610,7 +610,7 @@ export function AddAccessDialog({
                         setManualEntries((prev) =>
                           prev.includes(value) ? prev : [...prev, value],
                         );
-                        setManualInputValue("");
+                        setManualInputValue('');
                       }}
                       disabled={!manualInputValue.trim()}
                       variant="outline"
@@ -700,7 +700,7 @@ export function AddAccessDialog({
                   aria-expanded={showGroupSearchResults}
                 />
                 {showGroupSearchResults && (
-                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                     {groupSearchTerm.trim().length < 2 ? (
                       <div className="px-3 py-2 text-sm text-gray-600">
                         Type at least two characters to search.
@@ -758,7 +758,7 @@ export function AddAccessDialog({
                 Creating…
               </span>
             ) : (
-              "Create"
+              'Create'
             )}
           </Button>
         </DialogFooter>

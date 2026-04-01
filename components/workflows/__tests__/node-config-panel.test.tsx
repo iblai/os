@@ -1,34 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   render,
   screen,
   waitFor,
   act,
   fireEvent,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { NodeConfigPanel } from "../node-config-panel";
-import type { NodeConfig } from "../workflow-canvas";
+} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { NodeConfigPanel } from '../node-config-panel';
+import type { NodeConfig } from '../workflow-canvas';
 import {
   useGetMentorSettingsQuery,
   useGetToolsQuery,
-} from "@iblai/iblai-js/data-layer";
-import { useToggleTools } from "@/hooks/use-tools/use-toggle-tools";
-import { useUsername } from "@/hooks/use-user";
+} from '@iblai/iblai-js/data-layer';
+import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import { useUsername } from '@/hooks/use-user';
 
 // Mock Redux
 const mockDispatch = vi.fn();
-vi.mock("@/lib/hooks", () => ({
+vi.mock('@/lib/hooks', () => ({
   useAppDispatch: vi.fn(() => mockDispatch),
 }));
 
-vi.mock("@/features/navigation/slice", () => ({
-  pushModal: vi.fn((payload) => ({ type: "PUSH_MODAL", payload })),
-  popModal: vi.fn(() => ({ type: "POP_MODAL" })),
+vi.mock('@/features/navigation/slice', () => ({
+  pushModal: vi.fn((payload) => ({ type: 'PUSH_MODAL', payload })),
+  popModal: vi.fn(() => ({ type: 'POP_MODAL' })),
 }));
 
 // Mock data layer
-vi.mock("@iblai/iblai-js/data-layer", () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: vi.fn(() => ({
     data: null,
     isLoading: false,
@@ -40,13 +40,13 @@ vi.mock("@iblai/iblai-js/data-layer", () => ({
 }));
 
 // Mock user hooks
-vi.mock("@/hooks/use-user", () => ({
-  useUsername: vi.fn(() => "test-user"),
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: vi.fn(() => 'test-user'),
 }));
 
 // Mock tools hooks
 const mockToggleTools = vi.fn();
-vi.mock("@/hooks/use-tools/use-toggle-tools", () => ({
+vi.mock('@/hooks/use-tools/use-toggle-tools', () => ({
   useToggleTools: vi.fn(() => ({
     toggleTools: mockToggleTools,
     isLoading: false,
@@ -54,36 +54,36 @@ vi.mock("@/hooks/use-tools/use-toggle-tools", () => ({
 }));
 
 // Mock UI components
-vi.mock("@/components/ui/button", () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: ({
     children,
     onClick,
     disabled,
     ...props
-  }: React.ComponentProps<"button">) => (
+  }: React.ComponentProps<'button'>) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
   ),
 }));
 
-vi.mock("@/components/ui/input", () => ({
-  Input: (props: React.ComponentProps<"input">) => <input {...props} />,
+vi.mock('@/components/ui/input', () => ({
+  Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
 }));
 
-vi.mock("@/components/ui/label", () => ({
-  Label: ({ children, ...props }: React.ComponentProps<"label">) => (
+vi.mock('@/components/ui/label', () => ({
+  Label: ({ children, ...props }: React.ComponentProps<'label'>) => (
     <label {...props}>{children}</label>
   ),
 }));
 
-vi.mock("@/components/ui/textarea", () => ({
-  Textarea: (props: React.ComponentProps<"textarea">) => (
+vi.mock('@/components/ui/textarea', () => ({
+  Textarea: (props: React.ComponentProps<'textarea'>) => (
     <textarea {...props} />
   ),
 }));
 
-vi.mock("@/components/ui/switch", () => ({
+vi.mock('@/components/ui/switch', () => ({
   Switch: ({
     checked,
     onCheckedChange,
@@ -91,7 +91,7 @@ vi.mock("@/components/ui/switch", () => ({
   }: {
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
-  } & React.ComponentProps<"button">) => (
+  } & React.ComponentProps<'button'>) => (
     <button
       data-testid="switch"
       data-checked={checked}
@@ -103,7 +103,7 @@ vi.mock("@/components/ui/switch", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
+vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({
     children,
     open,
@@ -121,7 +121,7 @@ vi.mock("@/components/ui/dialog", () => ({
         </button>
       </div>
     ) : null,
-  DialogContent: ({ children, ...props }: React.ComponentProps<"div">) => (
+  DialogContent: ({ children, ...props }: React.ComponentProps<'div'>) => (
     <div data-testid="dialog-content" {...props}>
       {children}
     </div>
@@ -129,14 +129,14 @@ vi.mock("@/components/ui/dialog", () => ({
   DialogHeader: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-header">{children}</div>
   ),
-  DialogTitle: ({ children, ...props }: React.ComponentProps<"h2">) => (
+  DialogTitle: ({ children, ...props }: React.ComponentProps<'h2'>) => (
     <h2 data-testid="dialog-title" {...props}>
       {children}
     </h2>
   ),
 }));
 
-vi.mock("@/components/ui/select", () => ({
+vi.mock('@/components/ui/select', () => ({
   Select: ({
     children,
     value,
@@ -149,7 +149,7 @@ vi.mock("@/components/ui/select", () => ({
     <div
       data-testid="select"
       data-value={value}
-      onClick={() => onValueChange?.("var1")}
+      onClick={() => onValueChange?.('var1')}
     >
       {children}
     </div>
@@ -164,7 +164,7 @@ vi.mock("@/components/ui/select", () => ({
     children: React.ReactNode;
     value: string;
   }) => <div data-testid={`select-item-${value}`}>{children}</div>,
-  SelectTrigger: ({ children, ...props }: React.ComponentProps<"button">) => (
+  SelectTrigger: ({ children, ...props }: React.ComponentProps<'button'>) => (
     <button data-testid="select-trigger" {...props}>
       {children}
     </button>
@@ -174,7 +174,7 @@ vi.mock("@/components/ui/select", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/tooltip", () => ({
+vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="tooltip-content">{children}</div>
@@ -187,7 +187,7 @@ vi.mock("@/components/ui/tooltip", () => ({
   ),
 }));
 
-vi.mock("@/components/mentors/mentor-selection-grid", () => ({
+vi.mock('@/components/mentors/mentor-selection-grid', () => ({
   MentorSelectionGrid: ({
     onMentorSelect,
     selectedMentorIds,
@@ -197,12 +197,12 @@ vi.mock("@/components/mentors/mentor-selection-grid", () => ({
   }) => (
     <div data-testid="mentor-selection-grid">
       <span data-testid="selected-mentor-ids">
-        {selectedMentorIds.join(",")}
+        {selectedMentorIds.join(',')}
       </span>
       <button
         data-testid="select-mentor"
         onClick={() =>
-          onMentorSelect({ unique_id: "new-mentor-id", name: "New Mentor" })
+          onMentorSelect({ unique_id: 'new-mentor-id', name: 'New Mentor' })
         }
       >
         Select Mentor
@@ -211,7 +211,7 @@ vi.mock("@/components/mentors/mentor-selection-grid", () => ({
   ),
 }));
 
-vi.mock("@/components/modals/edit-mentor-modal/tabs/datasets-tab", () => ({
+vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab', () => ({
   DatasetsTab: ({
     onSelect,
     selectedDatasetId,
@@ -229,9 +229,9 @@ vi.mock("@/components/modals/edit-mentor-modal/tabs/datasets-tab", () => ({
         data-testid="select-dataset"
         onClick={() =>
           onSelect({
-            id: "dataset-123",
-            document_name: "Test Dataset",
-            url: "",
+            id: 'dataset-123',
+            document_name: 'Test Dataset',
+            url: '',
           })
         }
       >
@@ -241,7 +241,7 @@ vi.mock("@/components/modals/edit-mentor-modal/tabs/datasets-tab", () => ({
   ),
 }));
 
-vi.mock("@/components/modals/edit-mentor-modal/tabs/mcp-tab", () => ({
+vi.mock('@/components/modals/edit-mentor-modal/tabs/mcp-tab', () => ({
   McpTab: ({
     onSelect,
   }: {
@@ -251,7 +251,7 @@ vi.mock("@/components/modals/edit-mentor-modal/tabs/mcp-tab", () => ({
       <button
         data-testid="select-mcp-server"
         onClick={() =>
-          onSelect({ id: 1, name: "Test MCP Server", image: "/test.png" })
+          onSelect({ id: 1, name: 'Test MCP Server', image: '/test.png' })
         }
       >
         Select MCP Server
@@ -260,7 +260,7 @@ vi.mock("@/components/modals/edit-mentor-modal/tabs/mcp-tab", () => ({
   ),
 }));
 
-vi.mock("@/hoc/withPermissions", () => ({
+vi.mock('@/hoc/withPermissions', () => ({
   default: ({
     children,
   }: {
@@ -268,25 +268,25 @@ vi.mock("@/hoc/withPermissions", () => ({
   }) => children({ disabled: false }),
 }));
 
-describe("NodeConfigPanel", () => {
+describe('NodeConfigPanel', () => {
   const baseProps = {
-    nodeId: "test-node-id",
+    nodeId: 'test-node-id',
     onClose: vi.fn(),
     onUpdateNode: vi.fn(),
-    org: "test-org",
-    defaultMentorId: "default-mentor-id",
+    org: 'test-org',
+    defaultMentorId: 'default-mentor-id',
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("start node", () => {
+  describe('start node', () => {
     const startNodeData: NodeConfig = {
-      label: "Start",
+      label: 'Start',
     };
 
-    it("should render start node configuration panel", () => {
+    it('should render start node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -295,13 +295,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Start")).toBeInTheDocument();
+      expect(screen.getByText('Start')).toBeInTheDocument();
       expect(
-        screen.getByText("Define the workflow inputs"),
+        screen.getByText('Define the workflow inputs'),
       ).toBeInTheDocument();
     });
 
-    it("should display input variables section", () => {
+    it('should display input variables section', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -310,12 +310,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Input variables")).toBeInTheDocument();
-      expect(screen.getByText("input_as_text")).toBeInTheDocument();
-      expect(screen.getByText("string")).toBeInTheDocument();
+      expect(screen.getByText('Input variables')).toBeInTheDocument();
+      expect(screen.getByText('input_as_text')).toBeInTheDocument();
+      expect(screen.getByText('string')).toBeInTheDocument();
     });
 
-    it("should display state variables section", () => {
+    it('should display state variables section', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -324,10 +324,10 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("State variables")).toBeInTheDocument();
+      expect(screen.getByText('State variables')).toBeInTheDocument();
     });
 
-    it("should open add variable modal when Add button is clicked", async () => {
+    it('should open add variable modal when Add button is clicked', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
@@ -337,12 +337,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
     });
 
-    it("should call onClose when close button is clicked", async () => {
+    it('should call onClose when close button is clicked', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
       render(
@@ -355,21 +355,21 @@ describe("NodeConfigPanel", () => {
       );
 
       // Find the close button - it's the button with an X icon (lucide-x class)
-      const closeButtons = screen.getAllByRole("button");
+      const closeButtons = screen.getAllByRole('button');
       // The close button contains an SVG with lucide-x class
       const closeButton = closeButtons.find((btn) =>
-        btn.querySelector("svg.lucide-x"),
+        btn.querySelector('svg.lucide-x'),
       );
       expect(closeButton).toBeTruthy();
       await user.click(closeButton!);
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("should display existing state variables", () => {
+    it('should display existing state variables', () => {
       const nodeDataWithVars: NodeConfig = {
-        label: "Start",
+        label: 'Start',
         stateVariables: [
-          { id: "1", name: "myVar", type: "string", defaultValue: "test" },
+          { id: '1', name: 'myVar', type: 'string', defaultValue: 'test' },
         ],
       };
 
@@ -381,19 +381,19 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("myVar")).toBeInTheDocument();
+      expect(screen.getByText('myVar')).toBeInTheDocument();
     });
   });
 
-  describe("mentor node", () => {
+  describe('mentor node', () => {
     const mentorNodeData: NodeConfig = {
-      label: "My Mentor",
-      instructions: "You are a helpful assistant.",
-      model: "gpt-4",
-      mentor_id: "mentor-123",
+      label: 'My Mentor',
+      instructions: 'You are a helpful assistant.',
+      model: 'gpt-4',
+      mentor_id: 'mentor-123',
     };
 
-    it("should render mentor node configuration panel", () => {
+    it('should render mentor node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -402,13 +402,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("My Mentor")).toBeInTheDocument();
+      expect(screen.getByText('My Mentor')).toBeInTheDocument();
       expect(
-        screen.getByText("Configure the mentor instructions, model, and tools"),
+        screen.getByText('Configure the mentor instructions, model, and tools'),
       ).toBeInTheDocument();
     });
 
-    it("should display name input", () => {
+    it('should display name input', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -417,11 +417,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Name")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("My Mentor")).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('My Mentor')).toBeInTheDocument();
     });
 
-    it("should display instructions textarea", () => {
+    it('should display instructions textarea', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -430,13 +430,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Instructions")).toBeInTheDocument();
+      expect(screen.getByText('Instructions')).toBeInTheDocument();
       expect(
-        screen.getByDisplayValue("You are a helpful assistant."),
+        screen.getByDisplayValue('You are a helpful assistant.'),
       ).toBeInTheDocument();
     });
 
-    it("should display model input", () => {
+    it('should display model input', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -445,10 +445,10 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Model")).toBeInTheDocument();
+      expect(screen.getByText('Model')).toBeInTheDocument();
     });
 
-    it("should call onUpdateNode when name is changed", async () => {
+    it('should call onUpdateNode when name is changed', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
@@ -460,14 +460,14 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      const nameInput = screen.getByDisplayValue("My Mentor");
+      const nameInput = screen.getByDisplayValue('My Mentor');
       await user.clear(nameInput);
-      await user.type(nameInput, "New Name");
+      await user.type(nameInput, 'New Name');
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should open mentor selection modal when Change button is clicked", async () => {
+    it('should open mentor selection modal when Change button is clicked', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
@@ -477,15 +477,15 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Change"));
+      await user.click(screen.getByText('Change'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
-      expect(screen.getByTestId("mentor-selection-grid")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+      expect(screen.getByTestId('mentor-selection-grid')).toBeInTheDocument();
     });
 
     it('should show "Select" button when no mentor is selected', () => {
       const nodeDataNoMentor: NodeConfig = {
-        label: "Mentor",
+        label: 'Mentor',
       };
 
       render(
@@ -496,16 +496,16 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Select")).toBeInTheDocument();
+      expect(screen.getByText('Select')).toBeInTheDocument();
     });
   });
 
-  describe("guardrails node", () => {
+  describe('guardrails node', () => {
     const guardrailsNodeData: NodeConfig = {
-      label: "Guardrails",
+      label: 'Guardrails',
     };
 
-    it("should render guardrails node configuration panel", () => {
+    it('should render guardrails node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -514,15 +514,15 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Guardrails")).toBeInTheDocument();
+      expect(screen.getByText('Guardrails')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Run moderation, PII, jailbreak, or hallucination checks",
+          'Run moderation, PII, jailbreak, or hallucination checks',
         ),
       ).toBeInTheDocument();
     });
 
-    it("should display guardrail options", () => {
+    it('should display guardrail options', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -532,14 +532,14 @@ describe("NodeConfigPanel", () => {
       );
 
       expect(
-        screen.getByText("Personally identifiable information"),
+        screen.getByText('Personally identifiable information'),
       ).toBeInTheDocument();
-      expect(screen.getByText("Moderation")).toBeInTheDocument();
-      expect(screen.getByText("Jailbreak")).toBeInTheDocument();
-      expect(screen.getByText("Hallucination")).toBeInTheDocument();
+      expect(screen.getByText('Moderation')).toBeInTheDocument();
+      expect(screen.getByText('Jailbreak')).toBeInTheDocument();
+      expect(screen.getByText('Hallucination')).toBeInTheDocument();
     });
 
-    it("should display continue on error option", () => {
+    it('should display continue on error option', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -548,16 +548,16 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Continue on error")).toBeInTheDocument();
+      expect(screen.getByText('Continue on error')).toBeInTheDocument();
     });
   });
 
-  describe("file-search node", () => {
+  describe('file-search node', () => {
     const fileSearchNodeData: NodeConfig = {
-      label: "File search",
+      label: 'File search',
     };
 
-    it("should render file-search node configuration panel", () => {
+    it('should render file-search node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -566,13 +566,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("File search")).toBeInTheDocument();
+      expect(screen.getByText('File search')).toBeInTheDocument();
       expect(
-        screen.getByText("Search datasets for relevant information"),
+        screen.getByText('Search datasets for relevant information'),
       ).toBeInTheDocument();
     });
 
-    it("should display dataset selection", () => {
+    it('should display dataset selection', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -581,11 +581,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Dataset")).toBeInTheDocument();
-      expect(screen.getByText("Select")).toBeInTheDocument();
+      expect(screen.getByText('Dataset')).toBeInTheDocument();
+      expect(screen.getByText('Select')).toBeInTheDocument();
     });
 
-    it("should display max results input", () => {
+    it('should display max results input', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -594,11 +594,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Max results")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("10")).toBeInTheDocument();
+      expect(screen.getByText('Max results')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('10')).toBeInTheDocument();
     });
 
-    it("should display query textarea", () => {
+    it('should display query textarea', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -607,14 +607,14 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Query")).toBeInTheDocument();
+      expect(screen.getByText('Query')).toBeInTheDocument();
     });
 
-    it("should show Change button when dataset is selected", () => {
+    it('should show Change button when dataset is selected', () => {
       const nodeDataWithDataset: NodeConfig = {
-        label: "File search",
-        datasetId: "dataset-123",
-        datasetName: "Test Dataset",
+        label: 'File search',
+        datasetId: 'dataset-123',
+        datasetName: 'Test Dataset',
       };
 
       render(
@@ -625,11 +625,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Change")).toBeInTheDocument();
-      expect(screen.getByText("Test Dataset")).toBeInTheDocument();
+      expect(screen.getByText('Change')).toBeInTheDocument();
+      expect(screen.getByText('Test Dataset')).toBeInTheDocument();
     });
 
-    it("should open dataset dialog when Select is clicked", async () => {
+    it('should open dataset dialog when Select is clicked', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
@@ -639,19 +639,19 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Select"));
+      await user.click(screen.getByText('Select'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
-      expect(screen.getByTestId("datasets-tab")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+      expect(screen.getByTestId('datasets-tab')).toBeInTheDocument();
     });
   });
 
-  describe("mcp node", () => {
+  describe('mcp node', () => {
     const mcpNodeData: NodeConfig = {
-      label: "MCP",
+      label: 'MCP',
     };
 
-    it("should render mcp node configuration panel", () => {
+    it('should render mcp node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -660,13 +660,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("MCP")).toBeInTheDocument();
+      expect(screen.getByText('MCP')).toBeInTheDocument();
       expect(
-        screen.getByText("Invoke a Model Context Protocol tool"),
+        screen.getByText('Invoke a Model Context Protocol tool'),
       ).toBeInTheDocument();
     });
 
-    it("should display empty state when no connectors", () => {
+    it('should display empty state when no connectors', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -675,15 +675,15 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Add")).toBeInTheDocument();
+      expect(screen.getByText('Add')).toBeInTheDocument();
     });
 
-    it("should display connected tools when connectors exist", () => {
+    it('should display connected tools when connectors exist', () => {
       const nodeDataWithConnectors: NodeConfig = {
-        label: "MCP",
+        label: 'MCP',
         mcpConnectors: [
-          { id: "1", name: "Gmail", icon: "📧" },
-          { id: "2", name: "Slack", icon: "💬" },
+          { id: '1', name: 'Gmail', icon: '📧' },
+          { id: '2', name: 'Slack', icon: '💬' },
         ],
       };
 
@@ -695,12 +695,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Connected Tools")).toBeInTheDocument();
-      expect(screen.getByText("Gmail")).toBeInTheDocument();
-      expect(screen.getByText("Slack")).toBeInTheDocument();
+      expect(screen.getByText('Connected Tools')).toBeInTheDocument();
+      expect(screen.getByText('Gmail')).toBeInTheDocument();
+      expect(screen.getByText('Slack')).toBeInTheDocument();
     });
 
-    it("should open mcp dialog when Add is clicked", async () => {
+    it('should open mcp dialog when Add is clicked', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
@@ -710,19 +710,19 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
-      expect(screen.getByTestId("mcp-tab")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
+      expect(screen.getByTestId('mcp-tab')).toBeInTheDocument();
     });
   });
 
-  describe("while node", () => {
+  describe('while node', () => {
     const whileNodeData: NodeConfig = {
-      label: "While",
+      label: 'While',
     };
 
-    it("should render while node configuration panel", () => {
+    it('should render while node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -731,13 +731,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("While")).toBeInTheDocument();
+      expect(screen.getByText('While')).toBeInTheDocument();
       expect(
-        screen.getByText("Loop while a condition is true"),
+        screen.getByText('Loop while a condition is true'),
       ).toBeInTheDocument();
     });
 
-    it("should display expression textarea", () => {
+    it('should display expression textarea', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -746,11 +746,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Expression")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("input.foo == 5")).toBeInTheDocument();
+      expect(screen.getByText('Expression')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('input.foo == 5')).toBeInTheDocument();
     });
 
-    it("should call onUpdateNode when expression is changed", async () => {
+    it('should call onUpdateNode when expression is changed', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
@@ -762,19 +762,19 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      const textarea = screen.getByPlaceholderText("input.foo == 5");
-      await user.type(textarea, "x > 0");
+      const textarea = screen.getByPlaceholderText('input.foo == 5');
+      await user.type(textarea, 'x > 0');
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
   });
 
-  describe("user-approval node", () => {
+  describe('user-approval node', () => {
     const userApprovalNodeData: NodeConfig = {
-      label: "User approval",
+      label: 'User approval',
     };
 
-    it("should render user-approval node configuration panel", () => {
+    it('should render user-approval node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -783,13 +783,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("User approval")).toBeInTheDocument();
+      expect(screen.getByText('User approval')).toBeInTheDocument();
       expect(
-        screen.getByText("Pause for a human to approve or reject a step"),
+        screen.getByText('Pause for a human to approve or reject a step'),
       ).toBeInTheDocument();
     });
 
-    it("should display name input", () => {
+    it('should display name input', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -798,10 +798,10 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Name")).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
-    it("should display message textarea", () => {
+    it('should display message textarea', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -810,16 +810,16 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Message")).toBeInTheDocument();
+      expect(screen.getByText('Message')).toBeInTheDocument();
     });
   });
 
-  describe("transform node", () => {
+  describe('transform node', () => {
     const transformNodeData: NodeConfig = {
-      label: "Transform",
+      label: 'Transform',
     };
 
-    it("should render transform node configuration panel", () => {
+    it('should render transform node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -828,11 +828,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Transform")).toBeInTheDocument();
-      expect(screen.getByText("Reshape data")).toBeInTheDocument();
+      expect(screen.getByText('Transform')).toBeInTheDocument();
+      expect(screen.getByText('Reshape data')).toBeInTheDocument();
     });
 
-    it("should display mode toggle buttons", () => {
+    it('should display mode toggle buttons', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -841,11 +841,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Expressions")).toBeInTheDocument();
-      expect(screen.getByText("Object")).toBeInTheDocument();
+      expect(screen.getByText('Expressions')).toBeInTheDocument();
+      expect(screen.getByText('Object')).toBeInTheDocument();
     });
 
-    it("should display key and value inputs in expressions mode", () => {
+    it('should display key and value inputs in expressions mode', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -854,11 +854,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Key")).toBeInTheDocument();
-      expect(screen.getByText("Value")).toBeInTheDocument();
+      expect(screen.getByText('Key')).toBeInTheDocument();
+      expect(screen.getByText('Value')).toBeInTheDocument();
     });
 
-    it("should switch to object mode when clicked", async () => {
+    it('should switch to object mode when clicked', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
@@ -868,12 +868,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Object'));
 
-      expect(screen.getByText("Add schema")).toBeInTheDocument();
+      expect(screen.getByText('Add schema')).toBeInTheDocument();
     });
 
-    it("should add new expression when Add is clicked", async () => {
+    it('should add new expression when Add is clicked', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
@@ -885,18 +885,18 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
   });
 
-  describe("set-state node", () => {
+  describe('set-state node', () => {
     const setStateNodeData: NodeConfig = {
-      label: "Set state",
+      label: 'Set state',
     };
 
-    it("should render set-state node configuration panel", () => {
+    it('should render set-state node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -905,13 +905,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Set state")).toBeInTheDocument();
+      expect(screen.getByText('Set state')).toBeInTheDocument();
       expect(
         screen.getByText("Assign values to workflow's state variables"),
       ).toBeInTheDocument();
     });
 
-    it("should display assign value and to variable inputs", () => {
+    it('should display assign value and to variable inputs', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -920,11 +920,11 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Assign value")).toBeInTheDocument();
-      expect(screen.getByText("To variable")).toBeInTheDocument();
+      expect(screen.getByText('Assign value')).toBeInTheDocument();
+      expect(screen.getByText('To variable')).toBeInTheDocument();
     });
 
-    it("should add new assignment when Add is clicked", async () => {
+    it('should add new assignment when Add is clicked', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
@@ -936,18 +936,18 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
   });
 
-  describe("if-else node", () => {
+  describe('if-else node', () => {
     const ifElseNodeData: NodeConfig = {
-      label: "If / else",
+      label: 'If / else',
     };
 
-    it("should render if-else node configuration panel", () => {
+    it('should render if-else node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -956,13 +956,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("If / else")).toBeInTheDocument();
+      expect(screen.getByText('If / else')).toBeInTheDocument();
       expect(
-        screen.getByText("Create conditions to branch your workflow"),
+        screen.getByText('Create conditions to branch your workflow'),
       ).toBeInTheDocument();
     });
 
-    it("should display If condition by default", () => {
+    it('should display If condition by default', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -971,16 +971,16 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("If")).toBeInTheDocument();
+      expect(screen.getByText('If')).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("Case name (optional)"),
+        screen.getByPlaceholderText('Case name (optional)'),
       ).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("Enter condition, e.g. input == 5"),
+        screen.getByPlaceholderText('Enter condition, e.g. input == 5'),
       ).toBeInTheDocument();
     });
 
-    it("should add new condition when Add is clicked", async () => {
+    it('should add new condition when Add is clicked', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
@@ -992,12 +992,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should render conditional node same as if-else", () => {
+    it('should render conditional node same as if-else', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -1006,15 +1006,15 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("If / else")).toBeInTheDocument();
+      expect(screen.getByText('If / else')).toBeInTheDocument();
     });
 
-    it("should display existing conditions", () => {
+    it('should display existing conditions', () => {
       const nodeDataWithConditions: NodeConfig = {
-        label: "If / else",
+        label: 'If / else',
         conditions: [
-          { id: "1", caseName: "Case A", expression: "x > 0" },
-          { id: "2", caseName: "Case B", expression: "x < 0" },
+          { id: '1', caseName: 'Case A', expression: 'x > 0' },
+          { id: '2', caseName: 'Case B', expression: 'x < 0' },
         ],
       };
 
@@ -1026,17 +1026,17 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("If")).toBeInTheDocument();
-      expect(screen.getByText("Else if 1")).toBeInTheDocument();
+      expect(screen.getByText('If')).toBeInTheDocument();
+      expect(screen.getByText('Else if 1')).toBeInTheDocument();
     });
   });
 
-  describe("end node", () => {
+  describe('end node', () => {
     const endNodeData: NodeConfig = {
-      label: "End",
+      label: 'End',
     };
 
-    it("should render end node configuration panel", () => {
+    it('should render end node configuration panel', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -1045,13 +1045,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("End")).toBeInTheDocument();
+      expect(screen.getByText('End')).toBeInTheDocument();
       expect(
-        screen.getByText("Define the workflow output"),
+        screen.getByText('Define the workflow output'),
       ).toBeInTheDocument();
     });
 
-    it("should display output textarea", () => {
+    it('should display output textarea', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -1060,19 +1060,19 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Output")).toBeInTheDocument();
+      expect(screen.getByText('Output')).toBeInTheDocument();
       expect(
         screen.getByPlaceholderText(
-          "Enter output value. Use {{ curly braces }} to insert variables.",
+          'Enter output value. Use {{ curly braces }} to insert variables.',
         ),
       ).toBeInTheDocument();
     });
   });
 
-  describe("unknown node type", () => {
-    it("should return null for unknown node types", () => {
+  describe('unknown node type', () => {
+    it('should return null for unknown node types', () => {
       const unknownNodeData: NodeConfig = {
-        label: "Unknown",
+        label: 'Unknown',
       };
 
       const { container } = render(
@@ -1087,10 +1087,10 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("event propagation", () => {
-    it("should stop propagation on panel click", () => {
+  describe('event propagation', () => {
+    it('should stop propagation on panel click', () => {
       const startNodeData: NodeConfig = {
-        label: "Start",
+        label: 'Start',
       };
 
       render(
@@ -1101,10 +1101,10 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      const panel = document.querySelector(".absolute");
+      const panel = document.querySelector('.absolute');
       if (panel) {
-        const clickEvent = new MouseEvent("click", { bubbles: true });
-        const stopPropagation = vi.spyOn(clickEvent, "stopPropagation");
+        const clickEvent = new MouseEvent('click', { bubbles: true });
+        const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
 
         panel.dispatchEvent(clickEvent);
 
@@ -1113,16 +1113,16 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("handler functions", () => {
-    describe("handleRemoveCondition", () => {
-      it("should remove a condition when there are multiple conditions", async () => {
+  describe('handler functions', () => {
+    describe('handleRemoveCondition', () => {
+      it('should remove a condition when there are multiple conditions', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeDataWithConditions: NodeConfig = {
-          label: "If / else",
+          label: 'If / else',
           conditions: [
-            { id: "1", caseName: "Case A", expression: "x > 0" },
-            { id: "2", caseName: "Case B", expression: "x < 0" },
+            { id: '1', caseName: 'Case A', expression: 'x > 0' },
+            { id: '2', caseName: 'Case B', expression: 'x < 0' },
           ],
         };
 
@@ -1137,17 +1137,17 @@ describe("NodeConfigPanel", () => {
 
         // Find the trash button for removing a condition
         const trashButtons = screen
-          .getAllByRole("button")
+          .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
 
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
             conditions: expect.any(Array),
             conditionCount: expect.any(Number),
@@ -1155,10 +1155,10 @@ describe("NodeConfigPanel", () => {
         );
       });
 
-      it("should not show remove button when only one condition exists", () => {
+      it('should not show remove button when only one condition exists', () => {
         const nodeDataWithOneCondition: NodeConfig = {
-          label: "If / else",
-          conditions: [{ id: "1", caseName: "Case A", expression: "x > 0" }],
+          label: 'If / else',
+          conditions: [{ id: '1', caseName: 'Case A', expression: 'x > 0' }],
         };
 
         render(
@@ -1171,23 +1171,23 @@ describe("NodeConfigPanel", () => {
 
         // Trash button should not be visible when only one condition
         const trashButtons = screen
-          .queryAllByRole("button")
+          .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
     });
 
-    describe("handleUpdateCondition", () => {
-      it("should update condition caseName", async () => {
+    describe('handleUpdateCondition', () => {
+      it('should update condition caseName', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeDataWithConditions: NodeConfig = {
-          label: "If / else",
-          conditions: [{ id: "1", caseName: "", expression: "" }],
+          label: 'If / else',
+          conditions: [{ id: '1', caseName: '', expression: '' }],
         };
 
         render(
@@ -1200,12 +1200,12 @@ describe("NodeConfigPanel", () => {
         );
 
         const caseNameInput = screen.getByPlaceholderText(
-          "Case name (optional)",
+          'Case name (optional)',
         );
-        await user.type(caseNameInput, "New Case");
+        await user.type(caseNameInput, 'New Case');
 
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
             conditions: expect.arrayContaining([
               expect.objectContaining({ caseName: expect.any(String) }),
@@ -1214,12 +1214,12 @@ describe("NodeConfigPanel", () => {
         );
       });
 
-      it("should update condition expression", async () => {
+      it('should update condition expression', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeDataWithConditions: NodeConfig = {
-          label: "If / else",
-          conditions: [{ id: "1", caseName: "", expression: "" }],
+          label: 'If / else',
+          conditions: [{ id: '1', caseName: '', expression: '' }],
         };
 
         render(
@@ -1232,23 +1232,23 @@ describe("NodeConfigPanel", () => {
         );
 
         const expressionInput = screen.getByPlaceholderText(
-          "Enter condition, e.g. input == 5",
+          'Enter condition, e.g. input == 5',
         );
-        await user.type(expressionInput, "x > 10");
+        await user.type(expressionInput, 'x > 10');
 
         expect(onUpdateNode).toHaveBeenCalled();
       });
     });
 
-    describe("handleRemoveTransformExpression", () => {
-      it("should remove expression when there are multiple expressions", async () => {
+    describe('handleRemoveTransformExpression', () => {
+      it('should remove expression when there are multiple expressions', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeDataWithExpressions: NodeConfig = {
-          label: "Transform",
+          label: 'Transform',
           transformExpressions: [
-            { id: "1", key: "key1", value: "value1" },
-            { id: "2", key: "key2", value: "value2" },
+            { id: '1', key: 'key1', value: 'value1' },
+            { id: '2', key: 'key2', value: 'value2' },
           ],
         };
 
@@ -1262,29 +1262,29 @@ describe("NodeConfigPanel", () => {
         );
 
         const trashButtons = screen
-          .getAllByRole("button")
+          .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
 
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
             transformExpressions: expect.any(Array),
           }),
         );
       });
 
-      it("should not remove expression when only one exists", async () => {
+      it('should not remove expression when only one exists', async () => {
         userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeDataWithOneExpression: NodeConfig = {
-          label: "Transform",
-          transformExpressions: [{ id: "1", key: "key1", value: "value1" }],
+          label: 'Transform',
+          transformExpressions: [{ id: '1', key: 'key1', value: 'value1' }],
         };
 
         render(
@@ -1298,24 +1298,24 @@ describe("NodeConfigPanel", () => {
 
         // Trash button should not appear for single expression
         const trashButtons = screen
-          .queryAllByRole("button")
+          .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
     });
 
-    describe("handleUpdateTransformExpression", () => {
-      it("should update expression key", async () => {
+    describe('handleUpdateTransformExpression', () => {
+      it('should update expression key', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "Transform",
+          label: 'Transform',
           transformExpressions: [
-            { id: "1", key: "result", value: "input.foo + 1" },
+            { id: '1', key: 'result', value: 'input.foo + 1' },
           ],
         };
 
@@ -1328,20 +1328,20 @@ describe("NodeConfigPanel", () => {
           />,
         );
 
-        const keyInput = screen.getByDisplayValue("result");
+        const keyInput = screen.getByDisplayValue('result');
         await user.clear(keyInput);
-        await user.type(keyInput, "newKey");
+        await user.type(keyInput, 'newKey');
 
         expect(onUpdateNode).toHaveBeenCalled();
       });
 
-      it("should update expression value", async () => {
+      it('should update expression value', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "Transform",
+          label: 'Transform',
           transformExpressions: [
-            { id: "1", key: "result", value: "input.foo + 1" },
+            { id: '1', key: 'result', value: 'input.foo + 1' },
           ],
         };
 
@@ -1354,23 +1354,23 @@ describe("NodeConfigPanel", () => {
           />,
         );
 
-        const valueInput = screen.getByDisplayValue("input.foo + 1");
+        const valueInput = screen.getByDisplayValue('input.foo + 1');
         await user.clear(valueInput);
-        await user.type(valueInput, "input.bar * 2");
+        await user.type(valueInput, 'input.bar * 2');
 
         expect(onUpdateNode).toHaveBeenCalled();
       });
     });
 
-    describe("handleRemoveSetStateAssignment", () => {
-      it("should remove assignment when there are multiple assignments", async () => {
+    describe('handleRemoveSetStateAssignment', () => {
+      it('should remove assignment when there are multiple assignments', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "Set state",
+          label: 'Set state',
           setStateAssignments: [
-            { id: "1", value: "value1", variable: "var1" },
-            { id: "2", value: "value2", variable: "var2" },
+            { id: '1', value: 'value1', variable: 'var1' },
+            { id: '2', value: 'value2', variable: 'var2' },
           ],
         };
 
@@ -1384,27 +1384,27 @@ describe("NodeConfigPanel", () => {
         );
 
         const trashButtons = screen
-          .getAllByRole("button")
+          .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBeGreaterThan(0);
         await user.click(trashButtons[0]);
 
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
             setStateAssignments: expect.any(Array),
           }),
         );
       });
 
-      it("should not remove assignment when only one exists", () => {
+      it('should not remove assignment when only one exists', () => {
         const nodeData: NodeConfig = {
-          label: "Set state",
-          setStateAssignments: [{ id: "1", value: "value1", variable: "var1" }],
+          label: 'Set state',
+          setStateAssignments: [{ id: '1', value: 'value1', variable: 'var1' }],
         };
 
         render(
@@ -1416,24 +1416,24 @@ describe("NodeConfigPanel", () => {
         );
 
         const trashButtons = screen
-          .queryAllByRole("button")
+          .queryAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-trash2") ||
-              btn.querySelector("svg.lucide-trash-2"),
+              btn.querySelector('svg.lucide-trash2') ||
+              btn.querySelector('svg.lucide-trash-2'),
           );
         expect(trashButtons.length).toBe(0);
       });
     });
 
-    describe("handleUpdateSetStateAssignment", () => {
-      it("should update assignment value", async () => {
+    describe('handleUpdateSetStateAssignment', () => {
+      it('should update assignment value', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "Set state",
+          label: 'Set state',
           setStateAssignments: [
-            { id: "1", value: "input.foo + 1", variable: "" },
+            { id: '1', value: 'input.foo + 1', variable: '' },
           ],
         };
 
@@ -1446,19 +1446,19 @@ describe("NodeConfigPanel", () => {
           />,
         );
 
-        const valueInput = screen.getByDisplayValue("input.foo + 1");
+        const valueInput = screen.getByDisplayValue('input.foo + 1');
         await user.clear(valueInput);
-        await user.type(valueInput, "newValue");
+        await user.type(valueInput, 'newValue');
 
         expect(onUpdateNode).toHaveBeenCalled();
       });
 
-      it("should update assignment variable via select", async () => {
+      it('should update assignment variable via select', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "Set state",
-          setStateAssignments: [{ id: "1", value: "value", variable: "" }],
+          label: 'Set state',
+          setStateAssignments: [{ id: '1', value: 'value', variable: '' }],
         };
 
         render(
@@ -1471,22 +1471,22 @@ describe("NodeConfigPanel", () => {
         );
 
         // Click the select to trigger onValueChange
-        const select = screen.getByTestId("select");
+        const select = screen.getByTestId('select');
         await user.click(select);
 
         expect(onUpdateNode).toHaveBeenCalled();
       });
     });
 
-    describe("handleRemoveConnector", () => {
-      it("should remove MCP connector", async () => {
+    describe('handleRemoveConnector', () => {
+      it('should remove MCP connector', async () => {
         const user = userEvent.setup();
         const onUpdateNode = vi.fn();
         const nodeData: NodeConfig = {
-          label: "MCP",
+          label: 'MCP',
           mcpConnectors: [
-            { id: "1", name: "Gmail", icon: "📧" },
-            { id: "2", name: "Slack", icon: "💬" },
+            { id: '1', name: 'Gmail', icon: '📧' },
+            { id: '2', name: 'Slack', icon: '💬' },
           ],
         };
 
@@ -1501,17 +1501,17 @@ describe("NodeConfigPanel", () => {
 
         // Find X buttons in connector list (not the panel close button)
         const removeButtons = screen
-          .getAllByRole("button")
+          .getAllByRole('button')
           .filter(
             (btn) =>
-              btn.querySelector("svg.lucide-x") &&
-              btn.classList.contains("h-4"),
+              btn.querySelector('svg.lucide-x') &&
+              btn.classList.contains('h-4'),
           );
         expect(removeButtons.length).toBeGreaterThan(0);
         await user.click(removeButtons[0]);
 
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
             mcpConnectors: expect.any(Array),
           }),
@@ -1520,12 +1520,12 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("useEffect hooks - state sync with props", () => {
-    it("should sync state when nodeData changes externally", async () => {
+  describe('useEffect hooks - state sync with props', () => {
+    it('should sync state when nodeData changes externally', async () => {
       const nodeData: NodeConfig = {
-        label: "Start",
-        instructions: "Initial instructions",
-        model: "gpt-4",
+        label: 'Start',
+        instructions: 'Initial instructions',
+        model: 'gpt-4',
       };
 
       const { rerender } = render(
@@ -1534,10 +1534,10 @@ describe("NodeConfigPanel", () => {
 
       // Rerender with new nodeData to trigger useEffect
       const newNodeData: NodeConfig = {
-        label: "Updated Start",
-        instructions: "Updated instructions",
-        model: "gpt-4-turbo",
-        stateVariables: [{ id: "1", name: "newVar", type: "string" }],
+        label: 'Updated Start',
+        instructions: 'Updated instructions',
+        model: 'gpt-4-turbo',
+        stateVariables: [{ id: '1', name: 'newVar', type: 'string' }],
       };
 
       rerender(
@@ -1549,13 +1549,13 @@ describe("NodeConfigPanel", () => {
       );
 
       // Check that the new variable is displayed
-      expect(screen.getByText("newVar")).toBeInTheDocument();
+      expect(screen.getByText('newVar')).toBeInTheDocument();
     });
 
-    it("should sync conditions when nodeData changes", () => {
+    it('should sync conditions when nodeData changes', () => {
       const nodeData: NodeConfig = {
-        label: "If / else",
-        conditions: [{ id: "1", caseName: "Initial", expression: "x > 0" }],
+        label: 'If / else',
+        conditions: [{ id: '1', caseName: 'Initial', expression: 'x > 0' }],
       };
 
       const { rerender } = render(
@@ -1567,10 +1567,10 @@ describe("NodeConfigPanel", () => {
       );
 
       const newNodeData: NodeConfig = {
-        label: "If / else",
+        label: 'If / else',
         conditions: [
-          { id: "1", caseName: "Updated", expression: "x > 0" },
-          { id: "2", caseName: "New Case", expression: "x < 0" },
+          { id: '1', caseName: 'Updated', expression: 'x > 0' },
+          { id: '2', caseName: 'New Case', expression: 'x < 0' },
         ],
       };
 
@@ -1582,13 +1582,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Else if 1")).toBeInTheDocument();
+      expect(screen.getByText('Else if 1')).toBeInTheDocument();
     });
 
-    it("should sync file search node state when nodeData changes", () => {
+    it('should sync file search node state when nodeData changes', () => {
       const nodeData: NodeConfig = {
-        label: "File search",
-        datasetId: "",
+        label: 'File search',
+        datasetId: '',
         maxResults: 10,
       };
 
@@ -1601,11 +1601,11 @@ describe("NodeConfigPanel", () => {
       );
 
       const newNodeData: NodeConfig = {
-        label: "File search",
-        datasetId: "new-dataset-id",
-        datasetName: "New Dataset",
+        label: 'File search',
+        datasetId: 'new-dataset-id',
+        datasetName: 'New Dataset',
         maxResults: 20,
-        fileSearchQuery: "search query",
+        fileSearchQuery: 'search query',
       };
 
       rerender(
@@ -1616,22 +1616,22 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("New Dataset")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("20")).toBeInTheDocument();
+      expect(screen.getByText('New Dataset')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('20')).toBeInTheDocument();
     });
   });
 
-  describe("mentor node with tools", () => {
+  describe('mentor node with tools', () => {
     beforeEach(() => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          system_prompt: "Custom prompt",
-          llm_name: "gpt-4",
-          llm_provider: "OpenAI",
+          mentor_name: 'Test Mentor',
+          system_prompt: 'Custom prompt',
+          llm_name: 'gpt-4',
+          llm_provider: 'OpenAI',
           mentor_tools: [
-            { slug: "tool-1", name: "Tool 1" },
-            { slug: "tool-2", name: "Tool 2" },
+            { slug: 'tool-1', name: 'Tool 1' },
+            { slug: 'tool-2', name: 'Tool 2' },
           ],
           permissions: { field: {} },
         },
@@ -1642,16 +1642,16 @@ describe("NodeConfigPanel", () => {
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [
           {
-            slug: "tool-1",
-            name: "Tool 1",
-            display_name: "Tool One",
-            description: "First tool",
+            slug: 'tool-1',
+            name: 'Tool 1',
+            display_name: 'Tool One',
+            description: 'First tool',
           },
           {
-            slug: "tool-2",
-            name: "Tool 2",
-            display_name: "Tool Two",
-            description: "Second tool",
+            slug: 'tool-2',
+            name: 'Tool 2',
+            display_name: 'Tool Two',
+            description: 'Second tool',
           },
         ],
         isLoading: false,
@@ -1659,10 +1659,10 @@ describe("NodeConfigPanel", () => {
       } as any);
     });
 
-    it("should render tools list when mentor is selected", () => {
+    it('should render tools list when mentor is selected', () => {
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1673,14 +1673,14 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Tool One")).toBeInTheDocument();
-      expect(screen.getByText("Tool Two")).toBeInTheDocument();
+      expect(screen.getByText('Tool One')).toBeInTheDocument();
+      expect(screen.getByText('Tool Two')).toBeInTheDocument();
     });
 
-    it("should show tool description tooltip", () => {
+    it('should show tool description tooltip', () => {
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1691,15 +1691,15 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("First tool")).toBeInTheDocument();
-      expect(screen.getByText("Second tool")).toBeInTheDocument();
+      expect(screen.getByText('First tool')).toBeInTheDocument();
+      expect(screen.getByText('Second tool')).toBeInTheDocument();
     });
 
-    it("should call toggleTools when tool switch is clicked", async () => {
+    it('should call toggleTools when tool switch is clicked', async () => {
       const user = userEvent.setup();
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1710,13 +1710,13 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      const switches = screen.getAllByTestId("switch");
+      const switches = screen.getAllByTestId('switch');
       await user.click(switches[0]);
 
       expect(mockToggleTools).toHaveBeenCalled();
     });
 
-    it("should show loading state for tools", () => {
+    it('should show loading state for tools', () => {
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [],
         isLoading: true,
@@ -1724,8 +1724,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1736,10 +1736,10 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Loading tools...")).toBeInTheDocument();
+      expect(screen.getByText('Loading tools...')).toBeInTheDocument();
     });
 
-    it("should show no tools message when tools array is empty", () => {
+    it('should show no tools message when tools array is empty', () => {
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [],
         isLoading: false,
@@ -1747,8 +1747,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1759,14 +1759,14 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("No tools available.")).toBeInTheDocument();
+      expect(screen.getByText('No tools available.')).toBeInTheDocument();
     });
 
-    it("should display model with provider", () => {
+    it('should display model with provider', () => {
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
-        model: "gpt-4",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
+        model: 'gpt-4',
       };
 
       render(
@@ -1782,7 +1782,7 @@ describe("NodeConfigPanel", () => {
       expect(modelInput).toBeInTheDocument();
     });
 
-    it("should show placeholder when no mentor selected and loading", () => {
+    it('should show placeholder when no mentor selected and loading', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: null,
         isLoading: true,
@@ -1790,8 +1790,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1803,19 +1803,19 @@ describe("NodeConfigPanel", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("Loading model..."),
+        screen.getByPlaceholderText('Loading model...'),
       ).toBeInTheDocument();
     });
   });
 
-  describe("mentor settings prefill logic", () => {
-    it("should prefill mentor name when mentor has default label", async () => {
+  describe('mentor settings prefill logic', () => {
+    it('should prefill mentor name when mentor has default label', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Prefilled Mentor Name",
-          system_prompt: "Prefilled prompt",
-          llm_name: "gpt-4-turbo",
-          llm_provider: "OpenAI",
+          mentor_name: 'Prefilled Mentor Name',
+          system_prompt: 'Prefilled prompt',
+          llm_name: 'gpt-4-turbo',
+          llm_provider: 'OpenAI',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -1823,8 +1823,8 @@ describe("NodeConfigPanel", () => {
 
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Mentor", // Default label
-        mentor_id: "mentor-123",
+        label: 'Mentor', // Default label
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1838,20 +1838,20 @@ describe("NodeConfigPanel", () => {
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
-            label: "Prefilled Mentor Name",
+            label: 'Prefilled Mentor Name',
           }),
         );
       });
     });
 
-    it("should prefill instructions when using default instructions", async () => {
+    it('should prefill instructions when using default instructions', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          system_prompt: "Custom system prompt from mentor",
-          llm_name: "gpt-4",
+          mentor_name: 'Test Mentor',
+          system_prompt: 'Custom system prompt from mentor',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -1859,9 +1859,9 @@ describe("NodeConfigPanel", () => {
 
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "My Mentor", // Non-default label
-        instructions: "You are a helpful assistant.", // Default instructions
-        mentor_id: "mentor-123",
+        label: 'My Mentor', // Non-default label
+        instructions: 'You are a helpful assistant.', // Default instructions
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1875,20 +1875,20 @@ describe("NodeConfigPanel", () => {
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
-            instructions: "Custom system prompt from mentor",
+            instructions: 'Custom system prompt from mentor',
           }),
         );
       });
     });
 
-    it("should not prefill when mentor label is not default", async () => {
+    it('should not prefill when mentor label is not default', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Should Not Replace",
-          system_prompt: "Should Not Replace Prompt",
-          llm_name: "gpt-4",
+          mentor_name: 'Should Not Replace',
+          system_prompt: 'Should Not Replace Prompt',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -1896,9 +1896,9 @@ describe("NodeConfigPanel", () => {
 
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Custom Label", // Not a default label
-        instructions: "Custom instructions", // Not default instructions
-        mentor_id: "mentor-123",
+        label: 'Custom Label', // Not a default label
+        instructions: 'Custom instructions', // Not default instructions
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -1915,186 +1915,186 @@ describe("NodeConfigPanel", () => {
 
       // Should only update model, not label or instructions
       expect(onUpdateNode).not.toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
-          label: "Should Not Replace",
-          instructions: "Should Not Replace Prompt",
+          label: 'Should Not Replace',
+          instructions: 'Should Not Replace Prompt',
         }),
       );
     });
   });
 
-  describe("dataset selection dialog", () => {
-    it("should dispatch pushModal when opening dataset dialog with defaultMentorId", async () => {
+  describe('dataset selection dialog', () => {
+    it('should dispatch pushModal when opening dataset dialog with defaultMentorId', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search" }}
+          nodeData={{ label: 'File search' }}
           defaultMentorId="my-mentor-id"
         />,
       );
 
-      await user.click(screen.getByText("Select"));
+      await user.click(screen.getByText('Select'));
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    it("should select dataset and close dialog", async () => {
+    it('should select dataset and close dialog', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search" }}
+          nodeData={{ label: 'File search' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Select"));
-      await user.click(screen.getByTestId("select-dataset"));
+      await user.click(screen.getByText('Select'));
+      await user.click(screen.getByTestId('select-dataset'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
-          datasetId: "dataset-123",
-          datasetName: "Test Dataset",
+          datasetId: 'dataset-123',
+          datasetName: 'Test Dataset',
         }),
       );
     });
 
-    it("should close dataset dialog and dispatch popModal", async () => {
+    it('should close dataset dialog and dispatch popModal', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search" }}
+          nodeData={{ label: 'File search' }}
         />,
       );
 
-      await user.click(screen.getByText("Select"));
-      await user.click(screen.getByTestId("close-dialog"));
+      await user.click(screen.getByText('Select'));
+      await user.click(screen.getByTestId('close-dialog'));
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    it("should handle file search query change", async () => {
+    it('should handle file search query change', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search" }}
+          nodeData={{ label: 'File search' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
       const queryTextarea = screen.getByPlaceholderText(
-        "Enter file search input. Use {{ curly braces }} to insert variables.",
+        'Enter file search input. Use {{ curly braces }} to insert variables.',
       );
-      await user.type(queryTextarea, "search query");
+      await user.type(queryTextarea, 'search query');
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           fileSearchQuery: expect.any(String),
         }),
       );
     });
 
-    it("should handle max results change with valid number", async () => {
+    it('should handle max results change with valid number', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search", maxResults: 10 }}
+          nodeData={{ label: 'File search', maxResults: 10 }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const maxResultsInput = screen.getByDisplayValue("10");
+      const maxResultsInput = screen.getByDisplayValue('10');
       await user.clear(maxResultsInput);
-      await user.type(maxResultsInput, "25");
+      await user.type(maxResultsInput, '25');
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should handle max results change with invalid input", async () => {
+    it('should handle max results change with invalid input', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="file-search"
-          nodeData={{ label: "File search", maxResults: 10 }}
+          nodeData={{ label: 'File search', maxResults: 10 }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const maxResultsInput = screen.getByDisplayValue("10");
+      const maxResultsInput = screen.getByDisplayValue('10');
       await user.clear(maxResultsInput);
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
   });
 
-  describe("MCP connector dialog", () => {
-    it("should dispatch pushModal when opening MCP dialog", async () => {
+  describe('MCP connector dialog', () => {
+    it('should dispatch pushModal when opening MCP dialog', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="mcp"
-          nodeData={{ label: "MCP" }}
+          nodeData={{ label: 'MCP' }}
           defaultMentorId="my-mentor-id"
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    it("should add MCP connector when selected", async () => {
+    it('should add MCP connector when selected', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="mcp"
-          nodeData={{ label: "MCP" }}
+          nodeData={{ label: 'MCP' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByTestId("select-mcp-server"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByTestId('select-mcp-server'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           mcpConnectors: expect.arrayContaining([
             expect.objectContaining({
-              id: "1",
-              name: "Test MCP Server",
+              id: '1',
+              name: 'Test MCP Server',
             }),
           ]),
         }),
       );
     });
 
-    it("should not add duplicate MCP connector", async () => {
+    it('should not add duplicate MCP connector', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "MCP",
-        mcpConnectors: [{ id: "1", name: "Test MCP Server" }],
+        label: 'MCP',
+        mcpConnectors: [{ id: '1', name: 'Test MCP Server' }],
       };
 
       render(
@@ -2108,28 +2108,28 @@ describe("NodeConfigPanel", () => {
 
       // Open dialog via the plus button in connected tools header
       const plusButtons = screen
-        .getAllByRole("button")
-        .filter((btn) => btn.querySelector("svg.lucide-plus"));
+        .getAllByRole('button')
+        .filter((btn) => btn.querySelector('svg.lucide-plus'));
       await user.click(plusButtons[0]);
-      await user.click(screen.getByTestId("select-mcp-server"));
+      await user.click(screen.getByTestId('select-mcp-server'));
 
       // Should close dialog without adding duplicate
       expect(onUpdateNode).not.toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           mcpConnectors: expect.arrayContaining([
-            expect.objectContaining({ id: "1" }),
-            expect.objectContaining({ id: "1" }),
+            expect.objectContaining({ id: '1' }),
+            expect.objectContaining({ id: '1' }),
           ]),
         }),
       );
     });
 
-    it("should display connector with icon", () => {
+    it('should display connector with icon', () => {
       const nodeData: NodeConfig = {
-        label: "MCP",
+        label: 'MCP',
         mcpConnectors: [
-          { id: "1", name: "Gmail", icon: "https://example.com/gmail.png" },
+          { id: '1', name: 'Gmail', icon: 'https://example.com/gmail.png' },
         ],
       };
 
@@ -2137,31 +2137,31 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />,
       );
 
-      const img = screen.getByAltText("Gmail");
+      const img = screen.getByAltText('Gmail');
       expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute("src", "https://example.com/gmail.png");
+      expect(img).toHaveAttribute('src', 'https://example.com/gmail.png');
     });
 
-    it("should display connector without icon using emoji fallback", () => {
+    it('should display connector without icon using emoji fallback', () => {
       const nodeData: NodeConfig = {
-        label: "MCP",
-        mcpConnectors: [{ id: "1", name: "No Icon Tool" }],
+        label: 'MCP',
+        mcpConnectors: [{ id: '1', name: 'No Icon Tool' }],
       };
 
       render(
         <NodeConfigPanel {...baseProps} nodeType="mcp" nodeData={nodeData} />,
       );
 
-      expect(screen.getByText("No Icon Tool")).toBeInTheDocument();
+      expect(screen.getByText('No Icon Tool')).toBeInTheDocument();
     });
   });
 
-  describe("mentor selection dialog", () => {
-    it("should select mentor and update node", async () => {
+  describe('mentor selection dialog', () => {
+    it('should select mentor and update node', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Mentor",
+        label: 'Mentor',
       };
 
       render(
@@ -2173,24 +2173,24 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Select"));
-      await user.click(screen.getByTestId("select-mentor"));
+      await user.click(screen.getByText('Select'));
+      await user.click(screen.getByTestId('select-mentor'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
-          entry_mentor_id: "new-mentor-id",
-          mentor_id: "new-mentor-id",
-          label: "New Mentor",
+          entry_mentor_id: 'new-mentor-id',
+          mentor_id: 'new-mentor-id',
+          label: 'New Mentor',
         }),
       );
     });
 
-    it("should close mentor modal and clear search when dialog closes", async () => {
+    it('should close mentor modal and clear search when dialog closes', async () => {
       const user = userEvent.setup();
       const nodeData: NodeConfig = {
-        label: "Mentor",
-        mentor_id: "mentor-123",
+        label: 'Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2201,18 +2201,18 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Change"));
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      await user.click(screen.getByText('Change'));
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
 
-      await user.click(screen.getByTestId("close-dialog"));
-      expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('close-dialog'));
+      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
     });
 
-    it("should show mentor selection grid when change button is clicked", async () => {
+    it('should show mentor selection grid when change button is clicked', async () => {
       const user = userEvent.setup();
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2223,267 +2223,267 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Change"));
+      await user.click(screen.getByText('Change'));
 
       // The mentor selection grid should be visible
-      expect(screen.getByTestId("mentor-selection-grid")).toBeInTheDocument();
+      expect(screen.getByTestId('mentor-selection-grid')).toBeInTheDocument();
     });
   });
 
-  describe("start node variable modal", () => {
-    it("should add new state variable with String type", async () => {
+  describe('start node variable modal', () => {
+    it('should add new state variable with String type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Enter variable name
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myStringVar");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myStringVar');
 
       // Enter default value
-      const defaultInput = screen.getByPlaceholderText("Enter default value");
-      await user.type(defaultInput, "default string");
+      const defaultInput = screen.getByPlaceholderText('Enter default value');
+      await user.type(defaultInput, 'default string');
 
       // Click save
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "myStringVar",
-              type: "string",
-              defaultValue: "default string",
+              name: 'myStringVar',
+              type: 'string',
+              defaultValue: 'default string',
             }),
           ]),
         }),
       );
     });
 
-    it("should add variable with Number type", async () => {
+    it('should add variable with Number type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Select Number type
-      await user.click(screen.getByText("Number"));
+      await user.click(screen.getByText('Number'));
 
       // Enter variable name
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myNumberVar");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myNumberVar');
 
       // Click save
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "myNumberVar",
-              type: "number",
+              name: 'myNumberVar',
+              type: 'number',
             }),
           ]),
         }),
       );
     });
 
-    it("should add variable with Boolean type", async () => {
+    it('should add variable with Boolean type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Select Boolean type
-      await user.click(screen.getByText("Boolean"));
+      await user.click(screen.getByText('Boolean'));
 
       // Enter variable name
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myBoolVar");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myBoolVar');
 
       // Toggle the switch
-      const switchEl = screen.getByTestId("switch");
+      const switchEl = screen.getByTestId('switch');
       await user.click(switchEl);
 
       // Click save
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "myBoolVar",
-              type: "boolean",
-              defaultValue: "true",
+              name: 'myBoolVar',
+              type: 'boolean',
+              defaultValue: 'true',
             }),
           ]),
         }),
       );
     });
 
-    it("should add variable with Object type", async () => {
+    it('should add variable with Object type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Select Object type
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Object'));
 
       // Enter variable name
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myObjectVar");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myObjectVar');
 
       // Click save
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "myObjectVar",
-              type: "object",
+              name: 'myObjectVar',
+              type: 'object',
             }),
           ]),
         }),
       );
     });
 
-    it("should add variable with List type", async () => {
+    it('should add variable with List type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Select List type
-      await user.click(screen.getByText("List"));
+      await user.click(screen.getByText('List'));
 
       // Enter variable name
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myListVar");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myListVar');
 
       // Click save
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "myListVar",
-              type: "list",
+              name: 'myListVar',
+              type: 'list',
             }),
           ]),
         }),
       );
     });
 
-    it("should disable save button when name is empty", async () => {
+    it('should disable save button when name is empty', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      const saveButton = screen.getByText("Save");
+      const saveButton = screen.getByText('Save');
       expect(saveButton).toBeDisabled();
     });
   });
 
-  describe("guardrails node handlers", () => {
-    it("should handle continue on error toggle", async () => {
+  describe('guardrails node handlers', () => {
+    it('should handle continue on error toggle', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="guardrails"
-          nodeData={{ label: "Guardrails" }}
+          nodeData={{ label: 'Guardrails' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const switches = screen.getAllByTestId("switch");
+      const switches = screen.getAllByTestId('switch');
       // The last switch should be the continue on error toggle
       const continueOnErrorSwitch = switches[switches.length - 1];
       await user.click(continueOnErrorSwitch);
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           continueOnError: true,
         }),
       );
     });
 
-    it("should update name in guardrails node", async () => {
+    it('should update name in guardrails node', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="guardrails"
-          nodeData={{ label: "Guardrails" }}
+          nodeData={{ label: 'Guardrails' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const nameInput = screen.getByDisplayValue("Guardrails");
+      const nameInput = screen.getByDisplayValue('Guardrails');
       await user.clear(nameInput);
-      await user.type(nameInput, "Custom Guardrails");
+      await user.type(nameInput, 'Custom Guardrails');
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           label: expect.any(String),
         }),
@@ -2491,45 +2491,45 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("user-approval node handlers", () => {
-    it("should update name", async () => {
+  describe('user-approval node handlers', () => {
+    it('should update name', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="user-approval"
-          nodeData={{ label: "User approval" }}
+          nodeData={{ label: 'User approval' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const nameInput = screen.getByDisplayValue("User approval");
+      const nameInput = screen.getByDisplayValue('User approval');
       await user.clear(nameInput);
-      await user.type(nameInput, "Custom Approval");
+      await user.type(nameInput, 'Custom Approval');
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should update message", async () => {
+    it('should update message', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="user-approval"
-          nodeData={{ label: "User approval" }}
+          nodeData={{ label: 'User approval' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
       const messageTextarea = screen.getByPlaceholderText(
-        "Describe the message to show the user. Eg. ok to proceed?",
+        'Describe the message to show the user. Eg. ok to proceed?',
       );
-      await user.type(messageTextarea, "Please approve this action");
+      await user.type(messageTextarea, 'Please approve this action');
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           userApprovalMessage: expect.any(String),
         }),
@@ -2537,38 +2537,38 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("transform node mode switching", () => {
-    it("should update transform mode to expressions", async () => {
+  describe('transform node mode switching', () => {
+    it('should update transform mode to expressions', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="transform"
-          nodeData={{ label: "Transform", transformMode: "object" }}
+          nodeData={{ label: 'Transform', transformMode: 'object' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Expressions"));
+      await user.click(screen.getByText('Expressions'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
-          transformMode: "expressions",
+          transformMode: 'expressions',
         }),
       );
     });
   });
 
-  describe("mentor instructions change", () => {
-    it("should update instructions when changed", async () => {
+  describe('mentor instructions change', () => {
+    it('should update instructions when changed', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        instructions: "Initial instructions",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        instructions: 'Initial instructions',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2581,13 +2581,13 @@ describe("NodeConfigPanel", () => {
       );
 
       const instructionsTextarea = screen.getByDisplayValue(
-        "Initial instructions",
+        'Initial instructions',
       );
       await user.clear(instructionsTextarea);
-      await user.type(instructionsTextarea, "New instructions");
+      await user.type(instructionsTextarea, 'New instructions');
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           instructions: expect.any(String),
         }),
@@ -2595,28 +2595,28 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("while node with existing expression", () => {
-    it("should display existing while expression", () => {
+  describe('while node with existing expression', () => {
+    it('should display existing while expression', () => {
       const nodeData: NodeConfig = {
-        label: "While",
-        whileExpression: "counter < 10",
+        label: 'While',
+        whileExpression: 'counter < 10',
       };
 
       render(
         <NodeConfigPanel {...baseProps} nodeType="while" nodeData={nodeData} />,
       );
 
-      expect(screen.getByDisplayValue("counter < 10")).toBeInTheDocument();
+      expect(screen.getByDisplayValue('counter < 10')).toBeInTheDocument();
     });
   });
 
-  describe("isDefaultMentorLabel helper", () => {
-    it("should recognize default mentor labels", async () => {
+  describe('isDefaultMentorLabel helper', () => {
+    it('should recognize default mentor labels', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Custom Name",
-          system_prompt: "Custom prompt",
-          llm_name: "gpt-4",
+          mentor_name: 'Custom Name',
+          system_prompt: 'Custom prompt',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -2629,15 +2629,15 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel
           {...baseProps}
           nodeType="mentor"
-          nodeData={{ label: "my mentor", mentor_id: "mentor-123" }}
+          nodeData={{ label: 'my mentor', mentor_id: 'mentor-123' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
-          expect.objectContaining({ label: "Custom Name" }),
+          'test-node-id',
+          expect.objectContaining({ label: 'Custom Name' }),
         );
       });
 
@@ -2648,24 +2648,24 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel
           {...baseProps}
           nodeType="mentor"
-          nodeData={{ label: "Mentor Node", mentor_id: "mentor-123" }}
+          nodeData={{ label: 'Mentor Node', mentor_id: 'mentor-123' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
-          expect.objectContaining({ label: "Custom Name" }),
+          'test-node-id',
+          expect.objectContaining({ label: 'Custom Name' }),
         );
       });
     });
 
-    it("should handle empty label as default", async () => {
+    it('should handle empty label as default', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Filled Name",
-          llm_name: "gpt-4",
+          mentor_name: 'Filled Name',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -2676,7 +2676,7 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel
           {...baseProps}
           nodeType="mentor"
-          nodeData={{ label: "", mentor_id: "mentor-123" }}
+          nodeData={{ label: '', mentor_id: 'mentor-123' }}
           onUpdateNode={onUpdateNode}
         />,
       );
@@ -2687,20 +2687,20 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("entry_mentor_id vs mentor_id", () => {
-    it("should use entry_mentor_id when mentor_id is not set", () => {
+  describe('entry_mentor_id vs mentor_id', () => {
+    it('should use entry_mentor_id when mentor_id is not set', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Entry Mentor",
-          llm_name: "gpt-4",
+          mentor_name: 'Entry Mentor',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "Mentor",
-        entry_mentor_id: "entry-mentor-123",
+        label: 'Mentor',
+        entry_mentor_id: 'entry-mentor-123',
       };
 
       render(
@@ -2712,100 +2712,100 @@ describe("NodeConfigPanel", () => {
       );
 
       // Should show Change button since entry_mentor_id is set
-      expect(screen.getByText("Change")).toBeInTheDocument();
+      expect(screen.getByText('Change')).toBeInTheDocument();
     });
   });
 
-  describe("without onUpdateNode callback", () => {
-    it("should not crash when onUpdateNode is not provided", async () => {
+  describe('without onUpdateNode callback', () => {
+    it('should not crash when onUpdateNode is not provided', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           nodeId="test-id"
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onClose={vi.fn()}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "test");
-      await user.click(screen.getByText("Save"));
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'test');
+      await user.click(screen.getByText('Save'));
 
       // Should not throw
     });
   });
 
-  describe("transform node name change", () => {
-    it("should update name in transform node", async () => {
+  describe('transform node name change', () => {
+    it('should update name in transform node', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="transform"
-          nodeData={{ label: "Transform" }}
+          nodeData={{ label: 'Transform' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      const nameInput = screen.getByDisplayValue("Transform");
+      const nameInput = screen.getByDisplayValue('Transform');
       await user.clear(nameInput);
-      await user.type(nameInput, "My Transform");
+      await user.type(nameInput, 'My Transform');
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({ label: expect.any(String) }),
       );
     });
   });
 
-  describe("event propagation on all node types", () => {
-    it("should stop propagation on end node panel click", () => {
+  describe('event propagation on all node types', () => {
+    it('should stop propagation on end node panel click', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="end"
-          nodeData={{ label: "End" }}
+          nodeData={{ label: 'End' }}
         />,
       );
 
-      const panel = document.querySelector(".absolute");
+      const panel = document.querySelector('.absolute');
       if (panel) {
-        const clickEvent = new MouseEvent("click", { bubbles: true });
-        const stopPropagation = vi.spyOn(clickEvent, "stopPropagation");
+        const clickEvent = new MouseEvent('click', { bubbles: true });
+        const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
         panel.dispatchEvent(clickEvent);
         expect(stopPropagation).toHaveBeenCalled();
       }
     });
 
-    it("should stop propagation on transform node panel mousedown", () => {
+    it('should stop propagation on transform node panel mousedown', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="transform"
-          nodeData={{ label: "Transform" }}
+          nodeData={{ label: 'Transform' }}
         />,
       );
 
-      const panel = document.querySelector(".absolute");
+      const panel = document.querySelector('.absolute');
       if (panel) {
-        const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
-        const stopPropagation = vi.spyOn(mousedownEvent, "stopPropagation");
+        const mousedownEvent = new MouseEvent('mousedown', { bubbles: true });
+        const stopPropagation = vi.spyOn(mousedownEvent, 'stopPropagation');
         panel.dispatchEvent(mousedownEvent);
         expect(stopPropagation).toHaveBeenCalled();
       }
     });
   });
 
-  describe("mentor tools without description", () => {
-    it("should not render tooltip for tools without description", () => {
+  describe('mentor tools without description', () => {
+    it('should not render tooltip for tools without description', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          mentor_tools: [{ slug: "tool-no-desc" }],
+          mentor_name: 'Test Mentor',
+          mentor_tools: [{ slug: 'tool-no-desc' }],
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -2814,9 +2814,9 @@ describe("NodeConfigPanel", () => {
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [
           {
-            slug: "tool-no-desc",
-            name: "Tool No Desc",
-            display_name: "Tool Without Description",
+            slug: 'tool-no-desc',
+            name: 'Tool No Desc',
+            display_name: 'Tool Without Description',
           },
         ],
         isLoading: false,
@@ -2824,8 +2824,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2836,17 +2836,17 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Tool Without Description")).toBeInTheDocument();
+      expect(screen.getByText('Tool Without Description')).toBeInTheDocument();
       // Tooltip content should not be rendered for tools without description
-      expect(screen.queryByTestId("tooltip-content")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('tooltip-content')).not.toBeInTheDocument();
     });
   });
 
-  describe("mentor tools with missing slug", () => {
-    it("should handle tools without slug gracefully", () => {
+  describe('mentor tools with missing slug', () => {
+    it('should handle tools without slug gracefully', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
+          mentor_name: 'Test Mentor',
           mentor_tools: [{ slug: undefined }],
         },
         isLoading: false,
@@ -2854,14 +2854,14 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
-        data: [{ slug: undefined, name: "No Slug Tool" }],
+        data: [{ slug: undefined, name: 'No Slug Tool' }],
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2873,32 +2873,32 @@ describe("NodeConfigPanel", () => {
       );
 
       // Should render the tool even without slug
-      expect(screen.getByText("No Slug Tool")).toBeInTheDocument();
+      expect(screen.getByText('No Slug Tool')).toBeInTheDocument();
     });
   });
 
-  describe("mentor tools toggle when disabled", () => {
-    it("should not call toggleTools when disabled", async () => {
+  describe('mentor tools toggle when disabled', () => {
+    it('should not call toggleTools when disabled', async () => {
       mockToggleTools.mockClear();
 
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          mentor_tools: [{ slug: "tool-1" }],
+          mentor_name: 'Test Mentor',
+          mentor_tools: [{ slug: 'tool-1' }],
         },
         isLoading: true, // Loading state makes it disabled
         refetch: vi.fn(),
       } as any);
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
-        data: [{ slug: "tool-1", name: "Tool 1" }],
+        data: [{ slug: 'tool-1', name: 'Tool 1' }],
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -2909,12 +2909,12 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      expect(screen.getByText("Loading tools...")).toBeInTheDocument();
+      expect(screen.getByText('Loading tools...')).toBeInTheDocument();
     });
   });
 
-  describe("mentor node missing org", () => {
-    it("should show select mentor message when no mentor selected", () => {
+  describe('mentor node missing org', () => {
+    it('should show select mentor message when no mentor selected', () => {
       vi.mocked(useGetToolsQuery).mockReturnValue({
         data: [],
         isLoading: false,
@@ -2922,7 +2922,7 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "Mentor",
+        label: 'Mentor',
       };
 
       render(
@@ -2934,16 +2934,16 @@ describe("NodeConfigPanel", () => {
       );
 
       expect(
-        screen.getByText("Select a mentor to configure tools."),
+        screen.getByText('Select a mentor to configure tools.'),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("Select a mentor to load configuration."),
+        screen.getByText('Select a mentor to load configuration.'),
       ).toBeInTheDocument();
     });
   });
 
-  describe("file search without defaultMentorId", () => {
-    it("should open dataset dialog even without defaultMentorId", async () => {
+  describe('file search without defaultMentorId', () => {
+    it('should open dataset dialog even without defaultMentorId', async () => {
       const user = userEvent.setup();
       mockDispatch.mockClear();
 
@@ -2952,18 +2952,18 @@ describe("NodeConfigPanel", () => {
           {...baseProps}
           defaultMentorId={undefined}
           nodeType="file-search"
-          nodeData={{ label: "File search" }}
+          nodeData={{ label: 'File search' }}
         />,
       );
 
-      await user.click(screen.getByText("Select"));
+      await user.click(screen.getByText('Select'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
     });
   });
 
-  describe("MCP node without defaultMentorId", () => {
-    it("should open MCP dialog even without defaultMentorId", async () => {
+  describe('MCP node without defaultMentorId', () => {
+    it('should open MCP dialog even without defaultMentorId', async () => {
       const user = userEvent.setup();
       mockDispatch.mockClear();
 
@@ -2972,32 +2972,32 @@ describe("NodeConfigPanel", () => {
           {...baseProps}
           defaultMentorId={undefined}
           nodeType="mcp"
-          nodeData={{ label: "MCP" }}
+          nodeData={{ label: 'MCP' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
     });
   });
 
-  describe("model display logic", () => {
-    it("should display only model when no provider", () => {
+  describe('model display logic', () => {
+    it('should display only model when no provider', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
+          mentor_name: 'Test Mentor',
           llm_provider: undefined,
-          llm_name: "gpt-4",
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
-        model: "gpt-4",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
+        model: 'gpt-4',
       };
 
       render(
@@ -3008,22 +3008,22 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      const modelInput = screen.getByDisplayValue("gpt-4");
+      const modelInput = screen.getByDisplayValue('gpt-4');
       expect(modelInput).toBeInTheDocument();
     });
 
-    it("should show no model placeholder when no model and not loading", () => {
+    it('should show no model placeholder when no model and not loading', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
+          mentor_name: 'Test Mentor',
         },
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3035,18 +3035,18 @@ describe("NodeConfigPanel", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("No model configured"),
+        screen.getByPlaceholderText('No model configured'),
       ).toBeInTheDocument();
     });
   });
 
-  describe("mentorSettings display_name fallback", () => {
-    it("should use display_name when mentor_name is not available", async () => {
+  describe('mentorSettings display_name fallback', () => {
+    it('should use display_name when mentor_name is not available', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          display_name: "Display Name Mentor",
-          system_prompt: "Custom prompt",
-          llm_name: "gpt-4",
+          display_name: 'Display Name Mentor',
+          system_prompt: 'Custom prompt',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3054,8 +3054,8 @@ describe("NodeConfigPanel", () => {
 
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Mentor", // Default label
-        mentor_id: "mentor-123",
+        label: 'Mentor', // Default label
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3069,22 +3069,22 @@ describe("NodeConfigPanel", () => {
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
-            label: "Display Name Mentor",
+            label: 'Display Name Mentor',
           }),
         );
       });
     });
   });
 
-  describe("add condition with proper id generation", () => {
-    it("should add condition with unique id", async () => {
+  describe('add condition with proper id generation', () => {
+    it('should add condition with unique id', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "If / else",
-        conditions: [{ id: "1", caseName: "", expression: "" }],
+        label: 'If / else',
+        conditions: [{ id: '1', caseName: '', expression: '' }],
       };
 
       render(
@@ -3096,17 +3096,17 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           conditions: expect.arrayContaining([
-            expect.objectContaining({ id: "1" }),
+            expect.objectContaining({ id: '1' }),
             expect.objectContaining({
               id: expect.any(String),
-              caseName: "",
-              expression: "",
+              caseName: '',
+              expression: '',
             }),
           ]),
           conditionCount: 2,
@@ -3115,7 +3115,7 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("mentor selection with no name", () => {
+  describe('mentor selection with no name', () => {
     beforeEach(() => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: null,
@@ -3124,11 +3124,11 @@ describe("NodeConfigPanel", () => {
       } as any);
     });
 
-    it("should select mentor that has unique_id but no name", async () => {
+    it('should select mentor that has unique_id but no name', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Mentor",
+        label: 'Mentor',
       };
 
       render(
@@ -3140,22 +3140,22 @@ describe("NodeConfigPanel", () => {
         />,
       );
 
-      await user.click(screen.getByText("Select"));
-      await user.click(screen.getByTestId("select-mentor"));
+      await user.click(screen.getByText('Select'));
+      await user.click(screen.getByTestId('select-mentor'));
 
       // Should update with mentor_id even when mentor has name
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
-          entry_mentor_id: "new-mentor-id",
-          mentor_id: "new-mentor-id",
+          entry_mentor_id: 'new-mentor-id',
+          mentor_id: 'new-mentor-id',
         }),
       );
     });
   });
 
-  describe("mentorSettings without username", () => {
-    it("should not fetch mentor settings when username is null", () => {
+  describe('mentorSettings without username', () => {
+    it('should not fetch mentor settings when username is null', () => {
       vi.mocked(useUsername).mockReturnValue(null);
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: null,
@@ -3164,8 +3164,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "Mentor",
-        mentor_id: "mentor-123",
+        label: 'Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3177,28 +3177,28 @@ describe("NodeConfigPanel", () => {
       );
 
       // Should render without crashing
-      expect(screen.getByText("Mentor")).toBeInTheDocument();
+      expect(screen.getByText('Mentor')).toBeInTheDocument();
 
       // Restore mock
-      vi.mocked(useUsername).mockReturnValue("test-user");
+      vi.mocked(useUsername).mockReturnValue('test-user');
     });
   });
 
-  describe("variable type change handlers in modal", () => {
-    it("should update default value when switching to Object type", async () => {
+  describe('variable type change handlers in modal', () => {
+    it('should update default value when switching to Object type', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Switch to Object type
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Object'));
 
       // The textarea for object should be visible with placeholder
       expect(
@@ -3206,115 +3206,115 @@ describe("NodeConfigPanel", () => {
       ).toBeInTheDocument();
     });
 
-    it("should update default value input for List type", async () => {
+    it('should update default value input for List type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByText("List"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByText('List'));
 
       // Verify list textarea is displayed
       const listTextarea = screen.getByPlaceholderText('["item1", "item2"]');
       expect(listTextarea).toBeInTheDocument();
 
       // Enter variable name and save
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myList");
-      await user.click(screen.getByText("Save"));
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myList');
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should update default value input for Object type", async () => {
+    it('should update default value input for Object type', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByText('Object'));
 
       // Verify object textarea is displayed
       const objectTextarea = screen.getByPlaceholderText('{ "key": "value" }');
       expect(objectTextarea).toBeInTheDocument();
 
       // Enter variable name and save
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myObj");
-      await user.click(screen.getByText("Save"));
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myObj');
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
 
-    it("should update Number type default value input", async () => {
+    it('should update Number type default value input', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByText("Number"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByText('Number'));
 
       // Type in the number input
-      const numberInput = screen.getByPlaceholderText("0");
-      await user.type(numberInput, "42");
+      const numberInput = screen.getByPlaceholderText('0');
+      await user.type(numberInput, '42');
 
       // Enter variable name and save
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "myNum");
-      await user.click(screen.getByText("Save"));
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'myNum');
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalled();
     });
   });
 
-  describe("MCP dialog close via onOpenChange", () => {
-    it("should close MCP dialog when onOpenChange is called with false", async () => {
+  describe('MCP dialog close via onOpenChange', () => {
+    it('should close MCP dialog when onOpenChange is called with false', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="mcp"
-          nodeData={{ label: "MCP" }}
+          nodeData={{ label: 'MCP' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      await user.click(screen.getByText('Add'));
+      expect(screen.getByTestId('dialog')).toBeInTheDocument();
 
       // Close via the dialog close button (which triggers onOpenChange(false))
-      await user.click(screen.getByTestId("close-dialog"));
+      await user.click(screen.getByTestId('close-dialog'));
 
-      expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
     });
   });
 
-  describe("mentor settings model update", () => {
-    it("should update model when mentor settings have different llm_name", async () => {
+  describe('mentor settings model update', () => {
+    it('should update model when mentor settings have different llm_name', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          llm_name: "new-model",
+          mentor_name: 'Test Mentor',
+          llm_name: 'new-model',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3322,10 +3322,10 @@ describe("NodeConfigPanel", () => {
 
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Custom Name", // Non-default label to skip label update
-        instructions: "Custom instructions", // Non-default instructions
-        model: "old-model",
-        mentor_id: "mentor-123",
+        label: 'Custom Name', // Non-default label to skip label update
+        instructions: 'Custom instructions', // Non-default instructions
+        model: 'old-model',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3339,25 +3339,25 @@ describe("NodeConfigPanel", () => {
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
-            model: "new-model",
+            model: 'new-model',
           }),
         );
       });
     });
   });
 
-  describe("close button on different node panels", () => {
+  describe('close button on different node panels', () => {
     const nodeTypes = [
-      "guardrails",
-      "file-search",
-      "mcp",
-      "while",
-      "user-approval",
-      "transform",
-      "set-state",
-      "if-else",
+      'guardrails',
+      'file-search',
+      'mcp',
+      'while',
+      'user-approval',
+      'transform',
+      'set-state',
+      'if-else',
     ];
 
     nodeTypes.forEach((nodeType) => {
@@ -3377,9 +3377,9 @@ describe("NodeConfigPanel", () => {
           />,
         );
 
-        const closeButtons = screen.getAllByRole("button");
+        const closeButtons = screen.getAllByRole('button');
         const closeButton = closeButtons.find((btn) =>
-          btn.querySelector("svg.lucide-x"),
+          btn.querySelector('svg.lucide-x'),
         );
 
         if (closeButton) {
@@ -3390,33 +3390,33 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("add state variable without default value", () => {
-    it("should add variable with undefined defaultValue when empty", async () => {
+  describe('add state variable without default value', () => {
+    it('should add variable with undefined defaultValue when empty', async () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Enter variable name without default
-      const nameInput = screen.getByPlaceholderText("Enter the variable name");
-      await user.type(nameInput, "noDefault");
+      const nameInput = screen.getByPlaceholderText('Enter the variable name');
+      await user.type(nameInput, 'noDefault');
 
-      await user.click(screen.getByText("Save"));
+      await user.click(screen.getByText('Save'));
 
       expect(onUpdateNode).toHaveBeenCalledWith(
-        "test-node-id",
+        'test-node-id',
         expect.objectContaining({
           stateVariables: expect.arrayContaining([
             expect.objectContaining({
-              name: "noDefault",
+              name: 'noDefault',
               defaultValue: undefined,
             }),
           ]),
@@ -3425,12 +3425,12 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("isDefaultMentorLabel edge cases", () => {
-    it("should handle labels with mixed case and whitespace", async () => {
+  describe('isDefaultMentorLabel edge cases', () => {
+    it('should handle labels with mixed case and whitespace', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Prefilled Name",
-          llm_name: "gpt-4",
+          mentor_name: 'Prefilled Name',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3443,26 +3443,26 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel
           {...baseProps}
           nodeType="mentor"
-          nodeData={{ label: "  MY MENTOR  ", mentor_id: "mentor-123" }}
+          nodeData={{ label: '  MY MENTOR  ', mentor_id: 'mentor-123' }}
           onUpdateNode={onUpdateNode}
         />,
       );
 
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
-          expect.objectContaining({ label: "Prefilled Name" }),
+          'test-node-id',
+          expect.objectContaining({ label: 'Prefilled Name' }),
         );
       });
     });
   });
 
-  describe("mentorSettings useEffect when not mentor node type", () => {
-    it("should skip prefill logic for non-mentor nodes", () => {
+  describe('mentorSettings useEffect when not mentor node type', () => {
+    it('should skip prefill logic for non-mentor nodes', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Should Not Apply",
-          llm_name: "gpt-4",
+          mentor_name: 'Should Not Apply',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3473,7 +3473,7 @@ describe("NodeConfigPanel", () => {
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
           onUpdateNode={onUpdateNode}
         />,
       );
@@ -3483,81 +3483,81 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("Object and List textarea onChange", () => {
-    it("should call onChange when typing in Object textarea", async () => {
+  describe('Object and List textarea onChange', () => {
+    it('should call onChange when typing in Object textarea', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByText('Object'));
 
       const objectTextarea = screen.getByPlaceholderText('{ "key": "value" }');
       // Use fireEvent instead of user.type to avoid bracket parsing issues
       await act(async () => {
-        fireEvent.change(objectTextarea, { target: { value: "test object" } });
+        fireEvent.change(objectTextarea, { target: { value: 'test object' } });
       });
 
-      expect(objectTextarea).toHaveValue("test object");
+      expect(objectTextarea).toHaveValue('test object');
     });
 
-    it("should call onChange when typing in List textarea", async () => {
+    it('should call onChange when typing in List textarea', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
-      await user.click(screen.getByText("List"));
+      await user.click(screen.getByText('Add'));
+      await user.click(screen.getByText('List'));
 
       const listTextarea = screen.getByPlaceholderText('["item1", "item2"]');
       // Use fireEvent instead of user.type to avoid bracket parsing issues
       await act(async () => {
-        fireEvent.change(listTextarea, { target: { value: "test list" } });
+        fireEvent.change(listTextarea, { target: { value: 'test list' } });
       });
 
-      expect(listTextarea).toHaveValue("test list");
+      expect(listTextarea).toHaveValue('test list');
     });
   });
 
-  describe("End node mousedown event", () => {
-    it("should stop mousedown propagation on end node", () => {
+  describe('End node mousedown event', () => {
+    it('should stop mousedown propagation on end node', () => {
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="end"
-          nodeData={{ label: "End" }}
+          nodeData={{ label: 'End' }}
         />,
       );
 
-      const panel = document.querySelector(".absolute");
+      const panel = document.querySelector('.absolute');
       if (panel) {
-        const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
-        const stopPropagation = vi.spyOn(mousedownEvent, "stopPropagation");
+        const mousedownEvent = new MouseEvent('mousedown', { bubbles: true });
+        const stopPropagation = vi.spyOn(mousedownEvent, 'stopPropagation');
         panel.dispatchEvent(mousedownEvent);
         expect(stopPropagation).toHaveBeenCalled();
       }
     });
   });
 
-  describe("mentorTools without slug filter", () => {
-    it("should filter out tools without slug from enabledToolSlugs", () => {
+  describe('mentorTools without slug filter', () => {
+    it('should filter out tools without slug from enabledToolSlugs', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
+          mentor_name: 'Test Mentor',
           mentor_tools: [
-            { slug: "valid-tool" },
+            { slug: 'valid-tool' },
             { slug: undefined },
-            { slug: "" },
+            { slug: '' },
             { slug: null },
           ],
         },
@@ -3566,14 +3566,14 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
-        data: [{ slug: "valid-tool", name: "Valid Tool" }],
+        data: [{ slug: 'valid-tool', name: 'Valid Tool' }],
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3585,23 +3585,23 @@ describe("NodeConfigPanel", () => {
       );
 
       // Only valid-tool should be shown as enabled
-      expect(screen.getByText("Valid Tool")).toBeInTheDocument();
+      expect(screen.getByText('Valid Tool')).toBeInTheDocument();
     });
   });
 
-  describe("useToggleTools loading state", () => {
-    it("should disable tools when toggle is loading", () => {
+  describe('useToggleTools loading state', () => {
+    it('should disable tools when toggle is loading', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          mentor_tools: [{ slug: "tool-1" }],
+          mentor_name: 'Test Mentor',
+          mentor_tools: [{ slug: 'tool-1' }],
         },
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       vi.mocked(useGetToolsQuery).mockReturnValue({
-        data: [{ slug: "tool-1", name: "Tool 1" }],
+        data: [{ slug: 'tool-1', name: 'Tool 1' }],
         isLoading: false,
         refetch: vi.fn(),
       } as any);
@@ -3612,8 +3612,8 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3625,7 +3625,7 @@ describe("NodeConfigPanel", () => {
       );
 
       // Switch should be disabled
-      const switches = screen.getAllByTestId("switch");
+      const switches = screen.getAllByTestId('switch');
       expect(switches[0]).toBeDisabled();
 
       // Reset mock
@@ -3636,62 +3636,62 @@ describe("NodeConfigPanel", () => {
     });
   });
 
-  describe("dialog content event propagation", () => {
-    it("should stop click propagation in dialog content", async () => {
+  describe('dialog content event propagation', () => {
+    it('should stop click propagation in dialog content', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      const dialogContent = screen.getByTestId("dialog-content");
-      const clickEvent = new MouseEvent("click", { bubbles: true });
-      const stopPropagation = vi.spyOn(clickEvent, "stopPropagation");
+      const dialogContent = screen.getByTestId('dialog-content');
+      const clickEvent = new MouseEvent('click', { bubbles: true });
+      const stopPropagation = vi.spyOn(clickEvent, 'stopPropagation');
 
       dialogContent.dispatchEvent(clickEvent);
       expect(stopPropagation).toHaveBeenCalled();
     });
 
-    it("should stop mousedown propagation in dialog content", async () => {
+    it('should stop mousedown propagation in dialog content', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
-      const dialogContent = screen.getByTestId("dialog-content");
-      const mousedownEvent = new MouseEvent("mousedown", { bubbles: true });
-      const stopPropagation = vi.spyOn(mousedownEvent, "stopPropagation");
+      const dialogContent = screen.getByTestId('dialog-content');
+      const mousedownEvent = new MouseEvent('mousedown', { bubbles: true });
+      const stopPropagation = vi.spyOn(mousedownEvent, 'stopPropagation');
 
       dialogContent.dispatchEvent(mousedownEvent);
       expect(stopPropagation).toHaveBeenCalled();
     });
   });
 
-  describe("mentorSettings with non-array mentor_tools", () => {
-    it("should handle non-array mentor_tools gracefully", () => {
+  describe('mentorSettings with non-array mentor_tools', () => {
+    it('should handle non-array mentor_tools gracefully', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Test Mentor",
-          mentor_tools: "not-an-array", // Invalid type
+          mentor_name: 'Test Mentor',
+          mentor_tools: 'not-an-array', // Invalid type
         },
         isLoading: false,
         refetch: vi.fn(),
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "My Mentor",
-        mentor_id: "mentor-123",
+        label: 'My Mentor',
+        mentor_id: 'mentor-123',
       };
 
       render(
@@ -3703,12 +3703,12 @@ describe("NodeConfigPanel", () => {
       );
 
       // Should not crash
-      expect(screen.getByText("My Mentor")).toBeInTheDocument();
+      expect(screen.getByText('My Mentor')).toBeInTheDocument();
     });
   });
 
-  describe("model display without model", () => {
-    it("should show select mentor placeholder when no mentor selected", () => {
+  describe('model display without model', () => {
+    it('should show select mentor placeholder when no mentor selected', () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: null,
         isLoading: false,
@@ -3716,7 +3716,7 @@ describe("NodeConfigPanel", () => {
       } as any);
 
       const nodeData: NodeConfig = {
-        label: "Mentor",
+        label: 'Mentor',
         // No mentor_id
       };
 
@@ -3729,18 +3729,18 @@ describe("NodeConfigPanel", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("Select a mentor to load model"),
+        screen.getByPlaceholderText('Select a mentor to load model'),
       ).toBeInTheDocument();
     });
   });
 
-  describe("forceMentorPrefill reset after selection", () => {
-    it("should reset forceMentorPrefill after mentor selection and prefill", async () => {
+  describe('forceMentorPrefill reset after selection', () => {
+    it('should reset forceMentorPrefill after mentor selection and prefill', async () => {
       vi.mocked(useGetMentorSettingsQuery).mockReturnValue({
         data: {
-          mentor_name: "Prefilled Name",
-          system_prompt: "Prefilled prompt",
-          llm_name: "gpt-4",
+          mentor_name: 'Prefilled Name',
+          system_prompt: 'Prefilled prompt',
+          llm_name: 'gpt-4',
         },
         isLoading: false,
         refetch: vi.fn(),
@@ -3749,8 +3749,8 @@ describe("NodeConfigPanel", () => {
       const user = userEvent.setup();
       const onUpdateNode = vi.fn();
       const nodeData: NodeConfig = {
-        label: "Custom Label", // Non-default label
-        instructions: "Custom instructions", // Non-default instructions
+        label: 'Custom Label', // Non-default label
+        instructions: 'Custom instructions', // Non-default instructions
       };
 
       render(
@@ -3763,88 +3763,88 @@ describe("NodeConfigPanel", () => {
       );
 
       // Open mentor selection
-      await user.click(screen.getByText("Select"));
-      await user.click(screen.getByTestId("select-mentor"));
+      await user.click(screen.getByText('Select'));
+      await user.click(screen.getByTestId('select-mentor'));
 
       // The selection triggers forceMentorPrefill to be true
       // After useEffect runs with mentorSettings, it should reset to false
       // We verify by checking that prefill was called
       await waitFor(() => {
         expect(onUpdateNode).toHaveBeenCalledWith(
-          "test-node-id",
+          'test-node-id',
           expect.objectContaining({
-            entry_mentor_id: "new-mentor-id",
-            mentor_id: "new-mentor-id",
+            entry_mentor_id: 'new-mentor-id',
+            mentor_id: 'new-mentor-id',
           }),
         );
       });
     });
   });
 
-  describe("variable type change back to String", () => {
-    it("should reset default value when switching from Number back to String", async () => {
+  describe('variable type change back to String', () => {
+    it('should reset default value when switching from Number back to String', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Switch to Number first
-      await user.click(screen.getByText("Number"));
+      await user.click(screen.getByText('Number'));
 
       // Then back to String
-      await user.click(screen.getByText("String"));
+      await user.click(screen.getByText('String'));
 
       // Should show string input
       expect(
-        screen.getByPlaceholderText("Enter default value"),
+        screen.getByPlaceholderText('Enter default value'),
       ).toBeInTheDocument();
     });
 
-    it("should reset default value when switching from Boolean to Number", async () => {
+    it('should reset default value when switching from Boolean to Number', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Switch to Boolean first
-      await user.click(screen.getByText("Boolean"));
+      await user.click(screen.getByText('Boolean'));
 
       // Then to Number
-      await user.click(screen.getByText("Number"));
+      await user.click(screen.getByText('Number'));
 
       // Should show number input with placeholder 0
-      expect(screen.getByPlaceholderText("0")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('0')).toBeInTheDocument();
     });
 
-    it("should reset default value when switching from Object to List", async () => {
+    it('should reset default value when switching from Object to List', async () => {
       const user = userEvent.setup();
       render(
         <NodeConfigPanel
           {...baseProps}
           nodeType="start"
-          nodeData={{ label: "Start" }}
+          nodeData={{ label: 'Start' }}
         />,
       );
 
-      await user.click(screen.getByText("Add"));
+      await user.click(screen.getByText('Add'));
 
       // Switch to Object first
-      await user.click(screen.getByText("Object"));
+      await user.click(screen.getByText('Object'));
 
       // Then to List
-      await user.click(screen.getByText("List"));
+      await user.click(screen.getByText('List'));
 
       // Should show list textarea
       expect(
