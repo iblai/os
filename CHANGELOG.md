@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.41.1](https://github.com/iblai/mentorai/compare/v0.41.0...v0.41.1) (2026-03-31)
+
+### Bug Fixes
+
+* guard window access in email redirect for SSR compatibility ([afbbf01](https://github.com/iblai/mentorai/commit/afbbf011cb66fa8cacd8a430b4ccb4eef87292a8))
+
 ## [0.41.0](https://github.com/iblai/mentorai/compare/v0.40.3...v0.41.0) (2026-03-31)
 
 ### Features
