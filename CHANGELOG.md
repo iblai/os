@@ -1,3 +1,204 @@
+# Changelog
+
+## [0.41.1](https://github.com/iblai/mentorai/compare/v0.41.0...v0.41.1) (2026-03-31)
+
+### Bug Fixes
+
+* guard window access in email redirect for SSR compatibility ([afbbf01](https://github.com/iblai/mentorai/commit/afbbf011cb66fa8cacd8a430b4ccb4eef87292a8))
+
+## [0.41.0](https://github.com/iblai/mentorai/compare/v0.40.3...v0.41.0) (2026-03-31)
+
+### Features
+
+* **copy-mentor:** add functionality to copy mentor without including training data and coverage ([67eccb7](https://github.com/iblai/mentorai/commit/67eccb77ccae5be9c422b74e4217166dc01bacc1))
+* **copy-mentor:** expand Copy Mentor journey with additional checkpoints and update coverage metric ([a388ed5](https://github.com/iblai/mentorai/commit/a388ed5ff56d69906c940ee5356581eb276f691c))
+* **copy-mentor:** implement Allow Copies toggle and enhance Copy Mentor functionality ([2dc3daf](https://github.com/iblai/mentorai/commit/2dc3daf16e4a32c47b629708aa9f48f57ae0d36a))
+* **copy-mentor:** implement Copy Mentor journey with 7 checkpoints and update coverage metrics ([0e48905](https://github.com/iblai/mentorai/commit/0e48905cebd2e6402806d93204cd69d746dcff67))
+* **create-mentor:** add CreateMentorPage class and integrate into Copy Mentor journey ([c440d7e](https://github.com/iblai/mentorai/commit/c440d7e35fb2aa34c638cce60099f4d8a385950b))
+* **mentor-copy:** add CopyMentorModal component with associated tests ([0d728fc](https://github.com/iblai/mentorai/commit/0d728fc22ad25bf1848fd96edf37e18e80c40b42))
+* **playwright:** enhance video reporting and cleanup test results in Makefile ([bedccd0](https://github.com/iblai/mentorai/commit/bedccd0314eaf21cea4c276a0f06e4e9a0bdb355))
+* **release:** add Makefile target for versioned releases with tagging ([b1bc902](https://github.com/iblai/mentorai/commit/b1bc902d623a12939c1e87945d310b11a17aeca0))
+* **settings-tab:** implement Allow Copies feature with associated tests and update dynamic modal ([f52ea6d](https://github.com/iblai/mentorai/commit/f52ea6db85875f5f07bc5cb2d58948162f8d7338))
+
+### Bug Fixes
+
+* **copy-mentor.spec:** improve visibility check for destination tenant combobox in Copy Mentor ([1260e14](https://github.com/iblai/mentorai/commit/1260e143e740e86581d8d97f05cf47aa36a4e6d6))
+* **copy-mentor:** add gap class to DialogFooter for improved layout ([b563453](https://github.com/iblai/mentorai/commit/b5634539d4061d984c686660bfdb5c6634466e85))
+* **copy-mentor:** update source file path in coverage documentation for accuracy ([1c96f86](https://github.com/iblai/mentorai/commit/1c96f86a281e3ed9b8b20311182ba7921dc85284))
+* **copy-mentor:** update success toast message to remove ellipsis ([bf0804f](https://github.com/iblai/mentorai/commit/bf0804fdf40843a26c7f8a28d03552badc17ce25))
+* **create-mentor:** update name input visibility check to be enabled with extended timeout ([65e6dc0](https://github.com/iblai/mentorai/commit/65e6dc0c0e29823b89b85cf93bbed444aad7ed9c))
+* **edit-mentor-modal:** standardize modal title to 'Edit Mentor' ([7f7acfc](https://github.com/iblai/mentorai/commit/7f7acfc903d294b6d6bc0f066eb9a3a603cdf696))
+* **settings-tab.test:** specify return type for mockUsername function in CopyMentorModal tests ([b381a92](https://github.com/iblai/mentorai/commit/b381a923e13ee6cc57ead0bb1e80754d449ce31f))
+* **settings-tab.test:** update LTI Accessible toggle text for consistency in tests ([b4d8da0](https://github.com/iblai/mentorai/commit/b4d8da096a98f46be92866b19cf9b347a8a39acd))
+
+### Refactors
+
+* **copy-mentor-modal:** enhance tenant handling during mentor copy process ([2e3e129](https://github.com/iblai/mentorai/commit/2e3e129b45784269407a5b34eee54a8cd2f8b41e))
+* **copy-mentor.spec:** remove unused dialog handling functions and cleanup code ([52a5e01](https://github.com/iblai/mentorai/commit/52a5e01af63c079bb30c83b83d5dbffbcae5a0d1))
+* **copy-mentor:** simplify modal stack handling in CopyMentorModal component ([a595ca6](https://github.com/iblai/mentorai/commit/a595ca6319c4c4a5f349eeb864be487ea5d28c89))
+* **copy-mentor:** update dataset verification method to use navigateToTab for clarity ([38e8c3a](https://github.com/iblai/mentorai/commit/38e8c3ace44704ef6e38e955f0d9464c6fd11f84))
+* **settings-tab.test:** replace inline modal mocks with named functions for better readability ([d29b196](https://github.com/iblai/mentorai/commit/d29b196c3faca9324352a8233d765e27e942d140))
+
+### Chores
+
+* add Prettier configuration and ignore file for code formatting ([e192b83](https://github.com/iblai/mentorai/commit/e192b834eda7c7cd811cce18bc2ebad047916ebc))
+
+### Tests
+
+* **apple-restriction-modal:** enhance tests for pricing link interactions and Tauri app behavior ([7d9f3ba](https://github.com/iblai/mentorai/commit/7d9f3ba193e50b9a927ed15d6bc89bd4b9f672c9))
+* **edit-mentor-modal:** update test to reflect standardized modal title 'Edit Mentor' ([103db66](https://github.com/iblai/mentorai/commit/103db66e16739f8ea1b742ae8efdd5b0ae279d14))
+* **settings-tab:** add error handling test for missing username in CopyMentorModal ([b2da8a4](https://github.com/iblai/mentorai/commit/b2da8a41378afb774e44341d08e5c0b1c23af220))
+* **settings-tab:** add Playwright tests for Copy Mentor functionality in settings tab ([461a60b](https://github.com/iblai/mentorai/commit/461a60ba2c562e28929b4af16803c18301af9f8f))
+* **use-os:** mock isTauriApp in use-os tests for accurate platform detection ([102f0d7](https://github.com/iblai/mentorai/commit/102f0d7779a3236e90641ea3cf0ea419f4354a03))
+
+## [0.40.3](https://github.com/iblai/mentorai/compare/v0.40.2...v0.40.3) (2026-03-31)
+
+### Bug Fixes
+
+* open pricing link in system browser via Tauri opener plugin ([db6f010](https://github.com/iblai/mentorai/commit/db6f010fb832ba0164f1cde5fc108f9e50404d02))
+
+## [0.40.2](https://github.com/iblai/mentorai/compare/v0.40.1...v0.40.2) (2026-03-31)
+
+### Bug Fixes
+
+* init tauri OS plugin and update apple restriction modal ([fd72a30](https://github.com/iblai/mentorai/commit/fd72a3029cb5cab8c8cf14b3a9967d76d5feae72))
+
+## [0.40.1](https://github.com/iblai/mentorai/compare/v0.40.0...v0.40.1) (2026-03-30)
+
+### Chores
+
+* add debug logging to useOS hook ([5e9b4d6](https://github.com/iblai/mentorai/commit/5e9b4d609f4566e450c84616fd5d57807f8dd018))
+
+## [0.40.0](https://github.com/iblai/mentorai/compare/v0.39.2...v0.40.0) (2026-03-30)
+
+### Features
+
+* ios restiction message modal feature ([e7f44d5](https://github.com/iblai/mentorai/commit/e7f44d5ed82bcbcfb4d674fbfee61597a36e2846))
+* ios restiction message modal feature > pnpm lock update ([f7699b0](https://github.com/iblai/mentorai/commit/f7699b0b152772d764341f9a699bf404f4692eff))
+* ios restiction message modal feature > test coverage ([9356132](https://github.com/iblai/mentorai/commit/93561324369fec93661e01669e2cd50c6d57cd30))
+* ios restriction on progress ([c91bcaf](https://github.com/iblai/mentorai/commit/c91bcafb7e7eed65a66d60a6d7c3245c5e51d713))
+* ios restriction on progress ([9c3637b](https://github.com/iblai/mentorai/commit/9c3637b4e49b51ce74ce0c5cf633d3a6a98a6954))
+
+### Bug Fixes
+
+* regenerate app icons, fix fetch interceptor crash, fix iOS bundle validation ([37e75d3](https://github.com/iblai/mentorai/commit/37e75d380f665bd289e96adffea263186ab10a94))
+* restore useOS isTauriApp guard and bump iblai-js to 1.1.9 ([9bd8fd4](https://github.com/iblai/mentorai/commit/9bd8fd4886eb4fc16845f393601073e192d1deb8))
+
+### Chores
+
+* add release-it as devDependency ([8776c87](https://github.com/iblai/mentorai/commit/8776c87e5988bb163f2e3a69a1e741f71070e86b))
+* bump package version to patch ([2fd6e7a](https://github.com/iblai/mentorai/commit/2fd6e7aacb9f3698ac3073c6292ebed5952a9338))
+
+## [0.39.2](https://github.com/iblai/mentorai/compare/v0.39.0...v0.39.2) (2026-03-30)
+
+### Chores
+
+* release 0.39.1 ([7a91886](https://github.com/iblai/mentorai/commit/7a9188683ba9db3b7e889fccabf7705b3e65a1ec))
+
+## [0.39.1]
+
+- bump iblai-js version to 1.1.9
+
+## [0.39.0](https://github.com/iblai/mentorai/compare/v0.38.2...v0.39.0) (2026-03-30)
+
+### Features
+
+* add explore page layout component ([9fa63b8](https://github.com/iblai/mentorai/commit/9fa63b8165cdd0142e3b66f0142ff0cae93774d3))
+* add navigation function to tenant explore page and implement E2E tests for non-admin and admin ([db1617b](https://github.com/iblai/mentorai/commit/db1617b82507fea448aabe039bc5159005296dba))
+* add new chat and workflows buttons to sidebar ([37df152](https://github.com/iblai/mentorai/commit/37df152d9605a1cc42e9e6b17f661eb4a9895ad7))
+* add notifications layout component ([91b9aab](https://github.com/iblai/mentorai/commit/91b9aab529aea98868cc23cf61a2d59f852f9809))
+* update E2E coverage for Tenant Explore Page with new checkpoints ([6129059](https://github.com/iblai/mentorai/commit/6129059a647144df9db656c70171161e5e9b105e))
+
+### Bug Fixes
+
+* add explore and notifications layout files to skip coverage check ([6dc8d3c](https://github.com/iblai/mentorai/commit/6dc8d3c963eed2ec92551da47c9f9d7a39409b89))
+* add skip condition to mentor public settings query ([813f1c8](https://github.com/iblai/mentorai/commit/813f1c896863691fdbfaaab391ecaf1212e3b4dc))
+* prevent navigation to workflows without a selected mentor ([ec0dbe9](https://github.com/iblai/mentorai/commit/ec0dbe919a9fc0e9739198ae695db394f3435e31))
+* update tenant explore page checkpoints for admin functionality ([316fce5](https://github.com/iblai/mentorai/commit/316fce5a1b7330075ab1e71b8e4e88b1ef3b2a2f))
+
+### Tests
+
+* add unit tests for NotificationsLayout component ([677bb24](https://github.com/iblai/mentorai/commit/677bb24809e8cac192e780048f0943eb77a2a12c))
+
+## [0.38.2](https://github.com/iblai/mentorai/compare/v0.38.0...v0.38.2) (2026-03-30)
+
+### Chores
+
+* release 0.38.1 ([d7b8a06](https://github.com/iblai/mentorai/commit/d7b8a061bf1bbdb2f549fab3300c78229422cbe4))
+* release 0.38.1 ([51adbe4](https://github.com/iblai/mentorai/commit/51adbe41aa7b021423ea08c46c1cfa2586f1f5af))
+
+## [0.38.1]
+
+- fix(web-containers): profile > basic > validation needed for fullname field 
+
+## [0.38.0](https://github.com/iblai/mentorai/compare/v0.37.2...v0.38.0) (2026-03-30)
+
+### Features
+
+* ios restiction message modal feature ([6d910d8](https://github.com/iblai/mentorai/commit/6d910d88cde11beb83f3cc8bc412ceec8691c76b))
+* ios restiction message modal feature > pnpm lock update ([c63f432](https://github.com/iblai/mentorai/commit/c63f4322d4aea72744b0aed0e7e14238d9a564f6))
+* ios restiction message modal feature > test coverage ([4c25605](https://github.com/iblai/mentorai/commit/4c256059ed30ac5aa6866de13d284812fd4c1fdb))
+* ios restriction on progress ([03358a4](https://github.com/iblai/mentorai/commit/03358a4a495a3f3da4c2ff9f1f6fd6b98063f9f4))
+* ios restriction on progress ([e5a781f](https://github.com/iblai/mentorai/commit/e5a781f532b02c155afce61c011d1f617fd0584b))
+
+### Chores
+
+* bump @iblai/iblai-js to 1.1.7 ([6884d9c](https://github.com/iblai/mentorai/commit/6884d9c34fbefa205dd12caa4e48928a6e2b6a92))
+* use localhost for tauri dev instead of org env ([62377c5](https://github.com/iblai/mentorai/commit/62377c5581031d3868ee80a92b29eada40cbdb02))
+
+## [0.37.2](https://github.com/iblai/mentorai/compare/v0.37.1...v0.37.2) (2026-03-30)
+
+### Chores
+
+* switch Dependabot to grouped updates to reduce PR noise ([5b50d13](https://github.com/iblai/mentorai/commit/5b50d13b8e5ad4b2113377215dc757ee28ca5866))
+
+## [0.37.1](https://github.com/iblai/mentorai/compare/v0.37.0...v0.37.1) (2026-03-30)
+
+### Bug Fixes
+
+* **e2e:** replace non-existent .react-flow selectors with actual DOM selectors ([8e465ac](https://github.com/iblai/mentorai/commit/8e465ac062156996c9007a14b9809b2e4e54a9bf))
+
+## [0.37.0](https://github.com/iblai/mentorai/compare/v0.36.13...v0.37.0) (2026-03-30)
+
+### Features
+
+* **tauri:** add os plugin and fix e2e auth test ([88cba0d](https://github.com/iblai/mentorai/commit/88cba0d91628575ea6b989861e5c75c3221cdb46))
+
+### Bug Fixes
+
+* add chunk-retry coverage exclusion and headers test ([ad58cfc](https://github.com/iblai/mentorai/commit/ad58cfc93ddb66dd13acd8df1f059c371b3fa0f8))
+* add webpack-level chunk retry and cache headers to prevent ChunkLoadError ([db293fc](https://github.com/iblai/mentorai/commit/db293fcdac0c3cf7296b195258d3608da1be973f))
+
+## [0.36.13](https://github.com/iblai/mentorai/compare/v0.36.12...v0.36.13) (2026-03-30)
+
+### Bug Fixes
+
+* **ci:** add release-it devDep, fix node version; skip custom domain check on mentor origin ([118bfa7](https://github.com/iblai/mentorai/commit/118bfa70d18f82eadf9e38656cac11eeba266c5b))
+* **ci:** disable husky hooks in release workflow to prevent OOM on CI ([50aa7ed](https://github.com/iblai/mentorai/commit/50aa7edf37eab3d0553c8a3ac9ed2544323e7758))
+* **e2e:** increase timeout and re-enable Safari browser tests ([4cc718d](https://github.com/iblai/mentorai/commit/4cc718d61e02cffd32f5eb1189683dd5fc61c7b3))
+
+### Chores
+
+* add Dependabot configuration for dependency and security updates ([7eee7cf](https://github.com/iblai/mentorai/commit/7eee7cfadf540dfcd2ff988836228a83f82e35b2))
+* **release:** v0.36.12 ([2c9fb64](https://github.com/iblai/mentorai/commit/2c9fb6475f28904b0f1e87e28dea87db38c86012))
+
+* fix(ci): disable husky hooks in release workflow to prevent OOM on CI (50aa7ed)
+* fix(ci): add release-it devDep, fix node version; skip custom domain check on mentor origin (118bfa7)
+* fix(e2e): increase timeout and re-enable Safari browser tests (4cc718d)
+
+## [0.36.12]
+
+- iblai-js bump version to 1.1.6
+
+## [0.36.11]
+
+- ⁠Fixed chat height when empty
+- Fixed welcome proactive messages in iframed anonymous mentors
+
+## [0.36.10]
+
+- chore(iblai-js): bump version of iblai-js to 1.1.5
+
 ## [0.36.9]
 
 - chore(iblai-js): bump version of iblai-js to 1.1.1

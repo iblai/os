@@ -261,9 +261,18 @@ describe('DatasetItemList', () => {
       const datasetItems = screen.getAllByTestId(/^dataset-item-/);
 
       // Verify order matches input order
-      expect(datasetItems[0]).toHaveAttribute('data-testid', 'dataset-item-dataset-1');
-      expect(datasetItems[1]).toHaveAttribute('data-testid', 'dataset-item-dataset-2');
-      expect(datasetItems[2]).toHaveAttribute('data-testid', 'dataset-item-dataset-3');
+      expect(datasetItems[0]).toHaveAttribute(
+        'data-testid',
+        'dataset-item-dataset-1',
+      );
+      expect(datasetItems[1]).toHaveAttribute(
+        'data-testid',
+        'dataset-item-dataset-2',
+      );
+      expect(datasetItems[2]).toHaveAttribute(
+        'data-testid',
+        'dataset-item-dataset-3',
+      );
     });
 
     /**
@@ -272,7 +281,9 @@ describe('DatasetItemList', () => {
      */
     it('handles null/undefined datasets array gracefully', () => {
       // Test with undefined
-      const { rerender } = render(<DatasetItemList datasets={undefined as any} />);
+      const { rerender } = render(
+        <DatasetItemList datasets={undefined as any} />,
+      );
       expect(screen.getByText('No datasets found')).toBeInTheDocument();
 
       // Test with null
@@ -285,15 +296,23 @@ describe('DatasetItemList', () => {
      * Verifies that component updates correctly when data changes
      */
     it('updates when datasets prop changes', () => {
-      const { rerender } = render(<DatasetItemList datasets={[mockDatasets[0]]} />);
+      const { rerender } = render(
+        <DatasetItemList datasets={[mockDatasets[0]]} />,
+      );
 
       expect(screen.getByTestId('dataset-item-dataset-1')).toBeInTheDocument();
-      expect(screen.queryByTestId('dataset-item-dataset-2')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('dataset-item-dataset-2'),
+      ).not.toBeInTheDocument();
 
       // Update with different datasets
-      rerender(<DatasetItemList datasets={[mockDatasets[1], mockDatasets[2]]} />);
+      rerender(
+        <DatasetItemList datasets={[mockDatasets[1], mockDatasets[2]]} />,
+      );
 
-      expect(screen.queryByTestId('dataset-item-dataset-1')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('dataset-item-dataset-1'),
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId('dataset-item-dataset-2')).toBeInTheDocument();
       expect(screen.getByTestId('dataset-item-dataset-3')).toBeInTheDocument();
     });
@@ -315,7 +334,9 @@ describe('DatasetItemList', () => {
       ];
 
       // Suppress console warnings for this test
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       render(<DatasetItemList datasets={duplicateDatasets} />);
 

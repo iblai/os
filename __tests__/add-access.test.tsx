@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AddAccessDialog } from "@/components/modals/edit-mentor-modal/tabs/access-tab/add-access";
+import { AddAccessDialog } from '@/components/modals/edit-mentor-modal/tabs/access-tab/add-access';
 
 /* ------------------------------------------------------------------ */
 /*  Mocks                                                              */
@@ -17,15 +17,15 @@ const mockUpdateRbacMentorAccess = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockCheckRbacPermission = vi.fn();
 
-vi.mock("next/navigation", () => ({
+vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-vi.mock("@/hooks/use-user", () => ({
+vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-vi.mock("@iblai/iblai-js/data-layer", () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorSettingsQuery(...args),
   usePlatformUsersQuery: (...args: unknown[]) =>
@@ -39,19 +39,19 @@ vi.mock("@iblai/iblai-js/data-layer", () => ({
   isPoliciesResponse: () => false,
 }));
 
-vi.mock("@/lib/hooks", () => ({
+vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => mockRbacPermissions(),
 }));
 
-vi.mock("@/features/rbac/rbac-slice", () => ({
-  selectRbacPermissions: "selectRbacPermissions",
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  selectRbacPermissions: 'selectRbacPermissions',
 }));
 
-vi.mock("@/hoc/withPermissions", () => ({
+vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -63,7 +63,7 @@ vi.mock("sonner", () => ({
 /* ------------------------------------------------------------------ */
 
 const defaultProps = {
-  availableRoles: ["editor"] as Array<"editor">,
+  availableRoles: ['editor'] as Array<'editor'>,
   isLoading: false,
   onAccessCreated: vi.fn().mockResolvedValue(undefined),
 };
@@ -76,21 +76,21 @@ function setup(overrides: Partial<typeof defaultProps> = {}) {
 }
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /create role access/i }));
+  await user.click(screen.getByRole('button', { name: /create role access/i }));
 }
 
 /* ------------------------------------------------------------------ */
 /*  Test suites                                                        */
 /* ------------------------------------------------------------------ */
 
-describe("AddAccessDialog", () => {
+describe('AddAccessDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseParams.mockReturnValue({
-      tenantKey: "test-tenant",
-      mentorId: "test-mentor",
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
     });
-    mockUseUsername.mockReturnValue("testuser");
+    mockUseUsername.mockReturnValue('testuser');
     mockUseGetMentorSettingsQuery.mockReturnValue({
       data: { mentor_id: 42 },
       isLoading: false,
@@ -114,32 +114,32 @@ describe("AddAccessDialog", () => {
 
   /* ---------- With permission: search mode ---------- */
 
-  describe("with users permission (search mode)", () => {
+  describe('with users permission (search mode)', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockReturnValue(true);
     });
 
-    it("renders search input when dialog is opened", async () => {
+    it('renders search input when dialog is opened', async () => {
       const { user } = setup();
       await openDialog(user);
 
       expect(
-        screen.getByPlaceholderText("Search by name, username, or email"),
+        screen.getByPlaceholderText('Search by name, username, or email'),
       ).toBeInTheDocument();
       expect(
-        screen.queryByLabelText("Select input type"),
+        screen.queryByLabelText('Select input type'),
       ).not.toBeInTheDocument();
     });
 
-    it("shows selected users with email display", async () => {
+    it('shows selected users with email display', async () => {
       mockUsePlatformUsersQuery.mockReturnValue({
         data: {
           results: [
             {
               user_id: 1,
-              name: "Alice",
-              username: "alice",
-              email: "alice@test.com",
+              name: 'Alice',
+              username: 'alice',
+              email: 'alice@test.com',
             },
           ],
         },
@@ -151,27 +151,27 @@ describe("AddAccessDialog", () => {
       await openDialog(user);
 
       const searchInput = screen.getByPlaceholderText(
-        "Search by name, username, or email",
+        'Search by name, username, or email',
       );
-      await user.type(searchInput, "ali");
+      await user.type(searchInput, 'ali');
 
       // Click on the user result
-      const resultButton = await screen.findByText("Alice");
+      const resultButton = await screen.findByText('Alice');
       await user.click(resultButton);
 
       // Should display email (email || name fallback)
-      expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+      expect(screen.getByText('alice@test.com')).toBeInTheDocument();
     });
 
-    it("submits with users_to_add payload when search users selected", async () => {
+    it('submits with users_to_add payload when search users selected', async () => {
       mockUsePlatformUsersQuery.mockReturnValue({
         data: {
           results: [
             {
               user_id: 1,
-              name: "Alice",
-              username: "alice",
-              email: "alice@test.com",
+              name: 'Alice',
+              username: 'alice',
+              email: 'alice@test.com',
             },
           ],
         },
@@ -183,26 +183,26 @@ describe("AddAccessDialog", () => {
       await openDialog(user);
 
       // Select a role
-      await user.click(screen.getByRole("combobox", { name: /select role/i }));
-      await user.click(screen.getByRole("option", { name: /editor/i }));
+      await user.click(screen.getByRole('combobox', { name: /select role/i }));
+      await user.click(screen.getByRole('option', { name: /editor/i }));
 
       // Search and select user
       const searchInput = screen.getByPlaceholderText(
-        "Search by name, username, or email",
+        'Search by name, username, or email',
       );
-      await user.type(searchInput, "ali");
-      const resultButton = await screen.findByText("Alice");
+      await user.type(searchInput, 'ali');
+      const resultButton = await screen.findByText('Alice');
       await user.click(resultButton);
 
       // Click create
-      await user.click(screen.getByRole("button", { name: /create$/i }));
+      await user.click(screen.getByRole('button', { name: /create$/i }));
 
       await waitFor(() => {
         expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            platform_key: "test-tenant",
+            platform_key: 'test-tenant',
             mentor_id: 42,
-            role: "editor",
+            role: 'editor',
             users_to_add: [1],
           }),
         });
@@ -212,199 +212,200 @@ describe("AddAccessDialog", () => {
 
   /* ---------- Without permission: manual input mode ---------- */
 
-  describe("without users permission (manual input mode)", () => {
+  describe('without users permission (manual input mode)', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockReturnValue(false);
     });
 
-    it("renders manual input with email/username selector", async () => {
+    it('renders manual input with email/username selector', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      expect(screen.getByLabelText("Select input type")).toBeInTheDocument();
+      expect(screen.getByLabelText('Select input type')).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("user@example.com"),
+        screen.getByPlaceholderText('user@example.com'),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /add entry/i }),
+        screen.getByRole('button', { name: /add entry/i }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByPlaceholderText("Search by name, username, or email"),
+        screen.queryByPlaceholderText('Search by name, username, or email'),
       ).not.toBeInTheDocument();
     });
 
-    it("stages entries via Enter key", async () => {
+    it('stages entries via Enter key', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
 
       // Entry should appear as a chip
-      expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+      expect(screen.getByText('alice@test.com')).toBeInTheDocument();
       // Input should be cleared
-      expect(input).toHaveValue("");
+      expect(input).toHaveValue('');
     });
 
-    it("stages entries via plus button", async () => {
+    it('stages entries via plus button', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "bob@test.com");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'bob@test.com');
 
-      await user.click(screen.getByRole("button", { name: /add entry/i }));
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
 
-      expect(screen.getByText("bob@test.com")).toBeInTheDocument();
-      expect(input).toHaveValue("");
+      expect(screen.getByText('bob@test.com')).toBeInTheDocument();
+      expect(input).toHaveValue('');
     });
 
-    it("does not stage empty entries", async () => {
+    it('does not stage empty entries', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "   {Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, '   {Enter}');
 
       // No chips should appear
       expect(
-        screen.queryByRole("button", { name: /remove/i }),
+        screen.queryByRole('button', { name: /remove/i }),
       ).not.toBeInTheDocument();
     });
 
-    it("does not stage duplicate entries", async () => {
+    it('does not stage duplicate entries', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'alice@test.com{Enter}');
 
       // Only one chip
-      const chips = screen.getAllByText("alice@test.com");
+      const chips = screen.getAllByText('alice@test.com');
       expect(chips).toHaveLength(1);
     });
 
-    it("removes staged entries when X is clicked", async () => {
+    it('removes staged entries when X is clicked', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'bob@test.com{Enter}');
 
       // Remove alice
       await user.click(
-        screen.getByRole("button", { name: /remove alice@test.com/i }),
+        screen.getByRole('button', { name: /remove alice@test.com/i }),
       );
 
-      expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
-      expect(screen.getByText("bob@test.com")).toBeInTheDocument();
+      expect(screen.queryByText('alice@test.com')).not.toBeInTheDocument();
+      expect(screen.getByText('bob@test.com')).toBeInTheDocument();
     });
 
-    it("submits with emails_to_add when input type is email", async () => {
+    it('submits with emails_to_add when input type is email', async () => {
       const { user } = setup();
       await openDialog(user);
 
       // Select role
-      await user.click(screen.getByRole("combobox", { name: /select role/i }));
-      await user.click(screen.getByRole("option", { name: /editor/i }));
+      await user.click(screen.getByRole('combobox', { name: /select role/i }));
+      await user.click(screen.getByRole('option', { name: /editor/i }));
 
       // Stage emails
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'bob@test.com{Enter}');
 
       // Click create
-      await user.click(screen.getByRole("button", { name: /create$/i }));
+      await user.click(screen.getByRole('button', { name: /create$/i }));
 
       await waitFor(() => {
         expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            platform_key: "test-tenant",
+            platform_key: 'test-tenant',
             mentor_id: 42,
-            role: "editor",
-            emails_to_add: ["alice@test.com", "bob@test.com"],
+            role: 'editor',
+            emails_to_add: ['alice@test.com', 'bob@test.com'],
           }),
         });
       });
     });
 
-    it("submits with usernames_to_add when input type is username", async () => {
+    it('submits with usernames_to_add when input type is username', async () => {
       const { user } = setup();
       await openDialog(user);
 
       // Select role
-      await user.click(screen.getByRole("combobox", { name: /select role/i }));
-      await user.click(screen.getByRole("option", { name: /editor/i }));
+      await user.click(screen.getByRole('combobox', { name: /select role/i }));
+      await user.click(screen.getByRole('option', { name: /editor/i }));
 
       // Switch to username mode
-      await user.click(screen.getByLabelText("Select input type"));
-      await user.click(screen.getByRole("option", { name: /username/i }));
+      await user.click(screen.getByLabelText('Select input type'));
+      await user.click(screen.getByRole('option', { name: /username/i }));
 
       // Stage usernames
-      const input = screen.getByPlaceholderText("username");
-      await user.type(input, "alice{Enter}");
-      await user.type(input, "bob{Enter}");
+      const input = screen.getByPlaceholderText('username');
+      await user.type(input, 'alice{Enter}');
+      await user.type(input, 'bob{Enter}');
 
       // Click create
-      await user.click(screen.getByRole("button", { name: /create$/i }));
+      await user.click(screen.getByRole('button', { name: /create$/i }));
 
       await waitFor(() => {
         expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            usernames_to_add: ["alice", "bob"],
+            usernames_to_add: ['alice', 'bob'],
           }),
         });
       });
     });
 
-    it("also stages remaining input text on submit", async () => {
+    it('also stages remaining input text on submit', async () => {
       const { user } = setup();
       await openDialog(user);
 
       // Select role
-      await user.click(screen.getByRole("combobox", { name: /select role/i }));
-      await user.click(screen.getByRole("option", { name: /editor/i }));
+      await user.click(screen.getByRole('combobox', { name: /select role/i }));
+      await user.click(screen.getByRole('option', { name: /editor/i }));
 
       // Stage one, leave another in the input
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com');
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
+      await user.type(input, 'bob@test.com');
       // Don't press Enter - just click Create
 
-      await user.click(screen.getByRole("button", { name: /create$/i }));
+      await user.click(screen.getByRole('button', { name: /create$/i }));
 
       await waitFor(() => {
         expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            emails_to_add: ["alice@test.com", "bob@test.com"],
+            emails_to_add: ['alice@test.com', 'bob@test.com'],
           }),
         });
       });
     });
 
-    it("clears manual entries on dialog close", async () => {
+    it('clears manual entries on dialog close', async () => {
       const { user } = setup();
       await openDialog(user);
 
       // Stage entries
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-
-      expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com');
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
+      expect(await screen.findByText('alice@test.com')).toBeInTheDocument();
 
       // Click cancel
-      await user.click(screen.getByRole("button", { name: /cancel/i }));
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
 
       // Reopen
       await openDialog(user);
 
       // Entries should be gone
-      expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
+      expect(screen.queryByText('alice@test.com')).not.toBeInTheDocument();
     });
 
-    it("shows helper text about staging entries", async () => {
+    it('shows helper text about staging entries', async () => {
       const { user } = setup();
       await openDialog(user);
 
@@ -413,38 +414,38 @@ describe("AddAccessDialog", () => {
       ).toBeInTheDocument();
     });
 
-    it("disables plus button when input is empty", async () => {
+    it('disables plus button when input is empty', async () => {
       const { user } = setup();
       await openDialog(user);
 
-      expect(screen.getByRole("button", { name: /add entry/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /add entry/i })).toBeDisabled();
     });
   });
 
   /* ---------- General behavior ---------- */
 
-  it("disables create button when no role is selected", async () => {
+  it('disables create button when no role is selected', async () => {
     const { user } = setup();
     await openDialog(user);
 
-    expect(screen.getByRole("button", { name: /create$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /create$/i })).toBeDisabled();
   });
 
-  it("clears state on successful creation", async () => {
+  it('clears state on successful creation', async () => {
     mockCheckRbacPermission.mockReturnValue(false);
     const { user } = setup();
     await openDialog(user);
 
     // Select role
-    await user.click(screen.getByRole("combobox", { name: /select role/i }));
-    await user.click(screen.getByRole("option", { name: /editor/i }));
+    await user.click(screen.getByRole('combobox', { name: /select role/i }));
+    await user.click(screen.getByRole('option', { name: /editor/i }));
 
     // Stage email
-    const input = screen.getByPlaceholderText("user@example.com");
-    await user.type(input, "alice@test.com{Enter}");
+    const input = screen.getByPlaceholderText('user@example.com');
+    await user.type(input, 'alice@test.com{Enter}');
 
     // Create
-    await user.click(screen.getByRole("button", { name: /create$/i }));
+    await user.click(screen.getByRole('button', { name: /create$/i }));
 
     await waitFor(() => {
       expect(defaultProps.onAccessCreated).toHaveBeenCalled();
@@ -453,7 +454,7 @@ describe("AddAccessDialog", () => {
 
   /* ---------- Groups permission ---------- */
 
-  describe("with groups permission", () => {
+  describe('with groups permission', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockImplementation(
         (_perms: unknown, resource: string) => {
@@ -464,19 +465,19 @@ describe("AddAccessDialog", () => {
       );
     });
 
-    it("renders groups search input when dialog is opened", async () => {
+    it('renders groups search input when dialog is opened', async () => {
       const { user } = setup();
       await openDialog(user);
 
       expect(
-        screen.getByPlaceholderText("Search groups by name"),
+        screen.getByPlaceholderText('Search groups by name'),
       ).toBeInTheDocument();
     });
 
-    it("shows selected groups and allows removal", async () => {
+    it('shows selected groups and allows removal', async () => {
       mockUseGetRbacGroupsQuery.mockReturnValue({
         data: {
-          results: [{ id: 10, name: "Engineering" }],
+          results: [{ id: 10, name: 'Engineering' }],
         },
         isFetching: false,
         isLoading: false,
@@ -485,26 +486,26 @@ describe("AddAccessDialog", () => {
       const { user } = setup();
       await openDialog(user);
 
-      const searchInput = screen.getByPlaceholderText("Search groups by name");
-      await user.type(searchInput, "eng");
+      const searchInput = screen.getByPlaceholderText('Search groups by name');
+      await user.type(searchInput, 'eng');
 
-      const resultButton = await screen.findByText("Engineering");
+      const resultButton = await screen.findByText('Engineering');
       await user.click(resultButton);
 
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
+      expect(screen.getByText('Engineering')).toBeInTheDocument();
 
       // Remove
       await user.click(
-        screen.getByRole("button", { name: /remove engineering/i }),
+        screen.getByRole('button', { name: /remove engineering/i }),
       );
 
-      expect(screen.getByText("No groups selected yet.")).toBeInTheDocument();
+      expect(screen.getByText('No groups selected yet.')).toBeInTheDocument();
     });
 
-    it("submits with groups_to_add in payload", async () => {
+    it('submits with groups_to_add in payload', async () => {
       mockUseGetRbacGroupsQuery.mockReturnValue({
         data: {
-          results: [{ id: 10, name: "Engineering" }],
+          results: [{ id: 10, name: 'Engineering' }],
         },
         isFetching: false,
         isLoading: false,
@@ -514,24 +515,24 @@ describe("AddAccessDialog", () => {
       await openDialog(user);
 
       // Select role
-      await user.click(screen.getByRole("combobox", { name: /select role/i }));
-      await user.click(screen.getByRole("option", { name: /editor/i }));
+      await user.click(screen.getByRole('combobox', { name: /select role/i }));
+      await user.click(screen.getByRole('option', { name: /editor/i }));
 
       // Search and select group
-      const searchInput = screen.getByPlaceholderText("Search groups by name");
-      await user.type(searchInput, "eng");
-      const resultButton = await screen.findByText("Engineering");
+      const searchInput = screen.getByPlaceholderText('Search groups by name');
+      await user.type(searchInput, 'eng');
+      const resultButton = await screen.findByText('Engineering');
       await user.click(resultButton);
 
       // Create
-      await user.click(screen.getByRole("button", { name: /create$/i }));
+      await user.click(screen.getByRole('button', { name: /create$/i }));
 
       await waitFor(() => {
         expect(mockUpdateRbacMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            platform_key: "test-tenant",
+            platform_key: 'test-tenant',
             mentor_id: 42,
-            role: "editor",
+            role: 'editor',
             groups_to_add: [10],
           }),
         });
@@ -539,7 +540,7 @@ describe("AddAccessDialog", () => {
     });
   });
 
-  describe("without groups permission", () => {
+  describe('without groups permission', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockImplementation(
         (_perms: unknown, resource: string) => {
@@ -550,12 +551,12 @@ describe("AddAccessDialog", () => {
       );
     });
 
-    it("does not render groups search input", async () => {
+    it('does not render groups search input', async () => {
       const { user } = setup();
       await openDialog(user);
 
       expect(
-        screen.queryByPlaceholderText("Search groups by name"),
+        screen.queryByPlaceholderText('Search groups by name'),
       ).not.toBeInTheDocument();
     });
   });

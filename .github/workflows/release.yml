@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Prevent concurrent releases
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Skip release commits to avoid infinite loops
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GIT_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run release-it
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          HUSKY: '0'
+        run: pnpm release --ci

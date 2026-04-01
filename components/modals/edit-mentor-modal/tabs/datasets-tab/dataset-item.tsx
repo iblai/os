@@ -12,17 +12,27 @@ import { useUsername } from '@/hooks/use-user';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import WithFormPermissions from '@/hoc/withPermissions';
 
 const DeleteDatasetModal = dynamic(() =>
-  import('./delete-dataset-modal').then((mod) => ({ default: mod.DeleteDatasetModal })),
+  import('./delete-dataset-modal').then((mod) => ({
+    default: mod.DeleteDatasetModal,
+  })),
 );
 const RetrainScheduleModal = dynamic(() =>
-  import('./retrain-schedule-modal').then((mod) => ({ default: mod.RetrainScheduleModal })),
+  import('./retrain-schedule-modal').then((mod) => ({
+    default: mod.RetrainScheduleModal,
+  })),
 );
 const TrainOrDeleteModal = dynamic(() =>
-  import('./train-or-delete-modal').then((mod) => ({ default: mod.TrainOrDeleteModal })),
+  import('./train-or-delete-modal').then((mod) => ({
+    default: mod.TrainOrDeleteModal,
+  })),
 );
 
 type EditTrainingDocument = {
@@ -46,18 +56,26 @@ export type Dataset = {
 
 type Props = {
   dataset: Dataset;
+  onSelect?: (dataset: Dataset) => void;
+  isSelected?: boolean;
 };
 
-export function DatasetItem({ dataset }: Props) {
-  const [isDeleteDatasetModalOpen, setIsDeleteDatasetModalOpen] = React.useState(false);
-  const [isRetrainScheduleModalOpen, setIsRetrainScheduleModalOpen] = React.useState(false);
-  const [isTrainOrDeleteModalOpen, setIsTrainOrDeleteModalOpen] = React.useState(false);
+export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
+  const [isDeleteDatasetModalOpen, setIsDeleteDatasetModalOpen] =
+    React.useState(false);
+  const [isRetrainScheduleModalOpen, setIsRetrainScheduleModalOpen] =
+    React.useState(false);
+  const [isTrainOrDeleteModalOpen, setIsTrainOrDeleteModalOpen] =
+    React.useState(false);
   const username = useUsername();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const [editTrainingDocument, { isLoading: isEditTrainingDocumentLoading }] =
     useEditTrainingDocumentMutation();
 
-  const handleEditTrainingDocument = async (data: EditTrainingDocument, callback?: () => void) => {
+  const handleEditTrainingDocument = async (
+    data: EditTrainingDocument,
+    callback?: () => void,
+  ) => {
     try {
       await editTrainingDocument({
         documentId: dataset.id,
@@ -116,10 +134,14 @@ export function DatasetItem({ dataset }: Props) {
 
   return (
     <>
-      <TableRow key={dataset.id} className="border-b last:border-0">
+      <TableRow
+        key={dataset.id}
+        className={`border-b last:border-0 ${onSelect ? 'hover:bg-muted/50 cursor-pointer' : ''} ${isSelected ? 'bg-blue-50' : ''}`}
+        onClick={onSelect ? () => onSelect(dataset) : undefined}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
-            <TableCell className="p-3 font-medium whitespace-nowrap text-[#646464] truncate max-w-[200px]">
+            <TableCell className="max-w-[200px] truncate p-3 font-medium whitespace-nowrap text-[#646464]">
               <WithFormPermissions
                 name={['document_name', 'url']}
                 // @ts-ignore
@@ -292,7 +314,10 @@ function TrainingStatusSwitch({
   url: string;
   training_status: string;
   disabled: boolean;
-  handleEditTrainingDocument: (data: EditTrainingDocument, callback?: () => void) => void;
+  handleEditTrainingDocument: (
+    data: EditTrainingDocument,
+    callback?: () => void,
+  ) => void;
   onUntrainSuccess?: () => void;
   onTrainRequest?: () => void;
 }) {
@@ -326,7 +351,11 @@ function TrainingStatusSwitch({
         );
       }}
       disabled={disabled}
-      aria-label={is_trained ? 'Disable training for document' : 'Enable training for document'}
+      aria-label={
+        is_trained
+          ? 'Disable training for document'
+          : 'Enable training for document'
+      }
     />
   );
 }

@@ -37,11 +37,16 @@ export function isSafariBrowser(): boolean {
 export function hasNonExpiredAuthToken() {
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
-    console.log('################### [hasNonExpiredAuthToken] axd token is not defined', token);
+    console.log(
+      '################### [hasNonExpiredAuthToken] axd token is not defined',
+      token,
+    );
     return true;
   }
 
-  const tokenExpiry = window.localStorage.getItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY);
+  const tokenExpiry = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
+  );
   if (!tokenExpiry) {
     console.log(
       '################### [hasNonExpiredAuthToken] axd token expiry is not defined',
@@ -52,7 +57,10 @@ export function hasNonExpiredAuthToken() {
 
   const expiryDate = new Date(tokenExpiry);
   if (isNaN(expiryDate.getTime())) {
-    console.log('################### [hasNonExpiredAuthToken] axd token expiry date', expiryDate);
+    console.log(
+      '################### [hasNonExpiredAuthToken] axd token expiry date',
+      expiryDate,
+    );
     return false;
   }
 
@@ -110,7 +118,8 @@ export async function redirectToAuthSpa(
     return;
   }
 
-  const redirectPath = redirectTo ?? `${window.location.pathname}${window.location.search}`;
+  const redirectPath =
+    redirectTo ?? `${window.location.pathname}${window.location.search}`;
 
   // Never save sso-login routes as redirect paths
   if (
@@ -145,7 +154,10 @@ export async function redirectToAuthSpa(
     }
     // Navigate the main webview directly to the auth URL
     // This keeps the user within the app
-    console.log('[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:', authRedirectUrl);
+    console.log(
+      '[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:',
+      authRedirectUrl,
+    );
     window.location.href = authRedirectUrl;
   } else {
     // window.location.href = authRedirectUrl;
@@ -155,7 +167,8 @@ export async function redirectToAuthSpa(
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
-  const resolvedTenant = tenantKey || getPlatformKey(window.location.pathname) || '';
+  const resolvedTenant =
+    tenantKey || getPlatformKey(window.location.pathname) || '';
 
   if (!resolvedTenant) {
     return '';
@@ -168,11 +181,18 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
   return joinUrl;
 }
 
-export function redirectToAuthSpaJoinTenant(tenantKey?: string, redirectUrl?: string) {
-  const resolvedTenant = tenantKey || getPlatformKey(window.location.pathname) || '';
+export function redirectToAuthSpaJoinTenant(
+  tenantKey?: string,
+  redirectUrl?: string,
+) {
+  const resolvedTenant =
+    tenantKey || getPlatformKey(window.location.pathname) || '';
 
   if (!resolvedTenant) {
-    console.log('[auth-redirect] Missing tenant key for join', { tenantKey, redirectUrl });
+    console.log('[auth-redirect] Missing tenant key for join', {
+      tenantKey,
+      redirectUrl,
+    });
     redirectToAuthSpa(redirectUrl);
     return;
   }
@@ -358,7 +378,10 @@ export function preprocessLaTeX(content: string) {
   // Escape currency dollar signs: if a $ is directly followed by a digit,
   // prepend a backslash so that it is rendered as a literal dollar sign.
   // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(/(?<!\\)\$(\d)/g, (_, digit) => `\\$${digit}`);
+  processedContent = processedContent.replace(
+    /(?<!\\)\$(\d)/g,
+    (_, digit) => `\\$${digit}`,
+  );
 
   // Replace block-level LaTeX delimiters \[ \] with $$ $$.
   processedContent = processedContent.replace(
@@ -386,7 +409,10 @@ export function preprocessLaTeX(content: string) {
   processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, '`$1`');
 
   // \underline{text} -> <u>text</u> (requires rehype-raw)
-  processedContent = processedContent.replace(/\\underline\{([^}]+)\}/g, '<u>$1</u>');
+  processedContent = processedContent.replace(
+    /\\underline\{([^}]+)\}/g,
+    '<u>$1</u>',
+  );
 
   // Convert LaTeX environments to Markdown/HTML
   // \begin{itemize} ... \end{itemize} -> convert to unordered list
@@ -426,18 +452,28 @@ export function preprocessLaTeX(content: string) {
   // \begin{center} ... \end{center} -> convert to centered div
   processedContent = processedContent.replace(
     /\\begin\{center\}([\s\S]*?)\\end\{center\}/g,
-    (_, content) => `\n<div style="text-align: center;">${content.trim()}</div>\n`,
+    (_, content) =>
+      `\n<div style="text-align: center;">${content.trim()}</div>\n`,
   );
 
   // Convert section headings (with optional * for unnumbered variants)
   // \section{text} or \section*{text} -> ## text
-  processedContent = processedContent.replace(/\\section\*?\{([^}]+)\}/g, '\n## $1\n');
+  processedContent = processedContent.replace(
+    /\\section\*?\{([^}]+)\}/g,
+    '\n## $1\n',
+  );
 
   // \subsection{text} or \subsection*{text} -> ### text
-  processedContent = processedContent.replace(/\\subsection\*?\{([^}]+)\}/g, '\n### $1\n');
+  processedContent = processedContent.replace(
+    /\\subsection\*?\{([^}]+)\}/g,
+    '\n### $1\n',
+  );
 
   // \subsubsection{text} or \subsubsection*{text} -> #### text
-  processedContent = processedContent.replace(/\\subsubsection\*?\{([^}]+)\}/g, '\n#### $1\n');
+  processedContent = processedContent.replace(
+    /\\subsubsection\*?\{([^}]+)\}/g,
+    '\n#### $1\n',
+  );
 
   // Handle line breaks
   // \\ or \newline -> line break
@@ -468,7 +504,11 @@ export function preprocessLaTeX(content: string) {
   return processedContent;
 }
 
-export const textTruncate = function (str: string, length: number, ending?: string) {
+export const textTruncate = function (
+  str: string,
+  length: number,
+  ending?: string,
+) {
   if (length == null) {
     length = 50;
   }
@@ -563,7 +603,10 @@ export const onAccountDeleted = () => {
   }, 3000);
 };
 
-export const handleLogout = (redirectUrl = window.location.origin, callback?: () => void) => {
+export const handleLogout = (
+  redirectUrl = window.location.origin,
+  callback?: () => void,
+) => {
   const tenant = window.localStorage.getItem('tenant');
   window.localStorage.clear();
   window.localStorage.setItem('tenant', tenant ?? '');
@@ -594,7 +637,9 @@ export const handleTenantSwitch = async (
   redirectUrl?: string,
 ) => {
   // Clear current tenant cookie before switching
-  const { clearCurrentTenantCookie } = await import('@iblai/iblai-js/web-utils');
+  const { clearCurrentTenantCookie } = await import(
+    '@iblai/iblai-js/web-utils'
+  );
   clearCurrentTenantCookie();
   // Preserve the current path before clearing localStorage
   const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -635,7 +680,8 @@ export const canSwitchLLm = (llm: {
 
   return (
     llm?.can_use_main_keys &&
-    (llm?.main_has_credentials === true || llm?.main_has_credentials === undefined)
+    (llm?.main_has_credentials === true ||
+      llm?.main_has_credentials === undefined)
   );
 };
 
@@ -657,7 +703,9 @@ export function formatRelativeDate(date: string) {
     return format(dateObj, 'h:mmaaa'); // "10:44AM"
   }
 
-  const daysDiff = Math.floor((new Date().getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.floor(
+    (new Date().getTime() - dateObj.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   if (daysDiff <= 7) {
     return format(dateObj, 'EEEE h:mmaaa'); // "Monday 10:44AM"
@@ -708,7 +756,11 @@ export function sendMessageToParentWebsite(payload: unknown) {
 }
 
 export function isLoggedIn() {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return false;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return false;
   return !!localStorage.getItem('axd_token');
 }
 
@@ -849,18 +901,25 @@ function preprocessMarkdownForHtml(markdown: string): string {
 
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
-  processed = processed.replace(/\\\[([^\]]+?)\\\]\s*\(([^)]+)\)/g, (match, label, href) => {
-    const trimmedHref = String(href ?? '').trim();
-    if (/^(https?:\/\/|mailto:|tel:|www\.)/i.test(trimmedHref) || EMAIL_PATTERN.test(trimmedHref)) {
-      return `[${label}](${trimmedHref})`;
-    }
-    return match;
-  });
+  processed = processed.replace(
+    /\\\[([^\]]+?)\\\]\s*\(([^)]+)\)/g,
+    (match, label, href) => {
+      const trimmedHref = String(href ?? '').trim();
+      if (
+        /^(https?:\/\/|mailto:|tel:|www\.)/i.test(trimmedHref) ||
+        EMAIL_PATTERN.test(trimmedHref)
+      ) {
+        return `[${label}](${trimmedHref})`;
+      }
+      return match;
+    },
+  );
 
   // Handle ```markdown code blocks - extract content and render as actual markdown
   // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(/```(?:markdown|md)\s*\n([\s\S]*?)```/gi, (_match, content) =>
-    content.trim(),
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
   );
 
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
@@ -881,7 +940,14 @@ function preprocessMarkdownForHtml(markdown: string): string {
   return processed;
 }
 
-const LINKIFY_SKIP_TAGS = new Set(['A', 'CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA']);
+const LINKIFY_SKIP_TAGS = new Set([
+  'A',
+  'CODE',
+  'PRE',
+  'SCRIPT',
+  'STYLE',
+  'TEXTAREA',
+]);
 const LINKIFY_PATTERN_SOURCE =
   '(?:https?:\\/\\/[^\\s<]+|www\\.[^\\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|(?<!\\w)(?:\\+?\\d|\\(\\d)[\\d\\s().-]{6,}\\d(?!\\w))';
 const MARKDOWN_LINK_PATTERN = '\\[([^\\]]+)\\]\\s*\\(([^)]+)\\)';
@@ -891,9 +957,11 @@ const SUP_SUB_PATTERN_SOURCE =
 
 const getLinkifyRegex = () => new RegExp(LINKIFY_PATTERN_SOURCE, 'gi');
 const getMarkdownLinkRegex = () => new RegExp(MARKDOWN_LINK_PATTERN, 'g');
-const hasMarkdownLink = (text: string) => new RegExp(MARKDOWN_LINK_PATTERN).test(text);
+const hasMarkdownLink = (text: string) =>
+  new RegExp(MARKDOWN_LINK_PATTERN).test(text);
 const getSupSubRegex = () => new RegExp(SUP_SUB_PATTERN_SOURCE, 'g');
-const hasSupSubPattern = (text: string) => new RegExp(SUP_SUB_PATTERN_SOURCE).test(text);
+const hasSupSubPattern = (text: string) =>
+  new RegExp(SUP_SUB_PATTERN_SOURCE).test(text);
 
 const shouldSkipLinkify = (element: Element | null): boolean => {
   let current: Element | null = element;
@@ -912,7 +980,10 @@ const shouldSkipSupSub = (element: Element | null): boolean => {
     if (LINKIFY_SKIP_TAGS.has(current.tagName) || current.tagName === 'MATH') {
       return true;
     }
-    if (current.classList?.contains('katex') || current.classList?.contains('katex-display')) {
+    if (
+      current.classList?.contains('katex') ||
+      current.classList?.contains('katex-display')
+    ) {
       return true;
     }
     current = current.parentElement;
@@ -920,7 +991,9 @@ const shouldSkipSupSub = (element: Element | null): boolean => {
   return false;
 };
 
-const stripTrailingPunctuation = (text: string): { linkText: string; trailing: string } => {
+const stripTrailingPunctuation = (
+  text: string,
+): { linkText: string; trailing: string } => {
   let linkText = text;
   let trailing = '';
 
@@ -938,8 +1011,10 @@ const stripTrailingPunctuation = (text: string): { linkText: string; trailing: s
 
   for (const { open, close } of bracketPairs) {
     while (linkText.endsWith(close)) {
-      const openCount = (linkText.match(new RegExp(`\\${open}`, 'g')) ?? []).length;
-      const closeCount = (linkText.match(new RegExp(`\\${close}`, 'g')) ?? []).length;
+      const openCount = (linkText.match(new RegExp(`\\${open}`, 'g')) ?? [])
+        .length;
+      const closeCount = (linkText.match(new RegExp(`\\${close}`, 'g')) ?? [])
+        .length;
       if (closeCount > openCount) {
         trailing = close + trailing;
         linkText = linkText.slice(0, -1);
@@ -996,7 +1071,10 @@ const resolveLinkMatch = (
   return null;
 };
 
-const linkifyTextNode = (text: string, doc: Document): DocumentFragment | null => {
+const linkifyTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
   const matches = Array.from(text.matchAll(getLinkifyRegex()));
   /* istanbul ignore next -- @preserve early return when no matches */
   if (matches.length === 0) {
@@ -1062,7 +1140,11 @@ const normalizeMarkdownLinkHref = (text: string): string => {
 };
 
 /* istanbul ignore next -- @preserve internal helper for linkifying text */
-const appendLinkifiedText = (fragment: DocumentFragment, text: string, doc: Document) => {
+const appendLinkifiedText = (
+  fragment: DocumentFragment,
+  text: string,
+  doc: Document,
+) => {
   if (!text) return;
   const linkified = linkifyTextNode(text, doc);
   if (linkified) {
@@ -1072,7 +1154,10 @@ const appendLinkifiedText = (fragment: DocumentFragment, text: string, doc: Docu
   }
 };
 
-const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment | null => {
+const linkifyMarkdownTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
   const sourceText = text.replace(/\\([\\[\]()])/g, '$1');
   if (!hasMarkdownLink(sourceText)) {
     return null;
@@ -1089,7 +1174,10 @@ const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment 
 
     /* istanbul ignore next -- @preserve image link handling (![alt](url)) */
     if (isImage) {
-      const before = sourceText.slice(lastIndex, matchIndex > 0 ? matchIndex - 1 : 0);
+      const before = sourceText.slice(
+        lastIndex,
+        matchIndex > 0 ? matchIndex - 1 : 0,
+      );
       appendLinkifiedText(fragment, before, doc);
       fragment.appendChild(doc.createTextNode(`!${match[0]}`));
       lastIndex = matchIndex + match[0].length;
@@ -1123,7 +1211,10 @@ const linkifyMarkdownTextNode = (text: string, doc: Document): DocumentFragment 
   return fragment;
 };
 
-const supSubTextNode = (text: string, doc: Document): DocumentFragment | null => {
+const supSubTextNode = (
+  text: string,
+  doc: Document,
+): DocumentFragment | null => {
   const matches = Array.from(text.matchAll(getSupSubRegex()));
   /* istanbul ignore next -- @preserve early return when no sup/sub patterns */
   if (matches.length === 0) {
@@ -1180,7 +1271,10 @@ const linkifyHtml = (html: string): string => {
       return;
     }
 
-    const markdownFragment = linkifyMarkdownTextNode(value, container.ownerDocument);
+    const markdownFragment = linkifyMarkdownTextNode(
+      value,
+      container.ownerDocument,
+    );
     if (markdownFragment && textNode.parentNode) {
       textNode.parentNode.replaceChild(markdownFragment, textNode);
       return;
@@ -1339,7 +1433,9 @@ export function markdownToHtml(markdownText: string) {
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(preprocessMarkdownForHtml(markdownText));
+    const cleanedMarkdown = preprocessLaTeX(
+      preprocessMarkdownForHtml(markdownText),
+    );
 
     const result = configuredMarked.parse(cleanedMarkdown);
     const html = typeof result === 'string' ? result : String(result);
@@ -1377,7 +1473,11 @@ export function getUserOS() {
 /**
  * Helper to set a cookie with base domain for cross-SPA sharing
  */
-function setCookieForAuth(name: string, value: string, days: number = 365): void {
+function setCookieForAuth(
+  name: string,
+  value: string,
+  days: number = 365,
+): void {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
 
@@ -1402,17 +1502,26 @@ function setCookieForAuth(name: string, value: string, days: number = 365): void
 function syncAuthDataToCookies(userObject: Record<string, any>): void {
   // Sync current_tenant
   if (userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]) {
-    setCookieForAuth('ibl_current_tenant', String(userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]));
+    setCookieForAuth(
+      'ibl_current_tenant',
+      String(userObject[LOCAL_STORAGE_KEYS.CURRENT_TENANT]),
+    );
   }
 
   // Sync user_data
   if (userObject[LOCAL_STORAGE_KEYS.USER_DATA]) {
-    setCookieForAuth('ibl_user_data', String(userObject[LOCAL_STORAGE_KEYS.USER_DATA]));
+    setCookieForAuth(
+      'ibl_user_data',
+      String(userObject[LOCAL_STORAGE_KEYS.USER_DATA]),
+    );
   }
 
   // Sync tenants
   if (userObject[LOCAL_STORAGE_KEYS.TENANTS]) {
-    setCookieForAuth('ibl_tenant', String(userObject[LOCAL_STORAGE_KEYS.TENANTS]));
+    setCookieForAuth(
+      'ibl_tenant',
+      String(userObject[LOCAL_STORAGE_KEYS.TENANTS]),
+    );
   }
 }
 
@@ -1444,7 +1553,9 @@ export const maxDatasetFileSizeInMegaBytes = () => {
 };
 
 // Helper function to format date to dd-mm-yyyy
-export const formatDateToYYYYMMDD = (date: Date | undefined): string | undefined => {
+export const formatDateToYYYYMMDD = (
+  date: Date | undefined,
+): string | undefined => {
   if (!date) return undefined;
 
   const day = date.getDate().toString().padStart(2, '0');
@@ -1455,7 +1566,10 @@ export const formatDateToYYYYMMDD = (date: Date | undefined): string | undefined
 };
 
 // Helper function to format date to "Oct 13" format or "Aug 15 2:00" if time is included
-export const formatDateToShortFormat = (dateString: string, displayOnlyTime?: boolean): string => {
+export const formatDateToShortFormat = (
+  dateString: string,
+  displayOnlyTime?: boolean,
+): string => {
   try {
     const date = new Date(dateString);
 

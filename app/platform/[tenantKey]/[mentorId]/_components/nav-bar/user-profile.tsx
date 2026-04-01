@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
+import {
+  useParams,
+  useRouter,
+  useSearchParams,
+  usePathname,
+} from 'next/navigation';
 import { UserProfileDropdown } from '@iblai/iblai-js/web-containers/next';
 import {
   useCurrentTenant,
@@ -18,14 +23,25 @@ import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { useSubscriptionHandlerV2, SUBSCRIPTION_V2_TRIGGERS } from '@iblai/iblai-js/web-utils';
-import { handleLogout, handleTenantSwitch, isStripeActivated, onAccountDeleted } from '@/lib/utils';
+import {
+  useSubscriptionHandlerV2,
+  SUBSCRIPTION_V2_TRIGGERS,
+} from '@iblai/iblai-js/web-utils';
+import {
+  handleLogout,
+  handleTenantSwitch,
+  isStripeActivated,
+  onAccountDeleted,
+} from '@/lib/utils';
 import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useLazyGetTenantMetadataQuery } from '@/features/tenants/api-slice';
 import { MentorVisibilityEnum, UserApp } from '@iblai/iblai-api';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
-import { selectRbacPermissions, updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
 
 export function UserProfile() {
@@ -70,7 +86,9 @@ export function UserProfile() {
       } else {
         // Clear URL param when leaving billing tab
         params.delete('profileTab');
-        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        const newUrl = params.toString()
+          ? `${pathname}?${params.toString()}`
+          : pathname;
         router.replace(newUrl, { scroll: false });
       }
     },
@@ -86,7 +104,9 @@ export function UserProfile() {
         // Clear profileTab from URL when modal closes
         const params = new URLSearchParams(searchParams.toString());
         params.delete('profileTab');
-        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        const newUrl = params.toString()
+          ? `${pathname}?${params.toString()}`
+          : pathname;
         router.replace(newUrl, { scroll: false });
         setActiveProfileTab('basic');
         // Reset flag after URL update has propagated
@@ -105,7 +125,9 @@ export function UserProfile() {
   const [loadingTenantInfo, setLoadingTenantInfo] = useState(false);
 
   const dispatch = useAppDispatch();
-  const topBannerOptions = useAppSelector((state) => state.topBanner.topBannerOptions);
+  const topBannerOptions = useAppSelector(
+    (state) => state.topBanner.topBannerOptions,
+  );
 
   const subscriptionFlow = new MentorSubscriptionFlowV2({
     platformName: config.iblPlatform(),
@@ -130,7 +152,9 @@ export function UserProfile() {
 
   // Handle upgrade click - triggers the pricing modal
   const handleUpgradeClick = useCallback(() => {
-    const triggerPricingModal = bannerButtonTriggerCallback(SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL);
+    const triggerPricingModal = bannerButtonTriggerCallback(
+      SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
+    );
     triggerPricingModal();
   }, [bannerButtonTriggerCallback]);
 
@@ -181,16 +205,21 @@ export function UserProfile() {
 
     const allowsAnonymousChat = mentorPublicSettings.allow_anonymous === true;
     const viewableByAnyone =
-      mentorPublicSettings.mentor_visibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
+      mentorPublicSettings.mentor_visibility ===
+      MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
 
     if (!allowsAnonymousChat || !viewableByAnyone) {
       return;
     }
 
-    const tenantAlreadyAdded = userTenants.some((tenant) => tenant.key === tenantKey);
+    const tenantAlreadyAdded = userTenants.some(
+      (tenant) => tenant.key === tenantKey,
+    );
 
     if (tenantAlreadyAdded) {
-      const existingTenant = userTenants.find((tenant) => tenant.key === tenantKey);
+      const existingTenant = userTenants.find(
+        (tenant) => tenant.key === tenantKey,
+      );
       if (existingTenant && currentTenant?.key !== tenantKey) {
         saveCurrentTenant(existingTenant);
       }
@@ -311,7 +340,9 @@ export function UserProfile() {
       showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
-      enableGravatarOnProfilePic={config.enableGravatarOnProfilePic() !== 'false'}
+      enableGravatarOnProfilePic={
+        config.enableGravatarOnProfilePic() !== 'false'
+      }
       // Callbacks
       onProfileClick={handleProfileClick}
       onTabChange={handleTabChange}
@@ -360,7 +391,7 @@ export function UserProfile() {
       isModalOpen={isProfileModalOpen}
       onModalOpenChange={handleModalOpenChange}
       defaultActiveTab={activeProfileTab}
-      onAccountDeleted={()=>onAccountDeleted()}
+      onAccountDeleted={() => onAccountDeleted()}
     />
   );
 }
