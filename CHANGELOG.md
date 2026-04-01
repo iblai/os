@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.44.0](https://github.com/iblai/mentorai/compare/v0.43.0...v0.44.0) (2026-04-01)
+
+### Features
+
+* **chat:** implement screen sharing and voice call modals in canvas view ([d5e3d9b](https://github.com/iblai/mentorai/commit/d5e3d9b2da39a313c9ad719e1d48a9d234b4c27e))
+* **e2e:** add journey 35 for voice call and screen share regression tests in canvas view ([1a41cbf](https://github.com/iblai/mentorai/commit/1a41cbf0bf23e7a21ad55e15ffb3e3992fddd2fe))
+* **tests:** add tests for voice call and screen sharing modals in mobile canvas view ([29ac899](https://github.com/iblai/mentorai/commit/29ac899aed2a9b9ddade162ea0ba519379106702))
+* **voice-call-screen-share:** add new journey tests for voice call and screen share flow ([269dfdf](https://github.com/iblai/mentorai/commit/269dfdf3cb500f02ce2de16b4ed070d2d540f9c8))
+
+### Bug Fixes
+
+* **chat:** add type="button" to ScreenSharingButton to prevent form submission ([af0642f](https://github.com/iblai/mentorai/commit/af0642ff64865f43baad2ac1942e2f8928c44257))
+
+### Refactors
+
+* **e2e:** extract tool and voice call toggles into page-objects ([7901c65](https://github.com/iblai/mentorai/commit/7901c6555e84df7ebc3ca44871a29b0e94206fe0))
+
+### Chores
+
+* **dependencies:** update package versions in pnpm-lock.yaml ([8f85ed7](https://github.com/iblai/mentorai/commit/8f85ed73973df2f06974c101cb13159217b5a8af))
+* **deps:** update Playwright and related dependencies ([cb733fb](https://github.com/iblai/mentorai/commit/cb733fb9def380d41a8a2a495e3388166bb8f595))
+
 ## [0.43.0](https://github.com/iblai/mentorai/compare/v0.42.0...v0.43.0) (2026-04-01)
 
 ### Features
