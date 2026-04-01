@@ -237,6 +237,7 @@ describe('AIMessageBubble', () => {
       const { container } = renderWithRedux(
         <AIMessageBubble {...defaultProps} />,
       );
+      // Avatar component may render img within nested structure
       const avatarImg = container.querySelector('img');
       if (avatarImg) {
         expect(avatarImg).toBeInTheDocument();
@@ -248,6 +249,7 @@ describe('AIMessageBubble', () => {
 
     it('should render avatar fallback with mentor initials', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      // Fallback should show "TE" for "Test Mentor"
       expect(screen.getByText('TE')).toBeInTheDocument();
     });
   });
@@ -267,7 +269,7 @@ describe('AIMessageBubble', () => {
       mockShowingSharedChat = true;
       renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
-      mockShowingSharedChat = false;
+      mockShowingSharedChat = false; // Reset for other tests
     });
 
     it('should render rating component when logged in and not shared chat', () => {
@@ -332,9 +334,7 @@ describe('AIMessageBubble', () => {
       };
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(mockReportInappropriateContent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          supportEmail: 'help@custom-tenant.com',
-        }),
+        expect.objectContaining({ supportEmail: 'help@custom-tenant.com' }),
       );
     });
   });
@@ -405,6 +405,7 @@ describe('AIMessageBubble', () => {
         <AIMessageBubble {...defaultProps} message={messageWithArtifacts} />,
       );
 
+      // When has artifact versions, should have different background
       const messageContainer = container.querySelector('.bg-white');
       expect(messageContainer).toBeInTheDocument();
     });
@@ -498,6 +499,7 @@ describe('AIMessageBubble', () => {
   describe('TooltipProvider', () => {
     it('should wrap content in TooltipProvider', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      // The component should render without errors, indicating TooltipProvider is working
       expect(screen.getByText('Test Mentor')).toBeInTheDocument();
     });
   });

@@ -11,6 +11,7 @@ const PDF_FILE = path.join(
 );
 const IMAGE_FILE = path.join(FILES_DIR, 'acessibility png.png');
 const TXT_FILE = path.join(FILES_DIR, 'outerHTML.txt');
+const CSV_FILE = path.join(FILES_DIR, 'test-data.csv');
 
 test.describe('Journey 20: Dataset Management', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -205,6 +206,18 @@ test.describe('Journey 20: Dataset Management', () => {
     const searchValue = await editMentorPage.datasets.searchInput.inputValue();
     logger.info(`TC20: Search value after reopen: "${searchValue}"`);
     expect(searchValue).toBe('');
+  });
+
+  // ── TC29: CSV upload ───────────────────────────────────────────────────────
+
+  test('admin goes to datasets tab and uploads a CSV file successfully', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.datasets.uploadFile(CSV_FILE, 'CSV');
+    // Verify the uploaded CSV file appears in the dataset list
+    const csvEntry = editMentorPage.dialog.getByText(/test-data\.csv/i);
+    await expect(csvEntry).toBeVisible({ timeout: 15_000 });
+    logger.info('TC29: CSV file uploaded and visible in dataset list');
   });
 
   // ── TC13: Train or Delete modal ────────────────────────────────────────────

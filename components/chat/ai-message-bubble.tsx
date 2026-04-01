@@ -16,7 +16,6 @@ import {
   selectShowingSharedChat,
   useTenantMetadata as useTenantMetadataHook,
   type Message,
-  type ToolCallInfo,
 } from '@iblai/iblai-js/web-utils';
 import { AIMessageRating } from './ai-message-rating';
 import { AIMessageReportInappropriateContent } from './ai-message-report-inappropriate-content';
@@ -27,8 +26,6 @@ import { useAppSelector } from '@/lib/hooks';
 import { MessagePreview } from './chat-messages/message-preview';
 import type { CanvasOpenPayload } from './chat-messages/types';
 import { config } from '@/lib/config';
-import { ReasoningSection } from './reasoning-section';
-import { ToolCallIndicator } from './tool-call-indicator';
 
 // Check if message has artifact versions
 const hasArtifactVersions = (message?: Message): boolean => {
@@ -127,21 +124,6 @@ export const AIMessageBubble = forwardRef<
                 hasArtifactVersions(message) && 'bg-white p-0',
               )}
             >
-              {reasoningContent && (
-                <ReasoningSection
-                  reasoningContent={reasoningContent}
-                  isReasoning={isReasoning || false}
-                  isCurrentlyStreaming={isCurrentlyStreaming}
-                />
-              )}
-
-              {toolCalls && toolCalls.length > 0 && (
-                <ToolCallIndicator
-                  toolCalls={toolCalls}
-                  isCurrentlyStreaming={isCurrentlyStreaming}
-                />
-              )}
-
               <div className="overflow-x-auto text-sm/6 text-gray-800 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_em]:italic [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-gray-200 [&_pre]:p-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4">
                 <MessagePreview
                   content={content}

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDebounce } from "use-debounce";
-import { Loader2, Plus, X } from "lucide-react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { Loader2, Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   useGetMentorSettingsQuery,
@@ -10,33 +10,33 @@ import {
   PlatformUsersListResponse,
   isPoliciesResponse,
   useGetRbacGroupsQuery,
-} from "@iblai/iblai-js/data-layer";
-import type { MentorPolicy, RbacUser } from "@iblai/iblai-api";
-import { useParams } from "next/navigation";
+} from '@iblai/iblai-js/data-layer';
+import type { MentorPolicy, RbacUser } from '@iblai/iblai-api';
+import { useParams } from 'next/navigation';
 
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { useUsername } from "@/hooks/use-user";
-import { useAppSelector } from "@/lib/hooks";
-import { selectRbacPermissions } from "@/features/rbac/rbac-slice";
-import { checkRbacPermission } from "@/hoc/withPermissions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useUsername } from '@/hooks/use-user';
+import { useAppSelector } from '@/lib/hooks';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 import type {
   GroupOption,
   MentorAccessPolicy,
   PlatformUserOption,
   UpdateAction,
-} from "./shared";
-import { formatRoleName, getErrorMessage } from "./shared";
+} from './shared';
+import { formatRoleName, getErrorMessage } from './shared';
 
 type RoleAccessPanelProps = {
   policy: MentorAccessPolicy;
@@ -58,19 +58,19 @@ export function RoleAccessPanel({
     rbacPermissions,
     `/groups/#list`,
   );
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [showUserSearchResults, setShowUserSearchResults] = useState(false);
   const [debouncedSearch] = useDebounce(searchTerm, 300);
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<UpdateAction | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [manualInputType, setManualInputType] = useState<"username" | "email">(
-    "email",
+  const [manualInputType, setManualInputType] = useState<'username' | 'email'>(
+    'email',
   );
-  const [manualInputValue, setManualInputValue] = useState("");
+  const [manualInputValue, setManualInputValue] = useState('');
   const [manualEntries, setManualEntries] = useState<string[]>([]);
   const [isAddingManual, setIsAddingManual] = useState(false);
-  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+  const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
   const [debouncedGroupSearch] = useDebounce(groupSearchTerm, 300);
   const [pendingGroupId, setPendingGroupId] = useState<number | null>(null);
@@ -89,10 +89,10 @@ export function RoleAccessPanel({
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
-      mentor: mentorId ?? "",
+      mentor: mentorId ?? '',
       org: tenantKey,
       // @ts-expect-error userId is not part of the query type definition
-      userId: username ?? "",
+      userId: username ?? '',
     },
     {
       skip: !mentorId || !tenantKey || !username,
@@ -112,8 +112,8 @@ export function RoleAccessPanel({
       query:
         debouncedSearch && debouncedSearch.trim().length >= 2
           ? debouncedSearch
-          : "",
-      return_policies: "false",
+          : '',
+      return_policies: 'false',
     },
     {
       skip:
@@ -137,19 +137,19 @@ export function RoleAccessPanel({
 
     return candidates
       .map<PlatformUserOption | null>((rawCandidate) => {
-        if (!rawCandidate || typeof rawCandidate !== "object") {
+        if (!rawCandidate || typeof rawCandidate !== 'object') {
           return null;
         }
 
         const candidate = rawCandidate as Record<string, unknown>;
         const rawId = candidate.user_id ?? candidate.id;
         const id =
-          typeof rawId === "string"
+          typeof rawId === 'string'
             ? Number(rawId)
-            : typeof rawId === "number"
+            : typeof rawId === 'number'
               ? rawId
               : undefined;
-        const name = (candidate.name as string | null | undefined) ?? "";
+        const name = (candidate.name as string | null | undefined) ?? '';
 
         if (!id) {
           return null;
@@ -172,7 +172,7 @@ export function RoleAccessPanel({
     if (highlightedIndex >= 0 && availableUsers[highlightedIndex]) {
       const optionId = `user-option-${availableUsers[highlightedIndex].id}`;
       const optionElement = document.getElementById(optionId);
-      optionElement?.scrollIntoView({ block: "nearest" });
+      optionElement?.scrollIntoView({ block: 'nearest' });
     }
   }, [highlightedIndex, availableUsers]);
 
@@ -195,7 +195,7 @@ export function RoleAccessPanel({
     ) => {
       if (!tenantKey || !mentorSettings?.mentor_id) {
         toast.error(
-          "Mentor context is missing. Close the modal and try again.",
+          'Mentor context is missing. Close the modal and try again.',
         );
         resetPendingState();
         return;
@@ -217,7 +217,7 @@ export function RoleAccessPanel({
         toast.success(successMessage);
         await onAccessUpdated();
       } catch (error) {
-        toast.error(getErrorMessage(error, "Unable to update mentor access."));
+        toast.error(getErrorMessage(error, 'Unable to update mentor access.'));
       } finally {
         resetPendingState();
       }
@@ -264,12 +264,12 @@ export function RoleAccessPanel({
       /* istanbul ignore next -- defensive: buttons are disabled during pending operations */
       if (pendingUserId !== null) return;
       setPendingUserId(user.id);
-      setPendingAction("add");
+      setPendingAction('add');
       await handleMutation(
         { users_to_add: [user.id] },
         `${user.name || user.email} now has ${formatRoleName(policy.role)} access.`,
       );
-      setSearchTerm("");
+      setSearchTerm('');
       setShowUserSearchResults(false);
       setHighlightedIndex(-1);
     },
@@ -283,19 +283,19 @@ export function RoleAccessPanel({
       }
 
       switch (event.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           event.preventDefault();
           setHighlightedIndex((prev) =>
             prev < availableUsers.length - 1 ? prev + 1 : 0,
           );
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           event.preventDefault();
           setHighlightedIndex((prev) =>
             prev > 0 ? prev - 1 : availableUsers.length - 1,
           );
           break;
-        case "Enter":
+        case 'Enter':
           event.preventDefault();
           if (
             highlightedIndex >= 0 &&
@@ -304,7 +304,7 @@ export function RoleAccessPanel({
             handleAddUser(availableUsers[highlightedIndex]);
           }
           break;
-        case "Escape":
+        case 'Escape':
           event.preventDefault();
           setShowUserSearchResults(false);
           setHighlightedIndex(-1);
@@ -319,7 +319,7 @@ export function RoleAccessPanel({
       /* istanbul ignore next -- defensive: buttons are disabled during pending operations */
       if (pendingUserId !== null) return;
       setPendingUserId(user.id);
-      setPendingAction("remove");
+      setPendingAction('remove');
       await handleMutation(
         { users_to_remove: [user.id] },
         `${user.username ?? `User ${user.id}`} was removed from ${formatRoleName(policy.role)} access.`,
@@ -334,7 +334,7 @@ export function RoleAccessPanel({
     setManualEntries((prev) =>
       prev.includes(value) ? prev : [...prev, value],
     );
-    setManualInputValue("");
+    setManualInputValue('');
   }, [manualInputValue]);
 
   const handleRemoveManualEntry = useCallback((entry: string) => {
@@ -350,13 +350,13 @@ export function RoleAccessPanel({
         : [...manualEntries];
     if (allEntries.length === 0) return;
     if (!tenantKey || !mentorSettings?.mentor_id) {
-      toast.error("Mentor context is missing. Close the modal and try again.");
+      toast.error('Mentor context is missing. Close the modal and try again.');
       return;
     }
     setIsAddingManual(true);
     try {
       const payload =
-        manualInputType === "email"
+        manualInputType === 'email'
           ? { emails_to_add: allEntries }
           : { usernames_to_add: allEntries };
       // @ts-expect-error The API expects a numeric mentor_id but the route param is a string.
@@ -373,11 +373,11 @@ export function RoleAccessPanel({
           ? `User added to ${formatRoleName(policy.role)} access.`
           : `${allEntries.length} users added to ${formatRoleName(policy.role)} access.`,
       );
-      setManualInputValue("");
+      setManualInputValue('');
       setManualEntries([]);
       await onAccessUpdated();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Unable to add user(s)."));
+      toast.error(getErrorMessage(error, 'Unable to add user(s).'));
     } finally {
       setIsAddingManual(false);
     }
@@ -430,8 +430,8 @@ export function RoleAccessPanel({
       .filter(
         (g): g is { id: number; name?: string } =>
           !!g &&
-          typeof g === "object" &&
-          typeof (g as Record<string, unknown>).id === "number",
+          typeof g === 'object' &&
+          typeof (g as Record<string, unknown>).id === 'number',
       )
       .map((g) => ({ id: g.id, name: g.name ?? `Group ${g.id}` }))
       .filter((g) => !assignedGroupIds.has(g.id));
@@ -452,7 +452,7 @@ export function RoleAccessPanel({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    window.setTimeout(() => {
+    setTimeout(() => {
       setShowGroupSearchResults(false);
     }, 100);
   }, []);
@@ -461,12 +461,12 @@ export function RoleAccessPanel({
     async (group: GroupOption) => {
       if (pendingGroupId !== null) return;
       setPendingGroupId(group.id);
-      setPendingGroupAction("add");
+      setPendingGroupAction('add');
       await handleMutation(
         { groups_to_add: [group.id] },
         `${group.name} now has ${formatRoleName(policy.role)} access.`,
       );
-      setGroupSearchTerm("");
+      setGroupSearchTerm('');
       setShowGroupSearchResults(false);
     },
     [handleMutation, pendingGroupId, policy.role],
@@ -476,7 +476,7 @@ export function RoleAccessPanel({
     async (group: { id: number; name?: string }) => {
       if (pendingGroupId !== null) return;
       setPendingGroupId(group.id);
-      setPendingGroupAction("remove");
+      setPendingGroupAction('remove');
       await handleMutation(
         { groups_to_remove: [group.id] },
         `${group.name ?? `Group ${group.id}`} was removed from ${formatRoleName(policy.role)} access.`,
@@ -518,7 +518,7 @@ export function RoleAccessPanel({
               onClick={() => handleRemoveUser(user)}
               disabled={pendingUserId !== null}
             >
-              {isPending(user.id, "remove") ? (
+              {isPending(user.id, 'remove') ? (
                 <Loader2
                   className="h-3.5 w-3.5 animate-spin"
                   aria-hidden="true"
@@ -580,7 +580,7 @@ export function RoleAccessPanel({
                     id="user-search-listbox"
                     role="listbox"
                     aria-label="Available users"
-                    className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+                    className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
                   >
                     {searchTerm.trim().length < 2 ? (
                       <div
@@ -612,8 +612,8 @@ export function RoleAccessPanel({
                           aria-selected={highlightedIndex === index}
                           className={`flex w-full flex-col items-start gap-1 px-3 py-2 text-left disabled:opacity-50 ${
                             highlightedIndex === index
-                              ? "bg-gray-100"
-                              : "hover:bg-gray-50"
+                              ? 'bg-gray-100'
+                              : 'hover:bg-gray-50'
                           }`}
                           onClick={() => handleAddUser(user)}
                           disabled={pendingUserId !== null}
@@ -624,11 +624,11 @@ export function RoleAccessPanel({
                           {user.name && (
                             <span className="text-xs text-gray-600">
                               {user.username}
-                              {user.username && user.email ? " • " : ""}
+                              {user.username && user.email ? ' • ' : ''}
                               {user.email}
                             </span>
                           )}
-                          {isPending(user.id, "add") && (
+                          {isPending(user.id, 'add') && (
                             <span className="inline-flex items-center gap-1 text-xs text-blue-600">
                               <Loader2
                                 className="h-3 w-3 animate-spin"
@@ -663,7 +663,7 @@ export function RoleAccessPanel({
                   <Select
                     value={manualInputType}
                     onValueChange={(value) =>
-                      setManualInputType(value as "username" | "email")
+                      setManualInputType(value as 'username' | 'email')
                     }
                   >
                     <SelectTrigger
@@ -682,15 +682,15 @@ export function RoleAccessPanel({
                     value={manualInputValue}
                     onChange={(e) => setManualInputValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === 'Enter') {
                         e.preventDefault();
                         handleStageManualEntry();
                       }
                     }}
                     placeholder={
-                      manualInputType === "email"
-                        ? "user@example.com"
-                        : "username"
+                      manualInputType === 'email'
+                        ? 'user@example.com'
+                        : 'username'
                     }
                     autoComplete="off"
                     className="flex-1"
@@ -746,7 +746,7 @@ export function RoleAccessPanel({
                       Adding…
                     </span>
                   ) : (
-                    `Add ${manualEntries.length > 0 ? `${manualEntries.length} user${manualEntries.length > 1 ? "s" : ""}` : ""}`
+                    `Add ${manualEntries.length > 0 ? `${manualEntries.length} user${manualEntries.length > 1 ? 's' : ''}` : ''}`
                   )}
                 </Button>
               </div>
@@ -791,7 +791,7 @@ export function RoleAccessPanel({
                         onClick={() => handleRemoveGroup(group)}
                         disabled={pendingGroupId !== null}
                       >
-                        {isGroupPending(group.id, "remove") ? (
+                        {isGroupPending(group.id, 'remove') ? (
                           <Loader2
                             className="h-3.5 w-3.5 animate-spin"
                             aria-hidden="true"
@@ -826,7 +826,7 @@ export function RoleAccessPanel({
                   aria-expanded={showGroupSearchResults}
                 />
                 {showGroupSearchResults && (
-                  <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                  <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                     {groupSearchTerm.trim().length < 2 ? (
                       <div
                         className="px-3 py-2 text-sm text-gray-600"
@@ -860,7 +860,7 @@ export function RoleAccessPanel({
                           <span className="text-sm font-medium text-gray-900">
                             {group.name}
                           </span>
-                          {isGroupPending(group.id, "add") && (
+                          {isGroupPending(group.id, 'add') && (
                             <span className="inline-flex items-center gap-1 text-xs text-blue-600">
                               <Loader2
                                 className="h-3 w-3 animate-spin"

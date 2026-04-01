@@ -12,6 +12,7 @@ const ACCEPTED_PDF = path.join(
   '0028-oop-object-oriented-programming-using-cpp.pdf',
 );
 const ACCEPTED_TXT = path.join(FILES_DIR, 'outerHTML.txt');
+const ACCEPTED_CSV = path.join(FILES_DIR, 'test-data.csv');
 
 /** Helper: open the file chooser via the Attach File button */
 async function openFileChooser(page: import('@playwright/test').Page) {
@@ -128,6 +129,7 @@ test.describe('Journey 8: Chat File Upload', () => {
     expect(acceptValue).toContain('image/jpeg');
     expect(acceptValue).toContain('application/pdf');
     expect(acceptValue).toContain('text/plain');
+    expect(acceptValue).toContain('.csv');
     expect(acceptValue).not.toContain('application/json');
     expect(acceptValue).not.toContain('.json');
     logger.info('File input accept attribute correctly filters types');
@@ -235,6 +237,39 @@ test.describe('Journey 8: Chat File Upload', () => {
     });
     logger.info('Text file accepted via drag and drop');
   });
+
+  test('non-admin goes to chat page and drag-and-drops a CSV file which appears in the attachments list', async ({
+    nonadminPage,
+  }) => {
+    await dragAndDropFiles(nonadminPage, [
+      {
+        name: 'test-data.csv',
+        type: 'text/csv',
+        content: 'col1,col2\nval1,val2',
+      },
+    ]);
+    await expect(
+      nonadminPage.getByText('Drop your files here'),
+    ).not.toBeVisible({ timeout: 5_000 });
+    await expect(nonadminPage.getByText('test-data.csv')).toBeVisible({
+      timeout: 15_000,
+    });
+    logger.info('CSV file accepted via drag and drop');
+  });
+
+  // fixme: non-admin user encounters pricing paywall that blocks file upload
+  test.fixme(
+    'non-admin goes to chat page and uploads a CSV file via the upload button',
+    async ({ nonadminPage }) => {
+      const chooser = await openFileChooser(nonadminPage);
+      if (!chooser) return;
+      await chooser.setFiles(ACCEPTED_CSV);
+      await expect(nonadminPage.getByText('test-data.csv')).toBeVisible({
+        timeout: 15_000,
+      });
+      logger.info('CSV file uploaded successfully via button');
+    },
+  );
 
   // ── Drag & drop – rejected files ───────────────────────────────────────────
 

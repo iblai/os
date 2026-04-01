@@ -301,7 +301,7 @@
       "id": "dataset-management",
       "name": "Dataset Management",
       "spec": "20-dataset-management.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx"],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx", "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"],
       "checkpoints": [
         { "id": "ds-01", "description": "Datasets tab header and description display correctly", "status": "covered" },
         { "id": "ds-02", "description": "Search input is visible", "status": "covered" },
@@ -595,6 +595,23 @@
         { "id": "tcr-05", "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after", "status": "covered" },
         { "id": "tcr-06", "description": "Reasoning section does not appear for non-reasoning model", "status": "covered" },
         { "id": "tcr-07", "description": "Tool call indicator and reasoning section both render in correct order in same message", "status": "covered" }
+      ]
+    },
+    {
+      "id": "voice-call-screen-share-canvas",
+      "name": "Voice Call and Screen Share in Canvas View",
+      "spec": "37-voice-call-and-screen-share-in-canvas.spec.ts",
+      "sourceFiles": ["components/chat-input-form/screen-sharing-button.tsx", "components/chat/index.tsx"],
+      "checkpoints": [
+        { "id": "vsc-01", "description": "Non-admin screen share button has type=button and does not submit chat form", "status": "covered" },
+        { "id": "vsc-02", "description": "Non-admin clicking screen share activates screen sharing not form submit", "status": "covered" },
+        { "id": "vsc-03", "description": "Non-admin voice call button has type=button", "status": "covered" },
+        { "id": "vsc-04", "description": "Admin screen share button has type=button and does not submit chat form", "status": "covered" },
+        { "id": "vsc-05", "description": "Admin clicking screen share activates screen sharing not form submit", "status": "covered" },
+        { "id": "vsc-06", "description": "Admin voice call button has type=button", "status": "covered" },
+        { "id": "vsc-07", "description": "Admin creates mentor, enables tools, opens canvas, voice call opens dialog", "status": "covered" },
+        { "id": "vsc-08", "description": "Admin creates mentor, enables tools, opens canvas, screen share activates", "status": "covered" },
+        { "id": "vsc-09", "description": "Admin creates mentor, enables tools, opens canvas, screen share does not submit form", "status": "covered" }
       ]
     }
   ]

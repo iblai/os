@@ -1801,9 +1801,31 @@ export function Chat({
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
                 stopGenerating={stopGenerating}
-                onScreenSharingClick={/* istanbul ignore next */ () => {}} // Disabled in canvas view
-                isScreenSharingModalOpen={false}
-                onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas view
+                onScreenSharingClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  if (isScreenSharingModalOpen) {
+                    setIsScreenSharingModalOpen(false);
+                  } else {
+                    setIsScreenSharingModalOpen(true);
+                  }
+                }}
+                isScreenSharingModalOpen={isScreenSharingModalOpen}
+                onPhoneCallClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  setIsPhoneCallModalOpen(true);
+                }}
                 tenantKey={tenantKey}
                 username={username ?? ''}
                 setMessage={setMessage}
@@ -1879,9 +1901,31 @@ export function Chat({
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
                 stopGenerating={stopGenerating}
-                onScreenSharingClick={/* istanbul ignore next */ () => {}} // Disabled in canvas mobile view
-                isScreenSharingModalOpen={false}
-                onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas mobile view
+                onScreenSharingClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  if (isScreenSharingModalOpen) {
+                    setIsScreenSharingModalOpen(false);
+                  } else {
+                    setIsScreenSharingModalOpen(true);
+                  }
+                }}
+                isScreenSharingModalOpen={isScreenSharingModalOpen}
+                onPhoneCallClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  setIsPhoneCallModalOpen(true);
+                }}
                 tenantKey={tenantKey}
                 username={username ?? ''}
                 setMessage={setMessage}

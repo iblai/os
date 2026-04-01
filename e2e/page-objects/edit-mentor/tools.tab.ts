@@ -5,65 +5,54 @@ export class ToolsTab {
   readonly dialog: Locator;
 
   readonly toolToggles: Locator;
-  readonly saveButton: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
     this.toolToggles = dialog.getByRole('switch');
-    this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
+  }
+
+  private getToolToggle(toolName: string): Locator {
+    return this.dialog.getByRole('switch', {
+      name: new RegExp(toolName, 'i'),
+    });
   }
 
   async toggleTool(toolName: string): Promise<void> {
-    const toggle = this.dialog.getByRole('switch', {
-      name: new RegExp(toolName, 'i'),
-    });
+    const toggle = this.getToolToggle(toolName);
     await expect(toggle).toBeVisible({ timeout: 10_000 });
     await toggle.click();
   }
 
   /**
-   * Enable a tool by name if not already enabled.
-   * Idempotent — does nothing if the tool is already on.
+   * Enable a tool if it is not already enabled. Tools tab auto-saves on toggle.
    */
   async enableTool(toolName: string): Promise<void> {
-    const toggle = this.dialog.getByRole('switch', {
-      name: new RegExp(toolName, 'i'),
-    });
-    await expect(toggle).toBeVisible({ timeout: 15_000 });
-    const isChecked = await toggle.getAttribute('aria-checked');
-    if (isChecked !== 'true') {
+    const toggle = this.getToolToggle(toolName);
+    await expect(toggle).toBeVisible({ timeout: 10_000 });
+    const isChecked = (await toggle.getAttribute('aria-checked')) === 'true';
+    if (!isChecked) {
       await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-checked', 'true', {
-        timeout: 10_000,
-      });
+      await this.page.waitForTimeout(2_000);
     }
   }
 
   /**
-   * Disable a tool by name if not already disabled.
-   * Idempotent — does nothing if the tool is already off.
+   * Disable a tool if it is currently enabled. Tools tab auto-saves on toggle.
    */
   async disableTool(toolName: string): Promise<void> {
-    const toggle = this.dialog.getByRole('switch', {
-      name: new RegExp(toolName, 'i'),
-    });
-    await expect(toggle).toBeVisible({ timeout: 15_000 });
-    const isChecked = await toggle.getAttribute('aria-checked');
-    if (isChecked === 'true') {
+    const toggle = this.getToolToggle(toolName);
+    await expect(toggle).toBeVisible({ timeout: 10_000 });
+    const isChecked = (await toggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked) {
       await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-checked', 'false', {
-        timeout: 10_000,
-      });
+      await this.page.waitForTimeout(2_000);
     }
   }
 
   async isToolEnabled(toolName: string): Promise<boolean> {
-    const toggle = this.dialog.getByRole('switch', {
-      name: new RegExp(toolName, 'i'),
-    });
-    const checked = await toggle.getAttribute('aria-checked');
-    return checked === 'true';
+    const toggle = this.getToolToggle(toolName);
+    return (await toggle.getAttribute('aria-checked')) === 'true';
   }
 
   async getToolCount(): Promise<number> {
