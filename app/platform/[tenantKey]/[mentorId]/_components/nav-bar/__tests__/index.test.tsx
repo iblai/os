@@ -165,20 +165,13 @@ vi.mock("@/hooks/user-navigate", () => ({
 }));
 
 vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
+  const actual =
+    await importOriginal<typeof import("@iblai/iblai-js/data-layer")>();
   return {
     ...actual,
     useGetMemsearchConfigQuery: () => ({
       data: { enable_memsearch: true },
     }),
-  };
-});
-
-vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@iblai/iblai-js/data-layer")>();
-  return {
-    ...actual,
     useGetMentorSettingsQuery: () => ({
       data: mockMentorSettings,
       isLoading: false,

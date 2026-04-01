@@ -1,26 +1,35 @@
-import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import { MentorVisibilityEnum } from '@iblai/iblai-api';
-import { EditMentorModal } from './index';
-import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
-import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
-import rbacReducer from '@/features/rbac/rbac-slice';
-import { MODALS, UserType } from '@/lib/constants';
+import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  render,
+  screen,
+  cleanup,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
+import { MentorVisibilityEnum } from "@iblai/iblai-api";
+import { EditMentorModal } from "./index";
+import { modalReducer, type ModalInfo } from "@/features/navigation/slice";
+import { mentorApiSlice } from "@iblai/iblai-js/data-layer";
+import rbacReducer from "@/features/rbac/rbac-slice";
+import { MODALS, UserType } from "@/lib/constants";
 
-global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+global.URL.createObjectURL = vi.fn(() => "blob:mock-url");
 global.URL.revokeObjectURL = vi.fn();
 
 const pushMock = vi.fn();
 const changeModalTabMock = vi.fn();
-let mockSearchParamsRaw = '';
+let mockSearchParamsRaw = "";
 let mockIsAdmin = true;
 let mockGetEditMentorTab: string | undefined = MODALS.EDIT_MENTOR.tabs.settings;
-let mockGetMentorId: string | null = 'mentor456';
-let mockIsUserTypeAllowed: (item: { userTypes: string[] }) => boolean = (item) =>
-  item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL);
+let mockGetMentorId: string | null = "mentor456";
+let mockIsUserTypeAllowed: (item: { userTypes: string[] }) => boolean = (
+  item,
+) =>
+  item.userTypes.includes(UserType.ADMIN) ||
+  item.userTypes.includes(UserType.FREE_TRIAL);
 let mockEnableRBAC = false;
 let mockCheckRbacPermissionResult = true;
 let mockMentorSettings: any = null;
@@ -52,34 +61,35 @@ const dfp = {
 
 function dms() {
   return {
-    mentor: 'Test Mentor',
+    mentor: "Test Mentor",
     mentor_id: 123,
-    mentor_unique_id: 'mentor456',
-    platform_key: 'tenant123',
+    mentor_unique_id: "mentor456",
+    platform_key: "tenant123",
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     permissions: { field: { ...dfp } },
   };
 }
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
-  usePathname: () => '/platform/tenant123/mentor456',
-  useParams: () => ({ tenantKey: 'tenant123', mentorId: 'mentor456' }),
+  usePathname: () => "/platform/tenant123/mentor456",
+  useParams: () => ({ tenantKey: "tenant123", mentorId: "mentor456" }),
   useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
 }));
 
-vi.mock('@/hooks/use-user', () => ({
+vi.mock("@/hooks/use-user", () => ({
   useIsAdmin: () => mockIsAdmin,
-  useUsername: () => 'testuser',
+  useUsername: () => "testuser",
 }));
 
-vi.mock('@/hooks/use-user-type', () => ({
+vi.mock("@/hooks/use-user-type", () => ({
   useUserType: () => ({
-    isUserTypeAllowed: (item: { userTypes: string[] }) => mockIsUserTypeAllowed(item),
+    isUserTypeAllowed: (item: { userTypes: string[] }) =>
+      mockIsUserTypeAllowed(item),
   }),
 }));
 
-vi.mock('@/hooks/user-navigate', () => ({
+vi.mock("@/hooks/user-navigate", () => ({
   useNavigate: () => ({
     changeModalTab: changeModalTabMock,
     getEditMentorTab: () => mockGetEditMentorTab,
@@ -87,8 +97,9 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@iblai/iblai-js/data-layer")>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
@@ -96,52 +107,55 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: mockIsSuccess,
     }),
+    useGetMemsearchConfigQuery: () => ({
+      data: { enable_memsearch: true },
+    }),
   };
 });
 
-vi.mock('@/lib/config', () => ({
+vi.mock("@/lib/config", () => ({
   config: {
-    mainTenantKey: () => 'main',
-    iblTemplateMentor: () => 'ai-mentor',
-    environment: () => 'test',
-    authUrl: () => '',
-    lmsUrl: () => '',
-    dmUrl: () => '',
-    axdUrl: () => '',
-    mentorUrl: () => '',
-    mentorIframeUrl: () => '',
-    externalPricingPageUrl: () => '',
-    stripeEnabled: () => 'true',
-    baseWsUrl: () => '',
-    liveKitServerUrl: () => '',
-    mentorSettingsDisclaimer: () => '',
-    iframeFromOldMentor: () => 'false',
+    mainTenantKey: () => "main",
+    iblTemplateMentor: () => "ai-mentor",
+    environment: () => "test",
+    authUrl: () => "",
+    lmsUrl: () => "",
+    dmUrl: () => "",
+    axdUrl: () => "",
+    mentorUrl: () => "",
+    mentorIframeUrl: () => "",
+    externalPricingPageUrl: () => "",
+    stripeEnabled: () => "true",
+    baseWsUrl: () => "",
+    liveKitServerUrl: () => "",
+    mentorSettingsDisclaimer: () => "",
+    iframeFromOldMentor: () => "false",
     enableRBAC: () => mockEnableRBAC,
-    sentryDsn: () => '',
-    helpCenterUrl: () => '',
-    supportEmail: () => '',
-    enableGravatarOnProfilePic: () => 'false',
-    defaultEmbedCssUrl: () => '',
-    appBannerLink: () => '',
-    appBannerLinkText: () => '',
-    appBannerBadge: () => '',
-    appBannerText: () => '',
-    showAppBanner: () => 'false',
-    mentorTrainingMaximumFileSize: () => '60',
-    hideAnalytics: () => 'false',
+    sentryDsn: () => "",
+    helpCenterUrl: () => "",
+    supportEmail: () => "",
+    enableGravatarOnProfilePic: () => "false",
+    defaultEmbedCssUrl: () => "",
+    appBannerLink: () => "",
+    appBannerLinkText: () => "",
+    appBannerBadge: () => "",
+    appBannerText: () => "",
+    showAppBanner: () => "false",
+    mentorTrainingMaximumFileSize: () => "60",
+    hideAnalytics: () => "false",
     showBaseMentor: () => false,
-    disabedDatasets: () => '',
+    disabedDatasets: () => "",
     advertisingEnabled: () => false,
-    disabledAnalyticsReports: () => '',
-    platformBaseDomain: () => 'example.com',
-    iblPlatform: () => 'mentor',
-    iblEnableSpecialLogoWhenIframed: () => 'false',
+    disabledAnalyticsReports: () => "",
+    platformBaseDomain: () => "example.com",
+    iblPlatform: () => "mentor",
+    iblEnableSpecialLogoWhenIframed: () => "false",
   },
 }));
 
-vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
-vi.mock('./tabs', () => ({
+vi.mock("./tabs", () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
@@ -155,15 +169,17 @@ vi.mock('./tabs', () => ({
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
 }));
 
-vi.mock('./tabs/memory-tab', () => ({
+vi.mock("./tabs/memory-tab", () => ({
   MemoryTab: () => <div data-testid="memory-tab">Memory Tab</div>,
 }));
 
-vi.mock('./tabs/disclaimers-tab', () => ({
-  DisclaimersTab: () => <div data-testid="disclaimers-tab">Disclaimers Tab</div>,
+vi.mock("./tabs/disclaimers-tab", () => ({
+  DisclaimersTab: () => (
+    <div data-testid="disclaimers-tab">Disclaimers Tab</div>
+  ),
 }));
 
-vi.mock('@/hoc/utils', () => ({
+vi.mock("@/hoc/utils", () => ({
   rbacPermissionToDisplay: (pf: string[], perms: any) => {
     if (!mockEnableRBAC || !perms || pf.length === 0) return true;
     for (const f of pf) {
@@ -173,7 +189,7 @@ vi.mock('@/hoc/utils', () => ({
   },
 }));
 
-vi.mock('@/hoc/withPermissions', () => ({
+vi.mock("@/hoc/withPermissions", () => ({
   checkRbacPermission: () => mockCheckRbacPermissionResult,
 }));
 
@@ -184,16 +200,17 @@ function createTestStore(ps: ModalInfo[] = [], rp: object = {}) {
       rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
-    middleware: (g) => g({ serializableCheck: false }).concat(mentorApiSlice.middleware),
+    middleware: (g) =>
+      g({ serializableCheck: false }).concat(mentorApiSlice.middleware),
     preloadedState: {
       modals: {
         modalStack: ps,
         customAlertDialog: {
-          message: '',
-          validateTrigger: '',
-          cancelTrigger: '',
+          message: "",
+          validateTrigger: "",
+          cancelTrigger: "",
           isOpen: false,
-          title: '',
+          title: "",
         },
         iframeCloseButton: false,
         darkMode: false,
@@ -212,22 +229,23 @@ function renderM(isOpen = true, onClose = vi.fn(), store = createTestStore()) {
   );
 }
 
-describe('EditMentorModal', () => {
+describe("EditMentorModal", () => {
   beforeEach(() => {
     cleanup();
     pushMock.mockReset();
     changeModalTabMock.mockReset();
-    mockSearchParamsRaw = '';
+    mockSearchParamsRaw = "";
     mockIsAdmin = true;
     mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.settings;
-    mockGetMentorId = 'mentor456';
+    mockGetMentorId = "mentor456";
     mockEnableRBAC = false;
     mockCheckRbacPermissionResult = true;
     mockIsSuccess = true;
     mockIsUserTypeAllowed = (item) =>
-      item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL);
+      item.userTypes.includes(UserType.ADMIN) ||
+      item.userTypes.includes(UserType.FREE_TRIAL);
     mockMentorSettings = dms();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -235,151 +253,174 @@ describe('EditMentorModal', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Rendering', () => {
-    it('renders dialog when isOpen true', () => {
+  describe("Rendering", () => {
+    it("renders dialog when isOpen true", () => {
       renderM(true);
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    it('no dialog when isOpen false', () => {
+    it("no dialog when isOpen false", () => {
       renderM(false);
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    it('shows mentor name in title', async () => {
+    it("shows mentor name in title", async () => {
       renderM();
       await waitFor(() => {
         const h = screen
-          .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Test Mentor'));
+          .getAllByRole("heading")
+          .find((el) => el.textContent?.includes("Edit Test Mentor"));
         expect(h).toBeTruthy();
       });
     });
 
-    it('shows Edit Mentor fallback', async () => {
+    it("shows Edit Mentor fallback", async () => {
       mockGetMentorId = null;
       renderM();
       await waitFor(() => {
         const h = screen
-          .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Mentor'));
+          .getAllByRole("heading")
+          .find((el) => el.textContent?.includes("Edit Mentor"));
         expect(h).toBeTruthy();
       });
     });
 
-    it('sr-only description', async () => {
+    it("sr-only description", async () => {
       renderM();
       await waitFor(() => {
-        const d = screen.getByText(/Edit Mentor settings, prompts, tools, safety/i);
-        expect(d).toHaveClass('sr-only');
+        const d = screen.getByText(
+          /Edit Mentor settings, prompts, tools, safety/i,
+        );
+        expect(d).toHaveClass("sr-only");
       });
     });
 
-    it('default settings tab', async () => {
+    it("default settings tab", async () => {
       renderM();
-      await waitFor(() => expect(screen.getByTestId('settings-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId("settings-tab")).toBeInTheDocument(),
+      );
     });
   });
 
-  describe('Active Tab', () => {
-    it('uses getEditMentorTab', async () => {
+  describe("Active Tab", () => {
+    it("uses getEditMentorTab", async () => {
       mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.llm;
       renderM();
-      await waitFor(() => expect(screen.getByTestId('llm-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId("llm-tab")).toBeInTheDocument(),
+      );
     });
 
-    it('defaults to settings', async () => {
+    it("defaults to settings", async () => {
       mockGetEditMentorTab = undefined;
       renderM();
-      await waitFor(() => expect(screen.getByTestId('settings-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId("settings-tab")).toBeInTheDocument(),
+      );
     });
   });
 
-  describe('handleTabChange', () => {
-    it('LLM tab trigger is clickable and has correct role', async () => {
+  describe("handleTabChange", () => {
+    it("LLM tab trigger is clickable and has correct role", async () => {
       renderM();
       await waitFor(() => {
-        const llmTab = document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.llm}`);
+        const llmTab = document.getElementById(
+          `desktop-tab-${MODALS.EDIT_MENTOR.tabs.llm}`,
+        );
         expect(llmTab).toBeTruthy();
-        expect(llmTab?.getAttribute('role')).toBe('tab');
-        expect(llmTab?.getAttribute('type')).toBe('button');
+        expect(llmTab?.getAttribute("role")).toBe("tab");
+        expect(llmTab?.getAttribute("type")).toBe("button");
       });
     });
 
-    it('Prompts tab trigger is clickable and has correct value', async () => {
+    it("Prompts tab trigger is clickable and has correct value", async () => {
       renderM();
       await waitFor(() => {
         const promptsTab = document.getElementById(
           `desktop-tab-${MODALS.EDIT_MENTOR.tabs.prompts}`,
         );
         expect(promptsTab).toBeTruthy();
-        expect(promptsTab?.getAttribute('role')).toBe('tab');
+        expect(promptsTab?.getAttribute("role")).toBe("tab");
         // The active tab should be settings by default, prompts should be inactive
-        expect(promptsTab?.getAttribute('data-state')).toBe('inactive');
+        expect(promptsTab?.getAttribute("data-state")).toBe("inactive");
       });
     });
 
-    it('active settings tab has data-state active', async () => {
+    it("active settings tab has data-state active", async () => {
       renderM();
       await waitFor(() => {
         const settingsTab = document.getElementById(
           `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
         );
-        expect(settingsTab?.getAttribute('data-state')).toBe('active');
+        expect(settingsTab?.getAttribute("data-state")).toBe("active");
       });
     });
   });
 
-  describe('Desktop Sidebar', () => {
-    it('tablist aria-label', async () => {
+  describe("Desktop Sidebar", () => {
+    it("tablist aria-label", async () => {
       renderM();
       await waitFor(() => {
         expect(
           screen
-            .getAllByRole('tablist')
-            .find((t) => t.getAttribute('aria-label') === 'Mentor settings tabs'),
+            .getAllByRole("tablist")
+            .find(
+              (t) => t.getAttribute("aria-label") === "Mentor settings tabs",
+            ),
         ).toBeTruthy();
       });
     });
 
-    it('desktop-tab IDs', async () => {
+    it("desktop-tab IDs", async () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('aria-controls', async () => {
+    it("aria-controls", async () => {
       renderM();
       await waitFor(() => {
         expect(
           document
             .getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`)
-            ?.getAttribute('aria-controls'),
+            ?.getAttribute("aria-controls"),
         ).toBe(`panel-${MODALS.EDIT_MENTOR.tabs.settings}`);
       });
     });
 
-    it('panel aria-labelledby', async () => {
+    it("panel aria-labelledby", async () => {
       renderM();
       await waitFor(() => {
-        const p = document.getElementById(`panel-${MODALS.EDIT_MENTOR.tabs.settings}`);
+        const p = document.getElementById(
+          `panel-${MODALS.EDIT_MENTOR.tabs.settings}`,
+        );
         expect(p).toBeInTheDocument();
-        expect(p?.getAttribute('aria-labelledby')).toBe(`tab-${MODALS.EDIT_MENTOR.tabs.settings}`);
+        expect(p?.getAttribute("aria-labelledby")).toBe(
+          `tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+        );
       });
     });
   });
 
-  describe('Mobile Tabs', () => {
-    it('multiple tablists', async () => {
+  describe("Mobile Tabs", () => {
+    it("multiple tablists", async () => {
       renderM();
-      await waitFor(() => expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2));
+      await waitFor(() =>
+        expect(screen.getAllByRole("tablist").length).toBeGreaterThanOrEqual(2),
+      );
     });
 
-    it('narrow screen tabs', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+    it("narrow screen tabs", async () => {
+      Object.defineProperty(window, "innerWidth", {
+        value: 500,
+        writable: true,
+      });
       renderM();
       await waitFor(() =>
         expect(
@@ -388,185 +429,227 @@ describe('EditMentorModal', () => {
       );
     });
 
-    it('tablet tabs', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    it("tablet tabs", async () => {
+      Object.defineProperty(window, "innerWidth", {
+        value: 1024,
+        writable: true,
+      });
       renderM();
-      await waitFor(() => expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2));
+      await waitFor(() =>
+        expect(screen.getAllByRole("tablist").length).toBeGreaterThanOrEqual(2),
+      );
     });
 
-    it('overflow dropdown', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+    it("overflow dropdown", async () => {
+      Object.defineProperty(window, "innerWidth", {
+        value: 500,
+        writable: true,
+      });
       renderM();
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole("dialog")).toBeInTheDocument(),
+      );
     });
   });
 
-  describe('Tab Filtering', () => {
-    it('shows tabs for ADMIN/FREE_TRIAL', async () => {
+  describe("Tab Filtering", () => {
+    it("shows tabs for ADMIN/FREE_TRIAL", async () => {
       renderM();
       await waitFor(() => {
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument();
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).toBeInTheDocument();
       });
     });
 
-    it('filters when user type STUDENT', async () => {
+    it("filters when user type STUDENT", async () => {
       mockIsUserTypeAllowed = (i) => i.userTypes.includes(UserType.STUDENT);
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('shows when mentor not on main tenant', async () => {
+    it("shows when mentor not on main tenant", async () => {
       mockIsAdmin = false;
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'custom',
+        platform_key: "custom",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
       };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('shows when visibility matches for admin', async () => {
+    it("shows when visibility matches for admin", async () => {
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'main',
+        platform_key: "main",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('filters when visibility no match', async () => {
+    it("filters when visibility no match", async () => {
       mockIsAdmin = false;
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'main',
+        platform_key: "main",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
       };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('filters when RBAC fails', async () => {
+    it("filters when RBAC fails", async () => {
       mockCheckRbacPermissionResult = false;
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('shows when RBAC passes', async () => {
+    it("shows when RBAC passes", async () => {
       mockCheckRbacPermissionResult = true;
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('filters when field perms missing RBAC on', async () => {
+    it("filters when field perms missing RBAC on", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('shows empty permissionFieldsCheck tabs', async () => {
+    it("shows empty permissionFieldsCheck tabs", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('no tabs when null settings', async () => {
+    it("no tabs when null settings", async () => {
       mockMentorSettings = null;
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('no tabs when undefined settings', async () => {
+    it("no tabs when undefined settings", async () => {
       mockMentorSettings = undefined;
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
   });
 
-  describe('getMentorId fallback', () => {
-    it('uses truthy getMentorId', async () => {
-      mockGetMentorId = 'x';
+  describe("getMentorId fallback", () => {
+    it("uses truthy getMentorId", async () => {
+      mockGetMentorId = "x";
       renderM();
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole("dialog")).toBeInTheDocument(),
+      );
     });
 
-    it('fallback on null', async () => {
+    it("fallback on null", async () => {
       mockGetMentorId = null;
       renderM();
       await waitFor(() =>
         expect(
-          screen.getAllByRole('heading').find((h) => h.textContent?.includes('Edit Mentor')),
+          screen
+            .getAllByRole("heading")
+            .find((h) => h.textContent?.includes("Edit Mentor")),
         ).toBeTruthy(),
       );
     });
 
-    it('fallback on empty', async () => {
-      mockGetMentorId = '';
+    it("fallback on empty", async () => {
+      mockGetMentorId = "";
       renderM();
       await waitFor(() =>
         expect(
-          screen.getAllByRole('heading').find((h) => h.textContent?.includes('Edit Mentor')),
+          screen
+            .getAllByRole("heading")
+            .find((h) => h.textContent?.includes("Edit Mentor")),
         ).toBeTruthy(),
       );
     });
   });
 
-  describe('onClose', () => {
-    it('calls onClose', async () => {
+  describe("onClose", () => {
+    it("calls onClose", async () => {
       const fn = vi.fn();
       renderM(true, fn);
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-      const b = screen.getByRole('button', { name: /close/i });
+      await waitFor(() =>
+        expect(screen.getByRole("dialog")).toBeInTheDocument(),
+      );
+      const b = screen.getByRole("button", { name: /close/i });
       if (b) {
         fireEvent.click(b);
         expect(fn).toHaveBeenCalled();
@@ -574,21 +657,21 @@ describe('EditMentorModal', () => {
     });
   });
 
-  describe('All Tabs', () => {
+  describe("All Tabs", () => {
     const cases = [
-      { t: MODALS.EDIT_MENTOR.tabs.settings, id: 'settings-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.access, id: 'access-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.llm, id: 'llm-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.prompts, id: 'prompts-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.safety, id: 'safety-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.memory, id: 'memory-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.history, id: 'history-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.datasets, id: 'datasets-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.api, id: 'api-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.embed, id: 'embed-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.settings, id: "settings-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.access, id: "access-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.llm, id: "llm-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.prompts, id: "prompts-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.safety, id: "safety-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: "disclaimers-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.tools, id: "tools-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.mcp, id: "mcp-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.memory, id: "memory-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.history, id: "history-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.datasets, id: "datasets-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.api, id: "api-tab" },
+      { t: MODALS.EDIT_MENTOR.tabs.embed, id: "embed-tab" },
     ];
     cases.forEach(({ t, id }) => {
       it(`renders ${t}`, async () => {
@@ -599,25 +682,29 @@ describe('EditMentorModal', () => {
     });
   });
 
-  describe('Edge Cases', () => {
-    it('Access filtered STUDENTS visibility', async () => {
+  describe("Edge Cases", () => {
+    it("Access filtered STUDENTS visibility", async () => {
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'main',
+        platform_key: "main",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
       };
       renderM();
       await waitFor(() => {
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).not.toBeInTheDocument();
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument();
       });
     });
 
-    it('empty permissionFieldsCheck passes', async () => {
+    it("empty permissionFieldsCheck passes", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
@@ -629,58 +716,72 @@ describe('EditMentorModal', () => {
       );
     });
 
-    it('AND: field ok RBAC fail', async () => {
+    it("AND: field ok RBAC fail", async () => {
       mockCheckRbacPermissionResult = false;
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('AND: RBAC ok field fail', async () => {
+    it("AND: RBAC ok field fail", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
-      mockMentorSettings = { ...dms(), permissions: { field: { x: { read: true, write: true } } } };
+      mockMentorSettings = {
+        ...dms(),
+        permissions: { field: { x: { read: true, write: true } } },
+      };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('AND: both fail', async () => {
+    it("AND: both fail", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = false;
-      mockMentorSettings = { ...dms(), permissions: { field: { x: { read: true, write: true } } } };
+      mockMentorSettings = {
+        ...dms(),
+        permissions: { field: { x: { read: true, write: true } } },
+      };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
 
-    it('visibility false branch', async () => {
+    it("visibility false branch", async () => {
       mockIsAdmin = false;
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'main',
+        platform_key: "main",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
       };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
   });
 
-  describe('Full 13 tabs', () => {
-    it('all tabs render', async () => {
+  describe("Full 13 tabs", () => {
+    it("all tabs render", async () => {
       renderM();
       const ts = [
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -698,17 +799,22 @@ describe('EditMentorModal', () => {
         MODALS.EDIT_MENTOR.tabs.embed,
       ];
       await waitFor(() => {
-        for (const v of ts) expect(document.getElementById(`desktop-tab-${v}`)).toBeInTheDocument();
+        for (const v of ts)
+          expect(
+            document.getElementById(`desktop-tab-${v}`),
+          ).toBeInTheDocument();
       });
     });
   });
 
-  describe('Re-runs', () => {
-    it('handles settings null', async () => {
+  describe("Re-runs", () => {
+    it("handles settings null", async () => {
       const { rerender } = renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
       mockMentorSettings = null;
@@ -717,16 +823,18 @@ describe('EditMentorModal', () => {
           <EditMentorModal isOpen={true} onClose={vi.fn()} />
         </Provider>,
       );
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    it('updates on isSuccess', async () => {
+    it("updates on isSuccess", async () => {
       mockIsSuccess = false;
       mockMentorSettings = null;
       const { rerender } = renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
       mockIsSuccess = true;
@@ -738,30 +846,34 @@ describe('EditMentorModal', () => {
       );
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
   });
 
-  describe('STUDENTS visibility', () => {
-    it('shows STUDENTS tabs', async () => {
+  describe("STUDENTS visibility", () => {
+    it("shows STUDENTS tabs", async () => {
       mockMentorSettings = {
         ...dms(),
-        platform_key: 'tenant123',
+        platform_key: "tenant123",
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
       };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
   });
 
-  describe('Partial perms', () => {
-    it('partial read ok', async () => {
+  describe("Partial perms", () => {
+    it("partial read ok", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = {
@@ -771,12 +883,14 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
 
-    it('all read false hides', async () => {
+    it("all read false hides", async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = {
@@ -799,19 +913,23 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
   });
 
-  describe('Missing perms', () => {
-    it('undefined perms ok', async () => {
+  describe("Missing perms", () => {
+    it("undefined perms ok", async () => {
       mockMentorSettings = { ...dms(), permissions: undefined };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });

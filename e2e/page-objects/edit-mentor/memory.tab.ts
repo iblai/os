@@ -7,6 +7,7 @@ export class MemoryTab {
   readonly enableMemoryToggle: Locator;
   readonly addMemoryButton: Locator;
   readonly emptyState: Locator;
+  readonly loadingState: Locator;
   readonly userFilter: Locator;
   readonly dateRangeButton: Locator;
   // Each memory entry has an unnamed icon button (MoreHorizontal) as its action trigger.
@@ -33,6 +34,7 @@ export class MemoryTab {
       .locator("button")
       .filter({ hasText: /add memory/i });
     this.emptyState = dialog.getByText("No saved memories yet.");
+    this.loadingState = dialog.getByText("Loading memories...");
     this.userFilter = dialog
       .locator("button")
       .filter({ hasText: /search for user/i });
@@ -45,6 +47,13 @@ export class MemoryTab {
     this.memoryActionButtons = dialog
       .locator(".space-y-3 button:not([aria-label]):not([name])")
       .or(dialog.locator('button[class*="ghost"][class*="h-6"]'));
+  }
+
+  /**
+   * Wait for the memory list to finish loading (no loading spinner visible).
+   */
+  private async waitForLoaded(): Promise<void> {
+    await expect(this.loadingState).not.toBeVisible({ timeout: 15_000 });
   }
 
   async isMemoryEnabled(): Promise<boolean> {
@@ -80,16 +89,19 @@ export class MemoryTab {
   }
 
   async hasMemories(): Promise<boolean> {
+    await this.waitForLoaded();
     const empty = await this.emptyState
-      .isVisible({ timeout: 5_000 })
+      .isVisible({ timeout: 3_000 })
       .catch(() => false);
     return !empty;
   }
 
   /**
    * Get the count of visible memory entries.
+   * Waits for loading to complete before counting.
    */
   async getMemoryCount(): Promise<number> {
+    await this.waitForLoaded();
     return this.memoryActionButtons.count().catch(() => 0);
   }
 
@@ -114,6 +126,7 @@ export class MemoryTab {
    * Add a new memory entry via the Add Memory dialog.
    */
   async addMemory(content: string): Promise<void> {
+    await expect(this.addMemoryButton).toBeVisible({ timeout: 10_000 });
     await this.addMemoryButton.click();
 
     const addDialog = this.page
@@ -131,12 +144,17 @@ export class MemoryTab {
     await expect(
       this.page.getByText("Memory created successfully"),
     ).toBeVisible({ timeout: 10_000 });
+
+    // Wait for the dialog to close and the list to refresh
+    await expect(addDialog).not.toBeVisible({ timeout: 5_000 });
+    await this.waitForLoaded();
   }
 
   /**
    * Edit the first memory entry via its action menu.
    */
   async editFirst(newContent: string): Promise<void> {
+    await this.waitForLoaded();
     const firstActionBtn = this.memoryActionButtons.first();
     await expect(firstActionBtn).toBeVisible({ timeout: 10_000 });
     await firstActionBtn.click();
@@ -163,6 +181,10 @@ export class MemoryTab {
     await expect(
       this.page.getByText("Memory updated successfully"),
     ).toBeVisible({ timeout: 10_000 });
+
+    // Wait for the dialog to close and the list to refresh
+    await expect(editDialog).not.toBeVisible({ timeout: 5_000 });
+    await this.waitForLoaded();
   }
 
   /**
@@ -170,6 +192,7 @@ export class MemoryTab {
    * and selecting "Delete" from the dropdown, then confirming.
    */
   async deleteFirst(): Promise<void> {
+    await this.waitForLoaded();
     const firstActionBtn = this.memoryActionButtons.first();
     await expect(firstActionBtn).toBeVisible({ timeout: 10_000 });
     await firstActionBtn.click();
@@ -198,6 +221,9 @@ export class MemoryTab {
     await expect(
       this.page.getByText("Memory deleted successfully"),
     ).toBeVisible({ timeout: 10_000 });
+
+    // Wait for the list to refresh after deletion
+    await this.waitForLoaded();
   }
 
   /**
@@ -208,6 +234,6 @@ export class MemoryTab {
       .locator("button")
       .filter({ hasText: new RegExp(`^${categoryName}$`) });
     await categoryButton.click();
-    await this.page.waitForTimeout(500);
+    await this.waitForLoaded();
   }
 }

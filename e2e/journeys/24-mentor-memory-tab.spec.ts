@@ -118,9 +118,7 @@ test.describe("Journey 24: Mentor Memory Tab", () => {
     const initialCount = await editMentorPage.memory.getMemoryCount();
     await editMentorPage.memory.deleteFirst();
 
-    // Wait for the deletion to reflect in the UI
-    await editMentorPage.page.waitForTimeout(2_000);
-
+    // deleteFirst() already waits for the list to refresh via waitForLoaded()
     const finalCount = await editMentorPage.memory.getMemoryCount();
     expect(finalCount).toBeLessThan(initialCount);
 
