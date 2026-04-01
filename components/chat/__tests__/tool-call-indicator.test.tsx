@@ -56,7 +56,7 @@ describe('ToolCallIndicator', () => {
     expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
   });
 
-  it('shows "Used N tools" in header for multiple tool calls', () => {
+  it('shows "Used N tools" in header for multiple unique tool calls', () => {
     render(
       <ToolCallIndicator
         toolCalls={[
@@ -66,6 +66,19 @@ describe('ToolCallIndicator', () => {
       />,
     );
     expect(screen.getByText('Used 2 tools')).toBeInTheDocument();
+  });
+
+  it('counts unique tool names, not total calls', () => {
+    render(
+      <ToolCallIndicator
+        toolCalls={[
+          makeToolCall({ id: '1', name: 'web_search_call' }),
+          makeToolCall({ id: '2', name: 'web_search_call' }),
+          makeToolCall({ id: '3', name: 'web_search_call' }),
+        ]}
+      />,
+    );
+    expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
   });
 
   it('shows tool count in header even when streaming', () => {

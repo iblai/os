@@ -47,10 +47,10 @@ export function ToolCallIndicator({
     return null;
   }
 
-  const lastTool = toolCalls[toolCalls.length - 1];
   const isStreaming = isCurrentlyStreaming;
 
-  const headerLabel = `Used ${toolCalls.length} tool${toolCalls.length === 1 ? '' : 's'}`;
+  const uniqueToolCount = new Set(toolCalls.map((tc) => tc.name)).size;
+  const headerLabel = `Used ${uniqueToolCount} tool${uniqueToolCount === 1 ? '' : 's'}`;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
