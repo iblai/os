@@ -34,6 +34,10 @@ import {
   selectToken,
   selectTokenEnabled,
   selectShowingSharedChat,
+  selectStreamingReasoningContent,
+  selectIsReasoning,
+  selectStreamingToolCalls,
+  selectCurrentStreamingMessage,
   useMentorTools,
   useTenantContext,
   useTenantMetadata as useTenantMetadataHook,
@@ -293,6 +297,13 @@ export function Chat({
   const attachedFiles = useAppSelector(
     (state: RootState) => state.files.attachedFiles || [],
   );
+  // Reasoning and tool call selectors
+  const streamingReasoningContent = useAppSelector(
+    selectStreamingReasoningContent,
+  );
+  const isReasoning = useAppSelector(selectIsReasoning);
+  const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
+  const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
 
   // Offline mode detection (for Tauri desktop app)
@@ -1734,6 +1745,10 @@ export function Chat({
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
+                      streamingReasoningContent={streamingReasoningContent}
+                      streamingToolCalls={streamingToolCalls}
+                      isReasoning={isReasoning}
+                      currentStreamingMessageId={currentStreamingMsg?.id}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-500 text-sm">
@@ -1752,9 +1767,10 @@ export function Chat({
                     {mentorAccessibilityMessage}
                   </div>
 
-                  {/* Loading indicator - hide if last message has canvas preview */}
+                  {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
                   {(isPending || isStreaming) &&
                     !currentStreamingMessage?.content &&
+                    !isReasoning &&
                     !(
                       messages.length > 0 &&
                       messages[messages.length - 1]?.role === "assistant" &&
@@ -1927,14 +1943,19 @@ export function Chat({
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
+                  streamingReasoningContent={streamingReasoningContent}
+                  streamingToolCalls={streamingToolCalls}
+                  isReasoning={isReasoning}
+                  currentStreamingMessageId={currentStreamingMsg?.id}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
                 </div>
 
-                {/* Loading indicator - hide if last message has canvas preview */}
+                {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
                 {(isPending || isStreaming) &&
                   !currentStreamingMessage?.content &&
+                  !isReasoning &&
                   !(
                     messages.length > 0 &&
                     messages[messages.length - 1]?.role === "assistant" &&
