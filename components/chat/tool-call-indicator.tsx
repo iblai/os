@@ -72,7 +72,7 @@ export function ToolCallIndicator({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent className="pb-2 pl-4">
-        <div className="space-y-3 border-l-2 border-gray-200 pt-3 pl-3 text-xs leading-relaxed text-gray-500">
+        <div className="space-y-2.5 border-l-2 border-gray-200 pt-3 pl-3 text-xs leading-relaxed text-gray-500">
           {toolCalls.map((toolCall, index) => {
             const query = getQueryLabel(toolCall);
             const Icon = getToolIcon(toolCall?.name);
