@@ -452,7 +452,7 @@ export function RoleAccessPanel({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    window.setTimeout(() => {
+    setTimeout(() => {
       setShowGroupSearchResults(false);
     }, 100);
   }, []);

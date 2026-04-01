@@ -730,6 +730,8 @@ describe("AddAccessDialog", () => {
 
   it("handles focus event on search input with existing search term", async () => {
     const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
     render(<AddAccessDialog {...defaultProps} />);
 
     await user.click(
@@ -751,6 +753,12 @@ describe("AddAccessDialog", () => {
     await waitFor(() => {
       expect(screen.getByText("User One")).toBeInTheDocument();
     });
+
+    // Flush the pending blur timeout so it doesn't fire after teardown
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+    });
+    vi.useRealTimers();
   });
 
   it("displays user email as fallback when name is missing", async () => {

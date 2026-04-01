@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import React from "react";
-import dynamic from "next/dynamic";
+import React from 'react';
+import dynamic from 'next/dynamic';
 
 /* istanbul ignore next -- @preserve dynamic import is not testable in unit tests */
 const DeleteMentorModal = dynamic(
   () =>
-    import("./settings-tab/delete-mentor-modal").then((module) => ({
+    import('./settings-tab/delete-mentor-modal').then((module) => ({
       default: module.DeleteMentorModal,
     })),
   { ssr: false },
@@ -15,20 +15,20 @@ const DeleteMentorModal = dynamic(
 /* istanbul ignore next -- @preserve dynamic import is not testable in unit tests */
 const CopyMentorModal = dynamic(
   () =>
-    import("./settings-tab/copy-mentor-modal").then((module) => ({
+    import('./settings-tab/copy-mentor-modal').then((module) => ({
       default: module.CopyMentorModal,
     })),
   { ssr: false },
 );
-import Image from "next/image";
-import { useParams } from "next/navigation";
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
 
 import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
-} from "@iblai/iblai-js/data-layer";
-import { useForm } from "@tanstack/react-form";
+} from '@iblai/iblai-js/data-layer';
+import { useForm } from '@tanstack/react-form';
 
 import {
   Select,
@@ -36,7 +36,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Command,
   CommandEmpty,
@@ -44,33 +44,33 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { useUsername } from "@/hooks/use-user";
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
-import { Textarea } from "@/components/ui/textarea";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Copy, Info, X } from "lucide-react";
-import { MENTOR_VISIBILITY } from "@/lib/constants";
-import { toast } from "sonner";
-import { Label } from "@/components/ui/label";
-import { useNavigate } from "@/hooks/user-navigate";
-import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
-import { cn } from "@/lib/utils";
-import WithFormPermissions from "@/hoc/withPermissions";
+} from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { useUsername } from '@/hooks/use-user';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { Textarea } from '@/components/ui/textarea';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Check, ChevronsUpDown, Copy, Info, X } from 'lucide-react';
+import { MENTOR_VISIBILITY } from '@/lib/constants';
+import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { useNavigate } from '@/hooks/user-navigate';
+import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import { cn } from '@/lib/utils';
+import WithFormPermissions from '@/hoc/withPermissions';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 
 interface SettingsForm {
   mentor_name: string;
@@ -97,7 +97,7 @@ export function SettingsTab() {
   const { data: categories, isLoading: isLoadingCategories } =
     useGetMentorCategoriesQuery(
       // @ts-ignore
-      { org: tenantKey, userId: username ?? "" },
+      { org: tenantKey, userId: username ?? '' },
       {
         skip: !tenantKey || !username,
       },
@@ -106,7 +106,7 @@ export function SettingsTab() {
   const { data: mentor, isLoading: isLoadingMentor } =
     useGetMentorSettingsQuery(
       // @ts-ignore
-      { mentor: activeMentorId, org: tenantKey, userId: username ?? "" },
+      { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
       {
         skip: !activeMentorId || !tenantKey || !username || isLoadingCategories,
       },
@@ -153,12 +153,12 @@ export function SettingsTab() {
 
   const form = useForm({
     defaultValues: {
-      mentor_name: mentor?.mentor_name || "",
-      mentor_description: mentor?.mentor_description || "",
+      mentor_name: mentor?.mentor_name || '',
+      mentor_description: mentor?.mentor_description || '',
       categories: firstCategory ? firstCategory.id : null,
-      profile_image: mentor?.profile_image || "",
-      mentor_visibility: mentor?.mentor_visibility?.toString() || "",
-      allow_anonymous: mentor?.allow_anonymous ? "true" : "false",
+      profile_image: mentor?.profile_image || '',
+      mentor_visibility: mentor?.mentor_visibility?.toString() || '',
+      allow_anonymous: mentor?.allow_anonymous ? 'true' : 'false',
       // @ts-ignore - is_featured exists in API response but not in type
       is_featured: mentor?.is_featured ?? false,
       // @ts-ignore - show_attachment exists in API response but not in type
@@ -199,7 +199,7 @@ export function SettingsTab() {
       }
 
       if (value.allow_anonymous) {
-        values.allow_anonymous = value.allow_anonymous === "true";
+        values.allow_anonymous = value.allow_anonymous === 'true';
       }
 
       if (value.is_featured !== undefined) {
@@ -231,16 +231,16 @@ export function SettingsTab() {
           mentor: activeMentorId,
           org: tenantKey,
           // @ts-ignore
-          userId: username ?? "",
+          userId: username ?? '',
           formData: {
             ...values,
           },
         }).unwrap();
 
-        toast.success("Mentor updated successfully");
+        toast.success('Mentor updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error("Failed to update mentor");
+        toast.error('Failed to update mentor');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -248,19 +248,19 @@ export function SettingsTab() {
 
   return (
     <>
-      <div className="flex lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] items-center">
+      <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Settings</h3>
-          <p className="text-gray-600 text-xs">
+          <h3 className="mb-1 text-base font-medium text-gray-900">Settings</h3>
+          <p className="text-xs text-gray-600">
             Configure your mentor's basic settings and preferences.
           </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
-          overflowY: "auto",
-          overflowX: "hidden",
+          overflowY: 'auto',
+          overflowX: 'hidden',
         }}
         tabIndex={0}
         role="region"
@@ -283,7 +283,7 @@ export function SettingsTab() {
                 {({ disabled }) => (
                   <form.Field name="mentor_name">
                     {(field) => {
-                      const hasNoValue = field.state.value === "";
+                      const hasNoValue = field.state.value === '';
                       const isDirty = field.state.meta.isDirty;
                       const hasNoValueAndIsDirty = hasNoValue && isDirty;
                       return (
@@ -299,7 +299,7 @@ export function SettingsTab() {
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
-                            <p className="text-red-500 text-xs">
+                            <p className="text-xs text-red-500">
                               Mentor name is required
                             </p>
                           )}
@@ -316,10 +316,10 @@ export function SettingsTab() {
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    value={activeMentorId || ""}
+                    value={activeMentorId || ''}
                     readOnly
                     disabled
-                    className="bg-gray-50 cursor-not-allowed flex-1"
+                    className="flex-1 cursor-not-allowed bg-gray-50"
                     placeholder="Unique ID"
                   />
                   <Button
@@ -329,12 +329,12 @@ export function SettingsTab() {
                     onClick={() => activeMentorId && copy(activeMentorId)}
                     disabled={!activeMentorId}
                     aria-label={
-                      copyStatus === "success"
-                        ? "Unique ID copied to clipboard"
-                        : "Copy unique ID to clipboard"
+                      copyStatus === 'success'
+                        ? 'Unique ID copied to clipboard'
+                        : 'Copy unique ID to clipboard'
                     }
                   >
-                    {copyStatus === "success" ? (
+                    {copyStatus === 'success' ? (
                       <Check className="h-4 w-4" />
                     ) : (
                       <Copy className="h-4 w-4" />
@@ -351,7 +351,7 @@ export function SettingsTab() {
                 {({ disabled }) => (
                   <form.Field name="mentor_description">
                     {(field) => {
-                      const hasNoValue = field.state.value === "";
+                      const hasNoValue = field.state.value === '';
                       const isDirty = field.state.meta.isDirty;
                       const hasNoValueAndIsDirty = hasNoValue && isDirty;
 
@@ -369,7 +369,7 @@ export function SettingsTab() {
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
-                            <p className="text-red-500 text-xs">
+                            <p className="text-xs text-red-500">
                               Mentor description is required
                             </p>
                           )}
@@ -409,11 +409,11 @@ export function SettingsTab() {
                                     (category) =>
                                       category.id === field.state.value,
                                   )?.name
-                                : "Select category..."}
+                                : 'Select category...'}
                               <ChevronsUpDown className="opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 max-w-[490px] w-full sm:w-[400px] lg:w-[490px]">
+                          <PopoverContent className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]">
                             <Command>
                               <CommandInput
                                 placeholder="Search category..."
@@ -435,10 +435,10 @@ export function SettingsTab() {
                                       {category.name}
                                       <Check
                                         className={cn(
-                                          "ml-auto",
+                                          'ml-auto',
                                           field.state.value === category.id
-                                            ? "opacity-100"
-                                            : "opacity-0",
+                                            ? 'opacity-100'
+                                            : 'opacity-0',
                                         )}
                                       />
                                     </CommandItem>
@@ -591,7 +591,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Featured ${field.state.value ? "enabled" : "disabled"}`}
+                          aria-label={`Featured ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -636,7 +636,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Is lti accessible ${field.state.value ? "enabled" : "disabled"}`}
+                          aria-label={`Is lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -677,7 +677,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show attachment ${field.state.value ? "enabled" : "disabled"}`}
+                          aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -718,7 +718,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show voice call ${field.state.value ? "enabled" : "disabled"}`}
+                          aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -761,7 +761,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show voice record ${field.state.value ? "enabled" : "disabled"}`}
+                          aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -797,7 +797,7 @@ export function SettingsTab() {
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
-                      aria-label={`Allow copies ${field.state.value ? "enabled" : "disabled"}`}
+                      aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}
@@ -829,7 +829,7 @@ export function SettingsTab() {
                           <div className="relative h-full w-full">
                             <Image
                               src={
-                                typeof field.state.value === "string"
+                                typeof field.state.value === 'string'
                                   ? field.state.value
                                   : URL.createObjectURL(field.state.value)
                               }
@@ -850,7 +850,7 @@ export function SettingsTab() {
                                 event.stopPropagation();
                                 if (!isDisabled && fileInputRef.current) {
                                   field.handleChange(null);
-                                  fileInputRef.current.value = "";
+                                  fileInputRef.current.value = '';
                                 }
                               }}
                               aria-label="Remove image"
@@ -902,7 +902,7 @@ export function SettingsTab() {
                           disabled={isDisabled || !isFormValid}
                           className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                         >
-                          {isLoadingEditMentor ? "Saving..." : "Save"}
+                          {isLoadingEditMentor ? 'Saving...' : 'Save'}
                         </Button>
                       )
                     }
