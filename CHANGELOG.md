@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.41.2](https://github.com/iblai/mentorai/compare/v0.41.1...v0.41.2) (2026-04-01)
+
+### Performance
+
+* speed up MSIX workflow by using rust-cache and pre-built cargo-binstall ([715abed](https://github.com/iblai/mentorai/commit/715abedc58becc7e9ea21a8208abc0f77c881fa4))
+
 ## [0.41.1](https://github.com/iblai/mentorai/compare/v0.41.0...v0.41.1) (2026-03-31)
 
 ### Bug Fixes
