@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   SettingsTab,
   LLMTab,
@@ -21,15 +21,15 @@ import {
   ApiTab,
   EmbedTab,
   AccessTab,
-} from "./tabs";
-import { useNavigate } from "@/hooks/user-navigate";
-import { MODALS, UserType } from "@/lib/constants";
-import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
-import { useParams } from "next/navigation";
-import { useIsAdmin, useUsername } from "@/hooks/use-user";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { rbacPermissionToDisplay } from "@/hoc/utils";
+} from './tabs';
+import { useNavigate } from '@/hooks/user-navigate';
+import { MODALS, UserType } from '@/lib/constants';
+import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { useGetMemsearchConfigQuery } from '@iblai/iblai-js/data-layer';
+import { useParams } from 'next/navigation';
+import { useIsAdmin, useUsername } from '@/hooks/use-user';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { rbacPermissionToDisplay } from '@/hoc/utils';
 import {
   Settings,
   Brain,
@@ -44,23 +44,23 @@ import {
   FileWarning,
   UserCog,
   Archive,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { MemoryTab } from "./tabs/memory-tab";
-import { DisclaimersTab } from "./tabs/disclaimers-tab";
-import { checkRbacPermission } from "@/hoc/withPermissions";
-import { selectRbacPermissions } from "@/features/rbac/rbac-slice";
-import { useAppSelector } from "@/lib/hooks";
-import { useUserType } from "@/hooks/use-user-type";
-import { MentorVisibilityEnum } from "@iblai/iblai-api";
-import { config } from "@/lib/config";
+} from '@/components/ui/select';
+import { MemoryTab } from './tabs/memory-tab';
+import { DisclaimersTab } from './tabs/disclaimers-tab';
+import { checkRbacPermission } from '@/hoc/withPermissions';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppSelector } from '@/lib/hooks';
+import { useUserType } from '@/hooks/use-user-type';
+import { MentorVisibilityEnum } from '@iblai/iblai-api';
+import { config } from '@/lib/config';
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -68,7 +68,7 @@ type Props = {
 
 const editMentorTabs = [
   {
-    label: "Settings",
+    label: 'Settings',
     value: MODALS.EDIT_MENTOR.tabs.settings,
     component: <SettingsTab />,
     icon: Settings,
@@ -76,16 +76,16 @@ const editMentorTabs = [
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/#show_settings`,
     permissionFieldsCheck: [
-      "mentor_name",
-      "mentor_description",
-      "profile_image",
-      "mentor_visibility",
-      "metadata",
-      "allow_anonymous",
-      "is_lti_accessible",
-      "show_attachment",
-      "show_voice_call",
-      "show_voice_record",
+      'mentor_name',
+      'mentor_description',
+      'profile_image',
+      'mentor_visibility',
+      'metadata',
+      'allow_anonymous',
+      'is_lti_accessible',
+      'show_attachment',
+      'show_voice_call',
+      'show_voice_record',
     ],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -93,7 +93,7 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Access",
+    label: 'Access',
     value: MODALS.EDIT_MENTOR.tabs.access,
     component: <AccessTab />,
     userTypes: [UserType.ADMIN],
@@ -104,20 +104,20 @@ const editMentorTabs = [
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },
   {
-    label: "LLM",
+    label: 'LLM',
     value: MODALS.EDIT_MENTOR.tabs.llm,
     component: <LLMTab />,
     icon: Brain,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/llms/#list`,
-    permissionFieldsCheck: ["llm_provider"],
+    permissionFieldsCheck: ['llm_provider'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
   },
   {
-    label: "Prompts",
+    label: 'Prompts',
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     component: <PromptsTab />,
     icon: Terminal,
@@ -125,9 +125,9 @@ const editMentorTabs = [
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/prompts/#list&/mentors/${_mentorDbId}/#view_prompts_menu`,
     permissionFieldsCheck: [
-      "system_prompt",
-      "proactive_prompt",
-      "guided_prompt_instructions",
+      'system_prompt',
+      'proactive_prompt',
+      'guided_prompt_instructions',
     ],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -135,7 +135,7 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Safety",
+    label: 'Safety',
     value: MODALS.EDIT_MENTOR.tabs.safety,
     component: <SafetyTab />,
     icon: Shield,
@@ -143,10 +143,10 @@ const editMentorTabs = [
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/#view_moderation_logs`,
     permissionFieldsCheck: [
-      "moderation_system_prompt",
-      "safety_system_prompt",
-      "moderation_response",
-      "safety_response",
+      'moderation_system_prompt',
+      'safety_system_prompt',
+      'moderation_response',
+      'safety_response',
     ],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -154,35 +154,35 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Disclaimers",
+    label: 'Disclaimers',
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
     component: <DisclaimersTab />,
     icon: FileWarning,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/#view_disclaimers&/mentors/${_mentorDbId}/#view_disclaimers_menu`,
-    permissionFieldsCheck: ["disclaimer"],
+    permissionFieldsCheck: ['disclaimer'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
   },
   {
-    label: "Tools",
+    label: 'Tools',
     value: MODALS.EDIT_MENTOR.tabs.tools,
     component: <ToolsTab />,
     icon: Wrench,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/tools/#list&/mentors/${_mentorDbId}/#view_tools_menu`,
-    permissionFieldsCheck: ["mentor_tools"],
+    permissionFieldsCheck: ['mentor_tools'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
   },
   {
-    label: "MCP",
+    label: 'MCP',
     value: MODALS.EDIT_MENTOR.tabs.mcp,
     component: <McpTab />,
     icon: Plug,
@@ -196,7 +196,7 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Memory",
+    label: 'Memory',
     value: MODALS.EDIT_MENTOR.tabs.memory,
     component: <MemoryTab />,
     icon: Archive,
@@ -215,7 +215,7 @@ const editMentorTabs = [
   //   component: <FlowTab />,
   // },
   {
-    label: "History",
+    label: 'History',
     value: MODALS.EDIT_MENTOR.tabs.history,
     component: <HistoryTab />,
     icon: Clock,
@@ -229,7 +229,7 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Datasets",
+    label: 'Datasets',
     value: MODALS.EDIT_MENTOR.tabs.datasets,
     component: <DatasetsTab />,
     icon: Grid,
@@ -243,12 +243,12 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "API",
+    label: 'API',
     value: MODALS.EDIT_MENTOR.tabs.api,
     component: <ApiTab />,
     icon: Key,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: () => "/apitokens/#list",
+    rbacResource: () => '/apitokens/#list',
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -256,14 +256,14 @@ const editMentorTabs = [
     ],
   },
   {
-    label: "Embed",
+    label: 'Embed',
     value: MODALS.EDIT_MENTOR.tabs.embed,
     component: <EmbedTab />,
     icon: MonitorSmartphone,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/#can_use_embed`,
-    permissionFieldsCheck: ["custom_css", "allow_anonymous"],
+    permissionFieldsCheck: ['custom_css', 'allow_anonymous'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -283,7 +283,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       mentor: getMentorId() || mentorId,
       org: tenantKey,
       // @ts-expect-error userId is no part of the useGetMentorSettingsQuery Query definition
-      userId: username ?? "",
+      userId: username ?? '',
     },
     {
       skip: !(getMentorId() || mentorId) || !tenantKey || !username,
@@ -292,7 +292,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const { data: memsearchConfig } = useGetMemsearchConfigQuery(
     {
       org: tenantKey,
-      userId: username ?? "",
+      userId: username ?? '',
     },
     {
       skip: !tenantKey || !username,
@@ -310,8 +310,8 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
 
   useEffect(() => {
     if (mentorSettings) {
-      console.log("[EditMentorModal] mentorSettings:", mentorSettings);
-      console.log("[EditMentorModal] Filter context:", {
+      console.log('[EditMentorModal] mentorSettings:', mentorSettings);
+      console.log('[EditMentorModal] Filter context:', {
         isAdmin,
         tenantKey,
         mainTenantKey: config.mainTenantKey(),
@@ -356,12 +356,12 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             visibilityAllowed,
             passesFilter,
             reason: isAdminOnMainTenant
-              ? "Admin on main tenant - all tabs allowed"
+              ? 'Admin on main tenant - all tabs allowed'
               : mentorNotOnMainTenant
-                ? "Mentor not on main tenant - tab allowed"
+                ? 'Mentor not on main tenant - tab allowed'
                 : visibilityAllowed
-                  ? "Visibility matches and user is admin or not on main tenant"
-                  : "Filtered out - visibility check failed or non-admin on main tenant",
+                  ? 'Visibility matches and user is admin or not on main tenant'
+                  : 'Filtered out - visibility check failed or non-admin on main tenant',
           });
 
           if (passesFilter) {
@@ -386,7 +386,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
         });
 
       console.log(
-        "[EditMentorModal] Final filtered tabs:",
+        '[EditMentorModal] Final filtered tabs:',
         filteredTabs.map((t) => t.label),
       );
       setFilteredTabs(filteredTabs);
@@ -396,53 +396,53 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className={`mx-auto w-[85vw] md:w-full max-w-7xl p-0 gap-0 overflow-hidden`}
+        className={`mx-auto w-[85vw] max-w-7xl gap-0 overflow-hidden p-0 md:w-full`}
         style={{
-          height: "75vh",
-          display: "flex",
-          flexDirection: "column",
+          height: '75vh',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <DialogDescription className="sr-only">
           Edit Mentor settings, prompts, tools, safety, flow, history, datasets,
           and API keys
         </DialogDescription>
-        <div className="flex-1 overflow-y-auto lg:overflow-hidden scrollbar-none">
+        <div className="scrollbar-none flex-1 overflow-y-auto lg:overflow-hidden">
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className="flex flex-col lg:flex-row h-full"
+            className="flex h-full flex-col lg:flex-row"
           >
             {/* Mobile Header */}
             <div className="lg:hidden">
-              <DialogHeader className="px-3 py-4 border-b border-gray-200">
+              <DialogHeader className="border-b border-gray-200 px-3 py-4">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit {getMentorId() ? mentorSettings?.mentor : "Mentor"}
+                  Edit Mentor
                 </DialogTitle>
               </DialogHeader>
             </div>
             {/* Desktop Sidebar - Now takes up 1/3 of the width */}
-            <div className="hidden lg:flex bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col w-80 min-w-0 flex-shrink-0">
-              <DialogHeader className="p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 h-[73px] flex justify-start">
+            <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
+              <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit {getMentorId() ? mentorSettings?.mentor : "Mentor"}
+                  Edit Mentor
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 overflow-y-auto scrollbar-none">
+              <div className="scrollbar-none flex-1 overflow-y-auto">
                 <TabsList
-                  className="flex-col h-auto bg-transparent p-2 space-y-1 w-full"
+                  className="h-auto w-full flex-col space-y-1 bg-transparent p-2"
                   aria-label="Mentor settings tabs"
                 >
                   {filteredTabs.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="w-full justify-start px-4 py-3 text-left text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-400 data-[state=active]:text-white data-[state=active]:font-medium hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-300"
+                      className="w-full justify-start px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-100 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-400 data-[state=active]:font-medium data-[state=active]:text-white dark:text-gray-300 dark:hover:bg-gray-800"
                       id={`desktop-tab-${tab.value}`}
                       aria-controls={`panel-${tab.value}`}
                     >
                       <tab.icon
-                        className="h-4 w-4 mr-3 flex-shrink-0"
+                        className="mr-3 h-4 w-4 flex-shrink-0"
                         aria-hidden="true"
                       />
                       <span className="truncate">{tab.label}</span>
@@ -455,7 +455,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             {/* Mobile and Tablet Tabs */}
             <div className="lg:hidden">
               <TabsList
-                className="w-full justify-start px-3 py-2 bg-white border-b border-gray-200 rounded-none h-auto overflow-x-auto"
+                className="h-auto w-full justify-start overflow-x-auto rounded-none border-b border-gray-200 bg-white px-3 py-2"
                 aria-label="Mentor settings tabs"
               >
                 {/* Show first 4 tabs on mobile, first 8 tabs on tablet */}
@@ -465,7 +465,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3"
+                      className="flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm"
                       id={`tab-${tab.value}`}
                       aria-controls={`panel-${tab.value}`}
                     >
@@ -474,7 +474,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                         aria-hidden="true"
                       />
                       <span className="hidden sm:inline">{tab.label}</span>
-                      <span className="sm:hidden text-xs">{tab.label}</span>
+                      <span className="text-xs sm:hidden">{tab.label}</span>
                     </TabsTrigger>
                   ))}
                 {/* Show dropdown for remaining tabs */}
@@ -483,13 +483,13 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     <TabsTrigger
                       key={activeTab}
                       value={activeTab}
-                      className="flex items-center gap-2 whitespace-nowrap text-xs sm:text-sm px-2 data-[state=active]:shadow-none"
+                      className="flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:shadow-none sm:text-sm"
                       id={`tab-${activeTab}`}
                       aria-controls={`panel-${activeTab}`}
                     >
                       <Select value={activeTab} onValueChange={handleTabChange}>
                         <SelectTrigger
-                          className="w-auto border-none shadow-none text-xs sm:text-sm"
+                          className="w-auto border-none text-xs shadow-none sm:text-sm"
                           aria-label="More tabs"
                         >
                           <SelectValue placeholder="More..." />
@@ -517,15 +517,15 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             </div>
             {/* Main Content Area - Now takes up 2/3 of the width */}
             <div
-              className="flex-1 flex flex-col overflow-hidden"
-              style={{ height: "100%" }}
+              className="flex flex-1 flex-col overflow-hidden"
+              style={{ height: '100%' }}
             >
               {filteredTabs.map((tab) => (
                 <TabsContent
                   key={tab.value}
                   value={tab.value}
-                  className="flex-1 flex flex-col overflow-hidden m-0 p-0 data-[state=inactive]:hidden"
-                  style={{ height: "100%" }}
+                  className="m-0 flex flex-1 flex-col overflow-hidden p-0 data-[state=inactive]:hidden"
+                  style={{ height: '100%' }}
                   id={`panel-${tab.value}`}
                   aria-labelledby={`tab-${tab.value}`}
                 >

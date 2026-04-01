@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import useWelcome from "@/hooks/use-welcome-message";
-import { config } from "@/lib/config";
-import Markdown from "@/components/markdown";
+import useWelcome from '@/hooks/use-welcome-message';
+import { config } from '@/lib/config';
+import Markdown from '@/components/markdown';
 
 interface WelcomeMessageProps {
   aiWelcomeMessage: string;
@@ -23,7 +23,7 @@ export function WelcomeMessage({
   mentorUniqueId,
   token,
   isNewSession,
-  className = "text-gray-600 text-lg max-w-3xl",
+  className = 'text-gray-600 text-lg max-w-3xl',
 }: WelcomeMessageProps) {
   const { welcomeMessage } = useWelcome({
     sessionId,
@@ -36,7 +36,7 @@ export function WelcomeMessage({
   });
   return (
     <Markdown className={className}>
-      {welcomeMessage || aiWelcomeMessage || ""}
+      {welcomeMessage || aiWelcomeMessage || ''}
     </Markdown>
   );
 }

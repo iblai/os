@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import type React from "react";
+import type React from 'react';
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Play,
   MousePointer,
@@ -16,26 +16,26 @@ import {
   Pencil,
   ZoomIn,
   ZoomOut,
-} from "lucide-react";
-import { useLazyGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { MentorSelectionGrid } from "@/components/mentors/mentor-selection-grid";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { useLazyGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useUsername } from "@/hooks/use-user";
-import { useNavigate } from "@/hooks/user-navigate";
-import { NodeConfigPanel } from "./node-config-panel";
+} from '@/components/ui/tooltip';
+import { useUsername } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { NodeConfigPanel } from './node-config-panel';
 
 interface Variable {
   id: string;
@@ -75,7 +75,7 @@ interface McpConnector {
   icon?: string;
 }
 
-const DEFAULT_MENTOR_LABELS = new Set(["my mentor", "mentor", "mentor node"]);
+const DEFAULT_MENTOR_LABELS = new Set(['my mentor', 'mentor', 'mentor node']);
 
 const isDefaultMentorLabel = (label?: string) => {
   if (!label) return true;
@@ -84,7 +84,7 @@ const isDefaultMentorLabel = (label?: string) => {
 
 // API may use 'conditional' as the node type key for if-else nodes
 const isConditionalType = (type?: string) =>
-  type === "if-else" || type === "conditional";
+  type === 'if-else' || type === 'conditional';
 
 export interface NodeConfig {
   // Common
@@ -116,7 +116,7 @@ export interface NodeConfig {
   // User approval node
   userApprovalMessage?: string;
   // Transform node
-  transformMode?: "expressions" | "object";
+  transformMode?: 'expressions' | 'object';
   transformExpressions?: TransformExpression[];
   // Set state node
   setStateAssignments?: SetStateAssignment[];
@@ -191,19 +191,19 @@ interface WorkflowCanvasProps {
 // Default nodes for new workflows
 const DEFAULT_NODES: Node[] = [
   {
-    id: "start",
-    type: "start",
+    id: 'start',
+    type: 'start',
     position: { x: 300, y: 250 },
-    data: { label: "Start" },
+    data: { label: 'Start' },
     draggable: true,
     selectable: true,
     connectable: true,
   },
   {
-    id: "mentor-1",
-    type: "mentor",
+    id: 'mentor-1',
+    type: 'mentor',
     position: { x: 550, y: 250 },
-    data: { label: "My mentor", subtitle: "Mentor", color: "chart-1" },
+    data: { label: 'My mentor', subtitle: 'Mentor', color: 'chart-1' },
     draggable: true,
     selectable: true,
     connectable: true,
@@ -212,11 +212,11 @@ const DEFAULT_NODES: Node[] = [
 
 const DEFAULT_EDGES: Edge[] = [
   {
-    id: "e-start-mentor-1",
-    source: "start",
-    target: "mentor-1",
-    sourceHandle: "right",
-    targetHandle: "left",
+    id: 'e-start-mentor-1',
+    source: 'start',
+    target: 'mentor-1',
+    sourceHandle: 'right',
+    targetHandle: 'left',
   },
 ];
 
@@ -239,7 +239,7 @@ export function WorkflowCanvas({
   const [edges, setEdges] = useState<Edge[]>(
     initialEdges ? initialEdges : DEFAULT_EDGES,
   );
-  const [tool, setTool] = useState<"hand" | "pointer">("hand");
+  const [tool, setTool] = useState<'hand' | 'pointer'>('hand');
   const [zoom, setZoom] = useState(initialViewport?.zoom || 1);
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([
     { nodes: [...nodes], edges: [...edges] },
@@ -283,7 +283,7 @@ export function WorkflowCanvas({
   >(null);
   const processedClickRef = useRef<typeof onClickedItem>(null);
   const [showMentorModal, setShowMentorModal] = useState(false);
-  const [mentorSearchQuery, setMentorSearchQuery] = useState("");
+  const [mentorSearchQuery, setMentorSearchQuery] = useState('');
   const [activeMentorNodeId, setActiveMentorNodeId] = useState<string | null>(
     null,
   );
@@ -384,7 +384,7 @@ export function WorkflowCanvas({
         const newNodes = prev.map((node) => {
           if (node.id !== nodeId) return node;
           const shouldSyncMentorId =
-            node.type === "mentor" &&
+            node.type === 'mentor' &&
             updates.entry_mentor_id !== undefined &&
             updates.mentor_id === undefined;
           const normalizedUpdates = shouldSyncMentorId
@@ -438,7 +438,7 @@ export function WorkflowCanvas({
           handleUpdateNode(nodeId, updates);
         }
       } catch (error) {
-        console.error("Failed to prefill mentor node data:", error);
+        console.error('Failed to prefill mentor node data:', error);
       }
     },
     [fetchMentorSettings, handleUpdateNode, org, username],
@@ -448,7 +448,7 @@ export function WorkflowCanvas({
     if (!defaultMentorId || previewMode) return;
     const mentorNodesMissingId = nodes.filter(
       (node) =>
-        node.type === "mentor" &&
+        node.type === 'mentor' &&
         !node.data.entry_mentor_id &&
         !node.data.mentor_id,
     );
@@ -456,7 +456,7 @@ export function WorkflowCanvas({
 
     setNodes((prev) =>
       prev.map((node) => {
-        if (node.type !== "mentor") return node;
+        if (node.type !== 'mentor') return node;
         if (node.data.entry_mentor_id || node.data.mentor_id) return node;
         return {
           ...node,
@@ -476,7 +476,7 @@ export function WorkflowCanvas({
 
   const closeMentorModal = useCallback(() => {
     setShowMentorModal(false);
-    setMentorSearchQuery("");
+    setMentorSearchQuery('');
     setActiveMentorNodeId(null);
   }, []);
 
@@ -492,7 +492,7 @@ export function WorkflowCanvas({
       let updates: Partial<NodeConfig> = {
         entry_mentor_id: mentorId,
         mentor_id: mentorId,
-        subtitle: currentData?.subtitle ?? "Mentor",
+        subtitle: currentData?.subtitle ?? 'Mentor',
       };
 
       try {
@@ -509,7 +509,7 @@ export function WorkflowCanvas({
               (settings.mentor_name as string) ||
               mentor.name ||
               currentData?.label ||
-              "Mentor",
+              'Mentor',
             instructions:
               (settings.system_prompt as string) || currentData?.instructions,
             model: (settings.llm_name as string) || currentData?.model,
@@ -519,7 +519,7 @@ export function WorkflowCanvas({
         }
       } catch (error) {
         console.error(
-          "Failed to load mentor settings for workflow node:",
+          'Failed to load mentor settings for workflow node:',
           error,
         );
         if (mentor.name) {
@@ -545,7 +545,7 @@ export function WorkflowCanvas({
     (nodeId: string) => {
       if (previewMode) return;
       setActiveMentorNodeId(nodeId);
-      setMentorSearchQuery("");
+      setMentorSearchQuery('');
       setShowMentorModal(true);
     },
     [previewMode],
@@ -554,19 +554,19 @@ export function WorkflowCanvas({
   const findNonOverlappingPosition = useCallback(
     (baseX: number, baseY: number, nodeType: string) => {
       const nodeWidth =
-        nodeType === "while"
+        nodeType === 'while'
           ? 400
-          : isConditionalType(nodeType) || nodeType === "user-approval"
+          : isConditionalType(nodeType) || nodeType === 'user-approval'
             ? 280
-            : nodeType === "note"
+            : nodeType === 'note'
               ? 200
               : 140;
       const nodeHeight =
-        nodeType === "while"
+        nodeType === 'while'
           ? 180
-          : isConditionalType(nodeType) || nodeType === "user-approval"
+          : isConditionalType(nodeType) || nodeType === 'user-approval'
             ? 140
-            : nodeType === "note"
+            : nodeType === 'note'
               ? 120
               : 50;
 
@@ -576,19 +576,19 @@ export function WorkflowCanvas({
       const hasOverlap = (x: number, y: number) => {
         return nodes.some((node) => {
           const existingWidth =
-            node.type === "while"
+            node.type === 'while'
               ? node.width || 400
-              : isConditionalType(node.type) || node.type === "user-approval"
+              : isConditionalType(node.type) || node.type === 'user-approval'
                 ? 280
-                : node.type === "note"
+                : node.type === 'note'
                   ? node.width || 200
                   : 140;
           const existingHeight =
-            node.type === "while"
+            node.type === 'while'
               ? node.height || 180
-              : isConditionalType(node.type) || node.type === "user-approval"
+              : isConditionalType(node.type) || node.type === 'user-approval'
                 ? 140
-                : node.type === "note"
+                : node.type === 'note'
                   ? node.height || 120
                   : 50;
 
@@ -672,16 +672,16 @@ export function WorkflowCanvas({
         position: { x, y },
         data: {
           label: onClickedItem.label,
-          ...(onClickedItem.id === "mentor" && {
-            subtitle: "Mentor",
-            color: "chart-1",
+          ...(onClickedItem.id === 'mentor' && {
+            subtitle: 'Mentor',
+            color: 'chart-1',
             entry_mentor_id: defaultMentorId,
             mentor_id: defaultMentorId,
           }),
-          ...(onClickedItem.id === "note" && { content: "Sticky Note" }),
+          ...(onClickedItem.id === 'note' && { content: 'Sticky Note' }),
         },
-        ...(onClickedItem.id === "note" && { width: 200, height: 120 }),
-        ...(onClickedItem.id === "while" && { width: 400, height: 180 }),
+        ...(onClickedItem.id === 'note' && { width: 200, height: 120 }),
+        ...(onClickedItem.id === 'while' && { width: 400, height: 180 }),
         draggable: true,
         selectable: true,
         connectable: true,
@@ -690,7 +690,7 @@ export function WorkflowCanvas({
       setNodes(newNodes);
       saveToHistory(newNodes, edges);
 
-      if (onClickedItem.id === "mentor" && defaultMentorId) {
+      if (onClickedItem.id === 'mentor' && defaultMentorId) {
         prefillMentorNode(newNode.id, defaultMentorId, newNode.data);
       }
     }
@@ -710,7 +710,7 @@ export function WorkflowCanvas({
           n.id === nodeId ? { ...n, selected: !n.selected } : n,
         ),
       );
-      if (node.type === "mentor") {
+      if (node.type === 'mentor') {
         setSelectedNodeForConfig(null);
       }
       suppressMentorClickRef.current = true;
@@ -718,7 +718,7 @@ export function WorkflowCanvas({
       setNodes((prev) =>
         prev.map((n) => ({ ...n, selected: n.id === nodeId })),
       );
-      if (node.type !== "mentor") {
+      if (node.type !== 'mentor') {
         setSelectedNodeForConfig(nodeId);
       } else {
         setSelectedNodeForConfig(null);
@@ -771,17 +771,17 @@ export function WorkflowCanvas({
     const target = e.target as HTMLElement;
     const isCanvasClick =
       target === e.currentTarget ||
-      target.tagName === "svg" ||
-      target.tagName === "rect";
+      target.tagName === 'svg' ||
+      target.tagName === 'rect';
 
     if (isCanvasClick && !previewMode) {
       setSelectedNodeForConfig(null);
     }
 
-    if (tool === "hand") {
+    if (tool === 'hand') {
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-    } else if (tool === "pointer" && !previewMode) {
+    } else if (tool === 'pointer' && !previewMode) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       const x = (e.clientX - rect.left - panOffset.x) / zoom;
@@ -846,10 +846,10 @@ export function WorkflowCanvas({
               let newWidth = resizingNote.startWidth;
               let newHeight = resizingNote.startHeight;
 
-              if (resizingNote.corner.includes("right")) {
+              if (resizingNote.corner.includes('right')) {
                 newWidth = Math.max(150, resizingNote.startWidth + deltaX);
               }
-              if (resizingNote.corner.includes("bottom")) {
+              if (resizingNote.corner.includes('bottom')) {
                 newHeight = Math.max(80, resizingNote.startHeight + deltaY);
               }
 
@@ -872,19 +872,19 @@ export function WorkflowCanvas({
         const maxY = Math.max(selectionBox.startY, currentY);
 
         const nodeWidth = (node: Node) =>
-          node.type === "while"
+          node.type === 'while'
             ? node.width || 400
-            : isConditionalType(node.type) || node.type === "user-approval"
+            : isConditionalType(node.type) || node.type === 'user-approval'
               ? 280
-              : node.type === "note"
+              : node.type === 'note'
                 ? node.width || 200
                 : 140;
         const nodeHeight = (node: Node) =>
-          node.type === "while"
+          node.type === 'while'
             ? node.height || 180
-            : isConditionalType(node.type) || node.type === "user-approval"
+            : isConditionalType(node.type) || node.type === 'user-approval'
               ? 140
-              : node.type === "note"
+              : node.type === 'note'
                 ? node.height || 120
                 : 50;
 
@@ -925,7 +925,7 @@ export function WorkflowCanvas({
         source: connectingFrom.nodeId,
         target: hoveredNode,
         sourceHandle: connectingFrom.handle,
-        targetHandle: "left",
+        targetHandle: 'left',
       };
       const newEdges = [...edges, newEdge];
       setEdges(newEdges);
@@ -941,7 +941,7 @@ export function WorkflowCanvas({
         !suppressMentorClickRef.current
       ) {
         const clickedNode = nodes.find((node) => node.id === draggedNode);
-        if (clickedNode?.type === "mentor") {
+        if (clickedNode?.type === 'mentor') {
           openEditMentorModal(
             undefined,
             clickedNode.data.mentor_id ?? clickedNode.data.entry_mentor_id,
@@ -978,11 +978,11 @@ export function WorkflowCanvas({
       resizingNote ||
       selectionBox
     ) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
       return () => {
-        window.removeEventListener("mousemove", handleMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
       };
     }
   }, [
@@ -1005,7 +1005,7 @@ export function WorkflowCanvas({
     const baseY = (e.clientY - rect.top - panOffset.y) / zoom;
 
     try {
-      const data = JSON.parse(e.dataTransfer.getData("application/json"));
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
 
       const { x, y } = findNonOverlappingPosition(baseX, baseY, data.id);
 
@@ -1015,16 +1015,16 @@ export function WorkflowCanvas({
         position: { x, y },
         data: {
           label: data.label,
-          ...(data.id === "mentor" && {
-            subtitle: "Mentor",
-            color: "chart-1",
+          ...(data.id === 'mentor' && {
+            subtitle: 'Mentor',
+            color: 'chart-1',
             entry_mentor_id: defaultMentorId,
             mentor_id: defaultMentorId,
           }),
-          ...(data.id === "note" && { content: "Sticky Note" }),
+          ...(data.id === 'note' && { content: 'Sticky Note' }),
         },
-        ...(data.id === "note" && { width: 200, height: 120 }),
-        ...(data.id === "while" && { width: 400, height: 180 }),
+        ...(data.id === 'note' && { width: 200, height: 120 }),
+        ...(data.id === 'while' && { width: 400, height: 180 }),
         draggable: true,
         selectable: true,
         connectable: true,
@@ -1033,11 +1033,11 @@ export function WorkflowCanvas({
       setNodes(newNodes);
       saveToHistory(newNodes, edges);
 
-      if (data.id === "mentor" && defaultMentorId) {
+      if (data.id === 'mentor' && defaultMentorId) {
         prefillMentorNode(newNode.id, defaultMentorId, newNode.data);
       }
     } catch (error) {
-      console.error("Failed to parse dropped data:", error);
+      console.error('Failed to parse dropped data:', error);
     }
   };
 
@@ -1049,20 +1049,20 @@ export function WorkflowCanvas({
     let nodeWidth = 140;
     let nodeHeight = 50;
 
-    if (node.type === "start") {
+    if (node.type === 'start') {
       nodeWidth = 100;
       nodeHeight = 50;
-    } else if (node.type === "while") {
+    } else if (node.type === 'while') {
       nodeWidth = node.width || 400;
       nodeHeight = node.height || 180;
     } else if (isConditionalType(node.type)) {
       nodeWidth = 280;
       const conditionCount = node.data.conditionCount || 1;
       nodeHeight = 80 + conditionCount * 50;
-    } else if (node.type === "user-approval") {
+    } else if (node.type === 'user-approval') {
       nodeWidth = 280;
       nodeHeight = 140;
-    } else if (node.type === "note") {
+    } else if (node.type === 'note') {
       nodeWidth = node.width || 200;
       nodeHeight = node.height || 120;
     }
@@ -1070,34 +1070,34 @@ export function WorkflowCanvas({
     const HANDLE_OFFSET = 8;
 
     switch (handle) {
-      case "left":
+      case 'left':
         return {
           x: node.position.x - HANDLE_OFFSET,
           y: node.position.y + nodeHeight / 2,
         };
-      case "right":
+      case 'right':
         return {
           x: node.position.x + nodeWidth + HANDLE_OFFSET,
           y: node.position.y + nodeHeight / 2,
         };
-      case "top":
+      case 'top':
         return {
           x: node.position.x + nodeWidth / 2,
           y: node.position.y - HANDLE_OFFSET,
         };
-      case "bottom":
+      case 'bottom':
         return {
           x: node.position.x + nodeWidth / 2,
           y: node.position.y + nodeHeight + HANDLE_OFFSET,
         };
-      case "else":
+      case 'else':
         return {
           x: node.position.x + nodeWidth + HANDLE_OFFSET,
           y: node.position.y + nodeHeight - 25,
         };
       default:
-        if (handle.startsWith("condition-")) {
-          const index = Number.parseInt(handle.split("-")[1]);
+        if (handle.startsWith('condition-')) {
+          const index = Number.parseInt(handle.split('-')[1]);
           return {
             x: node.position.x + nodeWidth + HANDLE_OFFSET,
             y: node.position.y + 55 + index * 50,
@@ -1123,7 +1123,7 @@ export function WorkflowCanvas({
   const handleDeleteSelectedNodes = useCallback(() => {
     // Get IDs of selected nodes (excluding 'start' node which cannot be deleted)
     const selectedNodeIds = nodes
-      .filter((node) => node.selected && node.type !== "start")
+      .filter((node) => node.selected && node.type !== 'start')
       .map((node) => node.id);
 
     if (selectedNodeIds.length === 0) return;
@@ -1150,12 +1150,12 @@ export function WorkflowCanvas({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if Delete or Backspace is pressed
-      if (e.key === "Delete" || e.key === "Backspace") {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         // Don't delete if user is typing in an input or textarea
         const target = e.target as HTMLElement;
         if (
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
           target.isContentEditable
         ) {
           return;
@@ -1166,9 +1166,9 @@ export function WorkflowCanvas({
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [previewMode, handleDeleteSelectedNodes]);
 
@@ -1203,15 +1203,18 @@ export function WorkflowCanvas({
   const selectedMentorIds = activeMentorId ? [activeMentorId] : [];
 
   return (
-    <div className="h-full w-full relative bg-background overflow-hidden select-none">
+    <div
+      data-testid="workflow-canvas"
+      className="bg-background relative h-full w-full overflow-hidden select-none"
+    >
       <div
         ref={canvasRef}
-        className={`absolute inset-0 ${tool === "hand" ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}
+        className={`absolute inset-0 ${tool === 'hand' ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'}`}
         onMouseDown={handleCanvasMouseDown}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        <svg className="w-full h-full pointer-events-none">
+        <svg className="pointer-events-none h-full w-full">
           <defs>
             <pattern
               id="grid"
@@ -1239,11 +1242,11 @@ export function WorkflowCanvas({
 
               const fromPos = getHandlePosition(
                 fromNode,
-                edge.sourceHandle || "right",
+                edge.sourceHandle || 'right',
               );
               const toPos = getHandlePosition(
                 toNode,
-                edge.targetHandle || "left",
+                edge.targetHandle || 'left',
               );
 
               return (
@@ -1297,51 +1300,51 @@ export function WorkflowCanvas({
         </svg>
 
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="pointer-events-none absolute inset-0"
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
-            transformOrigin: "0 0",
+            transformOrigin: '0 0',
           }}
         >
           {nodes.map((node) => (
             <div
               key={node.id}
-              className={`absolute pointer-events-auto group ${node.selected ? "ring-2 ring-[#38A1E5] ring-offset-2 ring-offset-background rounded-xl" : ""}`}
+              className={`group pointer-events-auto absolute ${node.selected ? 'ring-offset-background rounded-xl ring-2 ring-[#38A1E5] ring-offset-2' : ''}`}
               style={{
                 left: `${node.position.x}px`,
                 top: `${node.position.y}px`,
               }}
               onMouseDown={(e) => {
-                if (node.type !== "note" || !editingNote) {
+                if (node.type !== 'note' || !editingNote) {
                   handleNodeMouseDown(e, node.id);
                 }
               }}
               onMouseEnter={() => setHoveredNode(node.id)}
               onMouseLeave={() => setHoveredNode(null)}
             >
-              {node.type === "start" ? (
-                <div className="relative flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing">
+              {node.type === 'start' ? (
+                <div className="bg-card border-border relative flex cursor-grab items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
                   <div
-                    className="w-6 h-6 rounded flex items-center justify-center"
-                    style={{ backgroundColor: "rgba(56, 161, 229, 0.2)" }}
+                    className="flex h-6 w-6 items-center justify-center rounded"
+                    style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                   >
-                    <Play className="h-4 w-4" style={{ color: "#38A1E5" }} />
+                    <Play className="h-4 w-4" style={{ color: '#38A1E5' }} />
                   </div>
                   <span className="text-foreground font-medium">
                     {node.data.label}
                   </span>
 
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "right")
+                      handleConnectionStart(e, node.id, 'right')
                     }
                   />
                 </div>
-              ) : node.type === "while" ? (
+              ) : node.type === 'while' ? (
                 <div
-                  className="relative rounded-2xl border-2 border-dashed border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card/50"
+                  className="border-border bg-card/50 relative cursor-grab rounded-2xl border-2 border-dashed transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
                   style={{
                     width: `${node.width || 400}px`,
                     height: `${node.height || 180}px`,
@@ -1350,7 +1353,7 @@ export function WorkflowCanvas({
                   <div className="flex items-center gap-2 p-4">
                     <RefreshCw
                       className="h-5 w-5"
-                      style={{ color: "#38A1E5" }}
+                      style={{ color: '#38A1E5' }}
                     />
                     <span className="text-foreground font-medium">
                       {node.data.label}
@@ -1358,25 +1361,25 @@ export function WorkflowCanvas({
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "left")
+                      handleConnectionStart(e, node.id, 'left')
                     }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "right")
+                      handleConnectionStart(e, node.id, 'right')
                     }
                   />
 
                   <div
-                    className="absolute -right-1 -bottom-1 w-4 h-4 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleResizeStart(e, node.id, "bottom-right")
+                      handleResizeStart(e, node.id, 'bottom-right')
                     }
                   />
                 </div>
@@ -1387,37 +1390,37 @@ export function WorkflowCanvas({
 
                   return (
                     <div
-                      className="relative rounded-2xl border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card"
-                      style={{ width: "280px", minHeight: `${nodeHeight}px` }}
+                      className="border-border bg-card relative cursor-grab rounded-2xl border transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
+                      style={{ width: '280px', minHeight: `${nodeHeight}px` }}
                     >
                       <div className="flex items-center gap-3 p-4 pb-3">
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: "rgba(56, 161, 229, 0.2)" }}
+                          className="flex h-10 w-10 items-center justify-center rounded-lg"
+                          style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                         >
                           <GitBranch
                             className="h-5 w-5"
-                            style={{ color: "#38A1E5" }}
+                            style={{ color: '#38A1E5' }}
                           />
                         </div>
                         <span className="text-foreground font-medium">
                           {node.data.label}
                         </span>
                       </div>
-                      <div className="px-4 pb-4 space-y-2">
+                      <div className="space-y-2 px-4 pb-4">
                         {/* Render each condition */}
                         {Array.from({ length: conditionCount }).map(
                           (_, index) => (
                             <div
                               key={index}
-                              className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50 relative"
+                              className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3"
                             >
                               <span className="text-muted-foreground text-sm">
-                                {index === 0 ? "If" : `Else if ${index}`}
+                                {index === 0 ? 'If' : `Else if ${index}`}
                               </span>
                               <div
-                                className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair absolute -right-[18px] top-1/2 -translate-y-1/2"
-                                style={{ backgroundColor: "#38A1E5" }}
+                                className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                                style={{ backgroundColor: '#38A1E5' }}
                                 onMouseDown={(e) =>
                                   handleConnectionStart(
                                     e,
@@ -1430,130 +1433,130 @@ export function WorkflowCanvas({
                           ),
                         )}
                         {/* Else condition */}
-                        <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50 relative">
+                        <div className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3">
                           <span className="text-muted-foreground text-sm">
                             Else
                           </span>
                           <div
-                            className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair absolute -right-[18px] top-1/2 -translate-y-1/2"
-                            style={{ backgroundColor: "#38A1E5" }}
+                            className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                            style={{ backgroundColor: '#38A1E5' }}
                             onMouseDown={(e) =>
-                              handleConnectionStart(e, node.id, "else")
+                              handleConnectionStart(e, node.id, 'else')
                             }
                           />
                         </div>
                       </div>
 
                       <div
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                        style={{ backgroundColor: "#38A1E5" }}
+                        className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        style={{ backgroundColor: '#38A1E5' }}
                         onMouseDown={(e) =>
-                          handleConnectionStart(e, node.id, "left")
+                          handleConnectionStart(e, node.id, 'left')
                         }
                       />
                     </div>
                   );
                 })()
-              ) : node.type === "user-approval" ? (
+              ) : node.type === 'user-approval' ? (
                 <div
-                  className="relative rounded-2xl border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing bg-card"
-                  style={{ width: "280px" }}
+                  className="border-border bg-card relative cursor-grab rounded-2xl border transition-colors hover:border-[#38A1E5] active:cursor-grabbing"
+                  style={{ width: '280px' }}
                 >
                   <div className="flex items-center gap-3 p-4 pb-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: "rgba(56, 161, 229, 0.2)" }}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
                       <ThumbsUp
                         className="h-5 w-5"
-                        style={{ color: "#38A1E5" }}
+                        style={{ color: '#38A1E5' }}
                       />
                     </div>
                     <span className="text-foreground font-medium">
                       {node.data.label}
                     </span>
                   </div>
-                  <div className="px-4 pb-4 space-y-2">
-                    <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
+                  <div className="space-y-2 px-4 pb-4">
+                    <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
                       <span className="text-muted-foreground">Approve</span>
                       <div
-                        className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                        style={{ backgroundColor: "#38A1E5" }}
+                        className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        style={{ backgroundColor: '#38A1E5' }}
                         onMouseDown={(e) =>
-                          handleConnectionStart(e, node.id, "approve")
+                          handleConnectionStart(e, node.id, 'approve')
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-muted/50">
+                    <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
                       <span className="text-muted-foreground">Reject</span>
                       <div
-                        className="w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                        style={{ backgroundColor: "#38A1E5" }}
+                        className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                        style={{ backgroundColor: '#38A1E5' }}
                         onMouseDown={(e) =>
-                          handleConnectionStart(e, node.id, "reject")
+                          handleConnectionStart(e, node.id, 'reject')
                         }
                       />
                     </div>
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "left")
+                      handleConnectionStart(e, node.id, 'left')
                     }
                   />
                 </div>
-              ) : node.type === "transform" ||
-                node.type === "set-state" ||
-                node.type === "guardrails" ||
-                node.type === "file-search" ||
-                node.type === "mcp" ? (
-                <div className="relative px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing min-w-[140px]">
+              ) : node.type === 'transform' ||
+                node.type === 'set-state' ||
+                node.type === 'guardrails' ||
+                node.type === 'file-search' ||
+                node.type === 'mcp' ? (
+                <div className="bg-card border-border relative min-w-[140px] cursor-grab rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-5 h-5 rounded flex items-center justify-center"
-                      style={{ backgroundColor: "rgba(56, 161, 229, 0.2)" }}
+                      className="flex h-5 w-5 items-center justify-center rounded"
+                      style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
-                      <Bot className="h-3 w-3" style={{ color: "#38A1E5" }} />
+                      <Bot className="h-3 w-3" style={{ color: '#38A1E5' }} />
                     </div>
-                    <span className="text-foreground font-medium text-sm">
+                    <span className="text-foreground text-sm font-medium">
                       {node.data.label}
                     </span>
                   </div>
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "left")
+                      handleConnectionStart(e, node.id, 'left')
                     }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "right")
+                      handleConnectionStart(e, node.id, 'right')
                     }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -top-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "top")
+                      handleConnectionStart(e, node.id, 'top')
                     }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "bottom")
+                      handleConnectionStart(e, node.id, 'bottom')
                     }
                   />
                 </div>
-              ) : node.type === "note" ? (
+              ) : node.type === 'note' ? (
                 <div
-                  className="relative rounded-lg border border-border hover:border-[#38A1E5] transition-colors bg-amber-50 dark:bg-amber-950/20 cursor-grab active:cursor-grabbing"
+                  className="border-border relative cursor-grab rounded-lg border bg-amber-50 transition-colors hover:border-[#38A1E5] active:cursor-grabbing dark:bg-amber-950/20"
                   style={{
                     width: `${node.width || 200}px`,
                     height: `${node.height || 120}px`,
@@ -1566,8 +1569,8 @@ export function WorkflowCanvas({
                   {editingNote === node.id ? (
                     <Textarea
                       autoFocus
-                      className="w-full h-full resize-none border-0 bg-transparent focus-visible:ring-0 text-sm"
-                      value={node.data.content || ""}
+                      className="h-full w-full resize-none border-0 bg-transparent text-sm focus-visible:ring-0"
+                      value={node.data.content || ''}
                       onChange={(e) => {
                         setNodes((prev) =>
                           prev.map((n) =>
@@ -1583,39 +1586,39 @@ export function WorkflowCanvas({
                       onBlur={() => setEditingNote(null)}
                     />
                   ) : (
-                    <div className="p-3 text-sm text-foreground whitespace-pre-wrap">
-                      {node.data.content || "Sticky Note"}
+                    <div className="text-foreground p-3 text-sm whitespace-pre-wrap">
+                      {node.data.content || 'Sticky Note'}
                     </div>
                   )}
 
                   <div
-                    className="absolute -right-1 -bottom-1 w-4 h-4 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-nwse-resize"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -right-1 -bottom-1 h-4 w-4 cursor-nwse-resize rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleResizeStart(e, node.id, "bottom-right")
+                      handleResizeStart(e, node.id, 'bottom-right')
                     }
                   />
                 </div>
               ) : (
-                <div className="relative px-4 py-3 rounded-xl bg-card border border-border hover:border-[#38A1E5] transition-colors cursor-grab active:cursor-grabbing min-w-[140px]">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="bg-card border-border relative min-w-[140px] cursor-grab rounded-xl border px-4 py-3 transition-colors hover:border-[#38A1E5] active:cursor-grabbing">
+                  <div className="mb-1 flex items-center gap-2">
                     <div
-                      className="w-5 h-5 rounded flex items-center justify-center"
-                      style={{ backgroundColor: "rgba(56, 161, 229, 0.2)" }}
+                      className="flex h-5 w-5 items-center justify-center rounded"
+                      style={{ backgroundColor: 'rgba(56, 161, 229, 0.2)' }}
                     >
-                      <Bot className="h-3 w-3" style={{ color: "#38A1E5" }} />
+                      <Bot className="h-3 w-3" style={{ color: '#38A1E5' }} />
                     </div>
-                    <span className="text-foreground font-medium text-sm">
+                    <span className="text-foreground text-sm font-medium">
                       {node.data.label}
                     </span>
-                    {node.type === "mentor" && !previewMode && (
+                    {node.type === 'mentor' && !previewMode && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
                               type="button"
                               aria-label="Change mentor"
-                              className="ml-auto rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 ml-auto cursor-pointer rounded-full p-1 transition-colors"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1631,37 +1634,37 @@ export function WorkflowCanvas({
                     )}
                   </div>
                   {node.data.subtitle && (
-                    <p className="text-xs text-muted-foreground ml-7">
+                    <p className="text-muted-foreground ml-7 text-xs">
                       {node.data.subtitle}
                     </p>
                   )}
 
                   <div
-                    className="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -left-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "left")
+                      handleConnectionStart(e, node.id, 'left')
                     }
                   />
                   <div
-                    className="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "right")
+                      handleConnectionStart(e, node.id, 'right')
                     }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -top-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "top")
+                      handleConnectionStart(e, node.id, 'top')
                     }
                   />
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-3 h-3 rounded-full border-2 border-background opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair"
-                    style={{ backgroundColor: "#38A1E5" }}
+                    className="border-background absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ backgroundColor: '#38A1E5' }}
                     onMouseDown={(e) =>
-                      handleConnectionStart(e, node.id, "bottom")
+                      handleConnectionStart(e, node.id, 'bottom')
                     }
                   />
                 </div>
@@ -1674,10 +1677,10 @@ export function WorkflowCanvas({
           selectedNodeForConfig &&
           (() => {
             const node = nodes.find((n) => n.id === selectedNodeForConfig);
-            return node && node.type !== "mentor" ? (
+            return node && node.type !== 'mentor' ? (
               <NodeConfigPanel
                 nodeId={node.id}
-                nodeType={node.type || ""}
+                nodeType={node.type || ''}
                 nodeData={node.data}
                 onClose={() => setSelectedNodeForConfig(null)}
                 onUpdateNode={handleUpdateNode}
@@ -1715,30 +1718,30 @@ export function WorkflowCanvas({
       </div>
 
       {!previewMode && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-card border border-border shadow-lg">
+        <div className="pointer-events-auto absolute bottom-6 left-1/2 -translate-x-1/2 transform">
+          <div className="bg-card border-border flex items-center gap-2 rounded-full border px-3 py-2 shadow-lg">
             <Button
-              variant={tool === "hand" ? "default" : "ghost"}
+              variant={tool === 'hand' ? 'default' : 'ghost'}
               size="icon"
-              className={`h-8 w-8 ${tool === "hand" ? "bg-[#38A1E5] text-white hover:bg-[#38A1E5]" : ""}`}
-              onClick={() => setTool("hand")}
+              className={`h-8 w-8 ${tool === 'hand' ? 'bg-[#38A1E5] text-white hover:bg-[#38A1E5]' : ''}`}
+              onClick={() => setTool('hand')}
             >
               <Hand className="h-4 w-4" />
             </Button>
 
             <Button
-              variant={tool === "pointer" ? "default" : "ghost"}
+              variant={tool === 'pointer' ? 'default' : 'ghost'}
               size="icon"
-              className={`h-8 w-8 ${tool === "pointer" ? "bg-[#38A1E5] text-white hover:bg-[#38A1E5]" : ""}`}
-              onClick={() => setTool("pointer")}
+              className={`h-8 w-8 ${tool === 'pointer' ? 'bg-[#38A1E5] text-white hover:bg-[#38A1E5]' : ''}`}
+              onClick={() => setTool('pointer')}
             >
               <MousePointer className="h-4 w-4" />
             </Button>
-            <div className="w-px h-6 bg-border mx-1" />
+            <div className="bg-border mx-1 h-6 w-px" />
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 disabled:opacity-30"
               onClick={handleUndo}
               disabled={historyIndex <= 0}
             >
@@ -1747,28 +1750,28 @@ export function WorkflowCanvas({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 disabled:opacity-30"
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
             >
               <Redo className="h-4 w-4" />
             </Button>
-            <div className="w-px h-6 bg-border mx-1" />
+            <div className="bg-border mx-1 h-6 w-px" />
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={handleZoomOut}
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className="text-xs text-muted-foreground min-w-[3ch] text-center">
+            <span className="text-muted-foreground min-w-[3ch] text-center text-xs">
               {Math.round(zoom * 100)}%
             </span>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8"
               onClick={handleZoomIn}
             >
               <ZoomIn className="h-4 w-4" />

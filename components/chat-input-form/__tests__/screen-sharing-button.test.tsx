@@ -167,6 +167,17 @@ describe('ScreenSharingButton', () => {
   });
 
   describe('Basic Rendering', () => {
+    it('should have type="button" to prevent form submission', () => {
+      renderWithTooltipProvider({
+        onClick: mockOnClick,
+        screenSharing: true,
+        isScreenSharingModalOpen: false,
+      });
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveAttribute('type', 'button');
+    });
+
     it('should render with ScreenShare icon (SVG)', () => {
       renderWithTooltipProvider({
         onClick: mockOnClick,

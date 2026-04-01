@@ -1,5 +1,5 @@
-import { test, expect } from "../fixtures/mentor-test";
-import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
+import { test, expect } from '../fixtures/mentor-test';
+import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import {
   navigateToWorkflowsPage,
   createWorkflow,
@@ -14,52 +14,52 @@ import {
   saveWorkflow,
   publishWorkflow,
   getWorkflowStatus,
-} from "../utils/workflows";
+} from '../utils/workflows';
 
-test.describe("Journey 34: Workflows", () => {
+test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) test.skip(true, "Workflows requires admin access");
+    if (!isAdmin) test.skip(true, 'Workflows requires admin access');
   });
 
   // ── Workflows List Page ───────────────────────────────────────────────────
 
-  test("admin goes to workflows page and sees heading and create button", async ({
+  test('admin goes to workflows page and sees heading and create button', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
 
     await expect(
-      page.getByRole("heading", { name: "Workflows" }),
+      page.getByRole('heading', { name: 'Workflows' }),
     ).toBeVisible();
     await expect(
-      page.getByText("Create and manage automated workflows for your mentors"),
+      page.getByText('Create and manage automated workflows for your mentors'),
     ).toBeVisible();
 
-    const createButton = page.getByRole("button", { name: "Create Workflow" });
+    const createButton = page.getByRole('button', { name: 'Create Workflow' });
     await expect(createButton).toBeVisible();
     await expect(createButton).toBeEnabled();
   });
 
-  test("admin goes to workflows page and sees the search input", async ({
+  test('admin goes to workflows page and sees the search input', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
 
-    await expect(page.getByPlaceholder("Search workflows...")).toBeVisible();
+    await expect(page.getByPlaceholder('Search workflows...')).toBeVisible();
   });
 
-  test("admin goes to workflows page and filters by search term", async ({
+  test('admin goes to workflows page and filters by search term', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
 
-    await searchWorkflow(page, "nonexistent-workflow-xyz");
+    await searchWorkflow(page, 'nonexistent-workflow-xyz');
 
-    const noWorkflows = page.getByText("No workflows found");
+    const noWorkflows = page.getByText('No workflows found');
     const hasResults = await page
-      .locator("h3")
+      .locator('h3')
       .first()
       .isVisible()
       .catch(() => false);
@@ -71,7 +71,7 @@ test.describe("Journey 34: Workflows", () => {
 
   // ── Workflow CRUD Operations ──────────────────────────────────────────────
 
-  test("admin goes to workflows page and creates a new workflow", async ({
+  test('admin goes to workflows page and creates a new workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -79,18 +79,16 @@ test.describe("Journey 34: Workflows", () => {
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
-    const startNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Start" });
+    const startNode = canvas.locator('span').filter({ hasText: 'Start' });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflows page and opens an existing workflow from the list", async ({
+  test('admin goes to workflows page and opens an existing workflow from the list', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -100,13 +98,13 @@ test.describe("Journey 34: Workflows", () => {
     await navigateBackToWorkflowsList(page);
     await openWorkflowByName(page, workflowName);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflows page and deletes a workflow", async ({
+  test('admin goes to workflows page and deletes a workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -116,34 +114,34 @@ test.describe("Journey 34: Workflows", () => {
     await deleteCurrentWorkflow(page);
 
     await expect(
-      page.getByRole("heading", { name: "Workflows" }),
+      page.getByRole('heading', { name: 'Workflows' }),
     ).toBeVisible();
 
     await searchWorkflow(page, workflowName);
 
     const deletedWorkflow = page
-      .locator("h3")
+      .locator('h3')
       .filter({ hasText: workflowName });
     await expect(deletedWorkflow).not.toBeVisible({ timeout: 10_000 });
   });
 
   // ── Workflow Editor ───────────────────────────────────────────────────────
 
-  test("admin goes to workflow editor and sees Save, Publish, and Preview buttons", async ({
+  test('admin goes to workflow editor and sees Save, Publish, and Preview buttons', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Preview" })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible();
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and sees Draft status for new workflow", async ({
+  test('admin goes to workflow editor and sees Draft status for new workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -151,12 +149,12 @@ test.describe("Journey 34: Workflows", () => {
     await waitForWorkflowEditorReady(page);
 
     const status = await getWorkflowStatus(page);
-    expect(status).toBe("Draft");
+    expect(status).toBe('Draft');
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and renames workflow inline", async ({
+  test('admin goes to workflow editor and renames workflow inline', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -171,45 +169,44 @@ test.describe("Journey 34: Workflows", () => {
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and saves workflow", async ({ page }) => {
+  test('admin goes to workflow editor and saves workflow', async ({ page }) => {
     await navigateToWorkflowsPage(page);
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
     await saveWorkflow(page);
 
-    const errorToast = page.getByText("Failed to save workflow");
+    const errorToast = page.getByText('Failed to save workflow');
     const hasError = await errorToast.isVisible().catch(() => false);
     expect(hasError).toBe(false);
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and sees default Start and Mentor nodes", async ({
+  test('admin goes to workflow editor and sees default Start and Mentor nodes', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    const startNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Start" });
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
+    const startNode = canvas.locator('span').filter({ hasText: 'Start' });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
-    const mentorNode = page
-      .locator(".react-flow__node")
-      .filter({ hasText: "Mentor" });
+    const mentorNode = canvas.locator('span').filter({ hasText: 'Mentor' });
     await expect(mentorNode).toBeVisible({ timeout: 15_000 });
 
-    const edges = page.locator(".react-flow__edge");
+    const edges = canvas.locator(
+      'path[stroke="#38A1E5"]:not([stroke-dasharray])',
+    );
     const edgeCount = await edges.count();
     expect(edgeCount).toBeGreaterThanOrEqual(1);
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and opens more options menu with Activate and Delete", async ({
+  test('admin goes to workflow editor and opens more options menu with Activate and Delete', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -217,26 +214,26 @@ test.describe("Journey 34: Workflows", () => {
     await waitForWorkflowEditorReady(page);
 
     const moreButton = page
-      .locator("button")
-      .filter({ has: page.locator("svg.lucide-more-horizontal") });
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-more-horizontal') });
     await expect(moreButton).toBeVisible({ timeout: 10_000 });
     await moreButton.click();
 
-    await expect(page.getByRole("menuitem", { name: "Activate" })).toBeVisible({
+    await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible({
+    await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible({
       timeout: 5_000,
     });
 
-    await page.keyboard.press("Escape");
+    await page.keyboard.press('Escape');
 
     await deleteCurrentWorkflow(page);
   });
 
   // ── Preview Mode ──────────────────────────────────────────────────────────
 
-  test("admin goes to workflow editor and enters and exits preview mode", async ({
+  test('admin goes to workflow editor and enters and exits preview mode', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -246,19 +243,19 @@ test.describe("Journey 34: Workflows", () => {
     await enterPreviewMode(page);
 
     await expect(
-      page.getByRole("button", { name: "Close preview" }),
+      page.getByRole('button', { name: 'Close preview' }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "New Chat" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Publish" })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New Chat' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
 
     await exitPreviewMode(page);
 
-    await expect(page.getByRole("button", { name: "Preview" })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible();
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow preview and sees canvas and chat panel", async ({
+  test('admin goes to workflow preview and sees canvas and chat panel', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -267,7 +264,7 @@ test.describe("Journey 34: Workflows", () => {
 
     await enterPreviewMode(page);
 
-    const canvas = page.locator(".react-flow");
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
     await expect(canvas).toBeVisible();
 
     await exitPreviewMode(page);
@@ -276,7 +273,7 @@ test.describe("Journey 34: Workflows", () => {
 
   // ── Workflow Publishing ───────────────────────────────────────────────────
 
-  test("admin goes to workflow editor and publishes a workflow", async ({
+  test('admin goes to workflow editor and publishes a workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -293,13 +290,13 @@ test.describe("Journey 34: Workflows", () => {
       .catch(() => false);
 
     if (!hasValidationErrors) {
-      expect(status).toBe("Active");
+      expect(status).toBe('Active');
     }
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and publishes an invalid workflow to check for validation errors", async ({
+  test('admin goes to workflow editor and publishes an invalid workflow to check for validation errors', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -309,16 +306,16 @@ test.describe("Journey 34: Workflows", () => {
     await publishWorkflow(page);
 
     // Either validation errors appear or it succeeds — both are valid outcomes
-    const validationBanner = page.locator("text=/error|warning/i").first();
+    const validationBanner = page.locator('text=/error|warning/i').first();
     const hasValidation = await validationBanner.isVisible().catch(() => false);
 
     // Test passes regardless — we're just verifying no crash
-    expect(typeof hasValidation).toBe("boolean");
+    expect(typeof hasValidation).toBe('boolean');
 
     await deleteCurrentWorkflow(page);
   });
 
-  test("admin goes to workflow editor and deactivates an active workflow", async ({
+  test('admin goes to workflow editor and deactivates an active workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -328,25 +325,25 @@ test.describe("Journey 34: Workflows", () => {
     await publishWorkflow(page);
 
     const status = await getWorkflowStatus(page);
-    if (status !== "Active") {
+    if (status !== 'Active') {
       await deleteCurrentWorkflow(page);
-      test.skip(true, "Workflow did not become active after publish");
+      test.skip(true, 'Workflow did not become active after publish');
       return;
     }
 
     const moreButton = page
-      .locator("button")
-      .filter({ has: page.locator("svg.lucide-more-horizontal") });
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-more-horizontal') });
     await moreButton.click();
 
-    const deactivateItem = page.getByRole("menuitem", { name: "Deactivate" });
+    const deactivateItem = page.getByRole('menuitem', { name: 'Deactivate' });
     await expect(deactivateItem).toBeVisible({ timeout: 5_000 });
     await deactivateItem.click();
 
     await page.waitForTimeout(2_000);
 
     const newStatus = await getWorkflowStatus(page);
-    expect(newStatus).toBe("Draft");
+    expect(newStatus).toBe('Draft');
 
     await deleteCurrentWorkflow(page);
   });
