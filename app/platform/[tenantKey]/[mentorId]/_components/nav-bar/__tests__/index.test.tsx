@@ -164,7 +164,7 @@ vi.mock("@/hooks/user-navigate", () => ({
   }),
 }));
 
-vi.mock("@iblai/data-layer", async (importOriginal) => {
+vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,

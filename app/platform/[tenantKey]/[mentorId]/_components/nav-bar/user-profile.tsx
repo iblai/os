@@ -392,6 +392,7 @@ export function UserProfile() {
       onModalOpenChange={handleModalOpenChange}
       defaultActiveTab={activeProfileTab}
       onAccountDeleted={() => onAccountDeleted()}
+      enableMemoryTab={true}
     />
   );
 }

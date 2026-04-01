@@ -343,13 +343,17 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 24: Mentor Memory Tab (3 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (7 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
 
-- [x] Memory tab is visible in the Edit Mentor modal
-- [x] "Reference saved memories" toggle can be enabled and disabled
-- [x] User memories list shows entries or empty state, and an entry can be deleted
+- [x] CP-24.1: Memory tab is visible and Enable Memory section is present
+- [x] CP-24.2: "Enable Memory" toggle can be enabled and disabled (sends enable_memory_component)
+- [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
+- [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
+- [x] CP-24.5: Admin can edit a memory entry via action menu
+- [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
+- [x] CP-24.7: User filter and date range filter are visible in manage memories
 
 ---
 

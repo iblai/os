@@ -54,7 +54,7 @@ vi.mock("@/hooks/user-navigate", () => ({
 }));
 
 let mockMemsearchConfig: any = { enable_memsearch: false };
-vi.mock("@iblai/data-layer", () => ({
+vi.mock("@iblai/iblai-js/data-layer", () => ({
   useGetMemsearchConfigQuery: () => ({
     data: mockMemsearchConfig,
   }),

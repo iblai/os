@@ -1,13 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { format, formatDistanceToNow } from 'date-fns';
-import type { DateRange } from 'react-day-picker';
+import { useState, useMemo } from "react";
+import { format, formatDistanceToNow } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
-import { Info } from 'lucide-react';
+import { Info } from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandInput,
@@ -15,63 +19,158 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@/components/ui/command';
+} from "@/components/ui/command";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Check, ChevronRight, ChevronsUpDown, Calendar } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/spinner";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Check, ChevronRight, ChevronsUpDown, Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Spinner } from '@/components/spinner';
-import { useGetMemoryFiltersQuery, useGetFilteredMemoriesQuery } from '@iblai/iblai-js/data-layer';
-import { useParams } from 'next/navigation';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useUsername } from '@/hooks/use-user';
-import { transformCategoryToDisplay } from './utils';
+  useGetMentorMemoriesQuery,
+  useGetMemoryCategoriesAdminQuery,
+  type MentorMemory,
+  type MentorMemoryCategory,
+} from "@iblai/iblai-js/data-layer";
+import { useParams } from "next/navigation";
+import { TenantKeyMentorIdParams } from "@/lib/types";
+import { useUsername } from "@/hooks/use-user";
+import { useNavigate } from "@/hooks/user-navigate";
+
+interface MemoryItem {
+  id: number;
+  content: string;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  username?: string;
+  createdAt?: string;
+}
 
 export function LearnersMemories() {
   const username = useUsername();
   const [open, setOpen] = useState(false);
-  const [selectedLearner, setSelectedLearner] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedLearner, setSelectedLearner] = useState("");
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [selectedMemory, setSelectedMemory] = useState<string | null>(null);
-  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const [selectedMemoryId, setSelectedMemoryId] = useState<number | null>(null);
+  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const { getMentorId } = useNavigate();
+  const activeMentorId = getMentorId() ?? mentorId;
 
-  const { data: memoryFilters } = useGetMemoryFiltersQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
+  // Build query params for server-side filtering
+  const queryParams = useMemo(() => {
+    const params: { start_date?: string; end_date?: string; user_id?: string } =
+      {};
+    if (selectedLearner) {
+      params.user_id = selectedLearner;
+    }
+    if (dateRange?.from) {
+      params.start_date = format(dateRange.from, "yyyy-MM-dd");
+    }
+    if (dateRange?.to) {
+      params.end_date = format(dateRange.to, "yyyy-MM-dd");
+    }
+    return Object.keys(params).length > 0 ? params : undefined;
+  }, [selectedLearner, dateRange]);
 
-  const categories = (memoryFilters?.categories ?? []).filter((cat) => cat !== null);
-  const learners = memoryFilters?.users ?? [];
-
-  const { data: filteredMemoriesData, isLoading: isLoadingMemories } = useGetFilteredMemoriesQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-      params: {
-        ...(selectedCategory && selectedCategory !== 'all' && { category: selectedCategory }),
-        ...(selectedLearner && { username: selectedLearner }),
-        ...(dateRange?.from && { start_date: dateRange.from.toISOString() }),
-        ...(dateRange?.to && { end_date: dateRange.to.toISOString() }),
+  const { data: memoriesByCategoryResponse, isLoading: isLoadingMemories } =
+    useGetMentorMemoriesQuery(
+      {
+        org: tenantKey,
+        userId: username ?? "",
+        mentorId: activeMentorId,
+        ...(queryParams ? { params: queryParams } : {}),
       },
+      {
+        skip: !tenantKey || !username || !activeMentorId,
+      },
+    );
+
+  const { data: adminCategories } = useGetMemoryCategoriesAdminQuery(
+    {
+      org: tenantKey,
+      mentorId: activeMentorId,
     },
     {
-      skip: !tenantKey || !username,
+      skip: !tenantKey || !activeMentorId,
     },
   );
 
-  const memories = filteredMemoriesData?.results ?? [];
+  // Fetch unfiltered memories to derive learner list
+  const { data: unfilteredResponse } = useGetMentorMemoriesQuery(
+    {
+      org: tenantKey,
+      userId: username ?? "",
+      mentorId: activeMentorId,
+    },
+    {
+      skip: !tenantKey || !username || !activeMentorId,
+    },
+  );
+
+  // Flatten memories
+  const memories: MemoryItem[] = useMemo(() => {
+    if (!memoriesByCategoryResponse) return [];
+    return memoriesByCategoryResponse.flatMap((item) =>
+      item.memories.map((memory: MentorMemory) => ({
+        id: memory.id,
+        content: memory.content,
+        category: {
+          id: memory.category.id,
+          name: memory.category.name,
+          slug: memory.category.slug,
+        },
+        username: memory.username,
+        createdAt: memory.created_at,
+      })),
+    );
+  }, [memoriesByCategoryResponse]);
+
+  // Filter by category (client-side since the API groups by category)
+  const filteredMemories = useMemo(() => {
+    if (selectedCategorySlug === "all") return memories;
+    return memories.filter((m) => m.category.slug === selectedCategorySlug);
+  }, [memories, selectedCategorySlug]);
+
+  // Derive unique learners from unfiltered response
+  const learners = useMemo(() => {
+    if (!unfilteredResponse) return [];
+    const userMap = new Map<string, { username: string; email: string }>();
+    unfilteredResponse.forEach((item) =>
+      item.memories.forEach((m: MentorMemory) => {
+        if (m.username && !userMap.has(m.username)) {
+          userMap.set(m.username, { username: m.username, email: m.username });
+        }
+      }),
+    );
+    return Array.from(userMap.values());
+  }, [unfilteredResponse]);
+
+  // Build category list
+  const categories = useMemo(() => {
+    if (adminCategories && adminCategories.length > 0) {
+      return [
+        { id: 0, name: "All", slug: "all" },
+        ...adminCategories.map((cat: MentorMemoryCategory) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+        })),
+      ];
+    }
+    if (!memoriesByCategoryResponse)
+      return [{ id: 0, name: "All", slug: "all" }];
+    const responseCats = memoriesByCategoryResponse.map((item) => ({
+      id: item.category.id,
+      name: item.category.name,
+      slug: item.category.slug,
+    }));
+    return [{ id: 0, name: "All", slug: "all" }, ...responseCats];
+  }, [adminCategories, memoriesByCategoryResponse]);
+
+  const selectedMemory =
+    filteredMemories.find((m) => m.id === selectedMemoryId) ?? null;
 
   return (
     <div className="space-y-4 pt-6 border-t border-gray-200">
@@ -93,8 +192,10 @@ export function LearnersMemories() {
                     className="w-full justify-between font-normal bg-transparent"
                   >
                     {selectedLearner
-                      ? learners.find((learner) => learner.username === selectedLearner)?.username
-                      : 'Select Learner'}
+                      ? learners.find(
+                          (learner) => learner.username === selectedLearner,
+                        )?.username
+                      : "Select Learner"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -107,14 +208,16 @@ export function LearnersMemories() {
                         <CommandItem
                           value="all"
                           onSelect={() => {
-                            setSelectedLearner('');
+                            setSelectedLearner("");
                             setOpen(false);
                           }}
                         >
                           <Check
                             className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedLearner === '' ? 'opacity-100' : 'opacity-0',
+                              "mr-2 h-4 w-4",
+                              selectedLearner === ""
+                                ? "opacity-100"
+                                : "opacity-0",
                             )}
                           />
                           All Learners
@@ -130,13 +233,19 @@ export function LearnersMemories() {
                           >
                             <Check
                               className={cn(
-                                'mr-2 h-4 w-4',
-                                selectedLearner === learner.username ? 'opacity-100' : 'opacity-0',
+                                "mr-2 h-4 w-4",
+                                selectedLearner === learner.username
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <div className="flex flex-col">
-                              <span className="font-medium">{learner.username}</span>
-                              <span className="text-xs text-gray-500">{learner.email}</span>
+                              <span className="font-medium">
+                                {learner.username}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {learner.email}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
@@ -155,8 +264,8 @@ export function LearnersMemories() {
                 >
                   <Calendar className="h-4 w-4" />
                   {dateRange?.from && dateRange?.to
-                    ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                    : 'Pick a Date Range'}
+                    ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                    : "Pick a Date Range"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -171,36 +280,46 @@ export function LearnersMemories() {
             </Popover>
 
             <div className="hidden lg:block">
-              <Select value={selectedCategory || 'all'} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {transformCategoryToDisplay(category)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-40 justify-between font-normal bg-transparent"
+                  >
+                    {categories.find((c) => c.slug === selectedCategorySlug)
+                      ?.name ?? "All"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-40 p-0" align="start">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        {categories.map((category) => (
+                          <CommandItem
+                            key={category.slug}
+                            value={category.slug}
+                            onSelect={() =>
+                              setSelectedCategorySlug(category.slug)
+                            }
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCategorySlug === category.slug
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {category.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
-          </div>
-
-          <div className="flex gap-3 lg:hidden">
-            <Select value={selectedCategory || 'all'} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {transformCategoryToDisplay(category)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </div>
@@ -209,7 +328,7 @@ export function LearnersMemories() {
         <div className="border rounded-md p-8 md:p-20 flex items-center justify-center">
           <Spinner />
         </div>
-      ) : memories.length === 0 ? (
+      ) : filteredMemories.length === 0 ? (
         <div className="border rounded-md p-8 md:p-20 flex items-center justify-center text-gray-500">
           No Memories
         </div>
@@ -217,35 +336,41 @@ export function LearnersMemories() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4 col-span-full md:col-span-1">
             <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto scrollbar-hide">
-              {memories.map((memory) => {
-                const timeAgo = formatDistanceToNow(new Date(memory.updated_at), {
-                  addSuffix: true,
-                });
-                const firstEntry = memory.entries[0];
+              {filteredMemories.map((memory) => {
+                const timeAgo = memory.createdAt
+                  ? formatDistanceToNow(new Date(memory.createdAt), {
+                      addSuffix: true,
+                    })
+                  : "";
+                const displayUser = memory.username || "Unknown";
                 return (
                   <div
-                    key={memory.unique_id}
+                    key={memory.id}
                     className={cn(
-                      'flex items-center justify-between p-4 border-b last:border-b-0 cursor-pointer',
-                      selectedMemory === memory.unique_id ? 'bg-gray-100' : 'hover:bg-gray-50',
+                      "flex items-center justify-between p-4 border-b last:border-b-0 cursor-pointer",
+                      selectedMemoryId === memory.id
+                        ? "bg-gray-100"
+                        : "hover:bg-gray-50",
                     )}
-                    onClick={() => setSelectedMemory(memory.unique_id)}
+                    onClick={() => setSelectedMemoryId(memory.id)}
                   >
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-500">{timeAgo}</span>
+                        {timeAgo && (
+                          <span className="text-sm text-gray-500">
+                            {timeAgo}
+                          </span>
+                        )}
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md">
-                          {transformCategoryToDisplay(memory.category)}
+                          {memory.category.name}
                         </span>
                       </div>
-                      <div className="font-medium text-gray-900 mb-1">{memory.username}</div>
-                      <div className="text-xs text-gray-500 mb-2">{memory.email}</div>
+                      <div className="font-medium text-gray-900 mb-1">
+                        {displayUser}
+                      </div>
                       <p className="text-sm text-gray-600 line-clamp-1">
-                        {firstEntry ? `${firstEntry.key}: ${firstEntry.value}` : 'No entries'}
+                        {memory.content}
                       </p>
-                      <span className="text-xs text-gray-400 mt-1 inline-block">
-                        {memory.entries.length} {memory.entries.length === 1 ? 'entry' : 'entries'}
-                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 ml-4">
                       <ChevronRight className="h-4 w-4" />
@@ -257,50 +382,37 @@ export function LearnersMemories() {
           </div>
 
           <div className="hidden md:flex border rounded-lg p-6 bg-white shadow-sm flex-col max-h-[400px] overflow-y-auto scrollbar-hide">
-            {selectedMemory !== null ? (
+            {selectedMemory ? (
               <>
-                {(() => {
-                  const memory = memories.find((m) => m.unique_id === selectedMemory);
-                  return memory ? (
-                    <>
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md font-medium">
-                            {transformCategoryToDisplay(memory.category)}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {format(new Date(memory.updated_at), "MMM dd, yyyy 'at' h:mm a")}
-                          </span>
-                        </div>
-                        <h3 className="text-base font-semibold text-gray-900 mb-1">
-                          {memory.username}
-                        </h3>
-                        <span className="text-sm text-gray-600">{memory.email}</span>
-                      </div>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-md font-medium">
+                      {selectedMemory.category.name}
+                    </span>
+                    {selectedMemory.createdAt && (
+                      <span className="text-sm text-gray-500">
+                        {format(
+                          new Date(selectedMemory.createdAt),
+                          "MMM dd, yyyy 'at' h:mm a",
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">
+                    {selectedMemory.username || "Unknown"}
+                  </h3>
+                </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                            Memory Entries
-                          </h4>
-                          <div className="space-y-3">
-                            {memory.entries.map((entry) => (
-                              <div
-                                key={entry.unique_id}
-                                className="border-l-2 border-blue-200 pl-3"
-                              >
-                                <div className="text-xs font-medium text-gray-700 mb-1">
-                                  {entry.key}
-                                </div>
-                                <div className="text-sm text-gray-600">{entry.value}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : null;
-                })()}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                      Memory Content
+                    </h4>
+                    <div className="text-sm text-gray-600">
+                      {selectedMemory.content}
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">

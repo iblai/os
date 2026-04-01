@@ -55,7 +55,7 @@ import {
   useForkMentorMutation,
   useEditMentorMutation,
 } from "@iblai/iblai-js/data-layer";
-import { useGetMemsearchConfigQuery } from "@iblai/data-layer";
+import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
 import {
   useIsAdmin,
   useIsVisiting,
@@ -983,6 +983,7 @@ export function NavBar() {
             onResetState: resetState,
             onSelectFoundryModel,
           }}
+          enableMemoryTab={true}
         />
       )}
       {isModalOpen && FreeTrialDialog && (

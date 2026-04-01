@@ -25,7 +25,7 @@ import {
 import { useNavigate } from "@/hooks/user-navigate";
 import { MODALS, UserType } from "@/lib/constants";
 import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useGetMemsearchConfigQuery } from "@iblai/data-layer";
+import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
 import { useParams } from "next/navigation";
 import { useIsAdmin, useUsername } from "@/hooks/use-user";
 import { TenantKeyMentorIdParams } from "@/lib/types";

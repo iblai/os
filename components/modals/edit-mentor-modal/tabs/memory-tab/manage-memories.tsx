@@ -100,9 +100,24 @@ export function ManageMemories({
   username,
   mentorId,
 }: ManageMemoriesProps) {
-  // Filter state (UI preserved, will be connected when SDK supports query params)
   const [selectedLearner, setSelectedLearner] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Build query params for server-side filtering
+  const queryParams = useMemo(() => {
+    const params: { start_date?: string; end_date?: string; user_id?: string } =
+      {};
+    if (selectedLearner) {
+      params.user_id = selectedLearner;
+    }
+    if (dateRange?.from) {
+      params.start_date = format(dateRange.from, "yyyy-MM-dd");
+    }
+    if (dateRange?.to) {
+      params.end_date = format(dateRange.to, "yyyy-MM-dd");
+    }
+    return Object.keys(params).length > 0 ? params : undefined;
+  }, [selectedLearner, dateRange]);
 
   // API hooks - use new memsearch endpoints
   const { data: memoriesByCategoryResponse, isLoading: isLoadingMemories } =
@@ -111,6 +126,7 @@ export function ManageMemories({
         org: tenantKey,
         userId: username ?? "",
         mentorId,
+        ...(queryParams ? { params: queryParams } : {}),
       },
       {
         skip: !tenantKey || !username || !mentorId,
@@ -135,7 +151,7 @@ export function ManageMemories({
     useCreateMentorMemoryMutation();
 
   // Flatten the by-category response into a flat list of memories
-  const allMemories: Memory[] = useMemo(() => {
+  const memories: Memory[] = useMemo(() => {
     if (!memoriesByCategoryResponse) return [];
 
     return memoriesByCategoryResponse.flatMap((item) =>
@@ -153,39 +169,31 @@ export function ManageMemories({
     );
   }, [memoriesByCategoryResponse]);
 
-  // Client-side filtering by learner and date range
-  const memories = useMemo(() => {
-    let filtered = allMemories;
+  // Fetch unfiltered memories to derive learner list for the dropdown
+  const { data: unfilteredResponse } = useGetMentorMemoriesQuery(
+    {
+      org: tenantKey,
+      userId: username ?? "",
+      mentorId,
+    },
+    {
+      skip: !tenantKey || !username || !mentorId,
+    },
+  );
 
-    if (selectedLearner) {
-      filtered = filtered.filter((m) => m.username === selectedLearner);
-    }
-
-    if (dateRange?.from) {
-      filtered = filtered.filter(
-        (m) => m.createdAt && new Date(m.createdAt) >= dateRange.from!,
-      );
-    }
-
-    if (dateRange?.to) {
-      filtered = filtered.filter(
-        (m) => m.createdAt && new Date(m.createdAt) <= dateRange.to!,
-      );
-    }
-
-    return filtered;
-  }, [allMemories, selectedLearner, dateRange]);
-
-  // Derive unique learners from all memories for the filter dropdown
+  // Derive unique learners from all (unfiltered) memories for the filter dropdown
   const learners = useMemo(() => {
+    if (!unfilteredResponse) return [];
     const userMap = new Map<string, { username: string; email: string }>();
-    allMemories.forEach((m) => {
-      if (m.username && !userMap.has(m.username)) {
-        userMap.set(m.username, { username: m.username, email: m.username });
-      }
-    });
+    unfilteredResponse.forEach((item) =>
+      item.memories.forEach((m: MentorMemory) => {
+        if (m.username && !userMap.has(m.username)) {
+          userMap.set(m.username, { username: m.username, email: m.username });
+        }
+      }),
+    );
     return Array.from(userMap.values());
-  }, [allMemories]);
+  }, [unfilteredResponse]);
 
   // Build category list from admin categories or from the response
   const categories = useMemo(() => {

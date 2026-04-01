@@ -11,12 +11,12 @@ import {
 import { X, BookOpen, Archive, Check, Terminal } from "lucide-react";
 import { DeepSearchIcon, CanvasIcon } from "@/components/icons/svg-icons";
 import { TOOLS } from "@iblai/iblai-js/web-utils";
-import { useGetMemsearchConfigQuery } from "@iblai/data-layer";
-import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useParams } from "next/navigation";
-import { useUsername } from "@/hooks/use-user";
-import { useNavigate } from "@/hooks/user-navigate";
-import { TenantKeyMentorIdParams } from "@/lib/types";
+// import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
+// import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
+// import { useParams } from "next/navigation";
+// import { useUsername } from "@/hooks/use-user";
+// import { useNavigate } from "@/hooks/user-navigate";
+// import { TenantKeyMentorIdParams } from "@/lib/types";
 import { MemoryButton } from "./memory-button";
 
 interface InsideButtonsProps {
@@ -44,34 +44,34 @@ export const InsideButtons = ({
   embedMode = false,
   promptsIsEnabled = false,
 }: InsideButtonsProps) => {
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  const username = useUsername();
-  const { getMentorId } = useNavigate();
-  const activeMentorId = getMentorId() || mentorId;
+  // const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  // const username = useUsername();
+  // const { getMentorId } = useNavigate();
+  // const activeMentorId = getMentorId() || mentorId;
 
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
-    {
-      org: tenantKey,
-      userId: username ?? "",
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
-  const { data: mentorSettings } = useGetMentorSettingsQuery(
-    {
-      mentor: activeMentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? "",
-    },
-    {
-      skip: !tenantKey || !username || !activeMentorId,
-    },
-  );
-  const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-  const isMemoryEnabled = mentorSettings?.enable_memory_component ?? false;
-  const isMemoryAvailable = isMemsearchEnabled && isMemoryEnabled;
+  // const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+  //   {
+  //     org: tenantKey,
+  //     userId: username ?? "",
+  //   },
+  //   {
+  //     skip: !tenantKey || !username,
+  //   },
+  // );
+  // const { data: mentorSettings } = useGetMentorSettingsQuery(
+  //   {
+  //     mentor: activeMentorId,
+  //     org: tenantKey,
+  //     // @ts-ignore
+  //     userId: username ?? "",
+  //   },
+  //   {
+  //     skip: !tenantKey || !username || !activeMentorId,
+  //   },
+  // );
+  // const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+  // const isMemoryEnabled = mentorSettings?.enable_memory_component ?? false;
+  // const isMemoryAvailable = isMemsearchEnabled && isMemoryEnabled;
 
   const allInsideButtons = [
     {

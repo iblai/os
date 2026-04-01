@@ -3,7 +3,7 @@ import type React from "react";
 import { Info } from "lucide-react";
 
 import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useGetMemsearchConfigQuery } from "@iblai/data-layer";
+import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
 import {
   Tooltip,
   TooltipContent,
