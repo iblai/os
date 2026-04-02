@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.4](https://github.com/iblai/mentorai/compare/v0.44.3...v0.44.4) (2026-04-02)
+
+### Styles
+
+* format entire codebase with prettier and update pre-commit hook ([3cd6f15](https://github.com/iblai/mentorai/commit/3cd6f15b2cfa734b7250a395fc08eee3e88fe4c3))
+
 ## [0.44.3](https://github.com/iblai/mentorai/compare/v0.44.2...v0.44.3) (2026-04-02)
 
 ### Bug Fixes
