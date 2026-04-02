@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.2](https://github.com/iblai/mentorai/compare/v0.44.1...v0.44.2) (2026-04-02)
+
+### Chores
+
+* bump iblai-js to 1.3.4, track .npmrc, update .gitignore ([acc8bbb](https://github.com/iblai/mentorai/commit/acc8bbbadf2aaabdbad008d0daeac110009270d4))
+
 ## [0.44.1](https://github.com/iblai/mentorai/compare/v0.44.0...v0.44.1) (2026-04-02)
 
 ### Chores
