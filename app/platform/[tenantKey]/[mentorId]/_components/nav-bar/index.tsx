@@ -55,6 +55,7 @@ import {
   useForkMentorMutation,
   useEditMentorMutation,
 } from "@iblai/iblai-js/data-layer";
+import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
 import {
   useIsAdmin,
   useIsVisiting,
@@ -329,6 +330,7 @@ export const getFilteredMenuItems = (
   mentorSettings: any,
   config: any,
   rbacPermissions: any,
+  isMemsearchEnabled?: boolean,
 ) => {
   // New Chat (first item) is always included for all users
   const newChatItem = menuItems[0];
@@ -336,6 +338,13 @@ export const getFilteredMenuItems = (
   // Filter remaining items (admin/settings items)
   const filteredItems = menuItems
     .slice(1)
+    .filter((item) => {
+      // Hide Memory tab when memsearch is not enabled
+      if (item.tab === MODALS.EDIT_MENTOR.tabs.memory && !isMemsearchEnabled) {
+        return false;
+      }
+      return true;
+    })
     .filter((item) => isUserTypeAllowed(item))
     .filter((item) => {
       if (
@@ -397,6 +406,17 @@ export function NavBar() {
       skip: !mentorId || !tenantKey || !username || isTauriOffline,
     },
   );
+  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+    {
+      org: tenantKey,
+      userId: username ?? "",
+    },
+    {
+      skip: !tenantKey || !username || isTauriOffline,
+    },
+  );
+  const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+
   const { data: mentorSettingsCombinedPublicAndPrivate } = useMentorSettings();
 
   const requiresLoginForChat =
@@ -569,6 +589,7 @@ export function NavBar() {
     mentorSettings,
     config,
     rbacPermissions,
+    isMemsearchEnabled,
   );
 
   const showForkButton =
@@ -962,6 +983,7 @@ export function NavBar() {
             onResetState: resetState,
             onSelectFoundryModel,
           }}
+          enableMemoryTab={true}
         />
       )}
       {isModalOpen && FreeTrialDialog && (

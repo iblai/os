@@ -1,18 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import type { DateRange } from 'react-day-picker';
-import { format, formatDistanceToNow } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Plus, ChevronDown, Calendar, ChevronsUpDown, Check } from 'lucide-react';
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import type { DateRange } from "react-day-picker";
+import { format, formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import {
+  MoreHorizontal,
+  Plus,
+  ChevronDown,
+  Calendar,
+  ChevronsUpDown,
+  Check,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandInput,
@@ -20,57 +31,62 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@/components/ui/command';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+} from "@/components/ui/command";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
-  useGetFilteredMemoriesQuery,
-  useGetMemoryCategoriesQuery,
-  useDeleteMemoryMutation,
-  useDeleteMemoryByCategoryMutation,
-  useUpdateMemoryEntryMutation,
-  useCreateMemoryMutation,
-  useGetMemoryFiltersQuery,
-  type Memory as ApiMemory,
-  type MemoryEntry,
-} from '@iblai/iblai-js/data-layer';
-import { toast } from 'sonner';
-import { transformCategoryToApi, transformCategoryToDisplay } from './utils';
-import { cn } from '@/lib/utils';
-import IblPagination from '@/components/ibl-pagination';
-import { useEffect } from 'react';
+  useGetMentorMemoriesQuery,
+  useDeleteMentorMemoryMutation,
+  useUpdateMentorMemoryMutation,
+  useCreateMentorMemoryMutation,
+  useGetMemoryCategoriesAdminQuery,
+  type MentorMemory,
+  type MentorMemoryCategory,
+} from "@iblai/iblai-js/data-layer";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const EditMemoryModal = dynamic(
-  () => import('./edit-memory-modal').then((module) => ({ default: module.EditMemoryModal })),
+  () =>
+    import("./edit-memory-modal").then((module) => ({
+      default: module.EditMemoryModal,
+    })),
   { ssr: false },
 );
 
 const AddMemoryModal = dynamic(
-  () => import('./add-memory-modal').then((module) => ({ default: module.AddMemoryModal })),
+  () =>
+    import("./add-memory-modal").then((module) => ({
+      default: module.AddMemoryModal,
+    })),
   { ssr: false },
 );
 
 const DeleteMemoryModal = dynamic(
-  () => import('./delete-memory-modal').then((module) => ({ default: module.DeleteMemoryModal })),
+  () =>
+    import("./delete-memory-modal").then((module) => ({
+      default: module.DeleteMemoryModal,
+    })),
   { ssr: false },
 );
 
 const BulkDeleteMemoryModal = dynamic(
   () =>
-    import('./bulk-delete-memory-modal').then((module) => ({
+    import("./bulk-delete-memory-modal").then((module) => ({
       default: module.BulkDeleteMemoryModal,
     })),
   { ssr: false },
 );
 
 interface Memory {
-  id: string;
+  id: number;
   content: string;
-  category: string;
-  memoryId?: string;
-  entryKey?: string;
-  email?: string;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   username?: string;
-  insertedAt?: string;
+  createdAt?: string;
 }
 
 interface ManageMemoriesProps {
@@ -79,142 +95,171 @@ interface ManageMemoriesProps {
   mentorId: string;
 }
 
-export function ManageMemories({ tenantKey, username, mentorId }: ManageMemoriesProps) {
-  const itemsPerPage = 10;
-
-  // Filter state
-  const [selectedLearner, setSelectedLearner] = useState('');
+export function ManageMemories({
+  tenantKey,
+  username,
+  mentorId,
+}: ManageMemoriesProps) {
+  const [selectedLearner, setSelectedLearner] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  // Build query params for server-side filtering
+  const queryParams = useMemo(() => {
+    const params: { start_date?: string; end_date?: string; user_id?: string } =
+      {};
+    if (selectedLearner) {
+      params.user_id = selectedLearner;
+    }
+    if (dateRange?.from) {
+      params.start_date = format(dateRange.from, "yyyy-MM-dd");
+    }
+    if (dateRange?.to) {
+      params.end_date = format(dateRange.to, "yyyy-MM-dd");
+    }
+    return Object.keys(params).length > 0 ? params : undefined;
+  }, [selectedLearner, dateRange]);
 
-  // API hooks - use filtered query for all memories
-  const {
-    data: memoriesResponse,
-    isLoading: isLoadingMemories,
-    isFetching,
-  } = useGetFilteredMemoriesQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-      params: {
-        page: currentPage,
-        page_size: itemsPerPage,
-        mentor: mentorId,
-        ...(selectedLearner && { username: selectedLearner }),
-        ...(dateRange?.from && { start_date: dateRange.from.toISOString() }),
-        ...(dateRange?.to && { end_date: dateRange.to.toISOString() }),
+  // API hooks - use new memsearch endpoints
+  const { data: memoriesByCategoryResponse, isLoading: isLoadingMemories } =
+    useGetMentorMemoriesQuery(
+      {
+        org: tenantKey,
+        userId: username ?? "",
+        mentorId,
+        ...(queryParams ? { params: queryParams } : {}),
       },
+      {
+        skip: !tenantKey || !username || !mentorId,
+      },
+    );
+
+  const { data: adminCategories } = useGetMemoryCategoriesAdminQuery(
+    {
+      org: tenantKey,
+      mentorId,
+    },
+    {
+      skip: !tenantKey || !mentorId,
+    },
+  );
+
+  const [deleteMentorMemory, { isLoading: isDeleting }] =
+    useDeleteMentorMemoryMutation();
+  const [updateMentorMemory, { isLoading: isEditing }] =
+    useUpdateMentorMemoryMutation();
+  const [createMentorMemory, { isLoading: isSaving }] =
+    useCreateMentorMemoryMutation();
+
+  // Flatten the by-category response into a flat list of memories
+  const memories: Memory[] = useMemo(() => {
+    if (!memoriesByCategoryResponse) return [];
+
+    return memoriesByCategoryResponse.flatMap((item) =>
+      item.memories.map((memory: MentorMemory) => ({
+        id: memory.id,
+        content: memory.content,
+        category: {
+          id: memory.category.id,
+          name: memory.category.name,
+          slug: memory.category.slug,
+        },
+        username: memory.username,
+        createdAt: memory.created_at,
+      })),
+    );
+  }, [memoriesByCategoryResponse]);
+
+  // Fetch unfiltered memories to derive learner list for the dropdown
+  const { data: unfilteredResponse } = useGetMentorMemoriesQuery(
+    {
+      org: tenantKey,
+      userId: username ?? "",
+      mentorId,
     },
     {
       skip: !tenantKey || !username || !mentorId,
     },
   );
 
-  // Effect to reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedLearner, dateRange]);
-
-  const { data: categoriesResponse } = useGetMemoryCategoriesQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
-
-  const { data: memoryFilters } = useGetMemoryFiltersQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
-
-  const [deleteMemory, { isLoading: isDeleting }] = useDeleteMemoryMutation();
-  const [deleteMemoryByCategory] = useDeleteMemoryByCategoryMutation();
-  const [updateMemoryEntry, { isLoading: isEditing }] = useUpdateMemoryEntryMutation();
-  const [createMemory, { isLoading: isSaving }] = useCreateMemoryMutation();
-
-  const learners = memoryFilters?.users ?? [];
-
-  // Pagination handler
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  // Calculate total pages based on count and limit
-  const totalPages = memoriesResponse ? Math.ceil(memoriesResponse.count / itemsPerPage) : 0;
-
-  // Transform API data to local format
-  const memories = useMemo(() => {
-    if (!memoriesResponse?.results) return [];
-
-    return memoriesResponse.results.flatMap((memory: ApiMemory) =>
-      memory.entries.map((entry: MemoryEntry) => ({
-        id: entry.unique_id,
-        content: entry.value,
-        category: memory.category,
-        memoryId: memory.unique_id,
-        entryKey: entry.key,
-        email: (memory as any).email || (memory as any).lti_email,
-        username: (memory as any).username || (memory as any).lti_username,
-        insertedAt: (memory as any).inserted_at || (memory as any).created_at,
-      })),
+  // Derive unique learners from all (unfiltered) memories for the filter dropdown
+  const learners = useMemo(() => {
+    if (!unfilteredResponse) return [];
+    const userMap = new Map<string, { username: string; email: string }>();
+    unfilteredResponse.forEach((item) =>
+      item.memories.forEach((m: MentorMemory) => {
+        if (m.username && !userMap.has(m.username)) {
+          userMap.set(m.username, { username: m.username, email: m.username });
+        }
+      }),
     );
-  }, [memoriesResponse]);
+    return Array.from(userMap.values());
+  }, [unfilteredResponse]);
 
+  // Build category list from admin categories or from the response
   const categories = useMemo(() => {
-    const apiCategories = categoriesResponse?.categories ?? [];
-    // Transform API categories to display format
-    const displayCategories = apiCategories.map(transformCategoryToDisplay);
-    const uniqueCategories = Array.from(['All', ...displayCategories]);
-    const withoutAll = uniqueCategories.filter((item) => item !== 'All');
-    return ['All', ...withoutAll];
-  }, [categoriesResponse]);
+    if (adminCategories && adminCategories.length > 0) {
+      return [
+        { id: 0, name: "All", slug: "all" },
+        ...adminCategories.map((cat: MentorMemoryCategory) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+        })),
+      ];
+    }
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+    // Fallback: derive from response
+    if (!memoriesByCategoryResponse)
+      return [{ id: 0, name: "All", slug: "all" }];
+
+    const responseCats = memoriesByCategoryResponse.map((item) => ({
+      id: item.category.id,
+      name: item.category.name,
+      slug: item.category.slug,
+    }));
+
+    return [{ id: 0, name: "All", slug: "all" }, ...responseCats];
+  }, [adminCategories, memoriesByCategoryResponse]);
+
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState("all");
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(
+    null,
+  );
   const [showAddMemory, setShowAddMemory] = useState(false);
-  const [newMemoryContent, setNewMemoryContent] = useState('');
-  const [newMemoryCategory, setNewMemoryCategory] = useState('');
+  const [newMemoryContent, setNewMemoryContent] = useState("");
+  const [newMemoryCategory, setNewMemoryCategory] = useState("");
   const [showMobileDropdown, setShowMobileDropdown] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  const filteredMemories =
-    selectedCategory === 'All'
-      ? memories
-      : memories.filter((memory: any) => {
-          // Transform display category back to API format for filtering
-          const apiCategory = transformCategoryToApi(selectedCategory);
-          return memory.category === apiCategory;
-        });
+  const selectedCategoryName =
+    categories.find((c) => c.slug === selectedCategorySlug)?.name ?? "All";
 
-  const handleDeleteMemory = async (id: string) => {
+  const filteredMemories =
+    selectedCategorySlug === "all"
+      ? memories
+      : memories.filter(
+          (memory) => memory.category.slug === selectedCategorySlug,
+        );
+
+  const handleDeleteMemory = async (id: number) => {
     if (!tenantKey || !username) return;
 
     try {
-      await deleteMemory({
-        tenantKey,
-        username,
+      await deleteMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
         memoryId: id,
       }).unwrap();
       setShowDeleteConfirm(null);
-      toast.success('Memory deleted successfully');
+      toast.success("Memory deleted successfully");
     } catch (error) {
-      console.error('Failed to delete memory:', error);
-      toast.error('Failed to delete memory');
-      console.error(JSON.stringify({ tenant: tenantKey, error }));
+      console.error("Failed to delete memory:", error);
+      toast.error("Failed to delete memory");
     }
   };
 
@@ -223,18 +268,26 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
 
     setIsBulkDeleting(true);
     try {
-      const apiCategory = transformCategoryToApi(selectedCategory);
-      await deleteMemoryByCategory({
-        tenantKey,
-        username,
-        category: apiCategory,
-      }).unwrap();
-      toast.success(`All ${selectedCategory} memories deleted successfully`);
+      const memoriesToDelete = memories.filter(
+        (memory) => memory.category.slug === selectedCategorySlug,
+      );
+      await Promise.all(
+        memoriesToDelete.map((memory) =>
+          deleteMentorMemory({
+            org: tenantKey,
+            userId: username!,
+            mentorId,
+            memoryId: memory.id,
+          }).unwrap(),
+        ),
+      );
+      toast.success(
+        `All ${selectedCategoryName} memories deleted successfully`,
+      );
       setShowBulkDeleteConfirm(false);
     } catch (error) {
-      console.error('Failed to delete memories:', error);
-      toast.error('Failed to delete memories');
-      console.error(JSON.stringify({ tenant: tenantKey, error }));
+      console.error("Failed to delete memories:", error);
+      toast.error("Failed to delete memories");
     } finally {
       setIsBulkDeleting(false);
     }
@@ -243,85 +296,85 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
   const startEdit = (memory: Memory) => {
     setEditingMemory(memory);
     setEditContent(memory.content);
-    setEditCategory(transformCategoryToDisplay(memory.category));
+    setEditCategory(memory.category.name);
   };
 
   const saveEdit = async () => {
     if (!editingMemory || !tenantKey || !username) return;
 
     try {
-      await updateMemoryEntry({
-        tenantKey,
-        username,
-        entryId: editingMemory.id,
+      const selectedCat = categories.find((c) => c.name === editCategory);
+      await updateMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
+        memoryId: editingMemory.id,
         data: {
-          key: editingMemory.entryKey,
-          value: editContent,
+          content: editContent,
+          ...(selectedCat && selectedCat.slug !== editingMemory.category.slug
+            ? { category_slug: selectedCat.slug }
+            : {}),
         },
       }).unwrap();
-      toast.success('Memory updated successfully');
+      toast.success("Memory updated successfully");
 
       setEditingMemory(null);
-      setEditContent('');
-      setEditCategory('');
+      setEditContent("");
+      setEditCategory("");
     } catch (error) {
-      console.error('Failed to update memory:', error);
-      toast.error('Failed to update memory');
-      console.error(JSON.stringify({ tenant: tenantKey, error }));
+      console.error("Failed to update memory:", error);
+      toast.error("Failed to update memory");
     }
   };
 
   const cancelEdit = () => {
     setEditingMemory(null);
-    setEditContent('');
-    setEditCategory('');
+    setEditContent("");
+    setEditCategory("");
   };
 
   const startAddMemory = () => {
     setShowAddMemory(true);
-    setNewMemoryCategory(selectedCategory);
+    setNewMemoryCategory(selectedCategoryName);
   };
 
   const saveNewMemory = async () => {
     if (!newMemoryContent.trim() || !tenantKey || !username) return;
 
     try {
-      const apiCategory = transformCategoryToApi(newMemoryCategory || selectedCategory);
+      const selectedCat = categories.find((c) => c.name === newMemoryCategory);
+      const categorySlug = selectedCat?.slug ?? selectedCategorySlug;
 
-      await createMemory({
-        tenantKey,
-        username,
+      await createMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
         data: {
-          name: `Memory ${Date.now()}`,
-          platform: tenantKey,
-          mentor_unique_id: mentorId,
-          entries: [
-            {
-              key: 'memory',
-              value: newMemoryContent.trim(),
-            },
-          ],
-          category: apiCategory,
+          category_slug: categorySlug === "all" ? "general" : categorySlug,
+          content: newMemoryContent.trim(),
         },
       }).unwrap();
 
       setShowAddMemory(false);
-      setNewMemoryContent('');
-      setNewMemoryCategory('');
-      setSelectedCategory(newMemoryCategory || selectedCategory);
-      toast.success('Memory created successfully');
+      setNewMemoryContent("");
+      setNewMemoryCategory("");
+      if (selectedCat) {
+        setSelectedCategorySlug(selectedCat.slug);
+      }
+      toast.success("Memory created successfully");
     } catch (error) {
-      console.error('Failed to create memory:', error);
-      toast.error('Failed to create memory');
-      console.error(JSON.stringify({ tenant: tenantKey, error }));
+      console.error("Failed to create memory:", error);
+      toast.error("Failed to create memory");
     }
   };
 
   const cancelAddMemory = () => {
     setShowAddMemory(false);
-    setNewMemoryContent('');
-    setNewMemoryCategory('');
+    setNewMemoryContent("");
+    setNewMemoryCategory("");
   };
+
+  const categoryNames = categories.map((c) => c.name);
 
   return (
     <>
@@ -339,8 +392,10 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                     className="w-full justify-between font-normal bg-transparent"
                   >
                     {selectedLearner
-                      ? learners.find((learner) => learner.username === selectedLearner)?.email
-                      : 'Search for User'}
+                      ? learners.find(
+                          (learner) => learner.username === selectedLearner,
+                        )?.email
+                      : "Search for User"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -353,13 +408,13 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                         <CommandItem
                           value=""
                           onSelect={() => {
-                            setSelectedLearner('');
+                            setSelectedLearner("");
                           }}
                         >
                           <Check
                             className={cn(
-                              'mr-2 h-4 w-4',
-                              !selectedLearner ? 'opacity-100' : 'opacity-0',
+                              "mr-2 h-4 w-4",
+                              !selectedLearner ? "opacity-100" : "opacity-0",
                             )}
                           />
                           All Users
@@ -374,12 +429,16 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                           >
                             <Check
                               className={cn(
-                                'mr-2 h-4 w-4',
-                                selectedLearner === learner.username ? 'opacity-100' : 'opacity-0',
+                                "mr-2 h-4 w-4",
+                                selectedLearner === learner.username
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <div className="flex flex-col">
-                              <span className="font-medium text-gray-700">{learner.email}</span>
+                              <span className="font-medium text-gray-700">
+                                {learner.email}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
@@ -398,8 +457,8 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                 >
                   <Calendar className="h-4 w-4" />
                   {dateRange?.from && dateRange?.to
-                    ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                    : 'Pick a Date Range'}
+                    ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                    : "Pick a Date Range"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -420,19 +479,19 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
             <div className="hidden sm:flex space-x-8 overflow-x-auto flex-1 scrollbar-none">
               {categories.map((category) => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  key={category.slug}
+                  onClick={() => setSelectedCategorySlug(category.slug)}
                   className={`relative py-2 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
-                    selectedCategory === category
-                      ? 'text-[#38A1E5]'
-                      : 'text-gray-600 hover:text-gray-900'
+                    selectedCategorySlug === category.slug
+                      ? "text-[#38A1E5]"
+                      : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
-                  {category}
-                  {selectedCategory === category && (
+                  {category.name}
+                  {selectedCategorySlug === category.slug && (
                     <div
                       className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-[#38A1E5] transition-all duration-200"
-                      style={{ width: `${category.length * 0.55}em` }}
+                      style={{ width: `${category.name.length * 0.55}em` }}
                     />
                   )}
                 </button>
@@ -440,31 +499,45 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
             </div>
 
             <div className="sm:hidden py-2 w-full">
-              <DropdownMenu open={showMobileDropdown} onOpenChange={setShowMobileDropdown}>
+              <DropdownMenu
+                open={showMobileDropdown}
+                onOpenChange={setShowMobileDropdown}
+              >
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
-                    {selectedCategory}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-transparent"
+                  >
+                    {selectedCategoryName}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-full">
                   {categories.map((category) => (
                     <DropdownMenuItem
-                      key={category}
+                      key={category.slug}
                       onClick={() => {
-                        setSelectedCategory(category);
+                        setSelectedCategorySlug(category.slug);
                         setShowMobileDropdown(false);
                       }}
-                      className={selectedCategory === category ? 'bg-gray-100' : ''}
+                      className={
+                        selectedCategorySlug === category.slug
+                          ? "bg-gray-100"
+                          : ""
+                      }
                     >
-                      {category}
+                      {category.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            <Button onClick={startAddMemory} size="sm" className="ibl-button-primary shrink-0">
+            <Button
+              onClick={startAddMemory}
+              size="sm"
+              className="ibl-button-primary shrink-0"
+            >
               <Plus className="h-4 w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Add Memory</span>
               <span className="sm:hidden">Add</span>
@@ -478,11 +551,13 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
               <p>Loading memories...</p>
             </div>
           ) : (
-            filteredMemories.map((memory: any) => {
-              const timeAgo = memory.insertedAt
-                ? formatDistanceToNow(new Date(memory.insertedAt), { addSuffix: true })
-                : '';
-              const displayEmail = memory.email || memory.username || 'Unknown';
+            filteredMemories.map((memory) => {
+              const timeAgo = memory.createdAt
+                ? formatDistanceToNow(new Date(memory.createdAt), {
+                    addSuffix: true,
+                  })
+                : "";
+              const displayUser = memory.username || "Unknown";
 
               return (
                 <div
@@ -490,17 +565,23 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                   className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200"
                 >
                   <div className="flex-1">
-                    {(timeAgo || displayEmail) && (
+                    {(timeAgo || displayUser) && (
                       <div className="flex items-center justify-between mb-2">
-                        {timeAgo && <span className="text-sm text-gray-600">{timeAgo}</span>}
-                        {displayEmail && (
+                        {timeAgo && (
+                          <span className="text-sm text-gray-600">
+                            {timeAgo}
+                          </span>
+                        )}
+                        {displayUser && (
                           <span className="text-sm text-gray-900 max-w-[100px] sm:max-w-[200px] truncate">
-                            {displayEmail}
+                            {displayUser}
                           </span>
                         )}
                       </div>
                     )}
-                    <div className="text-sm text-gray-900 leading-relaxed">{memory.content}</div>
+                    <div className="text-sm text-gray-900 leading-relaxed">
+                      {memory.content}
+                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -513,8 +594,12 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => startEdit(memory)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(memory.id)}>
+                      <DropdownMenuItem onClick={() => startEdit(memory)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowDeleteConfirm(memory.id)}
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -525,9 +610,12 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
           )}
         </div>
 
-        {filteredMemories.length > 0 && selectedCategory.toLowerCase() !== 'all' && (
+        {filteredMemories.length > 0 && selectedCategorySlug !== "all" && (
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowBulkDeleteConfirm(true)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+            >
               Delete All
             </Button>
           </div>
@@ -536,17 +624,6 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
         {filteredMemories.length === 0 && !isLoadingMemories && (
           <div className="text-center py-8 text-gray-600">
             <p>No saved memories yet.</p>
-          </div>
-        )}
-
-        {!isLoadingMemories && filteredMemories.length > 0 && totalPages > 1 && (
-          <div className="flex justify-center pt-4">
-            <IblPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              disabled={isFetching || isLoadingMemories}
-            />
           </div>
         )}
       </div>
@@ -560,7 +637,7 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
         onCategoryChange={setEditCategory}
         onSave={saveEdit}
         onCancel={cancelEdit}
-        categories={categories}
+        categories={categoryNames}
         isSaving={isEditing}
       />
 
@@ -573,14 +650,16 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
         onCategoryChange={setNewMemoryCategory}
         onSave={saveNewMemory}
         onCancel={cancelAddMemory}
-        categories={categories}
+        categories={categoryNames}
         isSaving={isSaving}
       />
 
       <DeleteMemoryModal
         open={!!showDeleteConfirm}
         onOpenChange={(open: boolean) => !open && setShowDeleteConfirm(null)}
-        onConfirm={() => showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)}
+        onConfirm={() =>
+          showDeleteConfirm !== null && handleDeleteMemory(showDeleteConfirm)
+        }
         onCancel={() => setShowDeleteConfirm(null)}
         isDeleting={isDeleting}
       />
@@ -591,7 +670,7 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
         onConfirm={handleBulkDelete}
         onCancel={() => setShowBulkDeleteConfirm(false)}
         isDeleting={isBulkDeleting}
-        selectedCategory={selectedCategory}
+        selectedCategory={selectedCategoryName}
       />
     </>
   );

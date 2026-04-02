@@ -194,7 +194,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   const email = searchParams.get('email');
 
-  if (email && typeof window !== "undefined") {
+  if (email && typeof window !== 'undefined') {
     window.location.href = `${config.authUrl()}/login?enforce_logout=1&logout=1&email=${encodeURIComponent(email)}&app=mentor&redirect-to=${window.location.origin}`;
     return;
   }

@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import { toast } from "sonner";
 
-import { ManageMemories } from "../manage-memories";
+import { SavedMemoriesModal } from "../saved-memories-modal";
 
 // ---- Mocks ----
 const mockGetMentorMemoriesQuery = vi.fn();
@@ -21,6 +21,10 @@ const mockCreateMentorMemory = vi.fn();
 const mockDeleteUnwrap = vi.fn();
 const mockUpdateUnwrap = vi.fn();
 const mockCreateUnwrap = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ tenantKey: "test-tenant", mentorId: "mentor-1" }),
+}));
 
 vi.mock("@iblai/iblai-js/data-layer", () => ({
   useGetMentorMemoriesQuery: (...args: any[]) =>
@@ -107,6 +111,19 @@ vi.mock("next/dynamic", () => ({
               value={props.newMemoryContent}
               onChange={(e: any) => props.onContentChange(e.target.value)}
             />
+            {props.categories && (
+              <select
+                data-testid="add-category-select"
+                value={props.newMemoryCategory}
+                onChange={(e: any) => props.onCategoryChange(e.target.value)}
+              >
+                {props.categories.map((cat: string) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            )}
             <button data-testid="add-save-btn" onClick={props.onSave}>
               Save New
             </button>
@@ -165,6 +182,18 @@ vi.mock("next/dynamic", () => ({
 }));
 
 // Mock UI components
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children }: any) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+}));
+
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
     <button onClick={onClick} disabled={disabled} {...props}>
@@ -173,58 +202,18 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/popover", () => ({
-  Popover: ({ children }: any) => <div data-testid="popover">{children}</div>,
-  PopoverTrigger: ({ children }: any) => (
-    <div data-testid="popover-trigger">{children}</div>
-  ),
-  PopoverContent: ({ children }: any) => (
-    <div data-testid="popover-content">{children}</div>
-  ),
-}));
-
-vi.mock("@/components/ui/command", () => ({
-  Command: ({ children }: any) => <div data-testid="command">{children}</div>,
-  CommandInput: ({ placeholder }: any) => (
-    <input data-testid="command-input" placeholder={placeholder} />
-  ),
-  CommandList: ({ children }: any) => (
-    <div data-testid="command-list">{children}</div>
-  ),
-  CommandEmpty: ({ children }: any) => (
-    <div data-testid="command-empty">{children}</div>
-  ),
-  CommandGroup: ({ children }: any) => (
-    <div data-testid="command-group">{children}</div>
-  ),
-  CommandItem: ({ children, onSelect, value }: any) => (
-    <div data-testid="command-item" data-value={value} onClick={onSelect}>
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children, open, onOpenChange }: any) => (
+    <div data-testid="dropdown-menu">
+      {typeof onOpenChange === "function" && (
+        <button
+          data-testid="dropdown-toggle"
+          onClick={() => onOpenChange(!open)}
+          style={{ display: "none" }}
+        />
+      )}
       {children}
     </div>
-  ),
-}));
-
-vi.mock("@/components/ui/calendar", () => ({
-  Calendar: ({ onSelect }: any) => (
-    <div data-testid="calendar">
-      <button
-        data-testid="calendar-select"
-        onClick={() =>
-          onSelect({
-            from: new Date("2024-01-01"),
-            to: new Date("2024-01-31"),
-          })
-        }
-      >
-        Select Date
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children }: any) => (
-    <div data-testid="dropdown-menu">{children}</div>
   ),
   DropdownMenuContent: ({ children }: any) => (
     <div data-testid="dropdown-content">{children}</div>
@@ -239,15 +228,16 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
 }));
 
-vi.mock("@/lib/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+vi.mock("@/lib/types", () => ({
+  TenantKeyMentorIdParams: {},
 }));
 
 // ---- Test Data ----
 const defaultProps = {
+  open: true,
+  onOpenChange: vi.fn(),
   tenantKey: "test-tenant",
   username: "testuser",
-  mentorId: "mentor-1",
 };
 
 const mockMemoriesByCategoryResponse = [
@@ -289,7 +279,7 @@ const mockAdminCategories = [
   { id: 2, name: "Learning Style", slug: "learning-style" },
 ];
 
-describe("ManageMemories", () => {
+describe("SavedMemoriesModal", () => {
   beforeEach(() => {
     cleanup();
     mockGetMentorMemoriesQuery.mockReset();
@@ -302,6 +292,7 @@ describe("ManageMemories", () => {
     mockCreateUnwrap.mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
+    defaultProps.onOpenChange.mockReset();
 
     mockGetMentorMemoriesQuery.mockReturnValue({
       data: mockMemoriesByCategoryResponse,
@@ -322,14 +313,18 @@ describe("ManageMemories", () => {
   });
 
   describe("Rendering", () => {
-    it("renders the user filter and date range section", () => {
-      render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Search for User")).toBeInTheDocument();
-      expect(screen.getByText("Pick a Date Range")).toBeInTheDocument();
+    it("renders the dialog with title", () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+      expect(screen.getByText("Saved Memories")).toBeInTheDocument();
+    });
+
+    it("does not render when open is false", () => {
+      render(<SavedMemoriesModal {...defaultProps} open={false} />);
+      expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     });
 
     it("renders category tabs", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
       expect(
         screen.getAllByText("Personal Info").length,
@@ -340,21 +335,26 @@ describe("ManageMemories", () => {
     });
 
     it("renders the Add Memory button", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("Add Memory")).toBeInTheDocument();
     });
 
     it("renders memory cards with content", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("User preference value")).toBeInTheDocument();
       expect(screen.getByText("Visual learner preference")).toBeInTheDocument();
       expect(screen.getByText("Fast pace preferred")).toBeInTheDocument();
     });
 
-    it("renders usernames for memory items", () => {
-      render(<ManageMemories {...defaultProps} />);
-      const user1Elements = screen.getAllByText("user1");
-      expect(user1Elements.length).toBeGreaterThanOrEqual(1);
+    it("renders mobile category dropdown", () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+      const dropdownMenus = screen.getAllByTestId("dropdown-menu");
+      expect(dropdownMenus.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders mobile Add button text", () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+      expect(screen.getByText("Add")).toBeInTheDocument();
     });
   });
 
@@ -365,7 +365,7 @@ describe("ManageMemories", () => {
         isLoading: true,
       });
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("Loading memories...")).toBeInTheDocument();
     });
   });
@@ -377,7 +377,7 @@ describe("ManageMemories", () => {
         isLoading: false,
       });
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("No saved memories yet.")).toBeInTheDocument();
     });
 
@@ -387,20 +387,20 @@ describe("ManageMemories", () => {
         isLoading: false,
       });
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("No saved memories yet.")).toBeInTheDocument();
     });
   });
 
   describe("Category Filtering", () => {
     it('defaults to "All" category showing all memories', () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getByText("User preference value")).toBeInTheDocument();
       expect(screen.getByText("Visual learner preference")).toBeInTheDocument();
     });
 
     it("filters memories by category when a category tab is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -413,7 +413,7 @@ describe("ManageMemories", () => {
     });
 
     it('shows "Delete All" button when a non-All category is selected with memories', () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -423,14 +423,27 @@ describe("ManageMemories", () => {
     });
 
     it('does not show "Delete All" button when All category is selected', () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.queryByText("Delete All")).not.toBeInTheDocument();
+    });
+
+    it("selects category via mobile dropdown", () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+
+      const dropdownItems = screen.getAllByTestId("dropdown-item");
+      // Find the Personal Info dropdown item
+      const personalInfoItem = dropdownItems.find(
+        (item) => item.textContent === "Personal Info",
+      );
+      if (personalInfoItem) fireEvent.click(personalInfoItem);
+
+      expect(screen.getByText("User preference value")).toBeInTheDocument();
     });
   });
 
   describe("Delete Memory", () => {
     it("shows delete confirmation modal when delete is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -439,7 +452,7 @@ describe("ManageMemories", () => {
     });
 
     it("calls deleteMentorMemory when confirmed", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -458,7 +471,7 @@ describe("ManageMemories", () => {
     });
 
     it("shows success toast on successful delete", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -479,7 +492,7 @@ describe("ManageMemories", () => {
         .mockImplementation(() => {});
       mockDeleteUnwrap.mockRejectedValue(new Error("Delete failed"));
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -494,7 +507,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes delete modal when cancel is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -510,7 +523,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes delete modal via onOpenChange(false)", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const deleteItems = screen.getAllByText("Delete");
       fireEvent.click(deleteItems[0]);
@@ -527,7 +540,12 @@ describe("ManageMemories", () => {
 
     it("does not call deleteMentorMemory when tenantKey is missing", async () => {
       render(
-        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
+          tenantKey=""
+          username="testuser"
+        />,
       );
 
       const deleteItems = screen.getAllByText("Delete");
@@ -543,10 +561,11 @@ describe("ManageMemories", () => {
 
     it("does not call deleteMentorMemory when username is null", async () => {
       render(
-        <ManageMemories
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
           tenantKey="test-tenant"
           username={null}
-          mentorId="mentor-1"
         />,
       );
 
@@ -564,7 +583,7 @@ describe("ManageMemories", () => {
 
   describe("Bulk Delete", () => {
     it("shows bulk delete modal when Delete All is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -577,7 +596,7 @@ describe("ManageMemories", () => {
     });
 
     it("calls deleteMentorMemory for each memory on confirm", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -600,7 +619,7 @@ describe("ManageMemories", () => {
     });
 
     it("shows success toast on successful bulk delete", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -625,7 +644,7 @@ describe("ManageMemories", () => {
         .mockImplementation(() => {});
       mockDeleteUnwrap.mockRejectedValue(new Error("Bulk delete failed"));
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -645,7 +664,12 @@ describe("ManageMemories", () => {
 
     it("does not call bulk delete when tenantKey is missing", async () => {
       render(
-        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
+          tenantKey=""
+          username="testuser"
+        />,
       );
 
       const categoryButtons = screen.getAllByText("Personal Info");
@@ -664,7 +688,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes bulk delete modal via onOpenChange(false)", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -682,7 +706,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes bulk delete modal via cancel button", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const categoryButtons = screen.getAllByText("Personal Info");
       const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
@@ -702,7 +726,7 @@ describe("ManageMemories", () => {
 
   describe("Edit Memory", () => {
     it("opens edit modal when Edit is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -711,7 +735,7 @@ describe("ManageMemories", () => {
     });
 
     it("pre-fills edit modal with memory content", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -723,7 +747,7 @@ describe("ManageMemories", () => {
     });
 
     it("calls updateMentorMemory when save is clicked", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -745,7 +769,7 @@ describe("ManageMemories", () => {
     });
 
     it("shows success toast on successful edit", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -766,7 +790,7 @@ describe("ManageMemories", () => {
         .mockImplementation(() => {});
       mockUpdateUnwrap.mockRejectedValue(new Error("Update failed"));
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -781,7 +805,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes edit modal when cancel is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -794,7 +818,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes edit modal via onOpenChange(false)", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const editItems = screen.getAllByText("Edit");
       fireEvent.click(editItems[0]);
@@ -805,15 +829,78 @@ describe("ManageMemories", () => {
       expect(screen.queryByTestId("edit-memory-modal")).not.toBeInTheDocument();
     });
 
-    it("does not call updateMentorMemory when no memory is being edited", () => {
-      render(<ManageMemories {...defaultProps} />);
-      expect(mockUpdateMentorMemory).not.toHaveBeenCalled();
+    it("updates edit content via textarea change", async () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+
+      const editItems = screen.getAllByText("Edit");
+      fireEvent.click(editItems[0]);
+
+      const textarea = screen.getByTestId("edit-content-input");
+      fireEvent.change(textarea, { target: { value: "Updated content" } });
+
+      const saveBtn = screen.getByTestId("edit-save-btn");
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockUpdateMentorMemory).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              content: "Updated content",
+            }),
+          }),
+        );
+      });
+    });
+
+    it("sends category_slug when category is changed", async () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+
+      const editItems = screen.getAllByText("Edit");
+      fireEvent.click(editItems[0]);
+
+      // Change category
+      const categorySelect = screen.getByTestId("edit-category-select");
+      fireEvent.change(categorySelect, { target: { value: "Learning Style" } });
+
+      const saveBtn = screen.getByTestId("edit-save-btn");
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockUpdateMentorMemory).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              category_slug: "learning-style",
+            }),
+          }),
+        );
+      });
+    });
+
+    it("does not call updateMentorMemory when username is null", async () => {
+      render(
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
+          tenantKey="test-tenant"
+          username={null}
+        />,
+      );
+
+      const editItems = screen.getAllByText("Edit");
+      fireEvent.click(editItems[0]);
+
+      const saveBtn = screen.getByTestId("edit-save-btn");
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockUpdateMentorMemory).not.toHaveBeenCalled();
+      });
     });
   });
 
   describe("Add Memory", () => {
     it("opens add modal when Add Memory button is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -822,14 +909,12 @@ describe("ManageMemories", () => {
     });
 
     it("calls createMentorMemory when save is clicked with content", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
 
-      const textarea = screen.getByTestId(
-        "add-content-input",
-      ) as HTMLTextAreaElement;
+      const textarea = screen.getByTestId("add-content-input");
       fireEvent.change(textarea, { target: { value: "New memory content" } });
 
       const saveBtn = screen.getByTestId("add-save-btn");
@@ -848,8 +933,40 @@ describe("ManageMemories", () => {
       });
     });
 
+    it("uses selected category slug when adding memory in a filtered view", async () => {
+      render(<SavedMemoriesModal {...defaultProps} />);
+
+      // Select Personal Info category first
+      const categoryButtons = screen.getAllByText("Personal Info");
+      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      if (tabButton) fireEvent.click(tabButton);
+
+      const addBtn = screen.getByText("Add Memory");
+      fireEvent.click(addBtn);
+
+      const textarea = screen.getByTestId("add-content-input");
+      fireEvent.change(textarea, { target: { value: "Category memory" } });
+
+      // Change category to match an existing one via select
+      const categorySelect = screen.getByTestId("add-category-select");
+      fireEvent.change(categorySelect, { target: { value: "Learning Style" } });
+
+      const saveBtn = screen.getByTestId("add-save-btn");
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockCreateMentorMemory).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              category_slug: "learning-style",
+            }),
+          }),
+        );
+      });
+    });
+
     it("shows success toast on successful create", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -873,7 +990,7 @@ describe("ManageMemories", () => {
         .mockImplementation(() => {});
       mockCreateUnwrap.mockRejectedValue(new Error("Create failed"));
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -891,7 +1008,7 @@ describe("ManageMemories", () => {
     });
 
     it("does not create memory when content is empty", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -905,7 +1022,7 @@ describe("ManageMemories", () => {
     });
 
     it("does not create memory when content is whitespace only", async () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -922,7 +1039,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes add modal when cancel is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -935,7 +1052,7 @@ describe("ManageMemories", () => {
     });
 
     it("closes add modal via onOpenChange(false)", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
 
       const addBtn = screen.getByText("Add Memory");
       fireEvent.click(addBtn);
@@ -946,11 +1063,35 @@ describe("ManageMemories", () => {
 
       expect(screen.queryByTestId("add-memory-modal")).not.toBeInTheDocument();
     });
+
+    it("does not create memory when tenantKey is missing", async () => {
+      render(
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
+          tenantKey=""
+          username="testuser"
+        />,
+      );
+
+      const addBtn = screen.getByText("Add Memory");
+      fireEvent.click(addBtn);
+
+      const textarea = screen.getByTestId("add-content-input");
+      fireEvent.change(textarea, { target: { value: "Some content" } });
+
+      const saveBtn = screen.getByTestId("add-save-btn");
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(mockCreateMentorMemory).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("Query Parameters", () => {
     it("passes org, userId, and mentorId to mentor memories query", () => {
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           org: "test-tenant",
@@ -961,9 +1102,22 @@ describe("ManageMemories", () => {
       );
     });
 
+    it("skips query when dialog is closed", () => {
+      render(<SavedMemoriesModal {...defaultProps} open={false} />);
+      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ skip: true }),
+      );
+    });
+
     it("skips query when tenantKey is missing", () => {
       render(
-        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
+          tenantKey=""
+          username="testuser"
+        />,
       );
       expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
@@ -973,98 +1127,17 @@ describe("ManageMemories", () => {
 
     it("skips query when username is null", () => {
       render(
-        <ManageMemories
+        <SavedMemoriesModal
+          open={true}
+          onOpenChange={vi.fn()}
           tenantKey="test-tenant"
           username={null}
-          mentorId="mentor-1"
         />,
       );
       expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
       );
-    });
-
-    it("skips query when mentorId is missing", () => {
-      render(
-        <ManageMemories
-          tenantKey="test-tenant"
-          username="testuser"
-          mentorId=""
-        />,
-      );
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.objectContaining({ skip: true }),
-      );
-    });
-
-    it("passes date range params when date filter is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const selectDateBtn = screen.getByTestId("calendar-select");
-      fireEvent.click(selectDateBtn);
-
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          params: expect.objectContaining({
-            start_date: "2024-01-01",
-            end_date: "2024-01-31",
-          }),
-        }),
-        expect.any(Object),
-      );
-    });
-
-    it("passes user_id param when learner filter is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      // Select a learner from the command items
-      const userItems = screen.getAllByTestId("command-item");
-      // Click the second item (first user after "All Users")
-      if (userItems.length > 1) {
-        fireEvent.click(userItems[1]);
-      }
-
-      // The query should now include user_id param
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalled();
-    });
-  });
-
-  describe("User Filter", () => {
-    it('renders "All Users" option', () => {
-      render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("All Users")).toBeInTheDocument();
-    });
-
-    it("renders user emails in filter dropdown", () => {
-      render(<ManageMemories {...defaultProps} />);
-      const items = screen.getAllByTestId("command-item");
-      // All Users + users derived from memories
-      expect(items.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it("clears user selection when All Users is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const userItems = screen.getAllByTestId("command-item");
-      if (userItems.length > 1) fireEvent.click(userItems[1]);
-
-      const allUsersItems = screen.getAllByTestId("command-item");
-      fireEvent.click(allUsersItems[0]);
-
-      expect(screen.getByText("Search for User")).toBeInTheDocument();
-    });
-  });
-
-  describe("Date Range Filter", () => {
-    it("updates date display when range is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const selectDateBtn = screen.getByTestId("calendar-select");
-      fireEvent.click(selectDateBtn);
-
-      expect(screen.getByText(/Jan 01 - Jan 31/)).toBeInTheDocument();
     });
   });
 
@@ -1074,7 +1147,7 @@ describe("ManageMemories", () => {
         data: undefined,
       });
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
     });
 
@@ -1083,58 +1156,32 @@ describe("ManageMemories", () => {
         data: [],
       });
 
-      render(<ManageMemories {...defaultProps} />);
+      render(<SavedMemoriesModal {...defaultProps} />);
       expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
     });
 
-    it("handles memory without username", () => {
+    it("derives categories from response when admin categories are empty", () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({
+        data: [],
+      });
+
+      render(<SavedMemoriesModal {...defaultProps} />);
+      expect(
+        screen.getAllByText("Personal Info").length,
+      ).toBeGreaterThanOrEqual(1);
+    });
+
+    it("shows only All when no data and no admin categories", () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({
+        data: undefined,
+      });
       mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [
-          {
-            category: { id: 1, name: "General", slug: "general" },
-            memories: [
-              {
-                id: 10,
-                content: "A note without user info",
-                category: { id: 1, name: "General", slug: "general" },
-                created_at: "2024-06-15T10:00:00Z",
-              },
-            ],
-          },
-        ],
+        data: undefined,
         isLoading: false,
       });
 
-      render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Unknown")).toBeInTheDocument();
-    });
-
-    it("handles memory without created_at", () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [
-          {
-            category: { id: 1, name: "General", slug: "general" },
-            memories: [
-              {
-                id: 11,
-                content: "No timestamp memory",
-                category: { id: 1, name: "General", slug: "general" },
-                username: "user1",
-              },
-            ],
-          },
-        ],
-        isLoading: false,
-      });
-
-      render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("No timestamp memory")).toBeInTheDocument();
-    });
-
-    it("renders mobile category dropdown", () => {
-      render(<ManageMemories {...defaultProps} />);
-      const dropdownMenus = screen.getAllByTestId("dropdown-menu");
-      expect(dropdownMenus.length).toBeGreaterThanOrEqual(1);
+      render(<SavedMemoriesModal {...defaultProps} />);
+      expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
     });
   });
 });

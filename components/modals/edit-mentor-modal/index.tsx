@@ -25,6 +25,7 @@ import {
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS, UserType } from '@/lib/constants';
 import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { useGetMemsearchConfigQuery } from '@iblai/iblai-js/data-layer';
 import { useParams } from 'next/navigation';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -288,6 +289,16 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       skip: !(getMentorId() || mentorId) || !tenantKey || !username,
     },
   );
+  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+    {
+      org: tenantKey,
+      userId: username ?? '',
+    },
+    {
+      skip: !tenantKey || !username,
+    },
+  );
+  const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
   const isAdmin = useIsAdmin();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
@@ -309,6 +320,16 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       });
 
       const filteredTabs = editMentorTabs
+        .filter((item) => {
+          // Hide Memory tab when memsearch is not enabled
+          if (
+            item.value === MODALS.EDIT_MENTOR.tabs.memory &&
+            !isMemsearchEnabled
+          ) {
+            return false;
+          }
+          return true;
+        })
         .filter(isUserTypeAllowed)
         .filter((item) => {
           const isAdminOnMainTenant =
@@ -370,7 +391,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       );
       setFilteredTabs(filteredTabs);
     }
-  }, [isSuccess, mentorSettings, rbacPermissions]);
+  }, [isSuccess, mentorSettings, rbacPermissions, isMemsearchEnabled]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

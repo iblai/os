@@ -169,6 +169,9 @@ vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
     await importOriginal<typeof import("@iblai/iblai-js/data-layer")>();
   return {
     ...actual,
+    useGetMemsearchConfigQuery: () => ({
+      data: { enable_memsearch: true },
+    }),
     useGetMentorSettingsQuery: () => ({
       data: mockMentorSettings,
       isLoading: false,
@@ -1037,6 +1040,94 @@ describe("NavBar - Menu Filtering Logic (getFilteredMenuItems)", () => {
       );
 
       expect(result[0].label).toBe("New Chat");
+    });
+  });
+
+  describe("Memory tab filtering", () => {
+    const adminMentorSettings = {
+      platform_key: "main",
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 123,
+      permissions: {
+        field: {
+          mentor_name: { read: true, write: true },
+          mentor_description: { read: true, write: true },
+          profile_image: { read: true, write: true },
+          mentor_visibility: { read: true, write: true },
+          metadata: { read: true, write: true },
+          llm_provider: { read: true, write: true },
+          system_prompt: { read: true, write: true },
+          mentor_tools: { read: true, write: true },
+        },
+      },
+    };
+
+    const isAdminUserType = (item: any) =>
+      item.userTypes.includes(UserType.ADMIN);
+
+    it("hides Memory tab when isMemsearchEnabled is false", () => {
+      const result = getFilteredMenuItems(
+        isAdminUserType,
+        true,
+        "main",
+        adminMentorSettings,
+        mockConfig,
+        {},
+        false,
+      );
+
+      const labels = result.map((i: any) => i.label);
+      expect(labels).not.toContain("Memory");
+    });
+
+    it("hides Memory tab when isMemsearchEnabled is undefined (default)", () => {
+      const result = getFilteredMenuItems(
+        isAdminUserType,
+        true,
+        "main",
+        adminMentorSettings,
+        mockConfig,
+        {},
+      );
+
+      const labels = result.map((i: any) => i.label);
+      expect(labels).not.toContain("Memory");
+    });
+
+    it("shows Memory tab when isMemsearchEnabled is true", () => {
+      const result = getFilteredMenuItems(
+        isAdminUserType,
+        true,
+        "main",
+        adminMentorSettings,
+        mockConfig,
+        {},
+        true,
+      );
+
+      const labels = result.map((i: any) => i.label);
+      expect(labels).toContain("Memory");
+    });
+
+    it("existing tests still work without isMemsearchEnabled param", () => {
+      const result = getFilteredMenuItems(
+        isAdminUserType,
+        true,
+        "main",
+        adminMentorSettings,
+        mockConfig,
+        {},
+      );
+
+      const labels = result.map((i: any) => i.label);
+      // New Chat is always present
+      expect(result[0].label).toBe("New Chat");
+      // Other items still filter correctly
+      expect(labels).toContain("Settings");
+      expect(labels).toContain("Analytics");
+      expect(labels).toContain("LLM");
+      expect(labels).toContain("Prompts");
+      expect(labels).toContain("Tools");
     });
   });
 

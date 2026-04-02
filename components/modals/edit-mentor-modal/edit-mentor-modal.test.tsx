@@ -107,6 +107,9 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: mockIsSuccess,
     }),
+    useGetMemsearchConfigQuery: () => ({
+      data: { enable_memsearch: true },
+    }),
   };
 });
 
