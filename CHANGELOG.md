@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.44.3](https://github.com/iblai/mentorai/compare/v0.44.2...v0.44.3) (2026-04-02)
+
+### Bug Fixes
+
+* **mentor:** adding test coverage ([eaf4842](https://github.com/iblai/mentorai/commit/eaf4842e798f0390b19146a2b05ac9f9fc9dfb11))
+* **mentor:** fixes for memory and tests ([4de9071](https://github.com/iblai/mentorai/commit/4de90715ac921a82e6a9d36a8d52803aaf7fe8fa))
+* **mentor:** fixes for memory, unit tests ([b3f974c](https://github.com/iblai/mentorai/commit/b3f974c42b1a0343510ed2b724220299320ea972))
+* **mentor:** merge conflicts fixes ([8938a07](https://github.com/iblai/mentorai/commit/8938a07b077ad82de81b2bf0ae67598251612824))
+* **mentor:** prop for the enable memory in profile dropdown ([9dbbd1f](https://github.com/iblai/mentorai/commit/9dbbd1f9d943fb72652df90031d0711482dd6b21))
+
 ## [0.44.2](https://github.com/iblai/mentorai/compare/v0.44.1...v0.44.2) (2026-04-02)
 
 ### Chores
