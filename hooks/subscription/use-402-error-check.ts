@@ -10,7 +10,7 @@ import { getUserEmail } from "@/features/utils";
 import { useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useIsAdmin } from "../use-user";
-import { showMonetizationCheckoutModal } from "@/features/monetization/monetization-slice";
+import { showMonetizationCheckoutModal } from "@iblai/iblai-js/web-utils";
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();

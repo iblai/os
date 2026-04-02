@@ -19,12 +19,14 @@ import { messagesApiSlice } from "@/features/messages/api-slice";
 import { appSlice } from "@/lib/features/app/app-slice";
 import { providerAssociationApiSlice } from "@/features/provider-association/api-slice";
 import { chatReducer } from "@/features/chat/chatSlice";
-import { filesReducer } from "@iblai/iblai-js/web-utils";
-import { chatSliceReducerShared } from "@iblai/iblai-js/web-utils";
+import {
+  filesReducer,
+  chatSliceReducerShared,
+  monetizationSlice,
+} from "@iblai/iblai-js/web-utils";
 import { analyticsReducer } from "@/features/analytics/slice";
 import { chatInputSliceReducer } from "@/features/chat-input/api-slice";
 import rbacReducer from "@/features/rbac/rbac-slice";
-import monetizationSlice from "@/features/monetization/monetization-slice";
 
 export const store = configureStore({
   reducer: {

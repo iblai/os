@@ -7,7 +7,7 @@ import {
 import {
   showMonetizationCheckoutModal,
   setDisplayMonetizationCheckoutModal,
-} from "@/features/monetization/monetization-slice";
+} from "@iblai/iblai-js/web-utils";
 import { isLoggedIn } from "@/lib/utils";
 
 export function useMonetizationCheck() {
