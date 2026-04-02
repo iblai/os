@@ -115,6 +115,19 @@ jobs:
       max-wait: 18000
 
   # ============================================================
+  # PINNED VERSIONS CHECK
+  # ============================================================
+  pinned-versions:
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all dependency versions are pinned
+        run: ./scripts/check-pinned-versions.sh
+
+  # ============================================================
   # CONVENTIONAL COMMIT CHECK
   # ============================================================
   commitlint:
@@ -713,7 +726,7 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [gate, acquire-domain, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
+    needs: [gate, acquire-domain, pinned-versions, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
@@ -728,7 +741,7 @@ jobs:
   # FINAL SUMMARY
   # ============================================================
   summary:
-    needs: [gate, acquire-domain, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
+    needs: [gate, acquire-domain, pinned-versions, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
     if: always()
     runs-on: ubuntu-22.04
     env:
@@ -746,6 +759,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|:------:|" >> $GITHUB_STEP_SUMMARY
+
+          PINNED_RESULT="${{ needs.pinned-versions.result }}"
+          if [[ "$PINNED_RESULT" == "success" ]]; then
+            echo "| Pinned Versions | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Pinned Versions | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
 
           COMMITLINT_RESULT="${{ needs.commitlint.result }}"
           if [[ "$COMMITLINT_RESULT" == "success" ]]; then
@@ -860,6 +880,12 @@ jobs:
           echo "============================================"
           echo "Checking test results..."
           echo "============================================"
+
+          if [[ "${{ needs.pinned-versions.result }}" != "success" ]]; then
+            echo "Pinned versions FAILED"; FAILED=true
+          else
+            echo "Pinned versions PASSED"
+          fi
 
           if [[ "${{ needs.commitlint.result }}" != "success" ]]; then
             echo "Conventional commits FAILED"; FAILED=true
