@@ -7,7 +7,7 @@ import type { TenantKeyMentorIdParams } from "@/lib/types";
 import { useAppSelector } from "@/lib/hooks";
 import { TopBanner } from "@iblai/iblai-js/web-containers";
 import { useIsPreviewMode } from "@/hooks/use-is-preview-mode";
-import { PaywallModal } from "./paywall-modal";
+import { PaywallModal } from "@iblai/iblai-js/web-containers";
 
 export function MonetizationWrapper() {
   const isPreviewMode = useIsPreviewMode();
@@ -188,7 +188,8 @@ export function MonetizationWrapper() {
         onClose={handleModalClose}
         pricing={pricing}
         platformKey={platformKey}
-        mentorId={mentorId}
+        itemId={mentorId}
+        itemType="mentor"
       />
     </>
   );
