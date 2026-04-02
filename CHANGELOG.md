@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.1](https://github.com/iblai/mentorai/compare/v0.44.0...v0.44.1) (2026-04-02)
+
+### Chores
+
+* pin all dependency versions and enforce via hook + CI ([0deb73d](https://github.com/iblai/mentorai/commit/0deb73d2b53d4c7282f6574b34a684b5d57689aa))
+
 ## [0.44.0](https://github.com/iblai/mentorai/compare/v0.43.0...v0.44.0) (2026-04-01)
 
 ### Features
