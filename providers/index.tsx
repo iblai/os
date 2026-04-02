@@ -18,6 +18,7 @@ import {
   useAxdToken,
   useDmTokenExpires,
   useAxdTokenExpires,
+  useUserData,
 } from "@/hooks/use-user";
 import {
   isInIframe,
@@ -45,6 +46,7 @@ import {
   AuthContextProvider,
   selectShowingSharedChat,
   isJSON,
+  isLoggedIn,
 } from "@iblai/iblai-js/web-utils";
 import { Spinner } from "@/components/spinner";
 import { useIsPreviewMode } from "@/hooks/use-is-preview-mode";
@@ -151,9 +153,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   const username = useUsername();
+  const userData = useUserData();
+  const userEmail = userData?.user_email ?? null;
   const { tenant: tenantKey, saveTenant } = useTenantKey();
 
   const isAdmin = useIsAdmin();
+  const userIsLoggedIn = isLoggedIn();
   const { tenantKey: tenantKeyParams, mentorId } =
     useParams<TenantKeyMentorIdParams>();
   const [getMentorPublicSettings] = useLazyGetMentorPublicSettingsQuery();
@@ -201,8 +206,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const showingSharedChat = useSelector(selectShowingSharedChat);
 
   const email = searchParams.get("email");
-
-  if (email) {
+  // if user is not logged in or email is different from user email, redirect to login page
+  if (email && (!userIsLoggedIn || email !== userEmail)) {
+    console.log("[Providers] Redirecting to login page", {
+      email,
+      userEmail,
+      userIsLoggedIn,
+    });
     window.location.href = `${config.authUrl()}/login?enforce_logout=1&logout=1&email=${encodeURIComponent(email)}&app=mentor&redirect-to=${window.location.origin}`;
     return;
   }
