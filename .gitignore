@@ -22,7 +22,6 @@ playwright/.auth/
 .env
 .env.*
 !.env.example
-.npmrc
 
 # keys & certificates
 *.pem
