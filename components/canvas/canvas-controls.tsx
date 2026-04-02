@@ -79,7 +79,8 @@ const emojiPrompts = {
   words: 'Replace as many words as possible with emojis.',
   sections:
     'Add three emojis at the start or end of every major section or paragraph to give subtle decoration. Do not change the structure of the original text. Do not add emojis to lists.',
-  lists: 'Add emojis to lists for visual flair. Do not change the structure of the original text.',
+  lists:
+    'Add emojis to lists for visual flair. Do not change the structure of the original text.',
   remove: 'Remove emojis.',
 };
 
@@ -87,7 +88,9 @@ interface CanvasControlsProps {
   sendFullArtifactUpdate?: (message: string) => void;
 }
 
-export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) {
+export function CanvasControls({
+  sendFullArtifactUpdate,
+}: CanvasControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedOption, setSelectedOption] = useState<ControlOption>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -102,7 +105,10 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setSelectedOption(null);
         setShowSendOnIcon(null);
         setIsExpanded(false);
@@ -119,13 +125,19 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
         if (!sliderRef.current) return;
 
         const sliderRect = sliderRef.current.getBoundingClientRect();
-        const dotCount = selectedOption === 'length' ? lengthLevels.length : readingLevels.length;
+        const dotCount =
+          selectedOption === 'length'
+            ? lengthLevels.length
+            : readingLevels.length;
         const sliderHeight = sliderRect.height - 60; // Accounting for padding
         const dotSpacing = sliderHeight / (dotCount - 1);
 
         const relativeY = e.clientY - sliderRect.top - 30; // Offset for padding
         const newPosition = Math.round(relativeY / dotSpacing);
-        const clampedPosition = Math.max(0, Math.min(dotCount - 1, newPosition));
+        const clampedPosition = Math.max(
+          0,
+          Math.min(dotCount - 1, newPosition),
+        );
 
         if (selectedOption === 'length') {
           setLengthPosition(clampedPosition);
@@ -136,7 +148,8 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
 
       const handleMouseUp = () => {
         setIsDragging(false);
-        const currentPosition = selectedOption === 'length' ? lengthPosition : readingPosition;
+        const currentPosition =
+          selectedOption === 'length' ? lengthPosition : readingPosition;
         const keepCurrentPosition = selectedOption === 'length' ? 2 : 3;
 
         if (currentPosition === keepCurrentPosition) {
@@ -167,7 +180,8 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
     setShowSendOnIcon(null); // Reset send button on mousedown to allow dragging again
     setIsDragging(true);
     startDragY.current = e.clientY;
-    startPosition.current = selectedOption === 'length' ? lengthPosition : readingPosition;
+    startPosition.current =
+      selectedOption === 'length' ? lengthPosition : readingPosition;
   };
 
   const handleIconClick = (option: ControlOption) => {
@@ -234,44 +248,51 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
   };
 
   return (
-    <div className="fixed bottom-6 right-10 flex items-end gap-4 z-40" ref={containerRef}>
+    <div
+      className="fixed right-10 bottom-6 z-40 flex items-end gap-4"
+      ref={containerRef}
+    >
       {(selectedOption === 'length' || selectedOption === 'reading') && (
-        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right duration-300">
+        <div className="animate-in fade-in slide-in-from-right flex items-center gap-4 duration-300">
           {/* Slider with dots */}
           <div
             ref={sliderRef}
-            className="bg-gray-100 rounded-full px-5 py-6 shadow-lg flex flex-col items-center relative"
+            className="relative flex flex-col items-center rounded-full bg-gray-100 px-5 py-6 shadow-lg"
             style={{ height: '300px', width: '70px' }}
           >
             {/* Static dots */}
-            <div className="absolute inset-0 flex flex-col justify-between items-center py-8">
-              {(selectedOption === 'length' ? lengthLevels : readingLevels).map((level, index) => {
-                const isActive =
-                  selectedOption === 'length'
-                    ? lengthPosition === index
-                    : readingPosition === index;
+            <div className="absolute inset-0 flex flex-col items-center justify-between py-8">
+              {(selectedOption === 'length' ? lengthLevels : readingLevels).map(
+                (level, index) => {
+                  const isActive =
+                    selectedOption === 'length'
+                      ? lengthPosition === index
+                      : readingPosition === index;
 
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center justify-center"
-                    style={{ position: 'relative' }}
-                  >
+                  return (
                     <div
-                      className={`absolute right-full mr-8 bg-black text-white px-3 py-1 rounded text-xs whitespace-nowrap transition-opacity duration-200 ${
-                        isActive ? 'opacity-100' : 'opacity-0'
-                      }`}
+                      key={index}
+                      className="flex items-center justify-center"
+                      style={{ position: 'relative' }}
                     >
-                      {level.label}
+                      <div
+                        className={`absolute right-full mr-8 rounded bg-black px-3 py-1 text-xs whitespace-nowrap text-white transition-opacity duration-200 ${
+                          isActive ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      >
+                        {level.label}
+                      </div>
+                      <div
+                        className={`rounded-full transition-all duration-200 ${
+                          isActive
+                            ? 'h-2 w-2 bg-gray-400'
+                            : 'h-2 w-2 bg-gray-300'
+                        }`}
+                      />
                     </div>
-                    <div
-                      className={`rounded-full transition-all duration-200 ${
-                        isActive ? 'w-2 h-2 bg-gray-400' : 'w-2 h-2 bg-gray-300'
-                      }`}
-                    />
-                  </div>
-                );
-              })}
+                  );
+                },
+              )}
             </div>
 
             <div
@@ -285,7 +306,7 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
               onMouseDown={handleDotMouseDown}
             >
               <div
-                className={`w-11 h-11 bg-white rounded-full shadow-xl flex items-center justify-center ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-xl ${
                   showSendOnIcon === selectedOption
                     ? 'cursor-pointer hover:bg-gray-50'
                     : 'cursor-grab active:cursor-grabbing'
@@ -301,11 +322,11 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
                 }
               >
                 {showSendOnIcon === selectedOption ? (
-                  <ArrowUp className="w-5 h-5 text-gray-700" />
+                  <ArrowUp className="h-5 w-5 text-gray-700" />
                 ) : selectedOption === 'length' ? (
-                  <ArrowUpDown className="w-5 h-5 text-gray-700" />
+                  <ArrowUpDown className="h-5 w-5 text-gray-700" />
                 ) : (
-                  <BookOpen className="w-5 h-5 text-gray-700" />
+                  <BookOpen className="h-5 w-5 text-gray-700" />
                 )}
               </div>
             </div>
@@ -314,8 +335,8 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
       )}
 
       {selectedOption === 'emojis' && showSendOnIcon !== 'emojis' && (
-        <div className="bg-white rounded-2xl p-6 shadow-xl animate-in fade-in slide-in-from-right duration-300 min-w-[280px]">
-          <h3 className="text-center text-lg font-semibold mb-4">Add emojis</h3>
+        <div className="animate-in fade-in slide-in-from-right min-w-[280px] rounded-2xl bg-white p-6 shadow-xl duration-300">
+          <h3 className="mb-4 text-center text-lg font-semibold">Add emojis</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
               { icon: Type, label: 'Words' },
@@ -327,10 +348,10 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
               return (
                 <button
                   key={index}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200"
+                  className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-gray-200 p-4 transition-all duration-200 hover:border-blue-400 hover:bg-blue-50"
                   onClick={() => handleEmojiOption(option.label)}
                 >
-                  <IconComponent className="w-6 h-6 text-gray-700" />
+                  <IconComponent className="h-6 w-6 text-gray-700" />
                   <span className="text-sm text-gray-700">{option.label}</span>
                 </button>
               );
@@ -340,9 +361,9 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
       )}
 
       <div
-        className={`flex flex-col gap-3 rounded-full p-2 transition-all duration-300 relative ${
+        className={`relative flex flex-col gap-3 rounded-full p-2 transition-all duration-300 ${
           (isExpanded || showSendOnIcon === 'polish') && !selectedOption
-            ? 'bg-white shadow-lg border border-gray-200'
+            ? 'border border-gray-200 bg-white shadow-lg'
             : 'bg-transparent'
         }`}
         onMouseEnter={() => setIsExpanded(true)}
@@ -351,27 +372,27 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
         <div
           className={`flex flex-col gap-3 transition-all duration-500 ease-out ${
             (isExpanded || showSendOnIcon === 'polish') && !selectedOption
-              ? 'opacity-100 translate-y-0'
-              : 'opacity-0 translate-y-4 pointer-events-none h-0 overflow-hidden'
+              ? 'translate-y-0 opacity-100'
+              : 'pointer-events-none h-0 translate-y-4 overflow-hidden opacity-0'
           }`}
         >
           {/* Add Emojis */}
-          <div className="relative group flex items-center justify-center">
+          <div className="group relative flex items-center justify-center">
             <button
-              className="h-12 w-12 flex items-center justify-center transition-all duration-200"
+              className="flex h-12 w-12 items-center justify-center transition-all duration-200"
               onClick={() => handleIconClick('emojis')}
             >
-              <Smile className="h-5 w-5 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all duration-200" />
+              <Smile className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-black text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               Add emojis
             </div>
           </div>
 
           {/* Add final polish */}
-          <div className="relative group flex items-center justify-center">
+          <div className="group relative flex items-center justify-center">
             <button
-              className="h-12 w-12 flex items-center justify-center transition-all duration-200"
+              className="flex h-12 w-12 items-center justify-center transition-all duration-200"
               onClick={
                 showSendOnIcon === 'polish'
                   ? (e) => {
@@ -385,36 +406,36 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
               {showSendOnIcon === 'polish' ? (
                 <ArrowUp className="h-5 w-5 text-gray-700" />
               ) : (
-                <Sparkles className="h-5 w-5 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all duration-200" />
+                <Sparkles className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
               )}
             </button>
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-black text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               {showSendOnIcon === 'polish' ? 'Send' : 'Add final polish'}
             </div>
           </div>
 
           {/* Reading Level */}
-          <div className="relative group flex items-center justify-center">
+          <div className="group relative flex items-center justify-center">
             <button
-              className="h-12 w-12 flex items-center justify-center transition-all duration-200"
+              className="flex h-12 w-12 items-center justify-center transition-all duration-200"
               onClick={() => handleIconClick('reading')}
             >
-              <BookOpen className="h-5 w-5 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all duration-200" />
+              <BookOpen className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-black text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               Reading level
             </div>
           </div>
 
           {/* Adjust the length */}
-          <div className="relative group flex items-center justify-center">
+          <div className="group relative flex items-center justify-center">
             <button
-              className="h-12 w-12 flex items-center justify-center transition-all duration-200"
+              className="flex h-12 w-12 items-center justify-center transition-all duration-200"
               onClick={() => handleIconClick('length')}
             >
-              <ArrowUpDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 group-hover:scale-110 transition-all duration-200" />
+              <ArrowUpDown className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
-            <div className="absolute right-full mr-2 top-1/2 transform -translate-y-1/2 bg-black text-white px-3 py-1 rounded text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               Adjust the length
             </div>
           </div>
@@ -423,7 +444,7 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
         {/* Main Pencil Button */}
         <button
           type="button"
-          className="h-14 w-14 rounded-full bg-white shadow-lg hover:bg-gray-50 transition-all duration-200 hover:scale-105 flex items-center justify-center border-0 outline-none cursor-pointer"
+          className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border-0 bg-white shadow-lg transition-all duration-200 outline-none hover:scale-105 hover:bg-gray-50"
           style={{
             backgroundColor: '#ffffff',
             position: 'relative',
@@ -432,7 +453,10 @@ export function CanvasControls({ sendFullArtifactUpdate }: CanvasControlsProps) 
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Pencil className="h-6 w-6 text-gray-600" style={{ position: 'relative', zIndex: 11 }} />
+          <Pencil
+            className="h-6 w-6 text-gray-600"
+            style={{ position: 'relative', zIndex: 11 }}
+          />
         </button>
       </div>
     </div>

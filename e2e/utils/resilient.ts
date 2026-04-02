@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 /**
  * Wait for an element to be attached and visible, with a stability pause.
@@ -8,7 +8,7 @@ export async function waitForElementStable(
   locator: Locator,
   timeout = 10_000,
 ): Promise<Locator> {
-  await locator.waitFor({ state: "attached", timeout });
+  await locator.waitFor({ state: 'attached', timeout });
   await expect(locator).toBeVisible({ timeout });
   await page.waitForTimeout(500);
   return locator;
@@ -81,7 +81,7 @@ export async function waitForPageReady(
   page: Page,
   timeout = 30_000,
 ): Promise<void> {
-  await page.waitForFunction(() => document.readyState === "complete", {
+  await page.waitForFunction(() => document.readyState === 'complete', {
     timeout,
   });
   await page.waitForTimeout(2_000);
@@ -96,6 +96,6 @@ export async function waitForDialogReady(
   timeout = 15_000,
 ): Promise<Locator> {
   await expect(dialogLocator).toBeVisible({ timeout });
-  await page.waitForLoadState("domcontentloaded", { timeout });
+  await page.waitForLoadState('domcontentloaded', { timeout });
   return dialogLocator;
 }

@@ -4,7 +4,10 @@ import { getUserId, getUserName } from '@/features/utils';
 import { updateSessionId } from '@/lib/features/app/app-slice';
 import { useIframeHandlers } from '@/lib/handlers';
 import { useAppDispatch } from '@/lib/hooks';
-import { saveUserObjectToLocalStorage, sendMessageToParentWebsite } from '@/lib/utils';
+import {
+  saveUserObjectToLocalStorage,
+  sendMessageToParentWebsite,
+} from '@/lib/utils';
 import {
   useLazyGetPinnedMessagesQuery,
   useLazyGetRecentMessageQuery,
@@ -15,7 +18,11 @@ import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { MessageBridgeProvider } from './message-bridge-provider';
 
-export default function AppProvider({ children }: { children: React.ReactNode }) {
+export default function AppProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const dispatch = useAppDispatch();
   const [getVectorDocuments] = useLazyGetVectorDocumentsQuery();
   const [getRecentMessages] = useLazyGetRecentMessageQuery();

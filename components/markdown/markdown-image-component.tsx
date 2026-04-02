@@ -9,7 +9,11 @@ interface MarkdownImageComponentProps {
   title?: string;
 }
 
-export function MarkdownImageComponent({ src, alt, title }: MarkdownImageComponentProps) {
+export function MarkdownImageComponent({
+  src,
+  alt,
+  title,
+}: MarkdownImageComponentProps) {
   const [hasError, setHasError] = useState(false);
   const [imageSrc, setImageSrc] = useState<string>('');
 
@@ -34,11 +38,13 @@ export function MarkdownImageComponent({ src, alt, title }: MarkdownImageCompone
   if (hasError || !imageSrc) {
     return (
       <div
-        className="max-h-96 w-auto flex flex-col items-center justify-center gap-2 rounded border border-gray-300 bg-gray-50 p-8"
+        className="flex max-h-96 w-auto flex-col items-center justify-center gap-2 rounded border border-gray-300 bg-gray-50 p-8"
         title={title}
       >
         <ImageOff className="h-12 w-12 text-gray-400" />
-        <span className="text-sm text-gray-500">{alt || 'Image unavailable'}</span>
+        <span className="text-sm text-gray-500">
+          {alt || 'Image unavailable'}
+        </span>
       </div>
     );
   }
@@ -48,7 +54,7 @@ export function MarkdownImageComponent({ src, alt, title }: MarkdownImageCompone
       src={imageSrc}
       alt={alt || ''}
       title={title}
-      className="max-h-96 w-auto object-contain rounded"
+      className="max-h-96 w-auto rounded object-contain"
       onError={() => setHasError(true)}
       loading="lazy"
     />

@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class McpTab {
   readonly page: Page;
@@ -12,14 +12,14 @@ export class McpTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.addConnectorButton = dialog.getByRole("button", {
+    this.addConnectorButton = dialog.getByRole('button', {
       name: /add connector/i,
     });
     this.connectorRows = dialog.locator(
       '[class*="connector"], [data-testid*="connector"]',
     );
-    this.emptyState = dialog.getByText("No connectors configured");
-    this.deleteButtons = dialog.getByRole("button", { name: /delete/i });
+    this.emptyState = dialog.getByText('No connectors configured');
+    this.deleteButtons = dialog.getByRole('button', { name: /delete/i });
   }
 
   async addConnector(name: string, serverUrl: string): Promise<void> {
@@ -27,12 +27,12 @@ export class McpTab {
     await this.addConnectorButton.click();
 
     const connectorDialog = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /connector/i })
       .last();
     await expect(connectorDialog).toBeVisible({ timeout: 10_000 });
 
-    const nameInput = connectorDialog.getByPlaceholder("Enter connector name");
+    const nameInput = connectorDialog.getByPlaceholder('Enter connector name');
     await expect(nameInput).toBeVisible({ timeout: 5_000 });
     await nameInput.fill(name);
 
@@ -41,7 +41,7 @@ export class McpTab {
     await urlInput.fill(serverUrl);
 
     const saveButton = connectorDialog
-      .getByRole("button", { name: /save|add|create/i })
+      .getByRole('button', { name: /save|add|create/i })
       .last();
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
@@ -53,20 +53,20 @@ export class McpTab {
     const visible = await btn.isVisible({ timeout: 5_000 }).catch(() => false);
     if (!visible) {
       const optionsBtn = this.dialog
-        .getByRole("button", { name: /options|more/i })
+        .getByRole('button', { name: /options|more/i })
         .first();
       await expect(optionsBtn).toBeVisible({ timeout: 5_000 });
       await optionsBtn.click();
       await expect(
-        this.page.getByRole("menuitem", { name: /delete/i }),
+        this.page.getByRole('menuitem', { name: /delete/i }),
       ).toBeVisible({ timeout: 3_000 });
-      await this.page.getByRole("menuitem", { name: /delete/i }).click();
+      await this.page.getByRole('menuitem', { name: /delete/i }).click();
     } else {
       await btn.click();
     }
 
     const confirmDialog = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
     const confirmVisible = await confirmDialog
@@ -74,7 +74,7 @@ export class McpTab {
       .catch(() => false);
     if (confirmVisible) {
       await confirmDialog
-        .getByRole("button", { name: /delete|confirm/i })
+        .getByRole('button', { name: /delete|confirm/i })
         .last()
         .click();
     }

@@ -1,24 +1,22 @@
-import type React from "react";
+import type React from 'react';
 
-import { Info } from "lucide-react";
+import { Info } from 'lucide-react';
 
-import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
+import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useParams } from "next/navigation";
-import { useUsername } from "@/hooks/use-user";
-import { Switch } from "@/components/ui/switch";
-import { useNavigate } from "@/hooks/user-navigate";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { useGetToolsQuery } from "@iblai/iblai-js/data-layer";
-import { useMemo } from "react";
-import { useToggleTools } from "@/hooks/use-tools/use-toggle-tools";
-import WithFormPermissions from "@/hoc/withPermissions";
+} from '@/components/ui/tooltip';
+import { useParams } from 'next/navigation';
+import { useUsername } from '@/hooks/use-user';
+import { Switch } from '@/components/ui/switch';
+import { useNavigate } from '@/hooks/user-navigate';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useGetToolsQuery } from '@iblai/iblai-js/data-layer';
+import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import WithFormPermissions from '@/hoc/withPermissions';
 
 export function ToolsTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -26,38 +24,17 @@ export function ToolsTab() {
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() || mentorId;
 
-  const { data: allTools, isLoading: isToolsLoading } = useGetToolsQuery(
+  const { data: tools, isLoading: isToolsLoading } = useGetToolsQuery(
     {
       mentor: activeMentorId,
       org: tenantKey,
       // @ts-ignore
-      userId: username ?? "",
+      userId: username ?? '',
     },
     {
       skip: !username,
     },
   );
-
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
-    {
-      org: tenantKey,
-      userId: username ?? "",
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
-
-  const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-
-  // Hide memory tools when memsearch is not enabled
-  const tools = useMemo(() => {
-    if (!allTools) return allTools;
-    if (isMemsearchEnabled) return allTools;
-    return allTools.filter(
-      (tool) => !tool?.slug?.toLowerCase().includes("memory"),
-    );
-  }, [allTools, isMemsearchEnabled]);
 
   const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
     useGetMentorSettingsQuery(
@@ -65,7 +42,7 @@ export function ToolsTab() {
         mentor: activeMentorId,
         org: tenantKey,
         // @ts-ignore
-        userId: username ?? "",
+        userId: username ?? '',
       },
       { skip: !username || !activeMentorId || !tenantKey },
     );
@@ -74,7 +51,7 @@ export function ToolsTab() {
     tools: mentorSettings?.mentor_tools?.map((tool) => tool.slug) ?? [],
     activeMentorId,
     tenantKey,
-    username: username ?? "",
+    username: username ?? '',
   });
 
   const isDisabled =
@@ -82,10 +59,10 @@ export function ToolsTab() {
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Tools</h3>
-          <p className="text-gray-700 text-xs">
+          <h3 className="mb-1 text-base font-medium text-gray-900">Tools</h3>
+          <p className="text-xs text-gray-700">
             Configure tools and integrations for your mentor.
           </p>
         </div>
@@ -93,8 +70,8 @@ export function ToolsTab() {
       <div
         className="flex-1 space-y-4 p-3"
         style={{
-          overflowY: "auto",
-          overflowX: "hidden",
+          overflowY: 'auto',
+          overflowX: 'hidden',
         }}
       >
         <WithFormPermissions
@@ -107,7 +84,7 @@ export function ToolsTab() {
               {tools?.map((tool) => {
                 const isEnabled = mentorSettings?.mentor_tools
                   ?.map((tool) => tool.slug)
-                  .includes(tool?.slug ?? "");
+                  .includes(tool?.slug ?? '');
 
                 return (
                   <div
@@ -134,10 +111,10 @@ export function ToolsTab() {
                     <Switch
                       checked={isEnabled}
                       onCheckedChange={async () => {
-                        await toggleTools(tool?.slug ?? "");
+                        await toggleTools(tool?.slug ?? '');
                       }}
                       disabled={isDisabled || disabled}
-                      aria-label={`${tool?.display_name} ${isEnabled ? "enabled" : "disabled"}`}
+                      aria-label={`${tool?.display_name} ${isEnabled ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 );

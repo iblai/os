@@ -6,7 +6,9 @@ import katex from 'katex';
  * KaTeX embeds the original TeX in an <annotation encoding="application/x-tex"> element.
  */
 function extractLatexFromElement(element: HTMLElement): string {
-  const annotation = element.querySelector('annotation[encoding="application/x-tex"]');
+  const annotation = element.querySelector(
+    'annotation[encoding="application/x-tex"]',
+  );
   if (annotation?.textContent) {
     return annotation.textContent;
   }
@@ -133,7 +135,10 @@ export const MathBlock = Node.create({
   },
 
   renderHTML({ node }) {
-    return ['span', { 'data-math-latex': node.attrs.latex, 'data-math-display': 'true' }];
+    return [
+      'span',
+      { 'data-math-latex': node.attrs.latex, 'data-math-display': 'true' },
+    ];
   },
 
   addNodeView() {

@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class ProfilePage {
   readonly page: Page;
@@ -35,12 +35,12 @@ export class ProfilePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.modal = page.getByRole("dialog", { name: /profile/i });
-    this.closeButton = this.modal.getByRole("button", {
-      name: "Close",
+    this.modal = page.getByRole('dialog', { name: /profile/i });
+    this.closeButton = this.modal.getByRole('button', {
+      name: 'Close',
       exact: true,
     });
-    this.tabs = this.modal.getByRole("tablist");
+    this.tabs = this.modal.getByRole('tablist');
 
     this.fullNameField = this.modal
       .getByLabel(/full name/i)
@@ -54,50 +54,50 @@ export class ProfilePage {
     this.aboutField = this.modal
       .getByLabel(/about/i)
       .or(this.modal.locator('textarea[name*="about"]'));
-    this.languageSelector = this.modal.getByRole("combobox", {
+    this.languageSelector = this.modal.getByRole('combobox', {
       name: /language/i,
     });
-    this.saveButton = this.modal.getByRole("button", { name: /save/i }).first();
-    this.cancelButton = this.modal.getByRole("button", { name: /cancel/i });
+    this.saveButton = this.modal.getByRole('button', { name: /save/i }).first();
+    this.cancelButton = this.modal.getByRole('button', { name: /cancel/i });
 
     this.linkedInField = this.modal
-      .getByRole("textbox", { name: "LinkedIn" })
+      .getByRole('textbox', { name: 'LinkedIn' })
       .or(this.modal.getByPlaceholder(/linkedin/i));
     this.twitterField = this.modal
-      .getByRole("textbox", { name: "X" })
-      .or(this.modal.getByPlaceholder("X"));
+      .getByRole('textbox', { name: 'X' })
+      .or(this.modal.getByPlaceholder('X'));
     this.facebookField = this.modal
-      .getByRole("textbox", { name: "Facebook" })
-      .or(this.modal.getByPlaceholder("Facebook"));
+      .getByRole('textbox', { name: 'Facebook' })
+      .or(this.modal.getByPlaceholder('Facebook'));
 
     this.addEducationButton = this.modal
-      .getByRole("button", {
+      .getByRole('button', {
         name: /add education/i,
       })
       .first();
     this.addExperienceButton = this.modal
-      .getByRole("button", {
+      .getByRole('button', {
         name: /add experience/i,
       })
       .first();
     this.uploadResumeButton = this.modal
-      .getByRole("button", {
-        name: "Upload resume",
+      .getByRole('button', {
+        name: 'Upload resume',
         exact: true,
       })
-      .filter({ hasText: "Upload resume" });
-    this.sendPasswordResetButton = this.modal.getByRole("button", {
+      .filter({ hasText: 'Upload resume' });
+    this.sendPasswordResetButton = this.modal.getByRole('button', {
       name: /send password reset/i,
     });
   }
 
   async open(): Promise<void> {
-    const profileDropdown = this.page.getByRole("button", {
-      name: "More options",
+    const profileDropdown = this.page.getByRole('button', {
+      name: 'More options',
     });
     await expect(profileDropdown).toBeVisible({ timeout: 10_000 });
     await profileDropdown.click();
-    const profileItem = this.page.getByRole("menuitem", { name: /profile/i });
+    const profileItem = this.page.getByRole('menuitem', { name: /profile/i });
     await expect(profileItem).toBeVisible({ timeout: 5_000 });
     await profileItem.click();
     await expect(this.modal).toBeVisible({ timeout: 15_000 });
@@ -111,7 +111,7 @@ export class ProfilePage {
 
   async switchToTab(tabName: string): Promise<void> {
     const tab = this.modal
-      .getByRole("tab", { name: new RegExp(tabName, "i") })
+      .getByRole('tab', { name: new RegExp(tabName, 'i') })
       .first();
     await expect(tab).toBeVisible({ timeout: 5_000 });
     await tab.click();
@@ -130,7 +130,7 @@ export class ProfilePage {
     await expect(this.addEducationButton).toBeVisible({ timeout: 10_000 });
     await this.addEducationButton.click();
     const dialog = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /education/i })
       .last();
     await expect(dialog).toBeVisible({ timeout: 10_000 });
@@ -141,7 +141,7 @@ export class ProfilePage {
     await expect(this.addExperienceButton).toBeVisible({ timeout: 10_000 });
     await this.addExperienceButton.click();
     const dialog = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /experience/i })
       .last();
     await expect(dialog).toBeVisible({ timeout: 10_000 });

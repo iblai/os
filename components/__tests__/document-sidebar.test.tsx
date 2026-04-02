@@ -88,8 +88,12 @@ describe('DocumentSidebar', () => {
 
     it('should render document snippets', () => {
       render(<DocumentSidebar sessionId="session-1" />);
-      expect(screen.getByText('This is the first document snippet.')).toBeInTheDocument();
-      expect(screen.getByText('This is the second document snippet.')).toBeInTheDocument();
+      expect(
+        screen.getByText('This is the first document snippet.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('This is the second document snippet.'),
+      ).toBeInTheDocument();
     });
 
     it('should render document scores formatted to 2 decimal places', () => {
@@ -190,7 +194,9 @@ describe('DocumentSidebar', () => {
       fireEvent.click(header);
 
       expect(screen.queryByText('Retrieved Documents')).not.toBeInTheDocument();
-      expect(screen.queryByText('First Document Title')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('First Document Title'),
+      ).not.toBeInTheDocument();
     });
 
     it('should toggle back to expanded when clicked again', () => {
@@ -200,10 +206,14 @@ describe('DocumentSidebar', () => {
         .closest('div[class*="cursor-pointer"]')!;
 
       fireEvent.click(header);
-      expect(screen.queryByText('First Document Title')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('First Document Title'),
+      ).not.toBeInTheDocument();
 
       // The FileText icon's parent div is still clickable when collapsed
-      const collapsedHeader = document.querySelector('div[class*="cursor-pointer"]')!;
+      const collapsedHeader = document.querySelector(
+        'div[class*="cursor-pointer"]',
+      )!;
       fireEvent.click(collapsedHeader);
       expect(screen.getByText('First Document Title')).toBeInTheDocument();
     });

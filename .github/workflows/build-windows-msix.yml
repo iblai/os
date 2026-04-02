@@ -4,21 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
+        description: 'Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version'
         required: false
         type: string
       build_exe:
-        description: "Also produce NSIS .exe installers"
+        description: 'Also produce NSIS .exe installers'
         required: false
         type: boolean
         default: false
       sign:
-        description: "Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)"
+        description: 'Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)'
         required: false
         type: boolean
         default: false
       sign_publisher:
-        description: "Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)"
+        description: 'Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)'
         required: false
         type: string
 

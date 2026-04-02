@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { Page } from '@playwright/test';
 
 export interface FakeFile {
   name: string;
@@ -17,18 +17,18 @@ const DROP_TARGET_SELECTOR =
  */
 export async function dispatchDragEvent(
   page: Page,
-  eventType: "dragover" | "dragleave" | "drop",
+  eventType: 'dragover' | 'dragleave' | 'drop',
   files: FakeFile[] = [],
 ): Promise<void> {
   await page.evaluate(
     ({ eventType, files, selector }) => {
       const dt = new DataTransfer();
       for (const f of files) {
-        const blob = new File([f.content ?? ""], f.name, { type: f.type });
+        const blob = new File([f.content ?? ''], f.name, { type: f.type });
         dt.items.add(blob);
       }
       // Try selectors in priority order
-      const selectors = selector.split(", ");
+      const selectors = selector.split(', ');
       let target: Element | null = null;
       for (const s of selectors) {
         target = document.querySelector(s);
@@ -59,8 +59,8 @@ export async function dragAndDropFiles(
   files: FakeFile[],
 ): Promise<void> {
   // Dispatch dragover first to activate the drop zone
-  await dispatchDragEvent(page, "dragover", files);
+  await dispatchDragEvent(page, 'dragover', files);
   await page.waitForTimeout(500);
   // Then dispatch the actual drop
-  await dispatchDragEvent(page, "drop", files);
+  await dispatchDragEvent(page, 'drop', files);
 }

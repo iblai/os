@@ -39,7 +39,7 @@ export default function ShareChatWithParamsPage() {
   return (
     <AppLayout>
       <div className="flex-1 overflow-y-auto">
-        <div className="py-6 w-full max-w-2xl mx-auto px-2">
+        <div className="mx-auto w-full max-w-2xl px-2 py-6">
           <ChatMessages
             messages={messages}
             highlightedMessageId={null}

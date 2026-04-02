@@ -51,71 +51,79 @@ export function MentorSelectionGrid({
       {showSearch && (
         <div className="relative">
           {isMentorsFetching ? (
-            <Spinner className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Spinner className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           ) : (
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           )}
           <Input
             placeholder="Search Mentors"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-10 border-gray-200 focus:border-blue-500 focus:ring-0"
+            className="h-10 border-gray-200 pl-10 focus:border-blue-500 focus:ring-0"
           />
         </div>
       )}
 
       <div className="space-y-4">
         <div
-          className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-200 rounded-lg p-4 overflow-y-auto max-h-96 md:max-h-none items-start auto-rows-min"
+          className="grid max-h-96 auto-rows-min grid-cols-1 items-start gap-3 overflow-y-auto rounded-lg border border-gray-200 p-4 md:max-h-none md:grid-cols-2"
           style={{ minHeight }}
         >
           {isMentorsLoading ? (
-            <div className="col-span-full text-center py-8 text-gray-500">Loading mentors...</div>
+            <div className="col-span-full py-8 text-center text-gray-500">
+              Loading mentors...
+            </div>
           ) : mentors.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-gray-500">
+            <div className="col-span-full py-8 text-center text-gray-500">
               No mentors found matching your search.
             </div>
           ) : (
             mentors.map((mentor) => {
               const isSelected = isMentorSelected(mentor.unique_id || '');
-              const isAlreadyAdded = selectedMentorIds.includes(mentor.unique_id || '');
+              const isAlreadyAdded = selectedMentorIds.includes(
+                mentor.unique_id || '',
+              );
 
               return (
                 <button
                   key={mentor.unique_id}
                   onClick={() => onMentorSelect(mentor)}
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                     isSelected
                       ? 'border-blue-500 bg-blue-50'
                       : isAlreadyAdded
-                        ? 'border-blue-300 bg-blue-25'
+                        ? 'bg-blue-25 border-blue-300'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  <Avatar className="w-12 h-12 flex-shrink-0">
+                  <Avatar className="h-12 w-12 flex-shrink-0">
                     <AvatarImage
                       src={(mentor as any).profile_image || '/placeholder.svg'}
                       alt={mentor.name}
                     />
-                    <AvatarFallback>{mentor.name.substring(0, 2)}</AvatarFallback>
+                    <AvatarFallback>
+                      {mentor.name.substring(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0 flex flex-col justify-start text-left">
-                    <h4 className="font-medium text-gray-900 text-sm truncate">{mentor.name}</h4>
-                    <p className="text-xs text-gray-600 line-clamp-2">
+                  <div className="flex min-w-0 flex-1 flex-col justify-start text-left">
+                    <h4 className="truncate text-sm font-medium text-gray-900">
+                      {mentor.name}
+                    </h4>
+                    <p className="line-clamp-2 text-xs text-gray-600">
                       {(mentor as any).description}
                     </p>
                   </div>
                   {isSelected && (
                     <div className="flex-shrink-0">
-                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
+                        <Check className="h-4 w-4 text-white" />
                       </div>
                     </div>
                   )}
                   {isAlreadyAdded && !isSelected && (
                     <div className="flex-shrink-0">
-                      <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400">
+                        <Check className="h-4 w-4 text-white" />
                       </div>
                     </div>
                   )}

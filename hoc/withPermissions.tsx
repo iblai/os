@@ -12,8 +12,14 @@ import {
 
 type WithFormPermissionsProps = {
   name: string | string[];
-  permissions: Record<string, { read?: boolean; write: boolean; delete?: boolean }>;
-  children: (props: { disabled: boolean; canDelete?: boolean }) => React.ReactNode;
+  permissions: Record<
+    string,
+    { read?: boolean; write: boolean; delete?: boolean }
+  >;
+  children: (props: {
+    disabled: boolean;
+    canDelete?: boolean;
+  }) => React.ReactNode;
 };
 
 /**
@@ -25,7 +31,11 @@ const WithFormPermissions: React.FC<WithFormPermissionsProps> = ({
   children,
 }) => {
   return (
-    <BaseWithFormPermissions name={name} permissions={permissions} enableRBAC={config.enableRBAC()}>
+    <BaseWithFormPermissions
+      name={name}
+      permissions={permissions}
+      enableRBAC={config.enableRBAC()}
+    >
       {children}
     </BaseWithFormPermissions>
   );
@@ -44,10 +54,16 @@ type WithPermissionsProps = {
   children: (props: { hasPermission: boolean }) => React.ReactNode;
 };
 
-export const WithPermissions = ({ rbacResource, children }: WithPermissionsProps) => {
+export const WithPermissions = ({
+  rbacResource,
+  children,
+}: WithPermissionsProps) => {
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   return (
-    <BaseWithPermissions rbacResource={rbacResource} rbacPermissions={rbacPermissions}>
+    <BaseWithPermissions
+      rbacResource={rbacResource}
+      rbacPermissions={rbacPermissions}
+    >
       {children}
     </BaseWithPermissions>
   );
@@ -60,6 +76,13 @@ export const WithPermissions = ({ rbacResource, children }: WithPermissionsProps
  * @param rbacResource - The resource path to check (e.g., "mentors#read" or "mentor#write")
  * @returns boolean indicating if permission exists
  */
-export const checkRbacPermission = (rbacPermissions: object, rbacResource: string): boolean => {
-  return baseCheckRbacPermission(rbacPermissions, rbacResource, config.enableRBAC());
+export const checkRbacPermission = (
+  rbacPermissions: object,
+  rbacResource: string,
+): boolean => {
+  return baseCheckRbacPermission(
+    rbacPermissions,
+    rbacResource,
+    config.enableRBAC(),
+  );
 };

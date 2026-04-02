@@ -37,18 +37,21 @@ export function ChatActionBlockingOverlay({
         </div>
 
         {/* Title */}
-        <h2 id="blocking-overlay-title" className="mb-3 text-xl font-semibold text-gray-900">
+        <h2
+          id="blocking-overlay-title"
+          className="mb-3 text-xl font-semibold text-gray-900"
+        >
           {isVoiceCall ? 'Voice Call Active' : 'Screen Sharing Active'}
         </h2>
 
         {/* Description */}
         <p id="blocking-overlay-description" className="mb-6 text-gray-600">
-          Your {actionLabel} session is now active. Please return to the original window to continue
-          your conversation with your mentor.
+          Your {actionLabel} session is now active. Please return to the
+          original window to continue your conversation with your mentor.
         </p>
 
         {/* Action Buttons */}
-        <div className="flex flex-col gap-3 mb-4">
+        <div className="mb-4 flex flex-col gap-3">
           {/* Stop Screen Share Button */}
           {!isVoiceCall && onStopScreenShare && (
             <button
@@ -71,8 +74,8 @@ export function ChatActionBlockingOverlay({
 
         {/* Additional help text */}
         <p className="mt-4 text-xs text-gray-500">
-          This window will handle your {actionLabel} in the background. You can close this window
-          when you&apos;re done.
+          This window will handle your {actionLabel} in the background. You can
+          close this window when you&apos;re done.
         </p>
       </div>
     </div>

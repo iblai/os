@@ -75,7 +75,13 @@ type Props = {
   isEditing: boolean;
 };
 
-export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, isEditing }: Props) {
+export function EditPromptModal({
+  isOpen,
+  onClose,
+  selectedPrompt,
+  handleSave,
+  isEditing,
+}: Props) {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
@@ -107,7 +113,9 @@ export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, i
           promptVisibility: selectedPrompt.promptVisibility,
         },
     validators: {
-      onChange: selectedPrompt.isSystem ? systemPromptSchema : nonSystemPromptSchema,
+      onChange: selectedPrompt.isSystem
+        ? systemPromptSchema
+        : nonSystemPromptSchema,
     },
     onSubmit: ({ value }) => {
       handleSave(selectedPrompt, value as EditFormValues);
@@ -144,7 +152,10 @@ export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, i
                         value={field.state.value}
                         onValueChange={field.handleChange}
                       >
-                        <SelectTrigger className="py-6" aria-label="Select a category">
+                        <SelectTrigger
+                          className="py-6"
+                          aria-label="Select a category"
+                        >
                           <SelectValue placeholder="Select a category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -170,9 +181,14 @@ export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, i
                       <Select
                         disabled={isDisabled}
                         value={field.state.value}
-                        onValueChange={(value) => field.handleChange(value as PromptVisibilityEnum)}
+                        onValueChange={(value) =>
+                          field.handleChange(value as PromptVisibilityEnum)
+                        }
                       >
-                        <SelectTrigger className="py-6" aria-label="Select visibility">
+                        <SelectTrigger
+                          className="py-6"
+                          aria-label="Select visibility"
+                        >
                           <SelectValue placeholder="Select visibility" />
                         </SelectTrigger>
                         <SelectContent>
@@ -208,7 +224,9 @@ export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, i
                         disabled={isDisabled}
                       />
                       {hasNoValueAndIsDirty && (
-                        <p className="text-red-500 text-xs">Prompt is required</p>
+                        <p className="text-xs text-red-500">
+                          Prompt is required
+                        </p>
                       )}
                     </div>
                   );
@@ -217,7 +235,9 @@ export function EditPromptModal({ isOpen, onClose, selectedPrompt, handleSave, i
             </div>
             <DialogFooter>
               <div className="flex justify-end gap-2 pt-4">
-                <form.Subscribe selector={(state) => ({ isFormValue: state.canSubmit })}>
+                <form.Subscribe
+                  selector={(state) => ({ isFormValue: state.canSubmit })}
+                >
                   {({ isFormValue }) => (
                     <Button
                       type="submit"

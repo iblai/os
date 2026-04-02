@@ -65,7 +65,13 @@ vi.mock('@/lib/config', () => ({
 }));
 
 vi.mock('@/components/markdown', () => ({
-  default: ({ children, className }: { children: string; className?: string }) => (
+  default: ({
+    children,
+    className,
+  }: {
+    children: string;
+    className?: string;
+  }) => (
     <div data-testid="markdown-content" className={className}>
       {children}
     </div>
@@ -85,7 +91,9 @@ vi.mock('../ui-tags/default-tag', () => ({
         <button
           key={i}
           data-testid={`prompt-${i}`}
-          onClick={() => onPromptSelect('chat' as AdvancedTab, prompt.content ?? '')}
+          onClick={() =>
+            onPromptSelect('chat' as AdvancedTab, prompt.content ?? '')
+          }
         >
           {prompt.content}
         </button>
@@ -95,7 +103,14 @@ vi.mock('../ui-tags/default-tag', () => ({
 }));
 
 vi.mock('../ui-tags/options-tag', () => ({
-  OptionsTag: ({ title, description, options, onOptionSelect, profileImage, mentorName }: any) => (
+  OptionsTag: ({
+    title,
+    description,
+    options,
+    onOptionSelect,
+    profileImage,
+    mentorName,
+  }: any) => (
     <div data-testid="options-tag">
       <div data-testid="options-title">{title}</div>
       <div data-testid="options-description">{description}</div>
@@ -166,13 +181,21 @@ describe('AdvancedStaticChatBuilder', () => {
     });
 
     it('should render OptionsTag when activeTab is options', () => {
-      render(<AdvancedStaticChatBuilder {...defaultProps} activeTab={'options' as AdvancedTab} />);
+      render(
+        <AdvancedStaticChatBuilder
+          {...defaultProps}
+          activeTab={'options' as AdvancedTab}
+        />,
+      );
       expect(screen.getByTestId('options-tag')).toBeInTheDocument();
     });
 
     it('should return null for empty/invalid tab', () => {
       const { container } = render(
-        <AdvancedStaticChatBuilder {...defaultProps} activeTab={'empty' as AdvancedTab} />,
+        <AdvancedStaticChatBuilder
+          {...defaultProps}
+          activeTab={'empty' as AdvancedTab}
+        />,
       );
       expect(container.firstChild).toBeNull();
     });
@@ -211,7 +234,9 @@ describe('AdvancedStaticChatBuilder', () => {
     });
 
     it('should render mentor avatar in welcome section', async () => {
-      const { container } = render(<AdvancedStaticChatBuilder {...defaultProps} />);
+      const { container } = render(
+        <AdvancedStaticChatBuilder {...defaultProps} />,
+      );
 
       await waitFor(() => {
         // Avatar container should be present
@@ -227,7 +252,9 @@ describe('AdvancedStaticChatBuilder', () => {
 
       // Welcome section should not be rendered when welcomeMessage is empty
       await waitFor(() => {
-        expect(screen.queryByTestId('markdown-content')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('markdown-content'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -240,7 +267,9 @@ describe('AdvancedStaticChatBuilder', () => {
 
       await waitFor(() => {
         const markdownContent = screen.getByTestId('markdown-content');
-        expect(markdownContent).toHaveTextContent('Hello! How can I help you? 🤖');
+        expect(markdownContent).toHaveTextContent(
+          'Hello! How can I help you? 🤖',
+        );
       });
     });
 
@@ -289,7 +318,9 @@ describe('AdvancedStaticChatBuilder', () => {
       render(<AdvancedStaticChatBuilder {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('markdown-content')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('markdown-content'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -353,11 +384,18 @@ describe('AdvancedStaticChatBuilder', () => {
 
   describe('options tab', () => {
     it('should render OptionsTag with correct props', () => {
-      render(<AdvancedStaticChatBuilder {...defaultProps} activeTab={'options' as AdvancedTab} />);
+      render(
+        <AdvancedStaticChatBuilder
+          {...defaultProps}
+          activeTab={'options' as AdvancedTab}
+        />,
+      );
 
       expect(screen.getByTestId('options-tag')).toBeInTheDocument();
       expect(screen.getByTestId('options-title')).toHaveTextContent('Options');
-      expect(screen.getByTestId('options-mentor-name')).toHaveTextContent('Test Mentor');
+      expect(screen.getByTestId('options-mentor-name')).toHaveTextContent(
+        'Test Mentor',
+      );
       expect(screen.getByTestId('options-profile-image')).toHaveTextContent(
         'https://example.com/image.jpg',
       );
@@ -434,7 +472,9 @@ describe('AdvancedStaticChatBuilder', () => {
 
     it('should handle very long mentor name', async () => {
       const longName = 'A'.repeat(100);
-      render(<AdvancedStaticChatBuilder {...defaultProps} mentorName={longName} />);
+      render(
+        <AdvancedStaticChatBuilder {...defaultProps} mentorName={longName} />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText(longName)).toBeInTheDocument();
@@ -448,7 +488,9 @@ describe('AdvancedStaticChatBuilder', () => {
 
       // Welcome section should not be rendered when welcomeMessage is null/falsy
       await waitFor(() => {
-        expect(screen.queryByTestId('markdown-content')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('markdown-content'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -459,12 +501,19 @@ describe('AdvancedStaticChatBuilder', () => {
 
       // Welcome section should not be rendered when welcomeMessage is undefined/falsy
       await waitFor(() => {
-        expect(screen.queryByTestId('markdown-content')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('markdown-content'),
+        ).not.toBeInTheDocument();
       });
     });
 
     it('should use "anonymous" as username when username prop is undefined', () => {
-      render(<AdvancedStaticChatBuilder {...defaultProps} username={undefined as any} />);
+      render(
+        <AdvancedStaticChatBuilder
+          {...defaultProps}
+          username={undefined as any}
+        />,
+      );
 
       expect(mockUseWelcome).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -476,7 +525,12 @@ describe('AdvancedStaticChatBuilder', () => {
 
   describe('avatar fallback', () => {
     it('should show first two letters of mentor name as fallback', async () => {
-      render(<AdvancedStaticChatBuilder {...defaultProps} mentorName="AI Assistant" />);
+      render(
+        <AdvancedStaticChatBuilder
+          {...defaultProps}
+          mentorName="AI Assistant"
+        />,
+      );
 
       await waitFor(() => {
         expect(screen.getByText('AI')).toBeInTheDocument();

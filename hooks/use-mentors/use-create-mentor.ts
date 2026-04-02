@@ -5,7 +5,11 @@ import { toast } from 'sonner';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useCreateMentorMutation } from '@iblai/iblai-js/data-layer';
-import { DEFAULT_PROMPTS, MENTOR_VISIBILITY, MODEL_AGENTS } from '@/lib/constants';
+import {
+  DEFAULT_PROMPTS,
+  MENTOR_VISIBILITY,
+  MODEL_AGENTS,
+} from '@/lib/constants';
 import { config } from '@/lib/config';
 import { usePathname } from 'next/navigation';
 
@@ -90,12 +94,27 @@ export function useCreateMentor() {
   });
 
   const name = useStore(form.store, (state) => (state as any).values.name);
-  const description = useStore(form.store, (state) => (state as any).values.description);
-  const category = useStore(form.store, (state) => (state as any).values.category);
+  const description = useStore(
+    form.store,
+    (state) => (state as any).values.description,
+  );
+  const category = useStore(
+    form.store,
+    (state) => (state as any).values.category,
+  );
   const file = useStore(form.store, (state) => (state as any).values.file);
-  const guidedPrompt = useStore(form.store, (state) => (state as any).values.guidedPrompt);
-  const systemPrompt = useStore(form.store, (state) => (state as any).values.systemPrompt);
-  const proactivePrompt = useStore(form.store, (state) => (state as any).values.proactivePrompt);
+  const guidedPrompt = useStore(
+    form.store,
+    (state) => (state as any).values.guidedPrompt,
+  );
+  const systemPrompt = useStore(
+    form.store,
+    (state) => (state as any).values.systemPrompt,
+  );
+  const proactivePrompt = useStore(
+    form.store,
+    (state) => (state as any).values.proactivePrompt,
+  );
 
   const editPrompt = (
     prompt: string,

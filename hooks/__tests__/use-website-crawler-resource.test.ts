@@ -36,11 +36,15 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: vi.fn(
-    (error: unknown, defaultMsg: string) => (error as { message?: string })?.message || defaultMsg,
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: vi.fn(
+      (error: unknown, defaultMsg: string) =>
+        (error as { message?: string })?.message || defaultMsg,
+    ),
+  }),
+);
 
 import { useWebsiteCrawlerResource } from '../use-website-crawler-resource';
 import { toast } from 'sonner';
@@ -58,7 +62,10 @@ describe('useWebsiteCrawlerResource', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockGetMentorId.mockReturnValue('mentor-from-navigate');
     mockUseUsername.mockReturnValue('testuser');
     mockAddTrainingDocument.mockReturnValue({
@@ -72,15 +79,25 @@ describe('useWebsiteCrawlerResource', () => {
 
   describe('handleCheckUrlIsValid', () => {
     it('should return true for valid URLs', () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
-      expect(result.current.handleCheckUrlIsValid('https://example.com')).toBe(true);
-      expect(result.current.handleCheckUrlIsValid('http://example.com')).toBe(true);
-      expect(result.current.handleCheckUrlIsValid('https://example.com/path')).toBe(true);
+      expect(result.current.handleCheckUrlIsValid('https://example.com')).toBe(
+        true,
+      );
+      expect(result.current.handleCheckUrlIsValid('http://example.com')).toBe(
+        true,
+      );
+      expect(
+        result.current.handleCheckUrlIsValid('https://example.com/path'),
+      ).toBe(true);
     });
 
     it('should return false for invalid URLs', () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       expect(result.current.handleCheckUrlIsValid('not-a-url')).toBe(false);
       expect(result.current.handleCheckUrlIsValid('example.com')).toBe(false);
@@ -90,7 +107,9 @@ describe('useWebsiteCrawlerResource', () => {
 
   describe('form', () => {
     it('should have correct default values', () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       expect(result.current.form.state.values).toEqual({
         url: '',
@@ -106,13 +125,17 @@ describe('useWebsiteCrawlerResource', () => {
 
   describe('crawlerMatchPatterns', () => {
     it('should initialize with empty array', () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       expect(result.current.crawlerMatchPatterns).toEqual([]);
     });
 
     it('should update when setCrawlerMatchPatterns is called', () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       act(() => {
         result.current.setCrawlerMatchPatterns(['*.html', '*.php']);
@@ -124,7 +147,9 @@ describe('useWebsiteCrawlerResource', () => {
 
   describe('form submission', () => {
     it('should call addTrainingDocument on submit', async () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       // Set form values
       await act(async () => {
@@ -152,7 +177,9 @@ describe('useWebsiteCrawlerResource', () => {
     });
 
     it('should show success toast on successful submission', async () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');
@@ -162,11 +189,15 @@ describe('useWebsiteCrawlerResource', () => {
         await result.current.form.handleSubmit();
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Web crawl started and queued for training');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Web crawl started and queued for training',
+      );
     });
 
     it('should reset form and crawlerMatchPatterns on success', async () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       // Set values
       await act(async () => {
@@ -183,12 +214,16 @@ describe('useWebsiteCrawlerResource', () => {
     });
 
     it('should show error toast on submission failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
       });
 
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');
@@ -206,7 +241,9 @@ describe('useWebsiteCrawlerResource', () => {
     it('should use mentorId from params when getMentorId returns null', async () => {
       mockGetMentorId.mockReturnValue(null);
 
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');
@@ -228,7 +265,9 @@ describe('useWebsiteCrawlerResource', () => {
     it('should use empty string for username when null', async () => {
       mockUseUsername.mockReturnValue(null);
 
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');
@@ -246,7 +285,9 @@ describe('useWebsiteCrawlerResource', () => {
     });
 
     it('should include crawlerMatchPatterns in submission', async () => {
-      const { result } = renderHook(() => useWebsiteCrawlerResource(mockResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(mockResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');
@@ -272,7 +313,9 @@ describe('useWebsiteCrawlerResource', () => {
         type: 'webcrawler',
       } as ResourceType;
 
-      const { result } = renderHook(() => useWebsiteCrawlerResource(uppercaseResource));
+      const { result } = renderHook(() =>
+        useWebsiteCrawlerResource(uppercaseResource),
+      );
 
       await act(async () => {
         result.current.form.setFieldValue('url', 'https://example.com');

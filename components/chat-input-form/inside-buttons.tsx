@@ -1,23 +1,17 @@
-"use client";
+'use client';
 
-import type React from "react";
-import { Button } from "@/components/ui/button";
+import type React from 'react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { X, BookOpen, Archive, Check, Terminal } from "lucide-react";
-import { DeepSearchIcon, CanvasIcon } from "@/components/icons/svg-icons";
-import { TOOLS } from "@iblai/iblai-js/web-utils";
-// import { useGetMemsearchConfigQuery } from "@iblai/iblai-js/data-layer";
-// import { useGetMentorSettingsQuery } from "@iblai/iblai-js/data-layer";
-// import { useParams } from "next/navigation";
-// import { useUsername } from "@/hooks/use-user";
-// import { useNavigate } from "@/hooks/user-navigate";
-// import { TenantKeyMentorIdParams } from "@/lib/types";
-import { MemoryButton } from "./memory-button";
+} from '@/components/ui/dropdown-menu';
+import { X, BookOpen, Archive, Check, Terminal } from 'lucide-react';
+import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
+import { TOOLS } from '@iblai/iblai-js/web-utils';
+import { MemoryButton } from './memory-button';
 
 interface InsideButtonsProps {
   activeOptions: string[];
@@ -44,68 +38,40 @@ export const InsideButtons = ({
   embedMode = false,
   promptsIsEnabled = false,
 }: InsideButtonsProps) => {
-  // const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  // const username = useUsername();
-  // const { getMentorId } = useNavigate();
-  // const activeMentorId = getMentorId() || mentorId;
-
-  // const { data: memsearchConfig } = useGetMemsearchConfigQuery(
-  //   {
-  //     org: tenantKey,
-  //     userId: username ?? "",
-  //   },
-  //   {
-  //     skip: !tenantKey || !username,
-  //   },
-  // );
-  // const { data: mentorSettings } = useGetMentorSettingsQuery(
-  //   {
-  //     mentor: activeMentorId,
-  //     org: tenantKey,
-  //     // @ts-ignore
-  //     userId: username ?? "",
-  //   },
-  //   {
-  //     skip: !tenantKey || !username || !activeMentorId,
-  //   },
-  // );
-  // const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-  // const isMemoryEnabled = mentorSettings?.enable_memory_component ?? false;
-  // const isMemoryAvailable = isMemsearchEnabled && isMemoryEnabled;
-
   const allInsideButtons = [
     {
-      name: "Canvas",
+      name: 'Canvas',
       icon: <CanvasIcon className="h-4 w-4" />,
       isActive: artifactsEnabled,
       action: () => onOptionClick(TOOLS.CANVAS),
       isEnabled: true,
     },
     {
-      name: "Prompts",
+      name: 'Prompts',
       icon: <Terminal className="h-4 w-4" />,
       isActive: false,
       action: () => onOpenPromptGallery?.(),
       isEnabled: !embedMode && promptsIsEnabled,
     },
     {
-      name: "Study Mode",
+      name: 'Study Mode',
       icon: <BookOpen className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.STUDY_MODE),
       action: () => onOptionClick(TOOLS.STUDY_MODE),
       isEnabled: studyMode,
     },
     {
-      name: "Deep Research",
+      name: 'Deep Research',
       icon: <DeepSearchIcon className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.DEEP_RESEARCH),
       action: () => onOptionClick(TOOLS.DEEP_RESEARCH),
       isEnabled: deepResearch,
     },
     {
-      name: "Memory",
+      name: 'Memory',
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
+      // Memory actions are disabled for now.
       action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
       isEnabled: false,
     },
@@ -146,11 +112,11 @@ export const InsideButtons = ({
     getVisibleInsideButtons();
 
   return (
-    <div className="flex items-center gap-1.5 relative">
+    <div className="relative flex items-center gap-1.5">
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
         // Memory buttons are disabled for now.
-        /* istanbul ignore next */ if (button.name === "Memory") {
+        /* istanbul ignore next */ if (button.name === 'Memory') {
           return <MemoryButton key={button.name} />;
         }
 
@@ -161,10 +127,10 @@ export const InsideButtons = ({
               size="sm"
               type="button"
               disabled={disabled}
-              className={`h-8 px-2 text-sm rounded-lg flex items-center gap-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                 button.isActive
-                  ? "text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]"
-                  : "text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF]"
+                  ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                  : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               onClick={(e) => {
                 e.preventDefault();
@@ -173,14 +139,14 @@ export const InsideButtons = ({
               }}
             >
               <span
-                className={button.isActive ? "text-[#38A1E5]" : "text-gray-600"}
+                className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}
               >
                 {button.icon}
               </span>
               {button.name}
               {button.isActive && (
                 <X
-                  className="h-3 w-3 ml-1 cursor-pointer"
+                  className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -201,7 +167,7 @@ export const InsideButtons = ({
               size="icon"
               type="button"
               disabled={disabled}
-              className="h-8 w-8 text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF] rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="text-xs">•••</span>
               <span className="sr-only">More options</span>
@@ -215,16 +181,16 @@ export const InsideButtons = ({
                 onClick={button.action}
                 className={
                   /* istanbul ignore next */ button.isActive
-                    ? "bg-[#F5F8FF] text-[#38A1E5]"
-                    : ""
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }
               >
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex w-full items-center gap-2">
                   <span
                     className={
                       /* istanbul ignore next */ button.isActive
-                        ? "text-[#38A1E5]"
-                        : "text-gray-600"
+                        ? 'text-[#38A1E5]'
+                        : 'text-gray-600'
                     }
                   >
                     {button.icon}

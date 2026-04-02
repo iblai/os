@@ -67,13 +67,21 @@ describe('UrlRoutes', () => {
 
       it('should include the mentorModal ID in the URL', () => {
         const mentorModal = 'specific-mentor-123';
-        const result = urlRoutes.platform.mentorListSettings('tenant', 'mentor', mentorModal);
+        const result = urlRoutes.platform.mentorListSettings(
+          'tenant',
+          'mentor',
+          mentorModal,
+        );
 
         expect(result).toContain(mentorModal);
       });
 
       it('should have properly encoded JSON in the modal parameter', () => {
-        const result = urlRoutes.platform.mentorListSettings('tenant', 'mentor', 'modal-id');
+        const result = urlRoutes.platform.mentorListSettings(
+          'tenant',
+          'mentor',
+          'modal-id',
+        );
 
         // The URL should contain URL-encoded characters
         expect(result).toContain('%5B'); // [
@@ -93,7 +101,11 @@ describe('UrlRoutes', () => {
         ];
 
         testCases.forEach(({ tenantKey, mentorId, mentorModal }) => {
-          const result = urlRoutes.platform.mentorListSettings(tenantKey, mentorId, mentorModal);
+          const result = urlRoutes.platform.mentorListSettings(
+            tenantKey,
+            mentorId,
+            mentorModal,
+          );
 
           expect(result).toContain(`/platform/${tenantKey}/${mentorId}`);
           expect(result).toContain(mentorModal);
@@ -101,7 +113,11 @@ describe('UrlRoutes', () => {
       });
 
       it('should generate valid URL format', () => {
-        const result = urlRoutes.platform.mentorListSettings('test', 'mentor', 'modal');
+        const result = urlRoutes.platform.mentorListSettings(
+          'test',
+          'mentor',
+          'modal',
+        );
 
         // Should start with /platform/
         expect(result.startsWith('/platform/')).toBe(true);

@@ -215,7 +215,12 @@ describe('translatePrompt', () => {
 
 describe('AdvancedTab type', () => {
   it('should allow valid tab keys', () => {
-    const validTabs: AdvancedTab[] = ['chat', 'summarize', 'translate', 'expand'];
+    const validTabs: AdvancedTab[] = [
+      'chat',
+      'summarize',
+      'translate',
+      'expand',
+    ];
     validTabs.forEach((tab) => {
       expect(advancedTabsProperties[tab]).toBeDefined();
     });
@@ -240,7 +245,9 @@ describe('data integrity', () => {
   });
 
   it('should have unique display names', () => {
-    const displays = Object.values(advancedTabsProperties).map((t) => t.display);
+    const displays = Object.values(advancedTabsProperties).map(
+      (t) => t.display,
+    );
     const uniqueDisplays = new Set(displays);
     expect(uniqueDisplays.size).toBe(displays.length);
   });

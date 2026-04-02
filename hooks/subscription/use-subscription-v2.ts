@@ -12,8 +12,12 @@ export const useSubscriptionV2 = () => {
   const { currentTenant } = useCurrentTenant();
   const { userTenants } = useUserTenants();
   const dispatch = useAppDispatch();
-  const error402Detected = useAppSelector((state) => state.subscription.error402Detected);
-  const topBannerOptions = useAppSelector((state) => state.topBanner.topBannerOptions);
+  const error402Detected = useAppSelector(
+    (state) => state.subscription.error402Detected,
+  );
+  const topBannerOptions = useAppSelector(
+    (state) => state.topBanner.topBannerOptions,
+  );
 
   const subscriptionStatus = useAppSelector((state) => state.subscription);
   const subscriptionFlow = new MentorSubscriptionFlowV2({
@@ -51,7 +55,10 @@ export const useSubscriptionV2 = () => {
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
 
   useEffect(() => {
-    if (error402Detected && subscriptionStatus.subscriptionStatus.creditExhausted) {
+    if (
+      error402Detected &&
+      subscriptionStatus.subscriptionStatus.creditExhausted
+    ) {
       executeWithTrialCheck(() => {});
     }
   }, [error402Detected, subscriptionStatus.subscriptionStatus.creditExhausted]);

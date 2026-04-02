@@ -24,7 +24,8 @@ const mockUseGetMentorsQuery = vi.fn();
 const mockUseGetPublicMentorsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorsQuery: (...args: unknown[]) => mockUseGetMentorsQuery(...args),
-  useGetPublicMentorsQuery: (...args: unknown[]) => mockUseGetPublicMentorsQuery(...args),
+  useGetPublicMentorsQuery: (...args: unknown[]) =>
+    mockUseGetPublicMentorsQuery(...args),
 }));
 
 describe('useMentorsWithPagination', () => {
@@ -118,7 +119,9 @@ describe('useMentorsWithPagination', () => {
 
       const { result } = renderHook(() => useMentorsWithPagination());
 
-      expect(result.current.mentors).toEqual([{ id: 2, name: 'Public Mentor' }]);
+      expect(result.current.mentors).toEqual([
+        { id: 2, name: 'Public Mentor' },
+      ]);
       expect(result.current.totalCount).toBe(1);
     });
   });

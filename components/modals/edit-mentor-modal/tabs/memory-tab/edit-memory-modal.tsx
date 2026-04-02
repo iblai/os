@@ -1,6 +1,11 @@
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -38,13 +43,15 @@ export function EditMemoryModal({
 }: EditMemoryModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl mx-4 sm:mx-auto">
+      <DialogContent className="mx-4 max-w-2xl sm:mx-auto">
         <DialogHeader>
           <DialogTitle className="text-gray-700">Edit Memory</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
+        <div className="mt-4 space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-600">Category</label>
+            <label className="text-sm font-medium text-gray-600">
+              Category
+            </label>
             <Select value={editCategory} onValueChange={onCategoryChange}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Select a memory category" />

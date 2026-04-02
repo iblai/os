@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 /**
  * Page object for the auth service create-account page (/account/create).
@@ -32,28 +32,28 @@ export class SignupPage {
   constructor(page: Page) {
     this.page = page;
 
-    this.heading = page.locator("h1");
-    this.emailInput = page.getByPlaceholder("Email");
-    this.continueWithPasswordButton = page.getByRole("button", {
-      name: "Continue with Password",
+    this.heading = page.locator('h1');
+    this.emailInput = page.getByPlaceholder('Email');
+    this.continueWithPasswordButton = page.getByRole('button', {
+      name: 'Continue with Password',
     });
-    this.logInButton = page.getByRole("button", { name: "Log In" });
+    this.logInButton = page.getByRole('button', { name: 'Log In' });
 
-    this.passwordInput = page.getByPlaceholder("Password", { exact: true });
-    this.confirmPasswordInput = page.getByPlaceholder("Confirm Password");
-    this.createAccountButton = page.getByRole("button", {
-      name: "Create Account",
+    this.passwordInput = page.getByPlaceholder('Password', { exact: true });
+    this.confirmPasswordInput = page.getByPlaceholder('Confirm Password');
+    this.createAccountButton = page.getByRole('button', {
+      name: 'Create Account',
     });
-    this.backButton = page.getByRole("button", { name: "Back" });
+    this.backButton = page.getByRole('button', { name: 'Back' });
 
-    this.emailError = page.locator("p").filter({
+    this.emailError = page.locator('p').filter({
       hasText: /Email is required|Please enter a valid email/,
     });
-    this.passwordError = page.locator("p").filter({
+    this.passwordError = page.locator('p').filter({
       hasText:
         /Password is required|Password must be at least|Passwords do not match/,
     });
-    this.generalError = page.locator("p").filter({
+    this.generalError = page.locator('p').filter({
       hasText: /Failed to create account/,
     });
   }

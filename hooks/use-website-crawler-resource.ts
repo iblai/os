@@ -25,7 +25,9 @@ export function useWebsiteCrawlerResource(resource: ResourceType) {
     }
   };
 
-  const [crawlerMatchPatterns, setCrawlerMatchPatterns] = useState<string[]>([]);
+  const [crawlerMatchPatterns, setCrawlerMatchPatterns] = useState<string[]>(
+    [],
+  );
 
   const form = useForm({
     defaultValues: {
@@ -59,7 +61,10 @@ export function useWebsiteCrawlerResource(resource: ResourceType) {
         toast.success('Web crawl started and queued for training');
       } catch (error: unknown) {
         console.error(JSON.stringify(error));
-        const errorMessage = extractErrorMessage(error, 'Error submitting web crawl data');
+        const errorMessage = extractErrorMessage(
+          error,
+          'Error submitting web crawl data',
+        );
 
         toast.error(errorMessage);
         console.error(JSON.stringify({ tenant: tenantKey, error }));

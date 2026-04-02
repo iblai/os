@@ -13,7 +13,12 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { CopyButton } from '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button';
 import WithFormPermissions, { WithPermissions } from '@/hoc/withPermissions';
 import { parsePrompt } from '@/lib/utils';
@@ -25,14 +30,18 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
 
 const EditDisclaimerModal = dynamic(
-  () => import('./edit-disclaimer-modal').then((mod) => mod.EditDisclaimerModal),
+  () =>
+    import('./edit-disclaimer-modal').then((mod) => mod.EditDisclaimerModal),
   {
     ssr: false,
   },
 );
 
 const EditUserAgreementModal = dynamic(
-  () => import('./edit-user-agreement-modal').then((mod) => mod.EditUserAgreementModal),
+  () =>
+    import('./edit-user-agreement-modal').then(
+      (mod) => mod.EditUserAgreementModal,
+    ),
   {
     ssr: false,
   },
@@ -43,13 +52,16 @@ export function DisclaimersTab() {
   const username = useUsername();
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() || mentorId;
-  const [editMentor, { isLoading: isEditMentorLoading }] = useEditMentorMutation();
+  const [editMentor, { isLoading: isEditMentorLoading }] =
+    useEditMentorMutation();
   const [createDisclaimer, { isLoading: isCreateDisclaimerLoading }] =
     useCreateDisclaimerMutation();
   const [updateDisclaimer, { isLoading: isUpdateDisclaimerLoading }] =
     useUpdateDisclaimerMutation();
-  const [isEditDisclaimerModalOpen, setIsEditDisclaimerModalOpen] = React.useState(false);
-  const [isEditUserAgreementModalOpen, setIsEditUserAgreementModalOpen] = React.useState(false);
+  const [isEditDisclaimerModalOpen, setIsEditDisclaimerModalOpen] =
+    React.useState(false);
+  const [isEditUserAgreementModalOpen, setIsEditUserAgreementModalOpen] =
+    React.useState(false);
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
@@ -63,18 +75,21 @@ export function DisclaimersTab() {
     },
   );
 
-  const { data: disclaimers, isLoading: isDisclaimersLoading } = useGetDisclaimersQuery({
-    org: tenantKey,
-    userId: username ?? '',
-    params: {
-      mentor_id: mentorId,
-      scope: 'mentor',
-    },
-  });
+  const { data: disclaimers, isLoading: isDisclaimersLoading } =
+    useGetDisclaimersQuery({
+      org: tenantKey,
+      userId: username ?? '',
+      params: {
+        mentor_id: mentorId,
+        scope: 'mentor',
+      },
+    });
 
   // const isDisclaimerDisabled = isMentorSettingsLoading || isEditMentorLoading;
   const isUserAgreementDisabled =
-    isDisclaimersLoading || isCreateDisclaimerLoading || isUpdateDisclaimerLoading;
+    isDisclaimersLoading ||
+    isCreateDisclaimerLoading ||
+    isUpdateDisclaimerLoading;
 
   const userAgreementRecord =
     disclaimers?.results?.length && disclaimers?.results?.length > 0
@@ -158,7 +173,13 @@ export function DisclaimersTab() {
     }
   }
 
-  async function toggleUserAgreement({ active, content }: { active: boolean; content?: string }) {
+  async function toggleUserAgreement({
+    active,
+    content,
+  }: {
+    active: boolean;
+    content?: string;
+  }) {
     try {
       const disclaimerExists = Boolean(userAgreementRecord);
       if (disclaimerExists && userAgreementRecord?.id) {
@@ -181,7 +202,9 @@ export function DisclaimersTab() {
         }).unwrap();
       }
 
-      toast.success(`User agreement ${active ? 'enabled' : 'disabled'} successfully`);
+      toast.success(
+        `User agreement ${active ? 'enabled' : 'disabled'} successfully`,
+      );
     } catch (error) {
       console.error(JSON.stringify(error));
       toast.error('Failed to update user agreement');
@@ -191,22 +214,30 @@ export function DisclaimersTab() {
 
   return (
     <>
-      <div className="flex lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] items-center">
+      <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Disclaimers</h3>
-          <p className="text-gray-600 text-xs">Configure disclaimer settings for your mentor.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            Disclaimers
+          </h3>
+          <p className="text-xs text-gray-600">
+            Configure disclaimer settings for your mentor.
+          </p>
         </div>
       </div>
-      <div className="space-y-6 flex-1 p-3 lg:p-4 overflow-y-auto">
+      <div className="flex-1 space-y-6 overflow-y-auto p-3 lg:p-4">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* User Agreement */}
-          <WithPermissions rbacResource={`/mentors/${mentorSettings?.mentor_id}/#view_disclaimers`}>
+          <WithPermissions
+            rbacResource={`/mentors/${mentorSettings?.mentor_id}/#view_disclaimers`}
+          >
             {({ hasPermission }) =>
               hasPermission && (
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">User Agreement</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        User Agreement
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about user agreement">
@@ -269,12 +300,17 @@ export function DisclaimersTab() {
 
           {/* Advisory */}
           {/* @ts-ignore disclaimer not in type of MentorSettingsPublic */}
-          <WithFormPermissions name="disclaimer" permissions={mentorSettings?.permissions?.field}>
+          <WithFormPermissions
+            name="disclaimer"
+            permissions={mentorSettings?.permissions?.field}
+          >
             {({ disabled }) => (
               <div className="overflow-hidden rounded-lg bg-gray-50">
                 <div className="flex items-center justify-between border-b border-gray-200 p-4">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-gray-900">Advisory</h3>
+                    <h3 className="text-sm font-medium text-gray-900">
+                      Advisory
+                    </h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger aria-label="More info about Advisory">

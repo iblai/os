@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAdvancedChat, ANONYMOUS_USERNAME } from "@iblai/iblai-js/web-utils";
-import { toast } from "sonner";
-import { Bot } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAdvancedChat, ANONYMOUS_USERNAME } from '@iblai/iblai-js/web-utils';
+import { toast } from 'sonner';
+import { Bot } from 'lucide-react';
 
-import { ChatMessages } from "@/components/chat/chat-messages";
-import { ChatInputForm } from "@/components/chat-input-form";
-import { LoadingMessage } from "@/components/chat/loading-message";
-import { useAxdToken } from "@/hooks/use-tokens";
-import { useUsername } from "@/hooks/use-user";
-import { config } from "@/lib/config";
-import { redirectToAuthSpa } from "@/lib/utils";
-import eventBus, { RemoteEvents } from "@/lib/eventBus";
+import { ChatMessages } from '@/components/chat/chat-messages';
+import { ChatInputForm } from '@/components/chat-input-form';
+import { LoadingMessage } from '@/components/chat/loading-message';
+import { useAxdToken } from '@/hooks/use-tokens';
+import { useUsername } from '@/hooks/use-user';
+import { config } from '@/lib/config';
+import { redirectToAuthSpa } from '@/lib/utils';
+import eventBus, { RemoteEvents } from '@/lib/eventBus';
 
 const noopAsync = async () => {};
 const noop = () => {};
@@ -27,7 +27,7 @@ export function WorkflowPreviewChat({
   mentorId,
 }: WorkflowPreviewChatProps) {
   const username = useUsername();
-  const token = useAxdToken() ?? "";
+  const token = useAxdToken() ?? '';
   const [highlightedMessageId, setHighlightedMessageId] = useState<
     number | null
   >(null);
@@ -49,7 +49,7 @@ export function WorkflowPreviewChat({
     isConnected,
     startNewChat,
   } = useAdvancedChat({
-    mentorId: mentorId ?? "",
+    mentorId: mentorId ?? '',
     tenantKey,
     username: username ?? ANONYMOUS_USERNAME,
     token,
@@ -63,7 +63,7 @@ export function WorkflowPreviewChat({
   });
 
   const visibleMessages =
-    messages.length > 0 && messages[0].role === "assistant"
+    messages.length > 0 && messages[0].role === 'assistant'
       ? messages.slice(1)
       : messages;
 
@@ -79,7 +79,7 @@ export function WorkflowPreviewChat({
     if (!chatContainerRef.current) return;
     chatContainerRef.current.scrollTo({
       top: chatContainerRef.current.scrollHeight,
-      behavior: "smooth",
+      behavior: 'smooth',
     });
   }, [visibleMessages.length, isStreaming, isPending]);
 
@@ -95,11 +95,11 @@ export function WorkflowPreviewChat({
       <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6">
         {visibleMessages.length === 0 && !isPending && !isStreaming ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <Bot className="h-10 w-10 text-muted-foreground mb-3" />
-            <h2 className="text-xl font-semibold text-foreground">
+            <Bot className="text-muted-foreground mb-3 h-10 w-10" />
+            <h2 className="text-foreground text-xl font-semibold">
               Preview your agent
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm">
               Prompt the agent as if you&apos;re the user.
             </p>
           </div>
@@ -111,7 +111,7 @@ export function WorkflowPreviewChat({
               profileImage={profileImage}
               mentorName={mentorName}
               sessionId={sessionId}
-              mentorId={mentorId ?? ""}
+              mentorId={mentorId ?? ''}
               tenantKey={tenantKey}
               handleHighlightMessage={setHighlightedMessageId}
               handleSubmit={handleSubmit}
@@ -136,7 +136,7 @@ export function WorkflowPreviewChat({
           isScreenSharingModalOpen={false}
           onPhoneCallClick={noop}
           tenantKey={tenantKey}
-          username={username ?? ""}
+          username={username ?? ''}
           enableWebBrowsing={false}
           setMessage={setMessage}
           isStreaming={isStreaming}

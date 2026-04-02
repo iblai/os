@@ -8,12 +8,12 @@ type Props = {
 export function ImagePreviewModal({ url, onClose }: Props) {
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+      className="bg-opacity-75 fixed inset-0 z-50 flex items-center justify-center bg-black p-4"
       onClick={onClose}
     >
-      <div className="relative w-full h-full flex items-center justify-center">
+      <div className="relative flex h-full w-full items-center justify-center">
         <button
-          className="absolute top-2 right-2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70"
+          className="bg-opacity-50 hover:bg-opacity-70 absolute top-2 right-2 rounded-full bg-black p-1 text-white"
           onClick={(e) => {
             e.stopPropagation();
             onClose();

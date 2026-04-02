@@ -96,7 +96,9 @@ describe('McpTab', () => {
 
       expect(screen.getByText('MCP')).toBeInTheDocument();
       expect(
-        screen.getByText('Manage Model Context Protocol connectors for your mentor.'),
+        screen.getByText(
+          'Manage Model Context Protocol connectors for your mentor.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -116,7 +118,9 @@ describe('McpTab', () => {
     it('renders ConnectorManagementContent component', () => {
       render(<McpTab />);
 
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -263,7 +267,9 @@ describe('McpTab', () => {
       render(<McpTab />);
 
       // Should still render without crashing
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -276,7 +282,9 @@ describe('McpTab', () => {
 
       render(<McpTab />);
 
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -359,7 +367,9 @@ describe('McpTab', () => {
     it('renders description text', () => {
       render(<McpTab />);
 
-      const description = screen.getByText(/Manage Model Context Protocol connectors/);
+      const description = screen.getByText(
+        /Manage Model Context Protocol connectors/,
+      );
       expect(description).toBeInTheDocument();
     });
 
@@ -476,7 +486,9 @@ describe('McpTab', () => {
     it('renders ConnectorManagementContent component', () => {
       render(<McpTab />);
 
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -513,7 +525,9 @@ describe('McpTab', () => {
 
       // Should have rendered content
       expect(container.querySelector('.flex-1')).toBeTruthy();
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -531,11 +545,15 @@ describe('McpTab', () => {
       // Header present
       expect(screen.getByText('MCP')).toBeInTheDocument();
       expect(
-        screen.getByText('Manage Model Context Protocol connectors for your mentor.'),
+        screen.getByText(
+          'Manage Model Context Protocol connectors for your mentor.',
+        ),
       ).toBeInTheDocument();
 
       // Child component present
-      expect(screen.getByTestId('connector-management-content')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('connector-management-content'),
+      ).toBeInTheDocument();
 
       // Props passed correctly
       expect(screen.getByTestId('tenant-key')).toHaveTextContent('test-tenant');

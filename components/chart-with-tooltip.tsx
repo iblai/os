@@ -1,7 +1,18 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
 
 // Sample data
 const data = [
@@ -27,7 +38,10 @@ export default function ChartWithTooltip() {
         className="h-[300px]"
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+          >
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="month"
@@ -35,7 +49,11 @@ export default function ChartWithTooltip() {
               tickLine={false}
               tick={{ fill: '#888', fontSize: 12 }}
             />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#888', fontSize: 12 }} />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#888', fontSize: 12 }}
+            />
             {/* This is the key part for tooltips */}
             <ChartTooltip
               cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}

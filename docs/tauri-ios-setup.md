@@ -94,11 +94,13 @@ echo "$HOME/.cargo/bin" | sudo tee /etc/paths.d/cargo
 The app supports both custom URL schemes and universal links:
 
 ### Custom URL Schemes (Development)
+
 - **Scheme:** `iblai://`
 - **Works in:** Development builds, simulators, and production
 - **Configuration:** Automatic through Tauri deep-link plugin
 
 ### Universal Links (Production Only)
+
 - **Domain:** `https://mentorai.iblai.app/*`
 - **Works in:** Production builds only (requires App Store submission)
 - **Requires:**
@@ -107,6 +109,7 @@ The app supports both custom URL schemes and universal links:
   - Associated Domains entitlement
 
 ### Android App Links
+
 - **Domain:** `https://mentorai.iblai.app/*`
 - **Requires:**
   - Digital Asset Links file at `https://mentorai.iblai.app/.well-known/assetlinks.json`
@@ -117,17 +120,20 @@ The app supports both custom URL schemes and universal links:
 ### iOS
 
 1. **Open in Xcode:**
+
    ```bash
    open apps/mentor/src-tauri/gen/apple/ibl-ai-os.xcodeproj
    ```
 
 2. **Configure Signing:**
+
    - Select the ibl-ai-os_iOS target
    - Go to "Signing & Capabilities"
    - Select your development team: `L4FWRM8W5Z`
    - Choose automatic or manual signing
 
 3. **Select Device:**
+
    - Connect your iPhone via USB
    - Select it from the device dropdown in Xcode
 
@@ -138,6 +144,7 @@ The app supports both custom URL schemes and universal links:
 ### Android
 
 1. **Build APK:**
+
    ```bash
    cd apps/mentor/src-tauri
    cargo tauri android build
@@ -146,11 +153,13 @@ The app supports both custom URL schemes and universal links:
 2. **Install on Device:**
 
    **Via USB (ADB):**
+
    ```bash
    adb install src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
    ```
 
    **Via File Transfer:**
+
    - Copy APK to device
    - Open file and install
    - May need to enable "Install from Unknown Sources"
@@ -158,19 +167,23 @@ The app supports both custom URL schemes and universal links:
 ## Troubleshooting
 
 ### Build fails with "invalid configuration"
+
 - Make sure you've removed invalid properties from `tauri.conf.json`
 - The `plugins.deep-link` section should be empty or removed
 - No `urlSchemes` in bundle configuration
 
 ### Deep links not working in development
+
 - Universal links (https://) only work in production builds
 - Use custom URL schemes (iblai://) for development testing
 
 ### "Could not find module" errors
+
 - Run `pnpm install` in the root directory
 - Make sure all packages are built: `pnpm build:packages`
 
 ### Xcode project regeneration
+
 - If you run `cargo tauri ios init` again, it regenerates the Xcode project
 - The fix script automatically runs with `make` commands
 - Or manually run: `./scripts/fix-xcode-cargo-path.sh`

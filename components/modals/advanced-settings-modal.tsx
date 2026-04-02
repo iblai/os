@@ -1,26 +1,26 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import * as React from 'react';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Info, Bell, Mail, CheckSquare, Mic, DollarSign } from "lucide-react";
+} from '@/components/ui/select';
+import { Info, Bell, Mail, CheckSquare, Mic, DollarSign } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
 interface AdvancedSettingsModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export function AdvancedSettingsModal({
   isOpen,
   onClose,
 }: AdvancedSettingsModalProps) {
-  const [activeTab, setActiveTab] = React.useState("notifications");
+  const [activeTab, setActiveTab] = React.useState('notifications');
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
@@ -325,7 +325,7 @@ export function AdvancedSettingsModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidth="800px">
       <div className="max-h-[80vh] space-y-6 overflow-y-auto p-6">
-        {" "}
+        {' '}
         {/* Added p-6 for consistent margins */}
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[#646464]">
@@ -384,7 +384,7 @@ export function AdvancedSettingsModal({
           </div>
         </Tabs>
         <div className="flex justify-end p-6 pt-4">
-          {" "}
+          {' '}
           {/* Added p-6 for consistent margins */}
           <Button variant="outline" className="mr-2" onClick={onClose}>
             Cancel

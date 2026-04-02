@@ -42,12 +42,17 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 vi.mock('@/components/document-sidebar', () => ({
   DocumentSidebar: ({ isModal, sessionId }: any) => (
-    <div data-testid="document-sidebar" data-is-modal={isModal} data-session-id={sessionId} />
+    <div
+      data-testid="document-sidebar"
+      data-is-modal={isModal}
+      data-session-id={sessionId}
+    />
   ),
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
   DialogContent: ({ children, className }: any) => (
     <div data-testid="dialog-content" className={className}>
       {children}
@@ -58,7 +63,9 @@ vi.mock('@/components/ui/dialog', () => ({
       {children}
     </div>
   ),
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogTitle: ({ children }: any) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
 }));
 
 const mockDocuments = [
@@ -83,18 +90,24 @@ describe('RetrievedDocumentsButton', () => {
   describe('rendering', () => {
     it('should render the button when documents are present', () => {
       render(<RetrievedDocumentsButton sessionId="session-1" />);
-      expect(screen.getByRole('button', { name: /retrieved documents/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /retrieved documents/i }),
+      ).toBeInTheDocument();
     });
 
     it('should render nothing when vectorDocuments is undefined', () => {
       mockVectorDocuments = undefined;
-      const { container } = render(<RetrievedDocumentsButton sessionId="session-1" />);
+      const { container } = render(
+        <RetrievedDocumentsButton sessionId="session-1" />,
+      );
       expect(container.innerHTML).toBe('');
     });
 
     it('should render nothing when vectorDocuments is empty', () => {
       mockVectorDocuments = [];
-      const { container } = render(<RetrievedDocumentsButton sessionId="session-1" />);
+      const { container } = render(
+        <RetrievedDocumentsButton sessionId="session-1" />,
+      );
       expect(container.innerHTML).toBe('');
     });
 
@@ -112,13 +125,17 @@ describe('RetrievedDocumentsButton', () => {
 
     it('should open dialog when button is clicked', () => {
       render(<RetrievedDocumentsButton sessionId="session-1" />);
-      fireEvent.click(screen.getByRole('button', { name: /retrieved documents/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /retrieved documents/i }),
+      );
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
     });
 
     it('should render dialog with correct classes', () => {
       render(<RetrievedDocumentsButton sessionId="session-1" />);
-      fireEvent.click(screen.getByRole('button', { name: /retrieved documents/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /retrieved documents/i }),
+      );
       const content = screen.getByTestId('dialog-content');
       expect(content).toHaveClass('flex');
       expect(content).toHaveClass('max-h-[80vh]');
@@ -129,13 +146,17 @@ describe('RetrievedDocumentsButton', () => {
 
     it('should render dialog header with title', () => {
       render(<RetrievedDocumentsButton sessionId="session-1" />);
-      fireEvent.click(screen.getByRole('button', { name: /retrieved documents/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /retrieved documents/i }),
+      );
       expect(screen.getByTestId('dialog-title')).toBeInTheDocument();
     });
 
     it('should render DocumentSidebar in modal mode with correct sessionId', () => {
       render(<RetrievedDocumentsButton sessionId="session-1" />);
-      fireEvent.click(screen.getByRole('button', { name: /retrieved documents/i }));
+      fireEvent.click(
+        screen.getByRole('button', { name: /retrieved documents/i }),
+      );
       const sidebar = screen.getByTestId('document-sidebar');
       expect(sidebar).toHaveAttribute('data-is-modal', 'true');
       expect(sidebar).toHaveAttribute('data-session-id', 'session-1');
@@ -145,7 +166,9 @@ describe('RetrievedDocumentsButton', () => {
   describe('refetch on streaming end', () => {
     it('should call refetch when streaming ends and user is logged in', () => {
       mockIsStreaming = true;
-      const { rerender } = render(<RetrievedDocumentsButton sessionId="session-1" />);
+      const { rerender } = render(
+        <RetrievedDocumentsButton sessionId="session-1" />,
+      );
 
       mockIsStreaming = false;
       rerender(<RetrievedDocumentsButton sessionId="session-1" />);

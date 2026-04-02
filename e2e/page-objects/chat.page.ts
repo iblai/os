@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class ChatPage {
   readonly page: Page;
@@ -18,22 +18,22 @@ export class ChatPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.chatInput = page.getByRole("textbox", {
-      name: "Ask anything",
+    this.chatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
       exact: true,
     });
-    this.sendButton = page.getByRole("button", { name: "Send message" });
-    this.newChatButton = page.getByRole("button", { name: "New Chat" });
-    this.userMessages = page.locator(".chat-user-message-query");
-    this.aiMessages = page.locator(".chat-ai-message-response");
-    this.canvasToggle = page.getByRole("button", { name: /canvas/i });
-    this.createMentorDialog = page.getByRole("dialog", {
+    this.sendButton = page.getByRole('button', { name: 'Send message' });
+    this.newChatButton = page.getByRole('button', { name: 'New Chat' });
+    this.userMessages = page.locator('.chat-user-message-query');
+    this.aiMessages = page.locator('.chat-ai-message-response');
+    this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });
-    this.loginBanner = page.getByRole("button", { name: /log in/i });
-    this.uploadButton = page.getByRole("button", { name: "Attach File" });
-    this.voiceCallButton = page.getByRole("button", { name: "Voice call" });
-    this.voiceInputButton = page.getByRole("button", { name: "Voice input" });
+    this.loginBanner = page.getByRole('button', { name: /log in/i });
+    this.uploadButton = page.getByRole('button', { name: 'Attach File' });
+    this.voiceCallButton = page.getByRole('button', { name: 'Voice call' });
+    this.voiceInputButton = page.getByRole('button', { name: 'Voice input' });
     this.dragOverlay = page.locator(
       '[data-testid="drag-overlay"], [class*="drag-overlay"]',
     );
@@ -53,7 +53,7 @@ export class ChatPage {
 
   async waitForUserMessage(text: string, timeout = 30_000): Promise<void> {
     await expect(
-      this.page.locator(".chat-user-message-query", { hasText: text }),
+      this.page.locator('.chat-user-message-query', { hasText: text }),
     ).toBeVisible({ timeout });
   }
 

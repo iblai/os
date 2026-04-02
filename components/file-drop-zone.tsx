@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { FileUp } from "lucide-react";
+import { FileUp } from 'lucide-react';
 
 interface FileDropZoneProps {
   onDrop?: (files: File[]) => void;

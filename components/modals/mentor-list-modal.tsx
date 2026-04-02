@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Search } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import * as React from 'react';
+import { Search } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Mentor {
   id: string;
@@ -16,35 +16,35 @@ interface Mentor {
 
 const mentors: Mentor[] = [
   {
-    id: "1",
-    name: "Abilene Christian University",
+    id: '1',
+    name: 'Abilene Christian University',
     description:
-      "Abilene Christian University | ibl.ai AI Mentor Trained on Public University Data",
-    avatar: "/placeholder.svg",
-    fallback: "ACU",
+      'Abilene Christian University | ibl.ai AI Mentor Trained on Public University Data',
+    avatar: '/placeholder.svg',
+    fallback: 'ACU',
   },
   {
-    id: "2",
-    name: "Accelerated Computing Agent",
+    id: '2',
+    name: 'Accelerated Computing Agent',
     description:
-      "Mentor trained on academic papers, technical blogs, and online courses on accelerated computing.",
-    avatar: "/placeholder.svg",
-    fallback: "AC",
+      'Mentor trained on academic papers, technical blogs, and online courses on accelerated computing.',
+    avatar: '/placeholder.svg',
+    fallback: 'AC',
   },
   {
-    id: "3",
-    name: "Adelphi University",
+    id: '3',
+    name: 'Adelphi University',
     description:
-      "Adelphi University | ibl.ai AI Mentor Trained on Public University Data",
-    avatar: "/placeholder.svg",
-    fallback: "AU",
+      'Adelphi University | ibl.ai AI Mentor Trained on Public University Data',
+    avatar: '/placeholder.svg',
+    fallback: 'AU',
   },
   {
-    id: "4",
-    name: "AI Agent",
-    description: "Language Models, Unleashed.",
-    avatar: "/placeholder.svg",
-    fallback: "AI",
+    id: '4',
+    name: 'AI Agent',
+    description: 'Language Models, Unleashed.',
+    avatar: '/placeholder.svg',
+    fallback: 'AI',
   },
 ];
 
@@ -59,7 +59,7 @@ export function MentorListModal({
   onClose,
   onSelect,
 }: MentorListModalProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredMentors = React.useMemo(() => {
     return mentors.filter(

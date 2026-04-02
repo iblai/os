@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from '@testing-library/react';
 
 import {
   CodeCanvasComponent,
@@ -25,13 +31,28 @@ import {
 
 // Mock next/image
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
+  default: ({ src, alt, ...props }: any) => (
+    <img src={src} alt={alt} {...props} />
+  ),
 }));
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, disabled, className, title, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} title={title} {...props}>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    className,
+    title,
+    ...props
+  }: any) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      title={title}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -42,12 +63,16 @@ vi.mock('@/components/ui/select', () => ({
     <div data-testid="select" data-value={value}>
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
-          ? React.cloneElement(child as React.ReactElement<any>, { onValueChange })
+          ? React.cloneElement(child as React.ReactElement<any>, {
+              onValueChange,
+            })
           : child,
       )}
     </div>
   ),
-  SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+  SelectContent: ({ children }: any) => (
+    <div data-testid="select-content">{children}</div>
+  ),
   SelectItem: ({ children, value, onClick }: any) => (
     <button data-testid={`select-item-${value}`} onClick={onClick}>
       {children}
@@ -118,7 +143,13 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('renders with empty content by default', () => {
-      render(<CodeCanvasComponent {...defaultProps} title={undefined} content={undefined} />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          title={undefined}
+          content={undefined}
+        />,
+      );
       expect(screen.getByText('Code Editor')).toBeInTheDocument();
     });
 
@@ -174,12 +205,19 @@ describe('CodeCanvasComponent', () => {
 
   describe('Line Numbers', () => {
     it('renders line numbers for single line content', () => {
-      render(<CodeCanvasComponent {...defaultProps} content="print('hello')" />);
+      render(
+        <CodeCanvasComponent {...defaultProps} content="print('hello')" />,
+      );
       expect(screen.getByText('1')).toBeInTheDocument();
     });
 
     it('renders line numbers for multi-line content', () => {
-      render(<CodeCanvasComponent {...defaultProps} content={'line1\nline2\nline3'} />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content={'line1\nline2\nline3'}
+        />,
+      );
       // Even if content has \n characters, initial render may show 1 line
       expect(screen.getByText('1')).toBeInTheDocument();
     });
@@ -246,11 +284,15 @@ describe('CodeCanvasComponent', () => {
 
     it('does not show animation overlay when isAnimating is false', () => {
       render(<CodeCanvasComponent {...defaultProps} isAnimating={false} />);
-      expect(screen.queryByText('Generating content...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Generating content...'),
+      ).not.toBeInTheDocument();
     });
 
     it('applies animate-pulse class when animation is active', () => {
-      const { container } = render(<CodeCanvasComponent {...defaultProps} isAnimating={true} />);
+      const { container } = render(
+        <CodeCanvasComponent {...defaultProps} isAnimating={true} />,
+      );
       const rootDiv = container.firstChild as HTMLElement;
       expect(rootDiv.className).toContain('animate-pulse');
     });
@@ -304,7 +346,9 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('handles non-object metadata', () => {
-      render(<CodeCanvasComponent {...defaultProps} metadata={'invalid' as any} />);
+      render(
+        <CodeCanvasComponent {...defaultProps} metadata={'invalid' as any} />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
@@ -334,7 +378,9 @@ describe('CodeCanvasComponent', () => {
 
   describe('Content Updates', () => {
     it('updates content when prop changes', async () => {
-      const { rerender } = render(<CodeCanvasComponent {...defaultProps} content="initial" />);
+      const { rerender } = render(
+        <CodeCanvasComponent {...defaultProps} content="initial" />,
+      );
       rerender(<CodeCanvasComponent {...defaultProps} content="updated" />);
       // The content should be updated - checking line numbers as proxy
       expect(screen.getByText('1')).toBeInTheDocument();
@@ -346,7 +392,12 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('handles multiline content', () => {
-      render(<CodeCanvasComponent {...defaultProps} content={'line1\nline2\nline3'} />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content={'line1\nline2\nline3'}
+        />,
+      );
       // Verify at least one line number is present
       expect(screen.getByText('1')).toBeInTheDocument();
     });
@@ -377,7 +428,12 @@ describe('CodeCanvasComponent', () => {
 
   describe('Syntax Highlighting', () => {
     it('renders code content with syntax highlighting', () => {
-      render(<CodeCanvasComponent {...defaultProps} content='print("Hello World")' />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content='print("Hello World")'
+        />,
+      );
       const { container } = render(<CodeCanvasComponent {...defaultProps} />);
       // Verify the editor is rendered
       expect(container.querySelector('[contenteditable]')).toBeInTheDocument();
@@ -391,12 +447,19 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('highlights strings in code', () => {
-      render(<CodeCanvasComponent {...defaultProps} content={'"hello" and \'world\''} />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content={'"hello" and \'world\''}
+        />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
     it('highlights comments in code', () => {
-      render(<CodeCanvasComponent {...defaultProps} content="# This is a comment" />);
+      render(
+        <CodeCanvasComponent {...defaultProps} content="# This is a comment" />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
@@ -406,7 +469,9 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('highlights function calls in code', () => {
-      render(<CodeCanvasComponent {...defaultProps} content='print("hello")' />);
+      render(
+        <CodeCanvasComponent {...defaultProps} content='print("hello")' />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
   });
@@ -423,23 +488,40 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('handles special characters in content', () => {
-      render(<CodeCanvasComponent {...defaultProps} content='<script>alert("xss")</script>' />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content='<script>alert("xss")</script>'
+        />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
     it('handles unicode content', () => {
-      render(<CodeCanvasComponent {...defaultProps} content='print("你好世界 🌍")' />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content='print("你好世界 🌍")'
+        />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
     it('handles tab characters', () => {
-      render(<CodeCanvasComponent {...defaultProps} content={'def foo():\n\treturn True'} />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content={'def foo():\n\treturn True'}
+        />,
+      );
       // Verify at least one line number is present
       expect(screen.getByText('1')).toBeInTheDocument();
     });
 
     it('handles carriage return characters', () => {
-      render(<CodeCanvasComponent {...defaultProps} content="line1\r\nline2" />);
+      render(
+        <CodeCanvasComponent {...defaultProps} content="line1\r\nline2" />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
   });
@@ -475,7 +557,9 @@ describe('CodeCanvasComponent', () => {
   describe('Responsive Design', () => {
     it('renders with responsive classes', () => {
       const { container } = render(<CodeCanvasComponent {...defaultProps} />);
-      const headerElement = container.querySelector('.px-2.sm\\:px-3.md\\:px-4');
+      const headerElement = container.querySelector(
+        '.px-2.sm\\:px-3.md\\:px-4',
+      );
       expect(headerElement).toBeInTheDocument();
     });
   });
@@ -644,7 +728,9 @@ describe('CodeCanvasComponent', () => {
       }
 
       await waitFor(() => {
-        expect(screen.queryByPlaceholderText('Ask Anything...')).not.toBeInTheDocument();
+        expect(
+          screen.queryByPlaceholderText('Ask Anything...'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -658,7 +744,9 @@ describe('CodeCanvasComponent', () => {
 
       const mockRange = {
         cloneRange: vi.fn().mockReturnThis(),
-        getBoundingClientRect: vi.fn().mockReturnValue({ left: 0, top: 0, bottom: 0 }),
+        getBoundingClientRect: vi
+          .fn()
+          .mockReturnValue({ left: 0, top: 0, bottom: 0 }),
         commonAncestorContainer: outsideElement, // Outside editor
         getClientRects: vi.fn().mockReturnValue([]),
       };
@@ -732,10 +820,14 @@ describe('CodeCanvasComponent', () => {
 
     it('clears selection after sending highlight query', async () => {
       const sendMessage = vi.fn();
-      render(<CodeCanvasComponent {...defaultProps} sendMessage={sendMessage} />);
+      render(
+        <CodeCanvasComponent {...defaultProps} sendMessage={sendMessage} />,
+      );
 
       // The popup should not be visible initially
-      expect(screen.queryByPlaceholderText('Ask Anything...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Ask Anything...'),
+      ).not.toBeInTheDocument();
     });
 
     it('handles missing sendMessage prop gracefully', async () => {
@@ -806,7 +898,9 @@ describe('CodeCanvasComponent', () => {
     it('handles Escape key in highlight input', async () => {
       render(<CodeCanvasComponent {...defaultProps} />);
       // Popup should be closed by default
-      expect(screen.queryByPlaceholderText('Ask Anything...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Ask Anything...'),
+      ).not.toBeInTheDocument();
     });
 
     it('stops mousedown propagation on popup', async () => {
@@ -831,9 +925,13 @@ describe('CodeCanvasComponent', () => {
     });
 
     it('updates version history when content changes', async () => {
-      const { rerender } = render(<CodeCanvasComponent {...defaultProps} content="initial code" />);
+      const { rerender } = render(
+        <CodeCanvasComponent {...defaultProps} content="initial code" />,
+      );
 
-      rerender(<CodeCanvasComponent {...defaultProps} content="updated code" />);
+      rerender(
+        <CodeCanvasComponent {...defaultProps} content="updated code" />,
+      );
 
       expect(screen.getByTestId('select')).toBeInTheDocument();
     });
@@ -873,7 +971,12 @@ def function():
     });
 
     it('handles HTML entities in code', () => {
-      render(<CodeCanvasComponent {...defaultProps} content='if x < 10 && y > 5: print("test")' />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content='if x < 10 && y > 5: print("test")'
+        />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
@@ -888,7 +991,12 @@ def function():
     });
 
     it('handles nested function calls', () => {
-      render(<CodeCanvasComponent {...defaultProps} content="print(str(len(list(range(10)))))" />);
+      render(
+        <CodeCanvasComponent
+          {...defaultProps}
+          content="print(str(len(list(range(10)))))"
+        />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
   });
@@ -905,7 +1013,9 @@ def function():
 
     it('hides animation when isAnimating is false', () => {
       render(<CodeCanvasComponent {...defaultProps} isAnimating={false} />);
-      expect(screen.queryByText('Generating content...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Generating content...'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -964,7 +1074,9 @@ def function():
       render(<CodeCanvasComponent {...defaultProps} />);
 
       // Popup should not be visible initially
-      expect(screen.queryByPlaceholderText('Ask Anything...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Ask Anything...'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -1004,7 +1116,10 @@ def function():
   describe('Line Height Consistency', () => {
     it('renders line numbers container', () => {
       const { container } = render(
-        <CodeCanvasComponent {...defaultProps} content={'line1\nline2\nline3'} />,
+        <CodeCanvasComponent
+          {...defaultProps}
+          content={'line1\nline2\nline3'}
+        />,
       );
 
       const lineNumbersDiv = container.querySelector('.select-none');
@@ -1036,7 +1151,9 @@ def function():
 
   describe('Empty and Null Handling', () => {
     it('handles null sendMessage without crash', () => {
-      render(<CodeCanvasComponent {...defaultProps} sendMessage={null as any} />);
+      render(
+        <CodeCanvasComponent {...defaultProps} sendMessage={null as any} />,
+      );
       expect(screen.getByText('main.py')).toBeInTheDocument();
     });
 
@@ -1090,7 +1207,9 @@ def function():
 
     it('highlights comments', () => {
       const result = highlightCodeSyntax('# this is a comment');
-      expect(result).toContain('<span class="token-comment"># this is a comment</span>');
+      expect(result).toContain(
+        '<span class="token-comment"># this is a comment</span>',
+      );
     });
 
     it('highlights import keyword', () => {
@@ -1185,7 +1304,9 @@ def function():
 
     it('highlights function calls', () => {
       const result = highlightCodeSyntax('my_function(arg)');
-      expect(result).toContain('<span class="token-function">my_function</span>(');
+      expect(result).toContain(
+        '<span class="token-function">my_function</span>(',
+      );
     });
 
     it('highlights multiple function calls', () => {
@@ -1211,7 +1332,8 @@ def function():
     });
 
     it('handles complex code with multiple elements', () => {
-      const code = 'def foo(x):\n    if x > 0:\n        return True\n    return False';
+      const code =
+        'def foo(x):\n    if x > 0:\n        return True\n    return False';
       const result = highlightCodeSyntax(code);
       expect(result).toContain('<span class="token-keyword">def</span>');
       expect(result).toContain('<span class="token-keyword">if</span>');
@@ -1243,7 +1365,9 @@ def function():
     });
 
     it('returns correct array for 5 lines', () => {
-      expect(getLineNumbersFromContent('1\n2\n3\n4\n5')).toEqual([1, 2, 3, 4, 5]);
+      expect(getLineNumbersFromContent('1\n2\n3\n4\n5')).toEqual([
+        1, 2, 3, 4, 5,
+      ]);
     });
 
     it('handles content with trailing newline', () => {
@@ -1260,7 +1384,9 @@ def function():
 
     it('returns correct array for 10 lines', () => {
       const content = Array(10).fill('line').join('\n');
-      expect(getLineNumbersFromContent(content)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      expect(getLineNumbersFromContent(content)).toEqual([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      ]);
     });
 
     it('returns correct array for 100 lines', () => {
@@ -1428,12 +1554,16 @@ def function():
   describe('highlightComments', () => {
     it('highlights Python comments', () => {
       const result = highlightComments('# this is a comment');
-      expect(result).toBe('<span class="token-comment"># this is a comment</span>');
+      expect(result).toBe(
+        '<span class="token-comment"># this is a comment</span>',
+      );
     });
 
     it('highlights comment at end of line', () => {
       const result = highlightComments('x = 5 # inline comment');
-      expect(result).toContain('<span class="token-comment"># inline comment</span>');
+      expect(result).toContain(
+        '<span class="token-comment"># inline comment</span>',
+      );
     });
 
     it('returns unchanged when no comments', () => {
@@ -1463,7 +1593,9 @@ def function():
 
     it('highlights multiple occurrences', () => {
       const result = highlightKeyword('if a if b', 'if');
-      expect((result.match(/<span class="token-keyword">if<\/span>/g) || []).length).toBe(2);
+      expect(
+        (result.match(/<span class="token-keyword">if<\/span>/g) || []).length,
+      ).toBe(2);
     });
 
     it('returns unchanged when keyword not found', () => {

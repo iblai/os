@@ -6,7 +6,8 @@ const mockRefetch = vi.fn();
 const mockUseGetGuidedPromptsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetGuidedPromptsQuery: (...args: unknown[]) => mockUseGetGuidedPromptsQuery(...args),
+  useGetGuidedPromptsQuery: (...args: unknown[]) =>
+    mockUseGetGuidedPromptsQuery(...args),
 }));
 
 vi.mock('@/lib/utils', async () => {
@@ -91,20 +92,27 @@ describe('GuidedSuggestedPrompts', () => {
 
     it('should return null when enabledGuidedPrompts is false', () => {
       const { container } = render(
-        <GuidedSuggestedPrompts {...defaultProps} enabledGuidedPrompts={false} />,
+        <GuidedSuggestedPrompts
+          {...defaultProps}
+          enabledGuidedPrompts={false}
+        />,
       );
 
       expect(container.innerHTML).toBe('');
     });
 
     it('should return null when isStreaming is true', () => {
-      const { container } = render(<GuidedSuggestedPrompts {...defaultProps} isStreaming={true} />);
+      const { container } = render(
+        <GuidedSuggestedPrompts {...defaultProps} isStreaming={true} />,
+      );
 
       expect(container.innerHTML).toBe('');
     });
 
     it('should return null when isPending is true', () => {
-      const { container } = render(<GuidedSuggestedPrompts {...defaultProps} isPending={true} />);
+      const { container } = render(
+        <GuidedSuggestedPrompts {...defaultProps} isPending={true} />,
+      );
 
       expect(container.innerHTML).toBe('');
     });
@@ -117,7 +125,9 @@ describe('GuidedSuggestedPrompts', () => {
         status: 'fulfilled',
       });
 
-      const { container } = render(<GuidedSuggestedPrompts {...defaultProps} />);
+      const { container } = render(
+        <GuidedSuggestedPrompts {...defaultProps} />,
+      );
 
       expect(container.innerHTML).toBe('');
     });
@@ -126,7 +136,12 @@ describe('GuidedSuggestedPrompts', () => {
   describe('interactions', () => {
     it('should call onPromptSelect when a prompt is clicked', () => {
       const onPromptSelect = vi.fn();
-      render(<GuidedSuggestedPrompts {...defaultProps} onPromptSelect={onPromptSelect} />);
+      render(
+        <GuidedSuggestedPrompts
+          {...defaultProps}
+          onPromptSelect={onPromptSelect}
+        />,
+      );
 
       fireEvent.click(screen.getByText('Prompt 1'));
 
@@ -136,7 +151,9 @@ describe('GuidedSuggestedPrompts', () => {
     it('should call refetch when refresh button is clicked', () => {
       render(<GuidedSuggestedPrompts {...defaultProps} />);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Refresh Guided Prompts' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Refresh Guided Prompts' }),
+      );
 
       expect(mockRefetch).toHaveBeenCalled();
     });
@@ -162,7 +179,12 @@ describe('GuidedSuggestedPrompts', () => {
     });
 
     it('should skip query when enabledGuidedPrompts is false', () => {
-      render(<GuidedSuggestedPrompts {...defaultProps} enabledGuidedPrompts={false} />);
+      render(
+        <GuidedSuggestedPrompts
+          {...defaultProps}
+          enabledGuidedPrompts={false}
+        />,
+      );
 
       expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(
         expect.any(Object),

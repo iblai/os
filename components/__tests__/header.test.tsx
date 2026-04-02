@@ -92,17 +92,32 @@ vi.mock('@/hooks/use-model-download', () => ({
 // Mock react-responsive
 const mockUseMediaQuery = vi.fn();
 vi.mock('react-responsive', () => ({
-  useMediaQuery: (query: { maxWidth?: number; minWidth?: number }) => mockUseMediaQuery(query),
+  useMediaQuery: (query: { maxWidth?: number; minWidth?: number }) =>
+    mockUseMediaQuery(query),
 }));
 
 // Mock Avatar component to make onClick accessible
 vi.mock('@/components/ui/avatar', () => ({
-  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  Avatar: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <span data-testid="avatar" className={className}>
       {children}
     </span>
   ),
-  AvatarImage: ({ src, alt, onClick }: { src: string; alt: string; onClick?: () => void }) => (
+  AvatarImage: ({
+    src,
+    alt,
+    onClick,
+  }: {
+    src: string;
+    alt: string;
+    onClick?: () => void;
+  }) => (
     <img src={src} alt={alt} onClick={onClick} data-testid="avatar-image" />
   ),
   AvatarFallback: ({ children }: { children: React.ReactNode }) => (
@@ -146,7 +161,13 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
 
 // Mock child components
 vi.mock('@/components/modals/settings-modal', () => ({
-  SettingsModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  SettingsModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="settings-modal">
         <button onClick={onClose}>Close Settings</button>
@@ -155,7 +176,13 @@ vi.mock('@/components/modals/settings-modal', () => ({
 }));
 
 vi.mock('@/components/modals/llm-provider-selection-modal', () => ({
-  LLMProviderSelectionModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  LLMProviderSelectionModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="llm-modal">
         <button onClick={onClose}>Close LLM</button>
@@ -176,7 +203,10 @@ vi.mock('@/components/modals/mentor-list-modal', () => ({
     isOpen ? (
       <div data-testid="mentor-list-modal">
         <button onClick={onClose}>Close Mentor List</button>
-        <button onClick={() => onSelect({ id: 'test-mentor' })} data-testid="select-mentor">
+        <button
+          onClick={() => onSelect({ id: 'test-mentor' })}
+          data-testid="select-mentor"
+        >
           Select Mentor
         </button>
       </div>
@@ -184,7 +214,13 @@ vi.mock('@/components/modals/mentor-list-modal', () => ({
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
-  EditMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="edit-mentor-modal">
         <button onClick={onClose}>Close Edit Mentor</button>
@@ -202,7 +238,13 @@ vi.mock('@/components/modals/help-modal', () => ({
 }));
 
 vi.mock('@/components/modals/create-mentor-modal', () => ({
-  CreateMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  CreateMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="create-mentor-modal">
         <button onClick={onClose}>Close Create Mentor</button>
@@ -227,7 +269,13 @@ vi.mock('@/components/modals/my-mentors-modal', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  UserProfileModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  UserProfileModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="user-profile-modal">
         <button onClick={onClose}>Close User Profile</button>
@@ -254,7 +302,10 @@ vi.mock('../header/profile-button', () => ({
         Profile
       </button>
       <span data-testid="is-instructor">{isInstructor ? 'true' : 'false'}</span>
-      <button onClick={() => setIsInstructor(!isInstructor)} data-testid="toggle-instructor">
+      <button
+        onClick={() => setIsInstructor(!isInstructor)}
+        data-testid="toggle-instructor"
+      >
         Toggle Instructor
       </button>
     </div>
@@ -266,7 +317,10 @@ describe('Header component', () => {
     vi.clearAllMocks();
 
     // Default mock values
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUsePathname.mockReturnValue('/tenant-1/mentor-1/chat');
     mockUseUsername.mockReturnValue('testuser');
     mockUseIsAdmin.mockReturnValue(true);
@@ -296,11 +350,13 @@ describe('Header component', () => {
       onSelectFoundryModel: vi.fn(),
     });
     // Default: desktop view
-    mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-      if (query.maxWidth === 767) return false; // isMobile = false
-      if (query.minWidth === 768 && query.maxWidth === 1023) return false; // isTablet = false
-      return false;
-    });
+    mockUseMediaQuery.mockImplementation(
+      (query: { maxWidth?: number; minWidth?: number }) => {
+        if (query.maxWidth === 767) return false; // isMobile = false
+        if (query.minWidth === 768 && query.maxWidth === 1023) return false; // isTablet = false
+        return false;
+      },
+    );
   });
 
   describe('render', () => {
@@ -332,10 +388,12 @@ describe('Header component', () => {
 
   describe('mobile view', () => {
     beforeEach(() => {
-      mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-        if (query.maxWidth === 767) return true; // isMobile = true
-        return false;
-      });
+      mockUseMediaQuery.mockImplementation(
+        (query: { maxWidth?: number; minWidth?: number }) => {
+          if (query.maxWidth === 767) return true; // isMobile = true
+          return false;
+        },
+      );
     });
 
     it('should render mobile header layout', () => {
@@ -348,7 +406,9 @@ describe('Header component', () => {
     it('should render sidebar toggle button in mobile view', () => {
       render(<Header toggleDrawer={vi.fn()} />);
 
-      const toggleButton = screen.getByRole('button', { name: /open sidebar/i });
+      const toggleButton = screen.getByRole('button', {
+        name: /open sidebar/i,
+      });
       expect(toggleButton).toBeInTheDocument();
     });
 
@@ -356,7 +416,9 @@ describe('Header component', () => {
       const mockToggleDrawer = vi.fn();
       render(<Header toggleDrawer={mockToggleDrawer} />);
 
-      const toggleButton = screen.getByRole('button', { name: /open sidebar/i });
+      const toggleButton = screen.getByRole('button', {
+        name: /open sidebar/i,
+      });
       fireEvent.click(toggleButton);
 
       expect(mockToggleDrawer).toHaveBeenCalled();
@@ -365,14 +427,18 @@ describe('Header component', () => {
     it('should show "Close sidebar" label when drawer is open', () => {
       render(<Header isDrawerOpen={true} toggleDrawer={vi.fn()} />);
 
-      const toggleButton = screen.getByRole('button', { name: /close sidebar/i });
+      const toggleButton = screen.getByRole('button', {
+        name: /close sidebar/i,
+      });
       expect(toggleButton).toBeInTheDocument();
     });
 
     it('should render My Mentors button in mobile view', () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', { name: /my mentors/i });
+      const myMentorsButton = screen.getByRole('button', {
+        name: /my mentors/i,
+      });
       expect(myMentorsButton).toBeInTheDocument();
     });
 
@@ -380,7 +446,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // Find and click the LLM button (has GPT-4 text)
-      const llmButton = screen.getByRole('button', { name: /llm model icon gpt-4/i });
+      const llmButton = screen.getByRole('button', {
+        name: /llm model icon gpt-4/i,
+      });
       fireEvent.click(llmButton);
 
       await waitFor(() => {
@@ -391,7 +459,9 @@ describe('Header component', () => {
     it('should open My Mentors modal when My Mentors button is clicked in mobile view', async () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', { name: /my mentors/i });
+      const myMentorsButton = screen.getByRole('button', {
+        name: /my mentors/i,
+      });
       fireEvent.click(myMentorsButton);
 
       await waitFor(() => {
@@ -414,7 +484,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // Open the LLM modal
-      const llmButton = screen.getByRole('button', { name: /llm model icon gpt-4/i });
+      const llmButton = screen.getByRole('button', {
+        name: /llm model icon gpt-4/i,
+      });
       fireEvent.click(llmButton);
 
       await waitFor(() => {
@@ -434,7 +506,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // Open the modal
-      const myMentorsButton = screen.getByRole('button', { name: /my mentors/i });
+      const myMentorsButton = screen.getByRole('button', {
+        name: /my mentors/i,
+      });
       fireEvent.click(myMentorsButton);
 
       await waitFor(() => {
@@ -446,7 +520,9 @@ describe('Header component', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('my-mentors-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -465,17 +541,21 @@ describe('Header component', () => {
 
   describe('tablet view', () => {
     beforeEach(() => {
-      mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-        if (query.maxWidth === 767) return false; // isMobile = false
-        if (query.minWidth === 768 && query.maxWidth === 1023) return true; // isTablet = true
-        return false;
-      });
+      mockUseMediaQuery.mockImplementation(
+        (query: { maxWidth?: number; minWidth?: number }) => {
+          if (query.maxWidth === 767) return false; // isMobile = false
+          if (query.minWidth === 768 && query.maxWidth === 1023) return true; // isTablet = true
+          return false;
+        },
+      );
     });
 
     it('should render sidebar toggle when isMobileOrTablet is true', () => {
       render(<Header isMobileOrTablet={true} toggleDrawer={vi.fn()} />);
 
-      const toggleButton = screen.getByRole('button', { name: /open sidebar/i });
+      const toggleButton = screen.getByRole('button', {
+        name: /open sidebar/i,
+      });
       expect(toggleButton).toBeInTheDocument();
     });
   });
@@ -484,7 +564,9 @@ describe('Header component', () => {
     it('should not render sidebar toggle button in desktop view by default', () => {
       render(<Header />);
 
-      const toggleButtons = screen.queryAllByRole('button', { name: /sidebar/i });
+      const toggleButtons = screen.queryAllByRole('button', {
+        name: /sidebar/i,
+      });
       expect(toggleButtons).toHaveLength(0);
     });
 
@@ -540,7 +622,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // The LLM button has accessible name derived from its content (image alt + text)
-      const llmButton = screen.getByRole('button', { name: /llm model icon gpt-4/i });
+      const llmButton = screen.getByRole('button', {
+        name: /llm model icon gpt-4/i,
+      });
       fireEvent.click(llmButton);
 
       await waitFor(() => {
@@ -552,7 +636,9 @@ describe('Header component', () => {
       mockUseIsAdmin.mockReturnValue(true);
       render(<Header />);
 
-      const llmButton = screen.getByRole('button', { name: /llm model icon gpt-4/i });
+      const llmButton = screen.getByRole('button', {
+        name: /llm model icon gpt-4/i,
+      });
       fireEvent.click(llmButton);
 
       await waitFor(() => {
@@ -572,7 +658,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // For non-admin, the button should still be there but clicking shouldn't open modal
-      const llmButton = screen.getByRole('button', { name: /llm model icon gpt-4/i });
+      const llmButton = screen.getByRole('button', {
+        name: /llm model icon gpt-4/i,
+      });
       fireEvent.click(llmButton);
       // Modal should not open for non-admin
       expect(screen.queryByTestId('llm-modal')).not.toBeInTheDocument();
@@ -583,7 +671,9 @@ describe('Header component', () => {
     it('should open My Mentors modal when button is clicked', async () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', { name: /my mentors/i });
+      const myMentorsButton = screen.getByRole('button', {
+        name: /my mentors/i,
+      });
       fireEvent.click(myMentorsButton);
 
       await waitFor(() => {
@@ -594,7 +684,9 @@ describe('Header component', () => {
     it('should close My Mentors modal when close button is clicked', async () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', { name: /my mentors/i });
+      const myMentorsButton = screen.getByRole('button', {
+        name: /my mentors/i,
+      });
       fireEvent.click(myMentorsButton);
 
       await waitFor(() => {
@@ -605,7 +697,9 @@ describe('Header component', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('my-mentors-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -636,7 +730,9 @@ describe('Header component', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('user-profile-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('user-profile-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -683,7 +779,9 @@ describe('Header component', () => {
       render(<Header />);
 
       // LLM button should not be visible on prompt-gallery
-      const llmButton = screen.queryByRole('button', { name: /llm model icon/i });
+      const llmButton = screen.queryByRole('button', {
+        name: /llm model icon/i,
+      });
       expect(llmButton).not.toBeInTheDocument();
     });
 
@@ -862,10 +960,12 @@ describe('Header component', () => {
 
   describe('mobile dropdown menu interactions', () => {
     beforeEach(() => {
-      mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-        if (query.maxWidth === 767) return true; // isMobile = true
-        return false;
-      });
+      mockUseMediaQuery.mockImplementation(
+        (query: { maxWidth?: number; minWidth?: number }) => {
+          if (query.maxWidth === 767) return true; // isMobile = true
+          return false;
+        },
+      );
     });
 
     it('should render all menu items in mobile view', () => {
@@ -903,7 +1003,9 @@ describe('Header component', () => {
       // On prompt-gallery, clicking mentor name should open My Mentors modal
       // The button contains an avatar and mentor name
       const mentorButtons = screen.getAllByRole('button');
-      const mentorButton = mentorButtons.find((btn) => btn.textContent?.includes('Test Mentor'));
+      const mentorButton = mentorButtons.find((btn) =>
+        btn.textContent?.includes('Test Mentor'),
+      );
       expect(mentorButton).toBeDefined();
 
       if (mentorButton) {
@@ -921,7 +1023,9 @@ describe('Header component', () => {
 
       // On analytics, clicking mentor name should open My Mentors modal
       const mentorButtons = screen.getAllByRole('button');
-      const mentorButton = mentorButtons.find((btn) => btn.textContent?.includes('Test Mentor'));
+      const mentorButton = mentorButtons.find((btn) =>
+        btn.textContent?.includes('Test Mentor'),
+      );
       expect(mentorButton).toBeDefined();
 
       if (mentorButton) {
@@ -1106,11 +1210,13 @@ describe('Header component', () => {
 
   describe('tablet-specific behavior', () => {
     beforeEach(() => {
-      mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-        if (query.maxWidth === 767) return false;
-        if (query.minWidth === 768 && query.maxWidth === 1023) return true;
-        return false;
-      });
+      mockUseMediaQuery.mockImplementation(
+        (query: { maxWidth?: number; minWidth?: number }) => {
+          if (query.maxWidth === 767) return false;
+          if (query.minWidth === 768 && query.maxWidth === 1023) return true;
+          return false;
+        },
+      );
     });
 
     it('should pass isMobile=true to ProfileButton when in tablet view', () => {
@@ -1136,10 +1242,12 @@ describe('Header component', () => {
     });
 
     it('should hide My Mentors button in mobile when not on chat page', () => {
-      mockUseMediaQuery.mockImplementation((query: { maxWidth?: number; minWidth?: number }) => {
-        if (query.maxWidth === 767) return true;
-        return false;
-      });
+      mockUseMediaQuery.mockImplementation(
+        (query: { maxWidth?: number; minWidth?: number }) => {
+          if (query.maxWidth === 767) return true;
+          return false;
+        },
+      );
       mockUsePathname.mockReturnValue('/tenant-1/mentor-1/explore');
       render(<Header />);
 
@@ -1163,7 +1271,9 @@ describe('Header component', () => {
 
       const fallbacks = screen.getAllByTestId('avatar-fallback');
       // At least one fallback should have "Am" (first 2 chars of "Amazing Mentor")
-      const hasCorrectFallback = fallbacks.some((fb) => fb.textContent === 'Am');
+      const hasCorrectFallback = fallbacks.some(
+        (fb) => fb.textContent === 'Am',
+      );
       expect(hasCorrectFallback).toBe(true);
     });
   });
@@ -1207,7 +1317,9 @@ describe('Header component', () => {
       }
 
       // Wait for MentorListModal to appear
-      const mentorListModal = await screen.findByTestId('mentor-list-modal').catch(() => null);
+      const mentorListModal = await screen
+        .findByTestId('mentor-list-modal')
+        .catch(() => null);
 
       if (mentorListModal) {
         // Click on "Select Mentor" button to trigger handleMentorSelect
@@ -1215,11 +1327,15 @@ describe('Header component', () => {
         fireEvent.click(selectButton);
 
         // Verify handleMentorSelect was called (it logs to console)
-        expect(consoleSpy).toHaveBeenCalledWith('Selected mentor:', { id: 'test-mentor' });
+        expect(consoleSpy).toHaveBeenCalledWith('Selected mentor:', {
+          id: 'test-mentor',
+        });
 
         // Modal should close after selection
         await waitFor(() => {
-          expect(screen.queryByTestId('mentor-list-modal')).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('mentor-list-modal'),
+          ).not.toBeInTheDocument();
         });
       }
 
@@ -1240,7 +1356,9 @@ describe('Header component', () => {
       }
 
       // Wait for MentorListModal to appear
-      const mentorListModal = await screen.findByTestId('mentor-list-modal').catch(() => null);
+      const mentorListModal = await screen
+        .findByTestId('mentor-list-modal')
+        .catch(() => null);
 
       if (mentorListModal) {
         // Click close button
@@ -1249,7 +1367,9 @@ describe('Header component', () => {
 
         // Modal should close
         await waitFor(() => {
-          expect(screen.queryByTestId('mentor-list-modal')).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('mentor-list-modal'),
+          ).not.toBeInTheDocument();
         });
       }
     });

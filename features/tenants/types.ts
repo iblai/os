@@ -22,7 +22,7 @@ export interface TenantMetadata {
   platform_name: string;
   metadata: {
     spa_domains: Record<
-      "mentor" | "skills" | "analytics",
+      'mentor' | 'skills' | 'analytics',
       { active: boolean; domain: string }
     > | null;
   };

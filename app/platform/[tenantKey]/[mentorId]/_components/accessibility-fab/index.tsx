@@ -32,7 +32,7 @@ export function AccessibilityFab() {
   return (
     <>
       <div
-        className={cn('fixed right-4 flex flex-col gap-3 z-50 mb-10', {
+        className={cn('fixed right-4 z-50 mb-10 flex flex-col gap-3', {
           'bottom-4': messages.length === 0,
           'bottom-[21rem]': messages.length > 0,
         })}

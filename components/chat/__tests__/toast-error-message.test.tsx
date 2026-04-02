@@ -40,7 +40,10 @@ describe('ToastErrorMessage Component', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
@@ -83,7 +86,12 @@ describe('ToastErrorMessage Component', () => {
 
   describe('Punctuation Handling', () => {
     it('should not add period when message ends with period', () => {
-      render(<ToastErrorMessage message="Error occurred." supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error occurred."
+          supportEmail="support@example.com"
+        />,
+      );
 
       // Should contain message without double period
       expect(screen.getByText(/Error occurred\./)).toBeInTheDocument();
@@ -91,14 +99,24 @@ describe('ToastErrorMessage Component', () => {
     });
 
     it('should not add period when message ends with exclamation mark', () => {
-      render(<ToastErrorMessage message="Error!" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error!"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Error!/)).toBeInTheDocument();
       expect(screen.queryByText(/Error!\./)).not.toBeInTheDocument();
     });
 
     it('should not add period when message ends with question mark', () => {
-      render(<ToastErrorMessage message="What happened?" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="What happened?"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/What happened\?/)).toBeInTheDocument();
       expect(screen.queryByText(/What happened\?\./)).not.toBeInTheDocument();
@@ -106,7 +124,10 @@ describe('ToastErrorMessage Component', () => {
 
     it('should add period when message does not end with punctuation', () => {
       render(
-        <ToastErrorMessage message="Something went wrong" supportEmail="support@example.com" />,
+        <ToastErrorMessage
+          message="Something went wrong"
+          supportEmail="support@example.com"
+        />,
       );
 
       // The message should have a period added
@@ -114,19 +135,31 @@ describe('ToastErrorMessage Component', () => {
     });
 
     it('should add period when message ends with letter', () => {
-      render(<ToastErrorMessage message="Connection timeout" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Connection timeout"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Connection timeout\./)).toBeInTheDocument();
     });
 
     it('should add period when message ends with number', () => {
-      render(<ToastErrorMessage message="Error code 500" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error code 500"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Error code 500\./)).toBeInTheDocument();
     });
 
     it('should handle empty message', () => {
-      render(<ToastErrorMessage message="" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage message="" supportEmail="support@example.com" />,
+      );
 
       // Empty message should still render the container
       expect(screen.getByText(/Sorry about that!/)).toBeInTheDocument();
@@ -159,7 +192,10 @@ describe('ToastErrorMessage Component', () => {
 
     it('should convert inline code to plain text', () => {
       render(
-        <ToastErrorMessage message="Error in `function`" supportEmail="support@example.com" />,
+        <ToastErrorMessage
+          message="Error in `function`"
+          supportEmail="support@example.com"
+        />,
       );
 
       expect(screen.getByText(/Error in function/)).toBeInTheDocument();
@@ -190,9 +226,17 @@ describe('ToastErrorMessage Component', () => {
 
   describe('Console Error Logging', () => {
     it('should log error with tenant key on mount', () => {
-      mockUseParams.mockReturnValue({ tenantKey: 'my-tenant', mentorId: 'mentor-1' });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'my-tenant',
+        mentorId: 'mentor-1',
+      });
 
-      render(<ToastErrorMessage message="Test error" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Test error"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: 'my-tenant', error: 'Test error' }),
@@ -200,9 +244,17 @@ describe('ToastErrorMessage Component', () => {
     });
 
     it('should log error with different tenant key', () => {
-      mockUseParams.mockReturnValue({ tenantKey: 'another-tenant', mentorId: 'mentor-2' });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'another-tenant',
+        mentorId: 'mentor-2',
+      });
 
-      render(<ToastErrorMessage message="Different error" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Different error"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: 'another-tenant', error: 'Different error' }),
@@ -212,7 +264,12 @@ describe('ToastErrorMessage Component', () => {
     it('should log error with undefined tenant when params are null', () => {
       mockUseParams.mockReturnValue(null);
 
-      render(<ToastErrorMessage message="No tenant error" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="No tenant error"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: undefined, error: 'No tenant error' }),
@@ -222,7 +279,12 @@ describe('ToastErrorMessage Component', () => {
     it('should log error with undefined tenant when tenantKey is missing', () => {
       mockUseParams.mockReturnValue({ mentorId: 'mentor-1' });
 
-      render(<ToastErrorMessage message="Missing tenant" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Missing tenant"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: undefined, error: 'Missing tenant' }),
@@ -231,27 +293,43 @@ describe('ToastErrorMessage Component', () => {
 
     it('should log error only once on mount', () => {
       const { rerender } = render(
-        <ToastErrorMessage message="Initial error" supportEmail="support@example.com" />,
+        <ToastErrorMessage
+          message="Initial error"
+          supportEmail="support@example.com"
+        />,
       );
 
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
 
       // Rerender with same props shouldn't trigger new log
-      rerender(<ToastErrorMessage message="Initial error" supportEmail="support@example.com" />);
+      rerender(
+        <ToastErrorMessage
+          message="Initial error"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should log new error when message changes', () => {
       const { rerender } = render(
-        <ToastErrorMessage message="First error" supportEmail="support@example.com" />,
+        <ToastErrorMessage
+          message="First error"
+          supportEmail="support@example.com"
+        />,
       );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: 'test-tenant', error: 'First error' }),
       );
 
-      rerender(<ToastErrorMessage message="Second error" supportEmail="support@example.com" />);
+      rerender(
+        <ToastErrorMessage
+          message="Second error"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         JSON.stringify({ tenant: 'test-tenant', error: 'Second error' }),
@@ -261,21 +339,33 @@ describe('ToastErrorMessage Component', () => {
 
   describe('Support Email Variations', () => {
     it('should handle different support email addresses', () => {
-      render(<ToastErrorMessage message="Error" supportEmail="help@company.org" />);
+      render(
+        <ToastErrorMessage message="Error" supportEmail="help@company.org" />,
+      );
 
       const link = screen.getByRole('link', { name: 'contact us' });
       expect(link).toHaveAttribute('href', 'mailto:help@company.org');
     });
 
     it('should handle email with subdomain', () => {
-      render(<ToastErrorMessage message="Error" supportEmail="support@mail.company.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@mail.company.com"
+        />,
+      );
 
       const link = screen.getByRole('link', { name: 'contact us' });
       expect(link).toHaveAttribute('href', 'mailto:support@mail.company.com');
     });
 
     it('should handle email with plus sign', () => {
-      render(<ToastErrorMessage message="Error" supportEmail="support+test@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support+test@example.com"
+        />,
+      );
 
       const link = screen.getByRole('link', { name: 'contact us' });
       expect(link).toHaveAttribute('href', 'mailto:support+test@example.com');
@@ -284,7 +374,9 @@ describe('ToastErrorMessage Component', () => {
 
   describe('Message Content Edge Cases', () => {
     it('should handle message with only whitespace', () => {
-      render(<ToastErrorMessage message="   " supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage message="   " supportEmail="support@example.com" />,
+      );
 
       // Should still render the sorry message
       expect(screen.getByText(/Sorry about that!/)).toBeInTheDocument();
@@ -304,34 +396,57 @@ describe('ToastErrorMessage Component', () => {
 
     it('should handle very long message', () => {
       const longMessage = 'Error '.repeat(100);
-      render(<ToastErrorMessage message={longMessage} supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message={longMessage}
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Sorry about that!/)).toBeInTheDocument();
     });
 
     it('should handle message with newlines', () => {
       render(
-        <ToastErrorMessage message="Line 1\nLine 2\nLine 3" supportEmail="support@example.com" />,
+        <ToastErrorMessage
+          message="Line 1\nLine 2\nLine 3"
+          supportEmail="support@example.com"
+        />,
       );
 
       expect(screen.getByText(/Sorry about that!/)).toBeInTheDocument();
     });
 
     it('should handle message with unicode characters', () => {
-      render(<ToastErrorMessage message="Error occurred 🚫" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error occurred 🚫"
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Sorry about that!/)).toBeInTheDocument();
     });
 
     it('should handle message ending with multiple punctuation', () => {
-      render(<ToastErrorMessage message="What happened?!" supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="What happened?!"
+          supportEmail="support@example.com"
+        />,
+      );
 
       // Should not add additional period since it ends with !
       expect(screen.getByText(/What happened\?!/)).toBeInTheDocument();
     });
 
     it('should handle message with trailing whitespace before punctuation', () => {
-      render(<ToastErrorMessage message="Error occurred ." supportEmail="support@example.com" />);
+      render(
+        <ToastErrorMessage
+          message="Error occurred ."
+          supportEmail="support@example.com"
+        />,
+      );
 
       expect(screen.getByText(/Error occurred \./)).toBeInTheDocument();
     });

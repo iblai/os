@@ -1,18 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { InsideButtons } from "../inside-buttons";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { InsideButtons } from '../inside-buttons';
 
-vi.mock("@iblai/iblai-js/web-utils", () => ({
-  TOOLS: {
-    CANVAS: "canvas",
-    STUDY_MODE: "study-mode",
-    DEEP_RESEARCH: "deep-research",
-    MEMORY: "memory",
-  },
-}));
-
-vi.mock("@/components/icons/svg-icons", () => ({
+vi.mock('@/components/icons/svg-icons', () => ({
   DeepSearchIcon: ({ className }: { className?: string }) => (
     <svg data-testid="deep-search-icon" className={className} />
   ),
@@ -21,57 +12,31 @@ vi.mock("@/components/icons/svg-icons", () => ({
   ),
 }));
 
-vi.mock("../memory-button", () => ({
+vi.mock('../memory-button', () => ({
   MemoryButton: () => <button data-testid="memory-button">Memory</button>,
 }));
 
 // Mock hooks that require Redux Provider
-vi.mock("@/hooks/use-user", () => ({
+vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => true),
   useLearnerMode: vi.fn(() => ({ isInstructorMode: true })),
-  useUsername: vi.fn(() => "testuser"),
 }));
 
 // Mock config
-vi.mock("@/lib/config", () => ({
+vi.mock('@/lib/config', () => ({
   config: {
-    iblTemplateMentor: vi.fn(() => "default-mentor"),
-    iblAiUrl: vi.fn(() => "http://localhost"),
-    platformPublicKey: vi.fn(() => "test-key"),
+    iblTemplateMentor: vi.fn(() => 'default-mentor'),
+    iblAiUrl: vi.fn(() => 'http://localhost'),
+    platformPublicKey: vi.fn(() => 'test-key'),
     useGoogleOnetap: vi.fn(() => false),
     enableAdminDebugTools: vi.fn(() => false),
   },
 }));
 
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ tenantKey: "test-tenant", mentorId: "mentor-123" }),
-}));
-
-vi.mock("@/hooks/user-navigate", () => ({
-  useNavigate: () => ({
-    getMentorId: () => "mentor-123",
-  }),
-}));
-
-let mockMemsearchConfig: any = { enable_memsearch: false };
-vi.mock("@iblai/iblai-js/data-layer", () => ({
-  useGetMemsearchConfigQuery: () => ({
-    data: mockMemsearchConfig,
-  }),
-}));
-
-let mockMentorSettings: any = { enable_memory_component: false };
-vi.mock("@iblai/iblai-js/data-layer", () => ({
-  useGetMentorSettingsQuery: () => ({
-    data: mockMentorSettings,
-    isLoading: false,
-  }),
-}));
-
 // Import mocked modules for testing
-import { useIsAdmin, useLearnerMode } from "@/hooks/use-user";
+import { useIsAdmin, useLearnerMode } from '@/hooks/use-user';
 
-describe("InsideButtons", () => {
+describe('InsideButtons', () => {
   const mockOnOptionClick = vi.fn();
 
   const defaultProps = {
@@ -90,27 +55,25 @@ describe("InsideButtons", () => {
     (useLearnerMode as ReturnType<typeof vi.fn>).mockReturnValue({
       isInstructorMode: true,
     });
-    mockMemsearchConfig = { enable_memsearch: false };
-    mockMentorSettings = { enable_memory_component: false };
   });
 
-  describe("rendering", () => {
-    it("should render Canvas button when artifactsEnabled is true", () => {
+  describe('rendering', () => {
+    it('should render Canvas button when artifactsEnabled is true', () => {
       render(<InsideButtons {...defaultProps} artifactsEnabled={true} />);
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
     });
 
-    it("should render Deep Research button when deepResearch is true", () => {
+    it('should render Deep Research button when deepResearch is true', () => {
       render(<InsideButtons {...defaultProps} deepResearch={true} />);
-      expect(screen.getByText("Deep Research")).toBeInTheDocument();
+      expect(screen.getByText('Deep Research')).toBeInTheDocument();
     });
 
-    it("should not render Deep Research button when deepResearch is false", () => {
+    it('should not render Deep Research button when deepResearch is false', () => {
       render(<InsideButtons {...defaultProps} deepResearch={false} />);
-      expect(screen.queryByText("Deep Research")).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
     });
 
-    it("should render Study Mode button when studyMode is true", () => {
+    it('should render Study Mode button when studyMode is true', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -118,10 +81,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.getByText("Study Mode")).toBeInTheDocument();
+      expect(screen.getByText('Study Mode')).toBeInTheDocument();
     });
 
-    it("should not render Study Mode button when studyMode is false", () => {
+    it('should not render Study Mode button when studyMode is false', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -129,10 +92,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.queryByText("Study Mode")).not.toBeInTheDocument();
+      expect(screen.queryByText('Study Mode')).not.toBeInTheDocument();
     });
 
-    it("should render all enabled buttons when container is wide", () => {
+    it('should render all enabled buttons when container is wide', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -142,15 +105,15 @@ describe("InsideButtons", () => {
         />,
       );
 
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
-      expect(screen.getByText("Deep Research")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
+      expect(screen.getByText('Deep Research')).toBeInTheDocument();
     });
 
-    it("should render MemoryButton when the filtered list includes Memory", () => {
+    it('should render MemoryButton when the filtered list includes Memory', () => {
       const originalFilter = Array.prototype.filter;
       let bypassed = false;
       const filterSpy = vi
-        .spyOn(Array.prototype, "filter")
+        .spyOn(Array.prototype, 'filter')
         .mockImplementation(function (
           this: any[],
           ...args: Parameters<typeof Array.prototype.filter>
@@ -177,13 +140,13 @@ describe("InsideButtons", () => {
         />,
       );
 
-      expect(screen.getByTestId("memory-button")).toBeInTheDocument();
+      expect(screen.getByTestId('memory-button')).toBeInTheDocument();
       filterSpy.mockRestore();
     });
   });
 
-  describe("button interactions", () => {
-    it("should call onOptionClick with CANVAS when Canvas button is clicked", async () => {
+  describe('button interactions', () => {
+    it('should call onOptionClick with CANVAS when Canvas button is clicked', async () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -192,26 +155,26 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
+      const canvasButton = screen.getByText('Canvas').closest('button');
       expect(canvasButton).toBeInTheDocument();
       fireEvent.click(canvasButton!);
 
-      expect(mockOnOptionClick).toHaveBeenCalledWith("canvas");
+      expect(mockOnOptionClick).toHaveBeenCalledWith('canvas');
     });
 
-    it("should call onOptionClick with DEEP_RESEARCH when Deep Research button is clicked", async () => {
+    it('should call onOptionClick with DEEP_RESEARCH when Deep Research button is clicked', async () => {
       render(<InsideButtons {...defaultProps} containerWidth={1000} />);
 
       const deepResearchButton = screen
-        .getByText("Deep Research")
-        .closest("button");
+        .getByText('Deep Research')
+        .closest('button');
       expect(deepResearchButton).toBeInTheDocument();
       fireEvent.click(deepResearchButton!);
 
-      expect(mockOnOptionClick).toHaveBeenCalledWith("deep-research");
+      expect(mockOnOptionClick).toHaveBeenCalledWith('deep-research');
     });
 
-    it("should call onOptionClick with STUDY_MODE when Study Mode button is clicked", async () => {
+    it('should call onOptionClick with STUDY_MODE when Study Mode button is clicked', async () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -220,14 +183,14 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const studyModeButton = screen.getByText("Study Mode").closest("button");
+      const studyModeButton = screen.getByText('Study Mode').closest('button');
       expect(studyModeButton).toBeInTheDocument();
       fireEvent.click(studyModeButton!);
 
-      expect(mockOnOptionClick).toHaveBeenCalledWith("study-mode");
+      expect(mockOnOptionClick).toHaveBeenCalledWith('study-mode');
     });
 
-    it("should prevent default and stop propagation on button click", async () => {
+    it('should prevent default and stop propagation on button click', async () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -236,13 +199,13 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
-      const clickEvent = new MouseEvent("click", {
+      const canvasButton = screen.getByText('Canvas').closest('button');
+      const clickEvent = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
       });
-      const preventDefaultSpy = vi.spyOn(clickEvent, "preventDefault");
-      const stopPropagationSpy = vi.spyOn(clickEvent, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
+      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
       canvasButton!.dispatchEvent(clickEvent);
 
@@ -251,8 +214,8 @@ describe("InsideButtons", () => {
     });
   });
 
-  describe("active state styling", () => {
-    it("should apply active styling when Canvas is active", () => {
+  describe('active state styling', () => {
+    it('should apply active styling when Canvas is active', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -261,41 +224,41 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
+      const canvasButton = screen.getByText('Canvas').closest('button');
       // When artifactsEnabled is true, button should have active styling
-      expect(canvasButton).toHaveClass("text-[#38A1E5]");
+      expect(canvasButton).toHaveClass('text-[#38A1E5]');
     });
 
-    it("should apply active styling when Deep Research is in activeOptions", () => {
+    it('should apply active styling when Deep Research is in activeOptions', () => {
       render(
         <InsideButtons
           {...defaultProps}
-          activeOptions={["deep-research"]}
+          activeOptions={['deep-research']}
           containerWidth={1000}
         />,
       );
 
       const deepResearchButton = screen
-        .getByText("Deep Research")
-        .closest("button");
-      expect(deepResearchButton).toHaveClass("text-[#38A1E5]");
+        .getByText('Deep Research')
+        .closest('button');
+      expect(deepResearchButton).toHaveClass('text-[#38A1E5]');
     });
 
-    it("should apply active styling when Study Mode is in activeOptions", () => {
+    it('should apply active styling when Study Mode is in activeOptions', () => {
       render(
         <InsideButtons
           {...defaultProps}
           studyMode={true}
-          activeOptions={["study-mode"]}
+          activeOptions={['study-mode']}
           containerWidth={1000}
         />,
       );
 
-      const studyModeButton = screen.getByText("Study Mode").closest("button");
-      expect(studyModeButton).toHaveClass("text-[#38A1E5]");
+      const studyModeButton = screen.getByText('Study Mode').closest('button');
+      expect(studyModeButton).toHaveClass('text-[#38A1E5]');
     });
 
-    it("should not apply active styling when Study Mode is not in activeOptions", () => {
+    it('should not apply active styling when Study Mode is not in activeOptions', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -305,11 +268,11 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const studyModeButton = screen.getByText("Study Mode").closest("button");
-      expect(studyModeButton).not.toHaveClass("text-[#38A1E5]");
+      const studyModeButton = screen.getByText('Study Mode').closest('button');
+      expect(studyModeButton).not.toHaveClass('text-[#38A1E5]');
     });
 
-    it("should show X icon when button is active", () => {
+    it('should show X icon when button is active', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -318,13 +281,13 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
+      const canvasButton = screen.getByText('Canvas').closest('button');
       // Check for X icon in active button
-      const xIcon = canvasButton?.querySelector(".ml-1");
+      const xIcon = canvasButton?.querySelector('.ml-1');
       expect(xIcon).toBeInTheDocument();
     });
 
-    it("should prevent default and stop propagation when X icon is clicked", () => {
+    it('should prevent default and stop propagation when X icon is clicked', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -333,16 +296,16 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
-      const xIcon = canvasButton?.querySelector(".ml-1") as SVGElement | null;
+      const canvasButton = screen.getByText('Canvas').closest('button');
+      const xIcon = canvasButton?.querySelector('.ml-1') as SVGElement | null;
       expect(xIcon).toBeInTheDocument();
 
-      const clickEvent = new MouseEvent("click", {
+      const clickEvent = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,
       });
-      const preventDefaultSpy = vi.spyOn(clickEvent, "preventDefault");
-      const stopPropagationSpy = vi.spyOn(clickEvent, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
+      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
       xIcon?.dispatchEvent(clickEvent);
 
@@ -351,8 +314,8 @@ describe("InsideButtons", () => {
     });
   });
 
-  describe("responsive behavior", () => {
-    it("should show inactive buttons in dropdown when containerWidth is less than 600", () => {
+  describe('responsive behavior', () => {
+    it('should show inactive buttons in dropdown when containerWidth is less than 600', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -363,13 +326,13 @@ describe("InsideButtons", () => {
       );
 
       // Inactive buttons should be in dropdown
-      expect(screen.queryByText("Canvas")).not.toBeInTheDocument();
-      expect(screen.queryByText("Deep Research")).not.toBeInTheDocument();
+      expect(screen.queryByText('Canvas')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
       // Should show more options button
-      expect(screen.getByText("•••")).toBeInTheDocument();
+      expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it("should show active buttons visible on mobile even when containerWidth is less than 600", () => {
+    it('should show active buttons visible on mobile even when containerWidth is less than 600', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -380,14 +343,14 @@ describe("InsideButtons", () => {
       );
 
       // Active button (Canvas) should be visible
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
       // Inactive button (Deep Research) should be in dropdown
-      expect(screen.queryAllByText("Deep Research")).toHaveLength(0);
+      expect(screen.queryAllByText('Deep Research')).toHaveLength(0);
       // Should show more options button for inactive tools
-      expect(screen.getByText("•••")).toBeInTheDocument();
+      expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it("should show one button and dropdown when containerWidth is between 600-800", () => {
+    it('should show one button and dropdown when containerWidth is between 600-800', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -398,12 +361,12 @@ describe("InsideButtons", () => {
       );
 
       // Active button should be visible
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
       // More options should exist for inactive tools
-      expect(screen.getByText("•••")).toBeInTheDocument();
+      expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it("should show all buttons when containerWidth is 800 or more", () => {
+    it('should show all buttons when containerWidth is 800 or more', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -413,15 +376,15 @@ describe("InsideButtons", () => {
         />,
       );
 
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
-      expect(screen.getByText("Deep Research")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
+      expect(screen.getByText('Deep Research')).toBeInTheDocument();
       // No dropdown menu
-      expect(screen.queryByText("•••")).not.toBeInTheDocument();
+      expect(screen.queryByText('•••')).not.toBeInTheDocument();
     });
   });
 
-  describe("dropdown menu", () => {
-    it("should render dropdown trigger when hidden buttons exist", () => {
+  describe('dropdown menu', () => {
+    it('should render dropdown trigger when hidden buttons exist', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -431,13 +394,13 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
+      const moreButton = screen.getByText('•••').closest('button');
       expect(moreButton).toBeInTheDocument();
-      expect(moreButton).toHaveAttribute("aria-haspopup", "menu");
+      expect(moreButton).toHaveAttribute('aria-haspopup', 'menu');
     });
   });
 
-  describe("button type attribute", () => {
+  describe('button type attribute', () => {
     it('should have type="button" to prevent form submission', () => {
       render(
         <InsideButtons
@@ -447,13 +410,13 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
-      expect(canvasButton).toHaveAttribute("type", "button");
+      const canvasButton = screen.getByText('Canvas').closest('button');
+      expect(canvasButton).toHaveAttribute('type', 'button');
     });
   });
 
-  describe("empty state", () => {
-    it("should render empty when no buttons are enabled", () => {
+  describe('empty state', () => {
+    it('should render empty when no buttons are enabled', () => {
       const { container } = render(
         <InsideButtons
           {...defaultProps}
@@ -466,12 +429,12 @@ describe("InsideButtons", () => {
       // Only Canvas is rendered since it always shows (isEnabled: true)
       // But with artifactsEnabled false, no buttons should show
       // Container should be empty or only have the relative wrapper
-      expect(container.querySelector(".flex.items-center")).toBeInTheDocument();
+      expect(container.querySelector('.flex.items-center')).toBeInTheDocument();
     });
   });
 
-  describe("icons", () => {
-    it("should render CanvasIcon for Canvas button", () => {
+  describe('icons', () => {
+    it('should render CanvasIcon for Canvas button', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -479,10 +442,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.getByTestId("canvas-icon")).toBeInTheDocument();
+      expect(screen.getByTestId('canvas-icon')).toBeInTheDocument();
     });
 
-    it("should render DeepSearchIcon for Deep Research button", () => {
+    it('should render DeepSearchIcon for Deep Research button', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -490,12 +453,12 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.getByTestId("deep-search-icon")).toBeInTheDocument();
+      expect(screen.getByTestId('deep-search-icon')).toBeInTheDocument();
     });
   });
 
-  describe("accessibility", () => {
-    it("should have accessible more options button with sr-only text", () => {
+  describe('accessibility', () => {
+    it('should have accessible more options button with sr-only text', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -505,12 +468,12 @@ describe("InsideButtons", () => {
         />,
       );
 
-      expect(screen.getByText("More options")).toHaveClass("sr-only");
+      expect(screen.getByText('More options')).toHaveClass('sr-only');
     });
   });
 
-  describe("tablet responsive behavior (600-800px)", () => {
-    it("should show first inactive button when no buttons are active on tablet with multiple buttons", () => {
+  describe('tablet responsive behavior (600-800px)', () => {
+    it('should show first inactive button when no buttons are active on tablet with multiple buttons', () => {
       // Both Canvas and Deep Research enabled, both inactive
       // This tests line 84: activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : []
       render(
@@ -525,12 +488,12 @@ describe("InsideButtons", () => {
 
       // With two inactive buttons on tablet and no active buttons,
       // should show first inactive button (Canvas) and hide the rest
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
       // Deep Research should be in dropdown
-      expect(screen.getByText("•••")).toBeInTheDocument();
+      expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it("should show only active buttons on tablet (not the first inactive)", () => {
+    it('should show only active buttons on tablet (not the first inactive)', () => {
       // Canvas: artifactsEnabled=true means isActive=true
       // Deep Research: not in activeOptions, so isActive=false
       render(
@@ -544,15 +507,15 @@ describe("InsideButtons", () => {
       );
 
       // Active button (Canvas due to artifactsEnabled) should be visible
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
       // Since Canvas is active, inactive buttons (Deep Research) go to dropdown
       // visibleInactive will be [] because activeButtons.length > 0
-      expect(screen.getByText("•••")).toBeInTheDocument();
+      expect(screen.getByText('•••')).toBeInTheDocument();
     });
   });
 
-  describe("dropdown menu interactions", () => {
-    it("should have dropdown trigger when hidden buttons exist", () => {
+  describe('dropdown menu interactions', () => {
+    it('should have dropdown trigger when hidden buttons exist', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -562,11 +525,11 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
-      expect(moreButton).toHaveAttribute("aria-haspopup", "menu");
+      const moreButton = screen.getByText('•••').closest('button');
+      expect(moreButton).toHaveAttribute('aria-haspopup', 'menu');
     });
 
-    it("should show hidden buttons in dropdown menu when opened", async () => {
+    it('should show hidden buttons in dropdown menu when opened', async () => {
       const user = userEvent.setup();
       render(
         <InsideButtons
@@ -577,16 +540,16 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
+      const moreButton = screen.getByText('•••').closest('button');
       await user.click(moreButton!);
 
       // Dropdown should be open with Deep Research inside
       await waitFor(() => {
-        expect(screen.getByRole("menu")).toBeInTheDocument();
+        expect(screen.getByRole('menu')).toBeInTheDocument();
       });
     });
 
-    it("should call onOptionClick when dropdown item is clicked", async () => {
+    it('should call onOptionClick when dropdown item is clicked', async () => {
       const user = userEvent.setup();
       render(
         <InsideButtons
@@ -597,21 +560,21 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
+      const moreButton = screen.getByText('•••').closest('button');
       await user.click(moreButton!);
 
       await waitFor(() => {
-        expect(screen.getByRole("menu")).toBeInTheDocument();
+        expect(screen.getByRole('menu')).toBeInTheDocument();
       });
 
       // Find and click the menu item
-      const menuItems = screen.getAllByRole("menuitem");
+      const menuItems = screen.getAllByRole('menuitem');
       await user.click(menuItems[0]);
 
       expect(mockOnOptionClick).toHaveBeenCalled();
     });
 
-    it("should show icon in dropdown menu items", async () => {
+    it('should show icon in dropdown menu items', async () => {
       const user = userEvent.setup();
       render(
         <InsideButtons
@@ -622,19 +585,19 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
+      const moreButton = screen.getByText('•••').closest('button');
       await user.click(moreButton!);
 
       await waitFor(() => {
-        screen.getByRole("menuitem");
+        screen.getByRole('menuitem');
         // Deep Research icon should be in the menu item
-        expect(screen.getByTestId("deep-search-icon")).toBeInTheDocument();
+        expect(screen.getByTestId('deep-search-icon')).toBeInTheDocument();
       });
     });
   });
 
-  describe("single button edge case", () => {
-    it("should render single button without dropdown when only one button exists and width > minButtonWidth", () => {
+  describe('single button edge case', () => {
+    it('should render single button without dropdown when only one button exists and width > minButtonWidth', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -645,13 +608,13 @@ describe("InsideButtons", () => {
       );
 
       // With only Canvas enabled (deepResearch=false) and width > 120, should show button without dropdown
-      expect(screen.getByText("Canvas")).toBeInTheDocument();
-      expect(screen.queryByText("•••")).not.toBeInTheDocument();
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
+      expect(screen.queryByText('•••')).not.toBeInTheDocument();
     });
   });
 
-  describe("disabled state", () => {
-    it("should disable all buttons when disabled prop is true", () => {
+  describe('disabled state', () => {
+    it('should disable all buttons when disabled prop is true', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -662,16 +625,16 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const canvasButton = screen.getByText("Canvas").closest("button");
+      const canvasButton = screen.getByText('Canvas').closest('button');
       const deepResearchButton = screen
-        .getByText("Deep Research")
-        .closest("button");
+        .getByText('Deep Research')
+        .closest('button');
 
       expect(canvasButton).toBeDisabled();
       expect(deepResearchButton).toBeDisabled();
     });
 
-    it("should disable more options button when disabled prop is true", () => {
+    it('should disable more options button when disabled prop is true', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -682,15 +645,15 @@ describe("InsideButtons", () => {
         />,
       );
 
-      const moreButton = screen.getByText("•••").closest("button");
+      const moreButton = screen.getByText('•••').closest('button');
       expect(moreButton).toBeDisabled();
     });
   });
 
-  describe("Prompts button", () => {
+  describe('Prompts button', () => {
     const mockOnOpenPromptGallery = vi.fn();
 
-    it("should render Prompts button when promptsIsEnabled is true and not in embed mode", () => {
+    it('should render Prompts button when promptsIsEnabled is true and not in embed mode', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -700,10 +663,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.getByText("Prompts")).toBeInTheDocument();
+      expect(screen.getByText('Prompts')).toBeInTheDocument();
     });
 
-    it("should NOT render Prompts button when in embed mode", () => {
+    it('should NOT render Prompts button when in embed mode', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -713,10 +676,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.queryByText("Prompts")).not.toBeInTheDocument();
+      expect(screen.queryByText('Prompts')).not.toBeInTheDocument();
     });
 
-    it("should NOT render Prompts button when promptsIsEnabled is false", () => {
+    it('should NOT render Prompts button when promptsIsEnabled is false', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -726,10 +689,10 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      expect(screen.queryByText("Prompts")).not.toBeInTheDocument();
+      expect(screen.queryByText('Prompts')).not.toBeInTheDocument();
     });
 
-    it("should call onOpenPromptGallery when Prompts button is clicked", () => {
+    it('should call onOpenPromptGallery when Prompts button is clicked', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -739,12 +702,12 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      const button = screen.getByText("Prompts").closest("button");
+      const button = screen.getByText('Prompts').closest('button');
       fireEvent.click(button!);
       expect(mockOnOpenPromptGallery).toHaveBeenCalled();
     });
 
-    it("should render Terminal icon for Prompts button", () => {
+    it('should render Terminal icon for Prompts button', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -754,12 +717,12 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      const button = screen.getByText("Prompts").closest("button");
-      const icon = button?.querySelector(".lucide-terminal");
+      const button = screen.getByText('Prompts').closest('button');
+      const icon = button?.querySelector('.lucide-terminal');
       expect(icon).toBeInTheDocument();
     });
 
-    it("should never show X icon for Prompts (isActive is always false)", () => {
+    it('should never show X icon for Prompts (isActive is always false)', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -769,12 +732,12 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      const button = screen.getByText("Prompts").closest("button");
-      const xIcon = button?.querySelector(".ml-1");
+      const button = screen.getByText('Prompts').closest('button');
+      const xIcon = button?.querySelector('.ml-1');
       expect(xIcon).not.toBeInTheDocument();
     });
 
-    it("should render Prompts as the second button (after Canvas)", () => {
+    it('should render Prompts as the second button (after Canvas)', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -784,16 +747,16 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      const buttons = screen.getAllByRole("button");
+      const buttons = screen.getAllByRole('button');
       const buttonTexts = buttons.map((btn) =>
-        btn.textContent?.replace(/[×✕]/g, "").trim(),
+        btn.textContent?.replace(/[×✕]/g, '').trim(),
       );
-      const canvasIndex = buttonTexts.indexOf("Canvas");
-      const promptsIndex = buttonTexts.indexOf("Prompts");
+      const canvasIndex = buttonTexts.indexOf('Canvas');
+      const promptsIndex = buttonTexts.indexOf('Prompts');
       expect(promptsIndex).toBe(canvasIndex + 1);
     });
 
-    it("should handle missing onOpenPromptGallery gracefully", () => {
+    it('should handle missing onOpenPromptGallery gracefully', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -802,61 +765,9 @@ describe("InsideButtons", () => {
           containerWidth={1000}
         />,
       );
-      const button = screen.getByText("Prompts").closest("button");
+      const button = screen.getByText('Prompts').closest('button');
       // Should not throw when clicked without onOpenPromptGallery
       expect(() => fireEvent.click(button!)).not.toThrow();
-    });
-  });
-
-  describe("memory availability", () => {
-    it("does not show Memory button when both memsearch and memory component are disabled", () => {
-      mockMemsearchConfig = { enable_memsearch: false };
-      mockMentorSettings = { enable_memory_component: false };
-
-      render(<InsideButtons {...defaultProps} containerWidth={1000} />);
-
-      expect(screen.queryByTestId("memory-button")).not.toBeInTheDocument();
-      expect(screen.queryByText("Memory")).not.toBeInTheDocument();
-    });
-
-    it("does not show Memory button even when memsearch is enabled", () => {
-      mockMemsearchConfig = { enable_memsearch: true };
-      mockMentorSettings = { enable_memory_component: false };
-
-      render(<InsideButtons {...defaultProps} containerWidth={1000} />);
-
-      expect(screen.queryByTestId("memory-button")).not.toBeInTheDocument();
-      expect(screen.queryByText("Memory")).not.toBeInTheDocument();
-    });
-
-    it("does not show Memory button even when mentor memory component is enabled", () => {
-      mockMemsearchConfig = { enable_memsearch: false };
-      mockMentorSettings = { enable_memory_component: true };
-
-      render(<InsideButtons {...defaultProps} containerWidth={1000} />);
-
-      expect(screen.queryByTestId("memory-button")).not.toBeInTheDocument();
-      expect(screen.queryByText("Memory")).not.toBeInTheDocument();
-    });
-
-    it("computes isMemoryAvailable as false when memsearch enabled but memory component disabled", () => {
-      mockMemsearchConfig = { enable_memsearch: true };
-      mockMentorSettings = { enable_memory_component: false };
-
-      render(<InsideButtons {...defaultProps} containerWidth={1000} />);
-
-      // Memory button should not appear because isEnabled is hardcoded to false
-      expect(screen.queryByTestId("memory-button")).not.toBeInTheDocument();
-    });
-
-    it("computes isMemoryAvailable as false when memsearch disabled but memory component enabled", () => {
-      mockMemsearchConfig = { enable_memsearch: false };
-      mockMentorSettings = { enable_memory_component: true };
-
-      render(<InsideButtons {...defaultProps} containerWidth={1000} />);
-
-      // Memory button should not appear because isEnabled is hardcoded to false
-      expect(screen.queryByTestId("memory-button")).not.toBeInTheDocument();
     });
   });
 });

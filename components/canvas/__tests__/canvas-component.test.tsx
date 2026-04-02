@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from '@testing-library/react';
 
 import {
   CanvasComponent,
@@ -31,7 +37,9 @@ import {
 
 // Mock next/image
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
+  default: ({ src, alt, ...props }: any) => (
+    <img src={src} alt={alt} {...props} />
+  ),
 }));
 
 // Mock sonner toast
@@ -101,15 +109,35 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, disabled, className, variant, size, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    className,
+    variant,
+    size,
+    ...props
+  }: any) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ value, onChange, placeholder, className, onKeyDown, ...props }: any) => (
+  Input: ({
+    value,
+    onChange,
+    placeholder,
+    className,
+    onKeyDown,
+    ...props
+  }: any) => (
     <input
       value={value}
       onChange={onChange}
@@ -122,21 +150,34 @@ vi.mock('@/components/ui/input', () => ({
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
   DialogContent: ({ children, className }: any) => (
     <div data-testid="dialog-content" className={className}>
       {children}
     </div>
   ),
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>,
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: any) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  DialogFooter: ({ children }: any) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
-  DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
-  DropdownMenuTrigger: ({ children }: any) => <div data-testid="dropdown-trigger">{children}</div>,
-  DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-content">{children}</div>,
+  DropdownMenu: ({ children }: any) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: any) => (
+    <div data-testid="dropdown-trigger">{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: any) => (
+    <div data-testid="dropdown-content">{children}</div>
+  ),
   DropdownMenuItem: ({ children, onClick, disabled }: any) => (
     <button data-testid="dropdown-item" onClick={onClick} disabled={disabled}>
       {children}
@@ -169,9 +210,10 @@ const mockEditor = {
   isFocused: false,
   isEditable: true,
   isActive: vi.fn().mockReturnValue(false),
-  can: vi
-    .fn()
-    .mockReturnValue({ undo: vi.fn().mockReturnValue(true), redo: vi.fn().mockReturnValue(true) }),
+  can: vi.fn().mockReturnValue({
+    undo: vi.fn().mockReturnValue(true),
+    redo: vi.fn().mockReturnValue(true),
+  }),
   setEditable: vi.fn(),
   on: vi.fn(),
   off: vi.fn(),
@@ -257,7 +299,9 @@ vi.mock('../canvas-utils', () => ({
   normalizeContentToMarkdown: vi.fn((content: string) => content),
   getInitialEditorContent: vi.fn((content: string) => content),
   safeParseRecord: vi.fn((obj: any) => obj),
-  mergeRecords: vi.fn((...args: any[]) => args.reduce((a, b) => ({ ...a, ...b }), {})),
+  mergeRecords: vi.fn((...args: any[]) =>
+    args.reduce((a, b) => ({ ...a, ...b }), {}),
+  ),
   findValueByKey: vi.fn((obj: any, keys: string[]) => {
     if (!obj) return undefined;
     for (const key of keys) {
@@ -265,8 +309,12 @@ vi.mock('../canvas-utils', () => ({
     }
     return undefined;
   }),
-  coerceNumber: vi.fn((val: any) => (typeof val === 'number' ? val : undefined)),
-  coerceString: vi.fn((val: any) => (typeof val === 'string' ? val : undefined)),
+  coerceNumber: vi.fn((val: any) =>
+    typeof val === 'number' ? val : undefined,
+  ),
+  coerceString: vi.fn((val: any) =>
+    typeof val === 'string' ? val : undefined,
+  ),
   calculateMarkdownIndices: vi.fn(() => ({ start: 0, end: 10 })),
   resolveArtifactIdFromSources: vi.fn(
     (
@@ -274,7 +322,8 @@ vi.mock('../canvas-utils', () => ({
       metadataId: number | undefined,
       currentArtifactId: number | undefined,
     ) => {
-      if (typeof artifactId === 'number' && Number.isFinite(artifactId)) return artifactId;
+      if (typeof artifactId === 'number' && Number.isFinite(artifactId))
+        return artifactId;
       if (metadataId) return metadataId;
       if (currentArtifactId) return currentArtifactId;
       return undefined;
@@ -289,13 +338,29 @@ vi.mock('../canvas-utils', () => ({
       lastSavedMarkdownTrimmed: string,
     ) => {
       if (suppressNextOnChange)
-        return { shouldProcess: false, shouldMarkEdited: false, reason: 'suppressed' };
+        return {
+          shouldProcess: false,
+          shouldMarkEdited: false,
+          reason: 'suppressed',
+        };
       if (!hasInitializedEditor)
-        return { shouldProcess: false, shouldMarkEdited: false, reason: 'not_initialized' };
+        return {
+          shouldProcess: false,
+          shouldMarkEdited: false,
+          reason: 'not_initialized',
+        };
       if (!isViewingCurrentVersion)
-        return { shouldProcess: false, shouldMarkEdited: false, reason: 'not_viewing_current' };
+        return {
+          shouldProcess: false,
+          shouldMarkEdited: false,
+          reason: 'not_viewing_current',
+        };
       if (markdownTrimmed === lastSavedMarkdownTrimmed)
-        return { shouldProcess: false, shouldMarkEdited: false, reason: 'unchanged' };
+        return {
+          shouldProcess: false,
+          shouldMarkEdited: false,
+          reason: 'unchanged',
+        };
       return { shouldProcess: true, shouldMarkEdited: true, reason: 'process' };
     },
   ),
@@ -317,10 +382,18 @@ vi.mock('../canvas-export-handlers', () => ({
 vi.mock('../canvas-controls', () => ({
   CanvasControls: ({ sendFullArtifactUpdate }: any) => (
     <div data-testid="canvas-controls">
-      <button onClick={() => sendFullArtifactUpdate('adjust-length')}>Adjust Length</button>
-      <button onClick={() => sendFullArtifactUpdate('reading-level')}>Reading Level</button>
-      <button onClick={() => sendFullArtifactUpdate('add-polish')}>Add Polish</button>
-      <button onClick={() => sendFullArtifactUpdate('add-emojis')}>Add Emojis</button>
+      <button onClick={() => sendFullArtifactUpdate('adjust-length')}>
+        Adjust Length
+      </button>
+      <button onClick={() => sendFullArtifactUpdate('reading-level')}>
+        Reading Level
+      </button>
+      <button onClick={() => sendFullArtifactUpdate('add-polish')}>
+        Add Polish
+      </button>
+      <button onClick={() => sendFullArtifactUpdate('add-emojis')}>
+        Add Emojis
+      </button>
     </div>
   ),
 }));
@@ -373,9 +446,11 @@ describe('countStreamingParagraphs', () => {
   });
 
   it('counts HTML paragraphs with attributes', () => {
-    expect(countStreamingParagraphs('<p id="1">A</p><p class="b">B</p><p data-x="y">C</p>')).toBe(
-      3,
-    );
+    expect(
+      countStreamingParagraphs(
+        '<p id="1">A</p><p class="b">B</p><p data-x="y">C</p>',
+      ),
+    ).toBe(3);
   });
 
   it('counts markdown paragraphs (double newlines)', () => {
@@ -557,7 +632,9 @@ describe('CanvasComponent', () => {
 
     it('calls onClose when clicking close button', async () => {
       render(<CanvasComponent {...defaultProps} />);
-      const closeButton = document.querySelector('svg.lucide-x')?.closest('button');
+      const closeButton = document
+        .querySelector('svg.lucide-x')
+        ?.closest('button');
       expect(closeButton).toBeInTheDocument();
       if (closeButton) {
         fireEvent.click(closeButton);
@@ -725,7 +802,9 @@ describe('CanvasComponent', () => {
       const titleButton = screen.getByText('Test Canvas');
       fireEvent.click(titleButton);
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('Enter new canvas title')).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText('Enter new canvas title'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -894,7 +973,13 @@ describe('CanvasComponent', () => {
     });
 
     it('resolves org from metadata when not provided as prop', () => {
-      render(<CanvasComponent {...defaultProps} org={undefined} metadata={{ org: 'meta-org' }} />);
+      render(
+        <CanvasComponent
+          {...defaultProps}
+          org={undefined}
+          metadata={{ org: 'meta-org' }}
+        />,
+      );
       expect(screen.getByText('Test Canvas')).toBeInTheDocument();
     });
 
@@ -916,7 +1001,9 @@ describe('CanvasComponent', () => {
 
   describe('Content Normalization', () => {
     it('normalizes HTML content to markdown', () => {
-      render(<CanvasComponent {...defaultProps} content="<p>HTML content</p>" />);
+      render(
+        <CanvasComponent {...defaultProps} content="<p>HTML content</p>" />,
+      );
       expect(screen.getByText('Test Canvas')).toBeInTheDocument();
     });
 
@@ -977,17 +1064,26 @@ describe('CanvasComponent', () => {
 
   describe('Streaming Content', () => {
     it('handles streaming state from metadata', () => {
-      render(<CanvasComponent {...defaultProps} metadata={{ isStreaming: true }} />);
+      render(
+        <CanvasComponent {...defaultProps} metadata={{ isStreaming: true }} />,
+      );
       expect(screen.getByTestId('canvas-container')).toBeInTheDocument();
     });
 
     it('handles is_streaming metadata key variant', () => {
-      render(<CanvasComponent {...defaultProps} metadata={{ is_streaming: 'true' }} />);
+      render(
+        <CanvasComponent
+          {...defaultProps}
+          metadata={{ is_streaming: 'true' }}
+        />,
+      );
       expect(screen.getByTestId('canvas-container')).toBeInTheDocument();
     });
 
     it('renders during streaming state', async () => {
-      render(<CanvasComponent {...defaultProps} metadata={{ isStreaming: true }} />);
+      render(
+        <CanvasComponent {...defaultProps} metadata={{ isStreaming: true }} />,
+      );
       expect(screen.getByTestId('canvas-container')).toBeInTheDocument();
     });
 
@@ -1047,7 +1143,9 @@ describe('CanvasComponent', () => {
       fireEvent.mouseUp(editor);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('canvas-highlight-popup')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('canvas-highlight-popup'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -1220,7 +1318,9 @@ describe('CanvasComponent', () => {
 
       // Should not have been called because shift was pressed
       expect(mockUpdateArtifact).not.toHaveBeenCalledWith(
-        expect.objectContaining({ requestBody: expect.objectContaining({ title: 'New Title' }) }),
+        expect.objectContaining({
+          requestBody: expect.objectContaining({ title: 'New Title' }),
+        }),
       );
     });
 
@@ -1408,7 +1508,9 @@ describe('CanvasComponent', () => {
 
   describe('Content Derived States', () => {
     it('derives markdown content from HTML content', () => {
-      render(<CanvasComponent {...defaultProps} content="<p>HTML Content</p>" />);
+      render(
+        <CanvasComponent {...defaultProps} content="<p>HTML Content</p>" />,
+      );
       expect(screen.getByTestId('canvas-container')).toBeInTheDocument();
     });
 
@@ -1418,7 +1520,12 @@ describe('CanvasComponent', () => {
     });
 
     it('handles content starting with HTML tag', () => {
-      render(<CanvasComponent {...defaultProps} content="<h1>Heading</h1><p>Paragraph</p>" />);
+      render(
+        <CanvasComponent
+          {...defaultProps}
+          content="<h1>Heading</h1><p>Paragraph</p>"
+        />,
+      );
       expect(screen.getByTestId('canvas-container')).toBeInTheDocument();
     });
   });
@@ -1522,7 +1629,9 @@ describe('CanvasComponent', () => {
 
   describe('Title Display Logic', () => {
     it('updates display title when artifact title changes', async () => {
-      const { rerender } = render(<CanvasComponent {...defaultProps} title="Initial Title" />);
+      const { rerender } = render(
+        <CanvasComponent {...defaultProps} title="Initial Title" />,
+      );
       expect(screen.getByText('Initial Title')).toBeInTheDocument();
 
       rerender(<CanvasComponent {...defaultProps} title="Updated Title" />);
@@ -1554,7 +1663,9 @@ describe('CanvasComponent', () => {
     });
 
     it('cleans up properly on unmount', async () => {
-      const { unmount } = render(<CanvasComponent {...defaultProps} isAnimating={true} />);
+      const { unmount } = render(
+        <CanvasComponent {...defaultProps} isAnimating={true} />,
+      );
       unmount();
       expect(true).toBe(true);
     });
@@ -1575,7 +1686,9 @@ describe('getSaveStatusLabel', () => {
   });
 
   it('returns saveError for error state with custom error', () => {
-    expect(getSaveStatusLabel('error', 'Custom error message')).toBe('Custom error message');
+    expect(getSaveStatusLabel('error', 'Custom error message')).toBe(
+      'Custom error message',
+    );
   });
 
   it('returns "Save failed" for error state with null error', () => {
@@ -1619,31 +1732,45 @@ describe('getSaveStatusClass', () => {
 
 describe('getShouldShowOverlay', () => {
   it('returns true when showAnimation is true', () => {
-    expect(getShouldShowOverlay(true, false, false, false, false, false)).toBe(true);
+    expect(getShouldShowOverlay(true, false, false, false, false, false)).toBe(
+      true,
+    );
   });
 
   it('returns true when isExporting is true', () => {
-    expect(getShouldShowOverlay(false, true, false, false, false, false)).toBe(true);
+    expect(getShouldShowOverlay(false, true, false, false, false, false)).toBe(
+      true,
+    );
   });
 
   it('returns true when isInitialLoading is true', () => {
-    expect(getShouldShowOverlay(false, false, true, false, false, false)).toBe(true);
+    expect(getShouldShowOverlay(false, false, true, false, false, false)).toBe(
+      true,
+    );
   });
 
   it('returns true when isVersionLoading is true', () => {
-    expect(getShouldShowOverlay(false, false, false, true, false, false)).toBe(true);
+    expect(getShouldShowOverlay(false, false, false, true, false, false)).toBe(
+      true,
+    );
   });
 
   it('returns true when showUpdateAnimation is true', () => {
-    expect(getShouldShowOverlay(false, false, false, false, true, false)).toBe(true);
+    expect(getShouldShowOverlay(false, false, false, false, true, false)).toBe(
+      true,
+    );
   });
 
   it('returns true when isStreamingWithNoContent is true', () => {
-    expect(getShouldShowOverlay(false, false, false, false, false, true)).toBe(true);
+    expect(getShouldShowOverlay(false, false, false, false, false, true)).toBe(
+      true,
+    );
   });
 
   it('returns false when all conditions are false', () => {
-    expect(getShouldShowOverlay(false, false, false, false, false, false)).toBe(false);
+    expect(getShouldShowOverlay(false, false, false, false, false, false)).toBe(
+      false,
+    );
   });
 
   it('returns true when multiple conditions are true', () => {
@@ -1663,19 +1790,27 @@ describe('getOverlayMessage', () => {
   });
 
   it('returns "Loading artifacts..." when isInitialLoading is true', () => {
-    expect(getOverlayMessage(false, true, false, false, false, false)).toBe('Loading artifacts...');
+    expect(getOverlayMessage(false, true, false, false, false, false)).toBe(
+      'Loading artifacts...',
+    );
   });
 
   it('returns "Loading version..." when isVersionLoading is true', () => {
-    expect(getOverlayMessage(false, false, true, false, false, false)).toBe('Loading version...');
+    expect(getOverlayMessage(false, false, true, false, false, false)).toBe(
+      'Loading version...',
+    );
   });
 
   it('returns "Updating content..." when showUpdateAnimation is true', () => {
-    expect(getOverlayMessage(false, false, false, true, false, false)).toBe('Updating content...');
+    expect(getOverlayMessage(false, false, false, true, false, false)).toBe(
+      'Updating content...',
+    );
   });
 
   it('returns "Updating content..." when isContentUpdating is true', () => {
-    expect(getOverlayMessage(false, false, false, false, true, false)).toBe('Updating content...');
+    expect(getOverlayMessage(false, false, false, false, true, false)).toBe(
+      'Updating content...',
+    );
   });
 
   it('returns "Generating canvas content..." when isStreamingWithNoContent is true', () => {
@@ -1691,15 +1826,21 @@ describe('getOverlayMessage', () => {
   });
 
   it('prioritizes isExporting over other conditions', () => {
-    expect(getOverlayMessage(true, true, true, true, true, true)).toBe('Preparing document...');
+    expect(getOverlayMessage(true, true, true, true, true, true)).toBe(
+      'Preparing document...',
+    );
   });
 
   it('prioritizes isInitialLoading when isExporting is false', () => {
-    expect(getOverlayMessage(false, true, true, true, true, true)).toBe('Loading artifacts...');
+    expect(getOverlayMessage(false, true, true, true, true, true)).toBe(
+      'Loading artifacts...',
+    );
   });
 
   it('prioritizes isVersionLoading over update states', () => {
-    expect(getOverlayMessage(false, false, true, true, true, true)).toBe('Loading version...');
+    expect(getOverlayMessage(false, false, true, true, true, true)).toBe(
+      'Loading version...',
+    );
   });
 });
 
@@ -1712,27 +1853,35 @@ describe('deriveMarkdownContent', () => {
 
   it('returns artifact content when currentArtifact exists', () => {
     const artifact = { content: 'Artifact content' };
-    expect(deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown)).toBe(
-      'Artifact content',
-    );
+    expect(
+      deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown),
+    ).toBe('Artifact content');
   });
 
   it('returns empty string when artifact content is null', () => {
     const artifact = { content: null };
-    expect(deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown)).toBe('');
+    expect(
+      deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown),
+    ).toBe('');
   });
 
   it('returns empty string when artifact content is undefined', () => {
     const artifact = { content: undefined };
-    expect(deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown)).toBe('');
+    expect(
+      deriveMarkdownContent(artifact, 'fallback', mockHtmlToMarkdown),
+    ).toBe('');
   });
 
   it('returns content when no artifact and content is plain text', () => {
-    expect(deriveMarkdownContent(null, 'Plain content', mockHtmlToMarkdown)).toBe('Plain content');
+    expect(
+      deriveMarkdownContent(null, 'Plain content', mockHtmlToMarkdown),
+    ).toBe('Plain content');
   });
 
   it('converts HTML content to markdown when content starts with <', () => {
-    expect(deriveMarkdownContent(null, '<p>HTML</p>', mockHtmlToMarkdown)).toBe('MD:<p>HTML</p>');
+    expect(deriveMarkdownContent(null, '<p>HTML</p>', mockHtmlToMarkdown)).toBe(
+      'MD:<p>HTML</p>',
+    );
   });
 
   it('returns empty string when content is empty', () => {
@@ -1744,13 +1893,15 @@ describe('deriveMarkdownContent', () => {
   });
 
   it('trims content before processing', () => {
-    expect(deriveMarkdownContent(null, '  Trimmed  ', mockHtmlToMarkdown)).toBe('Trimmed');
+    expect(deriveMarkdownContent(null, '  Trimmed  ', mockHtmlToMarkdown)).toBe(
+      'Trimmed',
+    );
   });
 
   it('handles HTML with leading whitespace', () => {
-    expect(deriveMarkdownContent(null, '  <p>HTML</p>  ', mockHtmlToMarkdown)).toBe(
-      'MD:<p>HTML</p>',
-    );
+    expect(
+      deriveMarkdownContent(null, '  <p>HTML</p>  ', mockHtmlToMarkdown),
+    ).toBe('MD:<p>HTML</p>');
   });
 });
 
@@ -1837,23 +1988,33 @@ describe('shouldSkipStreamingUpdateByTiming', () => {
 
 describe('shouldSkipStreamingUpdateByThreshold', () => {
   it('returns true when all threshold conditions are met', () => {
-    expect(shouldSkipStreamingUpdateByThreshold(0, 50, 100, 500, 1000)).toBe(true);
+    expect(shouldSkipStreamingUpdateByThreshold(0, 50, 100, 500, 1000)).toBe(
+      true,
+    );
   });
 
   it('returns false when paragraph delta is positive', () => {
-    expect(shouldSkipStreamingUpdateByThreshold(1, 50, 100, 500, 1000)).toBe(false);
+    expect(shouldSkipStreamingUpdateByThreshold(1, 50, 100, 500, 1000)).toBe(
+      false,
+    );
   });
 
   it('returns false when char delta exceeds minimum', () => {
-    expect(shouldSkipStreamingUpdateByThreshold(0, 150, 100, 500, 1000)).toBe(false);
+    expect(shouldSkipStreamingUpdateByThreshold(0, 150, 100, 500, 1000)).toBe(
+      false,
+    );
   });
 
   it('returns false when time exceeds force update interval', () => {
-    expect(shouldSkipStreamingUpdateByThreshold(0, 50, 100, 1500, 1000)).toBe(false);
+    expect(shouldSkipStreamingUpdateByThreshold(0, 50, 100, 1500, 1000)).toBe(
+      false,
+    );
   });
 
   it('returns true when paragraph delta is negative', () => {
-    expect(shouldSkipStreamingUpdateByThreshold(-1, 50, 100, 500, 1000)).toBe(true);
+    expect(shouldSkipStreamingUpdateByThreshold(-1, 50, 100, 500, 1000)).toBe(
+      true,
+    );
   });
 });
 
@@ -1863,11 +2024,15 @@ describe('shouldSkipStreamingUpdateByThreshold', () => {
 
 describe('isStreamingContentUnchanged', () => {
   it('returns true when content is identical', () => {
-    expect(isStreamingContentUnchanged('test content', 'test content')).toBe(true);
+    expect(isStreamingContentUnchanged('test content', 'test content')).toBe(
+      true,
+    );
   });
 
   it('returns false when content is different', () => {
-    expect(isStreamingContentUnchanged('new content', 'old content')).toBe(false);
+    expect(isStreamingContentUnchanged('new content', 'old content')).toBe(
+      false,
+    );
   });
 
   it('returns true for empty strings', () => {
@@ -1985,35 +2150,51 @@ describe('buildPartialContent', () => {
 
 describe('shouldSkipSave', () => {
   it('returns true when user has not edited', () => {
-    expect(shouldSkipSave(false, 123, 'org', 'user', 'content', null)).toBe(true);
+    expect(shouldSkipSave(false, 123, 'org', 'user', 'content', null)).toBe(
+      true,
+    );
   });
 
   it('returns true when artifact id is missing', () => {
-    expect(shouldSkipSave(true, undefined, 'org', 'user', 'content', null)).toBe(true);
+    expect(
+      shouldSkipSave(true, undefined, 'org', 'user', 'content', null),
+    ).toBe(true);
   });
 
   it('returns true when org is missing', () => {
-    expect(shouldSkipSave(true, 123, undefined, 'user', 'content', null)).toBe(true);
+    expect(shouldSkipSave(true, 123, undefined, 'user', 'content', null)).toBe(
+      true,
+    );
   });
 
   it('returns true when user id is missing', () => {
-    expect(shouldSkipSave(true, 123, 'org', undefined, 'content', null)).toBe(true);
+    expect(shouldSkipSave(true, 123, 'org', undefined, 'content', null)).toBe(
+      true,
+    );
   });
 
   it('returns true when content matches last saved', () => {
-    expect(shouldSkipSave(true, 123, 'org', 'user', 'content', 'content')).toBe(true);
+    expect(shouldSkipSave(true, 123, 'org', 'user', 'content', 'content')).toBe(
+      true,
+    );
   });
 
   it('returns true when content matches with whitespace differences', () => {
-    expect(shouldSkipSave(true, 123, 'org', 'user', '  content  ', 'content')).toBe(true);
+    expect(
+      shouldSkipSave(true, 123, 'org', 'user', '  content  ', 'content'),
+    ).toBe(true);
   });
 
   it('returns false when all conditions are met for saving', () => {
-    expect(shouldSkipSave(true, 123, 'org', 'user', 'new content', 'old content')).toBe(false);
+    expect(
+      shouldSkipSave(true, 123, 'org', 'user', 'new content', 'old content'),
+    ).toBe(false);
   });
 
   it('returns false when last saved is null and content exists', () => {
-    expect(shouldSkipSave(true, 123, 'org', 'user', 'content', null)).toBe(false);
+    expect(shouldSkipSave(true, 123, 'org', 'user', 'content', null)).toBe(
+      false,
+    );
   });
 });
 
@@ -2054,11 +2235,15 @@ describe('buildSaveRequestBody', () => {
 
 describe('shouldProceedWithRename', () => {
   it('returns true when title is different from current', () => {
-    expect(shouldProceedWithRename('New Title', 'Old Title', 'Default')).toBe(true);
+    expect(shouldProceedWithRename('New Title', 'Old Title', 'Default')).toBe(
+      true,
+    );
   });
 
   it('returns false when title matches current', () => {
-    expect(shouldProceedWithRename('Same Title', 'Same Title', 'Default')).toBe(false);
+    expect(shouldProceedWithRename('Same Title', 'Same Title', 'Default')).toBe(
+      false,
+    );
   });
 
   it('uses prop title when current is null', () => {
@@ -2067,7 +2252,11 @@ describe('shouldProceedWithRename', () => {
   });
 
   it('uses prop title when current is undefined', () => {
-    expect(shouldProceedWithRename('Default', undefined, 'Default')).toBe(false);
-    expect(shouldProceedWithRename('Different', undefined, 'Default')).toBe(true);
+    expect(shouldProceedWithRename('Default', undefined, 'Default')).toBe(
+      false,
+    );
+    expect(shouldProceedWithRename('Different', undefined, 'Default')).toBe(
+      true,
+    );
   });
 });

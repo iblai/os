@@ -11,7 +11,12 @@ type Props = {
   setActiveTab: (tab: AdvancedTab) => void;
 };
 
-export function AdvancedChatHeader({ tabs, activeTab, setActiveTab, isTyping }: Props) {
+export function AdvancedChatHeader({
+  tabs,
+  activeTab,
+  setActiveTab,
+  isTyping,
+}: Props) {
   return (
     <>
       {/* Tabs */}
@@ -27,10 +32,10 @@ export function AdvancedChatHeader({ tabs, activeTab, setActiveTab, isTyping }: 
               }
               setActiveTab(tab);
             }}
-            className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors capitalize ${
+            className={`flex-1 border-b-2 px-4 py-3 text-sm font-medium capitalize transition-colors ${
               activeTab === tab
-                ? 'text-blue-600 border-blue-600'
-                : 'text-gray-600 border-transparent hover:text-gray-800'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
             }`}
           >
             {tab}

@@ -201,7 +201,10 @@ describe('canvas-send-message-handler', () => {
         }),
       );
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('canvas-send-message', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'canvas-send-message',
+        expect.any(Function),
+      );
 
       addEventListenerSpy.mockRestore();
     });
@@ -245,7 +248,10 @@ describe('canvas-send-message-handler', () => {
         window.dispatchEvent(event);
       });
 
-      expect(sendMessage).toHaveBeenCalledWith('Global message', expect.any(Object));
+      expect(sendMessage).toHaveBeenCalledWith(
+        'Global message',
+        expect.any(Object),
+      );
     });
 
     it('ignores global message event without withArtifact', () => {
@@ -301,7 +307,9 @@ describe('canvas-send-message-handler', () => {
       renderHook(() => useCanvasUpdateDetector(null, onUpdate));
 
       // Should not add listener when artifact is null
-      const calls = addEventListenerSpy.mock.calls.filter((call) => call[0] === 'artifact-updated');
+      const calls = addEventListenerSpy.mock.calls.filter(
+        (call) => call[0] === 'artifact-updated',
+      );
       expect(calls.length).toBe(0);
 
       addEventListenerSpy.mockRestore();
@@ -313,7 +321,10 @@ describe('canvas-send-message-handler', () => {
 
       renderHook(() => useCanvasUpdateDetector(mockArtifact as any, onUpdate));
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('artifact-updated', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'artifact-updated',
+        expect.any(Function),
+      );
 
       addEventListenerSpy.mockRestore();
     });
@@ -322,11 +333,16 @@ describe('canvas-send-message-handler', () => {
       const onUpdate = vi.fn();
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
-      const { unmount } = renderHook(() => useCanvasUpdateDetector(mockArtifact as any, onUpdate));
+      const { unmount } = renderHook(() =>
+        useCanvasUpdateDetector(mockArtifact as any, onUpdate),
+      );
 
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('artifact-updated', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'artifact-updated',
+        expect.any(Function),
+      );
 
       removeEventListenerSpy.mockRestore();
     });
@@ -513,7 +529,10 @@ describe('canvas-send-message-handler', () => {
         result.current.sendFullArtifactUpdate(specialMessage);
       });
 
-      expect(sendMessage).toHaveBeenCalledWith(specialMessage, expect.any(Object));
+      expect(sendMessage).toHaveBeenCalledWith(
+        specialMessage,
+        expect.any(Object),
+      );
     });
 
     it('handles very long messages', () => {

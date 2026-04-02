@@ -2,7 +2,11 @@ import { forwardRef } from 'react';
 import { CircleStop } from 'lucide-react';
 
 import { Button } from '../ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
 
@@ -31,7 +35,9 @@ export const StopStreamingButton = forwardRef<HTMLButtonElement, Props>(
             </Button>
           </div>
         </TooltipTrigger>
-        <TooltipContent className="ibl-tooltip-content capitalize">Stop Streaming</TooltipContent>
+        <TooltipContent className="ibl-tooltip-content capitalize">
+          Stop Streaming
+        </TooltipContent>
       </Tooltip>
     );
   },

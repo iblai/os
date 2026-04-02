@@ -73,8 +73,12 @@ describe('ProjectInstructionsModal', () => {
     it('renders Cancel and Save buttons', () => {
       render(<ProjectInstructionsModal {...defaultProps} />);
 
-      expect(screen.getByLabelText('Cancel editing instructions')).toBeInTheDocument();
-      expect(screen.getByLabelText('Save project instructions')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Cancel editing instructions'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Save project instructions'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -110,10 +114,14 @@ describe('ProjectInstructionsModal', () => {
       });
 
       await waitFor(() => {
-        expect(mockToastSuccess).toHaveBeenCalledWith('Instructions updated successfully');
+        expect(mockToastSuccess).toHaveBeenCalledWith(
+          'Instructions updated successfully',
+        );
       });
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith('Existing prompt instructions');
+      expect(defaultProps.onSave).toHaveBeenCalledWith(
+        'Existing prompt instructions',
+      );
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
@@ -125,12 +133,19 @@ describe('ProjectInstructionsModal', () => {
       fireEvent.click(screen.getByLabelText('Save project instructions'));
 
       await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith('Failed to update instructions');
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Failed to update instructions',
+        );
       });
     });
 
     it('saves and closes without onSave callback', async () => {
-      render(<ProjectInstructionsModal isOpen={true} onClose={defaultProps.onClose} />);
+      render(
+        <ProjectInstructionsModal
+          isOpen={true}
+          onClose={defaultProps.onClose}
+        />,
+      );
 
       fireEvent.click(screen.getByLabelText('Save project instructions'));
 

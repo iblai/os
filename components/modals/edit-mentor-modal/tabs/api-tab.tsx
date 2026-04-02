@@ -31,7 +31,9 @@ export function ApiTab() {
 
   const [showCreateApiModal, setShowCreateApiModal] = React.useState(false);
 
-  const [apiKeyToDelete, setApiKeyToDelete] = React.useState<ApiKey | null>(null);
+  const [apiKeyToDelete, setApiKeyToDelete] = React.useState<ApiKey | null>(
+    null,
+  );
 
   function closeCreateApiModal() {
     setShowCreateApiModal(false);
@@ -51,14 +53,16 @@ export function ApiTab() {
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">API</h3>
-          <p className="text-gray-700 text-xs">Manage API keys and integrations.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">API</h3>
+          <p className="text-xs text-gray-700">
+            Manage API keys and integrations.
+          </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -66,19 +70,20 @@ export function ApiTab() {
       >
         <div className="space-y-6">
           <div className="space-y-4">
-            <p className="text-gray-700 text-sm">
-              Your secret API keys are listed below. Please note that we do not display your secret
-              API keys again after you generate them.
+            <p className="text-sm text-gray-700">
+              Your secret API keys are listed below. Please note that we do not
+              display your secret API keys again after you generate them.
             </p>
-            <p className="text-gray-700 text-sm">
-              Do not share your API key with others, or expose it in the browser or other
-              client-side code. In order to protect the security of your account, IBL may also
-              automatically rotate any API key that we&apos;ve found has leaked publicly.
+            <p className="text-sm text-gray-700">
+              Do not share your API key with others, or expose it in the browser
+              or other client-side code. In order to protect the security of
+              your account, IBL may also automatically rotate any API key that
+              we&apos;ve found has leaked publicly.
             </p>
           </div>
 
           {isApiKeysLoading ? (
-            <div className="flex items-center justify-center w-full py-10">
+            <div className="flex w-full items-center justify-center py-10">
               <Spinner />
             </div>
           ) : (
@@ -86,10 +91,19 @@ export function ApiTab() {
               <Table className="w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="p-2 text-left text-sm text-gray-700">NAME</TableHead>
-                    <TableHead className="p-2 text-left text-sm text-gray-700">CREATED</TableHead>
-                    <TableHead className="p-2 text-left text-sm text-gray-700">EXPIRES</TableHead>
-                    <TableHead className="p-2 text-left text-sm text-gray-700" aria-label="Actions">
+                    <TableHead className="p-2 text-left text-sm text-gray-700">
+                      NAME
+                    </TableHead>
+                    <TableHead className="p-2 text-left text-sm text-gray-700">
+                      CREATED
+                    </TableHead>
+                    <TableHead className="p-2 text-left text-sm text-gray-700">
+                      EXPIRES
+                    </TableHead>
+                    <TableHead
+                      className="p-2 text-left text-sm text-gray-700"
+                      aria-label="Actions"
+                    >
                       <span className="sr-only">Actions</span>
                     </TableHead>
                   </TableRow>
@@ -97,7 +111,10 @@ export function ApiTab() {
                 <TableBody>
                   {apiKeys?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="p-4 text-center text-sm text-gray-700">
+                      <TableCell
+                        colSpan={5}
+                        className="p-4 text-center text-sm text-gray-700"
+                      >
                         No API keys found
                       </TableCell>
                     </TableRow>
@@ -119,18 +136,27 @@ export function ApiTab() {
                         return (
                           <>
                             {apiKeys?.map((apiKey) => (
-                              <TableRow key={apiKey.name} className="text-sm hover:bg-blue-50">
+                              <TableRow
+                                key={apiKey.name}
+                                className="text-sm hover:bg-blue-50"
+                              >
                                 <TableCell className="p-2 whitespace-nowrap text-gray-700">
                                   {apiKey.name}
                                 </TableCell>
                                 <TableCell className="p-2 whitespace-nowrap text-gray-700">
-                                  {apiKey.created ? format(apiKey.created, 'PPP') : 'N/A'}
+                                  {apiKey.created
+                                    ? format(apiKey.created, 'PPP')
+                                    : 'N/A'}
                                 </TableCell>
                                 <TableCell className="p-2 whitespace-nowrap text-gray-700">
-                                  {apiKey.expires ? format(apiKey.expires, 'PPP') : 'N/A'}
+                                  {apiKey.expires
+                                    ? format(apiKey.expires, 'PPP')
+                                    : 'N/A'}
                                 </TableCell>
                                 <TableCell className="p-2">
-                                  <WithPermissions rbacResource={`/apitokens/#create`}>
+                                  <WithPermissions
+                                    rbacResource={`/apitokens/#create`}
+                                  >
                                     {({ hasPermission }) =>
                                       hasPermission && (
                                         <Button
@@ -139,12 +165,16 @@ export function ApiTab() {
                                           className="cursor-pointer"
                                           onClick={() =>
                                             executeWithTrialCheck(() =>
-                                              openDeleteApiModal({ name: apiKey.name }),
+                                              openDeleteApiModal({
+                                                name: apiKey.name,
+                                              }),
                                             )
                                           }
                                         >
                                           <Trash className="h-4 w-4" />
-                                          <span className="sr-only">Delete API Key</span>
+                                          <span className="sr-only">
+                                            Delete API Key
+                                          </span>
                                         </Button>
                                       )
                                     }
@@ -175,7 +205,10 @@ export function ApiTab() {
             }
           </WithPermissions>
 
-          <CreateApiModal isOpen={showCreateApiModal} onClose={closeCreateApiModal} />
+          <CreateApiModal
+            isOpen={showCreateApiModal}
+            onClose={closeCreateApiModal}
+          />
 
           {apiKeyToDelete && (
             <DeleteApiModal

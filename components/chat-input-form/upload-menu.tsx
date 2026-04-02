@@ -17,7 +17,10 @@ interface UploadMenuProps {
   disabled?: boolean;
 }
 
-export const UploadMenu = ({ onFileInputTrigger, disabled = false }: UploadMenuProps) => {
+export const UploadMenu = ({
+  onFileInputTrigger,
+  disabled = false,
+}: UploadMenuProps) => {
   const showAttachment = useShowAttachment();
 
   const uploadMenuItems = [
@@ -66,18 +69,18 @@ export const UploadMenu = ({ onFileInputTrigger, disabled = false }: UploadMenuP
           variant="ghost"
           size="icon"
           disabled={disabled}
-          className="h-8 w-8 text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#38A1E5] rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#38A1E5] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
           <span className="sr-only">Attach File</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56 p-2 z-50">
+      <DropdownMenuContent align="start" className="z-50 w-56 p-2">
         {uploadMenuItems.map((item) => (
           <DropdownMenuItem
             key={item.name}
             onClick={item.action}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 hover:border-[#38A1E5] cursor-pointer"
+            className="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:border-[#38A1E5] hover:bg-gray-50"
           >
             {item.icon}
             <span className="text-gray-700">{item.name}</span>

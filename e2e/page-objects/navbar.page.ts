@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class NavbarPage {
   readonly page: Page;
@@ -16,27 +16,27 @@ export class NavbarPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.mentorDropdown = page.getByRole("button", {
-      name: "Selected mentor dropdown button",
+    this.mentorDropdown = page.getByRole('button', {
+      name: 'Selected mentor dropdown button',
     });
-    this.mentorDropdownNewChatItem = page.getByRole("menuitem", {
-      name: "New Chat",
+    this.mentorDropdownNewChatItem = page.getByRole('menuitem', {
+      name: 'New Chat',
       exact: true,
     });
 
-    this.profileDropdown = page.getByRole("button", { name: "More options" });
-    this.notificationBell = page.getByRole("button", { name: /notification/i });
+    this.profileDropdown = page.getByRole('button', { name: 'More options' });
+    this.notificationBell = page.getByRole('button', { name: /notification/i });
     this.newChatItem = page
-      .getByRole("menuitem", { name: /new chat/i })
-      .or(page.getByRole("button", { name: /new chat/i }));
+      .getByRole('menuitem', { name: /new chat/i })
+      .or(page.getByRole('button', { name: /new chat/i }));
     // "My Mentors" is a standalone button in the navbar, not a dropdown menuitem
-    this.myMentorsItem = page.getByRole("button", {
+    this.myMentorsItem = page.getByRole('button', {
       name: /my mentors/i,
     });
-    this.profileItem = page.getByRole("menuitem", { name: /profile/i });
-    this.helpItem = page.getByRole("menuitem", { name: /help/i });
-    this.logoutItem = page.getByRole("menuitem", { name: /log out/i });
-    this.vectorDocButton = page.getByRole("button", {
+    this.profileItem = page.getByRole('menuitem', { name: /profile/i });
+    this.helpItem = page.getByRole('menuitem', { name: /help/i });
+    this.logoutItem = page.getByRole('menuitem', { name: /log out/i });
+    this.vectorDocButton = page.getByRole('button', {
       name: /vector document/i,
     });
   }
@@ -64,7 +64,7 @@ export class NavbarPage {
 
   async getMenuItemCount(): Promise<number> {
     await this.openProfileDropdown();
-    const items = this.page.getByRole("menuitem");
+    const items = this.page.getByRole('menuitem');
     return items.count();
   }
 }

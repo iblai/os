@@ -37,11 +37,15 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: vi.fn(
-    (error: unknown, defaultMsg: string) => (error as { message?: string })?.message || defaultMsg,
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: vi.fn(
+      (error: unknown, defaultMsg: string) =>
+        (error as { message?: string })?.message || defaultMsg,
+    ),
+  }),
+);
 
 import useDropboxPicker from '../use-dropdox-picker';
 import { toast } from 'sonner';
@@ -51,12 +55,17 @@ describe('useDropboxPicker', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock Dropbox global
     mockDropboxChoose = vi.fn();
-    (window as unknown as { Dropbox: { choose: typeof mockDropboxChoose } }).Dropbox = {
+    (
+      window as unknown as { Dropbox: { choose: typeof mockDropboxChoose } }
+    ).Dropbox = {
       choose: mockDropboxChoose,
     };
 
@@ -117,7 +126,9 @@ describe('useDropboxPicker', () => {
     });
 
     it('should log error to console when credentials fail to load', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
@@ -253,7 +264,9 @@ describe('useDropboxPicker', () => {
         await successCallback([{ link: 'https://dropbox.com/file1' }]);
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Document has been queued for training');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Document has been queued for training',
+      );
     });
 
     it('should join multiple file links', async () => {
@@ -308,7 +321,9 @@ describe('useDropboxPicker', () => {
 
   describe('file selection error', () => {
     it('should show error toast when adding document fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
       });
@@ -335,7 +350,10 @@ describe('useDropboxPicker', () => {
     });
 
     it('should show error toast when mentorId is missing', async () => {
-      mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: undefined });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'tenant-1',
+        mentorId: undefined,
+      });
 
       const { result } = renderHook(() => useDropboxPicker({}));
 
@@ -360,7 +378,9 @@ describe('useDropboxPicker', () => {
   describe('cancel callback', () => {
     it('should call cancel callback when user cancels', async () => {
       const cancelMock = vi.fn();
-      const { result } = renderHook(() => useDropboxPicker({ cancel: cancelMock }));
+      const { result } = renderHook(() =>
+        useDropboxPicker({ cancel: cancelMock }),
+      );
 
       await waitFor(() => {
         expect(result.current.dropboxReady).toBe(true);

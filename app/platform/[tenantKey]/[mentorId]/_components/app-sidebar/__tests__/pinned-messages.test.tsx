@@ -36,9 +36,15 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   DropdownMenuItem: ({
     children,
     onClick,
@@ -133,7 +139,8 @@ vi.mock('@/lib/utils', () => ({
         const current = msg.artifact_versions.find((av: any) => av.is_current);
         if (current) return current.title || current.artifact?.title || null;
         const latest = msg.artifact_versions.reduce(
-          (a: any, b: any) => ((b.version_number ?? 0) > (a?.version_number ?? 0) ? b : a),
+          (a: any, b: any) =>
+            (b.version_number ?? 0) > (a?.version_number ?? 0) ? b : a,
           null,
         );
         if (latest) return latest.title || latest.artifact?.title || null;
@@ -181,7 +188,9 @@ vi.mock('@/lib/eventBus', () => ({
 }));
 
 const mockClearFiles = vi.fn((_arg?: unknown) => ({ type: 'clearFiles' }));
-const mockSetShouldStartNewChat = vi.fn((_arg?: unknown) => ({ type: 'setShouldStartNewChat' }));
+const mockSetShouldStartNewChat = vi.fn((_arg?: unknown) => ({
+  type: 'setShouldStartNewChat',
+}));
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: { name: 'selectSessionId' },
   clearFiles: (arg?: unknown) => mockClearFiles(arg),
@@ -262,10 +271,14 @@ describe('PinnedMessages', () => {
       fireEvent.click(trigger);
 
       // Find and click the message button
-      const messageButton = screen.getByRole('button', { name: /hello world/i });
+      const messageButton = screen.getByRole('button', {
+        name: /hello world/i,
+      });
       fireEvent.click(messageButton);
 
-      expect(mockOnSelectMessage).toHaveBeenCalledWith(mockPinnedData.results[0]);
+      expect(mockOnSelectMessage).toHaveBeenCalledWith(
+        mockPinnedData.results[0],
+      );
     });
 
     it('should display message content', () => {
@@ -308,7 +321,9 @@ describe('PinnedMessages', () => {
           {
             session_id: 'session-1',
             mentor: { unique_id: 'mentor-999', profile_image: null },
-            messages: [{ message: { data: { content: 'Other mentor message' } } }],
+            messages: [
+              { message: { data: { content: 'Other mentor message' } } },
+            ],
           },
         ],
       };
@@ -575,7 +590,9 @@ describe('PinnedMessages', () => {
     });
 
     it('should handle pin error gracefully', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockPinMessage.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Pin failed')),
       });
@@ -587,7 +604,10 @@ describe('PinnedMessages', () => {
 
       // Wait for async operation
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to pin message: ', expect.any(Error));
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to pin message: ',
+          expect.any(Error),
+        );
       });
       consoleSpy.mockRestore();
     });
@@ -661,7 +681,9 @@ describe('PinnedMessages', () => {
     it('should close mobile sidebar when selecting a message on mobile', () => {
       render(<PinnedMessages {...defaultProps} />);
 
-      const messageButton = screen.getByRole('button', { name: /mobile test/i });
+      const messageButton = screen.getByRole('button', {
+        name: /mobile test/i,
+      });
       fireEvent.click(messageButton);
 
       expect(mockSetOpenMobile).toHaveBeenCalledWith(false);
@@ -690,7 +712,10 @@ describe('PinnedMessages', () => {
         results: [
           {
             session_id: 'session-img',
-            mentor: { unique_id: 'mentor-123', profile_image: 'https://example.com/img.png' },
+            mentor: {
+              unique_id: 'mentor-123',
+              profile_image: 'https://example.com/img.png',
+            },
             messages: [
               {
                 message: {
@@ -771,7 +796,9 @@ describe('PinnedMessages', () => {
     });
 
     it('should log errors when delete fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockDeleteMessage.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Delete failed')),
       });
@@ -781,7 +808,10 @@ describe('PinnedMessages', () => {
       fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to delete message: ', expect.any(Error));
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Failed to delete message: ',
+          expect.any(Error),
+        );
       });
     });
 

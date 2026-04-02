@@ -20,11 +20,11 @@ Thank you for your interest in contributing to mentorAI! This guide will help yo
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|------|---------|---------|
+| Tool    | Version | Install                                          |
+| ------- | ------- | ------------------------------------------------ |
 | Node.js | 25.3.0+ | [nvm](https://github.com/nvm-sh/nvm) recommended |
-| pnpm | 10+ | `npm install -g pnpm` |
-| Git | 2.30+ | [git-scm.com](https://git-scm.com) |
+| pnpm    | 10+     | `npm install -g pnpm`                            |
+| Git     | 2.30+   | [git-scm.com](https://git-scm.com)               |
 
 ### Fork & Clone
 
@@ -162,6 +162,7 @@ pnpm test:coverage  # With coverage report
 Use the pattern: `<type>/<scope>/<description>`
 
 **Types:**
+
 - `feat` — new feature
 - `fix` — bug fix
 - `chore` — maintenance, dependencies, config
@@ -170,9 +171,11 @@ Use the pattern: `<type>/<scope>/<description>`
 - `test` — adding or updating tests
 
 **Scope** (optional but encouraged):
+
 - `chat`, `analytics`, `explore`, `auth`, `projects`, `ui`, `voice`, `billing`, etc.
 
 **Examples:**
+
 ```
 feat/chat/add-message-reactions
 fix/voice/handle-mic-permission-denial
@@ -191,6 +194,7 @@ type(scope): description
 ```
 
 **Examples:**
+
 ```
 feat(chat): add message pinning support
 fix(analytics): correct date range filter on topics page
@@ -201,6 +205,7 @@ test(projects): add unit tests for create project modal
 ```
 
 **Rules:**
+
 - Use imperative mood: "add feature" not "added feature"
 - Keep the first line under 72 characters
 - Reference issue numbers in the body when applicable: `Closes #123`
@@ -286,12 +291,14 @@ pnpm test -- --grep "a11y"
 ### Before Submitting
 
 1. **Sync with upstream:**
+
    ```bash
    git fetch upstream
    git rebase upstream/main
    ```
 
 2. **Run the full check suite:**
+
    ```bash
    pnpm lint
    pnpm typecheck

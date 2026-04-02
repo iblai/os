@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class HistoryTab {
   readonly page: Page;
@@ -17,12 +17,12 @@ export class HistoryTab {
     this.dialog = dialog;
     this.conversationRows = dialog.locator('[class*="cursor-pointer"]');
     this.emptyState = dialog.getByText(/no conversations/i);
-    this.nextButton = dialog.getByRole("button", { name: /next/i });
-    this.exportButton = dialog.getByRole("button", { name: /export/i });
+    this.nextButton = dialog.getByRole('button', { name: /next/i });
+    this.exportButton = dialog.getByRole('button', { name: /export/i });
     this.sentimentFilter = dialog
-      .getByRole("combobox", { name: /sentiment/i })
+      .getByRole('combobox', { name: /sentiment/i })
       .first();
-    this.topicFilter = dialog.getByRole("combobox", { name: /topic/i }).first();
+    this.topicFilter = dialog.getByRole('combobox', { name: /topic/i }).first();
     this.previewPanel = dialog
       .locator(
         '[class*="preview"], [class*="transcript"], [data-testid*="preview"]',
@@ -44,9 +44,9 @@ export class HistoryTab {
     await this.conversationRows.first().click();
   }
 
-  async triggerExport(): Promise<import("@playwright/test").Download> {
+  async triggerExport(): Promise<import('@playwright/test').Download> {
     const [download] = await Promise.all([
-      this.page.waitForEvent("download", { timeout: 30_000 }),
+      this.page.waitForEvent('download', { timeout: 30_000 }),
       this.exportButton.click(),
     ]);
     return download;

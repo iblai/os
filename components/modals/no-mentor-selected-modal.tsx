@@ -44,7 +44,7 @@ export function NoMentorSelectedModal({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleExplore}
-            className="border border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+            className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
             Explore Mentors
           </AlertDialogAction>

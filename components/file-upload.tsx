@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
-import { Upload, File, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useCallback, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Upload, File, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface FileUploadProps {
   onFilesUploaded?: (files: File[]) => void;
@@ -16,13 +16,13 @@ export function FileUpload({
   onFilesUploaded,
   maxFiles = 5,
   acceptedFileTypes = {
-    "application/pdf": [".pdf"],
-    "text/plain": [".txt"],
-    "text/csv": [".csv"],
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-      ".docx",
+    'application/pdf': ['.pdf'],
+    'text/plain': ['.txt'],
+    'text/csv': ['.csv'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
+      '.docx',
     ],
-    "application/msword": [".doc"],
+    'application/msword': ['.doc'],
   },
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
@@ -77,7 +77,7 @@ export function FileUpload({
       // Only set to false if we're leaving the document
       if (
         e.relatedTarget === null ||
-        (e.relatedTarget as Node).nodeName === "HTML"
+        (e.relatedTarget as Node).nodeName === 'HTML'
       ) {
         setIsDraggingOverDocument(false);
       }
@@ -87,14 +87,14 @@ export function FileUpload({
       setIsDraggingOverDocument(false);
     };
 
-    document.addEventListener("dragover", handleDragOver);
-    document.addEventListener("dragleave", handleDragLeave);
-    document.addEventListener("drop", handleDrop);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('drop', handleDrop);
 
     return () => {
-      document.removeEventListener("dragover", handleDragOver);
-      document.removeEventListener("dragleave", handleDragLeave);
-      document.removeEventListener("drop", handleDrop);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDrop);
     };
   }, []);
 

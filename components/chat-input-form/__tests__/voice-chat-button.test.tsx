@@ -9,7 +9,10 @@ vi.mock('@/hooks/use-show-voice-recorder');
 
 describe('VoiceChatButton', () => {
   const mockHandleMicrophoneBtnClick = vi.fn();
-  const mockUseShowVoiceRecorder = vi.spyOn(useShowVoiceRecorderModule, 'useShowVoiceRecorder');
+  const mockUseShowVoiceRecorder = vi.spyOn(
+    useShowVoiceRecorderModule,
+    'useShowVoiceRecorder',
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();

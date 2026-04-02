@@ -29,8 +29,12 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="rounded border border-red-400 bg-red-100 p-4 text-red-700">
-          <h2 className="mb-2 text-lg font-semibold">Oops, there was an error!</h2>
-          <p className="text-sm">{this.state.error?.message || 'Unknown error occurred'}</p>
+          <h2 className="mb-2 text-lg font-semibold">
+            Oops, there was an error!
+          </h2>
+          <p className="text-sm">
+            {this.state.error?.message || 'Unknown error occurred'}
+          </p>
         </div>
       );
     }

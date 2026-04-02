@@ -31,7 +31,9 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 const createMockStore = (preloadedState = {}) =>
   configureStore({
     reducer: {
-      chatSliceShared: (state = { activeTab: 'default', chats: { default: [] } }) => state,
+      chatSliceShared: (
+        state = { activeTab: 'default', chats: { default: [] } },
+      ) => state,
     },
     preloadedState,
   });
@@ -46,15 +48,21 @@ describe('AutoResizeTextarea', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNumberOfMessages = 0;
-    window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    window.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver;
   });
 
   afterEach(() => {
     window.ResizeObserver = originalResizeObserver;
   });
 
-  const renderWithRedux = (component: React.ReactElement, preloadedState = {}) => {
-    return render(<Provider store={createMockStore(preloadedState)}>{component}</Provider>);
+  const renderWithRedux = (
+    component: React.ReactElement,
+    preloadedState = {},
+  ) => {
+    return render(
+      <Provider store={createMockStore(preloadedState)}>{component}</Provider>,
+    );
   };
 
   describe('rendering', () => {
@@ -65,19 +73,28 @@ describe('AutoResizeTextarea', () => {
     });
 
     it('should render with provided value', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} value="Hello World" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} value="Hello World" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveValue('Hello World');
     });
 
     it('should render with placeholder', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} placeholder="Type a message..." />);
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          placeholder="Type a message..."
+        />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveAttribute('placeholder', 'Type a message...');
     });
 
     it('should render with custom className', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} className="custom-class" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} className="custom-class" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveClass('custom-class');
     });
@@ -100,7 +117,11 @@ describe('AutoResizeTextarea', () => {
 
     it('should be disabled when sessionId is null and allowAnonymousAccess is false', () => {
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} sessionId={null} allowAnonymousAccess={false} />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId={null}
+          allowAnonymousAccess={false}
+        />,
       );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toBeDisabled();
@@ -120,14 +141,20 @@ describe('AutoResizeTextarea', () => {
     });
 
     it('should be enabled when sessionId is provided and not in preview mode', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId="session-123" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).not.toBeDisabled();
     });
 
     it('should be enabled when allowAnonymousAccess is true regardless of sessionId', () => {
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} sessionId={null} allowAnonymousAccess={true} />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId={null}
+          allowAnonymousAccess={true}
+        />,
       );
       const textarea = screen.getByRole('textbox');
       expect(textarea).not.toBeDisabled();
@@ -151,7 +178,11 @@ describe('AutoResizeTextarea', () => {
     it('should call onChange when value changes', () => {
       const onChange = vi.fn();
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} onChange={onChange} sessionId="session-123" />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          onChange={onChange}
+          sessionId="session-123"
+        />,
       );
       const textarea = screen.getByRole('textbox');
       fireEvent.change(textarea, { target: { value: 'New text' } });
@@ -161,11 +192,17 @@ describe('AutoResizeTextarea', () => {
     it('should pass the event to onChange handler', () => {
       const onChange = vi.fn();
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} onChange={onChange} sessionId="session-123" />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          onChange={onChange}
+          sessionId="session-123"
+        />,
       );
       const textarea = screen.getByRole('textbox');
       fireEvent.change(textarea, { target: { value: 'Test value' } });
-      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ target: textarea }));
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({ target: textarea }),
+      );
     });
   });
 
@@ -324,14 +361,18 @@ describe('AutoResizeTextarea', () => {
   describe('minHeight calculation', () => {
     it('should have 56px minHeight when no messages and not in embed mode', () => {
       mockNumberOfMessages = 0;
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} embedMode={false} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} embedMode={false} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea.style.minHeight).toBe('56px');
     });
 
     it('should use textAreaRows for minHeight when there are messages', () => {
       mockNumberOfMessages = 5;
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} textAreaRows={3} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} textAreaRows={3} />,
+      );
       const textarea = screen.getByRole('textbox');
       // 3 rows * 20px = 60px
       expect(textarea.style.minHeight).toBe('60px');
@@ -339,7 +380,13 @@ describe('AutoResizeTextarea', () => {
 
     it('should use textAreaRows for minHeight in embed mode even with no messages', () => {
       mockNumberOfMessages = 0;
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} textAreaRows={4} embedMode={true} />);
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          textAreaRows={4}
+          embedMode={true}
+        />,
+      );
       const textarea = screen.getByRole('textbox');
       // 4 rows * 20px = 80px
       expect(textarea.style.minHeight).toBe('80px');
@@ -357,7 +404,10 @@ describe('AutoResizeTextarea', () => {
   describe('custom styles', () => {
     it('should merge custom style with computed minHeight', () => {
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} style={{ color: 'red', padding: '10px' }} />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          style={{ color: 'red', padding: '10px' }}
+        />,
       );
       const textarea = screen.getByRole('textbox');
       expect(textarea.style.color).toBe('red');
@@ -366,7 +416,9 @@ describe('AutoResizeTextarea', () => {
     });
 
     it('should allow custom style to override minHeight', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} style={{ minHeight: '200px' }} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} style={{ minHeight: '200px' }} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea.style.minHeight).toBe('200px');
     });
@@ -389,19 +441,29 @@ describe('AutoResizeTextarea', () => {
     });
 
     it('should pass through name attribute', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} name="chatInput" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} name="chatInput" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveAttribute('name', 'chatInput');
     });
 
     it('should pass through id attribute', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} id="my-textarea" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} id="my-textarea" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveAttribute('id', 'my-textarea');
     });
 
     it('should handle autoFocus prop', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} autoFocus sessionId="session-123" />);
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          autoFocus
+          sessionId="session-123"
+        />,
+      );
       const textarea = screen.getByRole('textbox');
       // autoFocus is processed by React and may focus the element on mount
       // In jsdom, we can verify the element exists and is focusable
@@ -420,7 +482,9 @@ describe('AutoResizeTextarea', () => {
         disconnect: disconnectMock,
       })) as unknown as typeof ResizeObserver;
 
-      const { unmount } = renderWithRedux(<AutoResizeTextarea {...defaultProps} />);
+      const { unmount } = renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} />,
+      );
 
       expect(window.ResizeObserver).toHaveBeenCalled();
       expect(observeMock).toHaveBeenCalled();
@@ -442,20 +506,24 @@ describe('AutoResizeTextarea', () => {
       let resizeCallback: ResizeObserverCallback | null = null;
       const observeMock = vi.fn();
 
-      window.ResizeObserver = vi.fn().mockImplementation((callback: ResizeObserverCallback) => {
-        resizeCallback = callback;
-        return {
-          observe: observeMock,
-          unobserve: vi.fn(),
-          disconnect: vi.fn(),
-        };
-      }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi
+        .fn()
+        .mockImplementation((callback: ResizeObserverCallback) => {
+          resizeCallback = callback;
+          return {
+            observe: observeMock,
+            unobserve: vi.fn(),
+            disconnect: vi.fn(),
+          };
+        }) as unknown as typeof ResizeObserver;
 
       // Mock requestAnimationFrame
-      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-        cb(0);
-        return 0;
-      });
+      const rafSpy = vi
+        .spyOn(window, 'requestAnimationFrame')
+        .mockImplementation((cb) => {
+          cb(0);
+          return 0;
+        });
 
       renderWithRedux(<AutoResizeTextarea {...defaultProps} />);
 
@@ -478,14 +546,16 @@ describe('AutoResizeTextarea', () => {
       let rafCallCount = 0;
       const rafCallbacks: FrameRequestCallback[] = [];
 
-      window.ResizeObserver = vi.fn().mockImplementation((callback: ResizeObserverCallback) => {
-        resizeCallback = callback;
-        return {
-          observe: vi.fn(),
-          unobserve: vi.fn(),
-          disconnect: vi.fn(),
-        };
-      }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi
+        .fn()
+        .mockImplementation((callback: ResizeObserverCallback) => {
+          resizeCallback = callback;
+          return {
+            observe: vi.fn(),
+            unobserve: vi.fn(),
+            disconnect: vi.fn(),
+          };
+        }) as unknown as typeof ResizeObserver;
 
       // Mock requestAnimationFrame to capture callbacks
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -525,7 +595,10 @@ describe('AutoResizeTextarea', () => {
 
       rerender(
         <Provider store={createMockStore()}>
-          <AutoResizeTextarea {...defaultProps} value="New text with more content" />
+          <AutoResizeTextarea
+            {...defaultProps}
+            value="New text with more content"
+          />
         </Provider>,
       );
 
@@ -548,14 +621,16 @@ describe('AutoResizeTextarea', () => {
       // This tests the branch where isResizing is true during input change
       let resizeCallback: ResizeObserverCallback | null = null;
 
-      window.ResizeObserver = vi.fn().mockImplementation((callback: ResizeObserverCallback) => {
-        resizeCallback = callback;
-        return {
-          observe: vi.fn(),
-          unobserve: vi.fn(),
-          disconnect: vi.fn(),
-        };
-      }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi
+        .fn()
+        .mockImplementation((callback: ResizeObserverCallback) => {
+          resizeCallback = callback;
+          return {
+            observe: vi.fn(),
+            unobserve: vi.fn(),
+            disconnect: vi.fn(),
+          };
+        }) as unknown as typeof ResizeObserver;
 
       // Don't execute the RAF callback to leave isResizing as true
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => {
@@ -563,7 +638,11 @@ describe('AutoResizeTextarea', () => {
       });
 
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} value="test" sessionId="session-123" />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          value="test"
+          sessionId="session-123"
+        />,
       );
 
       const textarea = screen.getByRole('textbox');
@@ -583,7 +662,9 @@ describe('AutoResizeTextarea', () => {
 
   describe('edge cases', () => {
     it('should handle undefined sessionId', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId={undefined as any} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId={undefined as any} />,
+      );
       const textarea = screen.getByRole('textbox');
       // Should be disabled since sessionId is falsy and allowAnonymousAccess is not set
       expect(textarea).toBeDisabled();
@@ -597,28 +678,36 @@ describe('AutoResizeTextarea', () => {
 
     it('should handle very long text', () => {
       const longText = 'a'.repeat(10000);
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} value={longText} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} value={longText} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveValue(longText);
     });
 
     it('should handle special characters in value', () => {
       const specialChars = '<script>alert("xss")</script>';
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} value={specialChars} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} value={specialChars} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveValue(specialChars);
     });
 
     it('should handle unicode characters', () => {
       const unicodeText = '🎉 Hello 世界 مرحبا';
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} value={unicodeText} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} value={unicodeText} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveValue(unicodeText);
     });
 
     it('should handle newlines in value', () => {
       const multilineText = 'Line 1\nLine 2\nLine 3';
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} value={multilineText} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} value={multilineText} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveValue(multilineText);
     });
@@ -626,7 +715,9 @@ describe('AutoResizeTextarea', () => {
 
   describe('focus behavior', () => {
     it('should be focusable when not disabled', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId="session-123" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+      );
       const textarea = screen.getByRole('textbox');
       textarea.focus();
       expect(document.activeElement).toBe(textarea);
@@ -635,7 +726,11 @@ describe('AutoResizeTextarea', () => {
     it('should handle onFocus event', () => {
       const onFocus = vi.fn();
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} sessionId="session-123" onFocus={onFocus} />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId="session-123"
+          onFocus={onFocus}
+        />,
       );
       const textarea = screen.getByRole('textbox');
       fireEvent.focus(textarea);
@@ -645,7 +740,11 @@ describe('AutoResizeTextarea', () => {
     it('should handle onBlur event', () => {
       const onBlur = vi.fn();
       renderWithRedux(
-        <AutoResizeTextarea {...defaultProps} sessionId="session-123" onBlur={onBlur} />,
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId="session-123"
+          onBlur={onBlur}
+        />,
       );
       const textarea = screen.getByRole('textbox');
       fireEvent.blur(textarea);
@@ -655,7 +754,9 @@ describe('AutoResizeTextarea', () => {
 
   describe('default prop values', () => {
     it('should use default disabled value of false', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId="session-123" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).not.toBeDisabled();
     });
@@ -682,13 +783,17 @@ describe('AutoResizeTextarea', () => {
     });
 
     it('should use default isPreviewMode value of false', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId="session-123" />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).not.toBeDisabled();
     });
 
     it('should use default allowAnonymousAccess value of false', () => {
-      renderWithRedux(<AutoResizeTextarea {...defaultProps} sessionId={null} />);
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId={null} />,
+      );
       const textarea = screen.getByRole('textbox');
       expect(textarea).toBeDisabled();
     });

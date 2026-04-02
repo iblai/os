@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -81,7 +87,8 @@ vi.mock('@sentry/nextjs', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useEditMentorAndRefreshListMutation: () => [vi.fn(), { isLoading: false }],
@@ -111,7 +118,10 @@ vi.mock('@/hooks/use-mentors/use-create-mentor', () => ({
   useCreateMentor: () => ({
     form: {
       Field: ({ children }: any) =>
-        children({ state: { value: '', meta: { isDirty: false } }, handleChange: vi.fn() }),
+        children({
+          state: { value: '', meta: { isDirty: false } },
+          handleChange: vi.fn(),
+        }),
       handleSubmit: vi.fn(),
     },
     name: '',
@@ -128,9 +138,19 @@ vi.mock('@/hooks/use-mentors/use-create-mentor', () => ({
 
 // Mock EditMentorModal to avoid complex dependencies
 vi.mock('../edit-mentor-modal', () => ({
-  EditMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
-      <div data-testid="mock-edit-mentor-modal" role="dialog" aria-label="Edit Mentor">
+      <div
+        data-testid="mock-edit-mentor-modal"
+        role="dialog"
+        aria-label="Edit Mentor"
+      >
         <button onClick={onClose}>Close Edit Modal</button>
       </div>
     ) : null,
@@ -199,18 +219,27 @@ function TestLayoutWithNavBar() {
       <button data-testid="open-settings" onClick={() => openSettingsModal()}>
         Open Settings
       </button>
-      <button data-testid="open-create-mentor-direct" onClick={() => openCreateMentorModal()}>
+      <button
+        data-testid="open-create-mentor-direct"
+        onClick={() => openCreateMentorModal()}
+      >
         Open Create Mentor Direct
       </button>
 
       {/* Settings Modal - should NOT render CreateMentorModal anymore */}
       {showSettingsModal && (
-        <SettingsModal isOpen={showSettingsModal} onClose={closeSettingsModal} />
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={closeSettingsModal}
+        />
       )}
 
       {/* NavBar's CreateMentorModal - the ONLY place it should be rendered */}
       {showCreateMentorModal && (
-        <CreateMentorModal isOpen={showCreateMentorModal} onClose={closeCreateMentorModal} />
+        <CreateMentorModal
+          isOpen={showCreateMentorModal}
+          onClose={closeCreateMentorModal}
+        />
       )}
     </div>
   );
@@ -361,10 +390,12 @@ describe('CreateMentorModal Singleton Behavior', () => {
       await waitFor(() => {
         // Count all "Create Mentor" dialogs
         const allDialogs = document.querySelectorAll('[role="dialog"]');
-        const createMentorDialogCount = Array.from(allDialogs).filter((dialog) => {
-          const title = dialog.querySelector('.ibl-dialog-title');
-          return title?.textContent === 'Create Mentor';
-        }).length;
+        const createMentorDialogCount = Array.from(allDialogs).filter(
+          (dialog) => {
+            const title = dialog.querySelector('.ibl-dialog-title');
+            return title?.textContent === 'Create Mentor';
+          },
+        ).length;
 
         // Should be exactly 1, not 2 (which was the bug)
         expect(createMentorDialogCount).toBe(1);

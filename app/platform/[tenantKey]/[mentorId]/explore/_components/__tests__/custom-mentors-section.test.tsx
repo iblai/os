@@ -3,7 +3,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { CustomMentorsSection } from '../custom-mentors-section';
-import { ExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  ExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Mock the data-layer hooks
@@ -30,15 +33,19 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   return {
     ...actual,
     isLoggedIn: () => mockIsLoggedIn(),
-    redirectToAuthSpaJoinTenant: (...args: unknown[]) => mockRedirectToAuthSpaJoinTenant(...args),
+    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
+      mockRedirectToAuthSpaJoinTenant(...args),
   };
 });
 
 // Mock WithPermissions HOC
 let mockHasPermission = true;
 vi.mock('@/hoc/withPermissions', () => ({
-  WithPermissions: ({ children }: { children: (hasPermission: boolean) => React.ReactNode }) =>
-    children(mockHasPermission),
+  WithPermissions: ({
+    children,
+  }: {
+    children: (hasPermission: boolean) => React.ReactNode;
+  }) => children(mockHasPermission),
 }));
 
 // Mock UI components
@@ -56,7 +63,9 @@ vi.mock('@/components/ui/card', () => ({
       {children}
     </div>
   ),
-  CardContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  CardContent: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
 }));
 
 vi.mock('@/components/spinner', () => ({
@@ -69,7 +78,9 @@ vi.mock('@/components/spinner', () => ({
 
 // Mock child component
 vi.mock('../mentor-card-with-star', () => ({
-  MentorCardWithStar: ({ mentor }: any) => <div data-testid="mentor-card">{mentor.name}</div>,
+  MentorCardWithStar: ({ mentor }: any) => (
+    <div data-testid="mentor-card">{mentor.name}</div>
+  ),
 }));
 
 /**
@@ -124,10 +135,14 @@ describe('CustomMentorsSection', () => {
     },
   ];
 
-  const renderWithContext = (contextOverrides: Partial<ExplorePageContextValue> = {}) => {
+  const renderWithContext = (
+    contextOverrides: Partial<ExplorePageContextValue> = {},
+  ) => {
     return render(
       <TooltipProvider>
-        <ExplorePageContext.Provider value={{ ...mockContextValue, ...contextOverrides }}>
+        <ExplorePageContext.Provider
+          value={{ ...mockContextValue, ...contextOverrides }}
+        >
           <CustomMentorsSection />
         </ExplorePageContext.Provider>
       </TooltipProvider>,
@@ -150,7 +165,9 @@ describe('CustomMentorsSection', () => {
     it('renders the Custom heading', () => {
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Custom$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('handles null data gracefully', () => {
@@ -161,7 +178,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Custom$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('handles undefined results gracefully', () => {
@@ -172,7 +191,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Custom$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('renders mentor cards when custom mentors exist', () => {
@@ -192,7 +213,9 @@ describe('CustomMentorsSection', () => {
 
       expect(screen.getByText('Create Custom Mentor')).toBeInTheDocument();
       expect(
-        screen.getByText('Build your own custom mentor tailored to your specific learning needs'),
+        screen.getByText(
+          'Build your own custom mentor tailored to your specific learning needs',
+        ),
       ).toBeInTheDocument();
       expect(screen.getByText('Get started today')).toBeInTheDocument();
     });
@@ -206,7 +229,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.queryByText('Create Custom Mentor')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Create Custom Mentor'),
+      ).not.toBeInTheDocument();
     });
 
     it('does not render create mentor card below mentors when user does not have permission', () => {
@@ -215,13 +240,17 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByText('Custom Mentor 1')).toBeInTheDocument();
-      expect(screen.queryByText('Create Custom Mentor')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Create Custom Mentor'),
+      ).not.toBeInTheDocument();
     });
 
     it('renders mentors list with proper roles', () => {
       renderWithContext();
 
-      expect(screen.getByRole('list', { name: /Custom mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('list', { name: /Custom mentors/i }),
+      ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
 
@@ -348,7 +377,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more custom mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more custom mentors/i,
+      });
       expect(seeMoreButton).toBeDisabled();
     });
   });
@@ -363,7 +394,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       await user.click(createCard);
 
       expect(mockOpenCreateMentorModal).toHaveBeenCalled();
@@ -378,7 +411,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       createCard.focus();
       await user.keyboard('{Enter}');
 
@@ -394,7 +429,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       createCard.focus();
       await user.keyboard(' ');
 
@@ -411,10 +448,14 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       await user.click(createCard);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
 
@@ -428,11 +469,15 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       createCard.focus();
       await user.keyboard('{Enter}');
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
 
@@ -441,7 +486,9 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       // When mentors exist, the create card is shown below the mentor list
-      const createCards = screen.getAllByRole('button', { name: /Create Custom Mentor/i });
+      const createCards = screen.getAllByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       const createCard = createCards[0];
       createCard.focus();
       await user.keyboard('{Enter}');
@@ -453,7 +500,9 @@ describe('CustomMentorsSection', () => {
       const user = userEvent.setup();
       renderWithContext();
 
-      const createCards = screen.getAllByRole('button', { name: /Create Custom Mentor/i });
+      const createCards = screen.getAllByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       const createCard = createCards[0];
       createCard.focus();
       await user.keyboard(' ');
@@ -472,10 +521,14 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createButton = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       fireEvent.click(createButton);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
 
@@ -488,7 +541,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createButton = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       fireEvent.click(createButton);
 
       expect(mockOpenCreateMentorModal).toHaveBeenCalled();
@@ -504,10 +559,14 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createButtons = screen.getAllByRole('button', { name: /Create Custom Mentor/i });
+      const createButtons = screen.getAllByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       fireEvent.click(createButtons[0]);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
   });
@@ -521,7 +580,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('button', { name: /Load more custom mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Load more custom mentors/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not show See more button when there is no next page', () => {
@@ -546,7 +607,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more custom mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more custom mentors/i,
+      });
       await user.click(seeMoreButton);
 
       await waitFor(() => {
@@ -564,7 +627,10 @@ describe('CustomMentorsSection', () => {
     it('has proper heading structure', () => {
       renderWithContext();
 
-      const heading = screen.getByRole('heading', { name: /^Custom$/i, level: 2 });
+      const heading = screen.getByRole('heading', {
+        name: /^Custom$/i,
+        level: 2,
+      });
       expect(heading).toHaveAttribute('aria-level', '2');
     });
 
@@ -576,7 +642,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('button', { name: /Create Custom Mentor/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Create Custom Mentor/i }),
+      ).toBeInTheDocument();
     });
 
     it('create mentor card is keyboard accessible', () => {
@@ -587,7 +655,9 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      const createCard = screen.getByRole('button', { name: /Create Custom Mentor/i });
+      const createCard = screen.getByRole('button', {
+        name: /Create Custom Mentor/i,
+      });
       expect(createCard).toHaveAttribute('tabindex', '0');
     });
   });

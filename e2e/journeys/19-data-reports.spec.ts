@@ -1,10 +1,10 @@
-import { test, expect } from "../fixtures/mentor-test";
-import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
-import { parsePlatformUrl, safeWaitForURL } from "../utils/navigation";
+import { test, expect } from '../fixtures/mentor-test';
+import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import { parsePlatformUrl, safeWaitForURL } from '../utils/navigation';
 import {
   MENTOR_NEXTJS_HOST,
   PLAYWRIGHT_TENANT_KEY,
-} from "../fixtures/test-data";
+} from '../fixtures/test-data';
 import {
   navigateToDataReports,
   shouldDisplayReportCards,
@@ -25,39 +25,39 @@ import {
   clickBackHome,
   clickDownloadAgain,
   waitForReportDownload,
-} from "@iblai/iblai-js/playwright";
+} from '@iblai/iblai-js/playwright';
 
 const REPORT_CARDS = [
   {
-    name: "User Report",
-    ariaLabel: "User Report report card",
-    description: "Basic user information including login details",
+    name: 'User Report',
+    ariaLabel: 'User Report report card',
+    description: 'Basic user information including login details',
     expectsCsvEditor: true,
   },
   {
-    name: "User Metadata Report",
-    ariaLabel: "User Metadata Report report card",
-    description: "User information including profile metadata like company",
+    name: 'User Metadata Report',
+    ariaLabel: 'User Metadata Report report card',
+    description: 'User information including profile metadata like company',
     expectsCsvEditor: true,
   },
   {
-    name: "Chat History",
-    ariaLabel: "All Mentor Chat History report card",
-    description: "Get detailed mentor chat history for all participants.",
+    name: 'Chat History',
+    ariaLabel: 'All Mentor Chat History report card',
+    description: 'Get detailed mentor chat history for all participants.',
     expectsCsvEditor: false,
   },
 ];
 
-test.describe("Journey 19: Data Reports", () => {
+test.describe('Journey 19: Data Reports', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) test.skip(true, "Data reports requires admin access");
+    if (!isAdmin) test.skip(true, 'Data reports requires admin access');
   });
 
   // ── Data Reports Feature (requires real user/chat data in env) ────────────
 
-  test("admin goes to analytics page and navigates to the Data Reports tab", async ({
+  test('admin goes to analytics page and navigates to the Data Reports tab', async ({
     page,
     analyticsPage,
   }) => {
@@ -65,7 +65,7 @@ test.describe("Journey 19: Data Reports", () => {
     await navigateToDataReports(page);
   });
 
-  test("admin goes to Data Reports tab and verifies all report cards display with download buttons", async ({
+  test('admin goes to Data Reports tab and verifies all report cards display with download buttons', async ({
     page,
     analyticsPage,
   }) => {
@@ -73,7 +73,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldDisplayReportCards(page, REPORT_CARDS);
   });
 
-  test("admin goes to Data Reports tab and opens the CSV editor by clicking download on User Report", async ({
+  test('admin goes to Data Reports tab and opens the CSV editor by clicking download on User Report', async ({
     page,
     analyticsPage,
   }) => {
@@ -81,7 +81,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldOpenCSVEditorDialog(page);
   });
 
-  test("admin goes to CSV editor and verifies data displays in editable table format", async ({
+  test('admin goes to CSV editor and verifies data displays in editable table format', async ({
     page,
     analyticsPage,
   }) => {
@@ -89,7 +89,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldDisplayCSVInEditableTableFormat(page);
   });
 
-  test("admin goes to CSV editor and edits a cell value", async ({
+  test('admin goes to CSV editor and edits a cell value', async ({
     page,
     analyticsPage,
   }) => {
@@ -97,7 +97,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldAllowEditingCellValuesInCSVEditor(page);
   });
 
-  test("admin goes to CSV editor and adds a new row by clicking the Add Row button", async ({
+  test('admin goes to CSV editor and adds a new row by clicking the Add Row button', async ({
     page,
     analyticsPage,
   }) => {
@@ -105,7 +105,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldAddNewRowWhenClickingAddRowButton(page);
   });
 
-  test("admin goes to CSV editor and saves the edited CSV which triggers a file download", async ({
+  test('admin goes to CSV editor and saves the edited CSV which triggers a file download', async ({
     page,
     analyticsPage,
   }) => {
@@ -113,7 +113,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldSaveEditedCSVAndTriggerDownload(page);
   });
 
-  test("admin goes to CSV editor and clicks Cancel to close without saving", async ({
+  test('admin goes to CSV editor and clicks Cancel to close without saving', async ({
     page,
     analyticsPage,
   }) => {
@@ -123,14 +123,14 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: CSV editor Close button test times out at 120s — app may not render the close button
   test.fixme(
-    "admin goes to CSV editor and closes it with the Close button",
+    'admin goes to CSV editor and closes it with the Close button',
     async ({ page, analyticsPage }) => {
       await analyticsPage.goto();
       await shouldCloseCSVEditorWhenClickingCloseButton(page);
     },
   );
 
-  test("admin goes to CSV editor and verifies it has proper ARIA labels and roles", async ({
+  test('admin goes to CSV editor and verifies it has proper ARIA labels and roles', async ({
     page,
     analyticsPage,
   }) => {
@@ -138,7 +138,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldVerifyCSVEditorDialogAccessibility(page);
   });
 
-  test("admin goes to Data Reports tab and opens the CSV editor for the User Metadata Report", async ({
+  test('admin goes to Data Reports tab and opens the CSV editor for the User Metadata Report', async ({
     page,
     analyticsPage,
   }) => {
@@ -146,7 +146,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldOpenCSVEditorForUserMetadataReport(page);
   });
 
-  test("admin goes to Data Reports tab and downloads the Chat History report directly without CSV editor", async ({
+  test('admin goes to Data Reports tab and downloads the Chat History report directly without CSV editor', async ({
     page,
     analyticsPage,
   }) => {
@@ -154,7 +154,7 @@ test.describe("Journey 19: Data Reports", () => {
     await shouldDirectlyDownloadChatHistoryReportWithoutCSVEditor(page);
   });
 
-  test("admin goes to Data Reports tab and verifies other download buttons are disabled while generating", async ({
+  test('admin goes to Data Reports tab and verifies other download buttons are disabled while generating', async ({
     page,
     analyticsPage,
   }) => {
@@ -166,7 +166,7 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: report download page redirects to auth instead of showing "Preparing your report"
   test.fixme(
-    "admin goes to the report download page and verifies the preparing phase is shown",
+    'admin goes to the report download page and verifies the preparing phase is shown',
     async ({ page }) => {
       let tenantKey = PLAYWRIGHT_TENANT_KEY;
       if (!tenantKey) {
@@ -176,7 +176,7 @@ test.describe("Journey 19: Data Reports", () => {
       await navigateToReportDownload(page, {
         baseUrl: MENTOR_NEXTJS_HOST,
         platformKey: tenantKey,
-        reportName: "user-report",
+        reportName: 'user-report',
       });
       await verifyPreparingPhase(page);
     },
@@ -184,7 +184,7 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: reports page fails to load — /reports/iblai/user-report timeout
   test.fixme(
-    "admin goes to the report download page and completes the full download flow",
+    'admin goes to the report download page and completes the full download flow',
     async ({ page }) => {
       let tenantKey = PLAYWRIGHT_TENANT_KEY;
       if (!tenantKey) {
@@ -194,7 +194,7 @@ test.describe("Journey 19: Data Reports", () => {
       await waitForReportDownload(page, {
         baseUrl: MENTOR_NEXTJS_HOST,
         platformKey: tenantKey,
-        reportName: "user-report",
+        reportName: 'user-report',
         timeout: 120_000,
       });
     },
@@ -202,7 +202,7 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: reports page fails to load — /reports/iblai/user-report timeout
   test.fixme(
-    "admin goes to the report download page and clicks Download Again after completion",
+    'admin goes to the report download page and clicks Download Again after completion',
     async ({ page }) => {
       let tenantKey = PLAYWRIGHT_TENANT_KEY;
       if (!tenantKey) {
@@ -212,7 +212,7 @@ test.describe("Journey 19: Data Reports", () => {
       await waitForReportDownload(page, {
         baseUrl: MENTOR_NEXTJS_HOST,
         platformKey: tenantKey,
-        reportName: "user-report",
+        reportName: 'user-report',
         timeout: 120_000,
       });
       await clickDownloadAgain(page);
@@ -221,7 +221,7 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: reports page fails to load — /reports/iblai/user-report timeout
   test.fixme(
-    "admin goes to the report download page and clicks Back Home to return to the platform",
+    'admin goes to the report download page and clicks Back Home to return to the platform',
     async ({ page }) => {
       let tenantKey = PLAYWRIGHT_TENANT_KEY;
       if (!tenantKey) {
@@ -231,11 +231,11 @@ test.describe("Journey 19: Data Reports", () => {
       await navigateToReportDownload(page, {
         baseUrl: MENTOR_NEXTJS_HOST,
         platformKey: tenantKey,
-        reportName: "user-report",
+        reportName: 'user-report',
       });
       await verifyPreparingPhase(page);
       await clickBackHome(page);
-      await safeWaitForURL(page, (url) => url.pathname === "/", {
+      await safeWaitForURL(page, (url) => url.pathname === '/', {
         timeout: 30_000,
       });
     },
@@ -243,7 +243,7 @@ test.describe("Journey 19: Data Reports", () => {
 
   // fixme: report download page redirects to auth — verifyErrorPhase times out
   test.fixme(
-    "admin goes to the report download page with an invalid report name and sees the error phase",
+    'admin goes to the report download page with an invalid report name and sees the error phase',
     async ({ page }) => {
       let tenantKey = PLAYWRIGHT_TENANT_KEY;
       if (!tenantKey) {
@@ -253,7 +253,7 @@ test.describe("Journey 19: Data Reports", () => {
       await navigateToReportDownload(page, {
         baseUrl: MENTOR_NEXTJS_HOST,
         platformKey: tenantKey,
-        reportName: "nonexistent-report",
+        reportName: 'nonexistent-report',
       });
       await verifyErrorPhase(page, { timeout: 120_000 });
     },

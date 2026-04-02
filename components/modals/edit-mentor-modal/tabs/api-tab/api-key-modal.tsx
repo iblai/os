@@ -32,7 +32,7 @@ export function ApiKeyModal({ isOpen, onClose, apiKey }: Props) {
           Copy and paste the API key.
         </DialogDescription>
         <div className="grid gap-6">
-          <p className="text-sm text-muted-foreground grid gap-2">
+          <p className="text-muted-foreground grid gap-2 text-sm">
             <span>
               Please copy your API key and store it in a secure location. For
               security reasons, this key will only be displayed once and cannot

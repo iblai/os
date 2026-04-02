@@ -12,7 +12,8 @@ const mockDispatch = vi.fn();
 const mockUseSelector = vi.fn();
 vi.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
-  useSelector: (selector: (state: unknown) => unknown) => mockUseSelector(selector),
+  useSelector: (selector: (state: unknown) => unknown) =>
+    mockUseSelector(selector),
 }));
 
 // Mock useLocalStorage
@@ -24,7 +25,8 @@ vi.mock('@/hooks/use-local-storage', () => ({
 
 // Mock useAppSelector
 vi.mock('@/lib/hooks', () => ({
-  useAppSelector: (selector: (state: unknown) => unknown) => mockUseSelector(selector),
+  useAppSelector: (selector: (state: unknown) => unknown) =>
+    mockUseSelector(selector),
 }));
 
 // Mock config
@@ -53,12 +55,18 @@ vi.mock('@/lib/constants', () => ({
 // Mock slice actions
 vi.mock('@/features/users/slice', () => ({
   userSliceActions: {
-    setIsInstructorMode: vi.fn((value) => ({ type: 'SET_INSTRUCTOR_MODE', payload: value })),
+    setIsInstructorMode: vi.fn((value) => ({
+      type: 'SET_INSTRUCTOR_MODE',
+      payload: value,
+    })),
   },
 }));
 
 vi.mock('@/features/navigation/slice', () => ({
-  initCustomAlertDialog: vi.fn((payload) => ({ type: 'INIT_CUSTOM_ALERT_DIALOG', payload })),
+  initCustomAlertDialog: vi.fn((payload) => ({
+    type: 'INIT_CUSTOM_ALERT_DIALOG',
+    payload,
+  })),
 }));
 
 import {
@@ -269,8 +277,12 @@ describe('providers/use-user', () => {
         },
       }));
 
-      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import('../use-user');
-      const { renderHook: renderHookFresh } = await import('@testing-library/react');
+      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import(
+        '../use-user'
+      );
+      const { renderHook: renderHookFresh } = await import(
+        '@testing-library/react'
+      );
 
       const { result } = renderHookFresh(() => useUserIsOnTrialFresh());
       expect(result.current).toBe(true);
@@ -330,8 +342,12 @@ describe('providers/use-user', () => {
         },
       }));
 
-      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import('../use-user');
-      const { renderHook: renderHookFresh } = await import('@testing-library/react');
+      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import(
+        '../use-user'
+      );
+      const { renderHook: renderHookFresh } = await import(
+        '@testing-library/react'
+      );
 
       const { result } = renderHookFresh(() => useUserIsOnTrialFresh());
       expect(result.current).toBe(false);
@@ -391,8 +407,12 @@ describe('providers/use-user', () => {
         },
       }));
 
-      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import('../use-user');
-      const { renderHook: renderHookFresh } = await import('@testing-library/react');
+      const { useUserIsOnTrial: useUserIsOnTrialFresh } = await import(
+        '../use-user'
+      );
+      const { renderHook: renderHookFresh } = await import(
+        '@testing-library/react'
+      );
 
       const { result } = renderHookFresh(() => useUserIsOnTrialFresh());
       expect(result.current).toBe(false);

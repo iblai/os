@@ -1,8 +1,8 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
+import { createApi } from '@reduxjs/toolkit/query/react';
 
-import { AUTH_ENDPOINTS, AUTH_REDUCER_PATH } from "@/features/auth/constants";
-import { iblFetchBaseQuery } from "@/features/utils";
-import { IntegratedProviderRequest, IntegratedProviderResponse } from "./types";
+import { AUTH_ENDPOINTS, AUTH_REDUCER_PATH } from '@/features/auth/constants';
+import { iblFetchBaseQuery } from '@/features/utils';
+import { IntegratedProviderRequest, IntegratedProviderResponse } from './types';
 
 export const authApiSlice = createApi({
   reducerPath: AUTH_REDUCER_PATH,

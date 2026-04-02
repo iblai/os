@@ -25,7 +25,10 @@ export function useOAuth() {
    * Polls for callback result and returns parsed OAuth data
    */
   const authenticate = useCallback(
-    async (oauthUrl: string, timeoutMs = 60000): Promise<OAuthResult | null> => {
+    async (
+      oauthUrl: string,
+      timeoutMs = 60000,
+    ): Promise<OAuthResult | null> => {
       if (!isTauriApp()) {
         throw new Error('OAuth is only supported in Tauri mobile apps');
       }
@@ -59,7 +62,8 @@ export function useOAuth() {
         setIsAuthenticating(false);
         return null;
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
         setError(errorMessage);
         setIsAuthenticating(false);
         throw err;

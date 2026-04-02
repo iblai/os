@@ -5,11 +5,11 @@ on:
     tags:
       - 'v*'
 
-run-name: "Build mentor ${{ github.ref_name }}"
+run-name: 'Build mentor ${{ github.ref_name }}'
 
 jobs:
   prepare:
-    name: "Prepare"
+    name: 'Prepare'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}

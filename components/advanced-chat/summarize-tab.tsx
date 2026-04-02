@@ -21,9 +21,9 @@ export function SummarizeTab({ messages, sendMessage, isPreviewMode }: Props) {
   }, [messages.length, sendMessage, isPreviewMode]);
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="p-0 text-blue-700 flex py-2 pl-2 bg-blue-50">
-        <h2 className="text-sm font-medium mb-4">Summarize</h2>
+    <div className="flex flex-1 flex-col">
+      <div className="flex bg-blue-50 p-0 py-2 pl-2 text-blue-700">
+        <h2 className="mb-4 text-sm font-medium">Summarize</h2>
       </div>
     </div>
   );

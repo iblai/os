@@ -28,8 +28,12 @@ type Props = {
 
 export function FreeTrialDialog({ isOpen, onClose }: Props) {
   const dispatch = useAppDispatch();
-  const topBannerOptions = useAppSelector((state) => state.topBanner.topBannerOptions);
-  const subscriptionStatus = useAppSelector((state) => state.subscription.subscriptionStatus);
+  const topBannerOptions = useAppSelector(
+    (state) => state.topBanner.topBannerOptions,
+  );
+  const subscriptionStatus = useAppSelector(
+    (state) => state.subscription.subscriptionStatus,
+  );
   const { currentTenant } = useCurrentTenant();
   const { userTenants } = useUserTenants();
   const subscriptionFlow = new MentorSubscriptionFlowV2({
@@ -45,7 +49,8 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
     userEmail: getUserEmail(),
     mentorUrl: config.mentorUrl(),
   });
-  const { bannerButtonTriggerCallback } = useSubscriptionHandlerV2(subscriptionFlow);
+  const { bannerButtonTriggerCallback } =
+    useSubscriptionHandlerV2(subscriptionFlow);
 
   const getDialogTitle = () => {
     return (
@@ -61,16 +66,19 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
         return (
           <>
             <p>
-              You're currently using our free package with basic access to mentors and you've used
-              all your credits.
+              You're currently using our free package with basic access to
+              mentors and you've used all your credits.
             </p>
             <p>
-              Upgrade to unlock unlimited chat time, custom data sources, and advanced mentor
-              behaviors.
+              Upgrade to unlock unlimited chat time, custom data sources, and
+              advanced mentor behaviors.
             </p>
             <p>
               For organizations needing enterprise solutions,{' '}
-              <a className="cursor-pointer text-[#2563EB]" href="mailto:support@iblai.zendesk.com">
+              <a
+                className="cursor-pointer text-[#2563EB]"
+                href="mailto:support@iblai.zendesk.com"
+              >
                 contact our team
               </a>{' '}
               for special packages.
@@ -81,16 +89,19 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
         return (
           <>
             <p>
-              You're accessing premium features through your institution's subscription and you've
-              used all your credits.
+              You're accessing premium features through your institution's
+              subscription and you've used all your credits.
             </p>
             <p>
-              Enjoy unlimited chat time and access to specialized mentors. Some advanced
-              customization options may require additional permissions.
+              Enjoy unlimited chat time and access to specialized mentors. Some
+              advanced customization options may require additional permissions.
             </p>
             <p>
               For questions about your access or institutional features,{' '}
-              <a className="cursor-pointer text-[#2563EB]" href="mailto:support@iblai.zendesk.com">
+              <a
+                className="cursor-pointer text-[#2563EB]"
+                href="mailto:support@iblai.zendesk.com"
+              >
                 contact support
               </a>
               .
@@ -101,16 +112,20 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
         return (
           <>
             <p>
-              You've used all your available credits for this period. Your full access to premium
-              features will renew on your next billing cycle.
+              You've used all your available credits for this period. Your full
+              access to premium features will renew on your next billing cycle.
             </p>
             <p>
-              To continue creating custom mentors and accessing advanced features immediately, you
-              can purchase additional credits or upgrade to a higher plan.
+              To continue creating custom mentors and accessing advanced
+              features immediately, you can purchase additional credits or
+              upgrade to a higher plan.
             </p>
             <p>
               For enterprise solutions or high-volume needs,{' '}
-              <a className="cursor-pointer text-[#2563EB]" href="mailto:support@iblai.zendesk.com">
+              <a
+                className="cursor-pointer text-[#2563EB]"
+                href="mailto:support@iblai.zendesk.com"
+              >
                 contact our sales team
               </a>{' '}
               for customized options.
@@ -122,12 +137,16 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
           <>
             <p>Upgrade to create your own mentors.</p>
             <p>
-              Enjoy unlimited chat time, custom data sources, and create your own specialized
-              mentors.
+              Enjoy unlimited chat time, custom data sources, and create your
+              own specialized mentors.
             </p>
             <p>
-              For full enterprise control — trusted by leading universities and companies —{' '}
-              <a className="cursor-pointer text-[#2563EB]" href="mailto:support@iblai.zendesk.com">
+              For full enterprise control — trusted by leading universities and
+              companies —{' '}
+              <a
+                className="cursor-pointer text-[#2563EB]"
+                href="mailto:support@iblai.zendesk.com"
+              >
                 contact our partnerships team.
               </a>
             </p>
@@ -137,7 +156,9 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
   };
 
   const handleButtonClick = () => {
-    const callback = bannerButtonTriggerCallback(subscriptionStatus.callToAction || '');
+    const callback = bannerButtonTriggerCallback(
+      subscriptionStatus.callToAction || '',
+    );
     callback?.();
   };
 
@@ -152,9 +173,14 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
             <span>{getDialogTitle()}</span>
           </DialogTitle>
         </DialogHeader>
-        <div className="my-3 space-y-3 text-sm text-gray-600">{getDialogContent()}</div>
+        <div className="my-3 space-y-3 text-sm text-gray-600">
+          {getDialogContent()}
+        </div>
         <DialogFooter>
-          <Button onClick={() => handleButtonClick()} className="ibl-button-primary cursor-pointer">
+          <Button
+            onClick={() => handleButtonClick()}
+            className="ibl-button-primary cursor-pointer"
+          >
             {
               SUBSCRIPTION_DIALOG_BTN_LABELS[
                 subscriptionStatus.userCapability as keyof typeof SUBSCRIPTION_DIALOG_BTN_LABELS

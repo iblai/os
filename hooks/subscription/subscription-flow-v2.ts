@@ -137,7 +137,10 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * @param {string} redirectUrl - The URL to redirect to
    * @param {string} toastMessage - Optional toast message to display before redirect
    */
-  public handleRedirectToURLFlow(redirectUrl: string, toastMessage?: string): void {
+  public handleRedirectToURLFlow(
+    redirectUrl: string,
+    toastMessage?: string,
+  ): void {
     if (toastMessage) {
       toast.info(toastMessage);
     }
@@ -207,7 +210,9 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * Shows error toast and resets banner loading state
    */
   public handleFailureOnTopUpCreditTriggerFlow(): void {
-    toast.error(SUBSCRIPTION_MESSAGES.TOAST_MESSAGES.TOP_UP_CREDIT_TRIGGER_LOAD_ERROR);
+    toast.error(
+      SUBSCRIPTION_MESSAGES.TOAST_MESSAGES.TOP_UP_CREDIT_TRIGGER_LOAD_ERROR,
+    );
     const updatedBannerOptions = {
       ...this.topBannerOptions,
       loading: false,
@@ -263,7 +268,10 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * Handles credit exhausted flow for user on free package
    * @param {string} subscriptionId - The subscription ID for billing page
    */
-  public handleCreditExhaustedWithUserOnFreePackageFlow({ subscriptionId, expiryDate }) {
+  public handleCreditExhaustedWithUserOnFreePackageFlow({
+    subscriptionId,
+    expiryDate,
+  }) {
     const updatedBannerOptions = {
       ...this.bannerOptions,
       bannerText: SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.FREE_PACKAGE({
@@ -287,7 +295,10 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * Handles credit exhausted flow for user on free package
    * @param {string} subscriptionId - The subscription ID for billing page
    */
-  public handleCreditExhaustedWithUserOnStarterPackageFlow({ subscriptionId, expiryDate }) {
+  public handleCreditExhaustedWithUserOnStarterPackageFlow({
+    subscriptionId,
+    expiryDate,
+  }) {
     const updatedBannerOptions = {
       ...this.bannerOptions,
       bannerText: SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STARTER_PACKAGE({
@@ -353,7 +364,8 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
     this.dispatch(
       setSubscriptionStatus({
         creditExhausted: true,
-        userCapability: SUBSCRIPTION_USER_CAPABILITIES.STUDENT_UNDER_PAID_PACKAGE,
+        userCapability:
+          SUBSCRIPTION_USER_CAPABILITIES.STUDENT_UNDER_PAID_PACKAGE,
         callToAction: SUBSCRIPTION_V2_TRIGGERS.CONTACT_ADMIN,
       }),
     );
@@ -364,15 +376,19 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * @param {string} adminEmail - The admin's email address
    */
   public handleOpenContactAdminFlow(adminEmail: string): void {
-    const subject = SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STUDENT_UNDER_PAID_PACKAGE_EMAIL_SUBJECT(
-      {
-        currentTenantOrg: this.getCurrentTenantOrg(),
-      },
-    );
-    const body = SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STUDENT_UNDER_PAID_PACKAGE_EMAIL_BODY({
-      currentTenantOrg: this.getCurrentTenantOrg(),
-      userEmail: this.getUserEmail(),
-    });
+    const subject =
+      SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STUDENT_UNDER_PAID_PACKAGE_EMAIL_SUBJECT(
+        {
+          currentTenantOrg: this.getCurrentTenantOrg(),
+        },
+      );
+    const body =
+      SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STUDENT_UNDER_PAID_PACKAGE_EMAIL_BODY(
+        {
+          currentTenantOrg: this.getCurrentTenantOrg(),
+          userEmail: this.getUserEmail(),
+        },
+      );
 
     const mailtoUrl = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoUrl, '_blank');
@@ -383,6 +399,8 @@ export class MentorSubscriptionFlowV2 extends IblSubscriptionFlow {
    * Shows error toast message
    */
   public handleFailureOnBillingPageTriggerFlow(): void {
-    toast.error(SUBSCRIPTION_MESSAGES.TOAST_MESSAGES.BILLING_PAGE_TRIGGER_LOAD_ERROR);
+    toast.error(
+      SUBSCRIPTION_MESSAGES.TOAST_MESSAGES.BILLING_PAGE_TRIGGER_LOAD_ERROR,
+    );
   }
 }

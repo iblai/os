@@ -19,7 +19,10 @@ export function AddResourceButton() {
         <span>Add Resource</span>
       </Button>
 
-      <AddResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddResourceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </>
   );
 }

@@ -58,18 +58,22 @@ export const CanvasMessagePreview = ({
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 p-4 mb-2 max-w-md shadow-sm"
+      className="mb-2 max-w-md rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
       data-testid="canvas-message-preview"
     >
       <div className="flex items-start gap-3">
-        <div className="bg-[#D0E0FF] text-[#38A1E5] p-2 rounded-lg">
+        <div className="rounded-lg bg-[#D0E0FF] p-2 text-[#38A1E5]">
           <CanvasIcon className="h-5 w-5" />
         </div>
-        <div className="flex-1 min-w-0">
-          <Markdown className="font-medium text-gray-900 text-sm truncate mb-1">{title}</Markdown>
-          <Markdown className="text-gray-500 text-xs mb-2 line-clamp-2">{snippet}</Markdown>
+        <div className="min-w-0 flex-1">
+          <Markdown className="mb-1 truncate text-sm font-medium text-gray-900">
+            {title}
+          </Markdown>
+          <Markdown className="mb-2 line-clamp-2 text-xs text-gray-500">
+            {snippet}
+          </Markdown>
           {isStreaming && (
-            <div className="flex items-center gap-2 text-blue-600 text-xs mb-2">
+            <div className="mb-2 flex items-center gap-2 text-xs text-blue-600">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Generating...</span>
             </div>
@@ -77,11 +81,11 @@ export const CanvasMessagePreview = ({
           <Button
             size="sm"
             variant="outline"
-            className="text-blue-600 border-blue-200 hover:bg-blue-50 bg-transparent"
+            className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
             onClick={handleOpenCanvas}
             data-testid="canvas-open-button"
           >
-            <ExternalLink className="h-3 w-3 mr-1" />
+            <ExternalLink className="mr-1 h-3 w-3" />
             Open Canvas
           </Button>
         </div>

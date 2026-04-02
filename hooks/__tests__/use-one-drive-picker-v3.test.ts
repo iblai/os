@@ -31,11 +31,15 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: vi.fn(
-    (error: unknown, defaultMsg: string) => (error as { message?: string })?.message || defaultMsg,
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: vi.fn(
+      (error: unknown, defaultMsg: string) =>
+        (error as { message?: string })?.message || defaultMsg,
+    ),
+  }),
+);
 
 import useOneDrivePicker from '../use-one-drive-picker-v3';
 import { toast } from 'sonner';
@@ -45,12 +49,17 @@ describe('useOneDrivePicker v3', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock OneDrive global
     mockOneDriveOpen = vi.fn();
-    (window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }).OneDrive = {
+    (
+      window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }
+    ).OneDrive = {
       open: mockOneDriveOpen,
     };
 
@@ -104,7 +113,9 @@ describe('useOneDrivePicker v3', () => {
     });
 
     it('should log error when credentials fail to load', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
@@ -229,7 +240,9 @@ describe('useOneDrivePicker v3', () => {
         });
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Document has been queued for training');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Document has been queued for training',
+      );
     });
 
     it('should join multiple file URLs', async () => {
@@ -266,7 +279,9 @@ describe('useOneDrivePicker v3', () => {
 
   describe('file selection error', () => {
     it('should show error toast when adding document fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
       });
@@ -357,7 +372,9 @@ describe('useOneDrivePicker v3', () => {
       // Both calls should have same redirectUri
       const firstCallOptions = mockOneDriveOpen.mock.calls[0][0];
       const secondCallOptions = mockOneDriveOpen.mock.calls[1][0];
-      expect(firstCallOptions.advanced.redirectUri).toBe(secondCallOptions.advanced.redirectUri);
+      expect(firstCallOptions.advanced.redirectUri).toBe(
+        secondCallOptions.advanced.redirectUri,
+      );
     });
   });
 });

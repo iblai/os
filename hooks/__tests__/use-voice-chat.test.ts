@@ -57,7 +57,10 @@ describe('useVoiceChat', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Create mock stream
@@ -101,25 +104,33 @@ describe('useVoiceChat', () => {
 
   describe('initial state', () => {
     it('should return recording as false initially', () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       expect(result.current.recording).toBe(false);
     });
 
     it('should return processing as false initially', () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       expect(result.current.processing).toBe(false);
     });
 
     it('should return handleMicrophoneBtnClick function', () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       expect(typeof result.current.handleMicrophoneBtnClick).toBe('function');
     });
 
     it('should return time from useTimer', () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       expect(result.current.time).toBe(0);
     });
@@ -127,7 +138,9 @@ describe('useVoiceChat', () => {
 
   describe('starting recording', () => {
     it('should start recording when handleMicrophoneBtnClick is called', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       await act(async () => {
         await result.current.handleMicrophoneBtnClick();
@@ -137,7 +150,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should request microphone access', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       await act(async () => {
         await result.current.handleMicrophoneBtnClick();
@@ -147,7 +162,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should create MediaRecorder with stream', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       await act(async () => {
         await result.current.handleMicrophoneBtnClick();
@@ -157,7 +174,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should start MediaRecorder', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       await act(async () => {
         await result.current.handleMicrophoneBtnClick();
@@ -167,7 +186,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should call timer start', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       await act(async () => {
         await result.current.handleMicrophoneBtnClick();
@@ -179,7 +200,9 @@ describe('useVoiceChat', () => {
 
   describe('stopping recording', () => {
     it('should stop recording when handleMicrophoneBtnClick is called while recording', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -197,7 +220,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should stop MediaRecorder', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -213,7 +238,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should call timer stop', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -231,7 +258,9 @@ describe('useVoiceChat', () => {
 
   describe('voice to text conversion', () => {
     it('should call audioToText when recording stops', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -256,7 +285,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should send transcribed text message', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -280,7 +311,9 @@ describe('useVoiceChat', () => {
     });
 
     it('should stop all tracks after conversion', async () => {
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -301,12 +334,16 @@ describe('useVoiceChat', () => {
 
   describe('error handling', () => {
     it('should show toast error when audioToText fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAudioToText.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
 
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -320,19 +357,25 @@ describe('useVoiceChat', () => {
       });
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Could not process your audio, please try again');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Could not process your audio, please try again',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('should set processing to false after error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAudioToText.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
 
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {
@@ -357,7 +400,9 @@ describe('useVoiceChat', () => {
     it('should use empty string when username is null', async () => {
       mockUseUsername.mockReturnValue(null);
 
-      const { result } = renderHook(() => useVoiceChat({ sendMessage: mockSendMessage }));
+      const { result } = renderHook(() =>
+        useVoiceChat({ sendMessage: mockSendMessage }),
+      );
 
       // Start recording
       await act(async () => {

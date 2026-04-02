@@ -38,7 +38,8 @@ vi.mock('@/hoc/withPermissions', () => ({
 // Mock utils
 const mockRbacPermissionToDisplay = vi.fn();
 vi.mock('@/hoc/utils', () => ({
-  rbacPermissionToDisplay: (...args: unknown[]) => mockRbacPermissionToDisplay(...args),
+  rbacPermissionToDisplay: (...args: unknown[]) =>
+    mockRbacPermissionToDisplay(...args),
 }));
 
 // Mock config

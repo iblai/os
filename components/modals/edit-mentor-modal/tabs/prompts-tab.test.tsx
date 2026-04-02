@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { PromptsTab } from './prompts-tab';
@@ -51,10 +57,18 @@ const mockEditMentorLoading = vi.fn();
 const mockUpdatePromptLoading = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useEditMentorMutation: () => [mockEditMentor, { isLoading: mockEditMentorLoading() }],
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockGetMentorSettingsQuery(...args),
-  useGetPromptsSearchQuery: (...args: unknown[]) => mockGetPromptsSearchQuery(...args),
-  useUpdatePromptMutation: () => [mockUpdatePrompt, { isLoading: mockUpdatePromptLoading() }],
+  useEditMentorMutation: () => [
+    mockEditMentor,
+    { isLoading: mockEditMentorLoading() },
+  ],
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+  useGetPromptsSearchQuery: (...args: unknown[]) =>
+    mockGetPromptsSearchQuery(...args),
+  useUpdatePromptMutation: () => [
+    mockUpdatePrompt,
+    { isLoading: mockUpdatePromptLoading() },
+  ],
 }));
 
 // Mock toast
@@ -68,7 +82,12 @@ vi.mock('sonner', () => ({
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -90,16 +109,21 @@ vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipContent: ({ children }: any) => <div>{children}</div>,
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
-  TooltipTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-}));
-
-vi.mock('@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button', () => ({
-  CopyButton: ({ disabled }: any) => (
-    <button disabled={disabled} data-testid="copy-button">
-      Copy
-    </button>
+  TooltipTrigger: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
   ),
 }));
+
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button',
+  () => ({
+    CopyButton: ({ disabled }: any) => (
+      <button disabled={disabled} data-testid="copy-button">
+        Copy
+      </button>
+    ),
+  }),
+);
 
 vi.mock('@/hoc/withPermissions', () => ({
   default: ({ children }: any) => children({ disabled: false }),
@@ -114,12 +138,20 @@ vi.mock('@/components/markdown', () => ({
 }));
 
 vi.mock('@/components/modals/edit-prompt-modal', () => ({
-  EditPromptModal: ({ isOpen, onClose, handleSave, selectedPrompt, isEditing }: any) =>
+  EditPromptModal: ({
+    isOpen,
+    onClose,
+    handleSave,
+    selectedPrompt,
+    isEditing,
+  }: any) =>
     isOpen ? (
       <div data-testid="edit-prompt-modal">
         <span data-testid="prompt-label">{selectedPrompt?.label}</span>
         <span data-testid="prompt-name">{selectedPrompt?.name}</span>
-        <span data-testid="prompt-is-system">{String(selectedPrompt?.isSystem)}</span>
+        <span data-testid="prompt-is-system">
+          {String(selectedPrompt?.isSystem)}
+        </span>
         <span data-testid="prompt-content">{selectedPrompt?.prompt}</span>
         <span data-testid="is-editing">{String(isEditing)}</span>
         <button
@@ -210,7 +242,10 @@ describe('PromptsTab', () => {
     cleanup();
     vi.clearAllMocks();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('testuser');
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
@@ -254,35 +289,45 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('Prompts')).toBeInTheDocument();
-      expect(screen.getByText('Manage and configure prompts for your mentor.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Manage and configure prompts for your mentor.'),
+      ).toBeInTheDocument();
     });
 
     it('renders System Prompt section with content', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('System Prompt')).toBeInTheDocument();
-      expect(screen.getByText('Test system prompt content')).toBeInTheDocument();
+      expect(
+        screen.getByText('Test system prompt content'),
+      ).toBeInTheDocument();
     });
 
     it('renders Proactive Prompt section with content', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
-      expect(screen.getByText('Test proactive prompt content')).toBeInTheDocument();
+      expect(
+        screen.getByText('Test proactive prompt content'),
+      ).toBeInTheDocument();
     });
 
     it('renders Study Prompt section with content', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('Study Prompt')).toBeInTheDocument();
-      expect(screen.getByText('Test study mode prompt content')).toBeInTheDocument();
+      expect(
+        screen.getByText('Test study mode prompt content'),
+      ).toBeInTheDocument();
     });
 
     it('renders Guided Prompt section with content', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('Guided Prompt')).toBeInTheDocument();
-      expect(screen.getByText('Test guided prompt instructions')).toBeInTheDocument();
+      expect(
+        screen.getByText('Test guided prompt instructions'),
+      ).toBeInTheDocument();
     });
 
     it('renders Suggested Prompts section', () => {
@@ -323,37 +368,67 @@ describe('PromptsTab', () => {
     it('renders tooltip triggers for prompt sections', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('More info about system prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about proactive prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about study mode prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about guided prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about suggested prompts')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about system prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about proactive prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about study mode prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about guided prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about suggested prompts'),
+      ).toBeInTheDocument();
     });
 
     it('renders tooltip content', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByText("Define the mentor's behavior")).toBeInTheDocument();
-      expect(screen.getByText('Guide the conversation flow')).toBeInTheDocument();
-      expect(screen.getByText('Define behavior when Study Mode is active')).toBeInTheDocument();
-      expect(screen.getByText('Guide the user interaction')).toBeInTheDocument();
-      expect(screen.getByText('Quick access to common prompts')).toBeInTheDocument();
+      expect(
+        screen.getByText("Define the mentor's behavior"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Guide the conversation flow'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Define behavior when Study Mode is active'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Guide the user interaction'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Quick access to common prompts'),
+      ).toBeInTheDocument();
     });
 
     it('renders accessible regions for prompt content', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('System prompt content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Proactive prompt content')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('System prompt content'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Proactive prompt content'),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText('Study prompt content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Guided prompt content')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Guided prompt content'),
+      ).toBeInTheDocument();
     });
 
     it('renders aria labels for suggested prompt regions', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('Suggested prompt 1 content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Suggested prompt 2 content')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Suggested prompt 1 content'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Suggested prompt 2 content'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -371,7 +446,10 @@ describe('PromptsTab', () => {
 
     it('displays Inactive when greeting_method is not proactive_prompt', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, greeting_method: 'proactive_response' },
+        data: {
+          ...defaultMentorSettings,
+          greeting_method: 'proactive_response',
+        },
         isLoading: false,
       });
 
@@ -383,7 +461,10 @@ describe('PromptsTab', () => {
 
     it('toggles proactive prompt when switch is clicked (activate)', async () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, greeting_method: 'proactive_response' },
+        data: {
+          ...defaultMentorSettings,
+          greeting_method: 'proactive_response',
+        },
         isLoading: false,
       });
 
@@ -430,12 +511,16 @@ describe('PromptsTab', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when proactive toggle fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -476,18 +561,25 @@ describe('PromptsTab', () => {
     it('renders proactive prompt aria label as enabled', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('Proactive prompt enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Proactive prompt enabled'),
+      ).toBeInTheDocument();
     });
 
     it('renders proactive prompt aria label as disabled', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, greeting_method: 'proactive_response' },
+        data: {
+          ...defaultMentorSettings,
+          greeting_method: 'proactive_response',
+        },
         isLoading: false,
       });
 
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('Proactive prompt disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Proactive prompt disabled'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -547,12 +639,16 @@ describe('PromptsTab', () => {
       fireEvent.click(switches[1]);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when guided toggle fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -572,7 +668,9 @@ describe('PromptsTab', () => {
     it('renders guided prompt aria label as enabled', () => {
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('Guided prompt enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Guided prompt enabled'),
+      ).toBeInTheDocument();
     });
 
     it('renders guided prompt aria label as disabled', () => {
@@ -583,7 +681,9 @@ describe('PromptsTab', () => {
 
       render(<PromptsTab />);
 
-      expect(screen.getByLabelText('Guided prompt disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Guided prompt disabled'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -600,9 +700,15 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('System Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('system_prompt');
-        expect(screen.getByTestId('prompt-is-system')).toHaveTextContent('true');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'System Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'system_prompt',
+        );
+        expect(screen.getByTestId('prompt-is-system')).toHaveTextContent(
+          'true',
+        );
       });
     });
 
@@ -614,8 +720,12 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Proactive Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('proactive_prompt');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Proactive Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'proactive_prompt',
+        );
       });
     });
 
@@ -627,8 +737,12 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Study Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('study_mode_prompt');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Study Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'study_mode_prompt',
+        );
       });
     });
 
@@ -640,8 +754,12 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Guided Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('guided_prompt_instructions');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Guided Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'guided_prompt_instructions',
+        );
       });
     });
 
@@ -658,7 +776,9 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('close-prompt-modal'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-prompt-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-prompt-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -697,12 +817,16 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('save-prompt'));
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when saving system prompt fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Save failed')),
       });
@@ -765,9 +889,15 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Suggested Prompt');
-        expect(screen.getByTestId('prompt-is-system')).toHaveTextContent('false');
-        expect(screen.getByTestId('prompt-content')).toHaveTextContent('Suggested prompt 1');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Suggested Prompt',
+        );
+        expect(screen.getByTestId('prompt-is-system')).toHaveTextContent(
+          'false',
+        );
+        expect(screen.getByTestId('prompt-content')).toHaveTextContent(
+          'Suggested prompt 1',
+        );
       });
     });
 
@@ -811,12 +941,16 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('save-prompt'));
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Prompt updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Prompt updated successfully',
+        );
       });
     });
 
     it('shows error toast when saving suggested prompt fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUpdatePrompt.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Save failed')),
       });
@@ -1171,7 +1305,9 @@ describe('PromptsTab', () => {
 
   describe('Toggle Settings Error Handling', () => {
     it('logs error details when toggle fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const error = new Error('Network error');
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(error),
@@ -1196,7 +1332,10 @@ describe('PromptsTab', () => {
 
   describe('Query Skip Logic', () => {
     it('skips queries when tenantKey is missing', () => {
-      mockUseParams.mockReturnValue({ tenantKey: undefined, mentorId: 'test-mentor' });
+      mockUseParams.mockReturnValue({
+        tenantKey: undefined,
+        mentorId: 'test-mentor',
+      });
 
       render(<PromptsTab />);
 
@@ -1212,7 +1351,10 @@ describe('PromptsTab', () => {
     });
 
     it('skips queries when mentorId is missing', () => {
-      mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: undefined });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'test-tenant',
+        mentorId: undefined,
+      });
       mockGetMentorId.mockReturnValue(null);
 
       render(<PromptsTab />);
@@ -1296,7 +1438,9 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-content')).toHaveTextContent('Prompt with no visibility');
+        expect(screen.getByTestId('prompt-content')).toHaveTextContent(
+          'Prompt with no visibility',
+        );
       });
     });
 
@@ -1604,7 +1748,9 @@ describe('PromptsTab', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(mockEditMentor).toHaveBeenCalledWith(expect.objectContaining({ userId: '' }));
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: '' }),
+        );
       });
     });
 
@@ -1631,7 +1777,9 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('save-prompt'));
 
       await waitFor(() => {
-        expect(mockEditMentor).toHaveBeenCalledWith(expect.objectContaining({ userId: '' }));
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: '' }),
+        );
       });
     });
 
@@ -1658,7 +1806,9 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('save-prompt'));
 
       await waitFor(() => {
-        expect(mockUpdatePrompt).toHaveBeenCalledWith(expect.objectContaining({ userId: '' }));
+        expect(mockUpdatePrompt).toHaveBeenCalledWith(
+          expect.objectContaining({ userId: '' }),
+        );
       });
     });
 
@@ -1673,7 +1823,9 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(mockEditMentor).toHaveBeenCalled();
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
   });

@@ -17,7 +17,9 @@ interface MentorCategoriesProps {
   facets?: Record<string, MentorFacet>;
   showCreatedByFilter?: boolean;
   onFiltersChange?: (filters: ExplorePageFilters) => void;
-  onCreatedByChange?: (createdBy: 'me' | 'my-organization' | 'community' | null) => void;
+  onCreatedByChange?: (
+    createdBy: 'me' | 'my-organization' | 'community' | null,
+  ) => void;
   includeMeToCreatedByFilter?: boolean;
 }
 
@@ -30,7 +32,9 @@ export function MentorCategories({
 }: MentorCategoriesProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string | null>(null);
+  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string | null>(
+    null,
+  );
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedFeatured, setSelectedFeatured] = useState<string | null>(null);
   const [selectedCreatedBy, setSelectedCreatedBy] = useState<
@@ -38,13 +42,21 @@ export function MentorCategories({
   >('');
 
   // Extract facet options from API response
-  const categories = facets?.categories?.terms ? Object.keys(facets.categories.terms) : [];
-  const subjects = facets?.subjects?.terms ? Object.keys(facets.subjects.terms) : [];
-  const llmProviders = facets?.llm_providers?.terms ? Object.keys(facets.llm_providers.terms) : [];
+  const categories = facets?.categories?.terms
+    ? Object.keys(facets.categories.terms)
+    : [];
+  const subjects = facets?.subjects?.terms
+    ? Object.keys(facets.subjects.terms)
+    : [];
+  const llmProviders = facets?.llm_providers?.terms
+    ? Object.keys(facets.llm_providers.terms)
+    : [];
   const types = facets?.types?.terms ? Object.keys(facets.types.terms) : [];
 
   const createdByOptions = [
-    ...(includeMeToCreatedByFilter ? [{ label: 'Me', value: 'me' as const }] : []),
+    ...(includeMeToCreatedByFilter
+      ? [{ label: 'Me', value: 'me' as const }]
+      : []),
     { label: 'My Organization', value: 'my-organization' as const },
     { label: 'Community', value: 'community' as const },
   ];
@@ -75,9 +87,13 @@ export function MentorCategories({
     });
   };
 
-  const handleLlmProviderSelect = (llmProvider: string, event?: React.MouseEvent) => {
+  const handleLlmProviderSelect = (
+    llmProvider: string,
+    event?: React.MouseEvent,
+  ) => {
     event?.preventDefault();
-    const newLlmProvider = selectedLlmProvider === llmProvider ? null : llmProvider;
+    const newLlmProvider =
+      selectedLlmProvider === llmProvider ? null : llmProvider;
     setSelectedLlmProvider(newLlmProvider);
     onFiltersChange?.({
       categories: selectedCategory,
@@ -161,10 +177,10 @@ export function MentorCategories({
             variant="ghost"
             size="sm"
             type="button"
-            className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+            className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
               selectedFeatured
-                ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
             }`}
             aria-haspopup="menu"
           >
@@ -174,14 +190,14 @@ export function MentorCategories({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="w-48 z-[80]"
+          className="z-[80] w-48"
           role="menu"
           aria-label="Promotion"
         >
           <DropdownMenuItem
             onSelect={preventDefaultSelect}
             onClick={(e) => handleFeaturedSelect('true', e)}
-            className={`cursor-pointer flex items-center justify-between ${selectedFeatured === 'true' ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''}`}
+            className={`flex cursor-pointer items-center justify-between ${selectedFeatured === 'true' ? 'bg-[#F5F8FF] text-[#38A1E5]' : ''}`}
             role="menuitem"
           >
             <div className="flex items-center gap-2">
@@ -200,10 +216,10 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
                 selectedCategory
-                  ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               aria-haspopup="menu"
             >
@@ -213,7 +229,7 @@ export function MentorCategories({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-48 z-[80]"
+            className="z-[80] w-48"
             role="menu"
             aria-label="Category"
           >
@@ -222,13 +238,17 @@ export function MentorCategories({
                 key={category}
                 onSelect={preventDefaultSelect}
                 onClick={(e) => handleCategorySelect(category, e)}
-                className={`cursor-pointer flex items-center justify-between ${
-                  selectedCategory === category ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''
+                className={`flex cursor-pointer items-center justify-between ${
+                  selectedCategory === category
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }`}
                 role="menuitem"
               >
                 <div className="flex items-center gap-2">
-                  {selectedCategory === category && <Check className="h-4 w-4" />}
+                  {selectedCategory === category && (
+                    <Check className="h-4 w-4" />
+                  )}
                   <span>{category}</span>
                 </div>
                 {/* {facets?.categories?.terms[category] && (
@@ -250,10 +270,10 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
                 selectedSubject
-                  ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               aria-haspopup="menu"
             >
@@ -263,7 +283,7 @@ export function MentorCategories({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-48 z-[80]"
+            className="z-[80] w-48"
             role="menu"
             aria-label="Subject"
           >
@@ -272,8 +292,10 @@ export function MentorCategories({
                 key={subject}
                 onSelect={preventDefaultSelect}
                 onClick={(e) => handleSubjectSelect(subject, e)}
-                className={`cursor-pointer flex items-center justify-between ${
-                  selectedSubject === subject ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''
+                className={`flex cursor-pointer items-center justify-between ${
+                  selectedSubject === subject
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }`}
                 role="menuitem"
               >
@@ -298,10 +320,10 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
                 selectedType
-                  ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               aria-haspopup="menu"
             >
@@ -309,13 +331,18 @@ export function MentorCategories({
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 z-[80]" role="menu" aria-label="Type">
+          <DropdownMenuContent
+            align="start"
+            className="z-[80] w-48"
+            role="menu"
+            aria-label="Type"
+          >
             {types.map((type) => (
               <DropdownMenuItem
                 key={type}
                 onSelect={preventDefaultSelect}
                 onClick={(e) => handleTypeSelect(type, e)}
-                className={`cursor-pointer flex items-center justify-between ${selectedType === type ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''}`}
+                className={`flex cursor-pointer items-center justify-between ${selectedType === type ? 'bg-[#F5F8FF] text-[#38A1E5]' : ''}`}
                 role="menuitem"
               >
                 <div className="flex items-center gap-2">
@@ -336,10 +363,10 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
                 selectedLlmProvider
-                  ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               aria-haspopup="menu"
             >
@@ -353,7 +380,7 @@ export function MentorCategories({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-48 z-[80]"
+            className="z-[80] w-48"
             role="menu"
             aria-label="LLM Provider"
           >
@@ -362,13 +389,17 @@ export function MentorCategories({
                 key={llmProvider}
                 onSelect={preventDefaultSelect}
                 onClick={(e) => handleLlmProviderSelect(llmProvider, e)}
-                className={`cursor-pointer flex items-center justify-between ${
-                  selectedLlmProvider === llmProvider ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''
+                className={`flex cursor-pointer items-center justify-between ${
+                  selectedLlmProvider === llmProvider
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }`}
                 role="menuitem"
               >
                 <div className="flex items-center gap-2">
-                  {selectedLlmProvider === llmProvider && <Check className="h-4 w-4" />}
+                  {selectedLlmProvider === llmProvider && (
+                    <Check className="h-4 w-4" />
+                  )}
                   <span>{getLLMProviderDetails(llmProvider).name}</span>
                 </div>
                 {/* {facets?.llm_providers?.terms[llmProvider] && (
@@ -390,23 +421,23 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 ${
+              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
                 selectedCreatedBy
-                  ? 'text-white bg-[#38A1E5] border border-[#38A1E5] hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]'
+                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               aria-haspopup="menu"
             >
               <span>
-                {createdByOptions.find((opt) => opt.value === selectedCreatedBy)?.label ||
-                  'Created By'}
+                {createdByOptions.find((opt) => opt.value === selectedCreatedBy)
+                  ?.label || 'Created By'}
               </span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="w-48 z-[80]"
+            className="z-[80] w-48"
             role="menu"
             aria-label="Created By"
           >
@@ -415,13 +446,17 @@ export function MentorCategories({
                 key={option.value}
                 onSelect={preventDefaultSelect}
                 onClick={(e) => handleCreatedBySelect(option.value, e)}
-                className={`cursor-pointer flex items-center justify-between ${
-                  selectedCreatedBy === option.value ? 'text-[#38A1E5] bg-[#F5F8FF]' : ''
+                className={`flex cursor-pointer items-center justify-between ${
+                  selectedCreatedBy === option.value
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }`}
                 role="menuitem"
               >
                 <div className="flex items-center gap-2">
-                  {selectedCreatedBy === option.value && <Check className="h-4 w-4" />}
+                  {selectedCreatedBy === option.value && (
+                    <Check className="h-4 w-4" />
+                  )}
                   <span>{option.label}</span>
                 </div>
               </DropdownMenuItem>
@@ -437,7 +472,7 @@ export function MentorCategories({
             variant="ghost"
             size="sm"
             onClick={handleClearAll}
-            className="h-8 px-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+            className="h-8 px-3 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
             aria-label="Clear All"
             role="button"
           >

@@ -85,7 +85,9 @@ describe('useSubscriptionV2', () => {
   });
 
   it('should create MentorSubscriptionFlowV2 with correct parameters', async () => {
-    const { MentorSubscriptionFlowV2 } = await import('../subscription-flow-v2');
+    const { MentorSubscriptionFlowV2 } = await import(
+      '../subscription-flow-v2'
+    );
 
     renderHook(() => useSubscriptionV2());
 
@@ -179,7 +181,9 @@ describe('useSubscriptionV2', () => {
 
     renderHook(() => useSubscriptionV2());
 
-    expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
   });
 
   it('should handle undefined tenant gracefully', async () => {
@@ -193,7 +197,9 @@ describe('useSubscriptionV2', () => {
   });
 
   it('should pass userTenants to subscription flow', async () => {
-    const { MentorSubscriptionFlowV2 } = await import('../subscription-flow-v2');
+    const { MentorSubscriptionFlowV2 } = await import(
+      '../subscription-flow-v2'
+    );
 
     renderHook(() => useSubscriptionV2());
 
@@ -205,7 +211,9 @@ describe('useSubscriptionV2', () => {
   });
 
   it('should call useSubscriptionHandlerV2 with subscription flow', async () => {
-    const { useSubscriptionHandlerV2 } = await import('@iblai/iblai-js/web-utils');
+    const { useSubscriptionHandlerV2 } = await import(
+      '@iblai/iblai-js/web-utils'
+    );
 
     renderHook(() => useSubscriptionV2());
 

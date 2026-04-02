@@ -15,7 +15,13 @@ vi.mock('@/lib/utils', async (importOriginal) => {
 
 // Mock Markdown component
 vi.mock('@/components/markdown', () => ({
-  default: ({ children, className }: { children?: string; className?: string }) => (
+  default: ({
+    children,
+    className,
+  }: {
+    children?: string;
+    className?: string;
+  }) => (
     <div data-testid="markdown" className={className}>
       {children}
     </div>
@@ -98,7 +104,12 @@ describe('CanvasMessagePreview', () => {
     });
 
     it('should use previewText if provided', () => {
-      render(<CanvasMessagePreview {...defaultProps} previewText="Custom preview text" />);
+      render(
+        <CanvasMessagePreview
+          {...defaultProps}
+          previewText="Custom preview text"
+        />,
+      );
 
       expect(screen.getByText('Custom preview text')).toBeInTheDocument();
     });
@@ -114,7 +125,9 @@ describe('CanvasMessagePreview', () => {
 
     it('should strip HTML tags from previewText when it is already HTML', () => {
       const htmlPreview = '<div>Preview <em>content</em> here</div>';
-      render(<CanvasMessagePreview {...defaultProps} previewText={htmlPreview} />);
+      render(
+        <CanvasMessagePreview {...defaultProps} previewText={htmlPreview} />,
+      );
 
       // isHtml returns true for text starting with '<', so the else branch strips tags
       const elements = screen.getAllByText(/Preview/);
@@ -130,7 +143,9 @@ describe('CanvasMessagePreview', () => {
     });
 
     it('should show spinning loader icon when streaming', () => {
-      const { container } = render(<CanvasMessagePreview {...defaultProps} isStreaming={true} />);
+      const { container } = render(
+        <CanvasMessagePreview {...defaultProps} isStreaming={true} />,
+      );
 
       const spinnerIcon = container.querySelector('.animate-spin');
       expect(spinnerIcon).toBeInTheDocument();
@@ -170,12 +185,16 @@ describe('CanvasMessagePreview', () => {
     it('should log to console when onOpenCanvas is not provided', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      render(<CanvasMessagePreview {...defaultProps} onOpenCanvas={undefined} />);
+      render(
+        <CanvasMessagePreview {...defaultProps} onOpenCanvas={undefined} />,
+      );
 
       const button = screen.getByTestId('canvas-open-button');
       fireEvent.click(button);
 
-      expect(consoleSpy).toHaveBeenCalledWith('Open Canvas - no handler provided');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Open Canvas - no handler provided',
+      );
       consoleSpy.mockRestore();
     });
   });
@@ -231,7 +250,9 @@ describe('CanvasMessagePreview', () => {
 
     it('should handle content with markdown', () => {
       const markdownContent = '# Header\n\n**Bold text** and *italic*';
-      render(<CanvasMessagePreview {...defaultProps} content={markdownContent} />);
+      render(
+        <CanvasMessagePreview {...defaultProps} content={markdownContent} />,
+      );
 
       // Should render without crashing
       expect(screen.getByTestId('canvas-message-preview')).toBeInTheDocument();
@@ -239,15 +260,22 @@ describe('CanvasMessagePreview', () => {
 
     it('should handle special characters in title', () => {
       render(
-        <CanvasMessagePreview {...defaultProps} title={'Test <Document> & "Special" Characters'} />,
+        <CanvasMessagePreview
+          {...defaultProps}
+          title={'Test <Document> & "Special" Characters'}
+        />,
       );
 
-      expect(screen.getByText('Test <Document> & "Special" Characters')).toBeInTheDocument();
+      expect(
+        screen.getByText('Test <Document> & "Special" Characters'),
+      ).toBeInTheDocument();
     });
 
     it('should handle very long title with truncation', () => {
       const longTitle = 'A'.repeat(100);
-      const { container } = render(<CanvasMessagePreview {...defaultProps} title={longTitle} />);
+      const { container } = render(
+        <CanvasMessagePreview {...defaultProps} title={longTitle} />,
+      );
 
       const titleElement = container.querySelector('.truncate');
       expect(titleElement).toBeInTheDocument();
@@ -270,7 +298,9 @@ describe('CanvasMessagePreview', () => {
         },
       };
 
-      render(<CanvasMessagePreview {...defaultProps} payload={customPayload} />);
+      render(
+        <CanvasMessagePreview {...defaultProps} payload={customPayload} />,
+      );
 
       const button = screen.getByTestId('canvas-open-button');
       fireEvent.click(button);
@@ -286,7 +316,12 @@ describe('CanvasMessagePreview', () => {
         artifactId: 789,
       };
 
-      render(<CanvasMessagePreview {...defaultProps} payload={payloadWithoutMetadata} />);
+      render(
+        <CanvasMessagePreview
+          {...defaultProps}
+          payload={payloadWithoutMetadata}
+        />,
+      );
 
       const button = screen.getByTestId('canvas-open-button');
       fireEvent.click(button);

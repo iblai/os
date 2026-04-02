@@ -39,8 +39,12 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { openCreateMentorModal, openEditMentorModal, closeEditMentorModal, showEditMentorModal } =
-    useNavigate();
+  const {
+    openCreateMentorModal,
+    openEditMentorModal,
+    closeEditMentorModal,
+    showEditMentorModal,
+  } = useNavigate();
   const username = useUsername();
   const userIsStudent = useUserIsStudent();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -58,7 +62,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     handlePageChange,
   } = useMentorsWithPagination();
 
-  async function toggleMentorFeaturedStatus(mentorId: string, checked: boolean) {
+  async function toggleMentorFeaturedStatus(
+    mentorId: string,
+    checked: boolean,
+  ) {
     try {
       await editMentorAndRefresh({
         mentor: mentorId,
@@ -162,7 +169,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200 bg-white">
                         {mentors?.map((mentor) => (
-                          <TableRow key={mentor?.id} className="bg-white even:bg-gray-50">
+                          <TableRow
+                            key={mentor?.id}
+                            className="bg-white even:bg-gray-50"
+                          >
                             <TableCell className="px-3 py-4 whitespace-nowrap">
                               <div
                                 className="max-w-[200px] cursor-pointer truncate text-sm font-medium text-blue-600 hover:text-blue-800"
@@ -187,7 +197,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             <TableCell className="px-3 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
                                 {/* @ts-expect-error - llm_provider property may not exist on mentor type */}
-                                {getLLMProviderDetails(mentor?.llm_provider).name}
+                                {
+                                  getLLMProviderDetails(mentor?.llm_provider)
+                                    .name
+                                }
                               </div>
                             </TableCell>
                             <TableCell className="px-3 py-4 whitespace-nowrap">
@@ -240,7 +253,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       </Dialog>
 
       {showEditMentorModal && (
-        <EditMentorModal isOpen={showEditMentorModal} onClose={closeEditMentorModal} />
+        <EditMentorModal
+          isOpen={showEditMentorModal}
+          onClose={closeEditMentorModal}
+        />
       )}
     </>
   );

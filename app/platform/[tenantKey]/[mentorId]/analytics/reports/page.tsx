@@ -18,7 +18,9 @@ export default function ReportsPage() {
 
   const selectedMentorInfo = useSelector(selectSelectedMentor);
   const selectedMentorId = selectedMentorInfo?.unique_id || mentorId;
-  const disabledAnalyticsReports = (config.disabledAnalyticsReports() || '').split('|');
+  const disabledAnalyticsReports = (
+    config.disabledAnalyticsReports() || ''
+  ).split('|');
 
   return (
     <AnalyticsReports

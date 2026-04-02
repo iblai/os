@@ -145,8 +145,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call dialog opens correctly on Firefox and WebKit
 - [x] Voice call button is hidden when "Show voice call" is toggled off in settings
 - [x] Voice call button reappears after re-enabling the toggle
-- [x] Full voice call flow: user speaks and receives an AI audio response *(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)*
-- [x] Full voice call with real LiveKit *(skipped — requires real LiveKit server, audio device, and STT pipeline)*
+- [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
+- [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
 
 ---
 

@@ -35,7 +35,9 @@ describe('FloatingAccessibilityButton', () => {
 
   it('renders the button', () => {
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
     expect(button).toBeInTheDocument();
   });
 
@@ -63,7 +65,9 @@ describe('FloatingAccessibilityButton', () => {
   it('toggles toolbar from closed to open when clicked', () => {
     mockIsToolbarOpen = false;
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     fireEvent.click(button);
 
@@ -74,7 +78,9 @@ describe('FloatingAccessibilityButton', () => {
   it('toggles toolbar from open to closed when clicked', () => {
     mockIsToolbarOpen = true;
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     fireEvent.click(button);
 
@@ -84,7 +90,9 @@ describe('FloatingAccessibilityButton', () => {
 
   it('has correct styling classes', () => {
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     expect(button.className).toContain('rounded-full');
     expect(button.className).toContain('bg-[#38A1E5]');
@@ -94,7 +102,9 @@ describe('FloatingAccessibilityButton', () => {
 
   it('has size icon variant', () => {
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     // Check for icon size classes (h-14 w-14)
     expect(button.className).toContain('h-14');
@@ -104,7 +114,9 @@ describe('FloatingAccessibilityButton', () => {
   it('handles multiple clicks correctly', () => {
     mockIsToolbarOpen = false;
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     fireEvent.click(button);
     fireEvent.click(button);
@@ -117,7 +129,9 @@ describe('FloatingAccessibilityButton', () => {
 
   it('button is accessible via keyboard', () => {
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     // Simulate keyboard navigation
     button.focus();
@@ -132,7 +146,9 @@ describe('FloatingAccessibilityButton', () => {
 
   it('button has transition and hover scale effects', () => {
     render(<FloatingAccessibilityButton />);
-    const button = screen.getByRole('button', { name: /open accessibility menu/i });
+    const button = screen.getByRole('button', {
+      name: /open accessibility menu/i,
+    });
 
     expect(button.className).toContain('transition-all');
     expect(button.className).toContain('duration-200');

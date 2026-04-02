@@ -155,7 +155,9 @@ describe('useResponsive', () => {
       });
 
       const { result } = renderHook(() => {
-        const ref = useRef<HTMLDivElement>(null) as React.RefObject<HTMLElement>;
+        const ref = useRef<HTMLDivElement>(
+          null,
+        ) as React.RefObject<HTMLElement>;
         return useResponsive(ref);
       });
 
@@ -170,7 +172,10 @@ describe('useResponsive', () => {
 
       renderHook(() => useResponsive());
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function),
+      );
       addEventListenerSpy.mockRestore();
     });
 
@@ -180,7 +185,10 @@ describe('useResponsive', () => {
       const { unmount } = renderHook(() => useResponsive());
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function),
+      );
       removeEventListenerSpy.mockRestore();
     });
 

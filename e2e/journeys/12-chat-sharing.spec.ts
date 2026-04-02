@@ -1,21 +1,21 @@
-import { test, expect } from "../fixtures/mentor-test";
-import { navigateToMentorApp } from "../utils/auth";
-import { safeWaitForURL } from "../utils/navigation";
-import { MENTOR_NEXTJS_HOST, AUTH_HOST } from "../fixtures/test-data";
+import { test, expect } from '../fixtures/mentor-test';
+import { navigateToMentorApp } from '../utils/auth';
+import { safeWaitForURL } from '../utils/navigation';
+import { MENTOR_NEXTJS_HOST, AUTH_HOST } from '../fixtures/test-data';
 
-test.describe("Journey 12: Chat Sharing", () => {
-  test.describe.configure({ mode: "serial" });
+test.describe('Journey 12: Chat Sharing', () => {
+  test.describe.configure({ mode: 'serial' });
 
-  let sharedChatUrl = "";
+  let sharedChatUrl = '';
 
   // fixme: shareable chat URL creation times out — share button not responding
   test.fixme(
-    "non-admin goes to chat page and creates a shareable chat URL",
+    'non-admin goes to chat page and creates a shareable chat URL',
     async ({ nonadminPage, nonadminChatPage, browserName }) => {
       // H10 fix: skip on Safari due to clipboard API limitations
       test.skip(
-        browserName === "webkit",
-        "Skipping on Safari due to clipboard API limitations",
+        browserName === 'webkit',
+        'Skipping on Safari due to clipboard API limitations',
       );
 
       await navigateToMentorApp(nonadminPage);
@@ -24,45 +24,45 @@ test.describe("Journey 12: Chat Sharing", () => {
       const nonadminContext = nonadminPage.context();
       try {
         await nonadminContext.grantPermissions([
-          "clipboard-read",
-          "clipboard-write",
+          'clipboard-read',
+          'clipboard-write',
         ]);
       } catch {
         try {
-          await nonadminContext.grantPermissions(["clipboard-read"]);
+          await nonadminContext.grantPermissions(['clipboard-read']);
         } catch {
           // Some browsers don't support clipboard permissions
         }
       }
 
       await nonadminChatPage.sendMessage(
-        "Hello, this is a test message for sharing",
+        'Hello, this is a test message for sharing',
       );
       await nonadminChatPage.waitForAIResponse();
 
       // H9 fix: use exact button name from original
-      const shareButton = nonadminPage.getByRole("button", {
-        name: "Share this chat",
+      const shareButton = nonadminPage.getByRole('button', {
+        name: 'Share this chat',
       });
       await expect(shareButton).toBeVisible({ timeout: 15_000 });
       await shareButton.click();
 
       // H9 fix: wait for clipboard toast confirmation, then read from clipboard
       await nonadminPage
-        .getByText("Share link copied to clipboard")
+        .getByText('Share link copied to clipboard')
         .waitFor({ timeout: 15_000 });
 
       // Read URL from clipboard
       const clipboardUrl = await nonadminPage
         .evaluate(() => navigator.clipboard.readText())
-        .catch(() => "");
+        .catch(() => '');
 
-      if (clipboardUrl && clipboardUrl.includes("/share/chat/")) {
+      if (clipboardUrl && clipboardUrl.includes('/share/chat/')) {
         sharedChatUrl = clipboardUrl;
       } else {
         // Fallback: construct from localStorage session_id
         const sessionId = await nonadminPage.evaluate(() => {
-          const raw = localStorage.getItem("session_id");
+          const raw = localStorage.getItem('session_id');
           if (!raw) return null;
           try {
             const parsed = JSON.parse(raw);
@@ -80,24 +80,24 @@ test.describe("Journey 12: Chat Sharing", () => {
     },
   );
 
-  test("unauthenticated user goes to shared chat URL and sees the chat history", async ({
+  test('unauthenticated user goes to shared chat URL and sees the chat history', async ({
     page,
     browser,
   }) => {
     if (!sharedChatUrl) {
-      test.skip(true, "No shared chat URL from previous test");
+      test.skip(true, 'No shared chat URL from previous test');
       return;
     }
     const anonContext = await browser.newContext({ storageState: undefined });
     const anonPage = await anonContext.newPage();
     try {
       await anonPage.goto(sharedChatUrl, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 30_000,
       });
       await anonPage.waitForTimeout(2_000);
       const hasMessages = await anonPage
-        .locator(".chat-ai-message-response, .chat-user-message-query")
+        .locator('.chat-ai-message-response, .chat-user-message-query')
         .first()
         .isVisible({ timeout: 15_000 })
         .catch(() => false);
@@ -107,23 +107,23 @@ test.describe("Journey 12: Chat Sharing", () => {
     }
   });
 
-  test("non-admin goes to shared chat URL and is redirected to the platform", async ({
+  test('non-admin goes to shared chat URL and is redirected to the platform', async ({
     nonadminPage,
   }) => {
     await navigateToMentorApp(nonadminPage);
     if (!sharedChatUrl) return;
-    await nonadminPage.goto(sharedChatUrl, { waitUntil: "domcontentloaded" });
+    await nonadminPage.goto(sharedChatUrl, { waitUntil: 'domcontentloaded' });
     await safeWaitForURL(
       nonadminPage,
-      (url) => url.href.includes("/platform/"),
+      (url) => url.href.includes('/platform/'),
       {
         timeout: 30_000,
       },
     );
-    expect(nonadminPage.url()).toContain("/platform/");
+    expect(nonadminPage.url()).toContain('/platform/');
   });
 
-  test("unauthenticated user goes to shared chat URL and the chat interface loads correctly", async ({
+  test('unauthenticated user goes to shared chat URL and the chat interface loads correctly', async ({
     page,
     browser,
   }) => {
@@ -132,7 +132,7 @@ test.describe("Journey 12: Chat Sharing", () => {
     const anonPage = await anonContext.newPage();
     try {
       await anonPage.goto(sharedChatUrl, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 30_000,
       });
       await anonPage.waitForTimeout(3_000);
@@ -144,7 +144,7 @@ test.describe("Journey 12: Chat Sharing", () => {
     }
   });
 
-  test("unauthenticated user goes to shared chat page and sees a Sign Up for Free button that redirects to auth", async ({
+  test('unauthenticated user goes to shared chat page and sees a Sign Up for Free button that redirects to auth', async ({
     page,
     browser,
   }) => {
@@ -153,12 +153,12 @@ test.describe("Journey 12: Chat Sharing", () => {
     const anonPage = await anonContext.newPage();
     try {
       await anonPage.goto(sharedChatUrl, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 30_000,
       });
       const signUpBtn = anonPage
-        .getByRole("button", { name: /sign up for free/i })
-        .or(anonPage.getByRole("link", { name: /sign up for free/i }));
+        .getByRole('button', { name: /sign up for free/i })
+        .or(anonPage.getByRole('link', { name: /sign up for free/i }));
       const visible = await signUpBtn
         .isVisible({ timeout: 10_000 })
         .catch(() => false);
@@ -171,7 +171,7 @@ test.describe("Journey 12: Chat Sharing", () => {
     }
   });
 
-  test("unauthenticated user goes to shared chat page and does not see the chat textarea", async ({
+  test('unauthenticated user goes to shared chat page and does not see the chat textarea', async ({
     browser,
   }) => {
     if (!sharedChatUrl) return;
@@ -179,11 +179,11 @@ test.describe("Journey 12: Chat Sharing", () => {
     const anonPage = await anonContext.newPage();
     try {
       await anonPage.goto(sharedChatUrl, {
-        waitUntil: "domcontentloaded",
+        waitUntil: 'domcontentloaded',
         timeout: 30_000,
       });
       await anonPage.waitForTimeout(2_000);
-      const chatInput = anonPage.getByPlaceholder("Ask anything", {
+      const chatInput = anonPage.getByPlaceholder('Ask anything', {
         exact: true,
       });
       const visible = await chatInput

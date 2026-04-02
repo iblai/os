@@ -12,7 +12,12 @@ export function useIsPreviewMode(): boolean {
 
   const isAnonymousMentor = mentorSettings?.allowAnonymous;
   const userIsNotAllowedToChat: boolean =
-    !username && !isAnonymousMentor && !!searchParams.get('token') && !tokenEnabled;
+    !username &&
+    !isAnonymousMentor &&
+    !!searchParams.get('token') &&
+    !tokenEnabled;
 
-  return searchParams.get('internalPreview') === 'true' || userIsNotAllowedToChat;
+  return (
+    searchParams.get('internalPreview') === 'true' || userIsNotAllowedToChat
+  );
 }

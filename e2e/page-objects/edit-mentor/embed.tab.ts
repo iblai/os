@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class EmbedTab {
   readonly page: Page;
@@ -13,20 +13,20 @@ export class EmbedTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.embedCodeBlock = dialog.locator("pre").first();
-    this.copyButton = dialog.getByRole("button", { name: /copy/i }).first();
-    this.voiceCallToggle = dialog.getByRole("switch", { name: /voice call/i });
-    this.voiceRecordToggle = dialog.getByRole("switch", {
+    this.embedCodeBlock = dialog.locator('pre').first();
+    this.copyButton = dialog.getByRole('button', { name: /copy/i }).first();
+    this.voiceCallToggle = dialog.getByRole('switch', { name: /voice call/i });
+    this.voiceRecordToggle = dialog.getByRole('switch', {
       name: /voice record|voice input/i,
     });
-    this.attachmentToggle = dialog.getByRole("switch", {
+    this.attachmentToggle = dialog.getByRole('switch', {
       name: /attachment|attach/i,
     });
   }
 
   async getEmbedCode(): Promise<string> {
     await expect(this.embedCodeBlock).toBeVisible({ timeout: 10_000 });
-    return (await this.embedCodeBlock.textContent()) ?? "";
+    return (await this.embedCodeBlock.textContent()) ?? '';
   }
 
   async copyEmbedCode(): Promise<void> {

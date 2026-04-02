@@ -8,7 +8,9 @@ describe('lib/eventBus', () => {
     });
 
     it('should have stopChatGenerating event', () => {
-      expect(RemoteEvents.stopChatGenerating).toBe('MENTOR:STOP_CHAT_GENERATING');
+      expect(RemoteEvents.stopChatGenerating).toBe(
+        'MENTOR:STOP_CHAT_GENERATING',
+      );
     });
 
     it('should have exactly 2 remote events defined', () => {

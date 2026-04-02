@@ -42,7 +42,10 @@ export function useMentorTimeTrackingConfig() {
         const currentSearch = window.location.search;
 
         // Check if either pathname or search params changed
-        if (currentPath !== previousPathname || currentSearch !== previousSearch) {
+        if (
+          currentPath !== previousPathname ||
+          currentSearch !== previousSearch
+        ) {
           console.log(
             `Route change detected: ${previousPathname}${previousSearch} -> ${currentPath}${currentSearch}`,
           );
@@ -118,7 +121,11 @@ export function MentorTimeTrackingProvider({
 
   return (
     <>
-      <TimeTrackingProvider intervalSeconds={intervalSeconds} enabled={enabled} {...config} />
+      <TimeTrackingProvider
+        intervalSeconds={intervalSeconds}
+        enabled={enabled}
+        {...config}
+      />
     </>
   );
 }

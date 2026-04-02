@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { setupChunkErrorRecovery } from "@/lib/chunk-retry";
+import { useEffect } from 'react';
+import { setupChunkErrorRecovery } from '@/lib/chunk-retry';
 
 /**
  * Installs global chunk load error recovery.

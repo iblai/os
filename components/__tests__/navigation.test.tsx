@@ -10,7 +10,13 @@ describe('Navigation component', () => {
     // Check for the nav element
     const navElement = container.querySelector('nav');
     expect(navElement).toBeInTheDocument();
-    expect(navElement).toHaveClass('hidden', 'w-[270px]', 'border-r', 'bg-gray-50/40', 'lg:block');
+    expect(navElement).toHaveClass(
+      'hidden',
+      'w-[270px]',
+      'border-r',
+      'bg-gray-50/40',
+      'lg:block',
+    );
   });
 
   it('should render the inner flex container', () => {

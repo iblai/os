@@ -1,6 +1,11 @@
 import { toast } from 'sonner';
 import { markdownToHtml } from '@/lib/utils';
-import { sanitizeFilename, escapeHtml, stripHtml, splitTextIntoLines } from './canvas-utils';
+import {
+  sanitizeFilename,
+  escapeHtml,
+  stripHtml,
+  splitTextIntoLines,
+} from './canvas-utils';
 
 /**
  * Convert LaTeX string to readable plain text with Unicode symbols.
@@ -11,7 +16,10 @@ import { sanitizeFilename, escapeHtml, stripHtml, splitTextIntoLines } from './c
  * text[i] must be '{'. Returns { content, end } where end is the index after '}'.
  * Returns null if no matching brace is found.
  */
-const extractBraceGroup = (text: string, i: number): { content: string; end: number } | null => {
+const extractBraceGroup = (
+  text: string,
+  i: number,
+): { content: string; end: number } | null => {
   if (text[i] !== '{') return null;
   let depth = 1;
   let j = i + 1;
@@ -99,13 +107,45 @@ export const latexToReadableText = (latex: string): string => {
 
   // Greek letters
   const greekMap: Record<string, string> = {
-    alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ',
-    eta: 'η', theta: 'θ', iota: 'ι', kappa: 'κ', lambda: 'λ', mu: 'μ',
-    nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ',
-    upsilon: 'υ', phi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
-    Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ',
-    Pi: 'Π', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
-    varepsilon: 'ε', varphi: 'φ', varpi: 'ϖ', varrho: 'ϱ', varsigma: 'ς', vartheta: 'ϑ',
+    alpha: 'α',
+    beta: 'β',
+    gamma: 'γ',
+    delta: 'δ',
+    epsilon: 'ε',
+    zeta: 'ζ',
+    eta: 'η',
+    theta: 'θ',
+    iota: 'ι',
+    kappa: 'κ',
+    lambda: 'λ',
+    mu: 'μ',
+    nu: 'ν',
+    xi: 'ξ',
+    pi: 'π',
+    rho: 'ρ',
+    sigma: 'σ',
+    tau: 'τ',
+    upsilon: 'υ',
+    phi: 'φ',
+    chi: 'χ',
+    psi: 'ψ',
+    omega: 'ω',
+    Gamma: 'Γ',
+    Delta: 'Δ',
+    Theta: 'Θ',
+    Lambda: 'Λ',
+    Xi: 'Ξ',
+    Pi: 'Π',
+    Sigma: 'Σ',
+    Phi: 'Φ',
+    Psi: 'Ψ',
+    Omega: 'Ω',
+    varepsilon: 'ε',
+    varphi: 'φ',
+    varpi: 'ϖ',
+    varrho: 'ϱ',
+    varsigma: 'ς',
+    vartheta: 'ϑ',
   };
   for (const [cmd, sym] of Object.entries(greekMap)) {
     text = text.replace(new RegExp(`\\\\${cmd}(?![a-zA-Z])`, 'g'), sym);
@@ -113,29 +153,78 @@ export const latexToReadableText = (latex: string): string => {
 
   // Math operators and symbols
   const symbolMap: Record<string, string> = {
-    '\\infty': '∞', '\\pm': '±', '\\mp': '∓', '\\times': '×', '\\div': '÷',
-    '\\cdot': '·', '\\ldots': '…', '\\cdots': '⋯', '\\approx': '≈', '\\neq': '≠',
-    '\\ne': '≠', '\\leq': '≤', '\\le': '≤', '\\geq': '≥', '\\ge': '≥',
-    '\\ll': '≪', '\\gg': '≫', '\\subset': '⊂', '\\supset': '⊃',
-    '\\subseteq': '⊆', '\\supseteq': '⊇', '\\in': '∈', '\\notin': '∉',
-    '\\cup': '∪', '\\cap': '∩', '\\forall': '∀', '\\exists': '∃',
-    '\\nabla': '∇', '\\partial': '∂', '\\sum': 'Σ', '\\prod': 'Π',
-    '\\int': '∫', '\\iint': '∬', '\\iiint': '∭',
-    '\\rightarrow': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒',
-    '\\Leftarrow': '⇐', '\\leftrightarrow': '↔', '\\Leftrightarrow': '⇔',
-    '\\to': '→', '\\gets': '←',
-    '\\quad': '  ', '\\qquad': '    ', '\\,': ' ', '\\;': ' ', '\\!': '',
-    '\\left': '', '\\right': '', '\\bigl': '', '\\bigr': '',
-    '\\Bigl': '', '\\Bigr': '', '\\biggl': '', '\\biggr': '',
-    '\\big': '', '\\Big': '', '\\bigg': '', '\\Bigg': '',
+    '\\infty': '∞',
+    '\\pm': '±',
+    '\\mp': '∓',
+    '\\times': '×',
+    '\\div': '÷',
+    '\\cdot': '·',
+    '\\ldots': '…',
+    '\\cdots': '⋯',
+    '\\approx': '≈',
+    '\\neq': '≠',
+    '\\ne': '≠',
+    '\\leq': '≤',
+    '\\le': '≤',
+    '\\geq': '≥',
+    '\\ge': '≥',
+    '\\ll': '≪',
+    '\\gg': '≫',
+    '\\subset': '⊂',
+    '\\supset': '⊃',
+    '\\subseteq': '⊆',
+    '\\supseteq': '⊇',
+    '\\in': '∈',
+    '\\notin': '∉',
+    '\\cup': '∪',
+    '\\cap': '∩',
+    '\\forall': '∀',
+    '\\exists': '∃',
+    '\\nabla': '∇',
+    '\\partial': '∂',
+    '\\sum': 'Σ',
+    '\\prod': 'Π',
+    '\\int': '∫',
+    '\\iint': '∬',
+    '\\iiint': '∭',
+    '\\rightarrow': '→',
+    '\\leftarrow': '←',
+    '\\Rightarrow': '⇒',
+    '\\Leftarrow': '⇐',
+    '\\leftrightarrow': '↔',
+    '\\Leftrightarrow': '⇔',
+    '\\to': '→',
+    '\\gets': '←',
+    '\\quad': '  ',
+    '\\qquad': '    ',
+    '\\,': ' ',
+    '\\;': ' ',
+    '\\!': '',
+    '\\left': '',
+    '\\right': '',
+    '\\bigl': '',
+    '\\bigr': '',
+    '\\Bigl': '',
+    '\\Bigr': '',
+    '\\biggl': '',
+    '\\biggr': '',
+    '\\big': '',
+    '\\Big': '',
+    '\\bigg': '',
+    '\\Bigg': '',
   };
   // Sort by key length descending to prevent prefix matching issues
   // Use regex with word boundary for alpha commands (e.g., \in must not match inside \int)
-  const sortedSymbols = Object.entries(symbolMap).sort((a, b) => b[0].length - a[0].length);
+  const sortedSymbols = Object.entries(symbolMap).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
   for (const [cmd, sym] of sortedSymbols) {
     // Check if the command ends with a letter (needs word boundary)
     if (/[a-zA-Z]$/.test(cmd)) {
-      text = text.replace(new RegExp(cmd.replace(/\\/g, '\\\\') + '(?![a-zA-Z])', 'g'), sym);
+      text = text.replace(
+        new RegExp(cmd.replace(/\\/g, '\\\\') + '(?![a-zA-Z])', 'g'),
+        sym,
+      );
     } else {
       text = text.split(cmd).join(sym);
     }
@@ -196,7 +285,9 @@ export const latexToReadableText = (latex: string): string => {
  */
 export const extractReadableMath = (element: Element): string => {
   // Try annotation first, convert via latexToReadableText
-  const annotation = element.querySelector('annotation[encoding="application/x-tex"]');
+  const annotation = element.querySelector(
+    'annotation[encoding="application/x-tex"]',
+  );
   if (annotation?.textContent) {
     return latexToReadableText(annotation.textContent);
   }
@@ -237,7 +328,10 @@ export const downloadBlob = (blob: Blob, filename: string): void => {
 /**
  * Convert oklch color to RGB
  */
-export const convertOklchToRgb = (value: string, ownerDoc: Document): string | null => {
+export const convertOklchToRgb = (
+  value: string,
+  ownerDoc: Document,
+): string | null => {
   if (!value || !value.includes('oklch')) return null;
 
   try {
@@ -305,17 +399,26 @@ export const normalizeRootColorsForExport = (): (() => void) => {
 /**
  * Sanitize all colors in an element and its children
  */
-export const sanitizeElementColors = (rootEl: HTMLElement, ownerDoc: Document): void => {
+export const sanitizeElementColors = (
+  rootEl: HTMLElement,
+  ownerDoc: Document,
+): void => {
   const patchInlineStyles = (el: HTMLElement) => {
     const inlineStyle = el.style;
-    const properties = Array.from({ length: inlineStyle.length }, (_, i) => inlineStyle.item(i));
+    const properties = Array.from({ length: inlineStyle.length }, (_, i) =>
+      inlineStyle.item(i),
+    );
 
     properties.forEach((prop) => {
       const current = inlineStyle.getPropertyValue(prop);
       if (current && current.includes('oklch')) {
         const rgb = convertOklchToRgb(current, ownerDoc);
         if (rgb) {
-          inlineStyle.setProperty(prop, rgb, inlineStyle.getPropertyPriority(prop));
+          inlineStyle.setProperty(
+            prop,
+            rgb,
+            inlineStyle.getPropertyPriority(prop),
+          );
         } else {
           inlineStyle.removeProperty(prop);
         }
@@ -323,7 +426,11 @@ export const sanitizeElementColors = (rootEl: HTMLElement, ownerDoc: Document): 
     });
   };
 
-  const walker = ownerDoc.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT, null);
+  const walker = ownerDoc.createTreeWalker(
+    rootEl,
+    NodeFilter.SHOW_ELEMENT,
+    null,
+  );
 
   let node = walker.currentNode as HTMLElement | null;
   while (node) {
@@ -335,7 +442,9 @@ export const sanitizeElementColors = (rootEl: HTMLElement, ownerDoc: Document): 
 /**
  * Sanitize all CSS custom properties in a document
  */
-export const sanitizeCssVariables = (doc: Document): Array<[string, string]> | undefined => {
+export const sanitizeCssVariables = (
+  doc: Document,
+): Array<[string, string]> | undefined => {
   const rootComputed = doc.defaultView?.getComputedStyle(doc.documentElement);
   if (!rootComputed) return;
 
@@ -365,7 +474,10 @@ export interface ExportData {
 /**
  * Export content as PDF with full support for tables, lists, and links
  */
-export const exportAsPDF = async (markdownSource: string, exportTitle: string): Promise<void> => {
+export const exportAsPDF = async (
+  markdownSource: string,
+  exportTitle: string,
+): Promise<void> => {
   if (!markdownSource || !markdownSource.trim()) {
     toast.error('Nothing to export yet');
     return;
@@ -447,8 +559,14 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       if (buffer.byteLength < 4) return false;
       const header = new Uint8Array(buffer.slice(0, 4));
       const isTrueType =
-        (header[0] === 0x00 && header[1] === 0x01 && header[2] === 0x00 && header[3] === 0x00) ||
-        (header[0] === 0x4f && header[1] === 0x54 && header[2] === 0x54 && header[3] === 0x4f);
+        (header[0] === 0x00 &&
+          header[1] === 0x01 &&
+          header[2] === 0x00 &&
+          header[3] === 0x00) ||
+        (header[0] === 0x4f &&
+          header[1] === 0x54 &&
+          header[2] === 0x54 &&
+          header[3] === 0x4f);
       if (!isTrueType) {
         return false;
       }
@@ -614,14 +732,16 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
   };
 
   /* istanbul ignore next -- @preserve internal PDF bold style check */
-  const isBoldStyle = (style: FontStyle) => style === 'bold' || style === 'bolditalic';
+  const isBoldStyle = (style: FontStyle) =>
+    style === 'bold' || style === 'bolditalic';
 
   const ARROW_REGEX = /[\u2190-\u21FF\u27F0-\u27FF\u2900-\u297F\u2B00-\u2BFF]/u;
 
   const SYMBOL_FONT_REGEX =
     /[\u2190-\u21FF\u2300-\u23FF\u25A0-\u25FF\u2600-\u26FF\u2700-\u27BF\u27F0-\u27FF\u2900-\u297F\u2B00-\u2BFF]/u;
 
-  const MATH_FONT_REGEX = /[\u2200-\u22FF\u27C0-\u27EF\u2980-\u29FF\u2A00-\u2AFF\u1D400-\u1D7FF]/u;
+  const MATH_FONT_REGEX =
+    /[\u2200-\u22FF\u27C0-\u27EF\u2980-\u29FF\u2A00-\u2AFF\u1D400-\u1D7FF]/u;
 
   type FontRunKind = 'text' | 'symbol' | 'math';
 
@@ -636,7 +756,9 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
   };
 
   /* istanbul ignore next -- @preserve text splitting by font requirements */
-  const splitFontRuns = (value: string): Array<{ text: string; kind: FontRunKind }> => {
+  const splitFontRuns = (
+    value: string,
+  ): Array<{ text: string; kind: FontRunKind }> => {
     const parts: Array<{ text: string; kind: FontRunKind }> = [];
     let buffer = '';
     let currentKind: FontRunKind = 'text';
@@ -672,10 +794,16 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
         '⇔': '<=>',
       };
       return text.replace(/[^\x00-\xFF]/g, (char) => {
-        if (fontState.symbolFamily !== 'helvetica' && SYMBOL_FONT_REGEX.test(char)) {
+        if (
+          fontState.symbolFamily !== 'helvetica' &&
+          SYMBOL_FONT_REGEX.test(char)
+        ) {
           return char;
         }
-        if (fontState.mathFamily !== 'helvetica' && MATH_FONT_REGEX.test(char)) {
+        if (
+          fontState.mathFamily !== 'helvetica' &&
+          MATH_FONT_REGEX.test(char)
+        ) {
           return char;
         }
         return fallbackMap[char] ?? '?';
@@ -710,7 +838,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
   };
 
   /* istanbul ignore next -- @preserve internal PDF styled text rendering */
-  const drawStyledText = (text: string, x: number, y: number, style: FontStyle) => {
+  const drawStyledText = (
+    text: string,
+    x: number,
+    y: number,
+    style: FontStyle,
+  ) => {
     const resolvedStyle = setPdfFont(style);
     safePdfText(text, x, y);
     if (isBoldStyle(style) && !isBoldStyle(resolvedStyle)) {
@@ -729,9 +862,14 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
   const normalFontSize = 11;
 
   /* istanbul ignore next -- @preserve internal text line splitting */
-  const splitTextIntoLinesSafe = (text: string, maxLineWidth: number): string[] => {
+  const splitTextIntoLinesSafe = (
+    text: string,
+    maxLineWidth: number,
+  ): string[] => {
     const sanitized = sanitizePdfText(text);
-    const measurePdf = { getTextWidth: (value: string) => safeGetTextWidth(value) } as typeof pdf;
+    const measurePdf = {
+      getTextWidth: (value: string) => safeGetTextWidth(value),
+    } as typeof pdf;
     return splitTextIntoLines(sanitized, maxLineWidth, measurePdf);
   };
 
@@ -755,7 +893,18 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       return `${letters[(counter - 1) % 26]}. `;
     }
     // Roman numerals for depth 2+
-    const romanNumerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+    const romanNumerals = [
+      'i',
+      'ii',
+      'iii',
+      'iv',
+      'v',
+      'vi',
+      'vii',
+      'viii',
+      'ix',
+      'x',
+    ];
     return `${romanNumerals[(counter - 1) % 10]}. `;
   };
 
@@ -855,7 +1004,9 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
 
       for (let i = 0; i < numCols; i++) {
         const proportion =
-          totalContentLength > 0 ? totalContentLengths[i] / totalContentLength : 1 / numCols;
+          totalContentLength > 0
+            ? totalContentLengths[i] / totalContentLength
+            : 1 / numCols;
         const extraWidth = extraSpace * proportion;
         widths.push(minWidths[i] + extraWidth);
       }
@@ -963,7 +1114,11 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
 
   /* istanbul ignore next -- @preserve internal PDF link rendering */
   // Process link element - renders inline and advances yPosition properly
-  const processLink = (element: Element, currentMargin: number, availableWidth: number): void => {
+  const processLink = (
+    element: Element,
+    currentMargin: number,
+    availableWidth: number,
+  ): void => {
     const href = element.getAttribute('href') || '';
     const text = element.textContent?.trim() || '';
 
@@ -982,7 +1137,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       // Add underline
       const textWidth = safeGetTextWidth(line);
       pdf.setDrawColor(37, 99, 235);
-      pdf.line(currentMargin, yPosition + 1, currentMargin + textWidth, yPosition + 1);
+      pdf.line(
+        currentMargin,
+        yPosition + 1,
+        currentMargin + textWidth,
+        yPosition + 1,
+      );
 
       // Add clickable link annotation for the full link
       if (href) {
@@ -1037,11 +1197,18 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
   const mergeInlineStyle = (base: FontStyle, next: FontStyle): FontStyle => {
     const baseFlags = styleToFlags(base);
     const nextFlags = styleToFlags(next);
-    return flagsToStyle(baseFlags.bold || nextFlags.bold, baseFlags.italic || nextFlags.italic);
+    return flagsToStyle(
+      baseFlags.bold || nextFlags.bold,
+      baseFlags.italic || nextFlags.italic,
+    );
   };
 
   /* istanbul ignore next -- @preserve internal PDF inline content collection */
-  const collectInlineParts = (node: Node, parts: InlinePart[], context: InlineContext): void => {
+  const collectInlineParts = (
+    node: Node,
+    parts: InlinePart[],
+    context: InlineContext,
+  ): void => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent ?? '';
       if (text === '') return;
@@ -1072,7 +1239,10 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
     }
 
     // Handle KaTeX math elements: extract readable math text
-    if (element.classList.contains('katex-display') || element.classList.contains('katex')) {
+    if (
+      element.classList.contains('katex-display') ||
+      element.classList.contains('katex')
+    ) {
       // Skip inner .katex when already handled by .katex-display parent
       if (
         element.classList.contains('katex') &&
@@ -1102,7 +1272,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
     }
 
     if (tag === 'br') {
-      parts.push({ text: '', type: 'linebreak', href: context.href, style: context.style });
+      parts.push({
+        text: '',
+        type: 'linebreak',
+        href: context.href,
+        style: context.style,
+      });
       return;
     }
 
@@ -1196,19 +1371,30 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
         const scriptText = text;
         if (!scriptText) return;
         const scriptFontSize = Math.max(baseFontSize - 3, 6);
-        const yOffset = part.type === 'sup' ? -baseFontSize * 0.35 : baseFontSize * 0.2;
+        const yOffset =
+          part.type === 'sup' ? -baseFontSize * 0.35 : baseFontSize * 0.2;
         const renderSegment = (segmentText: string, kind: FontRunKind) => {
           let needsEmbolden = false;
-          if (kind === 'symbol' && fontState.symbolFamily !== fontState.family) {
+          if (
+            kind === 'symbol' &&
+            fontState.symbolFamily !== fontState.family
+          ) {
             pdf.setFont(fontState.symbolFamily, 'normal');
             pdf.setFontSize(scriptFontSize);
             needsEmbolden = isBoldStyle(part.style ?? 'normal');
-          } else if (kind === 'math' && fontState.mathFamily !== fontState.family) {
+          } else if (
+            kind === 'math' &&
+            fontState.mathFamily !== fontState.family
+          ) {
             pdf.setFont(fontState.mathFamily, 'normal');
             pdf.setFontSize(scriptFontSize);
             needsEmbolden = isBoldStyle(part.style ?? 'normal');
           } else {
-            ({ needsEmbolden } = applyInlineFont(part.style ?? 'normal', false, scriptFontSize));
+            ({ needsEmbolden } = applyInlineFont(
+              part.style ?? 'normal',
+              false,
+              scriptFontSize,
+            ));
           }
           const segmentWidth = safeGetTextWidth(segmentText);
           if (currentX + segmentWidth > maxX && currentX > startX) {
@@ -1225,8 +1411,15 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           }
           if (part.href) {
             pdf.setDrawColor(37, 99, 235);
-            pdf.line(currentX, baselineY + 1, currentX + segmentWidth, baselineY + 1);
-            pdf.link(currentX, baselineY - 5, segmentWidth, 7, { url: part.href });
+            pdf.line(
+              currentX,
+              baselineY + 1,
+              currentX + segmentWidth,
+              baselineY + 1,
+            );
+            pdf.link(currentX, baselineY - 5, segmentWidth, 7, {
+              url: part.href,
+            });
             pdf.setDrawColor(0, 0, 0);
             pdf.setTextColor(0, 0, 0);
           }
@@ -1235,12 +1428,16 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
         };
 
         const shouldSplit =
-          (fontState.symbolFamily !== fontState.family && SYMBOL_FONT_REGEX.test(scriptText)) ||
-          (fontState.mathFamily !== fontState.family && MATH_FONT_REGEX.test(scriptText));
+          (fontState.symbolFamily !== fontState.family &&
+            SYMBOL_FONT_REGEX.test(scriptText)) ||
+          (fontState.mathFamily !== fontState.family &&
+            MATH_FONT_REGEX.test(scriptText));
 
         if (shouldSplit) {
           const segments = splitFontRuns(scriptText);
-          segments.forEach((segment) => renderSegment(segment.text, segment.kind));
+          segments.forEach((segment) =>
+            renderSegment(segment.text, segment.kind),
+          );
         } else {
           renderSegment(scriptText, 'text');
         }
@@ -1258,19 +1455,35 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
         }
       };
 
-      const renderToken = (token: string, fontSize: number, isCode: boolean) => {
+      const renderToken = (
+        token: string,
+        fontSize: number,
+        isCode: boolean,
+      ) => {
         const renderSegment = (segmentText: string, kind: FontRunKind) => {
           let needsEmbolden = false;
-          if (kind === 'symbol' && fontState.symbolFamily !== fontState.family && !isCode) {
+          if (
+            kind === 'symbol' &&
+            fontState.symbolFamily !== fontState.family &&
+            !isCode
+          ) {
             pdf.setFont(fontState.symbolFamily, 'normal');
             pdf.setFontSize(fontSize);
             needsEmbolden = isBoldStyle(part.style ?? 'normal');
-          } else if (kind === 'math' && fontState.mathFamily !== fontState.family && !isCode) {
+          } else if (
+            kind === 'math' &&
+            fontState.mathFamily !== fontState.family &&
+            !isCode
+          ) {
             pdf.setFont(fontState.mathFamily, 'normal');
             pdf.setFontSize(fontSize);
             needsEmbolden = isBoldStyle(part.style ?? 'normal');
           } else {
-            ({ needsEmbolden } = applyInlineFont(part.style ?? 'normal', isCode, fontSize));
+            ({ needsEmbolden } = applyInlineFont(
+              part.style ?? 'normal',
+              isCode,
+              fontSize,
+            ));
           }
           const segmentWidth = safeGetTextWidth(segmentText);
           if (currentX + segmentWidth > maxX && currentX > startX) {
@@ -1287,8 +1500,15 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           }
           if (part.href) {
             pdf.setDrawColor(37, 99, 235);
-            pdf.line(currentX, baselineY + 1, currentX + segmentWidth, baselineY + 1);
-            pdf.link(currentX, baselineY - 5, segmentWidth, 7, { url: part.href });
+            pdf.line(
+              currentX,
+              baselineY + 1,
+              currentX + segmentWidth,
+              baselineY + 1,
+            );
+            pdf.link(currentX, baselineY - 5, segmentWidth, 7, {
+              url: part.href,
+            });
             pdf.setDrawColor(0, 0, 0);
             pdf.setTextColor(0, 0, 0);
           }
@@ -1298,11 +1518,15 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
 
         if (!isCode) {
           const shouldSplit =
-            (fontState.symbolFamily !== fontState.family && SYMBOL_FONT_REGEX.test(token)) ||
-            (fontState.mathFamily !== fontState.family && MATH_FONT_REGEX.test(token));
+            (fontState.symbolFamily !== fontState.family &&
+              SYMBOL_FONT_REGEX.test(token)) ||
+            (fontState.mathFamily !== fontState.family &&
+              MATH_FONT_REGEX.test(token));
           if (shouldSplit) {
             const segments = splitFontRuns(token);
-            segments.forEach((segment) => renderSegment(segment.text, segment.kind));
+            segments.forEach((segment) =>
+              renderSegment(segment.text, segment.kind),
+            );
             return;
           }
         }
@@ -1358,7 +1582,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       (part) => part.type === 'linebreak' || part.text.trim(),
     );
     if (hasInlineContent) {
-      renderInlineParts(inlineParts, currentMargin, availableWidth, baseFontSize);
+      renderInlineParts(
+        inlineParts,
+        currentMargin,
+        availableWidth,
+        baseFontSize,
+      );
     } else {
       yPosition += lineHeight;
     }
@@ -1392,7 +1621,13 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           yPosition += 5;
           pdf.setFontSize(headingFontSize + 2);
           setPdfFont('bold');
-          renderInlineElement(element, currentMargin, availableWidth, headingFontSize + 2, 'bold');
+          renderInlineElement(
+            element,
+            currentMargin,
+            availableWidth,
+            headingFontSize + 2,
+            'bold',
+          );
           pdf.setFontSize(normalFontSize);
           setPdfFont('normal');
           yPosition += 3;
@@ -1401,7 +1636,13 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           yPosition += 4;
           pdf.setFontSize(headingFontSize + 1);
           setPdfFont('bold');
-          renderInlineElement(element, currentMargin, availableWidth, headingFontSize + 1, 'bold');
+          renderInlineElement(
+            element,
+            currentMargin,
+            availableWidth,
+            headingFontSize + 1,
+            'bold',
+          );
           pdf.setFontSize(normalFontSize);
           setPdfFont('normal');
           yPosition += 3;
@@ -1413,7 +1654,13 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           yPosition += 3;
           pdf.setFontSize(headingFontSize);
           setPdfFont('bold');
-          renderInlineElement(element, currentMargin, availableWidth, headingFontSize, 'bold');
+          renderInlineElement(
+            element,
+            currentMargin,
+            availableWidth,
+            headingFontSize,
+            'bold',
+          );
           pdf.setFontSize(normalFontSize);
           setPdfFont('normal');
           yPosition += 3;
@@ -1422,7 +1669,13 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           yPosition += 2;
           pdf.setFontSize(normalFontSize);
           setPdfFont('normal');
-          renderInlineElement(element, currentMargin, availableWidth, normalFontSize, 'normal');
+          renderInlineElement(
+            element,
+            currentMargin,
+            availableWidth,
+            normalFontSize,
+            'normal',
+          );
           return;
         }
         case 'table':
@@ -1497,9 +1750,21 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
               if (depth === 1) {
                 pdf.circle(centerX, centerY, size, 'S');
               } else if (depth === 2) {
-                pdf.rect(liMargin + 0.2, centerY - size, size * 2, size * 2, 'F');
+                pdf.rect(
+                  liMargin + 0.2,
+                  centerY - size,
+                  size * 2,
+                  size * 2,
+                  'F',
+                );
               } else {
-                pdf.rect(liMargin + 0.2, centerY - size, size * 2, size * 2, 'S');
+                pdf.rect(
+                  liMargin + 0.2,
+                  centerY - size,
+                  size * 2,
+                  size * 2,
+                  'S',
+                );
               }
             } else {
               safePdfText(marker, liMargin, markerY);
@@ -1519,7 +1784,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
               return;
             }
             drawMarker();
-            renderInlineParts(inlineParts, contentMargin, contentWidth, normalFontSize);
+            renderInlineParts(
+              inlineParts,
+              contentMargin,
+              contentWidth,
+              normalFontSize,
+            );
             inlineParts.length = 0;
           };
 
@@ -1570,7 +1840,15 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
           const blockHeight = codeLines.length * lineHeight + 6;
           checkPageBreak(blockHeight);
           pdf.setFillColor(243, 244, 246);
-          pdf.roundedRect(currentMargin, yPosition - 3, availableWidth, blockHeight, 2, 2, 'F');
+          pdf.roundedRect(
+            currentMargin,
+            yPosition - 3,
+            availableWidth,
+            blockHeight,
+            2,
+            2,
+            'F',
+          );
           codeLines.forEach((line) => {
             checkPageBreak();
             safePdfText(line || ' ', currentMargin + 3, yPosition + 3);
@@ -1598,7 +1876,12 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
         case 'hr':
           yPosition += 3;
           pdf.setDrawColor(200, 200, 200);
-          pdf.line(currentMargin, yPosition, currentMargin + availableWidth, yPosition);
+          pdf.line(
+            currentMargin,
+            yPosition,
+            currentMargin + availableWidth,
+            yPosition,
+          );
           yPosition += 5;
           return;
         case 'br':
@@ -1614,7 +1897,19 @@ export const exportAsPDF = async (markdownSource: string, exportTitle: string): 
       }
 
       // Process children for elements that weren't handled specially
-      if (!['ul', 'ol', 'li', 'table', 'a', 'pre', 'blockquote', 'hr', 'br'].includes(tagName)) {
+      if (
+        ![
+          'ul',
+          'ol',
+          'li',
+          'table',
+          'a',
+          'pre',
+          'blockquote',
+          'hr',
+          'br',
+        ].includes(tagName)
+      ) {
         Array.from(element.childNodes).forEach((child) =>
           processNode(child, currentMargin, availableWidth),
         );
@@ -1677,7 +1972,10 @@ const replaceKatexWithText = (html: string): string => {
   return result;
 };
 
-export const exportAsDOCX = (markdownSource: string, exportTitle: string): void => {
+export const exportAsDOCX = (
+  markdownSource: string,
+  exportTitle: string,
+): void => {
   if (!markdownSource || !markdownSource.trim()) {
     toast.error('Nothing to export yet');
     return;
@@ -1716,7 +2014,10 @@ export const exportAsDOCX = (markdownSource: string, exportTitle: string): void 
 /**
  * Export content as Markdown
  */
-export const exportAsMarkdown = (markdownSource: string, exportTitle: string): void => {
+export const exportAsMarkdown = (
+  markdownSource: string,
+  exportTitle: string,
+): void => {
   if (!markdownSource || !markdownSource.trim()) {
     toast.error('Nothing to export yet');
     return;

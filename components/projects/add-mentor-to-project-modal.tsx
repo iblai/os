@@ -1,7 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'next/navigation';
 import { ProjectPageParams } from '@/lib/types';
@@ -67,27 +72,34 @@ export function AddMentorToProjectModal({
   };
 
   const isMentorAlreadyAdded = (mentorId: string) => {
-    return project?.mentors?.some((mentor: any) => mentor.unique_id === mentorId) || false;
+    return (
+      project?.mentors?.some((mentor: any) => mentor.unique_id === mentorId) ||
+      false
+    );
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[80vh] p-0 gap-0 overflow-hidden flex flex-col">
-        <DialogHeader className="px-6 py-4 border-b border-gray-200">
+      <DialogContent className="flex max-h-[80vh] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b border-gray-200 px-6 py-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
             Add Mentor to {projectName}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto p-6">
           {/* Available Mentors Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Available Mentors</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Available Mentors
+              </h3>
             </div>
 
             <MentorSelectionGrid
-              selectedMentorIds={project?.mentors?.map((m: any) => m.unique_id) || []}
+              selectedMentorIds={
+                project?.mentors?.map((m: any) => m.unique_id) || []
+              }
               onMentorSelect={handleMentorSelect}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -98,8 +110,12 @@ export function AddMentorToProjectModal({
           </div>
         </div>
 
-        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-          <Button variant="outline" onClick={onClose} className="bg-transparent">
+        <div className="flex flex-shrink-0 justify-end border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-transparent"
+          >
             Done
           </Button>
         </div>

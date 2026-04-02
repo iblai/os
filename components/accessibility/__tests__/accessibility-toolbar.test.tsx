@@ -171,7 +171,10 @@ describe('AccessibilityToolbar', () => {
 
     if (button) {
       fireEvent.click(button);
-      expect(mockUpdateSetting).toHaveBeenCalledWith('dyslexiaFont', 'dyslexia');
+      expect(mockUpdateSetting).toHaveBeenCalledWith(
+        'dyslexiaFont',
+        'dyslexia',
+      );
     }
   });
 
@@ -227,7 +230,9 @@ describe('AccessibilityToolbar', () => {
 
   it('resets all settings when reset button is clicked', () => {
     render(<AccessibilityToolbar />);
-    const resetButton = screen.getByText('Reset All Accessibility Settings').closest('button');
+    const resetButton = screen
+      .getByText('Reset All Accessibility Settings')
+      .closest('button');
 
     if (resetButton) {
       fireEvent.click(resetButton);
@@ -307,7 +312,9 @@ describe('AccessibilityToolbar', () => {
 
     render(<AccessibilityToolbar />);
 
-    const highlightButton = screen.getByText('Highlight Links').closest('button');
+    const highlightButton = screen
+      .getByText('Highlight Links')
+      .closest('button');
     const pauseButton = screen.getByText('Pause Animations').closest('button');
     const hideButton = screen.getByText('Hide Images').closest('button');
 

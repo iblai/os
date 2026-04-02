@@ -1,17 +1,17 @@
-import { test as setup, expect } from "@playwright/test";
-import { safeWaitForURL } from "../utils/navigation";
-import path from "path";
-import fs from "fs";
+import { test as setup, expect } from '@playwright/test';
+import { safeWaitForURL } from '../utils/navigation';
+import path from 'path';
+import fs from 'fs';
 
-const HOST = process.env.MENTOR_NEXTJS_HOST || "";
-const AUTH_HOST = process.env.AUTH_HOST || "";
-const USERNAME = process.env.PLAYWRIGHT_NONADMIN_USERNAME || "";
-const PASSWORD = process.env.PLAYWRIGHT_NONADMIN_PASSWORD || "";
+const HOST = process.env.MENTOR_NEXTJS_HOST || '';
+const AUTH_HOST = process.env.AUTH_HOST || '';
+const USERNAME = process.env.PLAYWRIGHT_NONADMIN_USERNAME || '';
+const PASSWORD = process.env.PLAYWRIGHT_NONADMIN_PASSWORD || '';
 
-setup("authenticate non-admin", async ({ page }, testInfo) => {
+setup('authenticate non-admin', async ({ page }, testInfo) => {
   setup.setTimeout(200_000);
   const browserKey = testInfo.project.name
-    .replace("setup-nonadmin-", "")
+    .replace('setup-nonadmin-', '')
     .toLowerCase();
   // Save to mentorai/playwright/.auth/ — two levels up from e2e/journeys/
   const authFile = path.join(
@@ -24,7 +24,7 @@ setup("authenticate non-admin", async ({ page }, testInfo) => {
   console.log(
     `[auth-nonadmin.setup] [${browserKey}] Step 1: Navigating to ${HOST}`,
   );
-  await page.goto(HOST, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.goto(HOST, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   console.log(
     `[auth-nonadmin.setup] [${browserKey}] After goto — URL: ${page.url()}`,
   );
@@ -45,7 +45,7 @@ setup("authenticate non-admin", async ({ page }, testInfo) => {
     `[auth-nonadmin.setup] [${browserKey}] Step 3: Clicking "Continue with Password"`,
   );
   await expect(
-    page.getByRole("button", { name: "Continue with Password" }),
+    page.getByRole('button', { name: 'Continue with Password' }),
   ).toBeVisible({ timeout: 30_000 });
   await page.click('button:has-text("Continue with Password")');
   console.log(
@@ -74,7 +74,7 @@ setup("authenticate non-admin", async ({ page }, testInfo) => {
   while (Date.now() < deadline) {
     const current = page.url();
     console.log(`[auth-nonadmin.setup] [${browserKey}] URL: ${current}`);
-    if (current.startsWith(HOST + "/platform")) {
+    if (current.startsWith(HOST + '/platform')) {
       console.log(
         `[auth-nonadmin.setup] [${browserKey}] Reached /platform — stopping poll`,
       );
@@ -90,7 +90,7 @@ setup("authenticate non-admin", async ({ page }, testInfo) => {
   console.log(
     `[auth-nonadmin.setup] [${browserKey}] Step 6: safeWaitForURL → /platform`,
   );
-  await safeWaitForURL(page, (url) => url.href.startsWith(HOST + "/platform"), {
+  await safeWaitForURL(page, (url) => url.href.startsWith(HOST + '/platform'), {
     timeout: 80_000,
   });
   console.log(
@@ -98,13 +98,13 @@ setup("authenticate non-admin", async ({ page }, testInfo) => {
   );
 
   // ── Step 7: Verify tokens ─────────────────────────────────────────────────
-  const dmToken = await page.evaluate(() => localStorage.getItem("dm_token"));
-  const axdToken = await page.evaluate(() => localStorage.getItem("axd_token"));
+  const dmToken = await page.evaluate(() => localStorage.getItem('dm_token'));
+  const axdToken = await page.evaluate(() => localStorage.getItem('axd_token'));
   console.log(
-    `[auth-nonadmin.setup] [${browserKey}] dm_token:  ${dmToken ? "present" : "NULL"}`,
+    `[auth-nonadmin.setup] [${browserKey}] dm_token:  ${dmToken ? 'present' : 'NULL'}`,
   );
   console.log(
-    `[auth-nonadmin.setup] [${browserKey}] axd_token: ${axdToken ? "present" : "NULL"}`,
+    `[auth-nonadmin.setup] [${browserKey}] axd_token: ${axdToken ? 'present' : 'NULL'}`,
   );
   expect(dmToken).not.toBeNull();
 

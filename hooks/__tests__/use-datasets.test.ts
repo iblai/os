@@ -30,7 +30,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 // Mock data-layer hooks
 const mockUseGetTrainingDocumentsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetTrainingDocumentsQuery: (...args: unknown[]) => mockUseGetTrainingDocumentsQuery(...args),
+  useGetTrainingDocumentsQuery: (...args: unknown[]) =>
+    mockUseGetTrainingDocumentsQuery(...args),
 }));
 
 describe('useDatasetsWithPagination', () => {
@@ -38,7 +39,10 @@ describe('useDatasetsWithPagination', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
     mockGetMentorId.mockReturnValue(null);
     mockUseGetTrainingDocumentsQuery.mockReturnValue({

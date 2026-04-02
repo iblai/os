@@ -26,29 +26,43 @@ describe('ChatActionBlockingOverlay', () => {
   describe('when isOpen is true', () => {
     describe('voice-call action type', () => {
       it('should render voice call overlay', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         expect(screen.getByText('Voice Call Active')).toBeInTheDocument();
       });
 
       it('should display voice call description', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
-        expect(screen.getByText(/Your voice call session is now active/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Your voice call session is now active/i),
+        ).toBeInTheDocument();
       });
 
       it('should display voice call help text', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         expect(
-          screen.getByText(/This window will handle your voice call in the background/i),
+          screen.getByText(
+            /This window will handle your voice call in the background/i,
+          ),
         ).toBeInTheDocument();
       });
 
       it('should not render stop button for voice call', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
-        expect(screen.queryByText('Stop Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Stop Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
 
       it('should not render stop button even with onStopScreenShare prop', () => {
@@ -61,35 +75,51 @@ describe('ChatActionBlockingOverlay', () => {
           />,
         );
 
-        expect(screen.queryByText('Stop Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Stop Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
     });
 
     describe('screen-share action type', () => {
       it('should render screen sharing overlay', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />,
+        );
 
         expect(screen.getByText('Screen Sharing Active')).toBeInTheDocument();
       });
 
       it('should display screen sharing description', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />,
+        );
 
-        expect(screen.getByText(/Your screen sharing session is now active/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Your screen sharing session is now active/i),
+        ).toBeInTheDocument();
       });
 
       it('should display screen sharing help text', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />,
+        );
 
         expect(
-          screen.getByText(/This window will handle your screen sharing in the background/i),
+          screen.getByText(
+            /This window will handle your screen sharing in the background/i,
+          ),
         ).toBeInTheDocument();
       });
 
       it('should not render stop button without onStopScreenShare prop', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />,
+        );
 
-        expect(screen.queryByText('Stop Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Stop Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
 
       it('should render stop button with onStopScreenShare prop', () => {
@@ -123,63 +153,99 @@ describe('ChatActionBlockingOverlay', () => {
 
     describe('accessibility', () => {
       it('should have dialog role', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
 
       it('should have aria-modal attribute', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
-        expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+        expect(screen.getByRole('dialog')).toHaveAttribute(
+          'aria-modal',
+          'true',
+        );
       });
 
       it('should have aria-labelledby pointing to title', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         const dialog = screen.getByRole('dialog');
-        expect(dialog).toHaveAttribute('aria-labelledby', 'blocking-overlay-title');
+        expect(dialog).toHaveAttribute(
+          'aria-labelledby',
+          'blocking-overlay-title',
+        );
 
         const title = screen.getByText('Voice Call Active');
         expect(title).toHaveAttribute('id', 'blocking-overlay-title');
       });
 
       it('should have aria-describedby pointing to description', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         const dialog = screen.getByRole('dialog');
-        expect(dialog).toHaveAttribute('aria-describedby', 'blocking-overlay-description');
+        expect(dialog).toHaveAttribute(
+          'aria-describedby',
+          'blocking-overlay-description',
+        );
 
-        const description = screen.getByText(/Your voice call session is now active/i);
-        expect(description).toHaveAttribute('id', 'blocking-overlay-description');
+        const description = screen.getByText(
+          /Your voice call session is now active/i,
+        );
+        expect(description).toHaveAttribute(
+          'id',
+          'blocking-overlay-description',
+        );
       });
 
       it('should have proper aria attributes for screen share', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="screen-share" />,
+        );
 
         const dialog = screen.getByRole('dialog');
-        expect(dialog).toHaveAttribute('aria-labelledby', 'blocking-overlay-title');
-        expect(dialog).toHaveAttribute('aria-describedby', 'blocking-overlay-description');
+        expect(dialog).toHaveAttribute(
+          'aria-labelledby',
+          'blocking-overlay-title',
+        );
+        expect(dialog).toHaveAttribute(
+          'aria-describedby',
+          'blocking-overlay-description',
+        );
       });
     });
 
     describe('styling', () => {
       it('should have high z-index for overlay', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         const dialog = screen.getByRole('dialog');
         expect(dialog).toHaveStyle({ zIndex: 9999 });
       });
 
       it('should have fixed positioning', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         const dialog = screen.getByRole('dialog');
         expect(dialog).toHaveClass('fixed', 'inset-0');
       });
 
       it('should have backdrop blur', () => {
-        render(<ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />);
+        render(
+          <ChatActionBlockingOverlay isOpen={true} actionType="voice-call" />,
+        );
 
         const dialog = screen.getByRole('dialog');
         expect(dialog).toHaveClass('backdrop-blur-sm');
@@ -221,7 +287,9 @@ describe('ChatActionBlockingOverlay', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /Stop Screen Sharing/i });
+      const button = screen.getByRole('button', {
+        name: /Stop Screen Sharing/i,
+      });
       expect(button).toHaveClass('bg-red-600');
     });
 
@@ -235,7 +303,9 @@ describe('ChatActionBlockingOverlay', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /Stop Screen Sharing/i });
+      const button = screen.getByRole('button', {
+        name: /Stop Screen Sharing/i,
+      });
       expect(button).toHaveClass('hover:bg-red-700');
     });
 
@@ -249,7 +319,9 @@ describe('ChatActionBlockingOverlay', () => {
         />,
       );
 
-      const button = screen.getByRole('button', { name: /Stop Screen Sharing/i });
+      const button = screen.getByRole('button', {
+        name: /Stop Screen Sharing/i,
+      });
       expect(button).toHaveClass('w-full');
     });
   });

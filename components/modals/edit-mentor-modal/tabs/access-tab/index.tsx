@@ -1,31 +1,31 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { Pencil, ShieldAlert, UserCog, Users } from "lucide-react";
+import * as React from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { Pencil, ShieldAlert, UserCog, Users } from 'lucide-react';
 
 import {
   useGetMentorSettingsQuery,
   useGetRbacMentorAccessListQuery,
   useGetRbacPermissionsMutation,
   CustomRbacMentorAccessList,
-} from "@iblai/iblai-js/data-layer";
+} from '@iblai/iblai-js/data-layer';
 
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { useUsername } from "@/hooks/use-user";
-import { useNavigate } from "@/hooks/user-navigate";
-import { useAppDispatch } from "@/lib/hooks";
-import { updateRbacPermissions } from "@/features/rbac/rbac-slice";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useUsername } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { useAppDispatch } from '@/lib/hooks';
+import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -33,17 +33,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 
-import { AddAccessDialog } from "./add-access";
-import { RoleAccessPanel } from "./update-access";
+import { AddAccessDialog } from './add-access';
+import { RoleAccessPanel } from './update-access';
 import {
   DEFAULT_MENTOR_ROLES,
   formatRoleName,
   getErrorMessage,
   roleDescriptions,
   type MentorAccessPolicy,
-} from "./shared";
+} from './shared';
 
 export function AccessTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -55,10 +55,10 @@ export function AccessTab() {
   const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
     useGetMentorSettingsQuery(
       {
-        mentor: activeMentorId ?? "",
+        mentor: activeMentorId ?? '',
         org: tenantKey,
         // @ts-expect-error userId is not part of the query type definition
-        userId: username ?? "",
+        userId: username ?? '',
       },
       {
         skip: !activeMentorId || !tenantKey || !username,
@@ -82,8 +82,8 @@ export function AccessTab() {
   } = useGetRbacMentorAccessListQuery(
     {
       // @ts-expect-error The API expects a numeric mentorId, but the backend can return it as a string.
-      mentorId: mentorDbId ?? "",
-      platformKey: platformKey ?? "",
+      mentorId: mentorDbId ?? '',
+      platformKey: platformKey ?? '',
     },
     {
       skip: !mentorDbId || !platformKey,
@@ -167,7 +167,7 @@ export function AccessTab() {
       <div
         className="flex-1 space-y-4 overflow-y-auto px-4 py-4"
         style={{
-          overflowX: "hidden",
+          overflowX: 'hidden',
         }}
       >
         {canManageAccess && availableRoles.length > 0 && (
@@ -225,7 +225,7 @@ export function AccessTab() {
                 <p className="text-sm text-red-600">
                   {getErrorMessage(
                     accessError,
-                    "You may not have permission to manage access for this mentor.",
+                    'You may not have permission to manage access for this mentor.',
                   )}
                 </p>
                 <div>
@@ -304,7 +304,7 @@ export function AccessTab() {
                           </Badge>
                           <span className="sr-only">
                             {assignedCount === 1
-                              ? "1 user assigned to this role"
+                              ? '1 user assigned to this role'
                               : `${assignedCount} users assigned to this role`}
                           </span>
                         </TableCell>

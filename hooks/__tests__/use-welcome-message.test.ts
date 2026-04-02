@@ -347,7 +347,9 @@ describe('useWelcome', () => {
         },
       });
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       // Set readyState to OPEN so send will be attempted
       mockWebSocketInstance.readyState = WebSocket.OPEN;

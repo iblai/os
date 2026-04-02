@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, renderHook, act } from '@testing-library/react';
-import { AccessibilityProvider, useAccessibility } from '../accessibility-contexts';
+import {
+  AccessibilityProvider,
+  useAccessibility,
+} from '../accessibility-contexts';
 
 describe('AccessibilityProvider', () => {
   let localStorageMock: { [key: string]: string };
@@ -138,7 +141,9 @@ describe('AccessibilityProvider', () => {
       contrastMode: 'normal',
     });
 
-    expect(localStorage.removeItem).toHaveBeenCalledWith('accessibility-settings');
+    expect(localStorage.removeItem).toHaveBeenCalledWith(
+      'accessibility-settings',
+    );
   });
 
   it('manages toolbar open state', () => {

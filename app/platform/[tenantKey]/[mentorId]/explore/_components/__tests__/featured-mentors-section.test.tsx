@@ -3,14 +3,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { FeaturedMentorsSection } from '../featured-mentors-section';
-import { ExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  ExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Mock the data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
 }));
 
 /**
@@ -65,10 +69,14 @@ describe('FeaturedMentorsSection', () => {
     },
   ];
 
-  const renderWithContext = (contextOverrides: Partial<ExplorePageContextValue> = {}) => {
+  const renderWithContext = (
+    contextOverrides: Partial<ExplorePageContextValue> = {},
+  ) => {
     return render(
       <TooltipProvider>
-        <ExplorePageContext.Provider value={{ ...mockContextValue, ...contextOverrides }}>
+        <ExplorePageContext.Provider
+          value={{ ...mockContextValue, ...contextOverrides }}
+        >
           <FeaturedMentorsSection />
         </ExplorePageContext.Provider>
       </TooltipProvider>,
@@ -87,7 +95,9 @@ describe('FeaturedMentorsSection', () => {
     it('renders the Featured heading', () => {
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Featured$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Featured$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('renders mentor cards when featured mentors exist', () => {
@@ -118,7 +128,9 @@ describe('FeaturedMentorsSection', () => {
       // The component renders when fetching (even with empty results) because
       // it only returns null when not fetching AND results are empty
       renderWithContext();
-      expect(screen.getByRole('heading', { name: /^Featured$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Featured$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -244,7 +256,9 @@ describe('FeaturedMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more featured mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more featured mentors/i,
+      });
       await user.click(seeMoreButton);
 
       await waitFor(() => {
@@ -276,7 +290,9 @@ describe('FeaturedMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more featured mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more featured mentors/i,
+      });
       expect(seeMoreButton).toBeDisabled();
     });
   });
@@ -285,7 +301,9 @@ describe('FeaturedMentorsSection', () => {
     it('resets pagination when search changes', () => {
       const { rerender } = render(
         <TooltipProvider>
-          <ExplorePageContext.Provider value={{ ...mockContextValue, debouncedSearch: '' }}>
+          <ExplorePageContext.Provider
+            value={{ ...mockContextValue, debouncedSearch: '' }}
+          >
             <FeaturedMentorsSection />
           </ExplorePageContext.Provider>
         </TooltipProvider>,
@@ -314,7 +332,10 @@ describe('FeaturedMentorsSection', () => {
     it('has proper heading structure', () => {
       renderWithContext();
 
-      const heading = screen.getByRole('heading', { name: /^Featured$/i, level: 2 });
+      const heading = screen.getByRole('heading', {
+        name: /^Featured$/i,
+        level: 2,
+      });
       expect(heading).toHaveAttribute('aria-level', '2');
     });
   });

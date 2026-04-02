@@ -18,21 +18,30 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 
 const CreateProjectModal = dynamic(
-  () => import('@/components/projects/create-project-modal').then((mod) => mod.CreateProjectModal),
+  () =>
+    import('@/components/projects/create-project-modal').then(
+      (mod) => mod.CreateProjectModal,
+    ),
   {
     ssr: false,
   },
 );
 
 const RenameProjectModal = dynamic(
-  () => import('@/components/projects/rename-project-modal').then((mod) => mod.RenameProjectModal),
+  () =>
+    import('@/components/projects/rename-project-modal').then(
+      (mod) => mod.RenameProjectModal,
+    ),
   {
     ssr: false,
   },
 );
 
 const DeleteProjectModal = dynamic(
-  () => import('@/components/projects/delete-project-modal').then((mod) => mod.DeleteProjectModal),
+  () =>
+    import('@/components/projects/delete-project-modal').then(
+      (mod) => mod.DeleteProjectModal,
+    ),
   {
     ssr: false,
   },
@@ -41,7 +50,8 @@ const DeleteProjectModal = dynamic(
 export function ProjectsSidebarDropdown() {
   const { navigateToProject } = useNavigate();
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
-  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = React.useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
+    React.useState(false);
   const [renameModalData, setRenameModalData] = React.useState<{
     isOpen: boolean;
     projectId: string;
@@ -109,10 +119,12 @@ export function ProjectsSidebarDropdown() {
           <Button
             variant="ghost"
             className={cn(
-              'w-full gap-2 text-gray-700 hover:bg-[#c9d8f8] justify-start px-2 h-8',
+              'h-8 w-full justify-start gap-2 px-2 text-gray-700 hover:bg-[#c9d8f8]',
               false && 'bg-blue-50 text-blue-600',
             )}
-            onClick={() => executeWithTrialCheck(() => setIsCreateProjectModalOpen(true))}
+            onClick={() =>
+              executeWithTrialCheck(() => setIsCreateProjectModalOpen(true))
+            }
           >
             <div className="flex items-center gap-2.5">
               <Image
@@ -129,7 +141,9 @@ export function ProjectsSidebarDropdown() {
           <AuthPopover tenantKey={tenantKey}>
             <Button
               variant="ghost"
-              className={cn('w-full gap-2 text-gray-700 hover:bg-[#c9d8f8] justify-start px-2 h-8')}
+              className={cn(
+                'h-8 w-full justify-start gap-2 px-2 text-gray-700 hover:bg-[#c9d8f8]',
+              )}
             >
               <div className="flex items-center gap-2.5">
                 <Image
@@ -144,7 +158,7 @@ export function ProjectsSidebarDropdown() {
             </Button>
           </AuthPopover>
         )}
-        <div className="ml-4 border-l border-[#D0E0FF] space-y-1">
+        <div className="ml-4 space-y-1 border-l border-[#D0E0FF]">
           {projects.map((project) => (
             <div key={project.id}>
               <ProjectItem
@@ -152,26 +166,36 @@ export function ProjectsSidebarDropdown() {
                 isActive={projectId === String(project.id)}
                 onClick={() =>
                   executeWithTrialCheck(() =>
-                    handleSelectProject(String(project.id), project.mentors[0].unique_id),
+                    handleSelectProject(
+                      String(project.id),
+                      project.mentors[0].unique_id,
+                    ),
                   )
                 }
                 isOpen={projectId === String(project.id)}
                 onRename={(projectId, currentName) => {
-                  executeWithTrialCheck(() => handleRenameProject(projectId, currentName));
+                  executeWithTrialCheck(() =>
+                    handleRenameProject(projectId, currentName),
+                  );
                 }}
                 onDelete={(projectId, projectName) => {
-                  executeWithTrialCheck(() => handleDeleteProject(projectId, projectName));
+                  executeWithTrialCheck(() =>
+                    handleDeleteProject(projectId, projectName),
+                  );
                 }}
               />
               {projectId === String(project.id) && (
-                <div className="ml-4 space-y-1 mt-1">
+                <div className="mt-1 ml-4 space-y-1">
                   {project.mentors.map((mentor) => (
                     <ProjectChatItem
                       key={mentor.id}
                       title={mentor.name}
                       onClick={() =>
                         executeWithTrialCheck(() =>
-                          handleSelectProject(String(project.id), mentor.unique_id),
+                          handleSelectProject(
+                            String(project.id),
+                            mentor.unique_id,
+                          ),
                         )
                       }
                       isActive={mentor.unique_id === mentorId}

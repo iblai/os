@@ -1,14 +1,14 @@
-import { test, expect } from "../fixtures/mentor-test";
-import { navigateToMentorApp } from "../utils/auth";
-import { safeWaitForURL } from "../utils/navigation";
-import { MENTOR_NEXTJS_HOST } from "../fixtures/test-data";
+import { test, expect } from '../fixtures/mentor-test';
+import { navigateToMentorApp } from '../utils/auth';
+import { safeWaitForURL } from '../utils/navigation';
+import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 
-test.describe("Journey 15: Mentor Switching", () => {
+test.describe('Journey 15: Mentor Switching', () => {
   test.beforeEach(async ({ nonadminPage }) => {
     await navigateToMentorApp(nonadminPage);
   });
 
-  test("non-admin goes to explore page and switches to a different mentor by clicking a card", async ({
+  test('non-admin goes to explore page and switches to a different mentor by clicking a card', async ({
     nonadminPage,
     nonadminSidebarPage,
     nonadminExplorePage,
@@ -21,7 +21,7 @@ test.describe("Journey 15: Mentor Switching", () => {
     await nonadminExplorePage.clickFirstMentorCard();
     await safeWaitForURL(
       nonadminPage,
-      (url) => url.href !== initialUrl && url.href.includes("/platform/"),
+      (url) => url.href !== initialUrl && url.href.includes('/platform/'),
       { timeout: 15_000 },
     );
     expect(nonadminPage.url()).not.toBe(initialUrl);
@@ -29,17 +29,17 @@ test.describe("Journey 15: Mentor Switching", () => {
 
   // fixme: My Mentors modal not opening — navbar button locator change
   test.fixme(
-    "non-admin goes to My Mentors modal and switches to a different mentor and continues chatting",
+    'non-admin goes to My Mentors modal and switches to a different mentor and continues chatting',
     async (
       { nonadminPage, nonadminNavbarPage, nonadminChatPage },
       testInfo,
     ) => {
       test.skip(
-        testInfo.project.name.includes("safari"),
-        "Flaky on Safari — skipping",
+        testInfo.project.name.includes('safari'),
+        'Flaky on Safari — skipping',
       );
       await nonadminNavbarPage.openMyMentors();
-      const dialog = nonadminPage.getByRole("dialog");
+      const dialog = nonadminPage.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 10_000 });
       const mentorCards = dialog
         .locator('button, [class*="mentor"]')
@@ -49,13 +49,13 @@ test.describe("Journey 15: Mentor Switching", () => {
         await mentorCards.first().click();
         await safeWaitForURL(
           nonadminPage,
-          (url) => url.href.includes("/platform/"),
+          (url) => url.href.includes('/platform/'),
           { timeout: 30_000 },
         );
         await expect(nonadminChatPage.chatInput).toBeVisible({
           timeout: 15_000,
         });
-        await nonadminChatPage.sendMessage("Hello after switching mentors");
+        await nonadminChatPage.sendMessage('Hello after switching mentors');
         await nonadminChatPage.waitForAIResponse();
       }
     },
@@ -63,10 +63,10 @@ test.describe("Journey 15: Mentor Switching", () => {
 
   // fixme: My Mentors modal not opening — navbar button locator change
   test.fixme(
-    "non-admin goes to My Mentors modal and switches to a different mentor",
+    'non-admin goes to My Mentors modal and switches to a different mentor',
     async ({ nonadminPage, nonadminNavbarPage }) => {
       await nonadminNavbarPage.openMyMentors();
-      const dialog = nonadminPage.getByRole("dialog");
+      const dialog = nonadminPage.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 10_000 });
       const mentorCards = dialog
         .locator('button, [class*="mentor"]')
@@ -76,30 +76,30 @@ test.describe("Journey 15: Mentor Switching", () => {
         const firstMentorName = await mentorCards
           .first()
           .textContent()
-          .catch(() => "");
+          .catch(() => '');
         await mentorCards.first().click();
         await safeWaitForURL(
           nonadminPage,
-          (url) => url.href.includes("/platform/"),
+          (url) => url.href.includes('/platform/'),
           { timeout: 30_000 },
         );
-        expect(nonadminPage.url()).toContain("/platform/");
+        expect(nonadminPage.url()).toContain('/platform/');
       }
     },
   );
 
   // fixme: My Mentors modal not opening — navbar button locator change
   test.fixme(
-    "non-admin goes to My Mentors modal using the dedicated switch spec",
+    'non-admin goes to My Mentors modal using the dedicated switch spec',
     async ({ nonadminPage, nonadminNavbarPage }) => {
       await nonadminNavbarPage.openMyMentors();
-      const dialog = nonadminPage.getByRole("dialog");
+      const dialog = nonadminPage.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 10_000 });
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     },
   );
 
-  test("non-admin goes to explore page using the dedicated switch spec and selects a mentor", async ({
+  test('non-admin goes to explore page using the dedicated switch spec and selects a mentor', async ({
     nonadminPage,
     nonadminSidebarPage,
     nonadminExplorePage,
@@ -111,17 +111,17 @@ test.describe("Journey 15: Mentor Switching", () => {
     await nonadminExplorePage.clickFirstMentorCard();
     await safeWaitForURL(
       nonadminPage,
-      (url) => url.href.includes("/platform/"),
+      (url) => url.href.includes('/platform/'),
       { timeout: 15_000 },
     );
-    expect(nonadminPage.url()).toContain("/platform/");
+    expect(nonadminPage.url()).toContain('/platform/');
   });
 
-  test("non-admin goes to explore section on home page and switches mentor", async ({
+  test('non-admin goes to explore section on home page and switches mentor', async ({
     nonadminPage,
   }) => {
     // The home page may show an Explore Mentors section with cards
-    const exploreMentorsHeading = nonadminPage.getByRole("heading", {
+    const exploreMentorsHeading = nonadminPage.getByRole('heading', {
       name: /explore mentors/i,
     });
     const visible = await exploreMentorsHeading
@@ -135,10 +135,10 @@ test.describe("Journey 15: Mentor Switching", () => {
       await mentorCard.click();
       await safeWaitForURL(
         nonadminPage,
-        (url) => url.href.includes("/platform/"),
+        (url) => url.href.includes('/platform/'),
         { timeout: 15_000 },
       );
-      expect(nonadminPage.url()).toContain("/platform/");
+      expect(nonadminPage.url()).toContain('/platform/');
     }
   });
 });

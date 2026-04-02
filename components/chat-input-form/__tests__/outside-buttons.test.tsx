@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OutsideButtons } from '../outside-buttons';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
@@ -68,7 +74,9 @@ describe('OutsideButtons', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset the mock to return a basic function
-    (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
+    (
+      useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+    ).mockReturnValue([
       vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: null }),
       }),
@@ -113,7 +121,9 @@ describe('OutsideButtons', () => {
     });
 
     it('should render Google Docs button when googleDocumentIsEnabled is true', () => {
-      render(<OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />);
+      render(
+        <OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />,
+      );
       expect(screen.getByText('Google Docs')).toBeInTheDocument();
     });
 
@@ -155,7 +165,10 @@ describe('OutsideButtons', () => {
     it('should prevent default and stop propagation on button click', () => {
       render(<OutsideButtons {...defaultProps} />);
       const button = screen.getByText('Web Search').closest('button');
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
       const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
@@ -168,43 +181,62 @@ describe('OutsideButtons', () => {
 
   describe('active state styling', () => {
     it('should apply active styling when Web Search is active', () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />);
+      render(
+        <OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />,
+      );
       const button = screen.getByText('Web Search').closest('button');
       expect(button).toHaveClass('text-[#38A1E5]', 'bg-[#F5F8FF]');
     });
 
     it('should apply active styling when Code is active', () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.CODE_INTERPRETER]} />);
+      render(
+        <OutsideButtons
+          {...defaultProps}
+          activeOptions={[TOOLS.CODE_INTERPRETER]}
+        />,
+      );
       const button = screen.getByText('Code').closest('button');
       expect(button).toHaveClass('text-[#38A1E5]');
     });
 
     it('should show X icon when button is active', () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />);
+      render(
+        <OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />,
+      );
       const button = screen.getByText('Web Search').closest('button');
       const xIcon = button?.querySelector('.ml-1');
       expect(xIcon).toBeInTheDocument();
     });
 
     it('should call onCrossClick when X icon is clicked on active button', async () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />);
+      render(
+        <OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />,
+      );
       const button = screen.getByText('Web Search').closest('button');
       const xIcon = button?.querySelector('.ml-1') as SVGElement;
 
       expect(xIcon).toBeInTheDocument();
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       xIcon?.dispatchEvent(clickEvent);
 
       expect(mockOnCrossClick).toHaveBeenCalledWith(TOOLS.WEB_SEARCH);
     });
 
     it('should prevent default and stop propagation when X icon is clicked', () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />);
+      render(
+        <OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />,
+      );
       const button = screen.getByText('Web Search').closest('button');
       const xIcon = button?.querySelector('.ml-1') as SVGElement;
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
       const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
@@ -227,7 +259,10 @@ describe('OutsideButtons', () => {
     it('should have disabled styling when disabled', () => {
       render(<OutsideButtons {...defaultProps} disabled={true} />);
       const button = screen.getByText('Web Search').closest('button');
-      expect(button).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
+      expect(button).toHaveClass(
+        'disabled:opacity-50',
+        'disabled:cursor-not-allowed',
+      );
     });
   });
 
@@ -309,13 +344,19 @@ describe('OutsideButtons', () => {
       );
 
       // The More dropdown styling should reflect that something is selected
-      const moreButtonContainer = screen.getByTestId('more-icon').closest('button');
+      const moreButtonContainer = screen
+        .getByTestId('more-icon')
+        .closest('button');
       expect(moreButtonContainer).toBeInTheDocument();
     });
   });
 
   describe('Google OAuth authentication', () => {
-    let mockPopup: { location: { href: string }; closed: boolean; close: ReturnType<typeof vi.fn> };
+    let mockPopup: {
+      location: { href: string };
+      closed: boolean;
+      close: ReturnType<typeof vi.fn>;
+    };
     let originalOpen: typeof window.open;
 
     beforeEach(() => {
@@ -335,35 +376,49 @@ describe('OutsideButtons', () => {
     it('should open popup for Google Slides authentication', async () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () =>
-          Promise.resolve({ auth_url: 'https://accounts.google.com/oauth?client_id=123' }),
+          Promise.resolve({
+            auth_url: 'https://accounts.google.com/oauth?client_id=123',
+          }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
       const button = screen.getByText('Google Slides').closest('button');
       fireEvent.click(button!);
 
-      expect(window.open).toHaveBeenCalledWith('about:blank', '_blank', 'width=600,height=600');
+      expect(window.open).toHaveBeenCalledWith(
+        'about:blank',
+        '_blank',
+        'width=600,height=600',
+      );
     });
 
     it('should open popup for Google Docs authentication', async () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () =>
-          Promise.resolve({ auth_url: 'https://accounts.google.com/oauth?client_id=123' }),
+          Promise.resolve({
+            auth_url: 'https://accounts.google.com/oauth?client_id=123',
+          }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      render(<OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />);
+      render(
+        <OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />,
+      );
 
       const button = screen.getByText('Google Docs').closest('button');
       fireEvent.click(button!);
 
-      expect(window.open).toHaveBeenCalledWith('about:blank', '_blank', 'width=600,height=600');
+      expect(window.open).toHaveBeenCalledWith(
+        'about:blank',
+        '_blank',
+        'width=600,height=600',
+      );
     });
 
     it('should toggle off Google option when already active', async () => {
@@ -382,8 +437,12 @@ describe('OutsideButtons', () => {
     });
 
     it('should log error when toggling off active Google option fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const mockOnOptionClickWithError = vi.fn().mockRejectedValue(new Error('Toggle failed'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const mockOnOptionClickWithError = vi
+        .fn()
+        .mockRejectedValue(new Error('Toggle failed'));
 
       render(
         <OutsideButtons
@@ -427,9 +486,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -447,9 +506,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: null }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -460,7 +519,9 @@ describe('OutsideButtons', () => {
 
       await waitFor(() => {
         expect(mockPopup.close).toHaveBeenCalled();
-        expect(toast.error).toHaveBeenCalledWith('Failed to get authentication URL');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to get authentication URL',
+        );
       });
     });
 
@@ -468,12 +529,14 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.reject(new Error('API Error')),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       // Mock console.error to suppress expected error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -484,7 +547,9 @@ describe('OutsideButtons', () => {
 
       await waitFor(() => {
         expect(mockPopup.close).toHaveBeenCalled();
-        expect(toast.error).toHaveBeenCalledWith('Failed to initiate Google authentication');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to initiate Google authentication',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -499,9 +564,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => authPromise,
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -532,9 +597,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => authPromise,
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -545,7 +610,9 @@ describe('OutsideButtons', () => {
 
       // Other buttons should be disabled during auth
       await waitFor(() => {
-        const webSearchButton = screen.getByText('Web Search').closest('button');
+        const webSearchButton = screen
+          .getByText('Web Search')
+          .closest('button');
         expect(webSearchButton).toBeDisabled();
       });
 
@@ -560,12 +627,14 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       // Create a mock that returns a promise
-      const mockSetSessionToolsWithPromise = vi.fn().mockResolvedValue(undefined);
+      const mockSetSessionToolsWithPromise = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       render(
         <OutsideButtons
@@ -609,9 +678,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -644,9 +713,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -673,9 +742,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -715,9 +784,9 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
@@ -749,11 +818,13 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      const mockSetSessionToolsWithPromise = vi.fn().mockResolvedValue(undefined);
+      const mockSetSessionToolsWithPromise = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Active options already includes google-slides - it will be saved as savedTools
       render(
@@ -821,20 +892,29 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        // First filter call is for allButtons array - enable PowerPoint
-        if (filterCallCount === 1 && this.length === 6 && this[5]?.name === 'PowerPoint') {
-          return this; // Return all buttons including PowerPoint
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          // First filter call is for allButtons array - enable PowerPoint
+          if (
+            filterCallCount === 1 &&
+            this.length === 6 &&
+            this[5]?.name === 'PowerPoint'
+          ) {
+            return this; // Return all buttons including PowerPoint
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
 
@@ -861,12 +941,22 @@ describe('OutsideButtons', () => {
       render(
         <OutsideButtons
           {...defaultProps}
-          activeOptions={[TOOLS.WEB_SEARCH, TOOLS.CODE_INTERPRETER, TOOLS.IMAGE_GENERATION]}
+          activeOptions={[
+            TOOLS.WEB_SEARCH,
+            TOOLS.CODE_INTERPRETER,
+            TOOLS.IMAGE_GENERATION,
+          ]}
         />,
       );
-      expect(screen.getByText('Web Search').closest('button')).toHaveClass('text-[#38A1E5]');
-      expect(screen.getByText('Code').closest('button')).toHaveClass('text-[#38A1E5]');
-      expect(screen.getByText('Image').closest('button')).toHaveClass('text-[#38A1E5]');
+      expect(screen.getByText('Web Search').closest('button')).toHaveClass(
+        'text-[#38A1E5]',
+      );
+      expect(screen.getByText('Code').closest('button')).toHaveClass(
+        'text-[#38A1E5]',
+      );
+      expect(screen.getByText('Image').closest('button')).toHaveClass(
+        'text-[#38A1E5]',
+      );
     });
 
     it('should handle containerWidth of 0', () => {
@@ -971,7 +1061,9 @@ describe('OutsideButtons', () => {
         />,
       );
 
-      const moreButtonContainer = screen.getByTestId('more-icon').closest('button');
+      const moreButtonContainer = screen
+        .getByTestId('more-icon')
+        .closest('button');
       // More button should have active styling when it contains an active option
       expect(moreButtonContainer).toHaveClass('text-[#38A1E5]');
     });
@@ -999,7 +1091,11 @@ describe('OutsideButtons', () => {
   });
 
   describe('Google Docs OAuth authentication', () => {
-    let mockPopup: { location: { href: string }; closed: boolean; close: ReturnType<typeof vi.fn> };
+    let mockPopup: {
+      location: { href: string };
+      closed: boolean;
+      close: ReturnType<typeof vi.fn>;
+    };
     let originalOpen: typeof window.open;
 
     beforeEach(() => {
@@ -1018,13 +1114,16 @@ describe('OutsideButtons', () => {
 
     it('should initiate Google Docs auth with correct service name', async () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
-        unwrap: () => Promise.resolve({ auth_url: 'https://accounts.google.com/oauth' }),
+        unwrap: () =>
+          Promise.resolve({ auth_url: 'https://accounts.google.com/oauth' }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      render(<OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />);
+      render(
+        <OutsideButtons {...defaultProps} googleDocumentIsEnabled={true} />,
+      );
 
       const button = screen.getByText('Google Docs').closest('button');
       await act(async () => {
@@ -1045,11 +1144,13 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      const mockSetSessionToolsWithPromise = vi.fn().mockResolvedValue(undefined);
+      const mockSetSessionToolsWithPromise = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       render(
         <OutsideButtons
@@ -1071,8 +1172,12 @@ describe('OutsideButtons', () => {
 
       // Verify redirect_uri and tool_name are set
       const popupUrl = new URL(mockPopup.location.href);
-      expect(popupUrl.searchParams.get('tool_name')).toBe(TOOLS.GOOGLE_DOCUMENT);
-      expect(popupUrl.searchParams.get('redirect_uri')).toContain('/google-oauth-callback/');
+      expect(popupUrl.searchParams.get('tool_name')).toBe(
+        TOOLS.GOOGLE_DOCUMENT,
+      );
+      expect(popupUrl.searchParams.get('redirect_uri')).toContain(
+        '/google-oauth-callback/',
+      );
 
       // Simulate auth success
       await act(async () => {
@@ -1099,11 +1204,13 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      const mockSetSessionToolsWithPromise = vi.fn().mockResolvedValue(undefined);
+      const mockSetSessionToolsWithPromise = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Google Docs is already in activeOptions (saved tools)
       render(
@@ -1132,7 +1239,10 @@ describe('OutsideButtons', () => {
 
       render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function),
+      );
 
       addEventListenerSpy.mockRestore();
     });
@@ -1140,18 +1250,27 @@ describe('OutsideButtons', () => {
     it('should remove event listener on unmount', () => {
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
-      const { unmount } = render(<OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />);
+      const { unmount } = render(
+        <OutsideButtons {...defaultProps} googleSlidesIsEnabled={true} />,
+      );
 
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function),
+      );
 
       removeEventListenerSpy.mockRestore();
     });
   });
 
   describe('setSessionTools error handling', () => {
-    let mockPopup: { location: { href: string }; closed: boolean; close: ReturnType<typeof vi.fn> };
+    let mockPopup: {
+      location: { href: string };
+      closed: boolean;
+      close: ReturnType<typeof vi.fn>;
+    };
     let originalOpen: typeof window.open;
 
     beforeEach(() => {
@@ -1173,12 +1292,16 @@ describe('OutsideButtons', () => {
       const mockGetAuthUrl = vi.fn().mockReturnValue({
         unwrap: () => Promise.resolve({ auth_url: authUrl }),
       });
-      (useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>).mockReturnValue([
-        mockGetAuthUrl,
-      ]);
+      (
+        useLazyGetConnectedServiceAuthUrlQuery as ReturnType<typeof vi.fn>
+      ).mockReturnValue([mockGetAuthUrl]);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const mockSetSessionToolsWithError = vi.fn().mockRejectedValue(new Error('Session error'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const mockSetSessionToolsWithError = vi
+        .fn()
+        .mockRejectedValue(new Error('Session error'));
 
       render(
         <OutsideButtons
@@ -1253,14 +1376,19 @@ describe('OutsideButtons', () => {
 
   describe('X button on active buttons', () => {
     it('should call onCrossClick when button has slug', () => {
-      render(<OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />);
+      render(
+        <OutsideButtons {...defaultProps} activeOptions={[TOOLS.WEB_SEARCH]} />,
+      );
 
       const button = screen.getByText('Web Search').closest('button');
       const xIcon = button?.querySelector('.ml-1') as SVGElement;
 
       expect(xIcon).toBeInTheDocument();
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       xIcon?.dispatchEvent(clickEvent);
 
       expect(mockOnCrossClick).toHaveBeenCalledWith(TOOLS.WEB_SEARCH);
@@ -1293,21 +1421,30 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        // Bypass filter for the moreMenuItems array (typically the second filter call in the component)
-        // Return all items regardless of isEnabled for testing
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this; // Return unfiltered moreMenuItems
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          // Bypass filter for the moreMenuItems array (typically the second filter call in the component)
+          // Return all items regardless of isEnabled for testing
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this; // Return unfiltered moreMenuItems
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={200} />);
@@ -1328,22 +1465,35 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       render(
-        <OutsideButtons {...defaultProps} containerWidth={1200} activeOptions={[TOOLS.QUIZ]} />,
+        <OutsideButtons
+          {...defaultProps}
+          containerWidth={1200}
+          activeOptions={[TOOLS.QUIZ]}
+        />,
       );
 
       // The More button should show Quiz option since it's active and in moreMenuItems
@@ -1358,19 +1508,28 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
@@ -1396,19 +1555,28 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
@@ -1420,7 +1588,9 @@ describe('OutsideButtons', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument();
       });
 
-      const rubricItem = screen.getByText('Rubric').closest('[role="menuitem"]');
+      const rubricItem = screen
+        .getByText('Rubric')
+        .closest('[role="menuitem"]');
       if (rubricItem) {
         await user.click(rubricItem);
         expect(mockOnOptionClick).toHaveBeenCalledWith(TOOLS.RUBRIC);
@@ -1433,19 +1603,28 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
@@ -1457,7 +1636,9 @@ describe('OutsideButtons', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument();
       });
 
-      const resourceItem = screen.getByText('Resource').closest('[role="menuitem"]');
+      const resourceItem = screen
+        .getByText('Resource')
+        .closest('[role="menuitem"]');
       if (resourceItem) {
         await user.click(resourceItem);
         expect(mockOnOptionClick).toHaveBeenCalledWith(TOOLS.RESOURCE);
@@ -1470,19 +1651,28 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
@@ -1494,7 +1684,9 @@ describe('OutsideButtons', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument();
       });
 
-      const lessonPlanItem = screen.getByText('Lesson Plan').closest('[role="menuitem"]');
+      const lessonPlanItem = screen
+        .getByText('Lesson Plan')
+        .closest('[role="menuitem"]');
       if (lessonPlanItem) {
         await user.click(lessonPlanItem);
         expect(mockOnOptionClick).toHaveBeenCalledWith(TOOLS.LESSON_PLAN);
@@ -1507,19 +1699,28 @@ describe('OutsideButtons', () => {
       const originalFilter = Array.prototype.filter;
       let filterCallCount = 0;
 
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        filterCallCount++;
-        if (filterCallCount === 2 && this.length === 5 && this[0]?.name === 'Quiz') {
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
+      const filterSpy = vi
+        .spyOn(Array.prototype, 'filter')
+        .mockImplementation(function (
+          this: any[],
+          ...args: Parameters<typeof Array.prototype.filter>
+        ) {
+          filterCallCount++;
+          if (
+            filterCallCount === 2 &&
+            this.length === 5 &&
+            this[0]?.name === 'Quiz'
+          ) {
+            return this;
+          }
+          return originalFilter.apply(
+            this,
+            args as [
+              predicate: (value: any, index: number, array: any[]) => unknown,
+              thisArg?: any,
+            ],
+          );
+        });
 
       const user = userEvent.setup();
       render(<OutsideButtons {...defaultProps} containerWidth={1200} />);
@@ -1531,7 +1732,9 @@ describe('OutsideButtons', () => {
         expect(screen.getByRole('menu')).toBeInTheDocument();
       });
 
-      const syllabusItem = screen.getByText('Syllabus').closest('[role="menuitem"]');
+      const syllabusItem = screen
+        .getByText('Syllabus')
+        .closest('[role="menuitem"]');
       if (syllabusItem) {
         await user.click(syllabusItem);
         expect(mockOnOptionClick).toHaveBeenCalledWith(TOOLS.SYLLABUS);

@@ -20,11 +20,16 @@ export function useUserData() {
   const validationResult = userDataSchema.safeParse(data);
   if (!validationResult.success) {
     // SSR check: localStorage is not available on the server or edge runtime
-    if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') {
+    if (
+      typeof window === 'undefined' ||
+      typeof localStorage?.getItem !== 'function'
+    ) {
       return null;
     }
     try {
-      return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.USER_DATA) || '');
+      return JSON.parse(
+        localStorage.getItem(LOCAL_STORAGE_KEYS.USER_DATA) || '',
+      );
     } catch (error) {
       return null;
     }
@@ -45,13 +50,11 @@ export function useDmToken() {
 }
 
 export function useDmTokenExpires() {
-  const [dmTokenExpires, saveDmTokenExpires] = useLocalStorage<string | undefined>(
-    LOCAL_STORAGE_KEYS.DM_TOKEN_EXPIRY,
-    undefined,
-    {
-      serializer: (value: string | undefined) => value as string,
-    },
-  );
+  const [dmTokenExpires, saveDmTokenExpires] = useLocalStorage<
+    string | undefined
+  >(LOCAL_STORAGE_KEYS.DM_TOKEN_EXPIRY, undefined, {
+    serializer: (value: string | undefined) => value as string,
+  });
   return { dmTokenExpires, saveDmTokenExpires };
 }
 
@@ -67,13 +70,11 @@ export function useAxdToken() {
 }
 
 export function useAxdTokenExpires() {
-  const [axdTokenExpires, saveAxdTokenExpires] = useLocalStorage<string | undefined>(
-    LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
-    undefined,
-    {
-      serializer: (value: string | undefined) => value as string,
-    },
-  );
+  const [axdTokenExpires, saveAxdTokenExpires] = useLocalStorage<
+    string | undefined
+  >(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY, undefined, {
+    serializer: (value: string | undefined) => value as string,
+  });
   return { axdTokenExpires, saveAxdTokenExpires };
 }
 
@@ -88,20 +89,28 @@ export function useUsername() {
 }
 
 export function useCurrentTenant() {
-  const [data, setValue] = useLocalStorage<Tenant | null>(LOCAL_STORAGE_KEYS.CURRENT_TENANT, null);
+  const [data, setValue] = useLocalStorage<Tenant | null>(
+    LOCAL_STORAGE_KEYS.CURRENT_TENANT,
+    null,
+  );
 
   return { currentTenant: data, saveCurrentTenant: setValue };
 }
 
 export function useVisitingTenant() {
-  const [visitingTenant, saveVisitingTenant, removeVisitingTenant] = useLocalStorage<
-    Tenant | undefined
-  >(LOCAL_STORAGE_KEYS.VISITING_TENANT, undefined);
+  const [visitingTenant, saveVisitingTenant, removeVisitingTenant] =
+    useLocalStorage<Tenant | undefined>(
+      LOCAL_STORAGE_KEYS.VISITING_TENANT,
+      undefined,
+    );
   return { visitingTenant, saveVisitingTenant, removeVisitingTenant };
 }
 
 export function useUserTenants() {
-  const [data, setValue] = useLocalStorage<Tenant[]>(LOCAL_STORAGE_KEYS.USER_TENANTS, []);
+  const [data, setValue] = useLocalStorage<Tenant[]>(
+    LOCAL_STORAGE_KEYS.USER_TENANTS,
+    [],
+  );
 
   return { userTenants: data, saveUserTenants: setValue };
 }
@@ -141,7 +150,11 @@ export function useUserIsOnTrial() {
   const { currentTenant } = useCurrentTenant();
   const { userTenants } = useUserTenants();
 
-  if (currentTenant && isStripeActivated(currentTenant as Tenant) && userTenants.length === 1) {
+  if (
+    currentTenant &&
+    isStripeActivated(currentTenant as Tenant) &&
+    userTenants.length === 1
+  ) {
     return currentTenant?.key === 'main' && currentTenant?.is_admin === false;
   }
 
@@ -171,10 +184,14 @@ export function useLearnerMode() {
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const userIsAdmin = useIsAdmin();
-  const isInstructorMode = useAppSelector((state: RootState) => state.user.isInstructorMode);
+  const isInstructorMode = useAppSelector(
+    (state: RootState) => state.user.isInstructorMode,
+  );
 
   const isAdminPage = () => {
-    return Object.values(ADMIN_PAGES_SUBPATHS).some((subpath) => pathname.includes(subpath));
+    return Object.values(ADMIN_PAGES_SUBPATHS).some((subpath) =>
+      pathname.includes(subpath),
+    );
   };
 
   function toggleLearnerMode() {
@@ -182,7 +199,8 @@ export function useLearnerMode() {
       if (isInstructorMode && isAdminPage()) {
         dispatch(
           initCustomAlertDialog({
-            message: 'Switching to learner mode will redirect you to the chat page.',
+            message:
+              'Switching to learner mode will redirect you to the chat page.',
             validateTrigger: 'SWITCH_TO_LEARNER',
             cancelTrigger: '',
             title: 'Are you sure?',

@@ -8,10 +8,10 @@ import { config } from '@/lib/config';
 
 export function AppSyncBanner() {
   return (
-    <div className="w-full max-w-md mx-auto mb-8">
-      <div className="bg-[#F5F8FF] border border-[#D0E0FF] rounded-lg p-2 flex items-center justify-between">
+    <div className="mx-auto mb-8 w-full max-w-md">
+      <div className="flex items-center justify-between rounded-lg border border-[#D0E0FF] bg-[#F5F8FF] p-2">
         <div className="flex items-center gap-2">
-          <span className="bg-[#D0E0FF] text-[#666768] text-xs font-medium px-2 py-0.5 rounded-md">
+          <span className="rounded-md bg-[#D0E0FF] px-2 py-0.5 text-xs font-medium text-[#666768]">
             {config.appBannerBadge()}
           </span>
           <span className="text-sm font-medium text-gray-900">
@@ -25,12 +25,12 @@ export function AppSyncBanner() {
             buttonVariants({
               variant: 'ghost',
               size: 'sm',
-              className: 'text-blue-600 hover:text-blue-700 text-sm p-1 h-auto',
-            })
+              className: 'h-auto p-1 text-sm text-blue-600 hover:text-blue-700',
+            }),
           )}
         >
           {config.appBannerLinkText()}
-          <ExternalLink className="h-3 w-3 ml-1" />
+          <ExternalLink className="ml-1 h-3 w-3" />
         </Link>
       </div>
     </div>

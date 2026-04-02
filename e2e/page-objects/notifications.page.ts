@@ -1,7 +1,7 @@
-import { Page, Locator, expect } from "@playwright/test";
-import { safeWaitForURL } from "../utils/navigation";
+import { Page, Locator, expect } from '@playwright/test';
+import { safeWaitForURL } from '../utils/navigation';
 
-const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || "";
+const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
 
 export class NotificationsPage {
   readonly page: Page;
@@ -17,25 +17,25 @@ export class NotificationsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.bell = page.getByRole("button", { name: /notification/i });
+    this.bell = page.getByRole('button', { name: /notification/i });
     this.inboxTab = page
-      .getByTestId("notification-inbox-tab")
-      .or(page.getByRole("tab", { name: /inbox/i }));
+      .getByTestId('notification-inbox-tab')
+      .or(page.getByRole('tab', { name: /inbox/i }));
     this.alertsTab = page
-      .getByTestId("notification-alerts-tab")
-      .or(page.getByRole("tab", { name: /alerts/i }));
-    this.inboxContent = page.getByTestId("inbox-tab-content");
-    this.alertsContent = page.getByTestId("alerts-tab-content");
-    this.markAllReadButton = page.getByRole("button", {
+      .getByTestId('notification-alerts-tab')
+      .or(page.getByRole('tab', { name: /alerts/i }));
+    this.inboxContent = page.getByTestId('inbox-tab-content');
+    this.alertsContent = page.getByTestId('alerts-tab-content');
+    this.markAllReadButton = page.getByRole('button', {
       name: /mark all.*read/i,
     });
-    this.createButton = page.getByRole("button", { name: /create/i }).first();
-    this.emptyInbox = page.getByTestId("notifications-empty");
+    this.createButton = page.getByRole('button', { name: /create/i }).first();
+    this.emptyInbox = page.getByTestId('notifications-empty');
   }
 
   async goto(): Promise<void> {
-    const notifBtn = this.page.getByRole("button", {
-      name: "Notifications",
+    const notifBtn = this.page.getByRole('button', {
+      name: 'Notifications',
       exact: true,
     });
     await expect(notifBtn).toBeVisible({ timeout: 10_000 });
@@ -49,8 +49,8 @@ export class NotificationsPage {
 
   async isAlertsTabActive(): Promise<boolean> {
     return (
-      (await this.alertsTab.getAttribute("data-state").catch(() => null)) ===
-      "active"
+      (await this.alertsTab.getAttribute('data-state').catch(() => null)) ===
+      'active'
     );
   }
 

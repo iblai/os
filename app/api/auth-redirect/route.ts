@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const target = searchParams.get("to");
+  const target = searchParams.get('to');
 
-  if (!target?.startsWith("http://") && !target?.startsWith("https://")) {
+  if (!target?.startsWith('http://') && !target?.startsWith('https://')) {
     return NextResponse.json(
-      { error: "Invalid redirect URL" },
-      { status: 400 }
+      { error: 'Invalid redirect URL' },
+      { status: 400 },
     );
   }
 
