@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import Image from "next/image";
-import { useParams, usePathname } from "next/navigation";
+import React from 'react';
+import Image from 'next/image';
+import { useParams, usePathname } from 'next/navigation';
 
 import {
   PenSquare,
@@ -14,6 +14,7 @@ import {
   Shield,
   Network,
   Clock,
+  ScrollText,
   Grid,
   Key,
   MonitorSmartphone,
@@ -22,107 +23,113 @@ import {
   Plus,
   Users,
   Menu,
-} from "lucide-react";
-import { useMediaQuery } from "react-responsive";
+} from 'lucide-react';
+import { useMediaQuery } from 'react-responsive';
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { SettingsModal } from "@/components/modals/settings-modal";
-import { LLMProviderSelectionModal } from "@/components/modals/llm-provider-selection-modal";
-import { MentorListModal } from "@/components/modals/mentor-list-modal";
-import { Switch } from "@/components/ui/switch";
-import { EditMentorModal } from "@/components/modals/edit-mentor-modal";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HelpModal } from "@/components/modals/help-modal";
-import { CreateMentorModal } from "@/components/modals/create-mentor-modal";
-import { UserProfileModal } from "@iblai/iblai-js/web-containers/next";
-import { MyMentorsModal } from "@/components/modals/my-mentors-modal";
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { SettingsModal } from '@/components/modals/settings-modal';
+import { LLMProviderSelectionModal } from '@/components/modals/llm-provider-selection-modal';
+import { MentorListModal } from '@/components/modals/mentor-list-modal';
+import { Switch } from '@/components/ui/switch';
+import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { HelpModal } from '@/components/modals/help-modal';
+import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
+import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
+import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { useNavigate } from "@/hooks/user-navigate";
-import { useGetMentorPublicSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useIsAdmin, useUsername } from "@/hooks/use-user";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { ANONYMOUS_USERNAME, MODALS } from "@/lib/constants";
+} from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { useNavigate } from '@/hooks/user-navigate';
+import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { useIsAdmin, useUsername } from '@/hooks/use-user';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { ANONYMOUS_USERNAME, MODALS } from '@/lib/constants';
 
-import { ProfileButton } from "./header/profile-button";
-import { cn } from "@/lib/utils";
-import { config } from "@/lib/config";
-import { useModelDownload } from "@/hooks/use-model-download";
+import { ProfileButton } from './header/profile-button';
+import { cn } from '@/lib/utils';
+import { config } from '@/lib/config';
+import { useModelDownload } from '@/hooks/use-model-download';
 
 const menuItems = [
-  { icon: PenSquare, label: "New chat", isAdmin: false },
+  { icon: PenSquare, label: 'New chat', isAdmin: false },
   {
     icon: Settings,
-    label: "Settings",
+    label: 'Settings',
     tab: MODALS.EDIT_MENTOR.tabs.settings,
     isAdmin: true,
   },
   {
     icon: Brain,
-    label: "LLM",
+    label: 'LLM',
     tab: MODALS.EDIT_MENTOR.tabs.llm,
     isAdmin: true,
   },
   {
     icon: Terminal,
-    label: "Prompts",
+    label: 'Prompts',
     tab: MODALS.EDIT_MENTOR.tabs.prompts,
     isAdmin: true,
   },
   {
     icon: Wrench,
-    label: "Tools",
+    label: 'Tools',
     tab: MODALS.EDIT_MENTOR.tabs.tools,
     isAdmin: true,
   },
   {
     icon: Plug,
-    label: "MCP",
+    label: 'MCP',
     tab: MODALS.EDIT_MENTOR.tabs.mcp,
     isAdmin: true,
   },
   {
     icon: Shield,
-    label: "Safety",
+    label: 'Safety',
     tab: MODALS.EDIT_MENTOR.tabs.safety,
     isAdmin: true,
   },
   {
     icon: Network,
-    label: "Flow",
+    label: 'Flow',
     tab: MODALS.EDIT_MENTOR.tabs.flow,
     isAdmin: true,
   },
   {
     icon: Clock,
-    label: "History",
+    label: 'History',
     tab: MODALS.EDIT_MENTOR.tabs.history,
     isAdmin: true,
   },
   {
+    icon: ScrollText,
+    label: 'Audit',
+    tab: MODALS.EDIT_MENTOR.tabs.audit_log,
+    isAdmin: true,
+  },
+  {
     icon: Grid,
-    label: "Datasets",
+    label: 'Datasets',
     tab: MODALS.EDIT_MENTOR.tabs.datasets,
     isAdmin: true,
   },
-  { icon: Key, label: "API", tab: MODALS.EDIT_MENTOR.tabs.api, isAdmin: true },
+  { icon: Key, label: 'API', tab: MODALS.EDIT_MENTOR.tabs.api, isAdmin: true },
   {
     icon: MonitorSmartphone,
-    label: "Embed",
+    label: 'Embed',
     tab: MODALS.EDIT_MENTOR.tabs.embed,
     isAdmin: true,
   },
-  { icon: LineChart, label: "Analytics", isAdmin: true },
+  { icon: LineChart, label: 'Analytics', isAdmin: true },
 ];
 
 // Define the ProfileButton component
@@ -193,22 +200,22 @@ export function Header({
     onSelectFoundryModel,
   } = useModelDownload();
 
-  const selectedMentorName = mentorPublicSettings?.mentor || "";
-  const selectedMentorCategory = mentorPublicSettings?.llm_name || "";
+  const selectedMentorName = mentorPublicSettings?.mentor || '';
+  const selectedMentorCategory = mentorPublicSettings?.llm_name || '';
 
   const isMobile = useMediaQuery({ maxWidth: 767 });
   const isTablet = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
 
   const pathname = usePathname();
   const isPromptGalleryOrAnalytics =
-    pathname.includes("/prompt-gallery") || pathname.includes("/analytics");
+    pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
   const isOnChatPage =
-    !pathname.includes("/prompt-gallery") &&
-    !pathname.includes("/analytics") &&
-    !pathname.includes("/explore");
+    !pathname.includes('/prompt-gallery') &&
+    !pathname.includes('/analytics') &&
+    !pathname.includes('/explore');
 
   const handleMentorSelect = /* istanbul ignore next */ (mentor: unknown) => {
-    console.log("Selected mentor:", mentor);
+    console.log('Selected mentor:', mentor);
     setIsMentorListOpen(false);
   };
 
@@ -230,7 +237,7 @@ export function Header({
                   size="icon"
                   className="ml-4"
                   onClick={toggleDrawer}
-                  aria-label={isDrawerOpen ? "Close sidebar" : "Open sidebar"}
+                  aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -253,7 +260,7 @@ export function Header({
                     >
                       <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
                         <Image
-                          src={"/placeholder.svg"}
+                          src={'/placeholder.svg'}
                           alt="LLM model icon"
                           className="h-5 w-5 object-contain"
                           height={32}
@@ -273,7 +280,7 @@ export function Header({
               </TooltipProvider>
             )}
 
-            {!pathname.includes("/explore") && (
+            {!pathname.includes('/explore') && (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]">
                   <Avatar className="h-5 w-5">
@@ -420,7 +427,7 @@ export function Header({
                   size="icon"
                   className="ml-4"
                   onClick={toggleDrawer}
-                  aria-label={isDrawerOpen ? "Close sidebar" : "Open sidebar"}
+                  aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -433,7 +440,7 @@ export function Header({
         </TooltipProvider>
 
         <div
-          className={`flex items-center space-x-6 ${isMobileOrTablet ? "pl-2" : "pl-4"} ${!isOnChatPage || !isInstructor ? "" : ""}`}
+          className={`flex items-center space-x-6 ${isMobileOrTablet ? 'pl-2' : 'pl-4'} ${!isOnChatPage || !isInstructor ? '' : ''}`}
         >
           {isOnChatPage && isInstructor && (
             <TooltipProvider>
@@ -448,7 +455,7 @@ export function Header({
                   >
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
                       <Image
-                        src={"/placeholder.svg"}
+                        src={'/placeholder.svg'}
                         alt="LLM model icon"
                         className="h-5 w-5 object-contain"
                         height={32}
@@ -464,13 +471,13 @@ export function Header({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? "Select LLM model" : selectedMentorName}
+                  {isAdmin ? 'Select LLM model' : selectedMentorName}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
 
-          {!pathname.includes("/explore") &&
+          {!pathname.includes('/explore') &&
             (isPromptGalleryOrAnalytics ? (
               <TooltipProvider>
                 <Tooltip>
@@ -523,7 +530,7 @@ export function Header({
                       <DropdownMenuItem
                         key={index}
                         className={cn(
-                          "flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100",
+                          'flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
                         )}
                         onClick={() => {
                           if (item.tab) {
@@ -585,7 +592,7 @@ export function Header({
         {isAdmin && (
           <div className="hidden items-center gap-2 md:flex">
             <span
-              className={`text-sm ${isInstructor ? "text-gray-500" : "font-semibold"}`}
+              className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
             >
               Learner
             </span>
@@ -595,7 +602,7 @@ export function Header({
               className="data-[state=checked]:bg-blue-500"
             />
             <span
-              className={`text-sm ${isInstructor ? "font-semibold" : "text-gray-500"}`}
+              className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
             >
               Instructor
             </span>

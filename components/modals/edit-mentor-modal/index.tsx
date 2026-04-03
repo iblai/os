@@ -21,6 +21,7 @@ import {
   ApiTab,
   EmbedTab,
   AccessTab,
+  AuditLogTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS, UserType } from '@/lib/constants';
@@ -44,6 +45,7 @@ import {
   FileWarning,
   UserCog,
   Archive,
+  ScrollText,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
@@ -227,6 +229,15 @@ const editMentorTabs = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    label: 'Audit',
+    value: MODALS.EDIT_MENTOR.tabs.audit_log,
+    component: <AuditLogTab />,
+    icon: ScrollText,
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },
   {
     label: 'Datasets',

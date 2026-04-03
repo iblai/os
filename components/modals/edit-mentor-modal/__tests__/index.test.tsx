@@ -1,21 +1,21 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { configureStore } from "@reduxjs/toolkit";
-import { MentorVisibilityEnum } from "@iblai/iblai-api";
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
-import { EditMentorModal } from "../index";
-import { modalReducer, type ModalInfo } from "@/features/navigation/slice";
-import { mentorApiSlice } from "@iblai/iblai-js/data-layer";
-import rbacReducer from "@/features/rbac/rbac-slice";
-import { MODALS, UserType } from "@/lib/constants";
+import { EditMentorModal } from '../index';
+import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
+import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import rbacReducer from '@/features/rbac/rbac-slice';
+import { MODALS, UserType } from '@/lib/constants';
 
 // ============================================================================
 // GLOBAL MOCKS
 // ============================================================================
 
-global.URL.createObjectURL = vi.fn(() => "blob:mock-url");
+global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
 global.URL.revokeObjectURL = vi.fn();
 
 // ============================================================================
@@ -23,13 +23,13 @@ global.URL.revokeObjectURL = vi.fn();
 // ============================================================================
 
 const pushMock = vi.fn();
-let mockSearchParamsRaw = "";
+let mockSearchParamsRaw = '';
 let mockIsAdmin = true;
 let mockMentorSettings: any = {
-  mentor: "Test Mentor",
+  mentor: 'Test Mentor',
   mentor_id: 123,
-  mentor_unique_id: "mentor456",
-  platform_key: "tenant123",
+  mentor_unique_id: 'mentor456',
+  platform_key: 'tenant123',
   mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
   permissions: {
     field: {
@@ -61,21 +61,21 @@ let mockMentorSettings: any = {
   },
 };
 
-vi.mock("next/navigation", () => ({
+vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: pushMock,
   }),
-  usePathname: () => "/platform/tenant123/mentor456",
-  useParams: () => ({ tenantKey: "tenant123", mentorId: "mentor456" }),
+  usePathname: () => '/platform/tenant123/mentor456',
+  useParams: () => ({ tenantKey: 'tenant123', mentorId: 'mentor456' }),
   useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
 }));
 
-vi.mock("@/hooks/use-user", () => ({
+vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: () => mockIsAdmin,
-  useUsername: () => "testuser",
+  useUsername: () => 'testuser',
 }));
 
-vi.mock("@/hooks/use-user-type", () => ({
+vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       item.userTypes.includes(UserType.ADMIN) ||
@@ -83,17 +83,17 @@ vi.mock("@/hooks/use-user-type", () => ({
   }),
 }));
 
-vi.mock("@/hooks/user-navigate", () => ({
+vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     changeModalTab: vi.fn(),
     getEditMentorTab: () => MODALS.EDIT_MENTOR.tabs.settings,
-    getMentorId: () => "mentor456",
+    getMentorId: () => 'mentor456',
   }),
 }));
 
-vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
+vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@iblai/iblai-js/data-layer")>();
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
@@ -107,52 +107,52 @@ vi.mock("@iblai/iblai-js/data-layer", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/config", () => ({
+vi.mock('@/lib/config', () => ({
   config: {
-    mainTenantKey: () => "main",
-    iblTemplateMentor: () => "ai-mentor",
-    environment: () => "test",
-    authUrl: () => "https://auth.example.com",
-    lmsUrl: () => "https://learn.example.com",
-    dmUrl: () => "https://dm.example.com",
-    axdUrl: () => "https://axd.example.com",
-    mentorUrl: () => "https://mentor.example.com",
-    mentorIframeUrl: () => "https://mentor.example.com",
-    externalPricingPageUrl: () => "https://pricing.example.com",
-    stripeEnabled: () => "true",
-    baseWsUrl: () => "wss://ws.example.com",
-    liveKitServerUrl: () => "wss://livekit.example.com",
-    mentorSettingsDisclaimer: () => "",
-    iframeFromOldMentor: () => "false",
+    mainTenantKey: () => 'main',
+    iblTemplateMentor: () => 'ai-mentor',
+    environment: () => 'test',
+    authUrl: () => 'https://auth.example.com',
+    lmsUrl: () => 'https://learn.example.com',
+    dmUrl: () => 'https://dm.example.com',
+    axdUrl: () => 'https://axd.example.com',
+    mentorUrl: () => 'https://mentor.example.com',
+    mentorIframeUrl: () => 'https://mentor.example.com',
+    externalPricingPageUrl: () => 'https://pricing.example.com',
+    stripeEnabled: () => 'true',
+    baseWsUrl: () => 'wss://ws.example.com',
+    liveKitServerUrl: () => 'wss://livekit.example.com',
+    mentorSettingsDisclaimer: () => '',
+    iframeFromOldMentor: () => 'false',
     enableRBAC: () => false,
-    sentryDsn: () => "",
-    helpCenterUrl: () => "https://help.example.com",
-    supportEmail: () => "support@example.com",
-    enableGravatarOnProfilePic: () => "false",
-    defaultEmbedCssUrl: () => "",
-    appBannerLink: () => "",
-    appBannerLinkText: () => "",
-    appBannerBadge: () => "",
-    appBannerText: () => "",
-    showAppBanner: () => "false",
-    mentorTrainingMaximumFileSize: () => "60",
-    hideAnalytics: () => "false",
+    sentryDsn: () => '',
+    helpCenterUrl: () => 'https://help.example.com',
+    supportEmail: () => 'support@example.com',
+    enableGravatarOnProfilePic: () => 'false',
+    defaultEmbedCssUrl: () => '',
+    appBannerLink: () => '',
+    appBannerLinkText: () => '',
+    appBannerBadge: () => '',
+    appBannerText: () => '',
+    showAppBanner: () => 'false',
+    mentorTrainingMaximumFileSize: () => '60',
+    hideAnalytics: () => 'false',
     showBaseMentor: () => false,
-    disabedDatasets: () => "",
+    disabedDatasets: () => '',
     advertisingEnabled: () => false,
-    disabledAnalyticsReports: () => "",
-    platformBaseDomain: () => "example.com",
-    iblPlatform: () => "mentor",
-    iblEnableSpecialLogoWhenIframed: () => "false",
+    disabledAnalyticsReports: () => '',
+    platformBaseDomain: () => 'example.com',
+    iblPlatform: () => 'mentor',
+    iblEnableSpecialLogoWhenIframed: () => 'false',
   },
 }));
 
-vi.mock("@sentry/nextjs", () => ({
+vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
 }));
 
 // Mock all tab components
-vi.mock("../tabs", () => ({
+vi.mock('../tabs', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
@@ -164,13 +164,14 @@ vi.mock("../tabs", () => ({
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
+  AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
 }));
 
-vi.mock("../tabs/memory-tab", () => ({
+vi.mock('../tabs/memory-tab', () => ({
   MemoryTab: () => <div data-testid="memory-tab">Memory Tab</div>,
 }));
 
-vi.mock("../tabs/disclaimers-tab", () => ({
+vi.mock('../tabs/disclaimers-tab', () => ({
   DisclaimersTab: () => (
     <div data-testid="disclaimers-tab">Disclaimers Tab</div>
   ),
@@ -198,11 +199,11 @@ function createTestStore(
       modals: {
         modalStack: preloadedStack,
         customAlertDialog: {
-          message: "",
-          validateTrigger: "",
-          cancelTrigger: "",
+          message: '',
+          validateTrigger: '',
+          cancelTrigger: '',
           isOpen: false,
-          title: "",
+          title: '',
         },
         iframeCloseButton: false,
         darkMode: false,
@@ -219,17 +220,17 @@ function createTestStore(
 // TESTS
 // ============================================================================
 
-describe("EditMentorModal", () => {
+describe('EditMentorModal', () => {
   beforeEach(() => {
     cleanup();
     pushMock.mockReset();
-    mockSearchParamsRaw = "";
+    mockSearchParamsRaw = '';
     mockIsAdmin = true;
     mockMentorSettings = {
-      mentor: "Test Mentor",
+      mentor: 'Test Mentor',
       mentor_id: 123,
-      mentor_unique_id: "mentor456",
-      platform_key: "tenant123",
+      mentor_unique_id: 'mentor456',
+      platform_key: 'tenant123',
       mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       permissions: {
         field: {
@@ -261,7 +262,7 @@ describe("EditMentorModal", () => {
       },
     };
     // Suppress console.log during tests
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -273,8 +274,8 @@ describe("EditMentorModal", () => {
   // Basic Rendering Tests
   // --------------------------------------------------------------------------
 
-  describe("Rendering", () => {
-    it("renders the dialog when isOpen is true", () => {
+  describe('Rendering', () => {
+    it('renders the dialog when isOpen is true', () => {
       const store = createTestStore();
 
       render(
@@ -283,10 +284,10 @@ describe("EditMentorModal", () => {
         </Provider>,
       );
 
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    it("does not render when isOpen is false", () => {
+    it('does not render when isOpen is false', () => {
       const store = createTestStore();
 
       render(
@@ -295,10 +296,10 @@ describe("EditMentorModal", () => {
         </Provider>,
       );
 
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it("renders the Edit Mentor title with mentor name", async () => {
+    it('renders the Edit Mentor title with mentor name', async () => {
       const store = createTestStore();
 
       render(
@@ -310,15 +311,15 @@ describe("EditMentorModal", () => {
       // The title should contain "Edit" followed by the mentor name
       // Look for it in h2 heading elements
       await waitFor(() => {
-        const headings = screen.getAllByRole("heading");
+        const headings = screen.getAllByRole('heading');
         const editHeading = headings.find((h) =>
-          h.textContent?.includes("Edit"),
+          h.textContent?.includes('Edit'),
         );
         expect(editHeading).toBeTruthy();
       });
     });
 
-    it("renders the default settings tab content", async () => {
+    it('renders the default settings tab content', async () => {
       const store = createTestStore();
 
       render(
@@ -328,7 +329,7 @@ describe("EditMentorModal", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("settings-tab")).toBeInTheDocument();
+        expect(screen.getByTestId('settings-tab')).toBeInTheDocument();
       });
     });
   });
@@ -337,8 +338,8 @@ describe("EditMentorModal", () => {
   // Accessibility Tests
   // --------------------------------------------------------------------------
 
-  describe("Accessibility", () => {
-    it("has accessible dialog description", async () => {
+  describe('Accessibility', () => {
+    it('has accessible dialog description', async () => {
       const store = createTestStore();
 
       render(
@@ -352,11 +353,11 @@ describe("EditMentorModal", () => {
           /Edit Mentor settings, prompts, tools, safety, flow, history, datasets, and API keys/i,
         );
         expect(description).toBeInTheDocument();
-        expect(description).toHaveClass("sr-only");
+        expect(description).toHaveClass('sr-only');
       });
     });
 
-    it("tab triggers have proper aria attributes", async () => {
+    it('tab triggers have proper aria attributes', async () => {
       const store = createTestStore();
 
       render(
@@ -367,7 +368,7 @@ describe("EditMentorModal", () => {
 
       await waitFor(() => {
         // Get all tablists (there are multiple for desktop/mobile views)
-        const tabsLists = screen.getAllByRole("tablist");
+        const tabsLists = screen.getAllByRole('tablist');
         expect(tabsLists.length).toBeGreaterThan(0);
       });
     });
@@ -377,8 +378,8 @@ describe("EditMentorModal", () => {
   // Tab Navigation Tests
   // --------------------------------------------------------------------------
 
-  describe("Tab Navigation", () => {
-    it("renders tab list for navigation", async () => {
+  describe('Tab Navigation', () => {
+    it('renders tab list for navigation', async () => {
       const store = createTestStore();
 
       render(
@@ -388,7 +389,7 @@ describe("EditMentorModal", () => {
       );
 
       await waitFor(() => {
-        const tabsList = screen.getAllByRole("tablist");
+        const tabsList = screen.getAllByRole('tablist');
         expect(tabsList.length).toBeGreaterThan(0);
       });
     });
@@ -399,7 +400,7 @@ describe("EditMentorModal", () => {
 // PURE FUNCTION TESTS FOR TAB FILTERING LOGIC
 // ============================================================================
 
-describe("EditMentorModal - Tab Filtering Logic", () => {
+describe('EditMentorModal - Tab Filtering Logic', () => {
   /**
    * These tests validate the tab filtering logic that determines
    * which tabs are shown based on user type, admin status, tenant, and permissions.
@@ -479,24 +480,24 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
       });
   }
 
-  const mockConfig: MockConfig = { mainTenantKey: () => "main" };
+  const mockConfig: MockConfig = { mainTenantKey: () => 'main' };
 
   const sampleTabs: MockTab[] = [
     {
-      label: "Settings",
-      value: "settings",
+      label: 'Settings',
+      value: 'settings',
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
       rbacResource: (mentorDbId: number) =>
         `/mentors/${mentorDbId}/#show_settings`,
-      permissionFieldsCheck: ["mentor_name", "mentor_description"],
+      permissionFieldsCheck: ['mentor_name', 'mentor_description'],
       mentorVisibility: [
         MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
       ],
     },
     {
-      label: "Access",
-      value: "access",
+      label: 'Access',
+      value: 'access',
       userTypes: [UserType.ADMIN],
       rbacResource: (mentorDbId: number) =>
         `/mentors/${mentorDbId}/#read_shared_mentor`,
@@ -504,11 +505,11 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
       mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
     },
     {
-      label: "LLM",
-      value: "llm",
+      label: 'LLM',
+      value: 'llm',
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
       rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/llms/#list`,
-      permissionFieldsCheck: ["llm_provider"],
+      permissionFieldsCheck: ['llm_provider'],
       mentorVisibility: [
         MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -526,10 +527,10 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
 
   const mockCheckRbacPermission = (): boolean => true;
 
-  describe("Admin on main tenant", () => {
-    it("shows all tabs that pass user type check", () => {
+  describe('Admin on main tenant', () => {
+    it('shows all tabs that pass user type check', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "main",
+        platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
         permissions: {
@@ -545,7 +546,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "main",
+        'main',
         mentorSettings,
         mockConfig,
         {},
@@ -553,16 +554,16 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).toContain("Settings");
-      expect(result.map((t) => t.label)).toContain("Access");
-      expect(result.map((t) => t.label)).toContain("LLM");
+      expect(result.map((t) => t.label)).toContain('Settings');
+      expect(result.map((t) => t.label)).toContain('Access');
+      expect(result.map((t) => t.label)).toContain('LLM');
     });
   });
 
-  describe("Non-admin on main tenant", () => {
-    it("filters out admin-only tabs", () => {
+  describe('Non-admin on main tenant', () => {
+    it('filters out admin-only tabs', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "main",
+        platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
         mentor_id: 123,
         permissions: {
@@ -578,7 +579,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.FREE_TRIAL),
         false,
-        "main",
+        'main',
         mentorSettings,
         mockConfig,
         {},
@@ -586,12 +587,12 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).not.toContain("Access");
+      expect(result.map((t) => t.label)).not.toContain('Access');
     });
 
-    it("filters tabs based on mentor visibility for non-admins on main tenant", () => {
+    it('filters tabs based on mentor visibility for non-admins on main tenant', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "main",
+        platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
         mentor_id: 123,
         permissions: {
@@ -605,7 +606,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.FREE_TRIAL),
         false,
-        "main",
+        'main',
         mentorSettings,
         mockConfig,
         {},
@@ -619,10 +620,10 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
     });
   });
 
-  describe("User on non-main tenant", () => {
-    it("shows tabs when mentor is on non-main tenant", () => {
+  describe('User on non-main tenant', () => {
+    it('shows tabs when mentor is on non-main tenant', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "custom-tenant",
+        platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
         permissions: {
@@ -636,7 +637,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "custom-tenant",
+        'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
@@ -644,15 +645,15 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).toContain("Settings");
-      expect(result.map((t) => t.label)).toContain("Access");
+      expect(result.map((t) => t.label)).toContain('Settings');
+      expect(result.map((t) => t.label)).toContain('Access');
     });
   });
 
-  describe("RBAC permission checks", () => {
-    it("filters out tabs when user lacks field permissions", () => {
+  describe('RBAC permission checks', () => {
+    it('filters out tabs when user lacks field permissions', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "custom-tenant",
+        platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
         permissions: {
@@ -676,7 +677,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "custom-tenant",
+        'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
@@ -684,14 +685,14 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).not.toContain("Settings");
-      expect(result.map((t) => t.label)).toContain("LLM");
-      expect(result.map((t) => t.label)).toContain("Access");
+      expect(result.map((t) => t.label)).not.toContain('Settings');
+      expect(result.map((t) => t.label)).toContain('LLM');
+      expect(result.map((t) => t.label)).toContain('Access');
     });
 
-    it("filters out tabs when RBAC resource check fails", () => {
+    it('filters out tabs when RBAC resource check fails', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "custom-tenant",
+        platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
         permissions: {
@@ -707,7 +708,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         resource: string,
       ): boolean => {
         // Deny access to LLM
-        if (resource.includes("llms")) return false;
+        if (resource.includes('llms')) return false;
         return true;
       };
 
@@ -715,7 +716,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "custom-tenant",
+        'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
@@ -723,18 +724,18 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         strictCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).not.toContain("LLM");
-      expect(result.map((t) => t.label)).toContain("Settings");
+      expect(result.map((t) => t.label)).not.toContain('LLM');
+      expect(result.map((t) => t.label)).toContain('Settings');
     });
   });
 
-  describe("Edge cases", () => {
-    it("returns empty array when mentor settings is undefined", () => {
+  describe('Edge cases', () => {
+    it('returns empty array when mentor settings is undefined', () => {
       const result = filterTabs(
         sampleTabs,
         () => true,
         true,
-        "tenant123",
+        'tenant123',
         undefined,
         mockConfig,
         {},
@@ -745,11 +746,11 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
       expect(result).toEqual([]);
     });
 
-    it("handles tabs with no rbacResource", () => {
+    it('handles tabs with no rbacResource', () => {
       const tabsWithNoRbac: MockTab[] = [
         {
-          label: "Simple Tab",
-          value: "simple",
+          label: 'Simple Tab',
+          value: 'simple',
           userTypes: [UserType.ADMIN],
           permissionFieldsCheck: [],
           mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
@@ -757,7 +758,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
       ];
 
       const mentorSettings: MockMentorSettings = {
-        platform_key: "tenant123",
+        platform_key: 'tenant123',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
       };
@@ -766,7 +767,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         tabsWithNoRbac,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "tenant123",
+        'tenant123',
         mentorSettings,
         mockConfig,
         {},
@@ -774,12 +775,12 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).toContain("Simple Tab");
+      expect(result.map((t) => t.label)).toContain('Simple Tab');
     });
 
-    it("handles empty permissions field object", () => {
+    it('handles empty permissions field object', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "tenant123",
+        platform_key: 'tenant123',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
         permissions: {
@@ -791,7 +792,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "main",
+        'main',
         mentorSettings,
         mockConfig,
         {},
@@ -801,14 +802,14 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
 
       // With empty permissions and admin on main tenant, should still show tabs
       // that have empty permissionFieldsCheck
-      expect(result.map((t) => t.label)).toContain("Access");
+      expect(result.map((t) => t.label)).toContain('Access');
     });
   });
 
-  describe("Visibility filtering logic", () => {
-    it("isAdminOnMainTenant bypasses visibility check", () => {
+  describe('Visibility filtering logic', () => {
+    it('isAdminOnMainTenant bypasses visibility check', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "other-tenant",
+        platform_key: 'other-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE, // Not in tab's allowed list
         mentor_id: 123,
       };
@@ -817,7 +818,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true, // isAdmin
-        "main", // on main tenant
+        'main', // on main tenant
         mentorSettings,
         mockConfig,
         {},
@@ -826,12 +827,12 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
       );
 
       // Admin on main tenant sees all tabs regardless of visibility
-      expect(result.map((t) => t.label)).toContain("Settings");
+      expect(result.map((t) => t.label)).toContain('Settings');
     });
 
-    it("mentorNotOnMainTenant bypasses visibility check", () => {
+    it('mentorNotOnMainTenant bypasses visibility check', () => {
       const mentorSettings: MockMentorSettings = {
-        platform_key: "other-tenant", // Not main
+        platform_key: 'other-tenant', // Not main
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
         mentor_id: 123,
       };
@@ -840,7 +841,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         sampleTabs,
         (item) => item.userTypes.includes(UserType.ADMIN),
         true,
-        "other-tenant",
+        'other-tenant',
         mentorSettings,
         mockConfig,
         {},
@@ -848,7 +849,7 @@ describe("EditMentorModal - Tab Filtering Logic", () => {
         mockCheckRbacPermission,
       );
 
-      expect(result.map((t) => t.label)).toContain("Settings");
+      expect(result.map((t) => t.label)).toContain('Settings');
     });
   });
 });
