@@ -192,7 +192,7 @@
     "concurrently": "9.2.1",
     "cross-env": "7.0.3",
     "dotenv": "16.4.7",
-    "electron": "39.2.3",
+    "electron": "39.8.3",
     "electron-builder": "26.0.12",
     "eslint": "9.39.4",
     "eslint-config-next": "15.3.0",
