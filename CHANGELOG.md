@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.6](https://github.com/iblai/mentorai/compare/v0.44.5...v0.44.6) (2026-04-06)
+
+### Bug Fixes
+
+* memoize middleware map to stabilize AuthProvider cookie sync interval ([3eb1e86](https://github.com/iblai/mentorai/commit/3eb1e8604aafa33058ad45b0976e02e4be662919))
+
 ## [0.44.5](https://github.com/iblai/mentorai/compare/v0.44.4...v0.44.5) (2026-04-06)
 
 ### Chores
