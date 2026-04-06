@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.44.5](https://github.com/iblai/mentorai/compare/v0.44.4...v0.44.5) (2026-04-06)
+
+### Chores
+
+* bump iblai-js to 1.3.5 and set e2e workers to 1 ([e75dff8](https://github.com/iblai/mentorai/commit/e75dff87e81cddd8526b78f1bfd0c50dc80c581d))
+
 ## [0.44.4](https://github.com/iblai/mentorai/compare/v0.44.3...v0.44.4) (2026-04-02)
 
 ### Styles
