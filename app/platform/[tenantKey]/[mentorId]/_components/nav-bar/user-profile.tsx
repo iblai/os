@@ -156,6 +156,7 @@ export function UserProfile() {
       SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
     );
     triggerPricingModal();
+    handleModalOpenChange(false);
   }, [bannerButtonTriggerCallback]);
 
   const [billingURL, setBillingURL] = useState<string>('');
