@@ -582,7 +582,10 @@
       "id": "shareable-links-and-embed-integration",
       "name": "Shareable Links & Embed Integration",
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+      ],
       "checkpoints": [
         {
           "id": "emb-01",
@@ -602,6 +605,11 @@
         {
           "id": "emb-04",
           "description": "Advanced anonymous embed with context awareness configured",
+          "status": "covered"
+        },
+        {
+          "id": "emb-05",
+          "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
           "status": "covered"
         }
       ]
