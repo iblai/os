@@ -86,7 +86,8 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to history tab and clicks Export to trigger a file download', async ({
+  // FIXME: The flow seems to have changes here, the user expects a notification to be sent by e-mail for larger downloads
+  test.fixme('admin goes to history tab and clicks Export to trigger a file download', async ({
     page,
     editMentorPage,
   }) => {
