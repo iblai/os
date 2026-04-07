@@ -348,4 +348,98 @@ test.describe('Journey 38: Suggested Prompts', () => {
 
     await chatPage.closePromptGallery();
   });
+
+  // ==========================================================================
+  // Non-Admin: a student should be able to see and run admin-created prompts
+  // but should NOT be able to edit, delete, or add new prompts.
+  //
+  // We exercise this via the Learner-mode toggle on the same admin user. The
+  // RBAC code path that hides Edit/Delete (`useUserIsStudent()` in
+  // hooks/use-user.ts) returns `true` for admins in learner mode, so the
+  // student experience is rendered identically to that of a real student user.
+  // This avoids cross-tenant prompt-visibility limitations that prevent a
+  // separately-authenticated non-admin from seeing the admin's prompts.
+  // ==========================================================================
+
+  test.describe('Non-Admin', () => {
+    test('admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add', async ({
+      page,
+      editMentorPage,
+      chatPage,
+    }) => {
+      // ── Admin: add a suggested prompt to the fresh mentor ───────────────────
+      await editMentorPage.open('Prompts');
+      await waitForPageReady(page);
+
+      const promptText = `Non-admin visible prompt ${Date.now()}`;
+      await editMentorPage.prompts.addSuggestedPrompt(promptText);
+      await page.waitForTimeout(3_000);
+
+      const promptCount =
+        await editMentorPage.prompts.getSuggestedPromptCount();
+      expect(promptCount).toBeGreaterThan(0);
+
+      await editMentorPage.close();
+      await waitForPageReady(page);
+
+      // ── Switch to Learner mode (acts as a non-admin / student) ──────────────
+      const learnerSwitch = page.getByRole('switch', {
+        name: /learner mode/i,
+      });
+      await expect(learnerSwitch).toBeVisible({ timeout: 10_000 });
+      // The switch is `checked` when in instructor mode; click to flip to
+      // learner mode.
+      const isInstructor =
+        (await learnerSwitch.getAttribute('aria-checked')) === 'true';
+      if (isInstructor) {
+        await learnerSwitch.click();
+      }
+      await page.waitForTimeout(1_000);
+
+      // ── Open the Prompt Gallery from the chat area ──────────────────────────
+      await expect(chatPage.promptsButton).toBeVisible({ timeout: 15_000 });
+      await chatPage.openPromptGallery();
+
+      // ── Assert: prompt is visible in the gallery ───────────────────────────
+      await expect(
+        chatPage.promptGalleryDialog.getByText(promptText),
+      ).toBeVisible({ timeout: 15_000 });
+
+      // ── Assert: Run button IS visible to learners ──────────────────────────
+      const runButtons = chatPage.getPromptGalleryRunButtons();
+      await expect(runButtons.first()).toBeVisible({ timeout: 10_000 });
+      await expect(runButtons.first()).toBeEnabled();
+
+      // ── Assert: Edit button is NOT visible to learners ─────────────────────
+      const editButtonCount = await chatPage
+        .getPromptGalleryEditButtons()
+        .count();
+      expect(editButtonCount).toBe(0);
+
+      // ── Assert: Delete button is NOT visible to learners ───────────────────
+      const deleteButtonCount = await chatPage
+        .getPromptGalleryDeleteButtons()
+        .count();
+      expect(deleteButtonCount).toBe(0);
+
+      // ── Assert: Add (new prompt) button is NOT visible to learners ─────────
+      await expect(chatPage.getPromptGalleryAddButton()).not.toBeVisible({
+        timeout: 3_000,
+      });
+
+      // ── Clicking Run populates the chat input ──────────────────────────────
+      await chatPage.runPromptFromGallery(0);
+
+      // The gallery should close once a prompt is selected
+      await expect(chatPage.promptGalleryDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+
+      // The chat input should now contain the prompt text
+      await expect(chatPage.chatInput).toBeVisible({ timeout: 10_000 });
+      await expect(chatPage.chatInput).toHaveValue(promptText, {
+        timeout: 10_000,
+      });
+    });
+  });
 });

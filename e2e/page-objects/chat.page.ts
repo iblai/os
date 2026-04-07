@@ -85,11 +85,42 @@ export class ChatPage {
     });
   }
 
+  /** Returns all Run buttons inside the Prompt Gallery dialog. */
+  getPromptGalleryRunButtons(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Run',
+      exact: true,
+    });
+  }
+
+  /** Returns all Edit buttons inside the Prompt Gallery dialog. */
+  getPromptGalleryEditButtons(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Edit',
+      exact: true,
+    });
+  }
+
+  /** Returns the Add prompt button inside the Prompt Gallery dialog. */
+  getPromptGalleryAddButton(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Add',
+      exact: true,
+    });
+  }
+
   /** Deletes the nth prompt (0-indexed) from the Prompt Gallery. */
   async deletePromptFromGallery(index = 0): Promise<void> {
     const deleteButton = this.getPromptGalleryDeleteButtons().nth(index);
     await expect(deleteButton).toBeVisible({ timeout: 10_000 });
     await deleteButton.click();
+  }
+
+  /** Clicks the Run button on the nth prompt (0-indexed) in the Prompt Gallery. */
+  async runPromptFromGallery(index = 0): Promise<void> {
+    const runButton = this.getPromptGalleryRunButtons().nth(index);
+    await expect(runButton).toBeVisible({ timeout: 10_000 });
+    await runButton.click();
   }
 
   async closePromptGallery(): Promise<void> {

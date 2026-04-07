@@ -97,8 +97,15 @@ export class PromptsTab {
   /**
    * Opens the Add New Prompt dialog, fills in the form, and submits.
    * Waits for the dialog to close after submission.
+   *
+   * @param promptText - The text content of the prompt
+   * @param options.visibility - Optional visibility label ("Anyone", "Students",
+   *   or "Administrators"). Defaults to whatever the form pre-selects.
    */
-  async addSuggestedPrompt(promptText: string): Promise<void> {
+  async addSuggestedPrompt(
+    promptText: string,
+    options: { visibility?: 'Anyone' | 'Students' | 'Administrators' } = {},
+  ): Promise<void> {
     await expect(this.addNewPromptButton).toBeVisible({ timeout: 10_000 });
     await this.addNewPromptButton.click();
 
@@ -113,11 +120,23 @@ export class PromptsTab {
     });
     await expect(categoryTrigger).toBeVisible({ timeout: 5_000 });
     await categoryTrigger.click();
-    const firstCategoryOption = this.page
-      .getByRole('option')
-      .first();
+    const firstCategoryOption = this.page.getByRole('option').first();
     await expect(firstCategoryOption).toBeVisible({ timeout: 5_000 });
     await firstCategoryOption.click();
+
+    // Optionally change the visibility
+    if (options.visibility) {
+      const visibilityTrigger = addDialog.getByRole('combobox', {
+        name: 'Select visibility',
+      });
+      await expect(visibilityTrigger).toBeVisible({ timeout: 5_000 });
+      await visibilityTrigger.click();
+      const option = this.page
+        .getByRole('option', { name: options.visibility, exact: true })
+        .first();
+      await expect(option).toBeVisible({ timeout: 5_000 });
+      await option.click();
+    }
 
     // Fill in the prompt text via the rich text editor
     const editor = addDialog.getByRole('textbox').first().locator('div');
