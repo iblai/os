@@ -524,7 +524,6 @@ export function useSidebarNavigation() {
         dispatch(clearFiles(undefined));
         if (!mentorId) {
           openNoMentorSelectedModal();
-          dispatch(chatActions.setShouldStartNewChat(true));
         } else if (isChatPage) {
           eventBus.emit(RemoteEvents.newChat);
           dispatch(chatActions.setShouldStartNewChat(true));
@@ -539,8 +538,9 @@ export function useSidebarNavigation() {
         UserType.ADMIN,
         UserType.ANONYMOUS,
       ],
-      rbacResource: (_: number) =>
-        `/mentors/${mentorPublicSettings?.mentor_id}/#chat`,
+      rbacResource: mentorId
+        ? (_: number) => `/mentors/${mentorPublicSettings?.mentor_id}/#chat`
+        : undefined,
       isAnAdminAction: false,
       hasBorder: true,
     },
