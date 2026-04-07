@@ -72,9 +72,9 @@ export function DeleteProjectModal({
         <DialogHeader>
           <DialogTitle className="mb-4">Delete Project</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{projectName}"? This action cannot be undone and will
-            permanently remove the project and all associated data including chats, files, and
-            settings.
+            Are you sure you want to delete "{projectName}"? This action cannot
+            be undone and will permanently remove the project and all associated
+            data including chats, files, and settings.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -93,7 +93,7 @@ export function DeleteProjectModal({
               await handleDelete();
             }}
             disabled={isLoading}
-            className="border border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+            className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
             {isLoading ? 'Deleting...' : 'Delete Project'}
           </Button>

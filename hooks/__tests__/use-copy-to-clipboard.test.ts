@@ -4,7 +4,10 @@ import { useCopyToClipboard } from '../use-copy-to-clipboard';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useParams: vi.fn(() => ({ tenantKey: 'test-tenant', mentorId: 'test-mentor' })),
+  useParams: vi.fn(() => ({
+    tenantKey: 'test-tenant',
+    mentorId: 'test-mentor',
+  })),
 }));
 
 describe('useCopyToClipboard', () => {
@@ -147,7 +150,9 @@ describe('useCopyToClipboard', () => {
 
   describe('error handling', () => {
     it('should set error status when clipboard write fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockWriteText.mockRejectedValueOnce(new Error('Clipboard write failed'));
       const { result } = renderHook(() => useCopyToClipboard());
 
@@ -224,7 +229,9 @@ describe('useCopyToClipboard', () => {
     });
 
     it('should handle success followed by error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockWriteText.mockResolvedValueOnce(undefined);
       mockWriteText.mockRejectedValueOnce(new Error('Failed'));
 

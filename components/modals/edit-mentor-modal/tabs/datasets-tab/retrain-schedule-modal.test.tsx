@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { RetrainScheduleModal } from './retrain-schedule-modal';
@@ -66,13 +72,16 @@ vi.mock('sonner', () => ({
  * Mock UI components to simplify testing
  */
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
   DialogContent: ({ children, className }: any) => (
     <div data-testid="dialog-content" className={className}>
       {children}
     </div>
   ),
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
   DialogTitle: ({ children, className }: any) => (
     <div data-testid="dialog-title" className={className}>
       {children}
@@ -92,14 +101,29 @@ vi.mock('@/components/ui/dialog', () => ({
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, type, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} type={type} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      type={type}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ value, onChange, disabled, type, min, id, className, ...props }: any) => (
+  Input: ({
+    value,
+    onChange,
+    disabled,
+    type,
+    min,
+    id,
+    className,
+    ...props
+  }: any) => (
     <input
       value={value}
       onChange={onChange}
@@ -196,7 +220,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies modal visibility is controlled by isOpen prop
      */
     it('does not render when isOpen is false', () => {
-      render(<RetrainScheduleModal isOpen={false} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={false}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
     });
@@ -206,10 +236,18 @@ describe('RetrainScheduleModal', () => {
      * Verifies modal displays when opened
      */
     it('renders when isOpen is true', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
-      expect(screen.getByTestId('dialog-title')).toHaveTextContent('Schedule Retraining');
+      expect(screen.getByTestId('dialog-title')).toHaveTextContent(
+        'Schedule Retraining',
+      );
     });
 
     /**
@@ -217,7 +255,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies correct dataset information is shown
      */
     it('displays dataset document name in description', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByText('Test Document')).toBeInTheDocument();
     });
@@ -229,10 +273,16 @@ describe('RetrainScheduleModal', () => {
     it('displays dataset URL when document_name is empty', () => {
       const datasetWithoutName = { ...mockDataset, document_name: '' };
       render(
-        <RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={datasetWithoutName} />,
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={datasetWithoutName}
+        />,
       );
 
-      expect(screen.getByText('https://example.com/document')).toBeInTheDocument();
+      expect(
+        screen.getByText('https://example.com/document'),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -240,7 +290,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies Daily, Weekly, and Monthly buttons are present
      */
     it('renders all preset buttons', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByText('Daily (1 day)')).toBeInTheDocument();
       expect(screen.getByText('Weekly (7 days)')).toBeInTheDocument();
@@ -252,7 +308,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies input field for custom days is present
      */
     it('renders custom interval input field', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       expect(input).toBeInTheDocument();
@@ -265,10 +327,20 @@ describe('RetrainScheduleModal', () => {
      * Verifies Cancel and Schedule Retraining buttons are present
      */
     it('renders footer buttons', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Schedule Retraining' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Cancel' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Schedule Retraining' }),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -276,7 +348,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies icon is displayed
      */
     it('renders Repeat icon', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByTestId('repeat-icon')).toBeInTheDocument();
     });
@@ -294,7 +372,13 @@ describe('RetrainScheduleModal', () => {
     it('initializes with fetched retrain interval', () => {
       mockQueryResult.data = { retrain_interval_days: 14 };
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       expect(input).toHaveValue(14);
@@ -307,7 +391,13 @@ describe('RetrainScheduleModal', () => {
     it('defaults to 0 when no data is available', () => {
       mockQueryResult.data = undefined;
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       expect(input).toHaveValue(0);
@@ -320,7 +410,13 @@ describe('RetrainScheduleModal', () => {
     it('handles null retrain_interval_days', () => {
       mockQueryResult.data = { retrain_interval_days: null as any };
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       expect(input).toHaveValue(0);
@@ -332,7 +428,11 @@ describe('RetrainScheduleModal', () => {
      */
     it('updates state when data changes after initial render', () => {
       const { rerender } = render(
-        <RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />,
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
       );
 
       // Initially no data
@@ -341,7 +441,13 @@ describe('RetrainScheduleModal', () => {
 
       // Update data
       mockQueryResult.data = { retrain_interval_days: 21 };
-      rerender(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      rerender(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       input = screen.getByTestId('interval-input');
       expect(input).toHaveValue(21);
@@ -358,7 +464,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies Daily preset works correctly
      */
     it('sets interval to 1 when Daily button is clicked', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       fireEvent.click(dailyButton);
@@ -372,7 +484,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies Weekly preset works correctly
      */
     it('sets interval to 7 when Weekly button is clicked', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const weeklyButton = screen.getByText('Weekly (7 days)');
       fireEvent.click(weeklyButton);
@@ -386,7 +504,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies Monthly preset works correctly
      */
     it('sets interval to 30 when Monthly button is clicked', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const monthlyButton = screen.getByText('Monthly (30 days)');
       fireEvent.click(monthlyButton);
@@ -400,12 +524,22 @@ describe('RetrainScheduleModal', () => {
      * Verifies active button gets correct CSS class
      */
     it('applies active styling to selected preset button', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       fireEvent.click(dailyButton);
 
-      expect(dailyButton).toHaveClass('bg-gradient-to-r', 'from-[#2563EB]', 'to-[#93C5FD]');
+      expect(dailyButton).toHaveClass(
+        'bg-gradient-to-r',
+        'from-[#2563EB]',
+        'to-[#93C5FD]',
+      );
     });
 
     /**
@@ -413,14 +547,24 @@ describe('RetrainScheduleModal', () => {
      * Verifies non-selected buttons don't have active class
      */
     it('does not apply active styling to non-selected buttons', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       const weeklyButton = screen.getByText('Weekly (7 days)');
 
       fireEvent.click(dailyButton);
 
-      expect(weeklyButton).not.toHaveClass('bg-gradient-to-r', 'from-[#2563EB]', 'to-[#93C5FD]');
+      expect(weeklyButton).not.toHaveClass(
+        'bg-gradient-to-r',
+        'from-[#2563EB]',
+        'to-[#93C5FD]',
+      );
     });
 
     /**
@@ -428,7 +572,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies switching from one preset to another
      */
     it('switches active styling when different preset is clicked', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       const weeklyButton = screen.getByText('Weekly (7 days)');
@@ -454,7 +604,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies manual input updates state
      */
     it('updates interval when typing in custom input', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '15' } });
@@ -467,7 +623,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies input parsing works correctly
      */
     it('parses input value to number', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '42' } });
@@ -480,7 +642,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies empty input defaults to 0
      */
     it('converts empty string to 0', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '' } });
@@ -493,7 +661,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies invalid input is handled gracefully
      */
     it('converts non-numeric input to 0', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: 'abc' } });
@@ -506,12 +680,20 @@ describe('RetrainScheduleModal', () => {
      * Verifies dynamic description updates
      */
     it('updates description text when interval changes', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '10' } });
 
-      expect(screen.getByText(/Dataset will retrain every 10 days/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 10 days/),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -519,12 +701,20 @@ describe('RetrainScheduleModal', () => {
      * Verifies correct singular/plural text
      */
     it('shows singular "day" for interval of 1', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '1' } });
 
-      expect(screen.getByText(/Dataset will retrain every 1 day$/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 1 day$/),
+      ).toBeInTheDocument();
       expect(screen.queryByText(/1 days/)).not.toBeInTheDocument();
     });
 
@@ -533,12 +723,20 @@ describe('RetrainScheduleModal', () => {
      * Verifies correct singular/plural text
      */
     it('shows plural "days" for interval greater than 1', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '5' } });
 
-      expect(screen.getByText(/Dataset will retrain every 5 days/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 5 days/),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -546,9 +744,17 @@ describe('RetrainScheduleModal', () => {
      * Verifies 0 uses plural form
      */
     it('shows plural "days" for interval of 0', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      expect(screen.getByText(/Dataset will retrain every 0 days/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 0 days/),
+      ).toBeInTheDocument();
     });
   });
 
@@ -562,7 +768,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies form submission triggers API call
      */
     it('calls mutation on form submission', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const form = screen.getByTestId('dialog-content').querySelector('form');
       fireEvent.submit(form!);
@@ -577,14 +789,22 @@ describe('RetrainScheduleModal', () => {
      * Verifies API call is made with correct parameters
      */
     it('calls setRetrainInterval mutation on submit', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       // Set interval to 7 days
       const weeklyButton = screen.getByText('Weekly (7 days)');
       fireEvent.click(weeklyButton);
 
       // Submit form
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -603,13 +823,23 @@ describe('RetrainScheduleModal', () => {
      * Verifies success feedback is displayed
      */
     it('shows success toast on successful submission', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Successfully updated retrain interval');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Successfully updated retrain interval',
+        );
       });
     });
 
@@ -623,13 +853,23 @@ describe('RetrainScheduleModal', () => {
         unwrap: vi.fn().mockRejectedValue(mockError),
       });
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update retrain interval');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update retrain interval',
+        );
       });
     });
 
@@ -638,17 +878,29 @@ describe('RetrainScheduleModal', () => {
      * Verifies error logging
      */
     it('logs error to console on failed submission', async () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const mockError = new Error('Failed to update');
       mockSetRetrainInterval.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(mockError),
       });
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -665,12 +917,20 @@ describe('RetrainScheduleModal', () => {
      * Verifies custom input value is used in submission
      */
     it('submits with custom interval value', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '45' } });
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -695,7 +955,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies cancel functionality
      */
     it('calls onClose when Cancel button is clicked', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       fireEvent.click(cancelButton);
@@ -709,7 +975,13 @@ describe('RetrainScheduleModal', () => {
      */
     it('passes onClose to Dialog onOpenChange', () => {
       // This test verifies the Dialog component receives the onClose prop
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
       // The actual onOpenChange behavior is tested via the Dialog mock
@@ -728,13 +1000,21 @@ describe('RetrainScheduleModal', () => {
     it('disables buttons and inputs when loading data', () => {
       mockQueryResult.isLoading = true;
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       const weeklyButton = screen.getByText('Weekly (7 days)');
       const monthlyButton = screen.getByText('Monthly (30 days)');
       const input = screen.getByTestId('interval-input');
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
 
       expect(dailyButton).toBeDisabled();
       expect(weeklyButton).toBeDisabled();
@@ -750,7 +1030,13 @@ describe('RetrainScheduleModal', () => {
     it('does not disable Cancel button when loading', () => {
       mockQueryResult.isLoading = true;
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       expect(cancelButton).not.toBeDisabled();
@@ -767,13 +1053,21 @@ describe('RetrainScheduleModal', () => {
      * Verifies component works with large numbers
      */
     it('handles very large interval values', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '999999' } });
 
       expect(input).toHaveValue(999999);
-      expect(screen.getByText(/Dataset will retrain every 999999 days/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 999999 days/),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -787,7 +1081,11 @@ describe('RetrainScheduleModal', () => {
       };
 
       render(
-        <RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={longNameDataset} />,
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={longNameDataset}
+        />,
       );
 
       expect(screen.getByText('A'.repeat(200))).toBeInTheDocument();
@@ -804,7 +1102,13 @@ describe('RetrainScheduleModal', () => {
         url: 'https://example.com/' + 'path/'.repeat(50),
       };
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={longUrlDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={longUrlDataset}
+        />,
+      );
 
       expect(screen.getByText(longUrlDataset.url)).toBeInTheDocument();
     });
@@ -814,7 +1118,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies state updates correctly with multiple clicks
      */
     it('handles rapid preset button clicks', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       const weeklyButton = screen.getByText('Weekly (7 days)');
@@ -835,7 +1145,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies seamless transition between preset and custom values
      */
     it('handles switching between preset and custom input', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const weeklyButton = screen.getByText('Weekly (7 days)');
       const input = screen.getByTestId('interval-input');
@@ -858,7 +1174,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies decimals are converted to integers
      */
     it('handles decimal input values', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '7' } });
@@ -872,7 +1194,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies negative values are handled gracefully
      */
     it('handles negative numbers by converting to 0', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       // While the input has min="0", users might try to type negative values
@@ -893,9 +1221,17 @@ describe('RetrainScheduleModal', () => {
         url: '',
       };
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={minimalDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={minimalDataset}
+        />,
+      );
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -914,9 +1250,17 @@ describe('RetrainScheduleModal', () => {
      * Verifies submission doesn't cause issues with rapid clicks
      */
     it('handles multiple rapid form submissions', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
 
       // Rapid submissions
       fireEvent.click(submitButton);
@@ -939,12 +1283,20 @@ describe('RetrainScheduleModal', () => {
         unwrap: vi.fn().mockRejectedValue(mockError),
       });
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '10' } });
 
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -966,7 +1318,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies form accessibility
      */
     it('has proper label association for input', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const input = screen.getByTestId('interval-input');
       expect(input).toHaveAttribute('id', 'interval-days');
@@ -980,11 +1338,19 @@ describe('RetrainScheduleModal', () => {
      * Verifies all interactive elements can be reached via keyboard
      */
     it('supports keyboard navigation', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       const dailyButton = screen.getByText('Daily (1 day)');
       const input = screen.getByTestId('interval-input');
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
 
       // All should be focusable (buttons and input are naturally keyboard accessible)
       expect(dailyButton.tagName).toBe('BUTTON');
@@ -997,7 +1363,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies semantic HTML structure
      */
     it('has proper dialog structure', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByTestId('dialog-title')).toBeInTheDocument();
       expect(screen.getByTestId('dialog-description')).toBeInTheDocument();
@@ -1009,13 +1381,23 @@ describe('RetrainScheduleModal', () => {
      * Verifies screen reader support
      */
     it('has descriptive button text', () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       expect(screen.getByText('Daily (1 day)')).toBeInTheDocument();
       expect(screen.getByText('Weekly (7 days)')).toBeInTheDocument();
       expect(screen.getByText('Monthly (30 days)')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Schedule Retraining' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Cancel' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Schedule Retraining' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -1029,7 +1411,13 @@ describe('RetrainScheduleModal', () => {
      * Verifies end-to-end flow works correctly
      */
     it('completes full workflow: select preset and submit', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       // Select weekly preset
       const weeklyButton = screen.getByText('Weekly (7 days)');
@@ -1040,7 +1428,9 @@ describe('RetrainScheduleModal', () => {
       expect(input).toHaveValue(7);
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       // Verify mutation called correctly
@@ -1055,7 +1445,9 @@ describe('RetrainScheduleModal', () => {
       });
 
       // Verify success toast
-      expect(toast.success).toHaveBeenCalledWith('Successfully updated retrain interval');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Successfully updated retrain interval',
+      );
     });
 
     /**
@@ -1063,17 +1455,27 @@ describe('RetrainScheduleModal', () => {
      * Verifies custom value flow works correctly
      */
     it('completes full workflow: custom input and submit', async () => {
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       // Enter custom value
       const input = screen.getByTestId('interval-input');
       fireEvent.change(input, { target: { value: '21' } });
 
       // Verify description updated
-      expect(screen.getByText(/Dataset will retrain every 21 days/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dataset will retrain every 21 days/),
+      ).toBeInTheDocument();
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       // Verify mutation called correctly
@@ -1097,7 +1499,13 @@ describe('RetrainScheduleModal', () => {
     it('completes full workflow: load existing data, modify, and submit', async () => {
       mockQueryResult.data = { retrain_interval_days: 14 };
 
-      render(<RetrainScheduleModal isOpen={true} onClose={mockOnClose} dataset={mockDataset} />);
+      render(
+        <RetrainScheduleModal
+          isOpen={true}
+          onClose={mockOnClose}
+          dataset={mockDataset}
+        />,
+      );
 
       // Verify initial value loaded
       const input = screen.getByTestId('interval-input');
@@ -1110,7 +1518,9 @@ describe('RetrainScheduleModal', () => {
       expect(input).toHaveValue(30);
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: 'Schedule Retraining' });
+      const submitButton = screen.getByRole('button', {
+        name: 'Schedule Retraining',
+      });
       fireEvent.click(submitButton);
 
       await waitFor(() => {

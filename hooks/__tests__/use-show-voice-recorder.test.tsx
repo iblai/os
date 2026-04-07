@@ -8,7 +8,10 @@ vi.mock('../use-mentors/use-mentor-settings');
 vi.mock('../use-embed-mode');
 
 describe('useShowVoiceRecorder', () => {
-  const mockUseMentorSettings = vi.spyOn(useMentorSettingsModule, 'useMentorSettings');
+  const mockUseMentorSettings = vi.spyOn(
+    useMentorSettingsModule,
+    'useMentorSettings',
+  );
   const mockUseEmbedMode = vi.spyOn(useEmbedModeModule, 'useEmbedMode');
 
   beforeEach(() => {

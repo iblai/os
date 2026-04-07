@@ -3,7 +3,10 @@ import { useParams } from 'next/navigation';
 
 import { toast } from 'sonner';
 
-import { useAddTrainingDocumentMutation, useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useAddTrainingDocumentMutation,
+  useLazyGetCredentialsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { useUsername } from './use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils';
@@ -77,7 +80,11 @@ const useOneDrivePicker = () => {
             window.close();
           } else {
             // If not in popup, clean up URL
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
           }
         } catch (error) {
           console.error('Error parsing OAuth data:', error);
@@ -186,7 +193,10 @@ const useOneDrivePicker = () => {
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -214,7 +224,8 @@ const useOneDrivePicker = () => {
         advanced: {
           redirectUri: getFullDomain(),
           // only show folders, images, word files, powerpoint files, excel files, txt, PDF, csv, HTML, XML
-          filter: 'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
+          filter:
+            'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
         },
         success: handleSuccessOnedrive,
         cancel: function () {

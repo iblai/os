@@ -4,7 +4,16 @@ import React from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import { Heading } from '@tiptap/extension-heading';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, Italic, Heading1, Heading2, Heading3, Code2, FileCode, Quote } from 'lucide-react';
+import {
+  Bold,
+  Italic,
+  Heading1,
+  Heading2,
+  Heading3,
+  Code2,
+  FileCode,
+  Quote,
+} from 'lucide-react';
 
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
@@ -27,7 +36,9 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       <Toggle
         size="sm"
         pressed={editor.isActive('heading', { level: 1 })}
-        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        onPressedChange={() =>
+          editor.chain().focus().toggleHeading({ level: 1 }).run()
+        }
         aria-label="Toggle heading 1"
       >
         <Heading1 className="h-4 w-4" />
@@ -35,7 +46,9 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       <Toggle
         size="sm"
         pressed={editor.isActive('heading', { level: 2 })}
-        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        onPressedChange={() =>
+          editor.chain().focus().toggleHeading({ level: 2 }).run()
+        }
         aria-label="Toggle heading 2"
       >
         <Heading2 className="h-4 w-4" />
@@ -43,7 +56,9 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
       <Toggle
         size="sm"
         pressed={editor.isActive('heading', { level: 3 })}
-        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        onPressedChange={() =>
+          editor.chain().focus().toggleHeading({ level: 3 }).run()
+        }
         aria-label="Toggle heading 3"
       >
         <Heading3 className="h-4 w-4" />
@@ -98,7 +113,11 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export function RichTextEditor({ value, onChange, disabled }: RichTextEditorProps) {
+export function RichTextEditor({
+  value,
+  onChange,
+  disabled,
+}: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({

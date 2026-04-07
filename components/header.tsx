@@ -214,7 +214,7 @@ export function Header({
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore');
 
-  const handleMentorSelect = /* istanbul ignore next */ (mentor: unknown) => {
+  const handleMentorSelect = (mentor: unknown) => {
     console.log('Selected mentor:', mentor);
     setIsMentorListOpen(false);
   };
@@ -360,18 +360,14 @@ export function Header({
           isOpen={isProviderSelectionOpen}
           onClose={() => setIsProviderSelectionOpen(false)}
         />
-        {/* istanbul ignore next -- these modals are rendered but never opened in mobile view */}
         <SettingsModal
           isOpen={isSettingsOpen}
-          onClose={/* istanbul ignore next */ () => setIsSettingsOpen(false)}
+          onClose={() => setIsSettingsOpen(false)}
         />
-        <HelpModal
-          isOpen={isHelpOpen}
-          onClose={/* istanbul ignore next */ () => setIsHelpOpen(false)}
-        />
+        <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
         <MentorListModal
           isOpen={isMentorListOpen}
-          onClose={/* istanbul ignore next */ () => setIsMentorListOpen(false)}
+          onClose={() => setIsMentorListOpen(false)}
           onSelect={handleMentorSelect}
         />
         <EditMentorModal
@@ -664,7 +660,6 @@ export function Header({
           onResetState: resetState,
           onSelectFoundryModel,
         }}
-        enableMemoryTab={true}
       />
     </header>
   );

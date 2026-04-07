@@ -15,21 +15,21 @@ export function DefaultTag({ onPromptSelect, prompts = [] }: Props) {
   const activeTab = useSelector(selectActiveTab);
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex flex-1 flex-col">
       <div className="flex-1 px-6 pt-6">
         {/* Suggested prompts for Chat tab */}
         <div className="space-y-3">
           {prompts.map((prompt, idx) => (
             <div
               key={idx}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+              className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
               onClick={() => {
                 onPromptSelect(activeTab, prompt.content ?? '');
               }}
             >
               <div className="flex items-start gap-3">
                 {/* {renderIcon({ icon: prompt.icon })} */}
-                <span className="text-gray-700 text-sm leading-relaxed">
+                <span className="text-sm leading-relaxed text-gray-700">
                   {prompt.content}
                 </span>
               </div>

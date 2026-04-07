@@ -11,9 +11,11 @@ describe('useCanvasAwareSend', () => {
     eventListeners = new Map();
 
     // Mock window event listeners
-    vi.spyOn(window, 'addEventListener').mockImplementation((event, handler) => {
-      eventListeners.set(event, handler as EventListener);
-    });
+    vi.spyOn(window, 'addEventListener').mockImplementation(
+      (event, handler) => {
+        eventListeners.set(event, handler as EventListener);
+      },
+    );
 
     vi.spyOn(window, 'removeEventListener').mockImplementation((event) => {
       eventListeners.delete(event);
@@ -47,8 +49,14 @@ describe('useCanvasAwareSend', () => {
     it('should set up event listeners on mount', () => {
       renderHook(() => useCanvasAwareSend(mockSendMessage));
 
-      expect(window.addEventListener).toHaveBeenCalledWith('canvas-active', expect.any(Function));
-      expect(window.addEventListener).toHaveBeenCalledWith('canvas-inactive', expect.any(Function));
+      expect(window.addEventListener).toHaveBeenCalledWith(
+        'canvas-active',
+        expect.any(Function),
+      );
+      expect(window.addEventListener).toHaveBeenCalledWith(
+        'canvas-inactive',
+        expect.any(Function),
+      );
     });
 
     it('should remove event listeners on unmount', () => {
@@ -132,7 +140,11 @@ describe('useCanvasAwareSend', () => {
         const handler = eventListeners.get('canvas-active');
         handler?.(
           new CustomEvent('canvas-active', {
-            detail: { artifactId: 'artifact-123', title: 'Test', file_extension: 'txt' },
+            detail: {
+              artifactId: 'artifact-123',
+              title: 'Test',
+              file_extension: 'txt',
+            },
           }),
         );
       });
@@ -158,7 +170,9 @@ describe('useCanvasAwareSend', () => {
         result.current.sendMessage('Hello', { someOption: true });
       });
 
-      expect(mockSendMessage).toHaveBeenCalledWith('Hello', { someOption: true });
+      expect(mockSendMessage).toHaveBeenCalledWith('Hello', {
+        someOption: true,
+      });
     });
 
     it('should include artifact when canvas is active', () => {
@@ -169,7 +183,11 @@ describe('useCanvasAwareSend', () => {
         const handler = eventListeners.get('canvas-active');
         handler?.(
           new CustomEvent('canvas-active', {
-            detail: { artifactId: 'artifact-123', title: 'Test', file_extension: 'md' },
+            detail: {
+              artifactId: 'artifact-123',
+              title: 'Test',
+              file_extension: 'md',
+            },
           }),
         );
       });
@@ -198,7 +216,11 @@ describe('useCanvasAwareSend', () => {
         const handler = eventListeners.get('canvas-active');
         handler?.(
           new CustomEvent('canvas-active', {
-            detail: { artifactId: 'artifact-123', title: 'Test', file_extension: 'md' },
+            detail: {
+              artifactId: 'artifact-123',
+              title: 'Test',
+              file_extension: 'md',
+            },
           }),
         );
       });
@@ -210,7 +232,9 @@ describe('useCanvasAwareSend', () => {
         result.current.sendMessage('Update this', { artifact: customArtifact });
       });
 
-      expect(mockSendMessage).toHaveBeenCalledWith('Update this', { artifact: customArtifact });
+      expect(mockSendMessage).toHaveBeenCalledWith('Update this', {
+        artifact: customArtifact,
+      });
     });
 
     it('should preserve other options when adding artifact', () => {
@@ -221,7 +245,11 @@ describe('useCanvasAwareSend', () => {
         const handler = eventListeners.get('canvas-active');
         handler?.(
           new CustomEvent('canvas-active', {
-            detail: { artifactId: 'artifact-123', title: 'Test', file_extension: 'md' },
+            detail: {
+              artifactId: 'artifact-123',
+              title: 'Test',
+              file_extension: 'md',
+            },
           }),
         );
       });
@@ -251,7 +279,11 @@ describe('useCanvasAwareSend', () => {
         const handler = eventListeners.get('canvas-active');
         handler?.(
           new CustomEvent('canvas-active', {
-            detail: { artifactId: 'artifact-123', title: 'Test', file_extension: 'md' },
+            detail: {
+              artifactId: 'artifact-123',
+              title: 'Test',
+              file_extension: 'md',
+            },
           }),
         );
       });

@@ -1,11 +1,11 @@
-import { setOpenPricingModal } from "@/features/subscription/subscription-slice";
-import { TRIGGERS } from "@/features/top-banner/constants";
-import { setTopBannerOptions } from "@/features/top-banner/top-banner-slice";
-import type { FreeUsageCount } from "@iblai/iblai-api";
-import { toast } from "sonner";
-import { SubscriptionFlowConfig as IblSubscriptionFlowConfig } from "@iblai/iblai-js/web-utils";
-import { SubscriptionFlow as IblSubscriptionFlow } from "@iblai/iblai-js/web-utils";
-import { Dispatch, SetStateAction } from "react";
+import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
+import { TRIGGERS } from '@/features/top-banner/constants';
+import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
+import type { FreeUsageCount } from '@iblai/iblai-api';
+import { toast } from 'sonner';
+import { SubscriptionFlowConfig as IblSubscriptionFlowConfig } from '@iblai/iblai-js/web-utils';
+import { SubscriptionFlow as IblSubscriptionFlow } from '@iblai/iblai-js/web-utils';
+import { Dispatch, SetStateAction } from 'react';
 
 interface Tenant {
   key: string;
@@ -37,9 +37,9 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
   private bannerOptions = {
     enabled: true,
     bannerText:
-      "Upgrade to create your own mentors. No credit card required 😎",
+      'Upgrade to create your own mentors. No credit card required 😎',
     onUpgrade: TRIGGERS.PRICING_MODAL,
-    parentContainerSelector: ".mentor-parent-container",
+    parentContainerSelector: '.mentor-parent-container',
   };
 
   constructor(config: SubscriptionFlowConfig) {
@@ -80,7 +80,7 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
   public handleFreeUsageCountFlow(freeUsageCount: FreeUsageCount): void {
     if (!freeUsageCount) return;
     const freeTrialLimitMessage =
-      "You have reached your free trial limit. Please upgrade to continue and create your own mentors. No credit card required 😎";
+      'You have reached your free trial limit. Please upgrade to continue and create your own mentors. No credit card required 😎';
     const tooltipText =
       freeUsageCount.count < 1
         ? freeTrialLimitMessage
@@ -123,7 +123,7 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
       tooltipText: tooltipValue,
       bannerText: tooltipValue,
       enabled: true,
-      buttonLabel: "Subscribe",
+      buttonLabel: 'Subscribe',
       onUpgrade: TRIGGERS.SUBSCRIBE_USER,
     };
     this.dispatch(setTopBannerOptions(updatedBannerOptions));
@@ -135,7 +135,7 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
    */
   public handleRedirectToURLFlow(
     redirectUrl: string,
-    toastMessage?: string
+    toastMessage?: string,
   ): void {
     if (toastMessage) {
       toast.info(toastMessage);
@@ -158,7 +158,7 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
    */
   public handleBeforeSubscribeUserTriggerFlow(): void {
     this.dispatch(
-      setTopBannerOptions({ ...this.topBannerOptions, loading: true })
+      setTopBannerOptions({ ...this.topBannerOptions, loading: true }),
     );
   }
 
@@ -167,9 +167,9 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
    * Shows success message and disables subscription banner
    */
   public handleSuccessfullySubscribedFlow(message?: string): void {
-    toast.success(message || "Subscription renewed successfully.");
+    toast.success(message || 'Subscription renewed successfully.');
     this.dispatch(
-      setTopBannerOptions({ ...this.topBannerOptions, enabled: false })
+      setTopBannerOptions({ ...this.topBannerOptions, enabled: false }),
     );
   }
 

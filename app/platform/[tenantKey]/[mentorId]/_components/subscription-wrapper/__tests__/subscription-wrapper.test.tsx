@@ -30,7 +30,8 @@ vi.mock('@/lib/utils', () => ({
     // (!currentTenant?.is_enterprise || (currentTenant?.key === 'main' && currentTenant?.is_enterprise))
     return (
       mockStripeEnabled === 'true' &&
-      (!tenant?.is_enterprise || (tenant?.key === 'main' && tenant?.is_enterprise))
+      (!tenant?.is_enterprise ||
+        (tenant?.key === 'main' && tenant?.is_enterprise))
     );
   },
 }));
@@ -62,7 +63,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
@@ -78,7 +81,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
   });
@@ -97,7 +102,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
       render(<SubscriptionWrapper />);
 
       // New behavior: enterprise on main tenant CAN access stripe
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
 
     it('renders MentorECommerceWrapper for enterprise non-admin on main tenant', () => {
@@ -112,7 +119,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       render(<SubscriptionWrapper />);
 
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -129,7 +138,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       render(<SubscriptionWrapper />);
 
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
 
     it('renders MentorECommerceWrapper for admin users on non-enterprise tenants', () => {
@@ -144,7 +155,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       render(<SubscriptionWrapper />);
 
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -161,7 +174,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       render(<SubscriptionWrapper />);
 
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -178,7 +193,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
@@ -194,7 +211,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
@@ -210,7 +229,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
   });
@@ -228,7 +249,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
@@ -244,7 +267,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       const { container } = render(<SubscriptionWrapper />);
 
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
@@ -262,7 +287,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       // Even though enterprise on main would normally have access,
       // stripe being disabled blocks it
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
   });
@@ -277,7 +304,9 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       // When currentTenant is null, !currentTenant?.is_enterprise evaluates to true
       // So the ecommerce wrapper renders (since logged in + stripe enabled)
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
 
     it('renders MentorECommerceWrapper when currentTenant is undefined (is_enterprise defaults to falsy)', () => {
@@ -289,46 +318,76 @@ describe('SubscriptionWrapper - Enterprise Bypass with isStripeActivated', () =>
 
       // When currentTenant is undefined, !currentTenant?.is_enterprise evaluates to true
       // So the ecommerce wrapper renders (since logged in + stripe enabled)
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
   });
 
   describe('isStripeActivated logic validation', () => {
     it('stripe enabled + non-enterprise = active', () => {
-      mockCurrentTenant = { key: 'any', org: 'any', is_admin: true, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'any',
+        org: 'any',
+        is_admin: true,
+        is_enterprise: false,
+      };
       mockStripeEnabled = 'true';
       mockIsLoggedIn = true;
 
       render(<SubscriptionWrapper />);
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
 
     it('stripe enabled + enterprise on main = active (special case)', () => {
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: true, is_enterprise: true };
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: true,
+        is_enterprise: true,
+      };
       mockStripeEnabled = 'true';
       mockIsLoggedIn = true;
 
       render(<SubscriptionWrapper />);
-      expect(screen.getByTestId('mentor-ecommerce-wrapper')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('mentor-ecommerce-wrapper'),
+      ).toBeInTheDocument();
     });
 
     it('stripe enabled + enterprise on non-main = NOT active', () => {
-      mockCurrentTenant = { key: 'other', org: 'other', is_admin: true, is_enterprise: true };
+      mockCurrentTenant = {
+        key: 'other',
+        org: 'other',
+        is_admin: true,
+        is_enterprise: true,
+      };
       mockStripeEnabled = 'true';
       mockIsLoggedIn = true;
 
       const { container } = render(<SubscriptionWrapper />);
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
 
     it('stripe disabled = NOT active regardless of enterprise status', () => {
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: true, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: true,
+        is_enterprise: false,
+      };
       mockStripeEnabled = 'false';
       mockIsLoggedIn = true;
 
       const { container } = render(<SubscriptionWrapper />);
-      expect(screen.queryByTestId('mentor-ecommerce-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('mentor-ecommerce-wrapper'),
+      ).not.toBeInTheDocument();
       expect(container.firstChild).toBeNull();
     });
   });

@@ -1,13 +1,13 @@
-import { useTopTrialBanner } from "@/hooks/use-top-trial-banner";
-import { TopTrialBannerProps } from "@/lib/types";
-import React from "react";
+import { useTopTrialBanner } from '@/hooks/use-top-trial-banner';
+import { TopTrialBannerProps } from '@/lib/types';
+import React from 'react';
 
 export function TopTrialBanner({
   parentContainer,
-  bannerText = "Upgrade to create your own mentors. No credit card required 😎",
+  bannerText = 'Upgrade to create your own mentors. No credit card required 😎',
   onUpgrade,
   loading = false,
-  tooltipText = "Upgrade to create your own mentors. No credit card required 😎",
+  tooltipText = 'Upgrade to create your own mentors. No credit card required 😎',
 }: TopTrialBannerProps) {
   const {
     visible,
@@ -77,7 +77,7 @@ export function TopTrialBanner({
           aria-label="Upgrade"
           onClick={isLoading ? () => {} : () => bannerButtonTriggerHandler()}
           disabled={isLoading}
-          style={{ position: "relative", minWidth: "40px", minHeight: "32px" }}
+          style={{ position: 'relative', minWidth: '40px', minHeight: '32px' }}
         >
           {loading ? (
             <span className="mx-auto flex h-5 w-5 items-center justify-center">
@@ -125,7 +125,7 @@ export function TopTrialBanner({
           className="ml-4 hidden flex-shrink-0 rounded-full border border-white/70 bg-transparent px-4 py-1 text-sm font-medium whitespace-nowrap text-white transition hover:bg-white/10 sm:block"
           onClick={isLoading ? () => {} : () => bannerButtonTriggerHandler()}
           disabled={isLoading}
-          style={{ position: "relative", minWidth: "80px", minHeight: "32px" }}
+          style={{ position: 'relative', minWidth: '80px', minHeight: '32px' }}
         >
           {loading ? (
             <span className="mx-auto flex h-5 w-5 items-center justify-center">
@@ -154,7 +154,7 @@ export function TopTrialBanner({
               </svg>
             </span>
           ) : (
-            "Upgrade"
+            'Upgrade'
           )}
         </button>
       </div>
@@ -163,7 +163,7 @@ export function TopTrialBanner({
         className="absolute top-1/2 right-0 rounded-full p-1 transition hover:bg-white/20 md:right-4"
         aria-label="Close banner"
         onClick={() => setVisible(false)}
-        style={{ transform: "translateY(-50%)" }}
+        style={{ transform: 'translateY(-50%)' }}
       >
         <svg
           className="h-5 w-5 text-white"

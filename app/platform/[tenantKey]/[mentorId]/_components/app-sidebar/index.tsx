@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useCallback } from "react";
-import { cn } from "@/lib/utils";
+import React, { useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
@@ -9,43 +9,43 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { ToggleSidebarButton } from "./toggle-sidebar-button";
-import { PinnedMessages } from "./pinned-messages";
-import { RecentMessages } from "./recent-messages";
-import { useSidebarNavigation } from "@/hooks/user-navigate";
-import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
-import Logo from "@/components/logo";
+} from '@/components/ui/sidebar';
+import { ToggleSidebarButton } from './toggle-sidebar-button';
+import { PinnedMessages } from './pinned-messages';
+import { RecentMessages } from './recent-messages';
+import { useSidebarNavigation } from '@/hooks/user-navigate';
+import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import Logo from '@/components/logo';
 import {
   useParams,
   usePathname,
   useRouter,
   useSearchParams,
-} from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+} from 'next/navigation';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 
-import { useEmbedMode } from "@/hooks/use-embed-mode";
-import { useUserType } from "@/hooks/use-user-type";
-import { chatActions, selectSessionId } from "@iblai/iblai-js/web-utils";
-import eventBus, { RemoteEvents } from "@/lib/eventBus";
-import { ProjectsSidebarDropdown } from "./projects-sidebar-dropdown";
-import { ProjectPageParams } from "@/lib/types";
-import { AppSidebarFooter } from "./app-sidebar-footer";
-import { AppSidebarContent } from "./app-sidebar-content";
+import { useEmbedMode } from '@/hooks/use-embed-mode';
+import { useUserType } from '@/hooks/use-user-type';
+import { chatActions, selectSessionId } from '@iblai/iblai-js/web-utils';
+import eventBus, { RemoteEvents } from '@/lib/eventBus';
+import { ProjectsSidebarDropdown } from './projects-sidebar-dropdown';
+import { ProjectPageParams } from '@/lib/types';
+import { AppSidebarFooter } from './app-sidebar-footer';
+import { AppSidebarContent } from './app-sidebar-content';
 import {
   useCurrentTenant,
   useIsVisiting,
   useUserIsStudent,
   useVisitingTenant,
-} from "@/hooks/use-user";
-import { UserType, LOCAL_STORAGE_KEYS } from "@/lib/constants";
-import { clearFiles } from "@iblai/iblai-js/web-utils";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+} from '@/hooks/use-user';
+import { UserType, LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { clearFiles } from '@iblai/iblai-js/web-utils';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 export function AppSidebar() {
   const searchParams = useSearchParams();
-  const hideSidebarRaw = searchParams.get("hide-sidebar");
-  const hideSidebar = hideSidebarRaw === "1" || hideSidebarRaw === "true";
+  const hideSidebarRaw = searchParams.get('hide-sidebar');
+  const hideSidebar = hideSidebarRaw === '1' || hideSidebarRaw === 'true';
   const pathname = usePathname();
   const router = useRouter();
   const { mentorId, projectId, tenantKey } = useParams<ProjectPageParams>();
@@ -57,7 +57,7 @@ export function AppSidebar() {
   const embedMode = useEmbedMode();
   const { currentTenant } = useCurrentTenant();
   const { isUserTypeAllowed } = useUserType();
-  const isMainTenant = tenantKey === "main";
+  const isMainTenant = tenantKey === 'main';
   const userIsStudent = useUserIsStudent();
   const userIsVisiting = useIsVisiting();
   const { visitingTenant } = useVisitingTenant();
@@ -141,7 +141,7 @@ export function AppSidebar() {
 
         return {
           id: messageObj.id,
-          role: messageObj.message.type === "human" ? "user" : "ai",
+          role: messageObj.message.type === 'human' ? 'user' : 'ai',
           content: messageObj.message.data.content,
           timestamp: messageObj.inserted_at,
           visible: true,
@@ -157,7 +157,7 @@ export function AppSidebar() {
     dispatch(chatActions.resetIsTyping(undefined));
     dispatch(chatActions.setStreaming(false));
     dispatch(chatActions.resetCurrentStreamingMessage(undefined));
-    dispatch(chatActions.setActiveTab("chat"));
+    dispatch(chatActions.setActiveTab('chat'));
     dispatch(chatActions.updateSessionIds(message.session_id));
     dispatch(chatActions.setNewMessages(messages));
     dispatch(chatActions.setShouldStartNewChat(false));
@@ -188,41 +188,41 @@ export function AppSidebar() {
         collapsible="icon"
         variant="sidebar"
         className={cn(
-          "flex flex-col border-r border-[#D0E0FF] transition-all duration-300",
+          'flex flex-col border-r border-[#D0E0FF] transition-all duration-300',
         )}
-        sidebarInnerClassName={cn("bg-white")}
+        sidebarInnerClassName={cn('bg-white')}
       >
         <SidebarHeader
           className={cn(
-            "h-16 flex justify-center flex-none border-b border-[#D0E0FF]",
+            'flex h-16 flex-none justify-center border-b border-[#D0E0FF]',
           )}
         >
           <div
-            className={cn("flex w-full items-center", {
-              "justify-center": !(open || openMobile),
+            className={cn('flex w-full items-center', {
+              'justify-center': !(open || openMobile),
             })}
           >
             <ToggleSidebarButton />
             <div
-              className={cn("-ml-9 flex-1 flex items-center justify-center", {
+              className={cn('-ml-9 flex flex-1 items-center justify-center', {
                 hidden: !isSidebarOpen,
                 flex: isSidebarOpen,
               })}
             >
-              <Logo className={cn("max-w-[calc(16rem-2.25rem)]")} />
+              <Logo className={cn('max-w-[calc(16rem-2.25rem)]')} />
             </div>
           </div>
         </SidebarHeader>
-        <SidebarContent className="!overflow-visible p-4 flex-grow px-0">
+        <SidebarContent className="flex-grow !overflow-visible p-4 px-0">
           <SidebarMenu
-            className={cn("flex-none px-4 gap-0", {
-              "place-content-center": !open && !openMobile,
+            className={cn('flex-none gap-0 px-4', {
+              'place-content-center': !open && !openMobile,
             })}
           >
             {embedMode ? (
               <AppSidebarContent
                 contentItems={contentItems.filter(
-                  (item) => item.label === "New Chat",
+                  (item) => item.label === 'New Chat',
                 )}
                 isUserTypeAllowed={isUserTypeAllowed}
                 isMobile={isMobile}
@@ -251,9 +251,9 @@ export function AppSidebar() {
               />
             )}
           </SidebarMenu>
-          <div className="border-t border-[#D0E0FF] mb-2" />
-          <SidebarMenu className="flex-1 overflow-auto h-full scrollbar-thin px-4">
-            <SidebarMenuItem className="overflow-y-auto h-full scrollbar-thin">
+          <div className="mb-2 border-t border-[#D0E0FF]" />
+          <SidebarMenu className="scrollbar-thin h-full flex-1 overflow-auto px-4">
+            <SidebarMenuItem className="scrollbar-thin h-full overflow-y-auto">
               {isSidebarOpen && (
                 <div className="flex max-h-fit flex-col overflow-y-auto">
                   {!embedMode && <ProjectsSidebarDropdown />}
@@ -270,7 +270,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
-        <div className="border-t border-[#D0E0FF] mb-2" />
+        <div className="mb-2 border-t border-[#D0E0FF]" />
         <AppSidebarFooter
           embedMode={embedMode}
           footerItems={footerItems}

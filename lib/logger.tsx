@@ -18,7 +18,11 @@ function formatDateTime() {
 
 function getSessionIdFromLocalStorage(mentorId: string | null) {
   if (!mentorId) return '';
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return '';
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return '';
 
   try {
     const sessionIds = localStorage.getItem(LOCAL_STORAGE_KEYS.SESSION_ID);

@@ -36,11 +36,15 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: vi.fn(
-    (error: unknown, defaultMsg: string) => (error as { message?: string })?.message || defaultMsg,
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: vi.fn(
+      (error: unknown, defaultMsg: string) =>
+        (error as { message?: string })?.message || defaultMsg,
+    ),
+  }),
+);
 
 import useGoogleDrivePicker from '../use-google-drive-picker-v3';
 
@@ -51,7 +55,10 @@ describe('useGoogleDrivePicker v3', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock gapi global
@@ -63,9 +70,11 @@ describe('useGoogleDrivePicker v3', () => {
     };
 
     // Mock document.body.appendChild
-    appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
-      return node as HTMLScriptElement;
-    });
+    appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: Node) => {
+        return node as HTMLScriptElement;
+      });
 
     // Default mock implementations
     mockGetCredentials.mockReturnValue({
@@ -127,7 +136,9 @@ describe('useGoogleDrivePicker v3', () => {
       await waitFor(() => {
         expect(result.current.credentials.client_id).toBe('test-client-id');
         expect(result.current.credentials.developer_key).toBe('test-dev-key');
-        expect(result.current.credentials.client_secret).toBe('test-client-secret');
+        expect(result.current.credentials.client_secret).toBe(
+          'test-client-secret',
+        );
       });
     });
 
@@ -165,7 +176,9 @@ describe('useGoogleDrivePicker v3', () => {
 
   describe('handlePickerOpen', () => {
     it('should log error when credentials not loaded', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.resolve([]),
       });
@@ -180,7 +193,9 @@ describe('useGoogleDrivePicker v3', () => {
         await result.current.handlePickerOpen();
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith('Google drive Credentials are not loaded yet');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Google drive Credentials are not loaded yet',
+      );
 
       consoleSpy.mockRestore();
     });
@@ -209,9 +224,10 @@ describe('useGoogleDrivePicker v3', () => {
       });
 
       // Either openPicker is called directly, or a new script is appended
-      expect(mockOpenPicker.mock.calls.length > 0 || appendChildSpy.mock.calls.length > 1).toBe(
-        true,
-      );
+      expect(
+        mockOpenPicker.mock.calls.length > 0 ||
+          appendChildSpy.mock.calls.length > 1,
+      ).toBe(true);
     });
   });
 
@@ -230,7 +246,9 @@ describe('useGoogleDrivePicker v3', () => {
 
   describe('training document submission', () => {
     it('should show error toast when training document fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
       });

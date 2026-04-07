@@ -20,7 +20,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useModelDownload } from '@/hooks/use-model-download';
 import { ModelDownloadState, OsType } from '@/types/tauri';
 import { ModelDownloadLogsModal } from '@/components/modals/model-download-logs-modal';
@@ -102,11 +106,14 @@ export function ModelDownloadStatus() {
   }
 
   const showDownloadButton =
-    (state.status === 'idle' || state.status === 'cancelled' || state.status === 'error') &&
+    (state.status === 'idle' ||
+      state.status === 'cancelled' ||
+      state.status === 'error') &&
     ollamaStatus?.installed &&
     !ollamaStatus?.model_installed;
 
-  const showInstallOllamaButton = ollamaStatus !== null && !ollamaStatus?.installed;
+  const showInstallOllamaButton =
+    ollamaStatus !== null && !ollamaStatus?.installed;
   const isDownloading = state.status === 'downloading';
   const isWindows = osType === 'windows';
 
@@ -126,15 +133,15 @@ export function ModelDownloadStatus() {
                 {/* Status indicator dot */}
                 {state.status === 'downloading' && (
                   <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-blue-500"></span>
                   </span>
                 )}
                 {state.status === 'completed' && (
-                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
                 )}
                 {state.status === 'error' && (
-                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-white" />
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -146,12 +153,16 @@ export function ModelDownloadStatus() {
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm">Phi Mini 3 Model</h4>
-              <StatusBadge status={state.status} progress={state.progress} osType={osType} />
+              <h4 className="text-sm font-semibold">Phi Mini 3 Model</h4>
+              <StatusBadge
+                status={state.status}
+                progress={state.progress}
+                osType={osType}
+              />
             </div>
 
             {/* Model Manager Status */}
-            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
@@ -159,7 +170,8 @@ export function ModelDownloadStatus() {
                   }`}
                 />
                 <span>
-                  Model Manager: {ollamaStatus?.installed ? 'Installed' : 'Not installed'}
+                  Model Manager:{' '}
+                  {ollamaStatus?.installed ? 'Installed' : 'Not installed'}
                 </span>
               </div>
               {ollamaStatus?.installed && (
@@ -169,7 +181,9 @@ export function ModelDownloadStatus() {
                       ollamaStatus?.running ? 'bg-green-500' : 'bg-yellow-500'
                     }`}
                   />
-                  <span>Service: {ollamaStatus?.running ? 'Running' : 'Stopped'}</span>
+                  <span>
+                    Service: {ollamaStatus?.running ? 'Running' : 'Stopped'}
+                  </span>
                 </div>
               )}
             </div>
@@ -178,17 +192,21 @@ export function ModelDownloadStatus() {
             {isDownloading && !isWindows && (
               <div className="space-y-2">
                 <Progress value={state.progress} className="h-2" />
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{state.message}</p>
+                <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                  {state.message}
+                </p>
               </div>
             )}
             {/* Simple downloading message on Windows */}
             {isDownloading && isWindows && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">{state.message}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {state.message}
+              </p>
             )}
 
             {/* Error Message */}
             {state.status === 'error' && state.error && (
-              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+              <div className="rounded bg-red-50 p-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                 {state.error}
               </div>
             )}
@@ -197,21 +215,26 @@ export function ModelDownloadStatus() {
             <div className="flex flex-wrap gap-2">
               {showInstallOllamaButton && (
                 <Button onClick={installOllama} size="sm" className="flex-1">
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Install Model Manager
                 </Button>
               )}
 
               {showDownloadButton && (
                 <Button onClick={startDownload} size="sm" className="flex-1">
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Download Model
                 </Button>
               )}
 
               {isDownloading && (
-                <Button onClick={cancelDownload} variant="outline" size="sm" className="flex-1">
-                  <X className="h-4 w-4 mr-2" />
+                <Button
+                  onClick={cancelDownload}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <X className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
               )}
@@ -220,7 +243,7 @@ export function ModelDownloadStatus() {
                 state.status === 'error' ||
                 state.status === 'cancelled') && (
                 <Button onClick={checkStatus} variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="mr-2 h-4 w-4" />
                   Refresh
                 </Button>
               )}
@@ -239,7 +262,7 @@ export function ModelDownloadStatus() {
                   setShowDetails(false);
                   setShowLogsModal(true);
                 }}
-                className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
               >
                 <Terminal className="h-3 w-3" />
                 View logs ({state.logs.length})
@@ -250,7 +273,10 @@ export function ModelDownloadStatus() {
       </DropdownMenu>
 
       {/* Logs Modal */}
-      <ModelDownloadLogsModal isOpen={showLogsModal} onClose={() => setShowLogsModal(false)} />
+      <ModelDownloadLogsModal
+        isOpen={showLogsModal}
+        onClose={() => setShowLogsModal(false)}
+      />
     </>
   );
 }

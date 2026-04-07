@@ -24,7 +24,10 @@ interface CodeCanvasComponentProps {
   metadata?: Record<string, unknown>;
   sessionId?: string;
   tenantKey?: string;
-  sendMessage?: (text: string, options?: { visible?: boolean; artifact?: any }) => void;
+  sendMessage?: (
+    text: string,
+    options?: { visible?: boolean; artifact?: any },
+  ) => void;
 }
 
 // Exported for testing - Basic syntax highlighting function for Python
@@ -118,7 +121,10 @@ export const isSelectionWithinEditor = (
 // Exported for testing - Escape HTML entities for code display
 export const escapeHtmlEntities = (text: string): string => {
   if (!text) return '';
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 };
 
 // Exported for testing - Highlight strings in code
@@ -240,7 +246,9 @@ export function CodeCanvasComponent({
   const [highlightRects, setHighlightRects] = useState<Array<DOMRect>>([]);
   const artifactId =
     _artifactId ||
-    (typeof _metadata === 'object' && _metadata ? (_metadata as any)?.artifactId : undefined);
+    (typeof _metadata === 'object' && _metadata
+      ? (_metadata as any)?.artifactId
+      : undefined);
 
   // Version history state
   const [currentVersion, setCurrentVersion] = useState('v1');
@@ -352,7 +360,10 @@ export function CodeCanvasComponent({
     });
 
     // Function calls (simple detection: word followed by parenthesis)
-    html = html.replace(/(\b\w+)\(/g, '<span class="token-function">$1</span>(');
+    html = html.replace(
+      /(\b\w+)\(/g,
+      '<span class="token-function">$1</span>(',
+    );
 
     // Numbers
     html = html.replace(/\b(\d+)\b/g, '<span class="token-number">$1</span>');
@@ -488,12 +499,19 @@ export function CodeCanvasComponent({
   /* istanbul ignore next -- @preserve DOM selection handler */
   const handleTextSelection = () => {
     const selection = window.getSelection();
-    if (selection && selection.toString().trim().length > 0 && selection.rangeCount > 0) {
+    if (
+      selection &&
+      selection.toString().trim().length > 0 &&
+      selection.rangeCount > 0
+    ) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
 
       // Check if selection is within the editor
-      if (editorRef.current && !editorRef.current.contains(range.commonAncestorContainer)) {
+      if (
+        editorRef.current &&
+        !editorRef.current.contains(range.commonAncestorContainer)
+      ) {
         return;
       }
 
@@ -528,11 +546,14 @@ export function CodeCanvasComponent({
 
     // Calculate snippet positions
     if (!editorRef.current || !artifactId || !sendMessage) {
-      console.error('[CodeCanvas] Cannot send highlight query - missing requirements', {
-        hasEditor: !!editorRef.current,
-        hasArtifactId: !!artifactId,
-        hasSendMessage: !!sendMessage,
-      });
+      console.error(
+        '[CodeCanvas] Cannot send highlight query - missing requirements',
+        {
+          hasEditor: !!editorRef.current,
+          hasArtifactId: !!artifactId,
+          hasSendMessage: !!sendMessage,
+        },
+      );
       // Still clear the popup even if can't send
       setHighlightInput('');
       setShowHighlightPopup(false);
@@ -646,7 +667,9 @@ export function CodeCanvasComponent({
       const rect = range.getBoundingClientRect();
       const rects = Array.from(range.getClientRects());
       setSelectedText((prev) =>
-        prev ? { ...prev, position: { x: rect.left, y: rect.bottom + 8 }, rect } : null,
+        prev
+          ? { ...prev, position: { x: rect.left, y: rect.bottom + 8 }, rect }
+          : null,
       );
       setHighlightRects(rects);
     };
@@ -672,7 +695,9 @@ export function CodeCanvasComponent({
             variant="ghost"
             size="sm"
             className={buttonClass}
-            onClick={/* istanbul ignore next -- @preserve */ () => execCommand('undo')}
+            onClick={
+              /* istanbul ignore next -- @preserve */ () => execCommand('undo')
+            }
             title="Undo"
           >
             <Undo2 className="h-4 w-4 text-gray-600" />
@@ -685,7 +710,9 @@ export function CodeCanvasComponent({
             variant="ghost"
             size="sm"
             className={buttonClass}
-            onClick={/* istanbul ignore next -- @preserve */ () => execCommand('redo')}
+            onClick={
+              /* istanbul ignore next -- @preserve */ () => execCommand('redo')
+            }
             title="Redo"
           >
             <Redo2 className="h-4 w-4 text-gray-600" />
@@ -702,17 +729,19 @@ export function CodeCanvasComponent({
   return (
     <div
       ref={containerRef}
-      className={`bg-white h-full flex flex-col relative overflow-hidden ${showAnimation ? 'animate-pulse' : ''}`}
+      className={`relative flex h-full flex-col overflow-hidden bg-white ${showAnimation ? 'animate-pulse' : ''}`}
     >
       {/* Cool Animation Overlay */}
       {showAnimation && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 animate-pulse" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="pointer-events-none absolute inset-0 z-10">
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-blue-600 font-medium animate-bounce">Generating content...</div>
+            <div className="animate-bounce font-medium text-blue-600">
+              Generating content...
+            </div>
           </div>
         </div>
       )}
@@ -741,23 +770,27 @@ export function CodeCanvasComponent({
       )}
 
       {/* Main Header - Fully Responsive */}
-      <div className="flex items-center px-2 sm:px-3 md:px-4 py-2 sm:py-3 border-b border-gray-200 bg-white min-h-[50px] sm:min-h-[60px] gap-1 flex-shrink-0">
+      <div className="flex min-h-[50px] flex-shrink-0 items-center gap-1 border-b border-gray-200 bg-white px-2 py-2 sm:min-h-[60px] sm:px-3 sm:py-3 md:px-4">
         {/* Left Section - Title (Flexible with proper overflow handling) */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-hidden mr-2">
-          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
-          <span className="font-medium text-gray-900 text-xs sm:text-sm md:text-base truncate block">
+        <div className="mr-2 flex min-w-0 flex-1 items-center gap-1 overflow-hidden sm:gap-2">
+          <FileText className="h-4 w-4 flex-shrink-0 text-blue-600 sm:h-5 sm:w-5" />
+          <span className="block truncate text-xs font-medium text-gray-900 sm:text-sm md:text-base">
             {title}
           </span>
 
           {/* Version Dropdown */}
           {versionHistory.length > 0 && (
             <Select value={currentVersion} onValueChange={handleVersionChange}>
-              <SelectTrigger className="w-20 h-7 text-xs border-gray-300">
+              <SelectTrigger className="h-7 w-20 border-gray-300 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {versionHistory.map((version) => (
-                  <SelectItem key={version.id} value={version.id} className="text-xs">
+                  <SelectItem
+                    key={version.id}
+                    value={version.id}
+                    className="text-xs"
+                  >
                     {version.label}
                   </SelectItem>
                 ))}
@@ -767,7 +800,7 @@ export function CodeCanvasComponent({
         </div>
 
         {/* Middle Section - Responsive Toolbar */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-0.5">
           {visibleItems.map((item) => renderToolbarButton(item))}
 
           {/* Vertical Three Dots Menu (if needed for future expansion, currently empty) */}
@@ -793,8 +826,13 @@ export function CodeCanvasComponent({
         </div>
 
         {/* Right Section - Action Buttons (Fixed Width) */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Share">
+        <div className="ml-1 flex flex-shrink-0 items-center gap-1 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            title="Share"
+          >
             <Share2 className="h-4 w-4 text-gray-600" />
           </Button>
           {onClose && (
@@ -812,11 +850,11 @@ export function CodeCanvasComponent({
       </div>
 
       {/* Main Content Area - Code Editor */}
-      <div className="flex-1 flex overflow-hidden bg-gray-50 text-gray-800 font-mono text-sm">
+      <div className="flex flex-1 overflow-hidden bg-gray-50 font-mono text-sm text-gray-800">
         {/* Line Numbers */}
         <div
           ref={lineNumbersRef}
-          className="flex-shrink-0 w-10 sm:w-12 md:w-14 py-4 px-2 text-right border-r border-gray-200 bg-gray-100 text-gray-500 select-none overflow-y-hidden"
+          className="w-10 flex-shrink-0 overflow-y-hidden border-r border-gray-200 bg-gray-100 px-2 py-4 text-right text-gray-500 select-none sm:w-12 md:w-14"
           style={{ lineHeight: '1.25rem' }} // Match line-height of code editor
         >
           {getLineNumbers().map((lineNumber) => (
@@ -831,7 +869,7 @@ export function CodeCanvasComponent({
           contentEditable
           onInput={handleInput}
           onScroll={handleScroll}
-          className="flex-1 p-4 outline-none resize-none bg-transparent text-gray-800 font-mono text-sm leading-5 overflow-auto whitespace-pre-wrap"
+          className="flex-1 resize-none overflow-auto bg-transparent p-4 font-mono text-sm leading-5 whitespace-pre-wrap text-gray-800 outline-none"
           spellCheck="false"
           suppressContentEditableWarning={true}
           style={{ tabSize: 4, MozTabSize: 4 }} // Ensure consistent tab size
@@ -867,48 +905,61 @@ export function CodeCanvasComponent({
       {/* Text Highlight Popup - WORKING IMPLEMENTATION */}
       {/* istanbul ignore next -- @preserve highlight popup JSX event handlers */}
       {
-        /* istanbul ignore next -- @preserve */ showHighlightPopup && selectedText && (
-          <div
-            className="highlight-popup fixed z-[9999]"
-            style={{
-              left: `${selectedText.position.x}px`,
-              top: `${selectedText.position.y}px`,
-            }}
-            onMouseDown={/* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()}
-            onMouseUp={/* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2.5 bg-white shadow-md rounded-xl border border-gray-200/70 px-3.5 py-2.5 w-[min(90vw,420px)] max-w-[420px]">
-              <Image src="/icons/my-mentors.svg" alt="Ask Gemini" width={20} height={20} />
-              <input
-                ref={highlightInputRef}
-                type="text"
-                value={highlightInput}
-                onChange={
-                  /* istanbul ignore next -- @preserve */ (e) => setHighlightInput(e.target.value)
-                }
-                onKeyDown={
-                  /* istanbul ignore next -- @preserve */ (e) => {
-                    if (e.key === 'Enter') {
-                      handleSendHighlightQuery();
-                    } else if (e.key === 'Escape') {
-                      setShowHighlightPopup(false);
-                      setSelectedText(null);
-                      savedSelectionRef.current = null;
-                      setHighlightRects([]);
-                      const selection = window.getSelection();
-                      if (selection) {
-                        selection.removeAllRanges();
+        /* istanbul ignore next -- @preserve */ showHighlightPopup &&
+          selectedText && (
+            <div
+              className="highlight-popup fixed z-[9999]"
+              style={{
+                left: `${selectedText.position.x}px`,
+                top: `${selectedText.position.y}px`,
+              }}
+              onMouseDown={
+                /* istanbul ignore next -- @preserve */ (e) =>
+                  e.stopPropagation()
+              }
+              onMouseUp={
+                /* istanbul ignore next -- @preserve */ (e) =>
+                  e.stopPropagation()
+              }
+            >
+              <div className="flex w-[min(90vw,420px)] max-w-[420px] items-center gap-2.5 rounded-xl border border-gray-200/70 bg-white px-3.5 py-2.5 shadow-md">
+                <Image
+                  src="/icons/my-mentors.svg"
+                  alt="Ask Gemini"
+                  width={20}
+                  height={20}
+                />
+                <input
+                  ref={highlightInputRef}
+                  type="text"
+                  value={highlightInput}
+                  onChange={
+                    /* istanbul ignore next -- @preserve */ (e) =>
+                      setHighlightInput(e.target.value)
+                  }
+                  onKeyDown={
+                    /* istanbul ignore next -- @preserve */ (e) => {
+                      if (e.key === 'Enter') {
+                        handleSendHighlightQuery();
+                      } else if (e.key === 'Escape') {
+                        setShowHighlightPopup(false);
+                        setSelectedText(null);
+                        savedSelectionRef.current = null;
+                        setHighlightRects([]);
+                        const selection = window.getSelection();
+                        if (selection) {
+                          selection.removeAllRanges();
+                        }
                       }
                     }
                   }
-                }
-                placeholder="Ask Anything..."
-                className="flex-1 text-base text-gray-700 placeholder:text-gray-400 border-none rounded-lg px-2 py-1 focus:outline-none focus:ring-0"
-                autoFocus
-              />
+                  placeholder="Ask Anything..."
+                  className="flex-1 rounded-lg border-none px-2 py-1 text-base text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none"
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
-        )
+          )
       }
 
       {/* Custom CSS for syntax highlighting */}

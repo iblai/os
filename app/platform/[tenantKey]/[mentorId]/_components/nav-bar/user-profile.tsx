@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   useParams,
   useRouter,
   useSearchParams,
   usePathname,
-} from "next/navigation";
-import { UserProfileDropdown } from "@iblai/iblai-js/web-containers/next";
+} from 'next/navigation';
+import { UserProfileDropdown } from '@iblai/iblai-js/web-containers/next';
 import {
   useCurrentTenant,
   useIsAdmin,
@@ -16,33 +16,33 @@ import {
   useUsername,
   useUserTenants,
   useVisitingTenant,
-} from "@/hooks/use-user";
-import { LearnerModeSwitch } from "./learner-mode-switch";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { config } from "@/lib/config";
-import { getUserEmail, getUserName } from "@/features/utils";
-import { MentorSubscriptionFlowV2 } from "@/hooks/subscription/subscription-flow-v2";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+} from '@/hooks/use-user';
+import { LearnerModeSwitch } from './learner-mode-switch';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { config } from '@/lib/config';
+import { getUserEmail, getUserName } from '@/features/utils';
+import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   useSubscriptionHandlerV2,
   SUBSCRIPTION_V2_TRIGGERS,
-} from "@iblai/iblai-js/web-utils";
+} from '@iblai/iblai-js/web-utils';
 import {
   handleLogout,
   handleTenantSwitch,
   isStripeActivated,
   onAccountDeleted,
-} from "@/lib/utils";
-import { useTenantMetadata, Tenant } from "@iblai/iblai-js/web-utils";
-import { useGetMentorPublicSettingsQuery } from "@iblai/iblai-js/data-layer";
-import { useLazyGetTenantMetadataQuery } from "@/features/tenants/api-slice";
-import { MentorVisibilityEnum, UserApp } from "@iblai/iblai-api";
-import { ANONYMOUS_USERNAME } from "@/lib/constants";
+} from '@/lib/utils';
+import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
+import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { useLazyGetTenantMetadataQuery } from '@/features/tenants/api-slice';
+import { MentorVisibilityEnum, UserApp } from '@iblai/iblai-api';
+import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import {
   selectRbacPermissions,
   updateRbacPermissions,
-} from "@/features/rbac/rbac-slice";
-import { useModelDownload } from "@/hooks/use-model-download";
+} from '@/features/rbac/rbac-slice';
+import { useModelDownload } from '@/hooks/use-model-download';
 
 export function UserProfile() {
   const username = useUsername();
@@ -50,15 +50,15 @@ export function UserProfile() {
   const userIsStudent = useUserIsStudent();
   const userIsVisiting = useIsVisiting();
   const params = useParams<TenantKeyMentorIdParams>();
-  const tenantKey = params?.tenantKey || "";
-  const mentorId = params?.mentorId || "";
+  const tenantKey = params?.tenantKey || '';
+  const mentorId = params?.mentorId || '';
 
   // URL sync for billing tab only
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [activeProfileTab, setActiveProfileTab] = useState<string>("basic");
+  const [activeProfileTab, setActiveProfileTab] = useState<string>('basic');
   const isClosingRef = useRef(false);
 
   // Open modal from URL param on mount/URL change (billing tab only)
@@ -67,9 +67,9 @@ export function UserProfile() {
     if (isClosingRef.current) {
       return;
     }
-    const tabParam = searchParams.get("profileTab");
-    if (tabParam === "billing" && !isProfileModalOpen) {
-      setActiveProfileTab("billing");
+    const tabParam = searchParams.get('profileTab');
+    if (tabParam === 'billing' && !isProfileModalOpen) {
+      setActiveProfileTab('billing');
       setIsProfileModalOpen(true);
     }
   }, [searchParams, isProfileModalOpen]);
@@ -78,14 +78,14 @@ export function UserProfile() {
   const handleTabChange = useCallback(
     (tabId: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (tabId === "billing") {
+      if (tabId === 'billing') {
         // Set URL param for billing tab
-        setActiveProfileTab("billing");
-        params.set("profileTab", "billing");
+        setActiveProfileTab('billing');
+        params.set('profileTab', 'billing');
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       } else {
         // Clear URL param when leaving billing tab
-        params.delete("profileTab");
+        params.delete('profileTab');
         const newUrl = params.toString()
           ? `${pathname}?${params.toString()}`
           : pathname;
@@ -103,12 +103,12 @@ export function UserProfile() {
         isClosingRef.current = true;
         // Clear profileTab from URL when modal closes
         const params = new URLSearchParams(searchParams.toString());
-        params.delete("profileTab");
+        params.delete('profileTab');
         const newUrl = params.toString()
           ? `${pathname}?${params.toString()}`
           : pathname;
         router.replace(newUrl, { scroll: false });
-        setActiveProfileTab("basic");
+        setActiveProfileTab('basic');
         // Reset flag after URL update has propagated
         setTimeout(() => {
           isClosingRef.current = false;
@@ -131,9 +131,9 @@ export function UserProfile() {
 
   const subscriptionFlow = new MentorSubscriptionFlowV2({
     platformName: config.iblPlatform(),
-    currentTenantKey: currentTenant?.key || "",
+    currentTenantKey: currentTenant?.key || '',
     username: getUserName(),
-    currentTenantOrg: currentTenant?.org || "",
+    currentTenantOrg: currentTenant?.org || '',
     userTenants,
     isAdmin: currentTenant?.is_admin || false,
     mainTenantKey: config.mainTenantKey(),
@@ -156,11 +156,12 @@ export function UserProfile() {
       SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
     );
     triggerPricingModal();
+    handleModalOpenChange(false);
   }, [bannerButtonTriggerCallback]);
 
-  const [billingURL, setBillingURL] = useState<string>("");
-  const [topUpURL, setTopUpURL] = useState<string>("");
-  const [currentPlan, setCurrentPlan] = useState<string>("");
+  const [billingURL, setBillingURL] = useState<string>('');
+  const [topUpURL, setTopUpURL] = useState<string>('');
+  const [currentPlan, setCurrentPlan] = useState<string>('');
   const [userActiveApp, setUserActiveApp] = useState<UserApp | null>(null);
 
   const { metadata, metadataLoaded } = useTenantMetadata({
@@ -247,7 +248,7 @@ export function UserProfile() {
         saveCurrentTenant(newTenant);
       })
       .catch((error) => {
-        console.error("Failed to fetch tenant metadata", error);
+        console.error('Failed to fetch tenant metadata', error);
       })
       .finally(() => {
         setLoadingTenantInfo(false);
@@ -272,17 +273,17 @@ export function UserProfile() {
         returnURL: window.location.href,
         includeSubscriptionIdIfNeeded: false,
       }).then((url) => {
-        setBillingURL(url || "");
+        setBillingURL(url || '');
       });
       getTopUpURL(false).then((url) => {
-        setTopUpURL(url || "");
+        setTopUpURL(url || '');
       });
       getUserActiveAppLegacy().then((app) => {
         setUserActiveApp(app as unknown as UserApp);
       });
       getUserSubscriptionPackage().then((plan) => {
         if (plan) {
-          const splittedPlanName = String(plan).split("-");
+          const splittedPlanName = String(plan).split('-');
           setCurrentPlan(splittedPlanName[splittedPlanName.length - 1]);
         }
       });
@@ -299,7 +300,7 @@ export function UserProfile() {
   };
 
   const handleHelpClick = (url: string) => {
-    window.open(url, "_blank");
+    window.open(url, '_blank');
   };
 
   const handleTenantUpdate = (tenant: Tenant) => {
@@ -337,11 +338,11 @@ export function UserProfile() {
       showTenantSwitcher={userIsAdmin}
       showHelpLink={true}
       showLogoutButton={true}
-      showLearnerModeSwitch={userIsAdmin && tenantKey !== "main"}
+      showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
       enableGravatarOnProfilePic={
-        config.enableGravatarOnProfilePic() !== "false"
+        config.enableGravatarOnProfilePic() !== 'false'
       }
       // Callbacks
       onProfileClick={handleProfileClick}
@@ -360,7 +361,7 @@ export function UserProfile() {
       userActiveApp={userActiveApp}
       // Custom components
       LearnerModeSwitchComponent={LearnerModeSwitch}
-      currentSPA={config.iblPlatform() || "mentor"}
+      currentSPA={config.iblPlatform() || 'mentor'}
       // Additional data
       metadata={metadata}
       metadataLoaded={metadataLoaded}

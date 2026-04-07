@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import loadScript from 'load-script';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
-import { useAddTrainingDocumentMutation, useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useAddTrainingDocumentMutation,
+  useLazyGetCredentialsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { useUsername } from './use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { DROPBOX_EXTENSIONS } from '@/lib/constants';
@@ -89,7 +92,10 @@ const useDropboxPicker = ({
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));

@@ -242,7 +242,9 @@ describe('useTimer', () => {
         result.current.start();
       });
 
-      expect(result.current.startTime?.getTime()).not.toBe(firstStartTime?.getTime());
+      expect(result.current.startTime?.getTime()).not.toBe(
+        firstStartTime?.getTime(),
+      );
       expect(result.current.startTime?.getTime()).toBe(mockDate2.getTime());
     });
   });

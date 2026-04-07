@@ -69,7 +69,8 @@ export default function OAuthCallbackPage() {
         toast.success('Successfully connected service');
 
         // Extract service info from response
-        const serviceName = result?.service_info?.display_name || result?.service || 'service';
+        const serviceName =
+          result?.service_info?.display_name || result?.service || 'service';
         const connectedServiceId = result?.id;
         const toolName = params.tool_name;
 
@@ -114,9 +115,15 @@ export default function OAuthCallbackPage() {
         }, 1000);
       } catch (error: unknown) {
         console.error('Failed to complete OAuth callback:', error);
-        const err = error as { data?: { detail?: string; error?: string }; message?: string };
+        const err = error as {
+          data?: { detail?: string; error?: string };
+          message?: string;
+        };
         const errorMessage =
-          err?.data?.detail || err?.data?.error || err?.message || 'Failed to connect service';
+          err?.data?.detail ||
+          err?.data?.error ||
+          err?.message ||
+          'Failed to connect service';
         toast.error(errorMessage);
         setTimeout(() => {
           window.close();

@@ -174,7 +174,9 @@ describe('Table components', () => {
         </Table>,
       );
 
-      expect(screen.getByRole('columnheader')).toHaveTextContent('Column Header');
+      expect(screen.getByRole('columnheader')).toHaveTextContent(
+        'Column Header',
+      );
     });
   });
 

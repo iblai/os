@@ -40,7 +40,9 @@ describe('Select components', () => {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectLabel className="custom-label-class">Group Label</SelectLabel>
+              <SelectLabel className="custom-label-class">
+                Group Label
+              </SelectLabel>
               <SelectItem value="test">Test Item</SelectItem>
             </SelectGroup>
           </SelectContent>

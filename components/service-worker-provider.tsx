@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import {
+  useEffect,
+  useState,
+  createContext,
+  useContext,
+  useCallback,
+} from 'react';
 import { toast } from 'sonner';
 import {
   initServiceWorker,
@@ -23,7 +29,9 @@ if (typeof window !== 'undefined' && isTauriApp()) {
   import(/* webpackMode: "eager" */ '@tauri-apps/api/core')
     .then((tauriCore) => {
       tauriInvoke = tauriCore.invoke;
-      console.log('[ServiceWorkerProvider] Tauri API loaded eagerly (bundled inline)');
+      console.log(
+        '[ServiceWorkerProvider] Tauri API loaded eagerly (bundled inline)',
+      );
     })
     .catch((e) => {
       console.warn('[ServiceWorkerProvider] Failed to load Tauri API:', e);
@@ -37,7 +45,11 @@ const TAURI_OFFLINE_MODE_KEY = 'tauri_offline_mode';
  * Check if the shell has marked us as offline
  */
 function isShellOfflineMode(): boolean {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return false;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return false;
   return localStorage.getItem(TAURI_OFFLINE_MODE_KEY) === 'true';
 }
 
@@ -49,12 +61,16 @@ interface ServiceWorkerContextValue {
   checkNetworkNow: () => Promise<boolean>;
 }
 
-const ServiceWorkerContext = createContext<ServiceWorkerContextValue | null>(null);
+const ServiceWorkerContext = createContext<ServiceWorkerContextValue | null>(
+  null,
+);
 
 export function useServiceWorker() {
   const context = useContext(ServiceWorkerContext);
   if (!context) {
-    throw new Error('useServiceWorker must be used within ServiceWorkerProvider');
+    throw new Error(
+      'useServiceWorker must be used within ServiceWorkerProvider',
+    );
   }
   return context;
 }
@@ -63,7 +79,9 @@ interface ServiceWorkerProviderProps {
   children: React.ReactNode;
 }
 
-export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) {
+export function ServiceWorkerProvider({
+  children,
+}: ServiceWorkerProviderProps) {
   // Get initial status, considering the shell's offline flag
   const [status, setStatus] = useState<ServiceWorkerStatus>(() => {
     const baseStatus = getServiceWorkerStatus();
@@ -82,7 +100,9 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
     // Skip service worker registration in Tauri offline mode
     // The offline server handles all requests, SW is not needed and will fail to register
     if (isTauri && shellOffline) {
-      console.log('[ServiceWorkerProvider] Skipping SW registration - Tauri offline mode');
+      console.log(
+        '[ServiceWorkerProvider] Skipping SW registration - Tauri offline mode',
+      );
       setStatus({
         isSupported: false,
         isRegistered: false,
@@ -142,10 +162,14 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
         try {
           // Use pre-loaded invoke function if available
           if (!tauriInvoke) {
-            const tauriCore = await import(/* webpackMode: "eager" */ '@tauri-apps/api/core');
+            const tauriCore = await import(
+              /* webpackMode: "eager" */ '@tauri-apps/api/core'
+            );
             tauriInvoke = tauriCore.invoke;
           }
-          const isOnline = (await tauriInvoke(TAURI_COMMANDS.CHECK_NETWORK_STATUS)) as boolean;
+          const isOnline = (await tauriInvoke(
+            TAURI_COMMANDS.CHECK_NETWORK_STATUS,
+          )) as boolean;
 
           setStatus((prev) => {
             if (prev.isOnline !== isOnline) {
@@ -178,7 +202,10 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
               networkCheckInterval = undefined;
             }
           } else {
-            console.error('[ServiceWorkerProvider] Failed to check network status:', error);
+            console.error(
+              '[ServiceWorkerProvider] Failed to check network status:',
+              error,
+            );
           }
         }
       };
@@ -251,10 +278,14 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
     try {
       // Use pre-loaded invoke function if available
       if (!tauriInvoke) {
-        const tauriCore = await import(/* webpackMode: "eager" */ '@tauri-apps/api/core');
+        const tauriCore = await import(
+          /* webpackMode: "eager" */ '@tauri-apps/api/core'
+        );
         tauriInvoke = tauriCore.invoke;
       }
-      const isOnline = (await tauriInvoke(TAURI_COMMANDS.CHECK_NETWORK_STATUS)) as boolean;
+      const isOnline = (await tauriInvoke(
+        TAURI_COMMANDS.CHECK_NETWORK_STATUS,
+      )) as boolean;
 
       // Update state if changed
       setStatus((prev) => {
@@ -279,7 +310,10 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
         );
         return navigator.onLine;
       }
-      console.error('[ServiceWorkerProvider] Failed to check network status:', error);
+      console.error(
+        '[ServiceWorkerProvider] Failed to check network status:',
+        error,
+      );
       return navigator.onLine; // Fallback to browser API
     }
   }, []);
@@ -292,5 +326,9 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
     checkNetworkNow,
   };
 
-  return <ServiceWorkerContext.Provider value={value}>{children}</ServiceWorkerContext.Provider>;
+  return (
+    <ServiceWorkerContext.Provider value={value}>
+      {children}
+    </ServiceWorkerContext.Provider>
+  );
 }

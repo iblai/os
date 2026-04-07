@@ -67,9 +67,18 @@ describe('chat/chatSlice', () => {
     it('should maintain message order', () => {
       let state = initialState;
 
-      state = chatReducer(state, addMessage({ role: 'user', content: 'Message 1' }));
-      state = chatReducer(state, addMessage({ role: 'assistant', content: 'Message 2' }));
-      state = chatReducer(state, addMessage({ role: 'user', content: 'Message 3' }));
+      state = chatReducer(
+        state,
+        addMessage({ role: 'user', content: 'Message 1' }),
+      );
+      state = chatReducer(
+        state,
+        addMessage({ role: 'assistant', content: 'Message 2' }),
+      );
+      state = chatReducer(
+        state,
+        addMessage({ role: 'user', content: 'Message 3' }),
+      );
 
       expect(state.messages).toHaveLength(3);
       expect(state.messages[0].content).toBe('Message 1');
@@ -137,7 +146,10 @@ describe('chat/chatSlice', () => {
         enableChatActionsPopup: false,
       };
 
-      const state = chatReducer(stateWithMessages, enableChatActionsPopup(true));
+      const state = chatReducer(
+        stateWithMessages,
+        enableChatActionsPopup(true),
+      );
 
       expect(state.messages).toHaveLength(1);
       expect(state.messages[0].content).toBe('Test message');

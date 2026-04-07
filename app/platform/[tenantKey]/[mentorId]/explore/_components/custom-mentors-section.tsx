@@ -7,7 +7,10 @@ import { useGetPersonnalizedMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/spinner';
-import { CUSTOM_MENTORS_LIMIT, useExplorePageContext } from './explore-page-context';
+import {
+  CUSTOM_MENTORS_LIMIT,
+  useExplorePageContext,
+} from './explore-page-context';
 import { MentorCardWithStar } from './mentor-card-with-star';
 import { WithPermissions } from '@/hoc/withPermissions';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -34,7 +37,8 @@ export function CustomMentorsSection() {
     setCustomMentorsLoading,
   } = useExplorePageContext();
 
-  const [numberOfCustomMentors, setNumberOfCustomMentors] = React.useState(CUSTOM_MENTORS_LIMIT);
+  const [numberOfCustomMentors, setNumberOfCustomMentors] =
+    React.useState(CUSTOM_MENTORS_LIMIT);
   const { openCreateMentorModal } = useNavigate();
 
   // Reset pagination when filters or search change
@@ -79,13 +83,17 @@ export function CustomMentorsSection() {
 
   return (
     <div>
-      <h2 className="text-lg font-medium text-gray-900 mb-4" role="heading" aria-level={2}>
+      <h2
+        className="mb-4 text-lg font-medium text-gray-900"
+        role="heading"
+        aria-level={2}
+      >
         Custom
       </h2>
       {customMentors.length > 0 ? (
         <>
           <div
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="custom-mentors-card-list"
             role="list"
             aria-label="Custom mentors"
@@ -97,11 +105,13 @@ export function CustomMentorsSection() {
             ))}
           </div>
           {customMentorsData?.next && (
-            <div className="flex justify-center mt-6">
+            <div className="mt-6 flex justify-center">
               <Button
                 variant="outline"
                 onClick={() =>
-                  setNumberOfCustomMentors(numberOfCustomMentors + CUSTOM_MENTORS_LIMIT)
+                  setNumberOfCustomMentors(
+                    numberOfCustomMentors + CUSTOM_MENTORS_LIMIT,
+                  )
                 }
                 disabled={customMentorsFetching}
                 aria-label="Load more custom mentors"
@@ -122,7 +132,7 @@ export function CustomMentorsSection() {
               hasPermission ? (
                 <div className="mt-6">
                   <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow duration-200 bg-[#F5F8FF] border border-[#D0E0FF]"
+                    className="cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] transition-shadow duration-200 hover:shadow-md"
                     onClick={handleCreateMentor}
                     role="button"
                     tabIndex={0}
@@ -136,21 +146,24 @@ export function CustomMentorsSection() {
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="flex items-center justify-center w-12 h-12 bg-[#D0E0FF] rounded-lg shrink-0">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
                           <Plus className="h-6 w-6 text-[#38A1E5]" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <h3
-                            className="font-medium mb-2 text-sm text-gray-900"
+                            className="mb-2 text-sm font-medium text-gray-900"
                             role="heading"
                             aria-level={3}
                           >
                             Create Custom Mentor
                           </h3>
-                          <p className="text-sm mb-3 leading-relaxed text-gray-600">
-                            Build your own custom mentor tailored to your specific learning needs
+                          <p className="mb-3 text-sm leading-relaxed text-gray-600">
+                            Build your own custom mentor tailored to your
+                            specific learning needs
                           </p>
-                          <p className="text-xs text-gray-500">Get started today</p>
+                          <p className="text-xs text-gray-500">
+                            Get started today
+                          </p>
                         </div>
                       </div>
                     </CardContent>
@@ -164,9 +177,9 @@ export function CustomMentorsSection() {
         <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
           {(hasPermission) =>
             hasPermission ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Card
-                  className="cursor-pointer hover:shadow-md transition-shadow duration-200 bg-[#F5F8FF] border border-[#D0E0FF] md:col-span-2 lg:col-span-3"
+                  className="cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] transition-shadow duration-200 hover:shadow-md md:col-span-2 lg:col-span-3"
                   onClick={handleCreateMentor}
                   role="button"
                   tabIndex={0}
@@ -180,21 +193,24 @@ export function CustomMentorsSection() {
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="flex items-center justify-center w-12 h-12 bg-[#D0E0FF] rounded-lg shrink-0">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
                         <Plus className="h-6 w-6 text-[#38A1E5]" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h3
-                          className="font-medium mb-2 text-sm text-gray-900"
+                          className="mb-2 text-sm font-medium text-gray-900"
                           role="heading"
                           aria-level={3}
                         >
                           Create Custom Mentor
                         </h3>
-                        <p className="text-sm mb-3 leading-relaxed text-gray-600">
-                          Build your own custom mentor tailored to your specific learning needs
+                        <p className="mb-3 text-sm leading-relaxed text-gray-600">
+                          Build your own custom mentor tailored to your specific
+                          learning needs
                         </p>
-                        <p className="text-xs text-gray-500">Get started today</p>
+                        <p className="text-xs text-gray-500">
+                          Get started today
+                        </p>
                       </div>
                     </div>
                   </CardContent>

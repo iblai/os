@@ -8,7 +8,10 @@ import { toast } from 'sonner';
 
 // Mock module factories - these are hoisted, so use vi.fn() directly
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useCreateRedirectTokenMutation: vi.fn(() => [vi.fn(), { isLoading: false, data: null }]),
+  useCreateRedirectTokenMutation: vi.fn(() => [
+    vi.fn(),
+    { isLoading: false, data: null },
+  ]),
   useEditMentorMutation: vi.fn(() => [vi.fn()]),
   useGetMentorPublicSettingsQuery: vi.fn(() => ({
     data: {
@@ -31,7 +34,10 @@ vi.mock('@/features/auth/api-slice', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
-  useParams: vi.fn(() => ({ tenantKey: 'test-tenant', mentorId: 'test-mentor' })),
+  useParams: vi.fn(() => ({
+    tenantKey: 'test-tenant',
+    mentorId: 'test-mentor',
+  })),
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -92,7 +98,9 @@ describe('useEmbedTab', () => {
       mockCreateRedirectTokenFn,
       { isLoading: false, data: null } as any,
     ]);
-    vi.mocked(dataLayer.useEditMentorMutation).mockReturnValue([mockUpdateMentorSettingsFn] as any);
+    vi.mocked(dataLayer.useEditMentorMutation).mockReturnValue([
+      mockUpdateMentorSettingsFn,
+    ] as any);
 
     // Setup default mock return values
     mockGetUserName.mockReturnValue('test-user');
@@ -139,7 +147,9 @@ describe('useEmbedTab', () => {
 
   describe('syncEmbedSettings', () => {
     it('should successfully sync settings for anonymous mode', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ data: { success: true } });
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -169,7 +179,9 @@ describe('useEmbedTab', () => {
       mockCreateRedirectTokenFn.mockResolvedValueOnce({
         data: { token: 'redirect-token-123' },
       });
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ data: { success: true } });
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -183,7 +195,10 @@ describe('useEmbedTab', () => {
         syncResult = await result.current.syncEmbedSettings();
       });
 
-      expect(syncResult).toEqual({ success: true, redirectToken: 'redirect-token-123' });
+      expect(syncResult).toEqual({
+        success: true,
+        redirectToken: 'redirect-token-123',
+      });
       expect(mockCreateRedirectTokenFn).toHaveBeenCalledWith({
         org: 'test-tenant',
         requestBody: {
@@ -208,7 +223,9 @@ describe('useEmbedTab', () => {
       });
 
       expect(syncResult).toEqual({ success: false });
-      expect(result.current.createTokenError).toBe('Please specify a valid Website URL');
+      expect(result.current.createTokenError).toBe(
+        'Please specify a valid Website URL',
+      );
       expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
       expect(mockUpdateMentorSettingsFn).not.toHaveBeenCalled();
     });
@@ -227,7 +244,9 @@ describe('useEmbedTab', () => {
       });
 
       expect(syncResult).toEqual({ success: false });
-      expect(result.current.createTokenError).toBe('Please specify a valid Website URL');
+      expect(result.current.createTokenError).toBe(
+        'Please specify a valid Website URL',
+      );
       expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
       expect(mockUpdateMentorSettingsFn).not.toHaveBeenCalled();
     });
@@ -254,13 +273,19 @@ describe('useEmbedTab', () => {
       });
 
       expect(syncResult).toEqual({ success: false });
-      expect(result.current.createTokenError).toContain('Failed to create redirect token');
+      expect(result.current.createTokenError).toContain(
+        'Failed to create redirect token',
+      );
       expect(mockUpdateMentorSettingsFn).not.toHaveBeenCalled();
     });
 
     it('should handle redirect token exception', async () => {
-      mockCreateRedirectTokenFn.mockRejectedValueOnce(new Error('Network error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockCreateRedirectTokenFn.mockRejectedValueOnce(
+        new Error('Network error'),
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -291,7 +316,9 @@ describe('useEmbedTab', () => {
           },
         },
       });
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -311,7 +338,9 @@ describe('useEmbedTab', () => {
     });
 
     it('should set is_context_aware=true when mode is advanced', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ data: { success: true } });
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -395,7 +424,9 @@ describe('useEmbedTab', () => {
           },
         },
       });
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -413,8 +444,12 @@ describe('useEmbedTab', () => {
     });
 
     it('should handle API exception', async () => {
-      mockCreateRedirectTokenFn.mockRejectedValueOnce(new Error('Network error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockCreateRedirectTokenFn.mockRejectedValueOnce(
+        new Error('Network error'),
+      );
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -488,7 +523,9 @@ describe('useEmbedTab', () => {
         result.current.updateConfig('position', 'top-left');
       });
 
-      expect(result.current.customFloatingBubbleConfig.position).toBe('top-left');
+      expect(result.current.customFloatingBubbleConfig.position).toBe(
+        'top-left',
+      );
     });
   });
 
@@ -504,15 +541,22 @@ describe('useEmbedTab', () => {
         });
       });
 
-      expect(result.current.customFloatingBubbleConfig.title).toBe('Multi Title');
-      expect(result.current.customFloatingBubbleConfig.subtitle).toBe('Multi Subtitle');
-      expect(result.current.customFloatingBubbleConfig.backgroundColor).toBe('#ff0000');
+      expect(result.current.customFloatingBubbleConfig.title).toBe(
+        'Multi Title',
+      );
+      expect(result.current.customFloatingBubbleConfig.subtitle).toBe(
+        'Multi Subtitle',
+      );
+      expect(result.current.customFloatingBubbleConfig.backgroundColor).toBe(
+        '#ff0000',
+      );
     });
 
     it('should merge configs without overwriting unspecified keys', () => {
       const { result } = renderHook(() => useEmbedTab());
 
-      const originalPosition = result.current.customFloatingBubbleConfig.position;
+      const originalPosition =
+        result.current.customFloatingBubbleConfig.position;
 
       act(() => {
         result.current.updateMultipleConfig({
@@ -521,7 +565,9 @@ describe('useEmbedTab', () => {
       });
 
       expect(result.current.customFloatingBubbleConfig.title).toBe('New Title');
-      expect(result.current.customFloatingBubbleConfig.position).toBe(originalPosition);
+      expect(result.current.customFloatingBubbleConfig.position).toBe(
+        originalPosition,
+      );
     });
   });
 
@@ -549,7 +595,9 @@ describe('useEmbedTab', () => {
 
   describe('form onSubmit', () => {
     it('should delegate to syncEmbedSettings and generate embed code on success', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ data: { success: true } });
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
       mockGetEmbedCode.mockResolvedValueOnce('<generated-embed-code>');
 
       const { result } = renderHook(() => useEmbedTab());
@@ -580,7 +628,9 @@ describe('useEmbedTab', () => {
       mockUpdateMentorSettingsFn.mockResolvedValueOnce({
         error: { error: { error: 'Update failed' } },
       });
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useEmbedTab());
 
@@ -602,7 +652,9 @@ describe('useEmbedTab', () => {
     });
 
     it('should pass custom icon flag to getEmbedCode when icon_selection is custom', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ data: { success: true } });
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
       mockGetEmbedCode.mockResolvedValueOnce('<custom-embed-code>');
 
       const { result } = renderHook(() => useEmbedTab());

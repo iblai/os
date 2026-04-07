@@ -5,7 +5,12 @@ import { Lock, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -24,7 +29,13 @@ const AUTH_SCOPE = {
   USER: 'user',
 } as const;
 
-const KNOWN_TOKEN_TYPES = ['Bearer', 'Basic', 'API-Key', 'API-Token', 'Token'] as const;
+const KNOWN_TOKEN_TYPES = [
+  'Bearer',
+  'Basic',
+  'API-Key',
+  'API-Token',
+  'Token',
+] as const;
 import type { MCPServer } from '@iblai/iblai-js/data-layer';
 import {
   useLazyGetMCPServersQuery,
@@ -84,7 +95,10 @@ export interface ConnectorFormValidation {
   error: string | null;
 }
 
-export const validateConnectorForm = (name: string, server: string): ConnectorFormValidation => {
+export const validateConnectorForm = (
+  name: string,
+  server: string,
+): ConnectorFormValidation => {
   const trimmedName = name.trim();
   const trimmedServer = server.trim();
 
@@ -119,9 +133,17 @@ export const getValidationErrorMessage = (
 };
 
 // Helper to extract error message from API error
-export const extractApiErrorMessage = (error: unknown, defaultMessage: string = ''): string => {
-  const err = error as { data?: { detail?: string; error?: string }; message?: string };
-  return err?.data?.detail || err?.data?.error || err?.message || defaultMessage;
+export const extractApiErrorMessage = (
+  error: unknown,
+  defaultMessage: string = '',
+): string => {
+  const err = error as {
+    data?: { detail?: string; error?: string };
+    message?: string;
+  };
+  return (
+    err?.data?.detail || err?.data?.error || err?.message || defaultMessage
+  );
 };
 
 // Helper to validate custom token type
@@ -133,7 +155,10 @@ export const validateCustomTokenType = (
     return { isValid: false, error: 'Custom token type is required.' };
   }
   if (trimmed.length > 50) {
-    return { isValid: false, error: 'Token type must be 50 characters or fewer.' };
+    return {
+      isValid: false,
+      error: 'Token type must be 50 characters or fewer.',
+    };
   }
   if (!/^[a-zA-Z0-9-]+$/.test(trimmed)) {
     return {
@@ -167,10 +192,14 @@ export function ConnectorDialogs({
   const [connectorName, setConnectorName] = useState('');
   const [connectorServer, setConnectorServer] = useState('');
   const [connectorDescription, setConnectorDescription] = useState('');
-  const [transport, setTransport] = useState<TransportEnum>(TransportEnum.STREAMABLE_HTTP);
+  const [transport, setTransport] = useState<TransportEnum>(
+    TransportEnum.STREAMABLE_HTTP,
+  );
   const [authMethod, setAuthMethod] = useState('no-auth');
   const [authScope, setAuthScope] = useState<string>(AUTH_SCOPE.TENANT);
-  const [connectorScope, setConnectorScope] = useState<'tenant' | 'this-mentor'>('tenant');
+  const [connectorScope, setConnectorScope] = useState<
+    'tenant' | 'this-mentor'
+  >('tenant');
   const [tokenType, setTokenType] = useState('Bearer');
   const [customTokenType, setCustomTokenType] = useState('');
   const [tokenValue, setTokenValue] = useState('');
@@ -179,7 +208,9 @@ export function ConnectorDialogs({
   const [credentialsMasked, setCredentialsMasked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [oauthUrlError, setOauthUrlError] = useState<string | null>(null);
-  const [originalTokenPlaceholder, setOriginalTokenPlaceholder] = useState<string | null>(null);
+  const [originalTokenPlaceholder, setOriginalTokenPlaceholder] = useState<
+    string | null
+  >(null);
 
   // API hooks
   const [getMCPServers] = useLazyGetMCPServersQuery();
@@ -248,7 +279,9 @@ export function ConnectorDialogs({
       setConnectorName(editingServer.name || '');
       setConnectorServer(editingServer.url || '');
       setConnectorDescription(editingServer.description || '');
-      setTransport(normalizeTransportValue(editingServer.transport?.toString()));
+      setTransport(
+        normalizeTransportValue(editingServer.transport?.toString()),
+      );
       setConnectorImage(editingServer.image || null);
       setImageFile(null);
       setConnectorScope(editingServer.mentor ? 'this-mentor' : 'tenant');
@@ -269,7 +302,8 @@ export function ConnectorDialogs({
         if (credentials.trim()) {
           setAuthMethod('api-key');
           const spaceIndex = credentials.indexOf(' ');
-          const parsedType = spaceIndex > 0 ? credentials.substring(0, spaceIndex) : 'Bearer';
+          const parsedType =
+            spaceIndex > 0 ? credentials.substring(0, spaceIndex) : 'Bearer';
 
           // Check if parsedType matches a known dropdown option
           if ((KNOWN_TOKEN_TYPES as readonly string[]).includes(parsedType)) {
@@ -306,40 +340,43 @@ export function ConnectorDialogs({
     }
   }, [connectorServer, authMethod]);
 
-  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImageUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
 
-    if (!file) {
+      if (!file) {
+        if (objectUrlRef.current) {
+          URL.revokeObjectURL(objectUrlRef.current);
+          objectUrlRef.current = null;
+        }
+        setConnectorImage(null);
+        setImageFile(null);
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file.');
+        event.target.value = '';
+        return;
+      }
+
+      const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
+      if (file.size > maxSizeInBytes) {
+        toast.error('Image size must be less than 2MB.');
+        event.target.value = '';
+        return;
+      }
+
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
       }
-      setConnectorImage(null);
-      setImageFile(null);
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select a valid image file.');
-      event.target.value = '';
-      return;
-    }
-
-    const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
-    if (file.size > maxSizeInBytes) {
-      toast.error('Image size must be less than 2MB.');
-      event.target.value = '';
-      return;
-    }
-
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-    }
-    const previewUrl = URL.createObjectURL(file);
-    objectUrlRef.current = previewUrl;
-    setConnectorImage(previewUrl);
-    setImageFile(file);
-  }, []);
+      const previewUrl = URL.createObjectURL(file);
+      objectUrlRef.current = previewUrl;
+      setConnectorImage(previewUrl);
+      setImageFile(file);
+    },
+    [],
+  );
 
   // Handle OAuth flow
   // Note: tenantKey and username are validated in handleSubmit before this is called
@@ -347,7 +384,12 @@ export function ConnectorDialogs({
     async (server: MCPServer, provider: string, service: string) => {
       const serverId = server.id;
 
-      setPendingOAuthServer({ serverId, provider, service, timestamp: Date.now() });
+      setPendingOAuthServer({
+        serverId,
+        provider,
+        service,
+        timestamp: Date.now(),
+      });
 
       try {
         const result = await startOAuthFlow({
@@ -378,7 +420,10 @@ export function ConnectorDialogs({
         };
 
         const createConnection = async (connectedServiceId: number) => {
-          if (!canCreateOAuthConnection(isCreatingConnection, connectedServiceId)) return;
+          if (
+            !canCreateOAuthConnection(isCreatingConnection, connectedServiceId)
+          )
+            return;
           isCreatingConnection = true;
 
           try {
@@ -390,7 +435,9 @@ export function ConnectorDialogs({
               auth_type: 'oauth2',
               ...(authScope !== AUTH_SCOPE.MENTOR && { user: username! }),
               connected_service: connectedServiceId,
-              ...(authScope === AUTH_SCOPE.MENTOR && mentorId ? { mentor: mentorId } : {}),
+              ...(authScope === AUTH_SCOPE.MENTOR && mentorId
+                ? { mentor: mentorId }
+                : {}),
             }).unwrap();
 
             await refetchConnected();
@@ -401,7 +448,9 @@ export function ConnectorDialogs({
             // Modal is closed when OAuth flow starts, so no need to close/reset here
           } catch (error: unknown) {
             const err = error as { data?: { detail?: string } };
-            toast.error(`Failed to create connection: ${err?.data?.detail || 'Unknown error'}`);
+            toast.error(
+              `Failed to create connection: ${err?.data?.detail || 'Unknown error'}`,
+            );
             throw error;
           } finally {
             isCreatingConnection = false;
@@ -414,8 +463,14 @@ export function ConnectorDialogs({
             const updated = await refetchConnected();
             if (updated?.data) {
               const connService = (
-                updated.data as Array<{ provider: string; service: string; id: number }>
-              ).find((cs) => cs.provider === provider && cs.service === service);
+                updated.data as Array<{
+                  provider: string;
+                  service: string;
+                  id: number;
+                }>
+              ).find(
+                (cs) => cs.provider === provider && cs.service === service,
+              );
               if (connService?.id) {
                 await createConnection(connService.id);
                 cleanup();
@@ -433,8 +488,14 @@ export function ConnectorDialogs({
 
         const handleMessage = async (event: MessageEvent) => {
           if (event.origin !== window.location.origin) return;
-          if (event.data?.type === 'GOOGLE_AUTH_SUCCESS' && event.data?.connectedServiceId) {
-            if (event.data.provider === provider && event.data.serviceName === service) {
+          if (
+            event.data?.type === 'GOOGLE_AUTH_SUCCESS' &&
+            event.data?.connectedServiceId
+          ) {
+            if (
+              event.data.provider === provider &&
+              event.data.serviceName === service
+            ) {
               cleanup();
               await createConnection(event.data.connectedServiceId);
             }
@@ -543,7 +604,8 @@ export function ConnectorDialogs({
               description: connectorDescription.trim() || undefined,
               auth_type: 'oauth2',
               auth_scope: authScope,
-              mentor: connectorScope === 'this-mentor' && mentorId ? mentorId : null,
+              mentor:
+                connectorScope === 'this-mentor' && mentorId ? mentorId : null,
             },
           }).unwrap();
 
@@ -556,7 +618,8 @@ export function ConnectorDialogs({
                 userId: username,
                 id: editingConnectionId,
                 scope: authScope,
-                mentor: authScope === AUTH_SCOPE.MENTOR && mentorId ? mentorId : '',
+                mentor:
+                  authScope === AUTH_SCOPE.MENTOR && mentorId ? mentorId : '',
                 ...(authScope !== AUTH_SCOPE.MENTOR && { user: username }),
               }).unwrap();
             } catch {
@@ -575,12 +638,18 @@ export function ConnectorDialogs({
             }).unwrap();
 
             const matchingServer = existingServersResult.results?.find(
-              (s) => s.url === trimmedServer && s.auth_type?.toLowerCase() === 'oauth2',
+              (s) =>
+                s.url === trimmedServer &&
+                s.auth_type?.toLowerCase() === 'oauth2',
             );
 
             if (matchingServer?.oauth_service_data) {
               const oauthData = matchingServer.oauth_service_data;
-              await handleOAuthFlow(matchingServer, oauthData.oauth_provider, oauthData.name);
+              await handleOAuthFlow(
+                matchingServer,
+                oauthData.oauth_provider,
+                oauthData.name,
+              );
             } else {
               const callbackUrl = `${window.location.origin}/google-oauth-callback/`;
               const oauthFindResult = await oauthFind({
@@ -618,13 +687,18 @@ export function ConnectorDialogs({
         }).unwrap();
 
         const existingServer = existingServersResult.results?.find(
-          (s) => s.url === trimmedServer && s.auth_type?.toLowerCase() === 'oauth2',
+          (s) =>
+            s.url === trimmedServer && s.auth_type?.toLowerCase() === 'oauth2',
         );
 
         if (existingServer && existingServer.oauth_service_data) {
           // Use existing server
           const oauthData = existingServer.oauth_service_data;
-          await handleOAuthFlow(existingServer, oauthData.oauth_provider, oauthData.name);
+          await handleOAuthFlow(
+            existingServer,
+            oauthData.oauth_provider,
+            oauthData.name,
+          );
           setIsSubmitting(false);
           resetForm();
           onClose();
@@ -654,12 +728,17 @@ export function ConnectorDialogs({
               auth_type: 'oauth2',
               auth_scope: authScope,
               oauth_service: oauthFindResult.id,
-              mentor: connectorScope === 'this-mentor' && mentorId ? mentorId : null,
+              mentor:
+                connectorScope === 'this-mentor' && mentorId ? mentorId : null,
             },
           }).unwrap();
 
           // Start OAuth flow
-          await handleOAuthFlow(newServer, oauthFindResult.oauth_provider, oauthFindResult.name);
+          await handleOAuthFlow(
+            newServer,
+            oauthFindResult.oauth_provider,
+            oauthFindResult.name,
+          );
           setIsSubmitting(false);
           resetForm();
           onClose();
@@ -718,7 +797,8 @@ export function ConnectorDialogs({
         ) {
           credentials = undefined; // Don't send credentials - keep existing value
         } else {
-          const effectiveTokenType = tokenType === 'Other' ? customTokenType.trim() : tokenType;
+          const effectiveTokenType =
+            tokenType === 'Other' ? customTokenType.trim() : tokenType;
           credentials = `${effectiveTokenType} ${trimmedToken}`;
         }
       }
@@ -784,21 +864,21 @@ export function ConnectorDialogs({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="sm:max-w-[600px] bg-card max-h-[90vh] flex flex-col p-0 overflow-hidden"
+        className="bg-card flex max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[600px]"
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-xl font-semibold text-foreground">
+        <DialogHeader className="border-border flex-shrink-0 border-b px-6 py-4">
+          <DialogTitle className="text-foreground text-xl font-semibold">
             {editingServer ? 'Edit MCP Connector' : 'Add MCP Connector'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-4 max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl space-y-4">
             {/* Thumbnail and Connector Name */}
             <div className="flex items-center gap-4">
-              <div className="relative group">
+              <div className="group relative">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -809,27 +889,27 @@ export function ConnectorDialogs({
                 />
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-16 h-16 rounded-lg flex items-center justify-center cursor-pointer transition-colors relative group overflow-hidden"
+                  className="group relative flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-lg transition-colors"
                 >
                   {connectorImage ? (
                     <>
                       <img
                         src={connectorImage}
                         alt="Connector thumbnail"
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
-                      <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-[#38A1E5] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ImageIcon className="w-3 h-3 text-white" />
+                      <div className="absolute right-1 bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#38A1E5] opacity-0 transition-opacity group-hover:opacity-100">
+                        <ImageIcon className="h-3 w-3 text-white" />
                       </div>
                     </>
                   ) : (
-                    <div className="absolute inset-0 bg-[#38A1E5] flex items-center justify-center">
-                      <ImageIcon className="w-6 h-6 text-white" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#38A1E5]">
+                      <ImageIcon className="h-6 w-6 text-white" />
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex-1 flex flex-col gap-2">
+              <div className="flex flex-1 flex-col gap-2">
                 <Label className="text-base font-medium">
                   Connector Name<span className="text-red-500">*</span>
                 </Label>
@@ -855,14 +935,16 @@ export function ConnectorDialogs({
                 className={`bg-muted border-border ${oauthUrlError ? 'border-red-500' : ''}`}
                 disabled={isSubmitting}
               />
-              {oauthUrlError && <p className="text-xs text-red-500">{oauthUrlError}</p>}
+              {oauthUrlError && (
+                <p className="text-xs text-red-500">{oauthUrlError}</p>
+              )}
             </div>
 
             {/* Description */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-medium">Description</Label>
-                <span className="text-sm text-muted-foreground">Optional</span>
+                <span className="text-muted-foreground text-sm">Optional</span>
               </div>
               <Textarea
                 value={connectorDescription}
@@ -878,29 +960,37 @@ export function ConnectorDialogs({
               <Label className="text-base font-medium">Connector Scope</Label>
               <RadioGroup
                 value={connectorScope}
-                onValueChange={(value) => setConnectorScope(value as 'tenant' | 'this-mentor')}
+                onValueChange={(value) =>
+                  setConnectorScope(value as 'tenant' | 'this-mentor')
+                }
                 disabled={isSubmitting}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="tenant" id="scope-tenant" />
-                  <Label htmlFor="scope-tenant" className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor="scope-tenant"
+                    className="cursor-pointer font-normal"
+                  >
                     All Mentors
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="this-mentor" id="scope-this-mentor" />
-                  <Label htmlFor="scope-this-mentor" className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor="scope-this-mentor"
+                    className="cursor-pointer font-normal"
+                  >
                     This Mentor
                   </Label>
                 </div>
               </RadioGroup>
               {connectorScope === 'tenant' && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   This MCP will be available for all mentors.
                 </p>
               )}
               {connectorScope === 'this-mentor' && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   This MCP will only be available for this mentor.
                 </p>
               )}
@@ -911,7 +1001,9 @@ export function ConnectorDialogs({
               <Label className="text-base font-medium">Transport</Label>
               <Select
                 value={transport}
-                onValueChange={(value) => setTransport(normalizeTransportValue(value))}
+                onValueChange={(value) =>
+                  setTransport(normalizeTransportValue(value))
+                }
                 disabled={isSubmitting}
               >
                 <SelectTrigger className="bg-muted border-border">
@@ -919,16 +1011,26 @@ export function ConnectorDialogs({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={TransportEnum.SSE}>SSE</SelectItem>
-                  <SelectItem value={TransportEnum.WEBSOCKET}>Websocket</SelectItem>
-                  <SelectItem value={TransportEnum.STREAMABLE_HTTP}>Streamable Http</SelectItem>
+                  <SelectItem value={TransportEnum.WEBSOCKET}>
+                    Websocket
+                  </SelectItem>
+                  <SelectItem value={TransportEnum.STREAMABLE_HTTP}>
+                    Streamable Http
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Authentication Method */}
             <div className="flex flex-col gap-2">
-              <Label className="text-base font-medium">Authentication Method</Label>
-              <Select value={authMethod} onValueChange={setAuthMethod} disabled={isSubmitting}>
+              <Label className="text-base font-medium">
+                Authentication Method
+              </Label>
+              <Select
+                value={authMethod}
+                onValueChange={setAuthMethod}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="bg-muted border-border">
                   <SelectValue />
                 </SelectTrigger>
@@ -942,8 +1044,14 @@ export function ConnectorDialogs({
 
             {authMethod === 'oauth' && (
               <div className="flex flex-col gap-2">
-                <Label className="text-base font-medium">Authentication Scope</Label>
-                <Select value={authScope} onValueChange={setAuthScope} disabled={isSubmitting}>
+                <Label className="text-base font-medium">
+                  Authentication Scope
+                </Label>
+                <Select
+                  value={authScope}
+                  onValueChange={setAuthScope}
+                  disabled={isSubmitting}
+                >
                   <SelectTrigger className="bg-muted border-border">
                     <SelectValue />
                   </SelectTrigger>
@@ -954,20 +1062,22 @@ export function ConnectorDialogs({
                   </SelectContent>
                 </Select>
                 {authScope === AUTH_SCOPE.TENANT && (
-                  <p className="text-xs text-muted-foreground">
-                    OAuth connection will be available for all mentors in this tenant.
+                  <p className="text-muted-foreground text-xs">
+                    OAuth connection will be available for all mentors in this
+                    tenant.
                   </p>
                 )}
                 {authScope === AUTH_SCOPE.MENTOR && (
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       OAuth connection will only be available for this mentor.
                     </p>
                   </div>
                 )}
                 {authScope === AUTH_SCOPE.USER && (
-                  <p className="text-xs text-muted-foreground">
-                    Each user will need to authenticate individually when chatting.
+                  <p className="text-muted-foreground text-xs">
+                    Each user will need to authenticate individually when
+                    chatting.
                   </p>
                 )}
               </div>
@@ -977,7 +1087,11 @@ export function ConnectorDialogs({
               <div className="space-y-4 pt-2">
                 <div className="flex flex-col gap-2">
                   <Label className="text-base font-medium">Token Type</Label>
-                  <Select value={tokenType} onValueChange={setTokenType} disabled={isSubmitting}>
+                  <Select
+                    value={tokenType}
+                    onValueChange={setTokenType}
+                    disabled={isSubmitting}
+                  >
                     <SelectTrigger className="bg-background border-border">
                       <SelectValue />
                     </SelectTrigger>
@@ -994,7 +1108,9 @@ export function ConnectorDialogs({
 
                 {tokenType === 'Other' && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-base font-medium">Custom Token Type</Label>
+                    <Label className="text-base font-medium">
+                      Custom Token Type
+                    </Label>
                     <Input
                       value={customTokenType}
                       onChange={(e) => setCustomTokenType(e.target.value)}
@@ -1003,8 +1119,9 @@ export function ConnectorDialogs({
                       disabled={isSubmitting}
                       maxLength={50}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Alphanumeric characters and hyphens only. Max 50 characters.
+                    <p className="text-muted-foreground text-xs">
+                      Alphanumeric characters and hyphens only. Max 50
+                      characters.
                     </p>
                   </div>
                 )}
@@ -1012,7 +1129,7 @@ export function ConnectorDialogs({
                 <div className="flex flex-col gap-2">
                   <Label className="text-base font-medium">Token</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                     <Input
                       value={tokenValue}
                       onChange={(e) => setTokenValue(e.target.value)}
@@ -1023,9 +1140,9 @@ export function ConnectorDialogs({
                     />
                   </div>
                   {credentialsMasked && (
-                    <p className="text-xs text-muted-foreground">
-                      Existing token is hidden. Enter a new token to replace it, or leave as is to
-                      keep the current token.
+                    <p className="text-muted-foreground text-xs">
+                      Existing token is hidden. Enter a new token to replace it,
+                      or leave as is to keep the current token.
                     </p>
                   )}
                 </div>
@@ -1041,11 +1158,17 @@ export function ConnectorDialogs({
                   !connectorServer.trim() ||
                   isSubmitting ||
                   (authMethod === 'oauth' && !!oauthUrlError) ||
-                  (authMethod === 'api-key' && tokenType === 'Other' && !customTokenType.trim())
+                  (authMethod === 'api-key' &&
+                    tokenType === 'Other' &&
+                    !customTokenType.trim())
                 }
                 className="ibl-button-primary shrink-0"
               >
-                {isSubmitting ? 'Saving...' : editingServer ? 'Update' : 'Connect'}
+                {isSubmitting
+                  ? 'Saving...'
+                  : editingServer
+                    ? 'Update'
+                    : 'Connect'}
               </Button>
             </div>
           </div>

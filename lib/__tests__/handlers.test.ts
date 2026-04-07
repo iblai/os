@@ -63,9 +63,13 @@ describe('useIframeHandlers', () => {
         delete localStorageMock[key];
       }),
       clear: vi.fn(() => {
-        Object.keys(localStorageMock).forEach((key) => delete localStorageMock[key]);
+        Object.keys(localStorageMock).forEach(
+          (key) => delete localStorageMock[key],
+        );
       }),
-      key: vi.fn((index: number) => Object.keys(localStorageMock)[index] || null),
+      key: vi.fn(
+        (index: number) => Object.keys(localStorageMock)[index] || null,
+      ),
       get length() {
         return Object.keys(localStorageMock).length;
       },
@@ -186,8 +190,12 @@ describe('useIframeHandlers', () => {
       const css1 = 'body { color: blue; }';
       const css2 = 'h1 { font-size: 24px; }';
 
-      result.current['MENTOR:CSS_INJECT'](undefined, { data: { css: css1 } } as MessageEvent);
-      result.current['MENTOR:CSS_INJECT'](undefined, { data: { css: css2 } } as MessageEvent);
+      result.current['MENTOR:CSS_INJECT'](undefined, {
+        data: { css: css1 },
+      } as MessageEvent);
+      result.current['MENTOR:CSS_INJECT'](undefined, {
+        data: { css: css2 },
+      } as MessageEvent);
 
       const styleElements = document.head.querySelectorAll('style');
       expect(styleElements.length).toBe(2);
@@ -198,7 +206,9 @@ describe('useIframeHandlers', () => {
     it('should handle empty CSS string', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
-      result.current['MENTOR:CSS_INJECT'](undefined, { data: { css: '' } } as MessageEvent);
+      result.current['MENTOR:CSS_INJECT'](undefined, {
+        data: { css: '' },
+      } as MessageEvent);
 
       const styleElements = document.head.querySelectorAll('style');
       expect(styleElements.length).toBeGreaterThan(0);
@@ -255,7 +265,10 @@ describe('useIframeHandlers', () => {
 
       expect(localStorage.setItem).toHaveBeenCalledWith('token', 'test-token');
       expect(localStorage.setItem).toHaveBeenCalledWith('user', 'test-user');
-      expect(localStorage.setItem).toHaveBeenCalledWith('tenant', 'test-tenant');
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'tenant',
+        'test-tenant',
+      );
       expect(window.location.reload).toHaveBeenCalled();
     });
 
@@ -268,7 +281,10 @@ describe('useIframeHandlers', () => {
         result.current['MENTOR:AUTH_UPDATE'](undefined, mockEvent);
       }).not.toThrow();
 
-      expect(console.error).toHaveBeenCalledWith('Error parsing token data:', expect.any(Error));
+      expect(console.error).toHaveBeenCalledWith(
+        'Error parsing token data:',
+        expect.any(Error),
+      );
     });
 
     it('should set current_tenant if not present and tenants exist', () => {
@@ -297,7 +313,8 @@ describe('useIframeHandlers', () => {
 
     it('should not set current_tenant if already present', () => {
       vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
-        if (key === 'current_tenant') return JSON.stringify({ key: 'existing' });
+        if (key === 'current_tenant')
+          return JSON.stringify({ key: 'existing' });
         return null;
       });
 
@@ -308,7 +325,9 @@ describe('useIframeHandlers', () => {
       result.current['MENTOR:AUTH_UPDATE'](undefined, mockEvent);
 
       const setItemCalls = vi.mocked(localStorage.setItem).mock.calls;
-      const currentTenantCalls = setItemCalls.filter((call) => call[0] === 'current_tenant');
+      const currentTenantCalls = setItemCalls.filter(
+        (call) => call[0] === 'current_tenant',
+      );
       expect(currentTenantCalls.length).toBe(0);
     });
 
@@ -397,7 +416,9 @@ describe('useIframeHandlers', () => {
     it('should parse and dispatch document filter', () => {
       const { result } = renderHook(() => useIframeHandlers());
       const documentFilter = { type: 'include', values: ['doc1', 'doc2'] };
-      const mockEvent = { data: JSON.stringify(documentFilter) } as MessageEvent;
+      const mockEvent = {
+        data: JSON.stringify(documentFilter),
+      } as MessageEvent;
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
 
@@ -414,8 +435,13 @@ describe('useIframeHandlers', () => {
         result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
       }).not.toThrow();
 
-      expect(console.error).toHaveBeenCalledWith('MENTOR:DOCUMENTFILTER ', expect.any(Error));
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('use-iframe-handlers'));
+      expect(console.error).toHaveBeenCalledWith(
+        'MENTOR:DOCUMENTFILTER ',
+        expect.any(Error),
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('use-iframe-handlers'),
+      );
     });
 
     it('should handle complex document filter object', () => {
@@ -425,7 +451,9 @@ describe('useIframeHandlers', () => {
         values: ['doc1', 'doc2'],
         metadata: { source: 'external' },
       };
-      const mockEvent = { data: JSON.stringify(documentFilter) } as MessageEvent;
+      const mockEvent = {
+        data: JSON.stringify(documentFilter),
+      } as MessageEvent;
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
 
@@ -440,7 +468,9 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
 
-      expect(mockDispatchInstance).toHaveBeenCalledWith(chatActions.setDocumentFilter({}));
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setDocumentFilter({}),
+      );
     });
   });
 
@@ -451,15 +481,23 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:EDX_USAGE_ID'](payload);
 
-      expect(console.log).toHaveBeenCalledWith('EDX Usage ID updated:', 'usage-123');
+      expect(console.log).toHaveBeenCalledWith(
+        'EDX Usage ID updated:',
+        'usage-123',
+      );
     });
 
     it('should handle different usage ID formats', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
-      result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'block-v1:org+course+run' });
+      result.current['MENTOR:EDX_USAGE_ID']({
+        edxUsageId: 'block-v1:org+course+run',
+      });
 
-      expect(console.log).toHaveBeenCalledWith('EDX Usage ID updated:', 'block-v1:org+course+run');
+      expect(console.log).toHaveBeenCalledWith(
+        'EDX Usage ID updated:',
+        'block-v1:org+course+run',
+      );
     });
   });
 
@@ -470,13 +508,18 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:EDX_COURSE_ID'](payload);
 
-      expect(console.log).toHaveBeenCalledWith('EDX Course ID updated:', 'course-123');
+      expect(console.log).toHaveBeenCalledWith(
+        'EDX Course ID updated:',
+        'course-123',
+      );
     });
 
     it('should handle different course ID formats', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
-      result.current['MENTOR:EDX_COURSE_ID']({ edxCourseId: 'course-v1:org+course+run' });
+      result.current['MENTOR:EDX_COURSE_ID']({
+        edxCourseId: 'course-v1:org+course+run',
+      });
 
       expect(console.log).toHaveBeenCalledWith(
         'EDX Course ID updated:',
@@ -492,7 +535,10 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:METADATA_SAFETY'](payload);
 
-      expect(console.log).toHaveBeenCalledWith('Safety disclaimer updated:', true);
+      expect(console.log).toHaveBeenCalledWith(
+        'Safety disclaimer updated:',
+        true,
+      );
     });
 
     it('should log safety disclaimer false', () => {
@@ -501,7 +547,10 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:METADATA_SAFETY'](payload);
 
-      expect(console.log).toHaveBeenCalledWith('Safety disclaimer updated:', false);
+      expect(console.log).toHaveBeenCalledWith(
+        'Safety disclaimer updated:',
+        false,
+      );
     });
   });
 
@@ -534,7 +583,9 @@ describe('useIframeHandlers', () => {
           suggested_message: 'Old prompt',
         },
       };
-      vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(existingMentor));
+      vi.mocked(localStorage.getItem).mockReturnValue(
+        JSON.stringify(existingMentor),
+      );
 
       const { result } = renderHook(() => useIframeHandlers());
       const payload = {
@@ -561,7 +612,9 @@ describe('useIframeHandlers', () => {
         id: 'mentor-123',
         settings: { initial_message: 'Welcome' },
       };
-      vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(existingMentor));
+      vi.mocked(localStorage.getItem).mockReturnValue(
+        JSON.stringify(existingMentor),
+      );
 
       const { result } = renderHook(() => useIframeHandlers());
       const payload = { defaultPrompt: 'New prompt' };
@@ -579,7 +632,9 @@ describe('useIframeHandlers', () => {
         id: 'mentor-123',
         settings: { suggested_message: 'Prompt' },
       };
-      vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(existingMentor));
+      vi.mocked(localStorage.getItem).mockReturnValue(
+        JSON.stringify(existingMentor),
+      );
 
       const { result } = renderHook(() => useIframeHandlers());
       const payload = { welcomeMessage: 'New welcome' };
@@ -615,7 +670,9 @@ describe('useIframeHandlers', () => {
         result.current['MENTOR:MENTOR_PREVIEW'](payload);
       }).not.toThrow();
 
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('use-iframe-handlers'));
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('use-iframe-handlers'),
+      );
     });
 
     it('should preserve other mentor settings', () => {
@@ -629,7 +686,9 @@ describe('useIframeHandlers', () => {
         },
         otherData: 'preserved',
       };
-      vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(existingMentor));
+      vi.mocked(localStorage.getItem).mockReturnValue(
+        JSON.stringify(existingMentor),
+      );
 
       const { result } = renderHook(() => useIframeHandlers());
       const payload = { defaultPrompt: 'New prompt' };
@@ -650,7 +709,9 @@ describe('useIframeHandlers', () => {
       const existingMentor = {
         id: 'mentor-123',
       };
-      vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(existingMentor));
+      vi.mocked(localStorage.getItem).mockReturnValue(
+        JSON.stringify(existingMentor),
+      );
 
       const { result } = renderHook(() => useIframeHandlers());
       const payload = {
@@ -678,7 +739,9 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS'](payload);
 
-      expect(mockDispatchInstance).toHaveBeenCalledWith(enableChatActionsPopup(true));
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        enableChatActionsPopup(true),
+      );
     });
 
     it('should dispatch enableChatActionsPopup with false', () => {
@@ -687,7 +750,9 @@ describe('useIframeHandlers', () => {
 
       result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS'](payload);
 
-      expect(mockDispatchInstance).toHaveBeenCalledWith(enableChatActionsPopup(false));
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        enableChatActionsPopup(false),
+      );
     });
   });
 
@@ -737,7 +802,9 @@ describe('useIframeHandlers', () => {
         result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'id' });
         result.current['MENTOR:EDX_COURSE_ID']({ edxCourseId: 'id' });
         result.current['MENTOR:METADATA_SAFETY']({ safety_disclaimer: true });
-        result.current['MENTOR:IFRAME_CLOSE_BUTTON']({ enableCloseButton: true });
+        result.current['MENTOR:IFRAME_CLOSE_BUTTON']({
+          enableCloseButton: true,
+        });
         result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS']({ enable: true });
       }).not.toThrow();
     });

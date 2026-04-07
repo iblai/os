@@ -75,7 +75,9 @@ describe('ChatInterface', () => {
     });
 
     it('should handle null ref', () => {
-      const containerRef = { current: null } as React.RefObject<HTMLDivElement | null>;
+      const containerRef = {
+        current: null,
+      } as React.RefObject<HTMLDivElement | null>;
       render(<ChatInterface containerRef={containerRef} />);
 
       // After render, the ref should be populated
@@ -86,7 +88,9 @@ describe('ChatInterface', () => {
   describe('props combinations', () => {
     it('should handle both props together', () => {
       const containerRef = React.createRef<HTMLDivElement>();
-      render(<ChatInterface containerRef={containerRef} isInCanvasView={true} />);
+      render(
+        <ChatInterface containerRef={containerRef} isInCanvasView={true} />,
+      );
 
       expect(containerRef.current).toBeInstanceOf(HTMLDivElement);
       expect(screen.getByTestId('in-canvas-view')).toHaveTextContent('true');

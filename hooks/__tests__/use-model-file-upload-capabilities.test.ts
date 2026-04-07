@@ -92,8 +92,13 @@ describe('useModelFileUploadCapabilities', () => {
       expect(result.current.supportsFileUpload).toBe(true);
       expect(result.current.maxFileSizeMB).toBe(50);
       expect(result.current.maxFilesPerMessage).toBe(20);
-      expect(result.current.supportedImageTypes).toEqual(['image/png', 'image/jpeg']);
-      expect(result.current.supportedDocumentTypes).toEqual(['application/pdf']);
+      expect(result.current.supportedImageTypes).toEqual([
+        'image/png',
+        'image/jpeg',
+      ]);
+      expect(result.current.supportedDocumentTypes).toEqual([
+        'application/pdf',
+      ]);
     });
   });
 

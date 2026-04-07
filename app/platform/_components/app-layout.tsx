@@ -12,7 +12,10 @@ import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { isTauriApp } from '@/types/tauri';
-import { isTauriOfflineMode, isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
+import {
+  isTauriOfflineMode,
+  isOfflineServerOrigin,
+} from '@/hooks/use-tauri-offline';
 
 import '../../accessibility.css';
 
@@ -30,7 +33,8 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
   const isCompactMode = searchParams.get('compact') === 'true';
 
   // Check if we're in Tauri offline mode - hide sidebar and navbar
-  const isTauriOffline = isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
+  const isTauriOffline =
+    isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
 
   const { isLoading: isMentorSettingsLoading } = useMentorSettings({
     mentorId: mentorIdFromParams,
@@ -48,7 +52,10 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
   // This is used for PIP windows and embedded views
   if (isCompactMode) {
     return (
-      <main id="main-content-container" className="h-dvh flex flex-col overflow-hidden">
+      <main
+        id="main-content-container"
+        className="flex h-dvh flex-col overflow-hidden"
+      >
         {children}
       </main>
     );
@@ -61,10 +68,13 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
       <SidebarProvider defaultOpen={defaultOpen}>
         <HotKeysWrapper />
         <AppSidebar />
-        <SidebarInset asChild className="h-dvh flex flex-col overflow-hidden">
+        <SidebarInset asChild className="flex h-dvh flex-col overflow-hidden">
           <div>
             <NavBar />
-            <main id="main-content-container" className="flex-1 flex flex-col min-h-0">
+            <main
+              id="main-content-container"
+              className="flex min-h-0 flex-1 flex-col"
+            >
               {children}
             </main>
             <ModalContainer />

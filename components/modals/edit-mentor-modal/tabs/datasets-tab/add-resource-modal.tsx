@@ -3,7 +3,12 @@
 import React from 'react';
 import Script from 'next/script';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ResourceType, resourceTypes } from './resource-types';
 import { ResourceModal } from './resource-modal';
 import { cn } from '@/lib/utils';
@@ -19,7 +24,8 @@ interface AddResourceModalProps {
 }
 
 export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
-  const [selectedResource, setSelectedResource] = React.useState<ResourceType | null>(null);
+  const [selectedResource, setSelectedResource] =
+    React.useState<ResourceType | null>(null);
 
   const { openChooser } = useDropboxPicker({ autoShow: false });
   const {
@@ -48,8 +54,8 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
           <div className="pt-4">
             <div>
               <p className="mb-6 text-gray-600">
-                Add knowledge to help your agent provide more relevant insights. Others with edit
-                access can reuse these sources for more topics.
+                Add knowledge to help your agent provide more relevant insights.
+                Others with edit access can reuse these sources for more topics.
               </p>
 
               {pickerError && (
@@ -77,7 +83,8 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
                     key={resource.id}
                     className={cn(
                       'flex items-center rounded-lg border p-4 transition-colors duration-200 hover:bg-gray-50',
-                      resource.isActive && !disabledDatasets.includes(resource.id.toLowerCase())
+                      resource.isActive &&
+                        !disabledDatasets.includes(resource.id.toLowerCase())
                         ? 'cursor-pointer'
                         : 'cursor-not-allowed opacity-50',
                     )}
@@ -105,7 +112,8 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
                       }
                     }}
                     disabled={
-                      !resource.isActive || disabledDatasets.includes(resource.id.toLowerCase())
+                      !resource.isActive ||
+                      disabledDatasets.includes(resource.id.toLowerCase())
                     }
                   >
                     <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-md bg-blue-100">

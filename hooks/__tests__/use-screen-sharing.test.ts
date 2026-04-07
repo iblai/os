@@ -102,7 +102,9 @@ describe('useScreenSharing', () => {
       configurable: true,
     });
     // Clear captured room event handlers
-    Object.keys(roomEventHandlers).forEach((key) => delete roomEventHandlers[key]);
+    Object.keys(roomEventHandlers).forEach(
+      (key) => delete roomEventHandlers[key],
+    );
   });
 
   afterEach(() => {
@@ -146,7 +148,10 @@ describe('useScreenSharing', () => {
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(mockRoomConnect).toHaveBeenCalledWith('wss://test-url', 'test-token');
+        expect(mockRoomConnect).toHaveBeenCalledWith(
+          'wss://test-url',
+          'test-token',
+        );
       });
     });
 
@@ -169,9 +174,12 @@ describe('useScreenSharing', () => {
 
   describe('initiateCall error handling', () => {
     it('should show toast error when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
-        unwrap: () => Promise.reject({ error: { error: 'Custom error message' } }),
+        unwrap: () =>
+          Promise.reject({ error: { error: 'Custom error message' } }),
       });
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -184,7 +192,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should show default error message when error has no message', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -192,14 +202,18 @@ describe('useScreenSharing', () => {
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to initiate call. Please try again.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to initiate call. Please try again.',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('should call onError when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
@@ -220,7 +234,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not call room.connect when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -239,20 +255,26 @@ describe('useScreenSharing', () => {
 
   describe('room connection error handling', () => {
     it('should show toast error when room.connect fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to connect to room. Please try again.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to connect to room. Please try again.',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('should call onError when room.connect fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
@@ -271,7 +293,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not enable microphone when connection fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -288,7 +312,9 @@ describe('useScreenSharing', () => {
 
   describe('microphone error handling', () => {
     it('should show toast error when microphone enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -303,7 +329,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should call onError when microphone enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
@@ -322,7 +350,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not attempt screen share when microphone fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -339,8 +369,12 @@ describe('useScreenSharing', () => {
 
   describe('screen share error handling', () => {
     it('should show toast error when screen share enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockSetScreenShareEnabled.mockRejectedValue(new Error('Screen share denied'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockSetScreenShareEnabled.mockRejectedValue(
+        new Error('Screen share denied'),
+      );
 
       renderHook(() => useScreenSharing(defaultProps));
 
@@ -354,9 +388,13 @@ describe('useScreenSharing', () => {
     });
 
     it('should call onError when screen share enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
-      mockSetScreenShareEnabled.mockRejectedValue(new Error('Screen share denied'));
+      mockSetScreenShareEnabled.mockRejectedValue(
+        new Error('Screen share denied'),
+      );
 
       renderHook(() =>
         useScreenSharing({
@@ -449,7 +487,9 @@ describe('useScreenSharing', () => {
 
   describe('optional onError callback', () => {
     it('should work without onError callback on initiateCall error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -473,7 +513,9 @@ describe('useScreenSharing', () => {
   describe('room event handlers', () => {
     it('should handle ConnectionStateChanged to Connected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -489,7 +531,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Disconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -505,7 +549,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Connecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -521,7 +567,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Reconnecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -537,7 +585,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to disconnected on RoomEvent.Disconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -555,7 +605,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to reconnecting on RoomEvent.Reconnecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -572,7 +624,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to connected on RoomEvent.Reconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -591,7 +645,9 @@ describe('useScreenSharing', () => {
       const onScreenShareStopped = vi.fn();
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -610,7 +666,9 @@ describe('useScreenSharing', () => {
       const onScreenShareStopped = vi.fn();
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -627,7 +685,9 @@ describe('useScreenSharing', () => {
     it('should not call onScreenShareStopped for non-screen-share tracks', async () => {
       const onScreenShareStopped = vi.fn();
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();

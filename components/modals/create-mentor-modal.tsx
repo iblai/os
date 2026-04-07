@@ -13,7 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -29,7 +34,11 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { useUsername } from '@/hooks/use-user';
 import { Button } from '@/components/ui/button';
@@ -88,20 +97,28 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
   } = useShowFreeTrialDialog();
 
   const isDisabled = isLoadingMentorCategories || isLoadingCreateMentor;
-  const disablePromptsTab = name === '' || description === '' || category === null;
+  const disablePromptsTab =
+    name === '' || description === '' || category === null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="mx-auto w-full max-w-5xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="mx-auto max-h-[85vh] w-full max-w-5xl overflow-y-auto">
         <DialogDescription className="sr-only">
-          Create a new mentor by filling out the required information and customizing prompts
+          Create a new mentor by filling out the required information and
+          customizing prompts
         </DialogDescription>
         <div className="space-y-6">
           <DialogHeader>
-            <DialogTitle className="ibl-dialog-title">Create Mentor</DialogTitle>
+            <DialogTitle className="ibl-dialog-title">
+              Create Mentor
+            </DialogTitle>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList className="justify-start">
               <TabsTrigger
                 value="settings"
@@ -137,12 +154,16 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             <Input
                               placeholder="Mentor Name"
                               value={field.state.value}
-                              onChange={(e) => field.handleChange(e.target.value)}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
                               autoComplete="name"
                               disabled={isDisabled}
                             />
                             {hasNoValueAndIsDirty && (
-                              <p className="text-red-500 text-xs">Mentor name is required</p>
+                              <p className="text-xs text-red-500">
+                                Mentor name is required
+                              </p>
                             )}
                           </div>
                         );
@@ -164,12 +185,16 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             <Textarea
                               placeholder="Mentor Description"
                               value={field.state.value}
-                              onChange={(e) => field.handleChange(e.target.value)}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
                               required
                               disabled={isDisabled}
                             />
                             {hasNoValueAndIsDirty && (
-                              <p className="text-red-500 text-xs">Mentor description is required</p>
+                              <p className="text-xs text-red-500">
+                                Mentor description is required
+                              </p>
                             )}
                           </div>
                         );
@@ -193,7 +218,8 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               >
                                 {field.state.value
                                   ? mentorCategories?.find(
-                                      (mentorCategory) => mentorCategory.id === field.state.value,
+                                      (mentorCategory) =>
+                                        mentorCategory.id === field.state.value,
                                     )?.name
                                   : 'Select category...'}
                                 <ChevronsUpDown className="opacity-50" />
@@ -203,26 +229,34 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               aria-label="Categories dropdown container"
                               role="listbox"
                               aria-labelledby="Categories dropdown container"
-                              className="p-0 max-w-[490px] w-full sm:w-[400px] lg:w-[490px]"
+                              className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]"
                             >
                               <Command>
-                                <CommandInput placeholder="Search category..." className="h-9" />
+                                <CommandInput
+                                  placeholder="Search category..."
+                                  className="h-9"
+                                />
                                 <CommandList>
-                                  <CommandEmpty>No Category found.</CommandEmpty>
+                                  <CommandEmpty>
+                                    No Category found.
+                                  </CommandEmpty>
                                   <CommandGroup>
                                     {mentorCategories?.map((mentorCategory) => (
                                       <CommandItem
                                         key={mentorCategory.id}
                                         value={mentorCategory.id.toString()}
                                         onSelect={(currentValue) => {
-                                          field.handleChange(Number(currentValue));
+                                          field.handleChange(
+                                            Number(currentValue),
+                                          );
                                         }}
                                       >
                                         {mentorCategory.name}
                                         <Check
                                           className={cn(
                                             'ml-auto',
-                                            field.state.value === mentorCategory.id
+                                            field.state.value ===
+                                              mentorCategory.id
                                               ? 'opacity-100'
                                               : 'opacity-0',
                                           )}
@@ -256,7 +290,10 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             </SelectTrigger>
                             <SelectContent>
                               {MENTOR_VISIBILITY.map((visibility) => (
-                                <SelectItem key={visibility.value} value={visibility.value}>
+                                <SelectItem
+                                  key={visibility.value}
+                                  value={visibility.value}
+                                >
                                   {visibility.label}
                                 </SelectItem>
                               ))}
@@ -276,7 +313,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             </label>
                             <Select
                               value={field.state.value}
-                              onValueChange={(value) => field.handleChange(value)}
+                              onValueChange={(value) =>
+                                field.handleChange(value)
+                              }
                               required
                               disabled={isDisabled}
                             >
@@ -285,7 +324,10 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               </SelectTrigger>
                               <SelectContent>
                                 {MODEL_AGENTS.map((agent) => (
-                                  <SelectItem key={agent.value} value={agent.value}>
+                                  <SelectItem
+                                    key={agent.value}
+                                    value={agent.value}
+                                  >
                                     {agent.label}
                                   </SelectItem>
                                 ))}
@@ -300,7 +342,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                     {(field) => (
                       <>
                         <div className="order-1 mb-4 space-y-2 md:order-2 md:mb-0 md:w-[200px]">
-                          <label className="text-sm font-medium text-gray-700">Image</label>
+                          <label className="text-sm font-medium text-gray-700">
+                            Image
+                          </label>
                           <div
                             className="flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
                             onClick={() => {
@@ -347,7 +391,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                                 </Button>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-700">+ Upload</span>
+                              <span className="text-sm text-gray-700">
+                                + Upload
+                              </span>
                             )}
                           </div>
                           <input
@@ -384,7 +430,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
 
             <TabsContent value="prompts">
               <form
-                className="space-y-6 mt-6"
+                className="mt-6 space-y-6"
                 onSubmit={(formEvent) => {
                   formEvent.preventDefault();
                   formEvent.stopPropagation();
@@ -396,7 +442,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                     {(field) => (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-700">System Prompts</h3>
+                          <h3 className="text-sm font-medium text-gray-700">
+                            System Prompts
+                          </h3>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -422,7 +470,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             aria-readonly="true"
                             aria-label="System prompt content"
                           >
-                            <p className="text-sm text-gray-600">{field.state.value}</p>
+                            <p className="text-sm text-gray-600">
+                              {field.state.value}
+                            </p>
                           </div>
                           <div className="mt-4 flex justify-end gap-2">
                             <Button
@@ -451,7 +501,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                     {(field) => (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-700">Proactive Prompts</h3>
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Proactive Prompts
+                          </h3>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -464,7 +516,10 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>The system prompt defines the mentor&apos;s behavior</p>
+                                <p>
+                                  The system prompt defines the mentor&apos;s
+                                  behavior
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -477,7 +532,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             aria-readonly="true"
                             aria-label="Proactive prompt content"
                           >
-                            <p className="text-sm text-gray-600">{field.state.value}</p>
+                            <p className="text-sm text-gray-600">
+                              {field.state.value}
+                            </p>
                           </div>
                           <div className="mt-4 flex justify-end gap-2">
                             <Button
@@ -506,7 +563,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                     {(field) => (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-700">Guided Prompts</h3>
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Guided Prompts
+                          </h3>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -519,7 +578,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>The proactive prompt guides the conversation</p>
+                                <p>
+                                  The proactive prompt guides the conversation
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -532,7 +593,9 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             aria-readonly="true"
                             aria-label="Guided prompt content"
                           >
-                            <p className="text-sm text-gray-600">{field.state.value}</p>
+                            <p className="text-sm text-gray-600">
+                              {field.state.value}
+                            </p>
                           </div>
                           <div className="mt-4 flex justify-end gap-2">
                             <Button
@@ -587,7 +650,10 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
           />
         )}
         {isFreeTrialModalOpen && FreeTrialDialog && (
-          <FreeTrialDialog isOpen={isFreeTrialModalOpen} onClose={closeFreeTrialModal} />
+          <FreeTrialDialog
+            isOpen={isFreeTrialModalOpen}
+            onClose={closeFreeTrialModal}
+          />
         )}
       </DialogContent>
     </Dialog>

@@ -79,7 +79,9 @@ export function useFlaggedPromptsWithPagination({
         userEmail: log.username || 'N/A',
         userFullName: log.username || 'Unknown User',
         type:
-          log.target_system === 'Moderation System' ? ('Moderation' as const) : ('Safety' as const),
+          log.target_system === 'Moderation System'
+            ? ('Moderation' as const)
+            : ('Safety' as const),
         prompt: log.prompt,
         systemResponse: log.reason,
         timestamp: new Date(log.date_created).toLocaleString('en-US', {

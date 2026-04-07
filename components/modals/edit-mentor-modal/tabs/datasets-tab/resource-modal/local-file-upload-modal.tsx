@@ -54,7 +54,9 @@ export function LocalFileUploadModal({ resource }: Props) {
         formData: {
           file: file,
           pathway: activeMentorId,
-          type: resource.fileType ? resource.fileType.toLocaleLowerCase() : 'file',
+          type: resource.fileType
+            ? resource.fileType.toLocaleLowerCase()
+            : 'file',
           ...(isImageFile(file) && { user_image_description: description }),
         },
         // @ts-ignore
@@ -68,7 +70,10 @@ export function LocalFileUploadModal({ resource }: Props) {
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -139,7 +144,7 @@ export function LocalFileUploadModal({ resource }: Props) {
   return (
     <div className="flex flex-col items-center">
       <div
-        className={`w-full border-2 border-dashed max-w-sm ${
+        className={`w-full max-w-sm border-2 border-dashed ${
           isDraggingFile
             ? 'border-blue-400 bg-blue-50/50 backdrop-blur-sm'
             : 'border-gray-300 bg-gray-50'
@@ -155,7 +160,9 @@ export function LocalFileUploadModal({ resource }: Props) {
           <Upload className="h-8 w-8 text-blue-600" />
         </div>
 
-        <h3 className="mb-1 text-lg font-medium text-gray-700">Drag and drop your file here</h3>
+        <h3 className="mb-1 text-lg font-medium text-gray-700">
+          Drag and drop your file here
+        </h3>
         <p className="mb-4 text-sm text-gray-500">or</p>
 
         <label htmlFor="file-upload" className="cursor-pointer">
@@ -179,7 +186,7 @@ export function LocalFileUploadModal({ resource }: Props) {
         {file && (
           <>
             <div className="mt-4 flex w-full items-center rounded-md border border-gray-200 bg-white p-3">
-              <div className="flex items-center w-full">
+              <div className="flex w-full items-center">
                 <div className="mr-3 flex-shrink-0 rounded-md bg-blue-100 p-2">
                   <svg
                     width="20"
@@ -195,10 +202,11 @@ export function LocalFileUploadModal({ resource }: Props) {
                     <path d="M14 2V8H20L14 2Z" fill="#A1C2FA" />
                   </svg>
                 </div>
-                <div className="flex-1 min-w-0 overflow-hidden isolate z-50">
+                <div className="isolate z-50 min-w-0 flex-1 overflow-hidden">
                   <p className="truncate text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-gray-500">
-                    {convertFromBytes(file.size).value} {convertFromBytes(file.size).unit}
+                    {convertFromBytes(file.size).value}{' '}
+                    {convertFromBytes(file.size).unit}
                   </p>
                 </div>
                 <button
@@ -209,7 +217,7 @@ export function LocalFileUploadModal({ resource }: Props) {
                       fileInputRef.current.value = '';
                     }
                   }}
-                  className="ml-2 flex-shrink-0 rounded-full p-1 hover:bg-gray-100 transition-colors"
+                  className="ml-2 flex-shrink-0 rounded-full p-1 transition-colors hover:bg-gray-100"
                 >
                   <X className="h-4 w-4 text-gray-500" />
                 </button>
@@ -219,7 +227,7 @@ export function LocalFileUploadModal({ resource }: Props) {
               <div className="mt-3 w-full">
                 <label
                   htmlFor="image-description"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="mb-1 block text-sm font-medium text-gray-700"
                 >
                   Description (optional)
                 </label>

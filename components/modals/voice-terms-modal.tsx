@@ -1,6 +1,11 @@
 'use client';
 
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Mic, Shield, MessageSquare } from 'lucide-react';
 
 interface VoiceTermsModalProps {
@@ -9,11 +14,17 @@ interface VoiceTermsModalProps {
   onAgree: () => void;
 }
 
-export function VoiceTermsModal({ isOpen, onClose, onAgree }: VoiceTermsModalProps) {
+export function VoiceTermsModal({
+  isOpen,
+  onClose,
+  onAgree,
+}: VoiceTermsModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-[#f5f5fa] p-6">
-        <DialogTitle className="sr-only">Voice Terms and Conditions</DialogTitle>
+        <DialogTitle className="sr-only">
+          Voice Terms and Conditions
+        </DialogTitle>
         <DialogDescription className="sr-only">
           Review and accept the terms for using voice-powered mentorAI
         </DialogDescription>
@@ -41,7 +52,9 @@ export function VoiceTermsModal({ isOpen, onClose, onAgree }: VoiceTermsModalPro
               <div className="mt-1 text-blue-600">
                 <Shield className="h-5 w-5" />
               </div>
-              <p className="font-medium text-gray-800">Don&apos;t use copyrighted voices</p>
+              <p className="font-medium text-gray-800">
+                Don&apos;t use copyrighted voices
+              </p>
             </div>
 
             {/* Rule 3 */}

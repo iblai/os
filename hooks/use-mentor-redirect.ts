@@ -1,6 +1,9 @@
 import React from 'react';
 
-import { useLazySeedMentorsQuery, useLazyGetMentorsQuery } from '@/features/mentors/api-slice';
+import {
+  useLazySeedMentorsQuery,
+  useLazyGetMentorsQuery,
+} from '@/features/mentors/api-slice';
 
 type UseMentorProviderProps = {
   onAuthSuccess?: () => void;
@@ -129,10 +132,14 @@ export function useMentorProvider({
             username,
             params: { featured: true, limit: 10 },
           });
-          const featuredMentorsAfterSeed = featuredMentorsAfterSeedResult.data?.results || [];
+          const featuredMentorsAfterSeed =
+            featuredMentorsAfterSeedResult.data?.results || [];
 
           if (featuredMentorsAfterSeed.length > 0) {
-            redirectToMentor(tenantKey, featuredMentorsAfterSeed[0]?.slug || '');
+            redirectToMentor(
+              tenantKey,
+              featuredMentorsAfterSeed[0]?.slug || '',
+            );
             onAuthSuccess?.();
             return;
           }
@@ -149,10 +156,13 @@ export function useMentorProvider({
         return;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
       onAuthFailure?.(`Unexpected error: ${errorMessage}`);
-      console.log('[auth-redirect] Unexpected error in mentor redirect', { error: errorMessage });
+      console.log('[auth-redirect] Unexpected error in mentor redirect', {
+        error: errorMessage,
+      });
       redirectToAuthSpa();
     } finally {
       setIsLoading(false);

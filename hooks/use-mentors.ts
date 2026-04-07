@@ -5,7 +5,10 @@ import { useDebounce } from 'use-debounce';
 
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useGetMentorsQuery, useGetPublicMentorsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetMentorsQuery,
+  useGetPublicMentorsQuery,
+} from '@iblai/iblai-js/data-layer';
 
 export function useMentorsWithPagination(itemsPerPage = 5) {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -77,8 +80,12 @@ export function useMentorsWithPagination(itemsPerPage = 5) {
   };
 
   // Calculate total pages based on count and limit
-  const mentorsTotalPages = mentors ? Math.ceil(mentors.count / itemsPerPage) : 0;
-  const publicMentorsTotalPages = publicMentors ? Math.ceil(publicMentors.count / itemsPerPage) : 0;
+  const mentorsTotalPages = mentors
+    ? Math.ceil(mentors.count / itemsPerPage)
+    : 0;
+  const publicMentorsTotalPages = publicMentors
+    ? Math.ceil(publicMentors.count / itemsPerPage)
+    : 0;
   const totalPages = username ? mentorsTotalPages : publicMentorsTotalPages;
 
   return {

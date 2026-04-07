@@ -3,15 +3,23 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { StarredMentorsSection } from '../starred-mentors-section';
-import { ExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  ExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { mockStarredMentor, mockMentorsListWithPagination, mockEmptyMentorsList } from './fixtures';
+import {
+  mockStarredMentor,
+  mockMentorsListWithPagination,
+  mockEmptyMentorsList,
+} from './fixtures';
 
 // Mock the data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
 }));
 
 // Mock isLoggedIn from @/lib/utils
@@ -22,7 +30,8 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   return {
     ...actual,
     isLoggedIn: () => mockIsLoggedIn(),
-    redirectToAuthSpaJoinTenant: (...args: unknown[]) => mockRedirectToAuthSpaJoinTenant(...args),
+    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
+      mockRedirectToAuthSpaJoinTenant(...args),
   };
 });
 
@@ -80,10 +89,14 @@ describe('StarredMentorsSection', () => {
     },
   ];
 
-  const renderWithContext = (contextOverrides: Partial<ExplorePageContextValue> = {}) => {
+  const renderWithContext = (
+    contextOverrides: Partial<ExplorePageContextValue> = {},
+  ) => {
     return render(
       <TooltipProvider>
-        <ExplorePageContext.Provider value={{ ...mockContextValue, ...contextOverrides }}>
+        <ExplorePageContext.Provider
+          value={{ ...mockContextValue, ...contextOverrides }}
+        >
           <StarredMentorsSection />
         </ExplorePageContext.Provider>
       </TooltipProvider>,
@@ -104,7 +117,9 @@ describe('StarredMentorsSection', () => {
     it('renders the Favorites heading', () => {
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /Favorites/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /Favorites/i }),
+      ).toBeInTheDocument();
     });
 
     it('handles null data gracefully', () => {
@@ -115,7 +130,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Favorites$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Favorites$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('handles undefined results gracefully', () => {
@@ -126,7 +143,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /^Favorites$/i, level: 2 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /^Favorites$/i, level: 2 }),
+      ).toBeInTheDocument();
     });
 
     it('renders mentor cards when starred mentors exist', () => {
@@ -169,7 +188,9 @@ describe('StarredMentorsSection', () => {
 
       expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
       expect(
-        screen.getByText('Star your favorite mentors to quickly access them here'),
+        screen.getByText(
+          'Star your favorite mentors to quickly access them here',
+        ),
       ).toBeInTheDocument();
       expect(screen.getByText('No favorites yet')).toBeInTheDocument();
     });
@@ -184,7 +205,9 @@ describe('StarredMentorsSection', () => {
 
       expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
       expect(
-        screen.getByText('Star your favorite mentors to quickly access them here'),
+        screen.getByText(
+          'Star your favorite mentors to quickly access them here',
+        ),
       ).toBeInTheDocument();
       expect(screen.getByText('No favorites yet')).toBeInTheDocument();
     });
@@ -192,7 +215,9 @@ describe('StarredMentorsSection', () => {
     it('renders mentors in a list with proper role', () => {
       renderWithContext();
 
-      expect(screen.getByRole('list', { name: /Favorite mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('list', { name: /Favorite mentors/i }),
+      ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
   });
@@ -315,7 +340,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const button = screen.getByRole('button', { name: /load more favorite mentors/i });
+      const button = screen.getByRole('button', {
+        name: /load more favorite mentors/i,
+      });
       expect(button).toBeDisabled();
     });
   });
@@ -385,7 +412,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more favorite mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more favorite mentors/i,
+      });
       await user.click(seeMoreButton);
 
       // The limit should increase by 6 (FAVORITE_MENTORS_LIMIT)
@@ -433,7 +462,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more favorite mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more favorite mentors/i,
+      });
       expect(seeMoreButton).toBeDisabled();
     });
   });
@@ -442,7 +473,9 @@ describe('StarredMentorsSection', () => {
     it('resets pagination when search changes', () => {
       const { rerender } = render(
         <TooltipProvider>
-          <ExplorePageContext.Provider value={{ ...mockContextValue, debouncedSearch: '' }}>
+          <ExplorePageContext.Provider
+            value={{ ...mockContextValue, debouncedSearch: '' }}
+          >
             <StarredMentorsSection />
           </ExplorePageContext.Provider>
         </TooltipProvider>,
@@ -451,7 +484,9 @@ describe('StarredMentorsSection', () => {
       // Simulate search change
       rerender(
         <TooltipProvider>
-          <ExplorePageContext.Provider value={{ ...mockContextValue, debouncedSearch: 'test' }}>
+          <ExplorePageContext.Provider
+            value={{ ...mockContextValue, debouncedSearch: 'test' }}
+          >
             <StarredMentorsSection />
           </ExplorePageContext.Provider>
         </TooltipProvider>,
@@ -480,7 +515,9 @@ describe('StarredMentorsSection', () => {
       const favoritesCard = screen.getByTestId('favorites-card');
       fireEvent.click(favoritesCard);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
 
     it('does not redirect when logged in and empty favorites card is clicked', () => {
@@ -512,13 +549,17 @@ describe('StarredMentorsSection', () => {
 
       // Test Enter key
       fireEvent.keyDown(favoritesCard, { key: 'Enter' });
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
 
       mockRedirectToAuthSpaJoinTenant.mockClear();
 
       // Test Space key
       fireEvent.keyDown(favoritesCard, { key: ' ' });
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
   });
 
@@ -533,7 +574,9 @@ describe('StarredMentorsSection', () => {
     it('has proper list role and label', () => {
       renderWithContext();
 
-      expect(screen.getByRole('list', { name: /Favorite mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('list', { name: /Favorite mentors/i }),
+      ).toBeInTheDocument();
     });
 
     it('list items have proper role', () => {
@@ -576,10 +619,14 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       await user.click(emptyCard);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
 
     it('does not redirect when logged in and empty state card is clicked', async () => {
@@ -588,7 +635,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       await user.click(emptyCard);
 
       expect(mockRedirectToAuthSpaJoinTenant).not.toHaveBeenCalled();
@@ -600,11 +649,15 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       emptyCard.focus();
       await user.keyboard('{Enter}');
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
 
     it('can trigger action with Space key on empty state card', async () => {
@@ -613,17 +666,23 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       emptyCard.focus();
       await user.keyboard(' ');
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
 
     it('empty state card is keyboard accessible', () => {
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       expect(emptyCard).toHaveAttribute('tabindex', '0');
     });
 
@@ -633,7 +692,9 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', { name: /Add to Favorites/i });
+      const emptyCard = screen.getByRole('button', {
+        name: /Add to Favorites/i,
+      });
       emptyCard.focus();
       await user.keyboard('{Tab}');
 

@@ -5,9 +5,16 @@ import {
   VideoConference,
   useRoomContext,
 } from '@livekit/components-react';
-import { RoomEvent, type TranscriptionSegment, type Participant } from 'livekit-client';
+import {
+  RoomEvent,
+  type TranscriptionSegment,
+  type Participant,
+} from 'livekit-client';
 
-import { useScreenSharing, type ScreenSharingConnectionState } from '@/hooks/use-screen-sharing';
+import {
+  useScreenSharing,
+  type ScreenSharingConnectionState,
+} from '@/hooks/use-screen-sharing';
 import { usePipOnBlur } from '@/hooks/use-pip-on-blur';
 
 // LiveKit Agents 1.0 uses the 'lk.chat' topic for text streams
@@ -36,7 +43,10 @@ type Props = {
 /**
  * Post room status to the window opener (parent window that opened this popup)
  */
-function postRoomStatusToOpener(status: ScreenSharingConnectionState, action: 'screen-share') {
+function postRoomStatusToOpener(
+  status: ScreenSharingConnectionState,
+  action: 'screen-share',
+) {
   if (window.opener && !window.opener.closed) {
     try {
       window.opener.postMessage(
@@ -85,9 +95,16 @@ function ChatRelay() {
 
   // Log when chatMessages changes
   React.useEffect(() => {
-    console.log('[ChatRelay] chatMessages updated:', chatMessages.length, 'messages');
+    console.log(
+      '[ChatRelay] chatMessages updated:',
+      chatMessages.length,
+      'messages',
+    );
     if (chatMessages.length > 0) {
-      console.log('[ChatRelay] Latest message:', chatMessages[chatMessages.length - 1]);
+      console.log(
+        '[ChatRelay] Latest message:',
+        chatMessages[chatMessages.length - 1],
+      );
     }
   }, [chatMessages]);
 
@@ -100,7 +117,10 @@ function ChatRelay() {
   React.useEffect(() => {
     if (!room) return;
 
-    console.log('[ChatRelay] Registering text stream handler for', LK_CHAT_TOPIC);
+    console.log(
+      '[ChatRelay] Registering text stream handler for',
+      LK_CHAT_TOPIC,
+    );
 
     // Handle incoming text streams from the agent
     const textStreamHandler = async (
@@ -108,7 +128,10 @@ function ChatRelay() {
       participantInfo?: { identity?: string },
     ) => {
       try {
-        console.log('[ChatRelay] Received text stream from:', participantInfo?.identity);
+        console.log(
+          '[ChatRelay] Received text stream from:',
+          participantInfo?.identity,
+        );
 
         // Read the full text from the stream
         const text = await reader.readAll();
@@ -116,7 +139,9 @@ function ChatRelay() {
 
         // Create a chat message from the text stream
         // participantInfo only has identity, we can look up name from room participants
-        const participant = room.remoteParticipants.get(participantInfo?.identity ?? '');
+        const participant = room.remoteParticipants.get(
+          participantInfo?.identity ?? '',
+        );
         const newMessage: ChatMessage = {
           id: reader.info?.id || `agent-${Date.now()}-${Math.random()}`,
           message: text,
@@ -130,7 +155,10 @@ function ChatRelay() {
         setChatMessages((prev) => {
           // Avoid duplicates
           if (prev.some((m) => m.id === newMessage.id)) {
-            console.log('[ChatRelay] Duplicate message, skipping:', newMessage.id);
+            console.log(
+              '[ChatRelay] Duplicate message, skipping:',
+              newMessage.id,
+            );
             return prev;
           }
           return [...prev, newMessage];
@@ -161,11 +189,16 @@ function ChatRelay() {
     if (!room) return;
 
     const handleChatMessage = (msg: unknown) => {
-      console.log('[ChatRelay] RoomEvent.ChatMessage received (data packet):', msg);
+      console.log(
+        '[ChatRelay] RoomEvent.ChatMessage received (data packet):',
+        msg,
+      );
     };
 
     room.on(RoomEvent.ChatMessage, handleChatMessage);
-    console.log('[ChatRelay] Listening for RoomEvent.ChatMessage (data packets)');
+    console.log(
+      '[ChatRelay] Listening for RoomEvent.ChatMessage (data packets)',
+    );
 
     return () => {
       room.off(RoomEvent.ChatMessage, handleChatMessage);
@@ -177,16 +210,26 @@ function ChatRelay() {
     const handleMessage = async (event: MessageEvent) => {
       // Only log PIP-related messages to avoid noise
       if (event.data?.type?.startsWith('PIP:')) {
-        console.log('[ChatRelay] Received message from PIP:', event.data?.type, event.data);
+        console.log(
+          '[ChatRelay] Received message from PIP:',
+          event.data?.type,
+          event.data,
+        );
       }
 
       if (event.data?.type === 'PIP:SEND_CHAT_MESSAGE') {
         const messageText = event.data.message;
-        console.log('[ChatRelay] Sending message to LiveKit room via text stream:', messageText);
+        console.log(
+          '[ChatRelay] Sending message to LiveKit room via text stream:',
+          messageText,
+        );
 
         if (!room?.localParticipant) {
           console.error('[ChatRelay] No room or local participant available');
-          window.documentPictureInPicture?.window?.postMessage({ type: 'PIP:SEND_COMPLETE' }, '*');
+          window.documentPictureInPicture?.window?.postMessage(
+            { type: 'PIP:SEND_COMPLETE' },
+            '*',
+          );
           return;
         }
 
@@ -197,11 +240,15 @@ function ChatRelay() {
           const info = await room.localParticipant.sendText(messageText, {
             topic: LK_CHAT_TOPIC,
           });
-          console.log('[ChatRelay] Message sent successfully via text stream, id:', info.id);
+          console.log(
+            '[ChatRelay] Message sent successfully via text stream, id:',
+            info.id,
+          );
 
           // Add our own message to the chat history
           const localMessage: ChatMessage = {
-            id: info.id || `local-${Date.now()}-${messageIdCounterRef.current++}`,
+            id:
+              info.id || `local-${Date.now()}-${messageIdCounterRef.current++}`,
             message: messageText,
             timestamp: Date.now(),
             from: {
@@ -212,15 +259,25 @@ function ChatRelay() {
 
           setChatMessages((prev) => [...prev, localMessage]);
 
-          window.documentPictureInPicture?.window?.postMessage({ type: 'PIP:SEND_COMPLETE' }, '*');
+          window.documentPictureInPicture?.window?.postMessage(
+            { type: 'PIP:SEND_COMPLETE' },
+            '*',
+          );
         } catch (error) {
           console.error('[ChatRelay] Failed to send text stream:', error);
-          window.documentPictureInPicture?.window?.postMessage({ type: 'PIP:SEND_COMPLETE' }, '*');
+          window.documentPictureInPicture?.window?.postMessage(
+            { type: 'PIP:SEND_COMPLETE' },
+            '*',
+          );
         } finally {
           setIsSending(false);
         }
       } else if (event.data?.type === 'PIP:REQUEST_MESSAGES_SYNC') {
-        console.log('[ChatRelay] Syncing messages to PIP:', chatMessages.length, 'messages');
+        console.log(
+          '[ChatRelay] Syncing messages to PIP:',
+          chatMessages.length,
+          'messages',
+        );
         window.documentPictureInPicture?.window?.postMessage(
           { type: 'PIP:CHAT_MESSAGES_SYNC', messages: chatMessages },
           '*',
@@ -247,7 +304,11 @@ function ChatRelay() {
     // Only send new messages (skip on initial load)
     if (chatMessages.length > lastMessageCountRef.current) {
       const newMessages = chatMessages.slice(lastMessageCountRef.current);
-      console.log('[ChatRelay] Relaying', newMessages.length, 'new messages to PIP');
+      console.log(
+        '[ChatRelay] Relaying',
+        newMessages.length,
+        'new messages to PIP',
+      );
 
       newMessages.forEach((msg) => {
         if (window.documentPictureInPicture?.window) {
@@ -289,8 +350,14 @@ function TranscriptionRelay() {
   React.useEffect(() => {
     if (!room) return;
 
-    const handleTranscription = (segments: TranscriptionSegment[], participant?: Participant) => {
-      console.log('[TranscriptionRelay] Received transcription segments:', segments.length);
+    const handleTranscription = (
+      segments: TranscriptionSegment[],
+      participant?: Participant,
+    ) => {
+      console.log(
+        '[TranscriptionRelay] Received transcription segments:',
+        segments.length,
+      );
 
       if (!window.documentPictureInPicture?.window) {
         console.warn('[TranscriptionRelay] No PIP window available');
@@ -310,7 +377,10 @@ function TranscriptionRelay() {
         timestamp: Date.now(),
       };
 
-      console.log('[TranscriptionRelay] Posting transcription to PIP:', serializableTranscription);
+      console.log(
+        '[TranscriptionRelay] Posting transcription to PIP:',
+        serializableTranscription,
+      );
 
       window.documentPictureInPicture.window.postMessage(
         {
@@ -344,9 +414,12 @@ export function LiveKitScreenSharing({
   // Stable reference to the window that sent us a MENTOR:SCREENSHARING_MUTED status request
   const parentSourceRef = React.useRef<MessageEventSource | null>(null);
 
-  const handleConnectionStateChange = React.useCallback((state: ScreenSharingConnectionState) => {
-    postRoomStatusToOpener(state, 'screen-share');
-  }, []);
+  const handleConnectionStateChange = React.useCallback(
+    (state: ScreenSharingConnectionState) => {
+      postRoomStatusToOpener(state, 'screen-share');
+    },
+    [],
+  );
 
   // Handle when screen share is stopped via browser's "Stop sharing" button
   const handleScreenShareStopped = React.useCallback(() => {
@@ -360,9 +433,15 @@ export function LiveKitScreenSharing({
     // Notify the opener that screen sharing was stopped
     if (window.opener && !window.opener.closed) {
       try {
-        window.opener.postMessage({ type: 'MENTOR:SCREENSHARING_STOPPED' }, '*');
+        window.opener.postMessage(
+          { type: 'MENTOR:SCREENSHARING_STOPPED' },
+          '*',
+        );
       } catch (error) {
-        console.error('Failed to post screen sharing stopped to opener:', error);
+        console.error(
+          'Failed to post screen sharing stopped to opener:',
+          error,
+        );
       }
     }
     // Close the screen sharing modal
@@ -424,15 +503,25 @@ export function LiveKitScreenSharing({
         if (target) {
           try {
             target.postMessage(
-              { type: 'MENTOR:ROOM_STATUS', action: 'screen-share', status: connectionState },
+              {
+                type: 'MENTOR:ROOM_STATUS',
+                action: 'screen-share',
+                status: connectionState,
+              },
               '*',
             );
             target.postMessage(
-              { type: 'MENTOR:SCREENSHARING_MUTED', muted: !isMicrophoneEnabled },
+              {
+                type: 'MENTOR:SCREENSHARING_MUTED',
+                muted: !isMicrophoneEnabled,
+              },
               '*',
             );
             target.postMessage(
-              { type: 'MENTOR:SCREENSHARING_MENTOR_MUTED', muted: !isMentorAudioEnabled },
+              {
+                type: 'MENTOR:SCREENSHARING_MENTOR_MUTED',
+                muted: !isMentorAudioEnabled,
+              },
               '*',
             );
             if (isScreenShareActive) {
@@ -460,7 +549,11 @@ export function LiveKitScreenSharing({
     if (!parentSourceRef.current) return;
     try {
       (parentSourceRef.current as Window).postMessage(
-        { type: 'MENTOR:ROOM_STATUS', action: 'screen-share', status: connectionState },
+        {
+          type: 'MENTOR:ROOM_STATUS',
+          action: 'screen-share',
+          status: connectionState,
+        },
         '*',
       );
     } catch (error) {
@@ -486,7 +579,10 @@ export function LiveKitScreenSharing({
     if (!parentSourceRef.current) return;
     try {
       (parentSourceRef.current as Window).postMessage(
-        { type: 'MENTOR:SCREENSHARING_MENTOR_MUTED', muted: !isMentorAudioEnabled },
+        {
+          type: 'MENTOR:SCREENSHARING_MENTOR_MUTED',
+          muted: !isMentorAudioEnabled,
+        },
         '*',
       );
     } catch (error) {
@@ -541,7 +637,10 @@ export function LiveKitScreenSharing({
 
   return (
     <RoomContext.Provider value={room}>
-      <VideoConference className="hidden" chatMessageFormatter={formatChatMessageLinks} />
+      <VideoConference
+        className="hidden"
+        chatMessageFormatter={formatChatMessageLinks}
+      />
       <ChatRelay />
       <TranscriptionRelay />
     </RoomContext.Provider>

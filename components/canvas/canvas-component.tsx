@@ -62,7 +62,11 @@ import {
   shouldProcessEditorChange,
   getHighlightInputKeyAction,
 } from './canvas-utils';
-import { exportAsPDF, exportAsDOCX, exportAsMarkdown } from './canvas-export-handlers';
+import {
+  exportAsPDF,
+  exportAsDOCX,
+  exportAsMarkdown,
+} from './canvas-export-handlers';
 import { useCanvasVersionNavigation } from '@/hooks/use-canvas-version-navigation';
 
 // Import KaTeX CSS for math rendering
@@ -81,7 +85,10 @@ interface CanvasComponentProps {
   metadata?: Record<string, unknown>;
   sessionId?: string;
   tenantKey?: string;
-  sendMessage?: (text: string, options?: { visible?: boolean; artifact?: any }) => void;
+  sendMessage?: (
+    text: string,
+    options?: { visible?: boolean; artifact?: any },
+  ) => void;
   onArtifactUpdate?: (artifact: Artifact) => void;
 }
 
@@ -222,7 +229,9 @@ export const shouldSkipStreamingUpdateByThreshold = (
   forceUpdateInterval: number,
 ): boolean => {
   return (
-    paragraphDelta <= 0 && charDelta < minCharDelta && timeSinceLastUpdate < forceUpdateInterval
+    paragraphDelta <= 0 &&
+    charDelta < minCharDelta &&
+    timeSinceLastUpdate < forceUpdateInterval
   );
 };
 
@@ -236,10 +245,19 @@ export const isStreamingContentUnchanged = (
 
 // Exported for testing - Build artifact payload for chat message
 export const buildArtifactPayload = (
-  artifact: { title?: string | null; file_extension?: string | null; id: number },
+  artifact: {
+    title?: string | null;
+    file_extension?: string | null;
+    id: number;
+  },
   metadataTitle?: string | null,
   propTitle?: string,
-): { title: string; file_extension: string; id: string; is_partial: boolean } => {
+): {
+  title: string;
+  file_extension: string;
+  id: string;
+  is_partial: boolean;
+} => {
   return {
     title: artifact.title || metadataTitle || propTitle || 'Untitled Artifact',
     file_extension: artifact.file_extension || 'txt',
@@ -258,8 +276,10 @@ export const doesArtifactMatchEvent = (
   if (!eventArtifactId) return false;
   const eventId = Number(eventArtifactId);
   return (
-    (currentArtifactId !== undefined && eventId === Number(currentArtifactId)) ||
-    (resolvedArtifactId !== undefined && eventId === Number(resolvedArtifactId)) ||
+    (currentArtifactId !== undefined &&
+      eventId === Number(currentArtifactId)) ||
+    (resolvedArtifactId !== undefined &&
+      eventId === Number(resolvedArtifactId)) ||
     (propArtifactId !== undefined && eventId === Number(propArtifactId))
   );
 };
@@ -271,7 +291,11 @@ export const buildPartialContent = (
   startIndex: number,
   endIndex: number,
 ): string => {
-  return previousContent.slice(0, startIndex) + streamContent + previousContent.slice(endIndex);
+  return (
+    previousContent.slice(0, startIndex) +
+    streamContent +
+    previousContent.slice(endIndex)
+  );
 };
 
 // Exported for testing - Check if save should be skipped
@@ -294,7 +318,9 @@ export const buildSaveRequestBody = (
   markdown: string,
   title?: string | null,
 ): { content: string; title?: string } => {
-  const requestBody: { content: string; title?: string } = { content: markdown };
+  const requestBody: { content: string; title?: string } = {
+    content: markdown,
+  };
   if (title) requestBody.title = title;
   return requestBody;
 };
@@ -349,7 +375,9 @@ export function CanvasComponent({
 
   // Refs
   const pendingMarkdownRef = useRef<string | null>(null);
-  const savedStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isMountedRef = useRef(true);
   const hasUserEditedRef = useRef(false);
   const lastKnownVersionRef = useRef<number | null>(null);
@@ -380,7 +408,10 @@ export function CanvasComponent({
   });
 
   // Text highlighting state
-  const [selectedText, setSelectedText] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const [selectedText, setSelectedText] = useState<{
+    text: string;
+    rect: DOMRect;
+  } | null>(null);
   const [highlightInput, setHighlightInput] = useState('');
   const [showHighlightPopup, setShowHighlightPopup] = useState(false);
   const savedSelectionRef = useRef<Range | null>(null);
@@ -408,7 +439,12 @@ export function CanvasComponent({
     return (
       coerceString(_sessionId) ??
       coerceString(
-        findValueByKey(metadataRecord, ['sessionId', 'session_id', 'session', 'chat_session_id']),
+        findValueByKey(metadataRecord, [
+          'sessionId',
+          'session_id',
+          'session',
+          'chat_session_id',
+        ]),
       )
     );
   }, [_sessionId, metadataRecord]);
@@ -420,9 +456,18 @@ export function CanvasComponent({
     // IMPORTANT: We avoid using generic 'id' key as it can be confused with version ID
     // when metadata contains ArtifactVersion data (version.id vs artifact.id)
     const metadataId = coerceNumber(
-      findValueByKey(metadataRecord, ['artifactId', 'artifact_id', 'artifactID', 'artifact']),
+      findValueByKey(metadataRecord, [
+        'artifactId',
+        'artifact_id',
+        'artifactID',
+        'artifact',
+      ]),
     );
-    return resolveArtifactIdFromSources(artifactId, metadataId, currentArtifact?.id);
+    return resolveArtifactIdFromSources(
+      artifactId,
+      metadataId,
+      currentArtifact?.id,
+    );
   }, [artifactId, metadataRecord, currentArtifact?.id]);
 
   const resolvedOrg = useMemo(() => {
@@ -445,13 +490,23 @@ export function CanvasComponent({
     return (
       coerceString(userId) ??
       coerceString(
-        findValueByKey(metadataRecord, ['user_id', 'userId', 'username', 'user', 'owner']),
+        findValueByKey(metadataRecord, [
+          'user_id',
+          'userId',
+          'username',
+          'user',
+          'owner',
+        ]),
       )
     );
   }, [metadataRecord, userId]);
 
   const metadataVersionNumber = useMemo(() => {
-    const val = findValueByKey(metadataRecord, ['versionNumber', 'version_number', 'version']);
+    const val = findValueByKey(metadataRecord, [
+      'versionNumber',
+      'version_number',
+      'version',
+    ]);
     return coerceNumber(val);
   }, [metadataRecord]);
 
@@ -462,7 +517,10 @@ export function CanvasComponent({
   }, [metadataRecord]);
 
   const metadataTitle = useMemo(
-    () => coerceString(findValueByKey(metadataRecord, ['title', 'artifact_title', 'name'])),
+    () =>
+      coerceString(
+        findValueByKey(metadataRecord, ['title', 'artifact_title', 'name']),
+      ),
     [metadataRecord],
   );
 
@@ -476,7 +534,8 @@ export function CanvasComponent({
     editorContentValueRef.current = normalized;
     streamingContentBufferRef.current.lastAppliedContent = normalized;
     streamingContentBufferRef.current.lastAppliedLength = normalized.length;
-    streamingContentBufferRef.current.lastAppliedParagraphs = countStreamingParagraphs(normalized);
+    streamingContentBufferRef.current.lastAppliedParagraphs =
+      countStreamingParagraphs(normalized);
     const currentEditor = editorRef.current;
     if (currentEditor?.commands?.setContent) {
       const htmlContent = markdownToHtml(normalized);
@@ -612,7 +671,9 @@ export function CanvasComponent({
       const normalizedContent = normalizeContentToMarkdown(newContent);
       setEditorContent(normalizedContent);
       lastSavedMarkdownRef.current = normalizedContent;
-      setCurrentArtifact((prev) => (prev ? { ...prev, content: normalizedContent } : prev));
+      setCurrentArtifact((prev) =>
+        prev ? { ...prev, content: normalizedContent } : prev,
+      );
       // Reset editor's user edit tracking since this is a programmatic update
       if (editorRef.current) {
         (editorRef.current as any).__hasUserEdited = false;
@@ -631,7 +692,9 @@ export function CanvasComponent({
     const range = savedSelectionRef.current.cloneRange();
     const rect = range.getBoundingClientRect();
     const rects = Array.from(range.getClientRects());
-    setSelectedText((prev) => (prev ? { ...prev, rect } : { text: range.toString(), rect }));
+    setSelectedText((prev) =>
+      prev ? { ...prev, rect } : { text: range.toString(), rect },
+    );
     setHighlightRects(rects);
   }, [showHighlightPopup]);
 
@@ -651,7 +714,9 @@ export function CanvasComponent({
         contentLength: globalStreamingState.accumulatedContent?.length || 0,
       });
       if (globalStreamingState.accumulatedContent) {
-        const normalized = normalizeContentToMarkdown(globalStreamingState.accumulatedContent);
+        const normalized = normalizeContentToMarkdown(
+          globalStreamingState.accumulatedContent,
+        );
         if (normalized && normalized.trim()) {
           applyProgrammaticContent(normalized);
         }
@@ -668,15 +733,19 @@ export function CanvasComponent({
       // For new artifacts during streaming, resolvedArtifactId should be set from props
       const matchesArtifact =
         !!eventArtifactId &&
-        ((currentArtifact && Number(eventArtifactId) === Number(currentArtifact.id)) ||
-          (resolvedArtifactId && Number(eventArtifactId) === Number(resolvedArtifactId)) ||
+        ((currentArtifact &&
+          Number(eventArtifactId) === Number(currentArtifact.id)) ||
+          (resolvedArtifactId &&
+            Number(eventArtifactId) === Number(resolvedArtifactId)) ||
           (artifactId && Number(eventArtifactId) === Number(artifactId)));
 
       if (matchesArtifact) {
         if (streamingContentBufferRef.current.updateTimer) {
           clearTimeout(streamingContentBufferRef.current.updateTimer);
         }
-        const initialContent = isUpdate ? (editorContentValueRef.current ?? '') : '';
+        const initialContent = isUpdate
+          ? (editorContentValueRef.current ?? '')
+          : '';
         streamingContentBufferRef.current = {
           content: '',
           lastUpdateTime: Date.now(),
@@ -696,12 +765,18 @@ export function CanvasComponent({
     };
 
     const handleArtifactStreamContent = (event: CustomEvent) => {
-      const { artifactId: eventArtifactId, accumulatedContent, isPartial } = event.detail;
+      const {
+        artifactId: eventArtifactId,
+        accumulatedContent,
+        isPartial,
+      } = event.detail;
       // Match artifact: check current artifact, resolved artifact ID, or the artifact ID prop
       const matchesArtifact =
         !!eventArtifactId &&
-        ((currentArtifact && Number(eventArtifactId) === Number(currentArtifact.id)) ||
-          (resolvedArtifactId && Number(eventArtifactId) === Number(resolvedArtifactId)) ||
+        ((currentArtifact &&
+          Number(eventArtifactId) === Number(currentArtifact.id)) ||
+          (resolvedArtifactId &&
+            Number(eventArtifactId) === Number(resolvedArtifactId)) ||
           (artifactId && Number(eventArtifactId) === Number(artifactId)));
 
       // Accept streaming content if artifact matches and we're streaming or updating
@@ -715,7 +790,8 @@ export function CanvasComponent({
           streamingContentBufferRef.current.content = nextContent;
           const now = Date.now();
           const updateInterval = getStreamingUpdateInterval(nextContent.length);
-          const timeSinceLastUpdate = now - streamingContentBufferRef.current.lastUpdateTime;
+          const timeSinceLastUpdate =
+            now - streamingContentBufferRef.current.lastUpdateTime;
 
           if (streamingContentBufferRef.current.updateTimer) {
             clearTimeout(streamingContentBufferRef.current.updateTimer);
@@ -752,8 +828,10 @@ export function CanvasComponent({
       // Match artifact: check current artifact, resolved artifact ID, or the artifact ID prop
       const matchesArtifact =
         !!eventArtifactId &&
-        ((currentArtifact && Number(eventArtifactId) === Number(currentArtifact.id)) ||
-          (resolvedArtifactId && Number(eventArtifactId) === Number(resolvedArtifactId)) ||
+        ((currentArtifact &&
+          Number(eventArtifactId) === Number(currentArtifact.id)) ||
+          (resolvedArtifactId &&
+            Number(eventArtifactId) === Number(resolvedArtifactId)) ||
           (artifactId && Number(eventArtifactId) === Number(artifactId)));
 
       if (matchesArtifact) {
@@ -766,7 +844,12 @@ export function CanvasComponent({
         if (isUpdate) {
           setShowUpdateAnimation(true);
 
-          if (isPartial && startIndex !== undefined && endIndex !== undefined && previousContent) {
+          if (
+            isPartial &&
+            startIndex !== undefined &&
+            endIndex !== undefined &&
+            previousContent
+          ) {
             const newContent =
               previousContent.slice(0, startIndex) +
               streamContent +
@@ -783,7 +866,8 @@ export function CanvasComponent({
                     content: normalizedContent,
                     title: streamTitle || prev.title,
                     file_extension: fileExtension || prev.file_extension,
-                    current_version_number: versionNumber ?? prev.current_version_number,
+                    current_version_number:
+                      versionNumber ?? prev.current_version_number,
                     version_count: versionNumber
                       ? Math.max(prev.version_count ?? 0, versionNumber)
                       : prev.version_count,
@@ -803,7 +887,8 @@ export function CanvasComponent({
                     content: normalizedContent,
                     title: streamTitle || prev.title,
                     file_extension: fileExtension || prev.file_extension,
-                    current_version_number: versionNumber ?? prev.current_version_number,
+                    current_version_number:
+                      versionNumber ?? prev.current_version_number,
                     version_count: versionNumber
                       ? Math.max(prev.version_count ?? 0, versionNumber)
                       : prev.version_count,
@@ -840,7 +925,8 @@ export function CanvasComponent({
                   content: normalizedContent,
                   title: streamTitle || prev.title,
                   file_extension: fileExtension || prev.file_extension,
-                  current_version_number: versionNumber ?? prev.current_version_number,
+                  current_version_number:
+                    versionNumber ?? prev.current_version_number,
                   version_count: versionNumber
                     ? Math.max(prev.version_count ?? 0, versionNumber)
                     : prev.version_count,
@@ -856,7 +942,9 @@ export function CanvasComponent({
         }
 
         if (streamTitle && currentArtifact?.title !== streamTitle) {
-          setCurrentArtifact((prev) => (prev ? { ...prev, title: streamTitle } : prev));
+          setCurrentArtifact((prev) =>
+            prev ? { ...prev, title: streamTitle } : prev,
+          );
         }
       }
       console.log('artifact-stream-end new version ', {
@@ -873,21 +961,36 @@ export function CanvasComponent({
       setActiveVersionIsCurrent(true);
     };
 
-    window.addEventListener('artifact-stream-start' as any, handleArtifactStreamStart as any);
-    window.addEventListener('artifact-stream-content' as any, handleArtifactStreamContent as any);
-    window.addEventListener('artifact-stream-end' as any, handleArtifactStreamEnd as any);
+    window.addEventListener(
+      'artifact-stream-start' as any,
+      handleArtifactStreamStart as any,
+    );
+    window.addEventListener(
+      'artifact-stream-content' as any,
+      handleArtifactStreamContent as any,
+    );
+    window.addEventListener(
+      'artifact-stream-end' as any,
+      handleArtifactStreamEnd as any,
+    );
 
     return () => {
       if (streamingContentBufferRef.current.updateTimer) {
         clearTimeout(streamingContentBufferRef.current.updateTimer);
         streamingContentBufferRef.current.updateTimer = null;
       }
-      window.removeEventListener('artifact-stream-start' as any, handleArtifactStreamStart as any);
+      window.removeEventListener(
+        'artifact-stream-start' as any,
+        handleArtifactStreamStart as any,
+      );
       window.removeEventListener(
         'artifact-stream-content' as any,
         handleArtifactStreamContent as any,
       );
-      window.removeEventListener('artifact-stream-end' as any, handleArtifactStreamEnd as any);
+      window.removeEventListener(
+        'artifact-stream-end' as any,
+        handleArtifactStreamEnd as any,
+      );
     };
   }, [
     currentArtifact,
@@ -929,9 +1032,15 @@ export function CanvasComponent({
       }
     };
 
-    window.addEventListener('send-message-with-canvas' as any, handleChatMessage as any);
+    window.addEventListener(
+      'send-message-with-canvas' as any,
+      handleChatMessage as any,
+    );
     return () => {
-      window.removeEventListener('send-message-with-canvas' as any, handleChatMessage as any);
+      window.removeEventListener(
+        'send-message-with-canvas' as any,
+        handleChatMessage as any,
+      );
     };
   }, [currentArtifact, sendMessage]);
 
@@ -960,7 +1069,10 @@ export function CanvasComponent({
   // Initialize streaming state from metadata (when canvas opens during streaming)
   // Only run once on mount - don't keep re-setting after streaming ends
   useEffect(() => {
-    if (metadataIsStreaming && !hasInitializedStreamingFromMetadataRef.current) {
+    if (
+      metadataIsStreaming &&
+      !hasInitializedStreamingFromMetadataRef.current
+    ) {
       console.log('[Canvas] Initializing streaming state from metadata');
       hasInitializedStreamingFromMetadataRef.current = true;
       setIsStreamingArtifact(true);
@@ -1007,7 +1119,9 @@ export function CanvasComponent({
       let artifactToLoad: Artifact | null = null;
 
       if (resolvedArtifactId && artifactsResponse.results.length > 0) {
-        artifactToLoad = artifactsResponse.results.find((a) => a.id === resolvedArtifactId) || null;
+        artifactToLoad =
+          artifactsResponse.results.find((a) => a.id === resolvedArtifactId) ||
+          null;
       } else if (artifactsResponse.results.length > 0) {
         artifactToLoad = artifactsResponse.results[0];
       }
@@ -1022,8 +1136,11 @@ export function CanvasComponent({
         if (!isMountedRef.current) return;
 
         setCurrentArtifact(fullArtifact);
-        lastSavedMarkdownRef.current = normalizeContentToMarkdown(fullArtifact.content);
-        lastKnownVersionRef.current = (fullArtifact as any).current_version_number || 1;
+        lastSavedMarkdownRef.current = normalizeContentToMarkdown(
+          fullArtifact.content,
+        );
+        lastKnownVersionRef.current =
+          (fullArtifact as any).current_version_number || 1;
 
         resetVersionNavigation();
 
@@ -1070,13 +1187,22 @@ export function CanvasComponent({
             requestBody: { enable_artifacts: true } as any,
           }).unwrap();
         } catch (error) {
-          console.error('[Canvas] Failed to enable artifacts for session', error);
+          console.error(
+            '[Canvas] Failed to enable artifacts for session',
+            error,
+          );
         }
       }
       await loadArtifacts();
     };
     initializeCanvas();
-  }, [loadArtifacts, resolvedSessionId, resolvedOrg, resolvedUserId, editSession]);
+  }, [
+    loadArtifacts,
+    resolvedSessionId,
+    resolvedOrg,
+    resolvedUserId,
+    editSession,
+  ]);
 
   // Notify chat system when canvas is active
   /* istanbul ignore next -- @preserve canvas active/inactive event dispatch */
@@ -1155,7 +1281,8 @@ export function CanvasComponent({
     async (markdown: string) => {
       if (!hasUserEditedRef.current) return;
       if (!effectiveArtifactId || !resolvedOrg || !resolvedUserId) return;
-      if (markdown.trim() === (lastSavedMarkdownRef.current ?? '').trim()) return;
+      if (markdown.trim() === (lastSavedMarkdownRef.current ?? '').trim())
+        return;
 
       const currentEditor = editorRef.current;
       if (currentEditor?.state?.selection && !currentEditor.isDestroyed) {
@@ -1171,8 +1298,14 @@ export function CanvasComponent({
       setSaveError(null);
 
       try {
-        const nextTitle = metadataTitle ?? currentArtifact?.title ?? title ?? 'Untitled Artifact';
-        const requestBody: { content: string; title?: string } = { content: markdown };
+        const nextTitle =
+          metadataTitle ??
+          currentArtifact?.title ??
+          title ??
+          'Untitled Artifact';
+        const requestBody: { content: string; title?: string } = {
+          content: markdown,
+        };
         if (nextTitle) requestBody.title = nextTitle;
 
         const savedArtifact = await updateArtifactMutation({
@@ -1186,7 +1319,9 @@ export function CanvasComponent({
 
         if (savedArtifact) {
           setCurrentArtifact(savedArtifact);
-          lastSavedMarkdownRef.current = normalizeContentToMarkdown(savedArtifact.content);
+          lastSavedMarkdownRef.current = normalizeContentToMarkdown(
+            savedArtifact.content,
+          );
         } else {
           lastSavedMarkdownRef.current = normalizeContentToMarkdown(markdown);
         }
@@ -1203,10 +1338,15 @@ export function CanvasComponent({
               // Ensure cursor position is within document bounds
               const from = Math.min(savedCursor.from, docSize);
               const to = Math.min(savedCursor.to, docSize);
-              const shouldRestoreFocus = savedCursor.wasFocused && !currentEditor.isFocused;
+              const shouldRestoreFocus =
+                savedCursor.wasFocused && !currentEditor.isFocused;
               if (shouldRestoreFocus) {
                 // Restore focus and cursor position smoothly
-                currentEditor.chain().focus().setTextSelection({ from, to }).run();
+                currentEditor
+                  .chain()
+                  .focus()
+                  .setTextSelection({ from, to })
+                  .run();
               }
             } catch (e) {
               // Silently ignore if restoration fails
@@ -1286,7 +1426,8 @@ export function CanvasComponent({
       // The editor sets __hasUserEdited = true only for non-programmatic transactions
       // This is the authoritative way to detect user edits vs programmatic updates
       /* istanbul ignore next -- @preserve */
-      const isActualUserEdit = (editorRef.current as any)?.__hasUserEdited === true;
+      const isActualUserEdit =
+        (editorRef.current as any)?.__hasUserEdited === true;
       if (!isActualUserEdit) {
         // Not a user edit - skip save logic entirely
         return;
@@ -1358,10 +1499,19 @@ export function CanvasComponent({
     // Flush any pending saves first
     await flushSave();
     // Use the currently displayed editor content - this respects the viewed version
-    const markdownSource = editorContent ?? currentArtifact?.content ?? content ?? '';
-    const exportTitle = metadataTitle ?? currentArtifact?.title ?? title ?? 'Untitled Artifact';
+    const markdownSource =
+      editorContent ?? currentArtifact?.content ?? content ?? '';
+    const exportTitle =
+      metadataTitle ?? currentArtifact?.title ?? title ?? 'Untitled Artifact';
     return { markdownSource, exportTitle };
-  }, [flushSave, currentArtifact, editorContent, content, metadataTitle, title]);
+  }, [
+    flushSave,
+    currentArtifact,
+    editorContent,
+    content,
+    metadataTitle,
+    title,
+  ]);
 
   /* istanbul ignore next -- @preserve PDF export callback */
   const handleExportPDF = useCallback(async () => {
@@ -1417,7 +1567,13 @@ export function CanvasComponent({
 
   /* istanbul ignore next -- @preserve rename title callback */
   const handleRenameTitle = useCallback(async () => {
-    if (!effectiveArtifactId || !resolvedOrg || !resolvedUserId || !renameTitle.trim()) return;
+    if (
+      !effectiveArtifactId ||
+      !resolvedOrg ||
+      !resolvedUserId ||
+      !renameTitle.trim()
+    )
+      return;
 
     const trimmedTitle = renameTitle.trim();
     if (trimmedTitle === (currentArtifact?.title ?? title)) {
@@ -1440,7 +1596,10 @@ export function CanvasComponent({
         setDisplayTitle(savedArtifact.title || trimmedTitle);
         window.dispatchEvent(
           new CustomEvent('artifact-title-updated', {
-            detail: { artifactId: savedArtifact.id, title: savedArtifact.title || trimmedTitle },
+            detail: {
+              artifactId: savedArtifact.id,
+              title: savedArtifact.title || trimmedTitle,
+            },
           }),
         );
         toast.success('Canvas title updated');
@@ -1601,7 +1760,11 @@ export function CanvasComponent({
       const fileExt = metadataRecord?.fileExtension as string | undefined;
 
       const artifactPayload = {
-        title: currentArtifact.title || metadataTitle || title || 'Untitled Artifact',
+        title:
+          currentArtifact.title ||
+          metadataTitle ||
+          title ||
+          'Untitled Artifact',
         file_extension: currentArtifact.file_extension || fileExt || 'txt',
         id: String(currentArtifact.id),
         is_partial: true,
@@ -1691,40 +1854,42 @@ export function CanvasComponent({
   return (
     <div
       ref={containerRef}
-      className={`bg-white flex flex-col relative h-full overflow-hidden ${showAnimation ? 'animate-pulse' : ''}`}
+      className={`relative flex h-full flex-col overflow-hidden bg-white ${showAnimation ? 'animate-pulse' : ''}`}
       data-testid="canvas-container"
     >
       {/* Animation Overlay */}
       {shouldShowOverlay && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 z-10">
           {showUpdateAnimation ? (
             <>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 animate-pulse" />
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10" />
               <div className="absolute inset-0">
-                <div className="h-full w-full bg-gradient-to-t from-transparent via-blue-500/5 to-transparent animate-slide-down" />
+                <div className="animate-slide-down h-full w-full bg-gradient-to-t from-transparent via-blue-500/5 to-transparent" />
               </div>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform">
                 <div className="relative">
-                  <div className="w-20 h-20 border-4 border-blue-500/30 rounded-full animate-ping" />
-                  <div className="absolute inset-0 w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="h-20 w-20 animate-ping rounded-full border-4 border-blue-500/30" />
+                  <div className="absolute inset-0 h-20 w-20 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
                 </div>
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-blue-600 font-medium text-lg animate-fade-in-bounce">
+                <div className="animate-fade-in-bounce text-lg font-medium text-blue-600">
                   {overlayMessage}
                 </div>
               </div>
             </>
           ) : (
             <>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 animate-pulse" />
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform">
                 <div
-                  className={`w-16 h-16 border-4 ${isExporting ? 'border-purple-500' : isInitialLoading ? 'border-indigo-500' : 'border-blue-500'} border-t-transparent rounded-full animate-spin`}
+                  className={`h-16 w-16 border-4 ${isExporting ? 'border-purple-500' : isInitialLoading ? 'border-indigo-500' : 'border-blue-500'} animate-spin rounded-full border-t-transparent`}
                 />
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-blue-600 font-medium animate-bounce">{overlayMessage}</div>
+                <div className="animate-bounce font-medium text-blue-600">
+                  {overlayMessage}
+                </div>
               </div>
             </>
           )}
@@ -1732,18 +1897,21 @@ export function CanvasComponent({
       )}
 
       {/* Header */}
-      <div className="flex items-center px-2 sm:px-3 md:px-4 py-2 sm:py-3 border-b border-gray-200 bg-white min-h-[50px] sm:min-h-[60px] gap-1 flex-shrink-0">
-        <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-hidden mr-2">
-          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+      <div className="flex min-h-[50px] flex-shrink-0 items-center gap-1 border-b border-gray-200 bg-white px-2 py-2 sm:min-h-[60px] sm:px-3 sm:py-3 md:px-4">
+        <div className="mr-2 flex min-w-0 flex-1 items-center gap-1 overflow-hidden sm:gap-2">
+          <FileText className="h-4 w-4 flex-shrink-0 text-blue-600 sm:h-5 sm:w-5" />
           <button
             onClick={() => {
-              setRenameTitle(currentArtifact?.title ?? title ?? 'Untitled Artifact');
+              setRenameTitle(
+                currentArtifact?.title ?? title ?? 'Untitled Artifact',
+              );
               setIsRenameModalOpen(true);
             }}
             disabled={isEditingDisabled}
             className={cn(
-              'font-medium text-gray-900 text-xs sm:text-sm md:text-base truncate block hover:text-blue-600 transition-colors cursor-pointer text-left',
-              isEditingDisabled && 'cursor-not-allowed text-gray-500 hover:text-gray-500',
+              'block cursor-pointer truncate text-left text-xs font-medium text-gray-900 transition-colors hover:text-blue-600 sm:text-sm md:text-base',
+              isEditingDisabled &&
+                'cursor-not-allowed text-gray-500 hover:text-gray-500',
             )}
             title="Click to rename"
           >
@@ -1768,11 +1936,11 @@ export function CanvasComponent({
                   disabled={!canGoPrevious || isVersionNavDisabled}
                   className={
                     !canGoPrevious || isVersionNavDisabled
-                      ? 'opacity-50 cursor-not-allowed'
+                      ? 'cursor-not-allowed opacity-50'
                       : 'cursor-pointer'
                   }
                 >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  <ChevronLeft className="mr-2 h-4 w-4" />
                   Previous Version
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -1780,11 +1948,11 @@ export function CanvasComponent({
                   disabled={!canGoNext || isVersionNavDisabled}
                   className={
                     !canGoNext || isVersionNavDisabled
-                      ? 'opacity-50 cursor-not-allowed'
+                      ? 'cursor-not-allowed opacity-50'
                       : 'cursor-pointer'
                   }
                 >
-                  <ChevronRight className="h-4 w-4 mr-2" />
+                  <ChevronRight className="mr-2 h-4 w-4" />
                   Next Version
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -1798,29 +1966,33 @@ export function CanvasComponent({
 
         <div
           className={cn(
-            'flex items-center gap-0.5 flex-wrap flex-shrink-0',
-            (!isViewingCurrentVersion || isStreamingArtifact || isContentUpdating) &&
+            'flex flex-shrink-0 flex-wrap items-center gap-0.5',
+            (!isViewingCurrentVersion ||
+              isStreamingArtifact ||
+              isContentUpdating) &&
               'pointer-events-none opacity-60',
           )}
         >
           <CanvasRichTextEditorToolbar editor={editor} />
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-1">
+        <div className="ml-1 flex flex-shrink-0 items-center gap-1 sm:gap-2">
           {saveStatusLabel && (
-            <span className={`${saveStatusClass} hidden sm:inline`}>{saveStatusLabel}</span>
+            <span className={`${saveStatusClass} hidden sm:inline`}>
+              {saveStatusLabel}
+            </span>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="text-blue-600 border-blue-200 bg-transparent text-xs px-1 sm:px-2 md:px-3 whitespace-nowrap flex items-center gap-1"
+                className="flex items-center gap-1 border-blue-200 bg-transparent px-1 text-xs whitespace-nowrap text-blue-600 sm:px-2 md:px-3"
                 disabled={isExporting || saveState === 'saving'}
               >
                 {isExporting ? (
                   <>
-                    <span className="h-3 w-3 rounded-full border-[2px] border-blue-400 border-t-transparent animate-spin" />
+                    <span className="h-3 w-3 animate-spin rounded-full border-[2px] border-blue-400 border-t-transparent" />
                     <span className="hidden sm:inline">Exporting…</span>
                     <span className="sm:hidden">Export</span>
                   </>
@@ -1834,30 +2006,39 @@ export function CanvasComponent({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem
-                onClick={/* istanbul ignore next -- @preserve */ () => void handleExportPDF()}
+                onClick={
+                  /* istanbul ignore next -- @preserve */ () =>
+                    void handleExportPDF()
+                }
                 className="cursor-pointer"
               >
-                <FileIcon className="h-4 w-4 mr-2 text-red-500" />
+                <FileIcon className="mr-2 h-4 w-4 text-red-500" />
                 <div className="flex flex-col">
                   <span>PDF Document</span>
                   <span className="text-xs text-gray-500">.pdf</span>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={/* istanbul ignore next -- @preserve */ () => void handleExportDOCX()}
+                onClick={
+                  /* istanbul ignore next -- @preserve */ () =>
+                    void handleExportDOCX()
+                }
                 className="cursor-pointer"
               >
-                <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                <FileText className="mr-2 h-4 w-4 text-blue-500" />
                 <div className="flex flex-col">
                   <span>Microsoft Word</span>
                   <span className="text-xs text-gray-500">.docx</span>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={/* istanbul ignore next -- @preserve */ () => void handleExportMarkdown()}
+                onClick={
+                  /* istanbul ignore next -- @preserve */ () =>
+                    void handleExportMarkdown()
+                }
                 className="cursor-pointer"
               >
-                <FileCode className="h-4 w-4 mr-2 text-gray-600" />
+                <FileCode className="mr-2 h-4 w-4 text-gray-600" />
                 <div className="flex flex-col">
                   <span>Markdown Document</span>
                   <span className="text-xs text-gray-500">.md</span>
@@ -1881,19 +2062,19 @@ export function CanvasComponent({
       </div>
 
       {!isViewingCurrentVersion && (
-        <div className="bg-gray-50 border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        <div className="flex flex-col gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-3">
           <div className="min-w-0">
-            <div className="text-xs sm:text-sm font-semibold text-gray-900">
+            <div className="text-xs font-semibold text-gray-900 sm:text-sm">
               You are viewing a previous version
             </div>
-            <div className="text-xs text-gray-600 hidden sm:block">
+            <div className="hidden text-xs text-gray-600 sm:block">
               Restore this version to make edits
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2">
             <Button
               onClick={handleRestoreVersion}
-              className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 rounded-md px-2 sm:px-4 text-xs sm:text-sm"
+              className="rounded-md bg-gradient-to-r from-[#2563EB] to-[#93C5FD] px-2 text-xs text-white hover:opacity-90 sm:px-4 sm:text-sm"
               size="sm"
             >
               Restore this version
@@ -1901,7 +2082,7 @@ export function CanvasComponent({
             <Button
               variant="outline"
               onClick={handleBackToLatest}
-              className="rounded-md px-2 sm:px-4 text-xs sm:text-sm"
+              className="rounded-md px-2 text-xs sm:px-4 sm:text-sm"
               size="sm"
             >
               <span className="sm:hidden">Latest</span>
@@ -1912,39 +2093,45 @@ export function CanvasComponent({
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden relative" style={{ minHeight: 0 }}>
+      <div
+        className="relative flex-1 overflow-x-hidden overflow-y-auto"
+        style={{ minHeight: 0 }}
+      >
         {isInitialLoading && (
-          <div className="absolute inset-0 bg-white z-50">
-            <div className="px-6 py-4 sm:px-10 sm:py-6 md:px-16 md:py-8 lg:px-24 w-full max-w-full">
-              <div className="space-y-4 animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-                <div className="space-y-2 mt-6">
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="absolute inset-0 z-50 bg-white">
+            <div className="w-full max-w-full px-6 py-4 sm:px-10 sm:py-6 md:px-16 md:py-8 lg:px-24">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 w-3/4 rounded bg-gray-200"></div>
+                <div className="h-4 w-full rounded bg-gray-200"></div>
+                <div className="h-4 w-5/6 rounded bg-gray-200"></div>
+                <div className="h-4 w-full rounded bg-gray-200"></div>
+                <div className="h-4 w-4/5 rounded bg-gray-200"></div>
+                <div className="mt-6 space-y-2">
+                  <div className="h-4 w-full rounded bg-gray-200"></div>
+                  <div className="h-4 w-full rounded bg-gray-200"></div>
+                  <div className="h-4 w-3/4 rounded bg-gray-200"></div>
                 </div>
-                <div className="h-6 bg-gray-200 rounded w-1/2 mt-6"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="mt-6 h-6 w-1/2 rounded bg-gray-200"></div>
+                <div className="h-4 w-full rounded bg-gray-200"></div>
+                <div className="h-4 w-5/6 rounded bg-gray-200"></div>
+                <div className="h-4 w-full rounded bg-gray-200"></div>
               </div>
             </div>
           </div>
         )}
         <div
           ref={editorContentRef}
-          className="px-6 py-4 sm:px-10 sm:py-6 md:px-16 md:py-8 lg:px-24 w-full max-w-full"
+          className="w-full max-w-full px-6 py-4 sm:px-10 sm:py-6 md:px-16 md:py-8 lg:px-24"
         >
           <CanvasRichTextEditorContent editor={editor} />
         </div>
 
-        {!isMobile && isViewingCurrentVersion && !isStreamingArtifact && !isContentUpdating && (
-          <CanvasControls sendFullArtifactUpdate={sendFullArtifactUpdate} />
-        )}
+        {!isMobile &&
+          isViewingCurrentVersion &&
+          !isStreamingArtifact &&
+          !isContentUpdating && (
+            <CanvasControls sendFullArtifactUpdate={sendFullArtifactUpdate} />
+          )}
       </div>
 
       {/* Highlight Popup */}
@@ -1957,11 +2144,20 @@ export function CanvasComponent({
             left: `${selectedText.rect.left}px`,
             top: `${selectedText.rect.bottom + 8}px`,
           }}
-          onMouseDown={/* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()}
-          onMouseUp={/* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()}
+          onMouseDown={
+            /* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()
+          }
+          onMouseUp={
+            /* istanbul ignore next -- @preserve */ (e) => e.stopPropagation()
+          }
         >
-          <div className="flex items-center gap-2.5 bg-white shadow-md rounded-xl border border-gray-200/70 px-3.5 py-2.5 w-[min(90vw,420px)] max-w-[420px]">
-            <Image src="/icons/my-mentors.svg" alt="Ask Anything" width={20} height={20} />
+          <div className="flex w-[min(90vw,420px)] max-w-[420px] items-center gap-2.5 rounded-xl border border-gray-200/70 bg-white px-3.5 py-2.5 shadow-md">
+            <Image
+              src="/icons/my-mentors.svg"
+              alt="Ask Anything"
+              width={20}
+              height={20}
+            />
             <input
               id="partial-update-input"
               ref={highlightInputRef}
@@ -1987,7 +2183,7 @@ export function CanvasComponent({
                 }
               }
               placeholder="Ask Anything..."
-              className="flex-1 text-base text-gray-700 placeholder:text-gray-400 border-none rounded-lg px-2 py-1 focus:outline-none focus:ring-0"
+              className="flex-1 rounded-lg border-none px-2 py-1 text-base text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none"
               autoFocus
             />
           </div>
@@ -2020,7 +2216,7 @@ export function CanvasComponent({
       {/* Rename Modal */}
       <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
         <DialogContent
-          className="max-w-2xl w-[95vw] p-0 gap-0 overflow-hidden"
+          className="w-[95vw] max-w-2xl gap-0 overflow-hidden p-0"
           style={{
             height: 'auto',
             maxHeight: '90vh',
@@ -2028,18 +2224,22 @@ export function CanvasComponent({
             flexDirection: 'column',
           }}
         >
-          <DialogHeader className="px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold text-gray-900">Rename Canvas</DialogTitle>
+          <DialogHeader className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              Rename Canvas
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 px-6 py-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Canvas Title</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Canvas Title
+              </label>
               <Input
                 placeholder="Enter new canvas title"
                 value={renameTitle}
                 onChange={(e) => setRenameTitle(e.target.value)}
-                className="text-base h-12 px-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-0"
+                className="h-12 rounded-lg border-2 border-gray-200 px-4 text-base focus:border-blue-500 focus:ring-0"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -2053,7 +2253,7 @@ export function CanvasComponent({
             </div>
           </div>
 
-          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+          <DialogFooter className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
             <Button
               variant="outline"
               onClick={() => setIsRenameModalOpen(false)}

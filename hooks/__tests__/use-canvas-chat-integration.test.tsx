@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useCanvasChatIntegration, useChatWithCanvas } from '../use-canvas-chat-integration';
+import {
+  useCanvasChatIntegration,
+  useChatWithCanvas,
+} from '../use-canvas-chat-integration';
 
 describe('useCanvasChatIntegration', () => {
   let mockSendMessage: ReturnType<typeof vi.fn>;
@@ -58,14 +61,20 @@ describe('useCanvasChatIntegration', () => {
     it('should set up enhanced send message on window', () => {
       renderHook(() =>
         useCanvasChatIntegration({
-          currentArtifact: { id: 1, title: 'Test Artifact', file_extension: 'md' } as any,
+          currentArtifact: {
+            id: 1,
+            title: 'Test Artifact',
+            file_extension: 'md',
+          } as any,
           sendMessage: mockSendMessage,
           isCanvasOpen: true,
         }),
       );
 
       expect((window as any).__canvasEnhancedSendMessage).toBeDefined();
-      expect(typeof (window as any).__canvasEnhancedSendMessage).toBe('function');
+      expect(typeof (window as any).__canvasEnhancedSendMessage).toBe(
+        'function',
+      );
     });
 
     it('should dispatch canvas-integration-active event', () => {
@@ -77,7 +86,9 @@ describe('useCanvasChatIntegration', () => {
         }),
       );
 
-      const activeEvent = dispatchedEvents.find((e) => e.type === 'canvas-integration-active');
+      const activeEvent = dispatchedEvents.find(
+        (e) => e.type === 'canvas-integration-active',
+      );
       expect(activeEvent).toBeDefined();
       expect(activeEvent?.detail.artifactId).toBe(1);
     });
@@ -93,7 +104,9 @@ describe('useCanvasChatIntegration', () => {
 
       unmount();
 
-      const inactiveEvent = dispatchedEvents.find((e) => e.type === 'canvas-integration-inactive');
+      const inactiveEvent = dispatchedEvents.find(
+        (e) => e.type === 'canvas-integration-inactive',
+      );
       expect(inactiveEvent).toBeDefined();
       expect((window as any).__canvasEnhancedSendMessage).toBeUndefined();
     });
@@ -140,7 +153,9 @@ describe('useCanvasChatIntegration', () => {
       const enhancedSend = (window as any).__canvasEnhancedSendMessage;
       enhancedSend('Hello', { artifact: customArtifact });
 
-      expect(mockSendMessage).toHaveBeenCalledWith('Hello', { artifact: customArtifact });
+      expect(mockSendMessage).toHaveBeenCalledWith('Hello', {
+        artifact: customArtifact,
+      });
     });
 
     it('should use default values for missing title and file_extension', () => {

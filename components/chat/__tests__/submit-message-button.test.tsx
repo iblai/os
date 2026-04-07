@@ -17,7 +17,9 @@ import { CSS_CLASS_NAMES } from '@/lib/constants';
  */
 
 // Helper function to render SubmitMessageButton with TooltipProvider
-const renderWithTooltipProvider = (props: Parameters<typeof SubmitMessageButton>[0] = {}) => {
+const renderWithTooltipProvider = (
+  props: Parameters<typeof SubmitMessageButton>[0] = {},
+) => {
   return render(
     <TooltipProvider>
       <SubmitMessageButton {...props} />
@@ -126,7 +128,10 @@ describe('SubmitMessageButton', () => {
 
   describe('Disabled State - Preview Mode Logic', () => {
     it('should be disabled when isPreviewMode is true and allowAnonymousAccess is false', () => {
-      renderWithTooltipProvider({ isPreviewMode: true, allowAnonymousAccess: false });
+      renderWithTooltipProvider({
+        isPreviewMode: true,
+        allowAnonymousAccess: false,
+      });
 
       const button = screen.getByRole('button', { name: 'Send message' });
       expect(button).toBeDisabled();
@@ -140,14 +145,20 @@ describe('SubmitMessageButton', () => {
     });
 
     it('should not be disabled when isPreviewMode is true but allowAnonymousAccess is true', () => {
-      renderWithTooltipProvider({ isPreviewMode: true, allowAnonymousAccess: true });
+      renderWithTooltipProvider({
+        isPreviewMode: true,
+        allowAnonymousAccess: true,
+      });
 
       const button = screen.getByRole('button', { name: 'Send message' });
       expect(button).not.toBeDisabled();
     });
 
     it('should not be disabled when isPreviewMode is false', () => {
-      renderWithTooltipProvider({ isPreviewMode: false, allowAnonymousAccess: false });
+      renderWithTooltipProvider({
+        isPreviewMode: false,
+        allowAnonymousAccess: false,
+      });
 
       const button = screen.getByRole('button', { name: 'Send message' });
       expect(button).not.toBeDisabled();
@@ -569,7 +580,12 @@ describe('SubmitMessageButton Component', () => {
 
   describe('Preview Mode', () => {
     it('should be disabled when isPreviewMode is true and allowAnonymousAccess is false', () => {
-      render(<SubmitMessageButton isPreviewMode={true} allowAnonymousAccess={false} />);
+      render(
+        <SubmitMessageButton
+          isPreviewMode={true}
+          allowAnonymousAccess={false}
+        />,
+      );
 
       const button = screen.getByRole('button');
       expect(button).toBeDisabled();
@@ -583,7 +599,12 @@ describe('SubmitMessageButton Component', () => {
     });
 
     it('should be enabled when isPreviewMode is true but allowAnonymousAccess is true', () => {
-      render(<SubmitMessageButton isPreviewMode={true} allowAnonymousAccess={true} />);
+      render(
+        <SubmitMessageButton
+          isPreviewMode={true}
+          allowAnonymousAccess={true}
+        />,
+      );
 
       const button = screen.getByRole('button');
       expect(button).not.toBeDisabled();
@@ -679,7 +700,11 @@ describe('SubmitMessageButton Component', () => {
 
     it('should be disabled when isPreviewMode=true, allowAnonymousAccess=true, but isUploading=true', () => {
       render(
-        <SubmitMessageButton isPreviewMode={true} allowAnonymousAccess={true} isUploading={true} />,
+        <SubmitMessageButton
+          isPreviewMode={true}
+          allowAnonymousAccess={true}
+          isUploading={true}
+        />,
       );
 
       const button = screen.getByRole('button');
@@ -774,24 +799,26 @@ describe('SubmitMessageButton Component', () => {
         },
       ];
 
-      testCases.forEach(({ isPreviewMode, allowAnonymousAccess, isUploading, expected }) => {
-        it(`should ${expected ? 'be disabled' : 'be enabled'} when isPreviewMode=${isPreviewMode}, allowAnonymousAccess=${allowAnonymousAccess}, isUploading=${isUploading}`, () => {
-          render(
-            <SubmitMessageButton
-              isPreviewMode={isPreviewMode}
-              allowAnonymousAccess={allowAnonymousAccess}
-              isUploading={isUploading}
-            />,
-          );
+      testCases.forEach(
+        ({ isPreviewMode, allowAnonymousAccess, isUploading, expected }) => {
+          it(`should ${expected ? 'be disabled' : 'be enabled'} when isPreviewMode=${isPreviewMode}, allowAnonymousAccess=${allowAnonymousAccess}, isUploading=${isUploading}`, () => {
+            render(
+              <SubmitMessageButton
+                isPreviewMode={isPreviewMode}
+                allowAnonymousAccess={allowAnonymousAccess}
+                isUploading={isUploading}
+              />,
+            );
 
-          const button = screen.getByRole('button');
-          if (expected) {
-            expect(button).toBeDisabled();
-          } else {
-            expect(button).not.toBeDisabled();
-          }
-        });
-      });
+            const button = screen.getByRole('button');
+            if (expected) {
+              expect(button).toBeDisabled();
+            } else {
+              expect(button).not.toBeDisabled();
+            }
+          });
+        },
+      );
     });
   });
 
@@ -806,7 +833,10 @@ describe('SubmitMessageButton Component', () => {
 
     it('should have opacity styling only when isUploading', () => {
       const { rerender } = render(
-        <SubmitMessageButton isPreviewMode={true} allowAnonymousAccess={false} />,
+        <SubmitMessageButton
+          isPreviewMode={true}
+          allowAnonymousAccess={false}
+        />,
       );
 
       // Preview mode without anonymous access disables button but doesn't add opacity class
@@ -833,7 +863,9 @@ describe('SubmitMessageButton Component', () => {
       await screen.findAllByText('Send Message');
 
       // Check that the tooltip content has the expected class
-      const tooltipContent = container.ownerDocument.querySelector('.ibl-tooltip-content');
+      const tooltipContent = container.ownerDocument.querySelector(
+        '.ibl-tooltip-content',
+      );
       expect(tooltipContent).toBeInTheDocument();
     });
 
@@ -848,7 +880,8 @@ describe('SubmitMessageButton Component', () => {
       await screen.findAllByText('Send Message');
 
       // Check that the tooltip content has capitalize class
-      const tooltipContent = container.ownerDocument.querySelector('.capitalize');
+      const tooltipContent =
+        container.ownerDocument.querySelector('.capitalize');
       expect(tooltipContent).toBeInTheDocument();
     });
   });
@@ -925,7 +958,12 @@ describe('SubmitMessageButton Component', () => {
       // Rapid state changes
       rerender(<SubmitMessageButton isUploading={true} />);
       rerender(<SubmitMessageButton isUploading={false} />);
-      rerender(<SubmitMessageButton isPreviewMode={true} allowAnonymousAccess={true} />);
+      rerender(
+        <SubmitMessageButton
+          isPreviewMode={true}
+          allowAnonymousAccess={true}
+        />,
+      );
 
       const button = screen.getByRole('button');
       expect(button).not.toBeDisabled();

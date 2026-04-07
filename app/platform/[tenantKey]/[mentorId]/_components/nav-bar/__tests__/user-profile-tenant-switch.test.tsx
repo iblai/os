@@ -190,7 +190,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => (
     <div data-testid="user-profile-dropdown">
       <span data-testid="tenant">{props.tenantKey}</span>
-      <span data-testid="show-tenant-switcher">{String(props.showTenantSwitcher)}</span>
+      <span data-testid="show-tenant-switcher">
+        {String(props.showTenantSwitcher)}
+      </span>
     </div>
   ),
 }));
@@ -234,7 +236,9 @@ describe('UserProfile - Tenant Already Exists', () => {
       render(<UserProfile />);
 
       // useIsAdmin returns false in this test file
-      expect(screen.getByTestId('show-tenant-switcher')).toHaveTextContent('false');
+      expect(screen.getByTestId('show-tenant-switcher')).toHaveTextContent(
+        'false',
+      );
     });
   });
 });

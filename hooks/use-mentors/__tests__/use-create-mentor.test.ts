@@ -4,7 +4,8 @@ import { useCreateMentor } from '../use-create-mentor';
 import { toast } from 'sonner';
 
 // Store the onSubmit callback so we can trigger it in tests
-let onSubmitCallback: ((data: { value: any }) => void | Promise<void>) | null = null;
+let onSubmitCallback: ((data: { value: any }) => void | Promise<void>) | null =
+  null;
 
 // Mock form state that can be updated
 let mockFormState = {
@@ -249,8 +250,12 @@ describe('useCreateMentor', () => {
     });
 
     it('shows error toast on failed creation', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockUnwrap.mockRejectedValue({ error: { error: 'Custom error message' } });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockUnwrap.mockRejectedValue({
+        error: { error: 'Custom error message' },
+      });
 
       const { result } = renderHook(() => useCreateMentor());
 
@@ -267,7 +272,9 @@ describe('useCreateMentor', () => {
     });
 
     it('shows default error message when no specific error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUnwrap.mockRejectedValue({});
 
       const { result } = renderHook(() => useCreateMentor());

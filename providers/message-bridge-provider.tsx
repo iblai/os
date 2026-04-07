@@ -1,6 +1,8 @@
 import React, { useCallback } from 'react';
 
-export const MessageBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const MessageBridgeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   /**
    * STEP 1 — Register this window with parent site (e.g Canvas LMS)
    *

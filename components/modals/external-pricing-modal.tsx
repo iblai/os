@@ -12,9 +12,14 @@ interface ExternalPricingModalProps {
   onClose: () => void;
 }
 
-export function ExternalPricingModal({ isOpen, onClose }: ExternalPricingModalProps) {
+export function ExternalPricingModal({
+  isOpen,
+  onClose,
+}: ExternalPricingModalProps) {
   const PRICING_URL = config.externalPricingPageUrl();
-  const pricingModalData = useAppSelector((state) => state.subscription.pricingModalData);
+  const pricingModalData = useAppSelector(
+    (state) => state.subscription.pricingModalData,
+  );
   const { pricingBoxIframeRef } = useExternalPricingPlan({
     pricingModalData,
     userEmail: getUserEmail(),

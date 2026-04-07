@@ -16,7 +16,10 @@ interface CanvasViewProps {
   metadata?: Record<string, unknown>;
   sessionId?: string;
   tenantKey?: string;
-  sendMessage?: (text: string, options?: { visible?: boolean; artifact?: any }) => void;
+  sendMessage?: (
+    text: string,
+    options?: { visible?: boolean; artifact?: any },
+  ) => void;
   refreshTrigger?: number; // Add refresh trigger to force refresh
 }
 
@@ -43,7 +46,9 @@ export function CanvasView({
   useEffect(() => {
     const artifactIdChanged = artifactId !== prevArtifactIdRef.current;
     const triggerChanged =
-      refreshTrigger && refreshTrigger > 0 && refreshTrigger !== prevRefreshTriggerRef.current;
+      refreshTrigger &&
+      refreshTrigger > 0 &&
+      refreshTrigger !== prevRefreshTriggerRef.current;
 
     if (triggerChanged || artifactIdChanged) {
       if (triggerChanged) {
@@ -100,7 +105,10 @@ export function CanvasView({
   };
 
   return (
-    <div className="h-full w-full bg-white overflow-hidden flex flex-col" style={{ minHeight: 0 }}>
+    <div
+      className="flex h-full w-full flex-col overflow-hidden bg-white"
+      style={{ minHeight: 0 }}
+    >
       {renderCanvasComponent()}
     </div>
   );

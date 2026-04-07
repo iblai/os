@@ -40,7 +40,9 @@ describe('hooks/subscription/constants', () => {
     });
 
     it('should have STUDENT_UNDER_PAID_PACKAGE button label', () => {
-      expect(SUBSCRIPTION_DIALOG_BTN_LABELS.STUDENT_UNDER_PAID_PACKAGE).toBe('Contact admin');
+      expect(SUBSCRIPTION_DIALOG_BTN_LABELS.STUDENT_UNDER_PAID_PACKAGE).toBe(
+        'Contact admin',
+      );
     });
 
     it('should have PAID_PACKAGE button label', () => {

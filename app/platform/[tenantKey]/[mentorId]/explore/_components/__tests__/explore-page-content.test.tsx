@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ExplorePageContent } from '../explore-page-content';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  useExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 
 // Store context value for testing
 let capturedContextValue: ExplorePageContextValue | null = null;
@@ -30,7 +39,8 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   return {
     ...actual,
     isLoggedIn: () => mockIsLoggedIn(),
-    redirectToAuthSpaJoinTenant: (...args: any[]) => mockRedirectToAuthSpaJoinTenant(...args),
+    redirectToAuthSpaJoinTenant: (...args: any[]) =>
+      mockRedirectToAuthSpaJoinTenant(...args),
   };
 });
 
@@ -58,7 +68,8 @@ const mockStarMentor = vi.fn();
 const mockUnstarMentor = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
   useGetPersonnalizedMentorsQuery: (...args: unknown[]) =>
     mockUseGetPersonnalizedMentorsQuery(...args),
   useStarMentorMutation: () => [mockStarMentor, { isLoading: false }],
@@ -67,11 +78,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock section components - capture context for testing
 vi.mock('../starred-mentors-section', () => ({
-  StarredMentorsSection: () => <div data-testid="starred-mentors-section">Starred Section</div>,
+  StarredMentorsSection: () => (
+    <div data-testid="starred-mentors-section">Starred Section</div>
+  ),
 }));
 
 vi.mock('../featured-mentors-section', () => ({
-  FeaturedMentorsSection: () => <div data-testid="featured-mentors-section">Featured Section</div>,
+  FeaturedMentorsSection: () => (
+    <div data-testid="featured-mentors-section">Featured Section</div>
+  ),
 }));
 
 vi.mock('../custom-mentors-section', () => ({
@@ -96,7 +111,9 @@ vi.mock('../mentor-categories', () => ({
     onCreatedByChange,
   }: {
     onFiltersChange?: (filters: unknown) => void;
-    onCreatedByChange?: (createdBy: 'me' | 'my-organization' | 'community' | null) => void;
+    onCreatedByChange?: (
+      createdBy: 'me' | 'my-organization' | 'community' | null,
+    ) => void;
   }) => (
     <div data-testid="mentor-categories">
       <button
@@ -112,7 +129,10 @@ vi.mock('../mentor-categories', () => ({
       >
         Change Filter
       </button>
-      <button data-testid="change-created-by-me" onClick={() => onCreatedByChange?.('me')}>
+      <button
+        data-testid="change-created-by-me"
+        onClick={() => onCreatedByChange?.('me')}
+      >
         Created By Me
       </button>
       <button
@@ -127,7 +147,10 @@ vi.mock('../mentor-categories', () => ({
       >
         Created By Community
       </button>
-      <button data-testid="clear-created-by" onClick={() => onCreatedByChange?.(null)}>
+      <button
+        data-testid="clear-created-by"
+        onClick={() => onCreatedByChange?.(null)}
+      >
         Clear Created By
       </button>
     </div>
@@ -196,13 +219,17 @@ describe('ExplorePageContent', () => {
     it('renders the page title', () => {
       renderComponent();
 
-      expect(screen.getByText(/Discover and create academic mentors/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Discover and create academic mentors/i),
+      ).toBeInTheDocument();
     });
 
     it('renders the search input', () => {
       renderComponent();
 
-      expect(screen.getByRole('textbox', { name: /Search mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('textbox', { name: /Search mentors/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders skip to main content link', () => {
@@ -237,7 +264,9 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-      expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('featured-mentors-section'),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
       expect(screen.getByTestId('default-mentors-section')).toBeInTheDocument();
     });
@@ -254,7 +283,9 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-      expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('featured-mentors-section'),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
       expect(screen.getByTestId('default-mentors-section')).toBeInTheDocument();
     });
@@ -270,14 +301,23 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: false,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
       });
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
     });
 
     it('calls star mutation when logged in and mentor is not starred', async () => {
@@ -291,8 +331,15 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: false,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -316,8 +363,15 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: true };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: true,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -345,19 +399,29 @@ describe('ExplorePageContent', () => {
 
       // Verify all sections are visible initially with my-organization default
       expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-      expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('featured-mentors-section'),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
 
       // Enter search query
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       await user.type(searchInput, 'test search');
 
       // Wait for debounce and re-render
       await waitFor(
         () => {
-          expect(screen.queryByTestId('starred-mentors-section')).not.toBeInTheDocument();
-          expect(screen.queryByTestId('featured-mentors-section')).not.toBeInTheDocument();
-          expect(screen.queryByTestId('custom-mentors-section')).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('starred-mentors-section'),
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('featured-mentors-section'),
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('custom-mentors-section'),
+          ).not.toBeInTheDocument();
         },
         { timeout: 1000 },
       );
@@ -381,13 +445,17 @@ describe('ExplorePageContent', () => {
       expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
 
       // Enter search query
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       await user.type(searchInput, 'test');
 
       // Wait for sections to hide
       await waitFor(
         () => {
-          expect(screen.queryByTestId('starred-mentors-section')).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('starred-mentors-section'),
+          ).not.toBeInTheDocument();
         },
         { timeout: 1000 },
       );
@@ -398,9 +466,15 @@ describe('ExplorePageContent', () => {
       // Wait for sections to reappear
       await waitFor(
         () => {
-          expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-          expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
-          expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
+          expect(
+            screen.getByTestId('starred-mentors-section'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByTestId('featured-mentors-section'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByTestId('custom-mentors-section'),
+          ).toBeInTheDocument();
         },
         { timeout: 1000 },
       );
@@ -409,7 +483,9 @@ describe('ExplorePageContent', () => {
     it('handles search input changes', async () => {
       renderComponent();
 
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       await userEvent.type(searchInput, 'mathematics');
 
       expect(searchInput).toHaveValue('mathematics');
@@ -418,7 +494,9 @@ describe('ExplorePageContent', () => {
     it('debounces search input', async () => {
       renderComponent();
 
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       fireEvent.change(searchInput, { target: { value: 'm' } });
       fireEvent.change(searchInput, { target: { value: 'ma' } });
       fireEvent.change(searchInput, { target: { value: 'mat' } });
@@ -443,10 +521,18 @@ describe('ExplorePageContent', () => {
       await user.click(createdByMeBtn);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('starred-mentors-section')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('featured-mentors-section')).not.toBeInTheDocument();
-        expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
-        expect(screen.queryByTestId('default-mentors-section')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('starred-mentors-section'),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('featured-mentors-section'),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByTestId('custom-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('default-mentors-section'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -457,14 +543,24 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       // Click "Created By Community" button
-      const createdByCommunityBtn = screen.getByTestId('change-created-by-community');
+      const createdByCommunityBtn = screen.getByTestId(
+        'change-created-by-community',
+      );
       await user.click(createdByCommunityBtn);
 
       await waitFor(() => {
-        expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('default-mentors-section')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('starred-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('featured-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('custom-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('default-mentors-section'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -492,10 +588,18 @@ describe('ExplorePageContent', () => {
 
       // Should show all sections
       await waitFor(() => {
-        expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('default-mentors-section')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('starred-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('featured-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('custom-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('default-mentors-section'),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -535,8 +639,12 @@ describe('ExplorePageContent', () => {
       await user.click(meButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
-        expect(screen.queryByTestId('starred-mentors-section')).not.toBeInTheDocument();
+        expect(
+          screen.getByTestId('custom-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('starred-mentors-section'),
+        ).not.toBeInTheDocument();
       });
 
       // Now clear it
@@ -545,10 +653,18 @@ describe('ExplorePageContent', () => {
 
       // Should show all sections again
       await waitFor(() => {
-        expect(screen.getByTestId('starred-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('featured-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('custom-mentors-section')).toBeInTheDocument();
-        expect(screen.getByTestId('default-mentors-section')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('starred-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('featured-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('custom-mentors-section'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByTestId('default-mentors-section'),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -561,7 +677,9 @@ describe('ExplorePageContent', () => {
       const searchContainer = screen.getByRole('textbox', {
         name: /Search mentors/i,
       }).parentElement;
-      expect(searchContainer?.querySelector('.animate-spin')).not.toBeInTheDocument();
+      expect(
+        searchContainer?.querySelector('.animate-spin'),
+      ).not.toBeInTheDocument();
     });
 
     it('shows loading spinner when searching and loading', async () => {
@@ -575,7 +693,9 @@ describe('ExplorePageContent', () => {
 
       renderComponent();
 
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       await user.type(searchInput, 'test');
 
       // Note: Due to debounce and component state, this may be tricky to test
@@ -585,7 +705,9 @@ describe('ExplorePageContent', () => {
     it('has proper placeholder text', () => {
       renderComponent();
 
-      const searchInput = screen.getByRole('textbox', { name: /Search mentors/i });
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search mentors/i,
+      });
       expect(searchInput).toHaveAttribute('placeholder', 'Search');
     });
   });
@@ -629,7 +751,10 @@ describe('ExplorePageContent', () => {
 
       const mainContent = document.getElementById('main-content');
       expect(mainContent).toBeInTheDocument();
-      expect(mainContent).toHaveAttribute('aria-label', 'Mentor exploration page');
+      expect(mainContent).toHaveAttribute(
+        'aria-label',
+        'Mentor exploration page',
+      );
     });
 
     it('search input has proper label', () => {
@@ -701,7 +826,11 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id' };
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+      };
       act(() => {
         capturedContextValue!.handleMentorClick(mentor);
       });
@@ -735,8 +864,15 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: false,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -761,8 +897,15 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: true };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: true,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -785,8 +928,14 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id' };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -805,22 +954,33 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: false,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
       });
 
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockStarMentor).not.toHaveBeenCalled();
       expect(mockUnstarMentor).not.toHaveBeenCalled();
     });
 
     it('toggleFavorite handles errors gracefully', async () => {
       mockIsLoggedIn.mockReturnValue(true);
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockStarMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('API Error')),
       });
@@ -831,14 +991,24 @@ describe('ExplorePageContent', () => {
         expect(capturedContextValue).not.toBeNull();
       });
 
-      const mentor = { id: '1', name: 'Test Mentor', unique_id: 'test-unique-id', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mentor = {
+        id: '1',
+        name: 'Test Mentor',
+        unique_id: 'test-unique-id',
+        starred: false,
+      };
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
       });
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error toggling favorite:', expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error toggling favorite:',
+        expect.any(Error),
+      );
       consoleErrorSpy.mockRestore();
     });
 
@@ -854,7 +1024,9 @@ describe('ExplorePageContent', () => {
       });
 
       const mentor = { id: '1', name: 'Test Mentor', starred: false };
-      const mockEvent = { stopPropagation: vi.fn() } as unknown as React.MouseEvent;
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+      } as unknown as React.MouseEvent;
 
       await act(async () => {
         await capturedContextValue!.toggleFavorite(mentor, mockEvent);
@@ -901,7 +1073,9 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       // Switch to my-organization
-      const createdByMyOrgBtn = screen.getByTestId('change-created-by-my-organization');
+      const createdByMyOrgBtn = screen.getByTestId(
+        'change-created-by-my-organization',
+      );
       await user.click(createdByMyOrgBtn);
 
       await waitFor(() => {
@@ -914,7 +1088,9 @@ describe('ExplorePageContent', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const createdByCommunityBtn = screen.getByTestId('change-created-by-community');
+      const createdByCommunityBtn = screen.getByTestId(
+        'change-created-by-community',
+      );
       await user.click(createdByCommunityBtn);
 
       await waitFor(() => {
@@ -951,7 +1127,9 @@ describe('ExplorePageContent', () => {
       const user = userEvent.setup();
       renderComponent();
 
-      const createdByCommunityBtn = screen.getByTestId('change-created-by-community');
+      const createdByCommunityBtn = screen.getByTestId(
+        'change-created-by-community',
+      );
       await user.click(createdByCommunityBtn);
 
       await waitFor(() => {
@@ -964,7 +1142,9 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       // Switch to my-organization
-      const createdByMyOrgBtn = screen.getByTestId('change-created-by-my-organization');
+      const createdByMyOrgBtn = screen.getByTestId(
+        'change-created-by-my-organization',
+      );
       await user.click(createdByMyOrgBtn);
 
       await waitFor(() => {

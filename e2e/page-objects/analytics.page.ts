@@ -1,5 +1,5 @@
-import { Page, Locator, expect } from "@playwright/test";
-import { safeWaitForURL } from "../utils/navigation";
+import { Page, Locator, expect } from '@playwright/test';
+import { safeWaitForURL } from '../utils/navigation';
 
 export class AnalyticsPage {
   readonly page: Page;
@@ -14,34 +14,34 @@ export class AnalyticsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.analyticsButton = page.getByRole("button", {
-      name: "Analytics",
+    this.analyticsButton = page.getByRole('button', {
+      name: 'Analytics',
       exact: true,
     });
-    this.overviewTab = page.getByRole("tab", { name: /overview/i });
-    this.usersTab = page.getByRole("tab", { name: /users/i });
-    this.topicsTab = page.getByRole("tab", { name: /topics/i });
-    this.transcriptsTab = page.getByRole("tab", { name: /transcripts/i });
-    this.financialTab = page.getByRole("tab", { name: /financial/i });
-    this.reportsTab = page.getByRole("tab", { name: /reports|data reports/i });
+    this.overviewTab = page.getByRole('tab', { name: /overview/i });
+    this.usersTab = page.getByRole('tab', { name: /users/i });
+    this.topicsTab = page.getByRole('tab', { name: /topics/i });
+    this.transcriptsTab = page.getByRole('tab', { name: /transcripts/i });
+    this.financialTab = page.getByRole('tab', { name: /financial/i });
+    this.reportsTab = page.getByRole('tab', { name: /reports|data reports/i });
   }
 
   async goto(): Promise<void> {
     await expect(this.analyticsButton).toBeVisible({ timeout: 120_000 });
     await this.analyticsButton.click();
-    await safeWaitForURL(this.page, (url) => url.href.endsWith("/analytics"), {
+    await safeWaitForURL(this.page, (url) => url.href.endsWith('/analytics'), {
       timeout: 60_000,
     });
   }
 
   async navigateToTab(
     tab:
-      | "overview"
-      | "users"
-      | "topics"
-      | "transcripts"
-      | "financial"
-      | "reports",
+      | 'overview'
+      | 'users'
+      | 'topics'
+      | 'transcripts'
+      | 'financial'
+      | 'reports',
   ): Promise<void> {
     const tabLocators = {
       overview: this.overviewTab,
@@ -60,7 +60,7 @@ export class AnalyticsPage {
   async navigateToDataReports(): Promise<void> {
     await expect(this.analyticsButton).toBeVisible({ timeout: 120_000 });
     await this.analyticsButton.click();
-    await safeWaitForURL(this.page, (url) => url.href.endsWith("/analytics"), {
+    await safeWaitForURL(this.page, (url) => url.href.endsWith('/analytics'), {
       timeout: 60_000,
     });
     await expect(this.reportsTab).toBeVisible({ timeout: 30_000 });

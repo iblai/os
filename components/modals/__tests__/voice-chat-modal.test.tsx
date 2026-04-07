@@ -23,25 +23,41 @@ describe('VoiceChatModal', () => {
       const dialog = screen.getByRole('dialog');
       expect(dialog).toBeInTheDocument();
       expect(screen.getByText('Voice Chat')).toBeInTheDocument();
-      expect(screen.getByText('Real-time voice conversation with your mentor')).toBeInTheDocument();
+      expect(
+        screen.getByText('Real-time voice conversation with your mentor'),
+      ).toBeInTheDocument();
     });
   });
 
   describe('loading states', () => {
     it('shows requesting microphone message', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="requesting-permission" />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="requesting-permission"
+        />,
+      );
 
-      expect(screen.getByText('Requesting microphone access...')).toBeInTheDocument();
+      expect(
+        screen.getByText('Requesting microphone access...'),
+      ).toBeInTheDocument();
     });
 
     it('shows connecting message', () => {
       render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
 
-      expect(screen.getByText('Connecting to voice chat...')).toBeInTheDocument();
+      expect(
+        screen.getByText('Connecting to voice chat...'),
+      ).toBeInTheDocument();
     });
 
     it('disables mute button when requesting permission', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="requesting-permission" />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="requesting-permission"
+        />,
+      );
 
       expect(screen.getByLabelText('Mute microphone')).toBeDisabled();
     });
@@ -55,10 +71,20 @@ describe('VoiceChatModal', () => {
 
   describe('connected state', () => {
     it('renders without loading elements when connected', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="connected" isMuted={false} />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMuted={false}
+        />,
+      );
 
-      expect(screen.queryByText('Requesting microphone access...')).not.toBeInTheDocument();
-      expect(screen.queryByText('Connecting to voice chat...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Requesting microphone access...'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Connecting to voice chat...'),
+      ).not.toBeInTheDocument();
     });
 
     it('enables mute button when connected', () => {
@@ -81,7 +107,9 @@ describe('VoiceChatModal', () => {
 
       // Speaking uses 1.5s pulse (faster than non-speaking 2s)
       const pulsingBg = document.querySelector('.bg-blue-100');
-      expect(pulsingBg).toHaveStyle({ animation: 'randomPulse1 1.5s ease-in-out infinite' });
+      expect(pulsingBg).toHaveStyle({
+        animation: 'randomPulse1 1.5s ease-in-out infinite',
+      });
     });
 
     it('uses slower pulse animation when not speaking', () => {
@@ -96,25 +124,45 @@ describe('VoiceChatModal', () => {
 
       // Not speaking uses 2s pulse (slower)
       const pulsingBg = document.querySelector('.bg-blue-100');
-      expect(pulsingBg).toHaveStyle({ animation: 'randomPulse1 2s ease-in-out infinite' });
+      expect(pulsingBg).toHaveStyle({
+        animation: 'randomPulse1 2s ease-in-out infinite',
+      });
     });
   });
 
   describe('muted state', () => {
     it('shows unmute label when muted', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="connected" isMuted={true} />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMuted={true}
+        />,
+      );
 
       expect(screen.getByLabelText('Unmute microphone')).toBeInTheDocument();
     });
 
     it('shows mute label when not muted', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="connected" isMuted={false} />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMuted={false}
+        />,
+      );
 
       expect(screen.getByLabelText('Mute microphone')).toBeInTheDocument();
     });
 
     it('renders muted connected state without errors', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="connected" isMuted={true} />);
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMuted={true}
+        />,
+      );
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
@@ -122,7 +170,9 @@ describe('VoiceChatModal', () => {
 
   describe('disconnected state', () => {
     it('renders disconnected state without sound waves', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="disconnected" />);
+      render(
+        <VoiceChatModal {...defaultProps} connectionState="disconnected" />,
+      );
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
@@ -148,17 +198,27 @@ describe('VoiceChatModal', () => {
 
   describe('reconnecting/error states', () => {
     it('does not show loading message for reconnecting state', () => {
-      render(<VoiceChatModal {...defaultProps} connectionState="reconnecting" />);
+      render(
+        <VoiceChatModal {...defaultProps} connectionState="reconnecting" />,
+      );
 
-      expect(screen.queryByText('Requesting microphone access...')).not.toBeInTheDocument();
-      expect(screen.queryByText('Connecting to voice chat...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Requesting microphone access...'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Connecting to voice chat...'),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show loading message for error state', () => {
       render(<VoiceChatModal {...defaultProps} connectionState="error" />);
 
-      expect(screen.queryByText('Requesting microphone access...')).not.toBeInTheDocument();
-      expect(screen.queryByText('Connecting to voice chat...')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Requesting microphone access...'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Connecting to voice chat...'),
+      ).not.toBeInTheDocument();
     });
   });
 });

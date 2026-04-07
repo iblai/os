@@ -8,7 +8,11 @@ import { CalendarIcon } from 'lucide-react';
 import { useForm } from '@tanstack/react-form';
 
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Dialog,
   DialogTitle,
@@ -36,7 +40,10 @@ const createApiFormSchema = z.object({
   name: z
     .string()
     .min(1, 'API Key name is required')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'can only contain letters, numbers, and hyphens'),
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'can only contain letters, numbers, and hyphens',
+    ),
   expiration_date: z.date().nullable(),
 });
 
@@ -86,8 +93,12 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
             key: '',
             platform_key: tenantKey,
             created: new Date().toISOString(),
-            expires: expirationSeconds === 0 ? '' : expirationSeconds.toString(),
-            expires_in: expirationSeconds === 0 ? undefined : expirationSeconds.toString(),
+            expires:
+              expirationSeconds === 0 ? '' : expirationSeconds.toString(),
+            expires_in:
+              expirationSeconds === 0
+                ? undefined
+                : expirationSeconds.toString(),
           },
         }).unwrap();
         toast.success('API Key created successfully');
@@ -104,10 +115,17 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={isLoading ? undefined : onClose}>
-        <DialogContent aria-describedby="api-key-creation-description" className="w-full max-w-md">
-          <DialogDescription className="sr-only">Create API Key</DialogDescription>
+        <DialogContent
+          aria-describedby="api-key-creation-description"
+          className="w-full max-w-md"
+        >
+          <DialogDescription className="sr-only">
+            Create API Key
+          </DialogDescription>
           <DialogHeader>
-            <DialogTitle className="ibl-dialog-title">Create API Key</DialogTitle>
+            <DialogTitle className="ibl-dialog-title">
+              Create API Key
+            </DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(formEvent) => {
@@ -132,11 +150,15 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
                     <Input
                       placeholder="API Key Name"
                       value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
                       autoComplete="off"
                     />
                     {hasErrorAndIsDirty && (
-                      <p className="text-red-500 text-xs">{field.state.meta.errors[0]?.message}</p>
+                      <p className="text-xs text-red-500">
+                        {field.state.meta.errors[0]?.message}
+                      </p>
                     )}
                   </div>
                 );
@@ -203,7 +225,13 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
         <FreeTrialDialog isOpen={isModalOpen} onClose={closeModal} />
       )}
 
-      {apiKey && <ApiKeyModal isOpen={true} onClose={() => setApiKey(null)} apiKey={apiKey} />}
+      {apiKey && (
+        <ApiKeyModal
+          isOpen={true}
+          onClose={() => setApiKey(null)}
+          apiKey={apiKey}
+        />
+      )}
     </>
   );
 }

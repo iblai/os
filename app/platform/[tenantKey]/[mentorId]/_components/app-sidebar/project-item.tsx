@@ -47,7 +47,7 @@ export function ProjectItem({
 
   return (
     <div
-      className="relative group"
+      className="group relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         if (!showMenu) {
@@ -58,13 +58,13 @@ export function ProjectItem({
       <Button
         variant="ghost"
         className={cn(
-          'w-full flex items-center gap-2 px-2 py-1 h-8 rounded-md justify-start hover:bg-[#c9d8f8]',
+          'flex h-8 w-full items-center justify-start gap-2 rounded-md px-2 py-1 hover:bg-[#c9d8f8]',
           isHovered || showMenu ? 'bg-[#c9d8f8]' : 'hover:bg-[#c9d8f8]',
           isActive ? 'text-blue-600' : 'text-gray-700',
         )}
         onClick={onClick}
       >
-        <div className="flex-shrink-0 flex items-center justify-center">
+        <div className="flex flex-shrink-0 items-center justify-center">
           {isOpen ? (
             <Image
               src="/icons/open-folder.svg"
@@ -85,8 +85,8 @@ export function ProjectItem({
         </div>
         <span
           className={cn(
-            'text-sm text-left flex-1 truncate',
-            isActive ? 'text-blue-600 font-medium' : 'text-gray-700',
+            'flex-1 truncate text-left text-sm',
+            isActive ? 'font-medium text-blue-600' : 'text-gray-700',
             isHovered || showMenu || isActive ? 'pr-8' : 'pr-2',
           )}
         >
@@ -95,7 +95,7 @@ export function ProjectItem({
       </Button>
 
       {(isHovered || showMenu || isActive) && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
+        <div className="absolute top-1/2 right-2 z-10 -translate-y-1/2">
           <DropdownMenu
             open={showMenu}
             onOpenChange={(open) => {

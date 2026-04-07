@@ -117,7 +117,10 @@ export const getNextEditorContent = (
 };
 
 // Exported for testing - Check if content has changed
-export const hasContentChanged = (newContent: string, lastSavedContent: string): boolean => {
+export const hasContentChanged = (
+  newContent: string,
+  lastSavedContent: string,
+): boolean => {
   return newContent.trim() !== lastSavedContent.trim();
 };
 
@@ -136,7 +139,8 @@ export const isTransactionProgrammatic = (transaction: {
   getMeta: (key: string) => boolean | undefined;
 }): boolean => {
   return (
-    transaction.getMeta('addToHistory') === false || transaction.getMeta('preventUpdate') === true
+    transaction.getMeta('addToHistory') === false ||
+    transaction.getMeta('preventUpdate') === true
   );
 };
 
@@ -180,7 +184,10 @@ export const buildAutoSaveRequestBody = (
 };
 
 // Exported for testing - Check if content needs saving
-export const needsSaving = (newContent: string, lastSavedContent: string): boolean => {
+export const needsSaving = (
+  newContent: string,
+  lastSavedContent: string,
+): boolean => {
   return newContent.trim() !== lastSavedContent.trim();
 };
 
@@ -254,11 +261,19 @@ export const shouldTriggerAutoSave = (config: {
   org?: string;
   userId?: string;
   hasDebouncedFn: boolean;
-}): { shouldTrigger: boolean; reason: 'disabled' | 'missing-config' | 'ready' } => {
+}): {
+  shouldTrigger: boolean;
+  reason: 'disabled' | 'missing-config' | 'ready';
+} => {
   if (!config.enableAutoSave) {
     return { shouldTrigger: false, reason: 'disabled' };
   }
-  if (!config.artifactId || !config.org || !config.userId || !config.hasDebouncedFn) {
+  if (
+    !config.artifactId ||
+    !config.org ||
+    !config.userId ||
+    !config.hasDebouncedFn
+  ) {
     return { shouldTrigger: false, reason: 'missing-config' };
   }
   return { shouldTrigger: true, reason: 'ready' };
@@ -276,7 +291,10 @@ export const processAutoSaveResponse = (
 };
 
 // Exported for testing - Check if history reset is needed
-export const shouldResetHistory = (hasHistoryPlugin: boolean, historyState: unknown): boolean => {
+export const shouldResetHistory = (
+  hasHistoryPlugin: boolean,
+  historyState: unknown,
+): boolean => {
   return hasHistoryPlugin && !!historyState;
 };
 
@@ -324,7 +342,11 @@ interface CanvasRichTextEditorProps {
 }
 
 // Toolbar component that matches the reference but styled for canvas header
-export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null }) {
+export function CanvasRichTextEditorToolbar({
+  editor,
+}: {
+  editor: Editor | null;
+}) {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -361,7 +383,11 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
         transaction.getMeta('preventUpdate') === true;
 
       // If it's not programmatic, has steps, and editor is editable, it's a user edit
-      if (!isProgrammatic && transaction.steps.length > 0 && editor.isEditable) {
+      if (
+        !isProgrammatic &&
+        transaction.steps.length > 0 &&
+        editor.isEditable
+      ) {
         (editor as any).__hasUserEdited = true;
       }
     };
@@ -408,7 +434,8 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
     return null;
   }
 
-  const focusWithoutScroll = () => editor.chain().focus(undefined, { scrollIntoView: false });
+  const focusWithoutScroll = () =>
+    editor.chain().focus(undefined, { scrollIntoView: false });
 
   // Mobile: show only undo/redo + dropdown for other options
   /* istanbul ignore next -- @preserve mobile-only UI rendering */
@@ -472,7 +499,11 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
           size="sm"
           className="h-8 w-8 p-0"
           onClick={() => {
-            editor.chain().focus(undefined, { scrollIntoView: false }).undo().run();
+            editor
+              .chain()
+              .focus(undefined, { scrollIntoView: false })
+              .undo()
+              .run();
           }}
           disabled={!canUndo}
           aria-label="Undo"
@@ -484,14 +515,18 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
           size="sm"
           className="h-8 w-8 p-0"
           onClick={() => {
-            editor.chain().focus(undefined, { scrollIntoView: false }).redo().run();
+            editor
+              .chain()
+              .focus(undefined, { scrollIntoView: false })
+              .redo()
+              .run();
           }}
           disabled={!canRedo}
           aria-label="Redo"
         >
           <Redo2 className="h-4 w-4 text-gray-600" />
         </Button>
-        <div className="h-4 w-px bg-gray-300 mx-0.5" />
+        <div className="mx-0.5 h-4 w-px bg-gray-300" />
 
         {/* More options dropdown for mobile */}
         <DropdownMenu>
@@ -514,12 +549,18 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
                   onClick={item.action}
                   className={item.isActive ? 'bg-accent' : ''}
                 >
-                  <div className="flex items-center gap-2 w-full">
-                    <span className={item.isActive ? 'text-primary' : 'text-gray-600'}>
+                  <div className="flex w-full items-center gap-2">
+                    <span
+                      className={
+                        item.isActive ? 'text-primary' : 'text-gray-600'
+                      }
+                    >
                       {item.icon}
                     </span>
                     <span className="flex-1">{item.name}</span>
-                    {item.isActive && <span className="h-2 w-2 rounded-full bg-primary" />}
+                    {item.isActive && (
+                      <span className="bg-primary h-2 w-2 rounded-full" />
+                    )}
                   </div>
                 </DropdownMenuItem>
               </React.Fragment>
@@ -540,7 +581,11 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
         className="h-8 w-8 p-0"
         onClick={
           /* istanbul ignore next -- @preserve click handler requires enabled state */ () => {
-            editor.chain().focus(undefined, { scrollIntoView: false }).undo().run();
+            editor
+              .chain()
+              .focus(undefined, { scrollIntoView: false })
+              .undo()
+              .run();
           }
         }
         disabled={!canUndo}
@@ -554,7 +599,11 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
         className="h-8 w-8 p-0"
         onClick={
           /* istanbul ignore next -- @preserve click handler requires enabled state */ () => {
-            editor.chain().focus(undefined, { scrollIntoView: false }).redo().run();
+            editor
+              .chain()
+              .focus(undefined, { scrollIntoView: false })
+              .redo()
+              .run();
           }
         }
         disabled={!canRedo}
@@ -562,11 +611,13 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
       >
         <Redo2 className="h-4 w-4 text-gray-600" />
       </Button>
-      <div className="h-4 w-px bg-gray-300 mx-0.5" />
+      <div className="mx-0.5 h-4 w-px bg-gray-300" />
 
       {/* Heading buttons */}
       <Button
-        variant={editor.isActive('heading', { level: 1 }) ? 'secondary' : 'ghost'}
+        variant={
+          editor.isActive('heading', { level: 1 }) ? 'secondary' : 'ghost'
+        }
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 1 }).run()}
@@ -575,7 +626,9 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
         <Heading1 className="h-4 w-4 text-gray-600" />
       </Button>
       <Button
-        variant={editor.isActive('heading', { level: 2 }) ? 'secondary' : 'ghost'}
+        variant={
+          editor.isActive('heading', { level: 2 }) ? 'secondary' : 'ghost'
+        }
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 2 }).run()}
@@ -584,7 +637,9 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
         <Heading2 className="h-4 w-4 text-gray-600" />
       </Button>
       <Button
-        variant={editor.isActive('heading', { level: 3 }) ? 'secondary' : 'ghost'}
+        variant={
+          editor.isActive('heading', { level: 3 }) ? 'secondary' : 'ghost'
+        }
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 3 }).run()}
@@ -592,7 +647,7 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
       >
         <Heading3 className="h-4 w-4 text-gray-600" />
       </Button>
-      <div className="h-4 w-px bg-gray-300 mx-0.5" />
+      <div className="mx-0.5 h-4 w-px bg-gray-300" />
 
       {/* Text formatting buttons */}
       <Button
@@ -622,7 +677,7 @@ export function CanvasRichTextEditorToolbar({ editor }: { editor: Editor | null 
       >
         <Code2 className="h-4 w-4 text-gray-600" />
       </Button>
-      <div className="h-4 w-px bg-gray-300 mx-0.5" />
+      <div className="mx-0.5 h-4 w-px bg-gray-300" />
 
       {/* Block formatting buttons */}
       <Button
@@ -686,7 +741,10 @@ export function useCanvasRichTextEditor({
       userId,
       title,
     };
-    console.log('[CanvasRichTextEditor] Auto-save config updated:', autoSaveConfigRef.current);
+    console.log(
+      '[CanvasRichTextEditor] Auto-save config updated:',
+      autoSaveConfigRef.current,
+    );
   }, [enableAutoSave, artifactId, org, userId, title]);
 
   // Auto-save function - uses refs to get latest values
@@ -697,17 +755,22 @@ export function useCanvasRichTextEditor({
 
       // Validate required IDs
       if (!config.artifactId || !config.org || !config.userId) {
-        console.error('[CanvasRichTextEditor] Cannot auto-save - missing required IDs', {
-          artifactId: config.artifactId,
-          org: config.org,
-          userId: config.userId,
-        });
+        console.error(
+          '[CanvasRichTextEditor] Cannot auto-save - missing required IDs',
+          {
+            artifactId: config.artifactId,
+            org: config.org,
+            userId: config.userId,
+          },
+        );
         return;
       }
 
       // Skip if content hasn't changed
       if (markdown.trim() === lastSavedValueRef.current.trim()) {
-        console.log('[CanvasRichTextEditor] Content unchanged, skipping auto-save');
+        console.log(
+          '[CanvasRichTextEditor] Content unchanged, skipping auto-save',
+        );
         return;
       }
 
@@ -734,7 +797,10 @@ export function useCanvasRichTextEditor({
           requestBody,
         }).unwrap();
 
-        console.log('[CanvasRichTextEditor] Auto-save successful', savedArtifact);
+        console.log(
+          '[CanvasRichTextEditor] Auto-save successful',
+          savedArtifact,
+        );
 
         if (savedArtifact?.content) {
           lastSavedValueRef.current = savedArtifact.content;
@@ -750,7 +816,9 @@ export function useCanvasRichTextEditor({
   );
 
   // Debounced auto-save (800ms delay) - store in ref so it's always accessible
-  const debouncedAutoSaveRef = React.useRef<((markdown: string) => void) | null>(null);
+  const debouncedAutoSaveRef = React.useRef<
+    ((markdown: string) => void) | null
+  >(null);
 
   /* istanbul ignore next -- @preserve debounced callback triggered by editor events */
   const debouncedAutoSave = useDebouncedCallback(async (markdown: string) => {
@@ -846,7 +914,8 @@ export function useCanvasRichTextEditor({
       }),
       TableHeader.configure({
         HTMLAttributes: {
-          class: 'border border-gray-300 px-4 py-2 bg-gray-100 font-semibold text-left',
+          class:
+            'border border-gray-300 px-4 py-2 bg-gray-100 font-semibold text-left',
         },
       }),
       TableCell.configure({
@@ -951,7 +1020,10 @@ export function useCanvasRichTextEditor({
         // Also set a flag on the editor to track that we've cleared initial history
         (editor as any).__historyCleared = true;
       } catch (error) {
-        console.error('[CanvasRichTextEditor] Failed to clear initial history', error);
+        console.error(
+          '[CanvasRichTextEditor] Failed to clear initial history',
+          error,
+        );
       }
     }, 150);
 
@@ -969,7 +1041,9 @@ export function useCanvasRichTextEditor({
         return;
       }
       const newValue =
-        exportFormat === 'html' ? editor.getHTML() : htmlToMarkdown(editor.getHTML());
+        exportFormat === 'html'
+          ? editor.getHTML()
+          : htmlToMarkdown(editor.getHTML());
       lastSetValueRef.current = newValue;
       lastUserInputRef.current = newValue;
       onChange(newValue);
@@ -1121,7 +1195,10 @@ export function useCanvasRichTextEditor({
           }
           // If cursor position is still valid in the new document, restore it
           else if (selection.from <= newDocSize && selection.to <= newDocSize) {
-            editor.commands.setTextSelection({ from: selection.from, to: selection.to });
+            editor.commands.setTextSelection({
+              from: selection.from,
+              to: selection.to,
+            });
           }
           // Otherwise, try to maintain relative position
           /* istanbul ignore next -- @preserve edge case when selection exceeds new doc size */
@@ -1147,7 +1224,11 @@ export function useCanvasRichTextEditor({
   return editor;
 }
 
-export function CanvasRichTextEditorContent({ editor }: { editor: Editor | null }) {
+export function CanvasRichTextEditorContent({
+  editor,
+}: {
+  editor: Editor | null;
+}) {
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Add native click listener for links - React events don't catch TipTap's rendered content
@@ -1161,7 +1242,11 @@ export function CanvasRichTextEditorContent({ editor }: { editor: Editor | null 
 
       const target = event.target;
       const element =
-        target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
+        target instanceof Element
+          ? target
+          : target instanceof Node
+            ? target.parentElement
+            : null;
       const link = element?.closest('a');
 
       if (link) {

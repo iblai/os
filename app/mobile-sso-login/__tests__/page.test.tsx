@@ -81,9 +81,18 @@ describe('mobile-sso-login page', () => {
     render(<SsoLogin />);
 
     await waitFor(() => {
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('axd_token', 'test-token');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('dm_token', 'dm-token');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('userData', '{"username":"testuser"}');
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'axd_token',
+        'test-token',
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'dm_token',
+        'dm-token',
+      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        'userData',
+        '{"username":"testuser"}',
+      );
       expect(mockLocation.href).toBe('https://example.com/dashboard');
     });
   });

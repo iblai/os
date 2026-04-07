@@ -26,7 +26,10 @@ let mockUserIsStudent = false;
 let mockIsFetching = false;
 let mockIsLoading = false;
 let mockIsModalOpen = false;
-let mockFreeTrialDialog: React.FC<{ isOpen: boolean; onClose: () => void }> | null = null;
+let mockFreeTrialDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+}> | null = null;
 let mockMentors: any[] = [];
 let mockCurrentPage = 1;
 let mockTotalPages = 1;
@@ -140,7 +143,9 @@ function createTestStore() {
   });
 }
 
-function renderModal(props: Partial<React.ComponentProps<typeof MyMentorsModal>> = {}) {
+function renderModal(
+  props: Partial<React.ComponentProps<typeof MyMentorsModal>> = {},
+) {
   const store = createTestStore();
   const result = render(
     <Provider store={store}>
@@ -267,18 +272,24 @@ describe('MyMentorsModal', () => {
   it('hides Create button when not logged in', () => {
     mockIsLoggedIn = false;
     renderModal();
-    expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /create/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides Create button when user is student', () => {
     mockUserIsStudent = true;
     renderModal();
-    expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /create/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides Create button when hideCreateButton is true', () => {
     renderModal({ hideCreateButton: true });
-    expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /create/i }),
+    ).not.toBeInTheDocument();
   });
 
   // --------------------------------------------------------------------------
@@ -288,7 +299,9 @@ describe('MyMentorsModal', () => {
   it('calls executeWithTrialCheck with openCreateMentorModal on Create click', () => {
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: /create/i }));
-    expect(executeWithTrialCheckMock).toHaveBeenCalledWith(openCreateMentorModalMock);
+    expect(executeWithTrialCheckMock).toHaveBeenCalledWith(
+      openCreateMentorModalMock,
+    );
   });
 
   // --------------------------------------------------------------------------
@@ -381,7 +394,12 @@ describe('MyMentorsModal', () => {
 
   it('renders FreeTrialDialog when isModalOpen is true and component exists', () => {
     mockIsModalOpen = true;
-    mockFreeTrialDialog = ({ onClose }: { isOpen: boolean; onClose: () => void }) => (
+    mockFreeTrialDialog = ({
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) => (
       <div data-testid="free-trial-dialog">
         Free Trial
         <button onClick={onClose}>Close Trial</button>
@@ -393,7 +411,9 @@ describe('MyMentorsModal', () => {
 
   it('does not render FreeTrialDialog when isModalOpen is false', () => {
     mockIsModalOpen = false;
-    mockFreeTrialDialog = () => <div data-testid="free-trial-dialog">Free Trial</div>;
+    mockFreeTrialDialog = () => (
+      <div data-testid="free-trial-dialog">Free Trial</div>
+    );
     renderModal();
     expect(screen.queryByTestId('free-trial-dialog')).not.toBeInTheDocument();
   });
@@ -407,7 +427,12 @@ describe('MyMentorsModal', () => {
 
   it('passes closeModal to FreeTrialDialog onClose', () => {
     mockIsModalOpen = true;
-    mockFreeTrialDialog = ({ onClose }: { isOpen: boolean; onClose: () => void }) => (
+    mockFreeTrialDialog = ({
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) => (
       <button data-testid="close-trial" onClick={onClose}>
         Close
       </button>

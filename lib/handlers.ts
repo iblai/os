@@ -119,7 +119,10 @@ export function useIframeHandlers() {
     },
 
     // Internal preview handler for mentor settings
-    'MENTOR:MENTOR_PREVIEW': (payload: { defaultPrompt?: string; welcomeMessage?: string }) => {
+    'MENTOR:MENTOR_PREVIEW': (payload: {
+      defaultPrompt?: string;
+      welcomeMessage?: string;
+    }) => {
       const previewMentor = localStorage.getItem('previewMentorData');
       if (previewMentor) {
         try {
@@ -132,7 +135,10 @@ export function useIframeHandlers() {
               initial_message: payload.welcomeMessage,
             },
           };
-          localStorage.setItem('previewMentorData', JSON.stringify(updatedMentor));
+          localStorage.setItem(
+            'previewMentorData',
+            JSON.stringify(updatedMentor),
+          );
         } catch (error) {
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }

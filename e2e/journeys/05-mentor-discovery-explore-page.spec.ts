@@ -1,19 +1,19 @@
-import { test, expect } from "../fixtures/mentor-test";
-import { navigateToMentorApp, checkAdminStatus } from "../utils/auth";
+import { test, expect } from '../fixtures/mentor-test';
+import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 
-test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () => {
+test.describe('Journey 5: Mentor Discovery — Explore Page — Non-Admin', () => {
   test.beforeEach(async ({ nonadminPage, nonadminSidebarPage }) => {
     await navigateToMentorApp(nonadminPage);
     await nonadminSidebarPage.navigateToExplore();
   });
 
-  test("non-admin goes to explore page and sees the page title and description", async ({
+  test('non-admin goes to explore page and sees the page title and description', async ({
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 20_000 });
   });
 
-  test("non-admin goes to explore page and sees mentor cards with correct information", async ({
+  test('non-admin goes to explore page and sees mentor cards with correct information', async ({
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
@@ -21,17 +21,17 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     });
   });
 
-  test("non-admin goes to explore page and searches for a mentor by name", async ({
+  test('non-admin goes to explore page and searches for a mentor by name', async ({
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.searchInput).toBeVisible({
       timeout: 10_000,
     });
-    await nonadminExplorePage.search("test");
-    await expect(nonadminExplorePage.searchInput).toHaveValue("test");
+    await nonadminExplorePage.search('test');
+    await expect(nonadminExplorePage.searchInput).toHaveValue('test');
   });
 
-  test("non-admin goes to explore page and loads more mentors with the see more button", async ({
+  test('non-admin goes to explore page and loads more mentors with the see more button', async ({
     nonadminExplorePage,
   }) => {
     const seeMore = nonadminExplorePage.seeMoreButton;
@@ -46,7 +46,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     expect(afterCount).toBeGreaterThanOrEqual(beforeCount);
   });
 
-  test("non-admin goes to explore page and sees the featured section when configured", async ({
+  test('non-admin goes to explore page and sees the featured section when configured', async ({
     nonadminExplorePage,
   }) => {
     const visible = await nonadminExplorePage.featuredSection
@@ -59,7 +59,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     }
   });
 
-  test("non-admin goes to explore page and filters mentors by LLM provider", async ({
+  test('non-admin goes to explore page and filters mentors by LLM provider', async ({
     nonadminPage,
     nonadminExplorePage,
   }) => {
@@ -70,17 +70,17 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     if (!visible) return;
     await trigger.click();
     const firstOption = nonadminPage
-      .getByRole("option")
+      .getByRole('option')
       .first()
-      .or(nonadminPage.getByRole("menuitem").first());
+      .or(nonadminPage.getByRole('menuitem').first());
     if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await firstOption.click();
     } else {
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     }
   });
 
-  test("non-admin goes to explore page and filters mentors by subject", async ({
+  test('non-admin goes to explore page and filters mentors by subject', async ({
     nonadminPage,
     nonadminExplorePage,
   }) => {
@@ -91,17 +91,17 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     if (!visible) return;
     await trigger.click();
     const firstOption = nonadminPage
-      .getByRole("option")
+      .getByRole('option')
       .first()
-      .or(nonadminPage.getByRole("menuitem").first());
+      .or(nonadminPage.getByRole('menuitem').first());
     if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await firstOption.click();
     } else {
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     }
   });
 
-  test("non-admin goes to explore page and filters mentors by type", async ({
+  test('non-admin goes to explore page and filters mentors by type', async ({
     nonadminPage,
     nonadminExplorePage,
   }) => {
@@ -112,17 +112,17 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     if (!visible) return;
     await trigger.click();
     const firstOption = nonadminPage
-      .getByRole("option")
+      .getByRole('option')
       .first()
-      .or(nonadminPage.getByRole("menuitem").first());
+      .or(nonadminPage.getByRole('menuitem').first());
     if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await firstOption.click();
     } else {
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     }
   });
 
-  test("non-admin goes to explore page and filters by Created by Me", async ({
+  test('non-admin goes to explore page and filters by Created by Me', async ({
     nonadminPage,
     nonadminExplorePage,
   }) => {
@@ -133,16 +133,16 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     if (!visible) return;
     await trigger.click();
     const meOption = nonadminPage
-      .getByRole("option", { name: /me/i })
-      .or(nonadminPage.getByRole("menuitem", { name: /me/i }));
+      .getByRole('option', { name: /me/i })
+      .or(nonadminPage.getByRole('menuitem', { name: /me/i }));
     if (await meOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await meOption.click();
     } else {
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     }
   });
 
-  test("non-admin goes to explore page and filters by Created by Community", async ({
+  test('non-admin goes to explore page and filters by Created by Community', async ({
     nonadminPage,
     nonadminExplorePage,
   }) => {
@@ -153,18 +153,18 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
     if (!visible) return;
     await trigger.click();
     const communityOption = nonadminPage
-      .getByRole("option", { name: /community/i })
-      .or(nonadminPage.getByRole("menuitem", { name: /community/i }));
+      .getByRole('option', { name: /community/i })
+      .or(nonadminPage.getByRole('menuitem', { name: /community/i }));
     if (
       await communityOption.isVisible({ timeout: 3_000 }).catch(() => false)
     ) {
       await communityOption.click();
     } else {
-      await nonadminPage.keyboard.press("Escape");
+      await nonadminPage.keyboard.press('Escape');
     }
   });
 
-  test("non-admin goes to explore page and clicks a mentor card to navigate to that mentor and chat", async ({
+  test('non-admin goes to explore page and clicks a mentor card to navigate to that mentor and chat', async ({
     nonadminPage,
     nonadminExplorePage,
     nonadminChatPage,
@@ -181,13 +181,13 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
 
   // fixme: starring mentor fails silently — may require subscription
   test.fixme(
-    "non-admin goes to explore page and stars a mentor to add it to favorites",
+    'non-admin goes to explore page and stars a mentor to add it to favorites',
     async ({ nonadminExplorePage }) => {
       await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
         timeout: 20_000,
       });
       const addFavButton = nonadminExplorePage.page
-        .getByRole("button", { name: "Add to favorites", exact: true })
+        .getByRole('button', { name: 'Add to favorites', exact: true })
         .first();
       const isVisible = await addFavButton
         .isVisible({ timeout: 10_000 })
@@ -200,7 +200,7 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
       await nonadminExplorePage.page.waitForTimeout(3_000);
       // After starring, either "Remove from favorites" should appear, or the action was silently blocked
       const removeButton = nonadminExplorePage.page
-        .getByRole("button", { name: "Remove from favorites", exact: true })
+        .getByRole('button', { name: 'Remove from favorites', exact: true })
         .first();
       const starred = await removeButton
         .isVisible({ timeout: 10_000 })
@@ -214,18 +214,18 @@ test.describe("Journey 5: Mentor Discovery — Explore Page — Non-Admin", () =
   );
 });
 
-test.describe("Journey 5: Mentor Discovery — Explore Page — Admin", () => {
+test.describe('Journey 5: Mentor Discovery — Explore Page — Admin', () => {
   test.beforeEach(async ({ page, sidebarPage }) => {
     await navigateToMentorApp(page);
     await sidebarPage.navigateToExplore();
   });
 
-  test("admin goes to explore page and sees the custom mentor creation button", async ({
+  test('admin goes to explore page and sees the custom mentor creation button', async ({
     page,
     explorePage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
-    test.fail(!isAdmin, "Custom mentor creation requires admin access");
+    test.fail(!isAdmin, 'Custom mentor creation requires admin access');
     await expect(explorePage.createCustomMentorButton).toBeVisible({
       timeout: 10_000,
     });

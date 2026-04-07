@@ -3,7 +3,11 @@
 import React from 'react';
 
 import { useMediaQuery } from 'react-responsive';
-import { chatActions, selectSessionId, useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import {
+  chatActions,
+  selectSessionId,
+  useTenantMetadata,
+} from '@iblai/iblai-js/web-utils';
 
 import ErrorBoundary from '@/components/error-boundary';
 import { DocumentSidebar } from '@/components/document-sidebar';
@@ -54,7 +58,8 @@ export default function Page() {
 
   // Check if we're in Tauri offline mode - skip API calls if so
   // Use isOfflineServerOrigin() as primary check since it works before Tauri scripts run
-  const isTauriOffline = isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
+  const isTauriOffline =
+    isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
 
   const isPreviewMode = useIsPreviewMode();
   const chatMode = useChatMode();
@@ -98,11 +103,15 @@ export default function Page() {
   React.useEffect(() => {
     if (!mentorPublicSettings) return;
 
-    const requiresAuthentication = mentorPublicSettings.allow_anonymous === false;
+    const requiresAuthentication =
+      mentorPublicSettings.allow_anonymous === false;
     const viewableByAnyone =
-      mentorPublicSettings.mentor_visibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
+      mentorPublicSettings.mentor_visibility ===
+      MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
 
-    setShowLoginBanner(requiresAuthentication && viewableByAnyone && !isLoggedIn());
+    setShowLoginBanner(
+      requiresAuthentication && viewableByAnyone && !isLoggedIn(),
+    );
   }, [mentorPublicSettings]);
 
   React.useEffect(() => {
@@ -131,7 +140,8 @@ export default function Page() {
             toast.error(
               <>
                 <p>
-                  The shareable link is not enabled. Please contact support to enable it.{' '}
+                  The shareable link is not enabled. Please contact support to
+                  enable it.{' '}
                   <a
                     href={`mailto:${metadata?.support_email || config.supportEmail()}`}
                     style={{ color: '#2563eb', textDecoration: 'underline' }}
@@ -156,8 +166,8 @@ export default function Page() {
 
   return (
     <ErrorBoundary>
-      <div className="flex-1 flex min-h-0">
-        <div className="w-full flex-1 flex flex-col min-h-0 px-1 md:px-4">
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
           {/* {showLoginBanner && (
             <div className="mb-3">
               <LoginRequiredBanner

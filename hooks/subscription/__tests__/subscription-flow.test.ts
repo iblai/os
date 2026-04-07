@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { toast } from 'sonner';
-import { mentorSubscriptionFlow, SubscriptionFlowConfig } from '../subscription-flow';
+import {
+  mentorSubscriptionFlow,
+  SubscriptionFlowConfig,
+} from '../subscription-flow';
 import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
 import { TRIGGERS } from '@/features/top-banner/constants';
@@ -16,11 +19,17 @@ vi.mock('sonner', () => ({
 
 // Mock Redux actions
 vi.mock('@/features/subscription/subscription-slice', () => ({
-  setOpenPricingModal: vi.fn((value) => ({ type: 'SET_OPEN_PRICING_MODAL', payload: value })),
+  setOpenPricingModal: vi.fn((value) => ({
+    type: 'SET_OPEN_PRICING_MODAL',
+    payload: value,
+  })),
 }));
 
 vi.mock('@/features/top-banner/top-banner-slice', () => ({
-  setTopBannerOptions: vi.fn((options) => ({ type: 'SET_TOP_BANNER_OPTIONS', payload: options })),
+  setTopBannerOptions: vi.fn((options) => ({
+    type: 'SET_TOP_BANNER_OPTIONS',
+    payload: options,
+  })),
 }));
 
 vi.mock('@/features/top-banner/constants', () => ({
@@ -150,8 +159,10 @@ describe('mentorSubscriptionFlow', () => {
       expect(mockDispatch).toHaveBeenCalled();
       expect(setTopBannerOptions).toHaveBeenCalledWith(
         expect.objectContaining({
-          tooltipText: "You're on a free trial for the next 3 days. Upgrade to a paid plan 💪",
-          bannerText: "You're on a free trial for the next 3 days. Upgrade to a paid plan 💪",
+          tooltipText:
+            "You're on a free trial for the next 3 days. Upgrade to a paid plan 💪",
+          bannerText:
+            "You're on a free trial for the next 3 days. Upgrade to a paid plan 💪",
           buttonLabel: 'Subscribe',
           onUpgrade: TRIGGERS.SUBSCRIBE_USER,
         }),
@@ -237,7 +248,9 @@ describe('mentorSubscriptionFlow', () => {
     it('shows success toast with default message', () => {
       subscriptionFlow.handleSuccessfullySubscribedFlow();
 
-      expect(toast.success).toHaveBeenCalledWith('Subscription renewed successfully.');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Subscription renewed successfully.',
+      );
     });
 
     it('shows success toast with custom message', () => {

@@ -119,7 +119,9 @@ describe('chatInputSlice', () => {
     describe('selectTextareaInput', () => {
       it('should select textarea input', () => {
         const rootState = { chatInput: { textareaInput: 'Test input' } };
-        expect(chatInputSliceSelectors.selectTextareaInput(rootState)).toBe('Test input');
+        expect(chatInputSliceSelectors.selectTextareaInput(rootState)).toBe(
+          'Test input',
+        );
       });
 
       it('should return empty string when input is empty', () => {

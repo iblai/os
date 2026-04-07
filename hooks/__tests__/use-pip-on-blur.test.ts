@@ -1,9 +1,20 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, Mock } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  Mock,
+} from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { Track, ParticipantEvent, RoomEvent } from 'livekit-client';
 
 // Create a complete mock PIP document that works with copyStyles
-const createMockPipDocument = (elementCallback?: (tag: string, element: any) => void) => {
+const createMockPipDocument = (
+  elementCallback?: (tag: string, element: any) => void,
+) => {
   const eventListeners: Record<string, Function[]> = {};
 
   return {
@@ -71,7 +82,9 @@ const createMockPipDocument = (elementCallback?: (tag: string, element: any) => 
 };
 
 // Create mock PIP window
-const createMockPipWindow = (elementCallback?: (tag: string, element: any) => void) => {
+const createMockPipWindow = (
+  elementCallback?: (tag: string, element: any) => void,
+) => {
   const eventListeners: Record<string, Function[]> = {};
   const mockDocument = createMockPipDocument(elementCallback);
 
@@ -96,7 +109,9 @@ const createMockPipWindow = (elementCallback?: (tag: string, element: any) => vo
 };
 
 // Create a mock remote participant
-const createMockRemoteParticipant = (overrides?: Partial<{ isSpeaking: boolean }>) => {
+const createMockRemoteParticipant = (
+  overrides?: Partial<{ isSpeaking: boolean }>,
+) => {
   const eventListeners: Record<string, Function[]> = {};
   return {
     isSpeaking: overrides?.isSpeaking ?? false,
@@ -164,7 +179,9 @@ const createMockRoom = (
     isSpeaking: overrides?.isSpeaking ?? false,
   });
 
-  const remoteParticipants = new Map([['remote-participant-1', mockRemoteParticipant]]);
+  const remoteParticipants = new Map([
+    ['remote-participant-1', mockRemoteParticipant],
+  ]);
 
   return {
     localParticipant: mockLocalParticipant,
@@ -618,7 +635,9 @@ describe('usePipOnBlur', () => {
       });
 
       // Verify video element was created
-      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith('video');
+      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith(
+        'video',
+      );
     });
 
     it('should not create screen share preview when screenSharePreviewHeight is 0', async () => {
@@ -649,7 +668,8 @@ describe('usePipOnBlur', () => {
       });
 
       // Video element should not be created when screenSharePreviewHeight is 0
-      const createElementCalls = (mockPipWindow?.document.createElement as Mock).mock.calls;
+      const createElementCalls = (mockPipWindow?.document.createElement as Mock)
+        .mock.calls;
       const videoCreated = createElementCalls.some(
         (call: unknown[]) => (call[0] as string) === 'video',
       );
@@ -671,7 +691,9 @@ describe('usePipOnBlur', () => {
       });
 
       // Verify button (mute button) was created
-      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith('button');
+      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith(
+        'button',
+      );
     });
   });
 
@@ -701,7 +723,9 @@ describe('usePipOnBlur', () => {
       });
 
       // Verify chat container div was created with correct id
-      const chatContainer = createdElements.find(({ element }) => element.id === 'pip-chat-root');
+      const chatContainer = createdElements.find(
+        ({ element }) => element.id === 'pip-chat-root',
+      );
       expect(chatContainer).toBeDefined();
     });
 
@@ -761,7 +785,9 @@ describe('usePipOnBlur', () => {
       });
 
       // Verify style element was created and appended to head
-      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith('style');
+      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith(
+        'style',
+      );
       expect(mockPipWindow?.document.head.appendChild).toHaveBeenCalled();
     });
 
@@ -788,7 +814,9 @@ describe('usePipOnBlur', () => {
         await vi.runAllTimersAsync();
       });
 
-      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith('link');
+      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith(
+        'link',
+      );
     });
 
     it('should handle cross-origin stylesheet errors', async () => {
@@ -817,7 +845,9 @@ describe('usePipOnBlur', () => {
       });
 
       // Should create link element as fallback
-      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith('link');
+      expect(mockPipWindow?.document.createElement).toHaveBeenCalledWith(
+        'link',
+      );
     });
   });
 });
@@ -953,7 +983,10 @@ describe('createAudioStatusBar', () => {
 
       // Trigger speaking event on remote participant
       act(() => {
-        mockRoom._mockRemoteParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, true);
+        mockRoom._mockRemoteParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          true,
+        );
       });
 
       // Verify postMessage was called with speaking status
@@ -997,7 +1030,10 @@ describe('createAudioStatusBar', () => {
 
       // Trigger stop speaking event on remote participant
       act(() => {
-        mockRoom._mockRemoteParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, false);
+        mockRoom._mockRemoteParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          false,
+        );
       });
 
       expect((window.opener as any).postMessage).toHaveBeenCalledWith(
@@ -1040,7 +1076,10 @@ describe('createAudioStatusBar', () => {
 
       // Trigger speaking event on local participant
       act(() => {
-        mockRoom.localParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, true);
+        mockRoom.localParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          true,
+        );
       });
 
       // Verify postMessage was called with local speaking status
@@ -1149,7 +1188,9 @@ describe('createAudioStatusBar', () => {
       });
 
       // Should have set volume to 1 on the second click
-      expect(mockRoom._mockRemoteParticipant.setVolume).toHaveBeenLastCalledWith(1);
+      expect(
+        mockRoom._mockRemoteParticipant.setVolume,
+      ).toHaveBeenLastCalledWith(1);
 
       // Should have posted unmuted status
       expect((window.opener as any).postMessage).toHaveBeenLastCalledWith(
@@ -1164,9 +1205,11 @@ describe('createAudioStatusBar', () => {
       vi.useFakeTimers();
 
       // Make setVolume throw
-      mockRoom._mockRemoteParticipant.setVolume = vi.fn().mockImplementation(() => {
-        throw new Error('Permission denied');
-      });
+      mockRoom._mockRemoteParticipant.setVolume = vi
+        .fn()
+        .mockImplementation(() => {
+          throw new Error('Permission denied');
+        });
 
       const buttons: any[] = [];
       const mockPipWindow = createMockPipWindow((tag, element) => {
@@ -1592,7 +1635,10 @@ describe('createAudioStatusBar', () => {
 
       // Trigger speaking event on remote participant
       act(() => {
-        mockRoom._mockRemoteParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, true);
+        mockRoom._mockRemoteParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          true,
+        );
       });
 
       expect((window.opener as any).postMessage).not.toHaveBeenCalled();
@@ -1638,7 +1684,10 @@ describe('createAudioStatusBar', () => {
 
       // Should not throw when triggering events with null opener
       act(() => {
-        mockRoom._mockRemoteParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, true);
+        mockRoom._mockRemoteParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          true,
+        );
       });
 
       vi.useRealTimers();
@@ -1687,7 +1736,10 @@ describe('createAudioStatusBar', () => {
 
       // Should not throw when postMessage fails
       act(() => {
-        mockRoom._mockRemoteParticipant._triggerEvent(ParticipantEvent.IsSpeakingChanged, true);
+        mockRoom._mockRemoteParticipant._triggerEvent(
+          ParticipantEvent.IsSpeakingChanged,
+          true,
+        );
       });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(

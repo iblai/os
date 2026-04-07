@@ -6,7 +6,9 @@ describe('auth/constants', () => {
   describe('AUTH_ENDPOINTS', () => {
     it('should have GET_INTEGRATED_SSO_PROVIDERS endpoint configuration', () => {
       expect(AUTH_ENDPOINTS.GET_INTEGRATED_SSO_PROVIDERS).toBeDefined();
-      expect(AUTH_ENDPOINTS.GET_INTEGRATED_SSO_PROVIDERS.service).toBe(SERVICES.LMS);
+      expect(AUTH_ENDPOINTS.GET_INTEGRATED_SSO_PROVIDERS.service).toBe(
+        SERVICES.LMS,
+      );
     });
 
     it('should generate correct path for GET_INTEGRATED_SSO_PROVIDERS', () => {

@@ -28,7 +28,10 @@ describe('analytics slice', () => {
         unique_id: 'mentor-123',
       };
 
-      const state = analyticsReducer(initialState, analyticsActions.setSelectedMentor(mentor));
+      const state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor),
+      );
       expect(state.selectedMentor).toEqual(mentor);
     });
 
@@ -47,8 +50,14 @@ describe('analytics slice', () => {
         unique_id: 'mentor-456',
       };
 
-      let state = analyticsReducer(initialState, analyticsActions.setSelectedMentor(mentor1));
-      state = analyticsReducer(state, analyticsActions.setSelectedMentor(mentor2));
+      let state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor1),
+      );
+      state = analyticsReducer(
+        state,
+        analyticsActions.setSelectedMentor(mentor2),
+      );
       expect(state.selectedMentor).toEqual(mentor2);
     });
 
@@ -60,7 +69,10 @@ describe('analytics slice', () => {
         unique_id: 'mentor-123',
       };
 
-      let state = analyticsReducer(initialState, analyticsActions.setSelectedMentor(mentor));
+      let state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor),
+      );
       state = analyticsReducer(state, analyticsActions.setSelectedMentor(null));
       expect(state.selectedMentor).toBeNull();
     });

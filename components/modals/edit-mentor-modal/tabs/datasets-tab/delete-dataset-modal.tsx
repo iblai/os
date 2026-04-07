@@ -28,7 +28,8 @@ export function DeleteDatasetModal({ isOpen, onClose, dataset }: Props) {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
-  const [deleteTrainingDocument, { isLoading }] = useDeleteTrainingDocumentMutation();
+  const [deleteTrainingDocument, { isLoading }] =
+    useDeleteTrainingDocumentMutation();
 
   const handleDeleteTrainingDocument = async () => {
     try {
@@ -53,8 +54,8 @@ export function DeleteDatasetModal({ isOpen, onClose, dataset }: Props) {
         </DialogHeader>
         <div className="my-5">
           <p className="text-sm text-[#646464]">
-            You have successfully untrained a dataset, do you want to delete it? This action cannot
-            be undone.
+            You have successfully untrained a dataset, do you want to delete it?
+            This action cannot be undone.
           </p>
         </div>
         <DialogFooter className="gap-3">

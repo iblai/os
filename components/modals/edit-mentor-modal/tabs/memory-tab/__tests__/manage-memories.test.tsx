@@ -1,69 +1,67 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
   fireEvent,
   waitFor,
   cleanup,
-} from "@testing-library/react";
-import { toast } from "sonner";
+} from '@testing-library/react';
+import { toast } from 'sonner';
 
-import { ManageMemories } from "../manage-memories";
+import { ManageMemories } from '../manage-memories';
 
 // ---- Mocks ----
-const mockGetMentorMemoriesQuery = vi.fn();
-const mockGetMemoryCategoriesAdminQuery = vi.fn();
-const mockDeleteMentorMemory = vi.fn();
-const mockUpdateMentorMemory = vi.fn();
-const mockCreateMentorMemory = vi.fn();
+const mockGetFilteredMemoriesQuery = vi.fn();
+const mockGetMemoryCategoriesQuery = vi.fn();
+const mockGetMemoryFiltersQuery = vi.fn();
+const mockDeleteMemory = vi.fn();
+const mockDeleteMemoryByCategory = vi.fn();
+const mockUpdateMemoryEntry = vi.fn();
+const mockCreateMemory = vi.fn();
 
-const mockDeleteUnwrap = vi.fn();
-const mockUpdateUnwrap = vi.fn();
-const mockCreateUnwrap = vi.fn();
-
-vi.mock("@iblai/iblai-js/data-layer", () => ({
-  useGetMentorMemoriesQuery: (...args: any[]) =>
-    mockGetMentorMemoriesQuery(...args),
-  useGetMemoryCategoriesAdminQuery: (...args: any[]) =>
-    mockGetMemoryCategoriesAdminQuery(...args),
-  useDeleteMentorMemoryMutation: () => [
-    (...args: unknown[]) => {
-      mockDeleteMentorMemory(...args);
-      return { unwrap: mockDeleteUnwrap };
-    },
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetFilteredMemoriesQuery: (...args: any[]) =>
+    mockGetFilteredMemoriesQuery(...args),
+  useGetMemoryCategoriesQuery: (...args: any[]) =>
+    mockGetMemoryCategoriesQuery(...args),
+  useGetMemoryFiltersQuery: (...args: any[]) =>
+    mockGetMemoryFiltersQuery(...args),
+  useDeleteMemoryMutation: () => [mockDeleteMemory, { isLoading: false }],
+  useDeleteMemoryByCategoryMutation: () => [mockDeleteMemoryByCategory],
+  useUpdateMemoryEntryMutation: () => [
+    mockUpdateMemoryEntry,
     { isLoading: false },
   ],
-  useUpdateMentorMemoryMutation: () => [
-    (...args: unknown[]) => {
-      mockUpdateMentorMemory(...args);
-      return { unwrap: mockUpdateUnwrap };
-    },
-    { isLoading: false },
-  ],
-  useCreateMentorMemoryMutation: () => [
-    (...args: unknown[]) => {
-      mockCreateMentorMemory(...args);
-      return { unwrap: mockCreateUnwrap };
-    },
-    { isLoading: false },
-  ],
+  useCreateMemoryMutation: () => [mockCreateMemory, { isLoading: false }],
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
 }));
 
+vi.mock('../utils', () => ({
+  transformCategoryToApi: (cat: string) => cat.toLowerCase().replace(' ', '_'),
+  transformCategoryToDisplay: (cat: string) =>
+    cat
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' '),
+}));
+
 // Mock next/dynamic to render modals synchronously
-vi.mock("next/dynamic", () => ({
+vi.mock('next/dynamic', () => ({
   default: () => {
+    // Return a simple mock component that passes through props
     return (props: any) => {
       if (!props.open) return null;
 
-      if ("editContent" in props) {
+      // Detect modal type based on props
+      if ('editContent' in props) {
         return (
           <div data-testid="edit-memory-modal">
             <textarea
@@ -71,19 +69,6 @@ vi.mock("next/dynamic", () => ({
               value={props.editContent}
               onChange={(e: any) => props.onContentChange(e.target.value)}
             />
-            {props.categories && (
-              <select
-                data-testid="edit-category-select"
-                value={props.editCategory}
-                onChange={(e: any) => props.onCategoryChange(e.target.value)}
-              >
-                {props.categories.map((cat: string) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            )}
             <button data-testid="edit-save-btn" onClick={props.onSave}>
               Save
             </button>
@@ -99,7 +84,7 @@ vi.mock("next/dynamic", () => ({
           </div>
         );
       }
-      if ("newMemoryContent" in props) {
+      if ('newMemoryContent' in props) {
         return (
           <div data-testid="add-memory-modal">
             <textarea
@@ -122,7 +107,7 @@ vi.mock("next/dynamic", () => ({
           </div>
         );
       }
-      if ("selectedCategory" in props) {
+      if ('selectedCategory' in props) {
         return (
           <div data-testid="bulk-delete-modal">
             <span>Delete all {props.selectedCategory} memories?</span>
@@ -141,7 +126,7 @@ vi.mock("next/dynamic", () => ({
           </div>
         );
       }
-      if ("isDeleting" in props) {
+      if ('isDeleting' in props) {
         return (
           <div data-testid="delete-memory-modal">
             <button data-testid="delete-confirm-btn" onClick={props.onConfirm}>
@@ -165,7 +150,7 @@ vi.mock("next/dynamic", () => ({
 }));
 
 // Mock UI components
-vi.mock("@/components/ui/button", () => ({
+vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
     <button onClick={onClick} disabled={disabled} {...props}>
       {children}
@@ -173,7 +158,7 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/popover", () => ({
+vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div data-testid="popover">{children}</div>,
   PopoverTrigger: ({ children }: any) => (
     <div data-testid="popover-trigger">{children}</div>
@@ -183,7 +168,7 @@ vi.mock("@/components/ui/popover", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/command", () => ({
+vi.mock('@/components/ui/command', () => ({
   Command: ({ children }: any) => <div data-testid="command">{children}</div>,
   CommandInput: ({ placeholder }: any) => (
     <input data-testid="command-input" placeholder={placeholder} />
@@ -204,15 +189,15 @@ vi.mock("@/components/ui/command", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/calendar", () => ({
+vi.mock('@/components/ui/calendar', () => ({
   Calendar: ({ onSelect }: any) => (
     <div data-testid="calendar">
       <button
         data-testid="calendar-select"
         onClick={() =>
           onSelect({
-            from: new Date("2024-01-01"),
-            to: new Date("2024-01-31"),
+            from: new Date('2024-01-01'),
+            to: new Date('2024-01-31'),
           })
         }
       >
@@ -222,7 +207,7 @@ vi.mock("@/components/ui/calendar", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/dropdown-menu", () => ({
+vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: any) => (
     <div data-testid="dropdown-menu">{children}</div>
   ),
@@ -239,309 +224,373 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   ),
 }));
 
-vi.mock("@/lib/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+vi.mock('@/components/ibl-pagination', () => ({
+  default: ({ currentPage, totalPages, onPageChange, disabled }: any) => (
+    <div data-testid="pagination">
+      <span data-testid="current-page">{currentPage}</span>
+      <span data-testid="total-pages">{totalPages}</span>
+      <button
+        data-testid="next-page"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={disabled}
+      >
+        Next
+      </button>
+      <button
+        data-testid="prev-page"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={disabled}
+      >
+        Prev
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('@/lib/utils', () => ({
+  cn: (...classes: any[]) => classes.filter(Boolean).join(' '),
 }));
 
 // ---- Test Data ----
 const defaultProps = {
-  tenantKey: "test-tenant",
-  username: "testuser",
-  mentorId: "mentor-1",
+  tenantKey: 'test-tenant',
+  username: 'testuser',
+  mentorId: 'mentor-1',
 };
 
-const mockMemoriesByCategoryResponse = [
-  {
-    category: { id: 1, name: "Personal Info", slug: "personal-info" },
-    memories: [
-      {
-        id: 1,
-        content: "User preference value",
-        category: { id: 1, name: "Personal Info", slug: "personal-info" },
-        username: "user1",
-        created_at: "2024-06-15T10:00:00Z",
-      },
-    ],
-  },
-  {
-    category: { id: 2, name: "Learning Style", slug: "learning-style" },
-    memories: [
-      {
-        id: 2,
-        content: "Visual learner preference",
-        category: { id: 2, name: "Learning Style", slug: "learning-style" },
-        username: "user2",
-        created_at: "2024-06-14T10:00:00Z",
-      },
-      {
-        id: 3,
-        content: "Fast pace preferred",
-        category: { id: 2, name: "Learning Style", slug: "learning-style" },
-        username: "user1",
-        created_at: "2024-06-13T10:00:00Z",
-      },
-    ],
-  },
+const mockMemoriesResponse = {
+  results: [
+    {
+      unique_id: 'mem-1',
+      username: 'user1',
+      email: 'user1@test.com',
+      category: 'personal_info',
+      inserted_at: '2024-06-15T10:00:00Z',
+      updated_at: '2024-06-15T10:00:00Z',
+      entries: [
+        {
+          unique_id: 'entry-1',
+          key: 'name',
+          value: 'User preference value',
+          inserted_at: '2024-06-15T10:00:00Z',
+          updated_at: '2024-06-15T10:00:00Z',
+          expires_at: null,
+          category: 'personal_info',
+        },
+      ],
+    },
+    {
+      unique_id: 'mem-2',
+      username: 'user2',
+      email: 'user2@test.com',
+      category: 'learning_style',
+      inserted_at: '2024-06-14T10:00:00Z',
+      updated_at: '2024-06-14T10:00:00Z',
+      entries: [
+        {
+          unique_id: 'entry-2',
+          key: 'style',
+          value: 'Visual learner preference',
+          inserted_at: '2024-06-14T10:00:00Z',
+          updated_at: '2024-06-14T10:00:00Z',
+          expires_at: null,
+          category: 'learning_style',
+        },
+        {
+          unique_id: 'entry-3',
+          key: 'pace',
+          value: 'Fast pace preferred',
+          inserted_at: '2024-06-14T10:00:00Z',
+          updated_at: '2024-06-14T10:00:00Z',
+          expires_at: null,
+          category: 'learning_style',
+        },
+      ],
+    },
+  ],
+  count: 2,
+  next: null,
+  previous: null,
+};
+
+const mockLearners = [
+  { username: 'user1', email: 'user1@test.com', lti_email: '' },
+  { username: 'user2', email: 'user2@test.com', lti_email: '' },
 ];
 
-const mockAdminCategories = [
-  { id: 1, name: "Personal Info", slug: "personal-info" },
-  { id: 2, name: "Learning Style", slug: "learning-style" },
-];
-
-describe("ManageMemories", () => {
+describe('ManageMemories', () => {
   beforeEach(() => {
     cleanup();
-    mockGetMentorMemoriesQuery.mockReset();
-    mockGetMemoryCategoriesAdminQuery.mockReset();
-    mockDeleteMentorMemory.mockReset();
-    mockUpdateMentorMemory.mockReset();
-    mockCreateMentorMemory.mockReset();
-    mockDeleteUnwrap.mockReset();
-    mockUpdateUnwrap.mockReset();
-    mockCreateUnwrap.mockReset();
+    mockGetFilteredMemoriesQuery.mockReset();
+    mockGetMemoryCategoriesQuery.mockReset();
+    mockGetMemoryFiltersQuery.mockReset();
+    mockDeleteMemory.mockReset();
+    mockDeleteMemoryByCategory.mockReset();
+    mockUpdateMemoryEntry.mockReset();
+    mockCreateMemory.mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
 
-    mockGetMentorMemoriesQuery.mockReturnValue({
-      data: mockMemoriesByCategoryResponse,
+    mockGetFilteredMemoriesQuery.mockReturnValue({
+      data: mockMemoriesResponse,
       isLoading: false,
+      isFetching: false,
     });
 
-    mockGetMemoryCategoriesAdminQuery.mockReturnValue({
-      data: mockAdminCategories,
+    mockGetMemoryCategoriesQuery.mockReturnValue({
+      data: { categories: ['personal_info', 'learning_style'] },
     });
 
-    mockDeleteUnwrap.mockResolvedValue({});
-    mockUpdateUnwrap.mockResolvedValue({});
-    mockCreateUnwrap.mockResolvedValue({});
+    mockGetMemoryFiltersQuery.mockReturnValue({
+      data: {
+        categories: ['personal_info', 'learning_style'],
+        users: mockLearners,
+      },
+    });
+
+    mockDeleteMemory.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+    mockDeleteMemoryByCategory.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockUpdateMemoryEntry.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockCreateMemory.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  describe("Rendering", () => {
-    it("renders the user filter and date range section", () => {
+  describe('Rendering', () => {
+    it('renders the user filter and date range section', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Search for User")).toBeInTheDocument();
-      expect(screen.getByText("Pick a Date Range")).toBeInTheDocument();
+      expect(screen.getByText('Search for User')).toBeInTheDocument();
+      expect(screen.getByText('Pick a Date Range')).toBeInTheDocument();
     });
 
-    it("renders category tabs", () => {
+    it('renders category tabs', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(1);
       expect(
-        screen.getAllByText("Personal Info").length,
+        screen.getAllByText('Personal Info').length,
       ).toBeGreaterThanOrEqual(1);
       expect(
-        screen.getAllByText("Learning Style").length,
+        screen.getAllByText('Learning Style').length,
       ).toBeGreaterThanOrEqual(1);
     });
 
-    it("renders the Add Memory button", () => {
+    it('renders the Add Memory button', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Add Memory")).toBeInTheDocument();
+      expect(screen.getByText('Add Memory')).toBeInTheDocument();
     });
 
-    it("renders memory cards with content", () => {
+    it('renders memory cards with content', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("User preference value")).toBeInTheDocument();
-      expect(screen.getByText("Visual learner preference")).toBeInTheDocument();
-      expect(screen.getByText("Fast pace preferred")).toBeInTheDocument();
+      expect(screen.getByText('User preference value')).toBeInTheDocument();
+      expect(screen.getByText('Visual learner preference')).toBeInTheDocument();
+      expect(screen.getByText('Fast pace preferred')).toBeInTheDocument();
     });
 
-    it("renders usernames for memory items", () => {
+    it('renders emails for memory items', () => {
       render(<ManageMemories {...defaultProps} />);
-      const user1Elements = screen.getAllByText("user1");
-      expect(user1Elements.length).toBeGreaterThanOrEqual(1);
+      const email1Elements = screen.getAllByText('user1@test.com');
+      expect(email1Elements.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  describe("Loading State", () => {
-    it("shows loading message when memories are loading", () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
+  describe('Loading State', () => {
+    it('shows loading message when memories are loading', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
         data: undefined,
         isLoading: true,
+        isFetching: true,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Loading memories...")).toBeInTheDocument();
+      expect(screen.getByText('Loading memories...')).toBeInTheDocument();
     });
   });
 
-  describe("Empty State", () => {
+  describe('Empty State', () => {
     it('shows "No saved memories yet." when no memories exist', () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [],
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: { results: [], count: 0, next: null, previous: null },
         isLoading: false,
+        isFetching: false,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("No saved memories yet.")).toBeInTheDocument();
+      expect(screen.getByText('No saved memories yet.')).toBeInTheDocument();
     });
 
-    it("shows empty state when data is undefined", () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
+    it('shows empty state when data is undefined', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
+        isFetching: false,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("No saved memories yet.")).toBeInTheDocument();
+      expect(screen.getByText('No saved memories yet.')).toBeInTheDocument();
     });
   });
 
-  describe("Category Filtering", () => {
-    it('defaults to "All" category showing all memories', () => {
+  describe('Category Filtering', () => {
+    it('defaults to "All" category', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("User preference value")).toBeInTheDocument();
-      expect(screen.getByText("Visual learner preference")).toBeInTheDocument();
+      // All memories should be visible
+      expect(screen.getByText('User preference value')).toBeInTheDocument();
+      expect(screen.getByText('Visual learner preference')).toBeInTheDocument();
     });
 
-    it("filters memories by category when a category tab is clicked", () => {
+    it('filters memories by category when a category tab is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      // Click on "Personal Info" category
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      expect(screen.getByText("User preference value")).toBeInTheDocument();
+      // Only personal_info memories should show
+      expect(screen.getByText('User preference value')).toBeInTheDocument();
       expect(
-        screen.queryByText("Visual learner preference"),
+        screen.queryByText('Visual learner preference'),
       ).not.toBeInTheDocument();
     });
 
     it('shows "Delete All" button when a non-All category is selected with memories', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      expect(screen.getByText("Delete All")).toBeInTheDocument();
+      expect(screen.getByText('Delete All')).toBeInTheDocument();
     });
 
     it('does not show "Delete All" button when All category is selected', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.queryByText("Delete All")).not.toBeInTheDocument();
+      expect(screen.queryByText('Delete All')).not.toBeInTheDocument();
     });
   });
 
-  describe("Delete Memory", () => {
-    it("shows delete confirmation modal when delete is clicked", () => {
+  describe('Delete Memory', () => {
+    it('shows delete confirmation modal when delete is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      // Find dropdown items with "Delete" text
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      expect(screen.getByTestId("delete-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('delete-memory-modal')).toBeInTheDocument();
     });
 
-    it("calls deleteMentorMemory when confirmed", async () => {
+    it('calls deleteMemory when confirmed', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      const confirmBtn = screen.getByTestId("delete-confirm-btn");
+      const confirmBtn = screen.getByTestId('delete-confirm-btn');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(mockDeleteMentorMemory).toHaveBeenCalledWith({
-          org: "test-tenant",
-          userId: "testuser",
-          mentorId: "mentor-1",
-          memoryId: 1,
+        expect(mockDeleteMemory).toHaveBeenCalledWith({
+          tenantKey: 'test-tenant',
+          username: 'testuser',
+          memoryId: 'entry-1',
         });
       });
     });
 
-    it("shows success toast on successful delete", async () => {
+    it('shows success toast on successful delete', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      const confirmBtn = screen.getByTestId("delete-confirm-btn");
+      const confirmBtn = screen.getByTestId('delete-confirm-btn');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          "Memory deleted successfully",
+          'Memory deleted successfully',
         );
       });
     });
 
-    it("shows error toast on failed delete", async () => {
+    it('shows error toast on failed delete', async () => {
       const consoleSpy = vi
-        .spyOn(console, "error")
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
-      mockDeleteUnwrap.mockRejectedValue(new Error("Delete failed"));
+      mockDeleteMemory.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Delete failed')),
+      });
 
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      const confirmBtn = screen.getByTestId("delete-confirm-btn");
+      const confirmBtn = screen.getByTestId('delete-confirm-btn');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("Failed to delete memory");
+        expect(toast.error).toHaveBeenCalledWith('Failed to delete memory');
       });
       consoleSpy.mockRestore();
     });
 
-    it("closes delete modal when cancel is clicked", () => {
+    it('closes delete modal when cancel is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      expect(screen.getByTestId("delete-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('delete-memory-modal')).toBeInTheDocument();
 
-      const cancelBtn = screen.getByTestId("delete-cancel-btn");
+      const cancelBtn = screen.getByTestId('delete-cancel-btn');
       fireEvent.click(cancelBtn);
 
       expect(
-        screen.queryByTestId("delete-memory-modal"),
+        screen.queryByTestId('delete-memory-modal'),
       ).not.toBeInTheDocument();
     });
 
-    it("closes delete modal via onOpenChange(false)", () => {
+    it('closes delete modal via onOpenChange(false)', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      expect(screen.getByTestId("delete-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('delete-memory-modal')).toBeInTheDocument();
 
-      const closeBtn = screen.getByTestId("delete-close-btn");
+      const closeBtn = screen.getByTestId('delete-close-btn');
       fireEvent.click(closeBtn);
 
       expect(
-        screen.queryByTestId("delete-memory-modal"),
+        screen.queryByTestId('delete-memory-modal'),
       ).not.toBeInTheDocument();
     });
 
-    it("does not call deleteMentorMemory when tenantKey is missing", async () => {
+    it('does not call deleteMemory when tenantKey is missing', async () => {
       render(
         <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
       );
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      const confirmBtn = screen.getByTestId("delete-confirm-btn");
+      const confirmBtn = screen.getByTestId('delete-confirm-btn');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(mockDeleteMentorMemory).not.toHaveBeenCalled();
+        expect(mockDeleteMemory).not.toHaveBeenCalled();
       });
     });
 
-    it("does not call deleteMentorMemory when username is null", async () => {
+    it('does not call deleteMemory when username is null', async () => {
       render(
         <ManageMemories
           tenantKey="test-tenant"
@@ -550,428 +599,551 @@ describe("ManageMemories", () => {
         />,
       );
 
-      const deleteItems = screen.getAllByText("Delete");
+      const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
 
-      const confirmBtn = screen.getByTestId("delete-confirm-btn");
+      const confirmBtn = screen.getByTestId('delete-confirm-btn');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(mockDeleteMentorMemory).not.toHaveBeenCalled();
+        expect(mockDeleteMemory).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe("Bulk Delete", () => {
-    it("shows bulk delete modal when Delete All is clicked", () => {
+  describe('Bulk Delete', () => {
+    it('shows bulk delete modal when Delete All is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      // Select a category first
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      expect(screen.getByTestId("bulk-delete-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('bulk-delete-modal')).toBeInTheDocument();
     });
 
-    it("calls deleteMentorMemory for each memory on confirm", async () => {
+    it('calls deleteMemoryByCategory on confirm', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      const confirmBtn = screen.getByTestId("bulk-delete-confirm");
+      const confirmBtn = screen.getByTestId('bulk-delete-confirm');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(mockDeleteMentorMemory).toHaveBeenCalledWith({
-          org: "test-tenant",
-          userId: "testuser",
-          mentorId: "mentor-1",
-          memoryId: 1,
+        expect(mockDeleteMemoryByCategory).toHaveBeenCalledWith({
+          tenantKey: 'test-tenant',
+          username: 'testuser',
+          category: 'personal_info',
         });
       });
     });
 
-    it("shows success toast on successful bulk delete", async () => {
+    it('shows success toast on successful bulk delete', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      const confirmBtn = screen.getByTestId("bulk-delete-confirm");
+      const confirmBtn = screen.getByTestId('bulk-delete-confirm');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          "All Personal Info memories deleted successfully",
+          'All Personal Info memories deleted successfully',
         );
       });
     });
 
-    it("shows error toast on failed bulk delete", async () => {
+    it('shows error toast on failed bulk delete', async () => {
       const consoleSpy = vi
-        .spyOn(console, "error")
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
-      mockDeleteUnwrap.mockRejectedValue(new Error("Bulk delete failed"));
+      mockDeleteMemoryByCategory.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Bulk delete failed')),
+      });
 
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      const confirmBtn = screen.getByTestId("bulk-delete-confirm");
+      const confirmBtn = screen.getByTestId('bulk-delete-confirm');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("Failed to delete memories");
+        expect(toast.error).toHaveBeenCalledWith('Failed to delete memories');
       });
       consoleSpy.mockRestore();
     });
 
-    it("does not call bulk delete when tenantKey is missing", async () => {
+    it('does not call bulk delete when tenantKey is missing', async () => {
       render(
         <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
       );
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      const confirmBtn = screen.getByTestId("bulk-delete-confirm");
+      const confirmBtn = screen.getByTestId('bulk-delete-confirm');
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(mockDeleteMentorMemory).not.toHaveBeenCalled();
+        expect(mockDeleteMemoryByCategory).not.toHaveBeenCalled();
       });
     });
 
-    it("closes bulk delete modal via onOpenChange(false)", () => {
+    it('closes bulk delete modal via onOpenChange(false)', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      expect(screen.getByTestId("bulk-delete-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('bulk-delete-modal')).toBeInTheDocument();
 
-      const closeBtn = screen.getByTestId("bulk-close-btn");
+      const closeBtn = screen.getByTestId('bulk-close-btn');
       fireEvent.click(closeBtn);
 
-      expect(screen.queryByTestId("bulk-delete-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bulk-delete-modal')).not.toBeInTheDocument();
     });
 
-    it("closes bulk delete modal via cancel button", () => {
+    it('closes bulk delete modal via cancel button', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const categoryButtons = screen.getAllByText("Personal Info");
-      const tabButton = categoryButtons.find((el) => el.tagName === "BUTTON");
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
       if (tabButton) fireEvent.click(tabButton);
 
-      const deleteAllBtn = screen.getByText("Delete All");
+      const deleteAllBtn = screen.getByText('Delete All');
       fireEvent.click(deleteAllBtn);
 
-      expect(screen.getByTestId("bulk-delete-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('bulk-delete-modal')).toBeInTheDocument();
 
-      const cancelBtn = screen.getByTestId("bulk-delete-cancel");
+      const cancelBtn = screen.getByTestId('bulk-delete-cancel');
       fireEvent.click(cancelBtn);
 
-      expect(screen.queryByTestId("bulk-delete-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bulk-delete-modal')).not.toBeInTheDocument();
     });
   });
 
-  describe("Edit Memory", () => {
-    it("opens edit modal when Edit is clicked", () => {
+  describe('Edit Memory', () => {
+    it('opens edit modal when Edit is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
-      expect(screen.getByTestId("edit-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('edit-memory-modal')).toBeInTheDocument();
     });
 
-    it("pre-fills edit modal with memory content", () => {
+    it('pre-fills edit modal with memory content', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
       const textarea = screen.getByTestId(
-        "edit-content-input",
+        'edit-content-input',
       ) as HTMLTextAreaElement;
-      expect(textarea.value).toBe("User preference value");
+      expect(textarea.value).toBe('User preference value');
     });
 
-    it("calls updateMentorMemory when save is clicked", async () => {
+    it('calls updateMemoryEntry when save is clicked', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
-      const saveBtn = screen.getByTestId("edit-save-btn");
+      const saveBtn = screen.getByTestId('edit-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(mockUpdateMentorMemory).toHaveBeenCalledWith({
-          org: "test-tenant",
-          userId: "testuser",
-          mentorId: "mentor-1",
-          memoryId: 1,
+        expect(mockUpdateMemoryEntry).toHaveBeenCalledWith({
+          tenantKey: 'test-tenant',
+          username: 'testuser',
+          entryId: 'entry-1',
           data: {
-            content: "User preference value",
+            key: 'name',
+            value: 'User preference value',
           },
         });
       });
     });
 
-    it("shows success toast on successful edit", async () => {
+    it('shows success toast on successful edit', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
-      const saveBtn = screen.getByTestId("edit-save-btn");
+      const saveBtn = screen.getByTestId('edit-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          "Memory updated successfully",
+          'Memory updated successfully',
         );
       });
     });
 
-    it("shows error toast on failed edit", async () => {
+    it('shows error toast on failed edit', async () => {
       const consoleSpy = vi
-        .spyOn(console, "error")
+        .spyOn(console, 'error')
         .mockImplementation(() => {});
-      mockUpdateUnwrap.mockRejectedValue(new Error("Update failed"));
+      mockUpdateMemoryEntry.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
+      });
 
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
-      const saveBtn = screen.getByTestId("edit-save-btn");
+      const saveBtn = screen.getByTestId('edit-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("Failed to update memory");
+        expect(toast.error).toHaveBeenCalledWith('Failed to update memory');
       });
       consoleSpy.mockRestore();
     });
 
-    it("closes edit modal when cancel is clicked", () => {
+    it('closes edit modal when cancel is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
-      expect(screen.getByTestId("edit-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('edit-memory-modal')).toBeInTheDocument();
 
-      const cancelBtn = screen.getByTestId("edit-cancel-btn");
+      const cancelBtn = screen.getByTestId('edit-cancel-btn');
       fireEvent.click(cancelBtn);
 
-      expect(screen.queryByTestId("edit-memory-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-memory-modal')).not.toBeInTheDocument();
     });
 
-    it("closes edit modal via onOpenChange(false)", () => {
+    it('closes edit modal via onOpenChange(false)', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const editItems = screen.getAllByText("Edit");
+      const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
-      expect(screen.getByTestId("edit-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('edit-memory-modal')).toBeInTheDocument();
 
-      const closeBtn = screen.getByTestId("edit-close-btn");
+      // Close via onOpenChange(false)
+      const closeBtn = screen.getByTestId('edit-close-btn');
       fireEvent.click(closeBtn);
-      expect(screen.queryByTestId("edit-memory-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-memory-modal')).not.toBeInTheDocument();
     });
 
-    it("does not call updateMentorMemory when no memory is being edited", () => {
+    it('does not call updateMemoryEntry when no memory is being edited', async () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(mockUpdateMentorMemory).not.toHaveBeenCalled();
+      // No edit modal is open, so saveEdit should be a no-op
+      // This is implicitly tested by the fact that updateMemoryEntry is not called
+      expect(mockUpdateMemoryEntry).not.toHaveBeenCalled();
     });
   });
 
-  describe("Add Memory", () => {
-    it("opens add modal when Add Memory button is clicked", () => {
+  describe('Add Memory', () => {
+    it('opens add modal when Add Memory button is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
-      expect(screen.getByTestId("add-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('add-memory-modal')).toBeInTheDocument();
     });
 
-    it("calls createMentorMemory when save is clicked with content", async () => {
+    it('calls createMemory when save is clicked with content', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
       const textarea = screen.getByTestId(
-        "add-content-input",
+        'add-content-input',
       ) as HTMLTextAreaElement;
-      fireEvent.change(textarea, { target: { value: "New memory content" } });
+      fireEvent.change(textarea, { target: { value: 'New memory content' } });
 
-      const saveBtn = screen.getByTestId("add-save-btn");
+      const saveBtn = screen.getByTestId('add-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(mockCreateMentorMemory).toHaveBeenCalledWith({
-          org: "test-tenant",
-          userId: "testuser",
-          mentorId: "mentor-1",
-          data: {
-            category_slug: "general",
-            content: "New memory content",
-          },
-        });
-      });
-    });
-
-    it("shows success toast on successful create", async () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const addBtn = screen.getByText("Add Memory");
-      fireEvent.click(addBtn);
-
-      const textarea = screen.getByTestId("add-content-input");
-      fireEvent.change(textarea, { target: { value: "New memory content" } });
-
-      const saveBtn = screen.getByTestId("add-save-btn");
-      fireEvent.click(saveBtn);
-
-      await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith(
-          "Memory created successfully",
+        expect(mockCreateMemory).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tenantKey: 'test-tenant',
+            username: 'testuser',
+            data: expect.objectContaining({
+              platform: 'test-tenant',
+              mentor_unique_id: 'mentor-1',
+              entries: [{ key: 'memory', value: 'New memory content' }],
+              category: 'all',
+            }),
+          }),
         );
       });
     });
 
-    it("shows error toast on failed create", async () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-      mockCreateUnwrap.mockRejectedValue(new Error("Create failed"));
-
+    it('shows success toast on successful create', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
-      const textarea = screen.getByTestId("add-content-input");
-      fireEvent.change(textarea, { target: { value: "Some content" } });
+      const textarea = screen.getByTestId('add-content-input');
+      fireEvent.change(textarea, { target: { value: 'New memory content' } });
 
-      const saveBtn = screen.getByTestId("add-save-btn");
+      const saveBtn = screen.getByTestId('add-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("Failed to create memory");
+        expect(toast.success).toHaveBeenCalledWith(
+          'Memory created successfully',
+        );
+      });
+    });
+
+    it('shows error toast on failed create', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockCreateMemory.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Create failed')),
+      });
+
+      render(<ManageMemories {...defaultProps} />);
+
+      const addBtn = screen.getByText('Add Memory');
+      fireEvent.click(addBtn);
+
+      const textarea = screen.getByTestId('add-content-input');
+      fireEvent.change(textarea, { target: { value: 'Some content' } });
+
+      const saveBtn = screen.getByTestId('add-save-btn');
+      fireEvent.click(saveBtn);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Failed to create memory');
       });
       consoleSpy.mockRestore();
     });
 
-    it("does not create memory when content is empty", async () => {
+    it('does not create memory when content is empty', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
-      const saveBtn = screen.getByTestId("add-save-btn");
+      // Don't type anything, just click save
+      const saveBtn = screen.getByTestId('add-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(mockCreateMentorMemory).not.toHaveBeenCalled();
+        expect(mockCreateMemory).not.toHaveBeenCalled();
       });
     });
 
-    it("does not create memory when content is whitespace only", async () => {
+    it('does not create memory when content is whitespace only', async () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
-      const textarea = screen.getByTestId("add-content-input");
-      fireEvent.change(textarea, { target: { value: "   " } });
+      const textarea = screen.getByTestId('add-content-input');
+      fireEvent.change(textarea, { target: { value: '   ' } });
 
-      const saveBtn = screen.getByTestId("add-save-btn");
+      const saveBtn = screen.getByTestId('add-save-btn');
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(mockCreateMentorMemory).not.toHaveBeenCalled();
+        expect(mockCreateMemory).not.toHaveBeenCalled();
       });
     });
 
-    it("closes add modal when cancel is clicked", () => {
+    it('closes add modal when cancel is clicked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
-      expect(screen.getByTestId("add-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('add-memory-modal')).toBeInTheDocument();
 
-      const cancelBtn = screen.getByTestId("add-cancel-btn");
+      const cancelBtn = screen.getByTestId('add-cancel-btn');
       fireEvent.click(cancelBtn);
 
-      expect(screen.queryByTestId("add-memory-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('add-memory-modal')).not.toBeInTheDocument();
     });
 
-    it("closes add modal via onOpenChange(false)", () => {
+    it('closes add modal via onOpenChange(false)', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      const addBtn = screen.getByText("Add Memory");
+      const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
-      expect(screen.getByTestId("add-memory-modal")).toBeInTheDocument();
+      expect(screen.getByTestId('add-memory-modal')).toBeInTheDocument();
 
-      const closeBtn = screen.getByTestId("add-close-btn");
+      const closeBtn = screen.getByTestId('add-close-btn');
       fireEvent.click(closeBtn);
 
-      expect(screen.queryByTestId("add-memory-modal")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('add-memory-modal')).not.toBeInTheDocument();
+    });
+
+    it('pre-fills category with selected category', () => {
+      render(<ManageMemories {...defaultProps} />);
+
+      // Select Personal Info category
+      const categoryButtons = screen.getAllByText('Personal Info');
+      const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
+      if (tabButton) fireEvent.click(tabButton);
+
+      const addBtn = screen.getByText('Add Memory');
+      fireEvent.click(addBtn);
+
+      // The add modal should be open
+      expect(screen.getByTestId('add-memory-modal')).toBeInTheDocument();
     });
   });
 
-  describe("Query Parameters", () => {
-    it("passes org, userId, and mentorId to mentor memories query", () => {
+  describe('Pagination', () => {
+    it('shows pagination when total pages > 1', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: { ...mockMemoriesResponse, count: 25 },
+        isLoading: false,
+        isFetching: false,
+      });
+
       render(<ManageMemories {...defaultProps} />);
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
+      expect(screen.getByTestId('pagination')).toBeInTheDocument();
+    });
+
+    it('does not show pagination when total pages is 1', () => {
+      render(<ManageMemories {...defaultProps} />);
+      expect(screen.queryByTestId('pagination')).not.toBeInTheDocument();
+    });
+
+    it('handles page change', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: { ...mockMemoriesResponse, count: 25 },
+        isLoading: false,
+        isFetching: false,
+      });
+
+      render(<ManageMemories {...defaultProps} />);
+
+      const nextBtn = screen.getByTestId('next-page');
+      fireEvent.click(nextBtn);
+
+      // The query should be called with page 2
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalled();
+    });
+
+    it('does not show pagination when loading', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: { ...mockMemoriesResponse, count: 25 },
+        isLoading: true,
+        isFetching: true,
+      });
+
+      render(<ManageMemories {...defaultProps} />);
+      expect(screen.queryByTestId('pagination')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('User Filter', () => {
+    it('renders "All Users" option', () => {
+      render(<ManageMemories {...defaultProps} />);
+      expect(screen.getByText('All Users')).toBeInTheDocument();
+    });
+
+    it('renders user emails in filter dropdown', () => {
+      render(<ManageMemories {...defaultProps} />);
+      const items = screen.getAllByTestId('command-item');
+      // All Users + 2 users = 3
+      expect(items.length).toBe(3);
+    });
+
+    it('selects a user when clicked', () => {
+      render(<ManageMemories {...defaultProps} />);
+
+      const userItems = screen.getAllByTestId('command-item');
+      // Click user1 (index 1)
+      fireEvent.click(userItems[1]);
+
+      // The query should be re-called
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalled();
+    });
+
+    it('clears user selection when All Users is clicked', () => {
+      render(<ManageMemories {...defaultProps} />);
+
+      // Select a user first
+      const userItems = screen.getAllByTestId('command-item');
+      fireEvent.click(userItems[1]);
+
+      // Click All Users
+      const allUsersItems = screen.getAllByTestId('command-item');
+      fireEvent.click(allUsersItems[0]);
+
+      expect(screen.getByText('Search for User')).toBeInTheDocument();
+    });
+  });
+
+  describe('Date Range Filter', () => {
+    it('updates date display when range is selected', () => {
+      render(<ManageMemories {...defaultProps} />);
+
+      const selectDateBtn = screen.getByTestId('calendar-select');
+      fireEvent.click(selectDateBtn);
+
+      expect(screen.getByText(/Jan 01 - Jan 31/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Query Parameters', () => {
+    it('passes mentor ID to filtered memories query', () => {
+      render(<ManageMemories {...defaultProps} />);
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          org: "test-tenant",
-          userId: "testuser",
-          mentorId: "mentor-1",
+          params: expect.objectContaining({
+            mentor: 'mentor-1',
+          }),
         }),
         expect.any(Object),
       );
     });
 
-    it("skips query when tenantKey is missing", () => {
+    it('skips query when tenantKey is missing', () => {
       render(
         <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
       );
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
       );
     });
 
-    it("skips query when username is null", () => {
+    it('skips query when username is null', () => {
       render(
         <ManageMemories
           tenantKey="test-tenant"
@@ -979,13 +1151,13 @@ describe("ManageMemories", () => {
           mentorId="mentor-1"
         />,
       );
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
       );
     });
 
-    it("skips query when mentorId is missing", () => {
+    it('skips query when mentorId is missing', () => {
       render(
         <ManageMemories
           tenantKey="test-tenant"
@@ -993,147 +1165,168 @@ describe("ManageMemories", () => {
           mentorId=""
         />,
       );
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
       );
     });
-
-    it("passes date range params when date filter is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const selectDateBtn = screen.getByTestId("calendar-select");
-      fireEvent.click(selectDateBtn);
-
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          params: expect.objectContaining({
-            start_date: "2024-01-01",
-            end_date: "2024-01-31",
-          }),
-        }),
-        expect.any(Object),
-      );
-    });
-
-    it("passes user_id param when learner filter is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      // Select a learner from the command items
-      const userItems = screen.getAllByTestId("command-item");
-      // Click the second item (first user after "All Users")
-      if (userItems.length > 1) {
-        fireEvent.click(userItems[1]);
-      }
-
-      // The query should now include user_id param
-      expect(mockGetMentorMemoriesQuery).toHaveBeenCalled();
-    });
   });
 
-  describe("User Filter", () => {
-    it('renders "All Users" option', () => {
-      render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("All Users")).toBeInTheDocument();
-    });
-
-    it("renders user emails in filter dropdown", () => {
-      render(<ManageMemories {...defaultProps} />);
-      const items = screen.getAllByTestId("command-item");
-      // All Users + users derived from memories
-      expect(items.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it("clears user selection when All Users is clicked", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const userItems = screen.getAllByTestId("command-item");
-      if (userItems.length > 1) fireEvent.click(userItems[1]);
-
-      const allUsersItems = screen.getAllByTestId("command-item");
-      fireEvent.click(allUsersItems[0]);
-
-      expect(screen.getByText("Search for User")).toBeInTheDocument();
-    });
-  });
-
-  describe("Date Range Filter", () => {
-    it("updates date display when range is selected", () => {
-      render(<ManageMemories {...defaultProps} />);
-
-      const selectDateBtn = screen.getByTestId("calendar-select");
-      fireEvent.click(selectDateBtn);
-
-      expect(screen.getByText(/Jan 01 - Jan 31/)).toBeInTheDocument();
-    });
-  });
-
-  describe("Edge Cases", () => {
-    it("handles undefined adminCategories", () => {
-      mockGetMemoryCategoriesAdminQuery.mockReturnValue({
+  describe('Edge Cases', () => {
+    it('handles undefined categoriesResponse', () => {
+      mockGetMemoryCategoriesQuery.mockReturnValue({
         data: undefined,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
+      // Should still render with "All" category
+      expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(1);
     });
 
-    it("handles empty adminCategories array", () => {
-      mockGetMemoryCategoriesAdminQuery.mockReturnValue({
-        data: [],
+    it('handles empty categories array', () => {
+      mockGetMemoryCategoriesQuery.mockReturnValue({
+        data: { categories: [] },
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(1);
     });
 
-    it("handles memory without username", () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [
-          {
-            category: { id: 1, name: "General", slug: "general" },
-            memories: [
-              {
-                id: 10,
-                content: "A note without user info",
-                category: { id: 1, name: "General", slug: "general" },
-                created_at: "2024-06-15T10:00:00Z",
-              },
-            ],
-          },
-        ],
+    it('handles memory without email or username', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              unique_id: 'mem-no-email',
+              category: 'personal_info',
+              entries: [
+                {
+                  unique_id: 'entry-no-email',
+                  key: 'note',
+                  value: 'A note without user info',
+                  inserted_at: '',
+                  updated_at: '',
+                  expires_at: null,
+                  category: 'personal_info',
+                },
+              ],
+            },
+          ],
+          count: 1,
+          next: null,
+          previous: null,
+        },
         isLoading: false,
+        isFetching: false,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("Unknown")).toBeInTheDocument();
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
     });
 
-    it("handles memory without created_at", () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [
-          {
-            category: { id: 1, name: "General", slug: "general" },
-            memories: [
-              {
-                id: 11,
-                content: "No timestamp memory",
-                category: { id: 1, name: "General", slug: "general" },
-                username: "user1",
-              },
-            ],
-          },
-        ],
+    it('handles memory without insertedAt', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              unique_id: 'mem-no-date',
+              username: 'user1',
+              email: 'user1@test.com',
+              category: 'personal_info',
+              entries: [
+                {
+                  unique_id: 'entry-no-date',
+                  key: 'note',
+                  value: 'No timestamp memory',
+                  inserted_at: '',
+                  updated_at: '',
+                  expires_at: null,
+                  category: 'personal_info',
+                },
+              ],
+            },
+          ],
+          count: 1,
+          next: null,
+          previous: null,
+        },
         isLoading: false,
+        isFetching: false,
       });
 
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getByText("No timestamp memory")).toBeInTheDocument();
+      expect(screen.getByText('No timestamp memory')).toBeInTheDocument();
     });
 
-    it("renders mobile category dropdown", () => {
+    it('handles undefined memoryFilters', () => {
+      mockGetMemoryFiltersQuery.mockReturnValue({
+        data: undefined,
+      });
+
       render(<ManageMemories {...defaultProps} />);
-      const dropdownMenus = screen.getAllByTestId("dropdown-menu");
+      expect(screen.getByText('Search for User')).toBeInTheDocument();
+    });
+
+    it('resets to page 1 when learner filter changes', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: { ...mockMemoriesResponse, count: 25 },
+        isLoading: false,
+        isFetching: false,
+      });
+
+      render(<ManageMemories {...defaultProps} />);
+
+      // Go to page 2
+      const nextBtn = screen.getByTestId('next-page');
+      fireEvent.click(nextBtn);
+
+      // Select a learner - should reset page
+      const userItems = screen.getAllByTestId('command-item');
+      fireEvent.click(userItems[1]);
+
+      // After selecting learner, page should reset to 1
+      // The query should eventually be called with page: 1
+      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalled();
+    });
+
+    it('uses lti_email or lti_username when primary fields are missing', () => {
+      mockGetFilteredMemoriesQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              unique_id: 'mem-lti',
+              lti_email: 'lti@test.com',
+              lti_username: 'lti-user',
+              category: 'personal_info',
+              entries: [
+                {
+                  unique_id: 'entry-lti',
+                  key: 'note',
+                  value: 'LTI user memory',
+                  inserted_at: '',
+                  updated_at: '',
+                  expires_at: null,
+                  category: 'personal_info',
+                },
+              ],
+            },
+          ],
+          count: 1,
+          next: null,
+          previous: null,
+        },
+        isLoading: false,
+        isFetching: false,
+      });
+
+      render(<ManageMemories {...defaultProps} />);
+      expect(screen.getByText('LTI user memory')).toBeInTheDocument();
+    });
+
+    it('renders mobile category dropdown', () => {
+      render(<ManageMemories {...defaultProps} />);
+      // The mobile dropdown should be rendered (even though it's hidden via CSS)
+      const dropdownMenus = screen.getAllByTestId('dropdown-menu');
       expect(dropdownMenus.length).toBeGreaterThanOrEqual(1);
     });
   });

@@ -47,7 +47,9 @@ describe('MessageBridgeProvider', () => {
     });
 
     it('handles null children', () => {
-      const { container } = render(<MessageBridgeProvider>{null}</MessageBridgeProvider>);
+      const { container } = render(
+        <MessageBridgeProvider>{null}</MessageBridgeProvider>,
+      );
       expect(container).toBeTruthy();
     });
 
@@ -82,7 +84,10 @@ describe('MessageBridgeProvider', () => {
       );
 
       // Initial registration should have happened
-      expect(mockPostMessage).toHaveBeenCalledWith({ type: 'MENTOR:REGISTER_TAB' }, '*');
+      expect(mockPostMessage).toHaveBeenCalledWith(
+        { type: 'MENTOR:REGISTER_TAB' },
+        '*',
+      );
     });
 
     it('re-registers every 2 seconds (heartbeat)', () => {

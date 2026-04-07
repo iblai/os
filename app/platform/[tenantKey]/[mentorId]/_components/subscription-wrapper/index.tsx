@@ -7,7 +7,8 @@ import { Tenant } from '@iblai/iblai-js/web-utils';
 
 export function SubscriptionWrapper() {
   const { currentTenant } = useCurrentTenant();
-  if (isLoggedIn() && isStripeActivated(currentTenant as Tenant)) return <MentorECommerceWrapper />;
+  if (isLoggedIn() && isStripeActivated(currentTenant as Tenant))
+    return <MentorECommerceWrapper />;
 
   return null;
 }

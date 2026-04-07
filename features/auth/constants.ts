@@ -1,4 +1,4 @@
-import { SERVICES } from "@/features/constants";
+import { SERVICES } from '@/features/constants';
 
 export const AUTH_ENDPOINTS = {
   GET_INTEGRATED_SSO_PROVIDERS: {
@@ -7,4 +7,4 @@ export const AUTH_ENDPOINTS = {
   },
 };
 
-export const AUTH_REDUCER_PATH = "authApiSliceLocal";
+export const AUTH_REDUCER_PATH = 'authApiSliceLocal';

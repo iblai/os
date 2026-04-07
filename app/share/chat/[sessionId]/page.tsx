@@ -21,11 +21,17 @@ export default function ShareChatPage() {
     tenantKey: string;
   }>();
 
-  const { chatDetails, messages, mentorUniqueId, platformKey, isLoading, isError } =
-    useSharedChatMessages({
-      sessionId: sessionId ?? '',
-      tenantKey: tenantKey ?? 'undefined',
-    });
+  const {
+    chatDetails,
+    messages,
+    mentorUniqueId,
+    platformKey,
+    isLoading,
+    isError,
+  } = useSharedChatMessages({
+    sessionId: sessionId ?? '',
+    tenantKey: tenantKey ?? 'undefined',
+  });
 
   const dispatch = useAppDispatch();
   const { setTenantKey } = useTenantContext();
@@ -34,7 +40,9 @@ export default function ShareChatPage() {
     hideInitialLoader();
   }, []);
 
-  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<Record<string, string>>(
+  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
+    Record<string, string>
+  >(
     LOCAL_STORAGE_KEYS.SESSION_ID,
     {},
     { deserializer: (value) => JSON.parse(value) },

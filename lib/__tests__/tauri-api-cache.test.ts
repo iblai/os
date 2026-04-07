@@ -100,10 +100,14 @@ describe('tauri-api-cache', () => {
       const testData = { foo: 'bar' };
       const params = { id: '123' };
       localStorageMock._setStore({
-        [`tauri_api_cache_test-endpoint_${JSON.stringify(params)}`]: JSON.stringify(testData),
+        [`tauri_api_cache_test-endpoint_${JSON.stringify(params)}`]:
+          JSON.stringify(testData),
       });
 
-      const result = getCachedApiResponse<typeof testData>('test-endpoint', params);
+      const result = getCachedApiResponse<typeof testData>(
+        'test-endpoint',
+        params,
+      );
       expect(result).toEqual(testData);
     });
 
@@ -131,7 +135,9 @@ describe('tauri-api-cache', () => {
     });
 
     it('should return null on JSON parse error', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       localStorageMock._setStore({
         'tauri_api_cache_test-endpoint_': 'invalid json',
       });
@@ -271,7 +277,9 @@ describe('tauri-api-cache', () => {
     it('should throw when fetch fails and no cache', async () => {
       const fetchFn = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      await expect(fetchWithCache('test-endpoint', fetchFn)).rejects.toThrow('Network error');
+      await expect(fetchWithCache('test-endpoint', fetchFn)).rejects.toThrow(
+        'Network error',
+      );
     });
   });
 
@@ -341,8 +349,12 @@ describe('tauri-api-cache', () => {
     it('should handle fetch failures gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const fetchMentorSettings = vi.fn().mockRejectedValue(new Error('Failed'));
-      const fetchTenantMetadata = vi.fn().mockRejectedValue(new Error('Failed'));
+      const fetchMentorSettings = vi
+        .fn()
+        .mockRejectedValue(new Error('Failed'));
+      const fetchTenantMetadata = vi
+        .fn()
+        .mockRejectedValue(new Error('Failed'));
 
       // Should not throw
       await preCacheMentorData(

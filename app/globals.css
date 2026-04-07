@@ -1,11 +1,11 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 @tailwind utilities;
 
 @plugin 'tailwind-scrollbar';
 
 /* SDK: custom base styles (CSS variables, no Tailwind utilities) */
-@import "@iblai/iblai-js/web-containers/styles";
+@import '@iblai/iblai-js/web-containers/styles';
 
 /* SDK: scan compiled components so Tailwind generates their utility classes */
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
@@ -155,8 +155,8 @@ body:has(.default-mentor-logo) .logo-container {
 
 body {
   font-family:
-    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji" !important;
+    ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji' !important;
 }
 /* Prevent zoom on input focus for mobile devices */
 @supports (-webkit-overflow-scrolling: touch) {
@@ -166,6 +166,6 @@ body {
   }
 }
 
-[data-sonner-toaster][data-sonner-theme="dark"] .toast-wrapped-contact-tag {
+[data-sonner-toaster][data-sonner-theme='dark'] .toast-wrapped-contact-tag {
   @apply text-blue-400 hover:text-blue-300;
 }

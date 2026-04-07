@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic';
 
 export default function JobScoutPage() {
   const [, setSelectedPrompt] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>(
-    [],
-  );
+  const [messages, setMessages] = useState<
+    Array<{ role: 'user' | 'assistant'; content: string }>
+  >([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +24,10 @@ export default function JobScoutPage() {
       { role: 'user', content: prompt },
       {
         role: 'assistant',
-        content: "I'm thinking about your question regarding " + prompt.toLowerCase() + ' ...',
+        content:
+          "I'm thinking about your question regarding " +
+          prompt.toLowerCase() +
+          ' ...',
       },
     ]);
     setIsLoading(true);
@@ -58,7 +61,10 @@ export default function JobScoutPage() {
     e.preventDefault();
     if (!inputValue.trim()) return;
 
-    const newMessages = [...messages, { role: 'user' as const, content: inputValue }];
+    const newMessages = [
+      ...messages,
+      { role: 'user' as const, content: inputValue },
+    ];
     setMessages(newMessages);
     setInputValue('');
     setIsLoading(true);
@@ -118,15 +124,18 @@ export default function JobScoutPage() {
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
                   alt="AI Job Scout Assistant"
                 />
-                <AvatarFallback className="bg-amber-400 text-white">AI</AvatarFallback>
+                <AvatarFallback className="bg-amber-400 text-white">
+                  AI
+                </AvatarFallback>
               </Avatar>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">
                   AI Job Scout Assistant • Careers
                 </h1>
                 <p className="mt-1 text-gray-600">
-                  Hello! I&apos;m your AI Job Scout Assistant, here to help you find job
-                  opportunities. What type of job are you interested in exploring today?
+                  Hello! I&apos;m your AI Job Scout Assistant, here to help you
+                  find job opportunities. What type of job are you interested in
+                  exploring today?
                 </p>
               </div>
             </div>
@@ -153,9 +162,13 @@ export default function JobScoutPage() {
                         src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
                         alt="AI Job Scout Assistant"
                       />
-                      <AvatarFallback className="bg-amber-400 text-white">AI</AvatarFallback>
+                      <AvatarFallback className="bg-amber-400 text-white">
+                        AI
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-gray-700">{activity.title}</span>
+                    <span className="text-sm text-gray-700">
+                      {activity.title}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -169,10 +182,14 @@ export default function JobScoutPage() {
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
                   alt="AI Job Scout Assistant"
                 />
-                <AvatarFallback className="bg-amber-400 text-white">AI</AvatarFallback>
+                <AvatarFallback className="bg-amber-400 text-white">
+                  AI
+                </AvatarFallback>
               </Avatar>
               <div>
-                <h2 className="font-medium text-gray-800">AI Job Scout Assistant</h2>
+                <h2 className="font-medium text-gray-800">
+                  AI Job Scout Assistant
+                </h2>
                 <p className="text-xs text-gray-500">Careers</p>
               </div>
               <Button
@@ -200,7 +217,9 @@ export default function JobScoutPage() {
                         src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
                         alt="AI Job Scout Assistant"
                       />
-                      <AvatarFallback className="bg-amber-400 text-white">AI</AvatarFallback>
+                      <AvatarFallback className="bg-amber-400 text-white">
+                        AI
+                      </AvatarFallback>
                     </Avatar>
                   )}
                   <div
@@ -221,7 +240,9 @@ export default function JobScoutPage() {
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
                       alt="AI Job Scout Assistant"
                     />
-                    <AvatarFallback className="bg-amber-400 text-white">AI</AvatarFallback>
+                    <AvatarFallback className="bg-amber-400 text-white">
+                      AI
+                    </AvatarFallback>
                   </Avatar>
                   <div className="max-w-[80%] rounded-lg bg-gray-100 p-3 text-gray-800">
                     <div className="flex space-x-2">
@@ -251,7 +272,10 @@ export default function JobScoutPage() {
                   autoComplete="off"
                   disabled={isLoading}
                 />
-                <Button type="submit" disabled={isLoading || !inputValue.trim()}>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !inputValue.trim()}
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>

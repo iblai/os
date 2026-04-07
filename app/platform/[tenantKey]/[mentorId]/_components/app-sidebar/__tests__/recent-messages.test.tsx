@@ -84,9 +84,15 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   DropdownMenuItem: ({
     children,
     onClick,
@@ -105,8 +111,10 @@ vi.mock('@/lib/hooks', () => ({
   useAppSelector: (selector: any) => {
     if (selector.name === 'selectSessionId') return mockSessionId;
     if (selector.name === 'selectStreaming') return mockIsStreaming;
-    if (selector.name === 'selectNumberOfActiveChatMessages') return mockNumberOfActiveChatMessages;
-    if (selector.name === 'selectActiveChatMessages') return mockActiveChatMessages;
+    if (selector.name === 'selectNumberOfActiveChatMessages')
+      return mockNumberOfActiveChatMessages;
+    if (selector.name === 'selectActiveChatMessages')
+      return mockActiveChatMessages;
     return null;
   },
 }));
@@ -150,7 +158,8 @@ vi.mock('@/lib/utils', () => ({
         const current = msg.artifact_versions.find((av: any) => av.is_current);
         if (current) return current.title || current.artifact?.title || null;
         const latest = msg.artifact_versions.reduce(
-          (a: any, b: any) => ((b.version_number ?? 0) > (a?.version_number ?? 0) ? b : a),
+          (a: any, b: any) =>
+            (b.version_number ?? 0) > (a?.version_number ?? 0) ? b : a,
           null,
         );
         if (latest) return latest.title || latest.artifact?.title || null;
@@ -198,10 +207,14 @@ vi.mock('@/lib/eventBus', () => ({
 }));
 
 const mockClearFiles = vi.fn((_arg?: unknown) => ({ type: 'clearFiles' }));
-const mockSetShouldStartNewChat = vi.fn((_arg?: unknown) => ({ type: 'setShouldStartNewChat' }));
+const mockSetShouldStartNewChat = vi.fn((_arg?: unknown) => ({
+  type: 'setShouldStartNewChat',
+}));
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectActiveChatMessages: { name: 'selectActiveChatMessages' },
-  selectNumberOfActiveChatMessages: { name: 'selectNumberOfActiveChatMessages' },
+  selectNumberOfActiveChatMessages: {
+    name: 'selectNumberOfActiveChatMessages',
+  },
   selectSessionId: { name: 'selectSessionId' },
   selectStreaming: { name: 'selectStreaming' },
   clearFiles: (arg?: unknown) => mockClearFiles(arg),
@@ -235,7 +248,10 @@ describe('RecentMessages', () => {
     mockUseSelectFromResult = true;
     // Reset mock to default implementation - simple no-op to avoid infinite loops
     mockUpdateQueryData.mockClear();
-    mockUpdateQueryData.mockReturnValue({ type: 'updateQueryData', queryName: 'getRecentMessage' });
+    mockUpdateQueryData.mockReturnValue({
+      type: 'updateQueryData',
+      queryName: 'getRecentMessage',
+    });
     // Don't call updater to avoid potential infinite loops
   });
 
@@ -276,7 +292,9 @@ describe('RecentMessages', () => {
         {
           session_id: 'session-1',
           mentor: { unique_id: 'mentor-123', profile_image: null },
-          messages: [{ message: { data: { content: 'Recent message content' } } }],
+          messages: [
+            { message: { data: { content: 'Recent message content' } } },
+          ],
         },
       ],
     };
@@ -292,7 +310,9 @@ describe('RecentMessages', () => {
         {
           session_id: 'session-2',
           mentor: { unique_id: 'mentor-123', profile_image: null },
-          messages: [{ message: { data: { content: '<div>HTML formatted</div>' } } }],
+          messages: [
+            { message: { data: { content: '<div>HTML formatted</div>' } } },
+          ],
         },
       ],
     };
@@ -370,7 +390,10 @@ describe('RecentMessages', () => {
       results: [
         {
           session_id: 'session-4',
-          mentor: { unique_id: 'mentor-123', profile_image: 'https://example.com/avatar.jpg' },
+          mentor: {
+            unique_id: 'mentor-123',
+            profile_image: 'https://example.com/avatar.jpg',
+          },
           messages: [{ message: { data: { content: 'With image' } } }],
         },
       ],
@@ -394,7 +417,9 @@ describe('RecentMessages', () => {
 
     render(<RecentMessages {...defaultProps} />);
 
-    const messageButton = screen.getByRole('button', { name: /active session/i });
+    const messageButton = screen.getByRole('button', {
+      name: /active session/i,
+    });
     expect(messageButton.className).toContain('bg-[#c9d8f8]');
   });
 
@@ -498,7 +523,9 @@ describe('RecentMessages', () => {
 
   it('logs errors when pin fails', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockPinMessage.mockReturnValue({ unwrap: vi.fn().mockRejectedValue(new Error('Pin failed')) });
+    mockPinMessage.mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue(new Error('Pin failed')),
+    });
     mockRecentData = {
       results: [
         {
@@ -594,7 +621,10 @@ describe('RecentMessages', () => {
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to delete message: ', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to delete message: ',
+        expect.any(Error),
+      );
     });
   });
 
@@ -610,7 +640,9 @@ describe('RecentMessages', () => {
           mentor: { unique_id: 'mentor-123', profile_image: null },
           messages: [
             {
-              message: { data: { content: 'Active chat to delete', type: 'ai' } },
+              message: {
+                data: { content: 'Active chat to delete', type: 'ai' },
+              },
             },
           ],
         },
@@ -643,7 +675,9 @@ describe('RecentMessages', () => {
           mentor: { unique_id: 'mentor-123', profile_image: null },
           messages: [
             {
-              message: { data: { content: 'Non-active chat to delete', type: 'ai' } },
+              message: {
+                data: { content: 'Non-active chat to delete', type: 'ai' },
+              },
             },
           ],
         },

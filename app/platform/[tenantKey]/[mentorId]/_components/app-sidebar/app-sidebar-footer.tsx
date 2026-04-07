@@ -6,7 +6,11 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { cn, isLoggedIn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AuthPopover } from '@/components/auth-popover';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
@@ -55,7 +59,10 @@ export const AppSidebarFooter: React.FC<Props> = ({
               .filter((item) => {
                 // Skip RBAC check if user is not logged in or item has no rbacResource
                 if (!userIsLoggedIn || !item.rbacResource) return true;
-                return checkRbacPermission(rbacPermissions, item.rbacResource(0));
+                return checkRbacPermission(
+                  rbacPermissions,
+                  item.rbacResource(0),
+                );
               })
               .map((item) => (
                 <SidebarMenuItem key={item.label} className="font-medium">
@@ -104,7 +111,10 @@ export const AppSidebarFooter: React.FC<Props> = ({
                               <span>{item.label}</span>
                             </SidebarMenuButton>
                           </TooltipTrigger>
-                          <TooltipContent className="ibl-tooltip-content" side="right">
+                          <TooltipContent
+                            className="ibl-tooltip-content"
+                            side="right"
+                          >
                             {item.label}
                           </TooltipContent>
                         </Tooltip>
@@ -118,7 +128,10 @@ export const AppSidebarFooter: React.FC<Props> = ({
                               </SidebarMenuButton>
                             </TooltipTrigger>
                           </AuthPopover>
-                          <TooltipContent className="ibl-tooltip-content" side="right">
+                          <TooltipContent
+                            className="ibl-tooltip-content"
+                            side="right"
+                          >
                             {item.label}
                           </TooltipContent>
                         </Tooltip>

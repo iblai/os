@@ -57,7 +57,13 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 // Mock AuthPopover
 vi.mock('@/components/auth-popover', () => ({
-  AuthPopover: ({ children, tenantKey }: { children: React.ReactNode; tenantKey: string }) => (
+  AuthPopover: ({
+    children,
+    tenantKey,
+  }: {
+    children: React.ReactNode;
+    tenantKey: string;
+  }) => (
     <div data-testid="auth-popover" data-tenant-key={tenantKey}>
       {children}
     </div>
@@ -78,7 +84,10 @@ const createTestStore = (rbacPermissions = {}) =>
   });
 
 // Helper to render with providers
-const renderWithProviders = (ui: React.ReactElement, { rbacPermissions = {}, ...options } = {}) => {
+const renderWithProviders = (
+  ui: React.ReactElement,
+  { rbacPermissions = {}, ...options } = {},
+) => {
   const store = createTestStore(rbacPermissions);
   return {
     store,
@@ -133,7 +142,11 @@ describe('AppSidebarFooter', () => {
       const items = [createMockItem({ label: 'Footer Item' })];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} embedMode={true} footerItems={items} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          embedMode={true}
+          footerItems={items}
+        />,
       );
 
       expect(screen.queryByText('Footer Item')).not.toBeInTheDocument();
@@ -145,7 +158,11 @@ describe('AppSidebarFooter', () => {
       const items = [createMockItem({ label: 'Footer Item' })];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} embedMode={false} footerItems={items} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          embedMode={false}
+          footerItems={items}
+        />,
       );
 
       expect(screen.getByText('Footer Item')).toBeInTheDocument();
@@ -167,16 +184,23 @@ describe('AppSidebarFooter', () => {
         createMockItem({ label: 'Logout', icon: LogOut }),
       ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(screen.getByText('Logout')).toBeInTheDocument();
     });
 
     it('should apply updateNavItemsForStudentsInMainOrAdvertisingTenant to each item', () => {
-      const items = [createMockItem({ label: 'Item 1' }), createMockItem({ label: 'Item 2' })];
+      const items = [
+        createMockItem({ label: 'Item 1' }),
+        createMockItem({ label: 'Item 2' }),
+      ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(mockUpdateNavItems).toHaveBeenCalledTimes(2);
     });
@@ -193,27 +217,37 @@ describe('AppSidebarFooter', () => {
         .mockReturnValueOnce(true) // First item allowed
         .mockReturnValueOnce(false); // Second item not allowed
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('Allowed')).toBeInTheDocument();
       expect(screen.queryByText('Not Allowed')).not.toBeInTheDocument();
     });
 
     it('should show items without rbacResource', () => {
-      const items = [createMockItem({ label: 'No RBAC Resource', rbacResource: undefined })];
+      const items = [
+        createMockItem({ label: 'No RBAC Resource', rbacResource: undefined }),
+      ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('No RBAC Resource')).toBeInTheDocument();
     });
 
     it('should filter items based on RBAC permissions', () => {
       const rbacResourceFn = vi.fn().mockReturnValue('admin#read');
-      const items = [createMockItem({ label: 'RBAC Item', rbacResource: rbacResourceFn })];
+      const items = [
+        createMockItem({ label: 'RBAC Item', rbacResource: rbacResourceFn }),
+      ];
 
       mockCheckRbacPermission.mockReturnValue(false);
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.queryByText('RBAC Item')).not.toBeInTheDocument();
       expect(rbacResourceFn).toHaveBeenCalledWith(0);
@@ -221,11 +255,15 @@ describe('AppSidebarFooter', () => {
 
     it('should show items when RBAC permission check passes', () => {
       const rbacResourceFn = vi.fn().mockReturnValue('admin#read');
-      const items = [createMockItem({ label: 'RBAC Allowed', rbacResource: rbacResourceFn })];
+      const items = [
+        createMockItem({ label: 'RBAC Allowed', rbacResource: rbacResourceFn }),
+      ];
 
       mockCheckRbacPermission.mockReturnValue(true);
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('RBAC Allowed')).toBeInTheDocument();
     });
@@ -233,11 +271,15 @@ describe('AppSidebarFooter', () => {
     it('should skip RBAC check and show items with rbacResource when user is not logged in', () => {
       mockIsLoggedIn = false;
       const rbacResourceFn = vi.fn().mockReturnValue('admin#read');
-      const items = [createMockItem({ label: 'RBAC Skipped', rbacResource: rbacResourceFn })];
+      const items = [
+        createMockItem({ label: 'RBAC Skipped', rbacResource: rbacResourceFn }),
+      ];
 
       mockCheckRbacPermission.mockReturnValue(false);
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('RBAC Skipped')).toBeInTheDocument();
       expect(mockCheckRbacPermission).not.toHaveBeenCalled();
@@ -251,10 +293,17 @@ describe('AppSidebarFooter', () => {
 
     it('should render clickable button when user is logged in and open is true', () => {
       const mockOnClick = vi.fn();
-      const items = [createMockItem({ label: 'Test Button', onClick: mockOnClick })];
+      const items = [
+        createMockItem({ label: 'Test Button', onClick: mockOnClick }),
+      ];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} isMobile={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          open={true}
+          isMobile={false}
+        />,
       );
 
       const button = screen.getByText('Test Button');
@@ -266,10 +315,17 @@ describe('AppSidebarFooter', () => {
 
     it('should render clickable button when isMobile is true', () => {
       const mockOnClick = vi.fn();
-      const items = [createMockItem({ label: 'Mobile Button', onClick: mockOnClick })];
+      const items = [
+        createMockItem({ label: 'Mobile Button', onClick: mockOnClick }),
+      ];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} isMobile={true} open={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          isMobile={true}
+          open={false}
+        />,
       );
 
       const button = screen.getByText('Mobile Button');
@@ -282,10 +338,16 @@ describe('AppSidebarFooter', () => {
     it('should use executeWithTrialCheck for admin actions when logged in', () => {
       const mockOnClick = vi.fn();
       const items = [
-        createMockItem({ label: 'Admin Action', onClick: mockOnClick, isAnAdminAction: true }),
+        createMockItem({
+          label: 'Admin Action',
+          onClick: mockOnClick,
+          isAnAdminAction: true,
+        }),
       ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} open={true} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} />,
+      );
 
       const button = screen.getByText('Admin Action');
       fireEvent.click(button);
@@ -298,7 +360,9 @@ describe('AppSidebarFooter', () => {
     it('should not wrap in AuthPopover when logged in', () => {
       const items = [createMockItem({ label: 'Logged In Item' })];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} open={true} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} />,
+      );
 
       expect(screen.queryByTestId('auth-popover')).not.toBeInTheDocument();
       expect(screen.getByText('Logged In Item')).toBeInTheDocument();
@@ -313,7 +377,9 @@ describe('AppSidebarFooter', () => {
     it('should wrap in AuthPopover when logged out', () => {
       const items = [createMockItem({ label: 'Logged Out Item' })];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} open={true} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} />,
+      );
 
       const authPopover = screen.getByTestId('auth-popover');
       expect(authPopover).toBeInTheDocument();
@@ -345,10 +411,17 @@ describe('AppSidebarFooter', () => {
 
     it('should render with tooltip when sidebar is closed and logged in', () => {
       const mockOnClick = vi.fn();
-      const items = [createMockItem({ label: 'Tooltip Item', onClick: mockOnClick })];
+      const items = [
+        createMockItem({ label: 'Tooltip Item', onClick: mockOnClick }),
+      ];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} open={false} isMobile={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          open={false}
+          isMobile={false}
+        />,
       );
 
       expect(screen.getByText('Tooltip Item')).toBeInTheDocument();
@@ -356,10 +429,17 @@ describe('AppSidebarFooter', () => {
 
     it('should handle click on closed sidebar item for regular action', () => {
       const mockOnClick = vi.fn();
-      const items = [createMockItem({ label: 'Click Closed', onClick: mockOnClick })];
+      const items = [
+        createMockItem({ label: 'Click Closed', onClick: mockOnClick }),
+      ];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} open={false} isMobile={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          open={false}
+          isMobile={false}
+        />,
       );
 
       const button = screen.getByText('Click Closed').closest('button');
@@ -371,11 +451,20 @@ describe('AppSidebarFooter', () => {
     it('should use executeWithTrialCheck for admin actions on closed sidebar', () => {
       const mockOnClick = vi.fn();
       const items = [
-        createMockItem({ label: 'Admin Closed', onClick: mockOnClick, isAnAdminAction: true }),
+        createMockItem({
+          label: 'Admin Closed',
+          onClick: mockOnClick,
+          isAnAdminAction: true,
+        }),
       ];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} open={false} isMobile={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          open={false}
+          isMobile={false}
+        />,
       );
 
       const button = screen.getByText('Admin Closed').closest('button');
@@ -429,7 +518,12 @@ describe('AppSidebarFooter', () => {
       const items = [createMockItem({ label: 'Closed Logged Out' })];
 
       renderWithProviders(
-        <AppSidebarFooter {...defaultProps} footerItems={items} open={false} isMobile={false} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          footerItems={items}
+          open={false}
+          isMobile={false}
+        />,
       );
 
       const authPopover = screen.getByTestId('auth-popover');
@@ -442,7 +536,9 @@ describe('AppSidebarFooter', () => {
     it('should render icon with correct classes', () => {
       const items = [createMockItem({ label: 'Icon Test', icon: Settings })];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} open={true} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} />,
+      );
 
       const button = screen.getByText('Icon Test').closest('button');
       const icon = button?.querySelector('svg');
@@ -460,7 +556,9 @@ describe('AppSidebarFooter', () => {
         createMockItem({ label: 'Item 3', icon: LogOut }),
       ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('Item 1')).toBeInTheDocument();
       expect(screen.getByText('Item 2')).toBeInTheDocument();
@@ -472,7 +570,10 @@ describe('AppSidebarFooter', () => {
       const items = [
         createMockItem({ label: 'User Allowed' }),
         createMockItem({ label: 'User Not Allowed' }),
-        createMockItem({ label: 'RBAC Not Allowed', rbacResource: rbacResourceFn }),
+        createMockItem({
+          label: 'RBAC Not Allowed',
+          rbacResource: rbacResourceFn,
+        }),
       ];
 
       mockIsUserTypeAllowed
@@ -482,7 +583,9 @@ describe('AppSidebarFooter', () => {
 
       mockCheckRbacPermission.mockReturnValue(false);
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('User Allowed')).toBeInTheDocument();
       expect(screen.queryByText('User Not Allowed')).not.toBeInTheDocument();
@@ -512,7 +615,11 @@ describe('AppSidebarFooter', () => {
         <Provider store={createTestStore()}>
           <SidebarProvider>
             <TooltipProvider>
-              <AppSidebarFooter {...defaultProps} footerItems={items} open={false} />
+              <AppSidebarFooter
+                {...defaultProps}
+                footerItems={items}
+                open={false}
+              />
             </TooltipProvider>
           </SidebarProvider>
         </Provider>,
@@ -527,7 +634,9 @@ describe('AppSidebarFooter', () => {
         createMockItem({ label: 'Unique Key 2' }),
       ];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} />,
+      );
 
       expect(screen.getByText('Unique Key 1')).toBeInTheDocument();
       expect(screen.getByText('Unique Key 2')).toBeInTheDocument();
@@ -537,7 +646,11 @@ describe('AppSidebarFooter', () => {
       const items = [createMockItem({ label: 'Toggle Item' })];
 
       const { rerender } = renderWithProviders(
-        <AppSidebarFooter {...defaultProps} embedMode={false} footerItems={items} />,
+        <AppSidebarFooter
+          {...defaultProps}
+          embedMode={false}
+          footerItems={items}
+        />,
       );
 
       expect(screen.getByText('Toggle Item')).toBeInTheDocument();
@@ -546,7 +659,11 @@ describe('AppSidebarFooter', () => {
         <Provider store={createTestStore()}>
           <SidebarProvider>
             <TooltipProvider>
-              <AppSidebarFooter {...defaultProps} embedMode={true} footerItems={items} />
+              <AppSidebarFooter
+                {...defaultProps}
+                embedMode={true}
+                footerItems={items}
+              />
             </TooltipProvider>
           </SidebarProvider>
         </Provider>,
@@ -622,7 +739,9 @@ describe('AppSidebarFooter', () => {
     it('should apply correct styling classes to button', () => {
       const items = [createMockItem({ label: 'Styled Button' })];
 
-      renderWithProviders(<AppSidebarFooter {...defaultProps} footerItems={items} open={true} />);
+      renderWithProviders(
+        <AppSidebarFooter {...defaultProps} footerItems={items} open={true} />,
+      );
 
       const button = screen.getByText('Styled Button').closest('button');
       expect(button).toHaveClass('cursor-pointer');

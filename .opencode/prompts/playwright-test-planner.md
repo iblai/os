@@ -5,6 +5,7 @@ planning.
 You will:
 
 1. **Navigate and Explore**
+
    - Invoke the `planner_setup_page` tool once to set up page before using any other tools
    - Explore the browser snapshot
    - Do not take screenshots unless absolutely necessary
@@ -12,12 +13,14 @@ You will:
    - Thoroughly explore the interface, identifying all interactive elements, forms, navigation paths, and functionality
 
 2. **Analyze User Flows**
+
    - Map out the primary user journeys and identify critical paths through the application
    - Consider different user types and their typical behaviors
 
 3. **Design Comprehensive Scenarios**
 
    Create detailed test scenarios that cover:
+
    - Happy path scenarios (normal user behavior)
    - Edge cases and boundary conditions
    - Error handling and validation
@@ -25,6 +28,7 @@ You will:
 4. **Structure Test Plans**
 
    Each scenario must include:
+
    - Clear, descriptive title
    - Detailed step-by-step instructions
    - Expected outcomes where appropriate
@@ -36,6 +40,7 @@ You will:
    Submit your test plan using `planner_save_plan` tool.
 
 **Quality Standards**:
+
 - Write steps that are specific enough for any tester to follow
 - Include negative testing scenarios
 - Ensure scenarios are independent and can be run in any order

@@ -36,7 +36,9 @@ describe('mentor constants', () => {
       expect(LOCAL_STORAGE_KEYS.DEFAULT_TENANT).toBe('tenant');
       expect(LOCAL_STORAGE_KEYS.USER_TENANTS).toBe('tenants');
       expect(LOCAL_STORAGE_KEYS.SESSION_ID).toBe('session_id');
-      expect(LOCAL_STORAGE_KEYS.MODEL_DOWNLOAD_STATE).toBe('model_download_state');
+      expect(LOCAL_STORAGE_KEYS.MODEL_DOWNLOAD_STATE).toBe(
+        'model_download_state',
+      );
       expect(LOCAL_STORAGE_KEYS.MODEL_DOWNLOAD_PROMPT_DISMISSED).toBe(
         'model_download_prompt_dismissed',
       );
@@ -102,23 +104,33 @@ describe('mentor constants', () => {
   describe('DEFAULT_PROMPTS', () => {
     it('should have all default prompts', () => {
       expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toBeTruthy();
-      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain('helpful instructor');
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain(
+        'helpful instructor',
+      );
 
       expect(DEFAULT_PROMPTS.DEFAULT_MODERATION_PROMPT).toBeTruthy();
       expect(DEFAULT_PROMPTS.DEFAULT_MODERATION_PROMPT).toContain('moderator');
 
       expect(DEFAULT_PROMPTS.DEFAULT_PROACTIVE_PROMPT).toBeTruthy();
-      expect(DEFAULT_PROMPTS.DEFAULT_PROACTIVE_PROMPT).toContain('entered the chat');
+      expect(DEFAULT_PROMPTS.DEFAULT_PROACTIVE_PROMPT).toContain(
+        'entered the chat',
+      );
 
       expect(DEFAULT_PROMPTS.DEFAULT_GUIDED_PROMPT).toBeTruthy();
-      expect(DEFAULT_PROMPTS.DEFAULT_GUIDED_PROMPT).toContain('suggested prompts');
+      expect(DEFAULT_PROMPTS.DEFAULT_GUIDED_PROMPT).toContain(
+        'suggested prompts',
+      );
     });
   });
 
   describe('MENTOR_VISIBILITY', () => {
     it('should have visibility values', () => {
-      expect(MENTOR_VISIBILITY_VALUES.ADMINISTRATORS).toBe('viewable_by_tenant_admins');
-      expect(MENTOR_VISIBILITY_VALUES.STUDENTS).toBe('viewable_by_tenant_students');
+      expect(MENTOR_VISIBILITY_VALUES.ADMINISTRATORS).toBe(
+        'viewable_by_tenant_admins',
+      );
+      expect(MENTOR_VISIBILITY_VALUES.STUDENTS).toBe(
+        'viewable_by_tenant_students',
+      );
       expect(MENTOR_VISIBILITY_VALUES.ANYONE).toBe('viewable_by_anyone');
     });
 
@@ -199,22 +211,34 @@ describe('mentor constants', () => {
 
   describe('CSS_CLASS_NAMES', () => {
     it('should have chat class names', () => {
-      expect(CSS_CLASS_NAMES.CHAT.AI_MESSAGE_RESPONSE).toBe('chat-ai-message-response');
-      expect(CSS_CLASS_NAMES.CHAT.USER_MESSAGE_QUERY).toBe('chat-user-message-query');
+      expect(CSS_CLASS_NAMES.CHAT.AI_MESSAGE_RESPONSE).toBe(
+        'chat-ai-message-response',
+      );
+      expect(CSS_CLASS_NAMES.CHAT.USER_MESSAGE_QUERY).toBe(
+        'chat-user-message-query',
+      );
       expect(CSS_CLASS_NAMES.CHAT.TEXTAREA).toBe('chat-textarea');
-      expect(CSS_CLASS_NAMES.CHAT.SUBMIT_MESSAGE_BUTTON).toBe('chat-submit-message-button');
-      expect(CSS_CLASS_NAMES.CHAT.STOP_STREAMING_BUTTON).toBe('chat-stop-streaming-button');
+      expect(CSS_CLASS_NAMES.CHAT.SUBMIT_MESSAGE_BUTTON).toBe(
+        'chat-submit-message-button',
+      );
+      expect(CSS_CLASS_NAMES.CHAT.STOP_STREAMING_BUTTON).toBe(
+        'chat-stop-streaming-button',
+      );
     });
 
     it('should have app layout class names', () => {
-      expect(CSS_CLASS_NAMES.APP_LAYOUT.MAIN_CONTENT_AREA).toBe('chat-main-content-area');
+      expect(CSS_CLASS_NAMES.APP_LAYOUT.MAIN_CONTENT_AREA).toBe(
+        'chat-main-content-area',
+      );
       expect(CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS).toBe(
         'chat-guided-suggested-prompts',
       );
       expect(CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS_REFRESH).toBe(
         'chat-guided-suggested-prompts-refresh',
       );
-      expect(CSS_CLASS_NAMES.APP_LAYOUT.WELCOME_CHAT_BUTTON).toBe('chat-welcome-button');
+      expect(CSS_CLASS_NAMES.APP_LAYOUT.WELCOME_CHAT_BUTTON).toBe(
+        'chat-welcome-button',
+      );
     });
   });
 

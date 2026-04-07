@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { MESSAGES_ENDPOINTS, MESSAGES_QUERY_KEYS, MESSAGES_REDUCER_KEY } from '../constants';
+import {
+  MESSAGES_ENDPOINTS,
+  MESSAGES_QUERY_KEYS,
+  MESSAGES_REDUCER_KEY,
+} from '../constants';
 import { SERVICES } from '../../constants';
 
 describe('messages/constants', () => {
@@ -12,9 +16,14 @@ describe('messages/constants', () => {
     it('should generate correct path for GET_RECENT_MESSAGES', () => {
       const tenantKey = 'test-tenant';
       const username = 'testuser';
-      const path = MESSAGES_ENDPOINTS.GET_RECENT_MESSAGES.path(tenantKey, username);
+      const path = MESSAGES_ENDPOINTS.GET_RECENT_MESSAGES.path(
+        tenantKey,
+        username,
+      );
 
-      expect(path).toBe(`/api/ai-mentor/orgs/${tenantKey}/users/${username}/recent-messages/`);
+      expect(path).toBe(
+        `/api/ai-mentor/orgs/${tenantKey}/users/${username}/recent-messages/`,
+      );
     });
   });
 

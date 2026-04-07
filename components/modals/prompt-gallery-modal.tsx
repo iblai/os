@@ -3,7 +3,10 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 
-import { useGetPromptCategoriesQuery, useUpdatePromptMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useGetPromptCategoriesQuery,
+  useUpdatePromptMutation,
+} from '@iblai/iblai-js/data-layer';
 import { PromptVisibilityEnum } from '@iblai/iblai-api';
 import { Plus } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
@@ -11,7 +14,10 @@ import { useMediaQuery } from 'react-responsive';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddPromptModal } from '@/components/modals/add-prompt-modal';
-import { EditPromptModal, SelectedPrompt } from '@/components/modals/edit-prompt-modal';
+import {
+  EditPromptModal,
+  SelectedPrompt,
+} from '@/components/modals/edit-prompt-modal';
 import {
   Select,
   SelectContent,
@@ -46,11 +52,16 @@ interface PromptGalleryModalProps {
   onSelectPrompt?: (promptText: string) => void;
 }
 
-export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGalleryModalProps) {
+export function PromptGalleryModal({
+  isOpen,
+  onClose,
+  onSelectPrompt,
+}: PromptGalleryModalProps) {
   const userIsStudent = useUserIsStudent();
   const [activeCategory, setActiveCategory] = React.useState('');
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
-  const [editingPrompt, setEditingPrompt] = React.useState<SelectedPrompt | null>(null);
+  const [editingPrompt, setEditingPrompt] =
+    React.useState<SelectedPrompt | null>(null);
   const isMobile = useMediaQuery({ maxWidth: 767 });
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
@@ -63,7 +74,8 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
     userId: username ?? '',
   });
 
-  const [updatePrompt, { isLoading: isEditingPrompt }] = useUpdatePromptMutation();
+  const [updatePrompt, { isLoading: isEditingPrompt }] =
+    useUpdatePromptMutation();
 
   // Set "All" as default when data loads
   React.useEffect(() => {
@@ -76,7 +88,10 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
     setEditingPrompt(prompt);
   };
 
-  const handleEditPrompt = async (selectedPrompt: SelectedPrompt, value: EditFormValues) => {
+  const handleEditPrompt = async (
+    selectedPrompt: SelectedPrompt,
+    value: EditFormValues,
+  ) => {
     if (editingPrompt) {
       try {
         await updatePrompt({
@@ -112,7 +127,7 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
       variant="outline"
       size="sm"
       className={cn(
-        'flex rounded-md border-none h-9 items-center gap-2 px-3 text-sm font-normal whitespace-nowrap bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 hover:text-white shadow-sm',
+        'flex h-9 items-center gap-2 rounded-md border-none bg-gradient-to-r from-[#2563EB] to-[#93C5FD] px-3 text-sm font-normal whitespace-nowrap text-white shadow-sm hover:text-white hover:opacity-90',
         {
           'h-8': isMobile,
         },
@@ -127,17 +142,19 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="h-[90vh] overflow-hidden w-full max-w-7xl sm:w-[calc(100vw-2rem)]">
+        <DialogContent className="h-[90vh] w-full max-w-7xl overflow-hidden sm:w-[calc(100vw-2rem)]">
           <DialogDescription className="sr-only">
             View and edit custom prompts for your mentor.
           </DialogDescription>
           <div className="flex h-full w-full max-w-full flex-col overflow-hidden p-6">
             <DialogHeader>
-              <DialogTitle className="ibl-dialog-title">Prompt Gallery</DialogTitle>
+              <DialogTitle className="ibl-dialog-title">
+                Prompt Gallery
+              </DialogTitle>
             </DialogHeader>
 
             {isLoading ? (
-              <div className="h-full w-full flex items-center justify-center">
+              <div className="flex h-full w-full items-center justify-center">
                 <Spinner />
               </div>
             ) : (
@@ -145,25 +162,33 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
                 <div className="w-full overflow-hidden py-4">
                   {isMobile ? (
                     <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 w-full">
-                        <Select value={activeCategory} onValueChange={setActiveCategory}>
+                      <div className="w-full flex-1">
+                        <Select
+                          value={activeCategory}
+                          onValueChange={setActiveCategory}
+                        >
                           <SelectTrigger className="h-8 w-full">
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="All">All</SelectItem>
                             {promptCategories?.map((category) => (
-                              <SelectItem key={category.name} value={category.name}>
+                              <SelectItem
+                                key={category.name}
+                                value={category.name}
+                              >
                                 {category.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      {!userIsStudent && <div className="flex-shrink-0">{addPromptButton}</div>}
+                      {!userIsStudent && (
+                        <div className="flex-shrink-0">{addPromptButton}</div>
+                      )}
                     </div>
                   ) : (
-                    <div className="w-full flex gap-4">
+                    <div className="flex w-full gap-4">
                       <div className="scrollbar-none w-full overflow-x-auto">
                         <Tabs
                           value={activeCategory}
@@ -211,13 +236,17 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
                     />
                   ) : (
                     promptCategories
-                      ?.filter((category: any) => category.name === activeCategory)
+                      ?.filter(
+                        (category: any) => category.name === activeCategory,
+                      )
                       ?.map((category: any) => (
                         <CategorySection
                           key={category.id}
                           title={category.name}
                           onEdit={selectPrompt}
-                          onSelect={onSelectPrompt ? handleSelectPrompt : undefined}
+                          onSelect={
+                            onSelectPrompt ? handleSelectPrompt : undefined
+                          }
                           uniqueMentorId={mentorId}
                           category={category.name}
                           activeCategory={activeCategory}
@@ -232,7 +261,10 @@ export function PromptGalleryModal({ isOpen, onClose, onSelectPrompt }: PromptGa
       </Dialog>
 
       {isAddModalOpen && (
-        <AddPromptModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+        <AddPromptModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+        />
       )}
 
       {editingPrompt && (

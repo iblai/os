@@ -64,7 +64,10 @@ vi.mock('@/hooks/use-shared-chat-messages', () => ({
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   chatActions: {
     addUserMessage: vi.fn((payload) => ({ type: 'ADD_MESSAGE', payload })),
-    setShowingSharedChat: vi.fn((payload) => ({ type: 'SET_SHOWING_SHARED', payload })),
+    setShowingSharedChat: vi.fn((payload) => ({
+      type: 'SET_SHOWING_SHARED',
+      payload,
+    })),
   },
   useTenantContext: () => ({ setTenantKey: mockSetTenantKey }),
 }));
@@ -168,7 +171,9 @@ describe('ShareChatPage', () => {
 
     render(<ShareChatPage />);
 
-    expect(mockRedirect).toHaveBeenCalledWith('/error/404?errorType=sessionNotFound');
+    expect(mockRedirect).toHaveBeenCalledWith(
+      '/error/404?errorType=sessionNotFound',
+    );
   });
 
   it('returns null when data is loaded but no redirect yet', () => {

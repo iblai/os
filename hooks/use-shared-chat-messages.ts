@@ -98,7 +98,9 @@ export function transformChatMessage(result: any): TransformedMessage {
   };
 }
 
-export function transformChatResults(results: any[] | undefined): TransformedMessage[] | undefined {
+export function transformChatResults(
+  results: any[] | undefined,
+): TransformedMessage[] | undefined {
   if (!results) {
     return undefined;
   }
@@ -106,7 +108,10 @@ export function transformChatResults(results: any[] | undefined): TransformedMes
   return results.map(transformChatMessage).reverse();
 }
 
-export function useSharedChatMessages({ sessionId, tenantKey }: SharedChatParams) {
+export function useSharedChatMessages({
+  sessionId,
+  tenantKey,
+}: SharedChatParams) {
   const { data, isLoading, isError, error } = useGetChatMessagesForSessionQuery(
     {
       org: tenantKey ?? '',

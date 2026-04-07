@@ -20,17 +20,28 @@ type Props = {
   value: string;
 };
 
-export function EditMentorModalDialog({ isOpen, onClose, prompt, editPrompt, value }: Props) {
+export function EditMentorModalDialog({
+  isOpen,
+  onClose,
+  prompt,
+  editPrompt,
+  value,
+}: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full">
-        <DialogDescription className="sr-only">Edit {prompt.label}</DialogDescription>
+        <DialogDescription className="sr-only">
+          Edit {prompt.label}
+        </DialogDescription>
         <DialogHeader>
           <DialogTitle className="ibl-dialog-title">{prompt.label}</DialogTitle>
         </DialogHeader>
 
         <div className="mt-7 grid gap-4">
-          <RichTextEditor value={value} onChange={(e) => editPrompt(e, prompt.type)} />
+          <RichTextEditor
+            value={value}
+            onChange={(e) => editPrompt(e, prompt.type)}
+          />
         </div>
       </DialogContent>
     </Dialog>

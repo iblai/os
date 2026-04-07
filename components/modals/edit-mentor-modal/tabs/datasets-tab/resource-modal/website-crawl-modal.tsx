@@ -1,26 +1,24 @@
-
-import { ResourceType } from "../resource-types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ResourceType } from '../resource-types';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
-import { useWebsiteCrawlerResource } from "@/hooks/use-website-crawler-resource";
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { X, Plus } from 'lucide-react';
+import { useWebsiteCrawlerResource } from '@/hooks/use-website-crawler-resource';
 
 type Props = {
   resource: ResourceType;
 };
 
 export function WebsiteCrawlModal({ resource }: Props) {
-
   const {
     form,
     handleCheckUrlIsValid,
@@ -29,12 +27,20 @@ export function WebsiteCrawlModal({ resource }: Props) {
   } = useWebsiteCrawlerResource(resource);
 
   return (
-    <Card className="w-full max-w-2xl mx-auto" role="dialog" aria-labelledby="crawler-title" aria-describedby="crawler-description">
+    <Card
+      className="mx-auto w-full max-w-2xl"
+      role="dialog"
+      aria-labelledby="crawler-title"
+      aria-describedby="crawler-description"
+    >
       <CardHeader>
-        <CardTitle id="crawler-title" className="text-md font-semibold text-gray-600">
+        <CardTitle
+          id="crawler-title"
+          className="text-md font-semibold text-gray-600"
+        >
           Web Crawler Configuration
         </CardTitle>
-        <p id="crawler-description" className="text-sm text-muted-foreground">
+        <p id="crawler-description" className="text-muted-foreground text-sm">
           Configure your web crawler settings and URL patterns
         </p>
       </CardHeader>
@@ -53,8 +59,8 @@ export function WebsiteCrawlModal({ resource }: Props) {
               name="url"
               validators={{
                 onChange: ({ value }) =>
-                  (!value && "URL is required") ||
-                  (!handleCheckUrlIsValid(value) && "Invalid URL"),
+                  (!value && 'URL is required') ||
+                  (!handleCheckUrlIsValid(value) && 'Invalid URL'),
               }}
             >
               {(field) => (
@@ -66,12 +72,20 @@ export function WebsiteCrawlModal({ resource }: Props) {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="https://example.com"
-                    aria-describedby={field.state.meta.errors ? `${field.name}-error` : undefined}
+                    aria-describedby={
+                      field.state.meta.errors
+                        ? `${field.name}-error`
+                        : undefined
+                    }
                     aria-invalid={!!field.state.meta.errors}
                     aria-required="true"
                   />
                   {field.state.meta.errors && (
-                    <p id={`${field.name}-error`} className="text-sm text-destructive mb-2" role="alert">
+                    <p
+                      id={`${field.name}-error`}
+                      className="text-destructive mb-2 text-sm"
+                      role="alert"
+                    >
                       {field.state.meta.errors}
                     </p>
                   )}
@@ -84,9 +98,9 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 name="crawler_max_depth"
                 validators={{
                   onChange: ({ value }) =>
-                    (!value && "Field is required") ||
-                    (value < 1 && "Must be greater than 0") ||
-                    (value > 10000 && "Must be less than 10000"),
+                    (!value && 'Field is required') ||
+                    (value < 1 && 'Must be greater than 0') ||
+                    (value > 10000 && 'Must be less than 10000'),
                 }}
               >
                 {(field) => (
@@ -101,12 +115,20 @@ export function WebsiteCrawlModal({ resource }: Props) {
                       onChange={(e) =>
                         field.handleChange(Number.parseInt(e.target.value))
                       }
-                      aria-describedby={field.state.meta.errors ? `${field.name}-error` : undefined}
+                      aria-describedby={
+                        field.state.meta.errors
+                          ? `${field.name}-error`
+                          : undefined
+                      }
                       aria-invalid={!!field.state.meta.errors}
                       aria-required="true"
                     />
                     {field.state.meta.errors && (
-                      <p id={`${field.name}-error`} className="text-sm text-destructive mb-2" role="alert">
+                      <p
+                        id={`${field.name}-error`}
+                        className="text-destructive mb-2 text-sm"
+                        role="alert"
+                      >
                         {field.state.meta.errors}
                       </p>
                     )}
@@ -117,8 +139,8 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 name="crawler_max_pages_limit"
                 validators={{
                   onChange: ({ value }) =>
-                    (!value && "Field is required") ||
-                    (value < 1 && "Must be greater than 0"),
+                    (!value && 'Field is required') ||
+                    (value < 1 && 'Must be greater than 0'),
                 }}
               >
                 {(field) => (
@@ -132,12 +154,20 @@ export function WebsiteCrawlModal({ resource }: Props) {
                       onChange={(e) =>
                         field.handleChange(Number.parseInt(e.target.value))
                       }
-                      aria-describedby={field.state.meta.errors ? `${field.name}-error` : undefined}
+                      aria-describedby={
+                        field.state.meta.errors
+                          ? `${field.name}-error`
+                          : undefined
+                      }
                       aria-invalid={!!field.state.meta.errors}
                       aria-required="true"
                     />
                     {field.state.meta.errors && (
-                      <p id={`${field.name}-error`} className="text-sm text-destructive mb-2" role="alert">
+                      <p
+                        id={`${field.name}-error`}
+                        className="text-destructive mb-2 text-sm"
+                        role="alert"
+                      >
                         {field.state.meta.errors}
                       </p>
                     )}
@@ -145,9 +175,7 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 )}
               </form.Field>
             </div>
-            <form.Field
-              name="crawler_pattern_type"
-            >
+            <form.Field name="crawler_pattern_type">
               {(field) => (
                 <div className="grid gap-2">
                   <Label htmlFor="pattern-type">Pattern Type</Label>
@@ -155,7 +183,10 @@ export function WebsiteCrawlModal({ resource }: Props) {
                     value={field.state.value}
                     onValueChange={(value) => field.handleChange(value)}
                   >
-                    <SelectTrigger id="pattern-type" aria-label="Select pattern type">
+                    <SelectTrigger
+                      id="pattern-type"
+                      aria-label="Select pattern type"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -178,14 +209,16 @@ export function WebsiteCrawlModal({ resource }: Props) {
                   validators={{
                     onChange: ({ value }) =>
                       value &&
-                      crawlerPatternType === "glob" &&
+                      crawlerPatternType === 'glob' &&
                       !handleCheckUrlIsValid(value) &&
-                      "Invalid URL",
+                      'Invalid URL',
                   }}
                 >
                   {(field) => (
                     <div className="grid gap-2">
-                      <Label htmlFor="pattern-input">Crawler Match Patterns</Label>
+                      <Label htmlFor="pattern-input">
+                        Crawler Match Patterns
+                      </Label>
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <Input
@@ -193,24 +226,28 @@ export function WebsiteCrawlModal({ resource }: Props) {
                             value={tempCrawlerMatchPatterns}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onKeyPress={(e) => {
-                              if (e.key === "Enter") {
+                              if (e.key === 'Enter') {
                                 e.preventDefault();
                                 if (tempCrawlerMatchPatterns.trim()) {
                                   setCrawlerMatchPatterns([
                                     ...crawlerMatchPatterns,
                                     tempCrawlerMatchPatterns,
                                   ]);
-                                  field.handleChange("");
+                                  field.handleChange('');
                                 }
                               }
                             }}
                             placeholder={
-                              crawlerPatternType === "glob"
-                                ? "https://example.com/"
-                                : "(http|https)://www.example.com/(.*)"
+                              crawlerPatternType === 'glob'
+                                ? 'https://example.com/'
+                                : '(http|https)://www.example.com/(.*)'
                             }
                             className="flex-1"
-                            aria-describedby={field.state.meta.errors ? "pattern-error" : "pattern-help"}
+                            aria-describedby={
+                              field.state.meta.errors
+                                ? 'pattern-error'
+                                : 'pattern-help'
+                            }
                             aria-invalid={!!field.state.meta.errors}
                           />
                           <Button
@@ -221,7 +258,7 @@ export function WebsiteCrawlModal({ resource }: Props) {
                                   ...crawlerMatchPatterns,
                                   tempCrawlerMatchPatterns,
                                 ]);
-                                field.handleChange("");
+                                field.handleChange('');
                               }
                             }}
                             disabled={!String(tempCrawlerMatchPatterns).trim()}
@@ -232,20 +269,27 @@ export function WebsiteCrawlModal({ resource }: Props) {
                           </Button>
                         </div>
                         {field.state.meta.errors && (
-                          <p id="pattern-error" className="text-sm text-destructive mb-2" role="alert">
+                          <p
+                            id="pattern-error"
+                            className="text-destructive mb-2 text-sm"
+                            role="alert"
+                          >
                             {field.state.meta.errors}
                           </p>
                         )}
-                        <p id="pattern-help" className="text-sm text-muted-foreground">
+                        <p
+                          id="pattern-help"
+                          className="text-muted-foreground text-sm"
+                        >
                           Press Enter or click the plus button to add a pattern
                         </p>
-                        <div 
-                          className="flex flex-wrap gap-2 min-h-[2rem] p-2 border rounded-md bg-muted/50"
+                        <div
+                          className="bg-muted/50 flex min-h-[2rem] flex-wrap gap-2 rounded-md border p-2"
                           role="list"
                           aria-label="Added crawler match patterns"
                         >
                           {crawlerMatchPatterns.length === 0 ? (
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               No patterns added
                             </span>
                           ) : (
@@ -262,11 +306,11 @@ export function WebsiteCrawlModal({ resource }: Props) {
                                   onClick={() =>
                                     setCrawlerMatchPatterns(
                                       crawlerMatchPatterns.filter(
-                                        (p) => p !== pattern
-                                      )
+                                        (p) => p !== pattern,
+                                      ),
                                     )
                                   }
-                                  className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                                  className="hover:bg-destructive/20 ml-1 rounded-full p-0.5"
                                   aria-label={`Remove pattern: ${pattern}`}
                                 >
                                   <X className="h-3 w-3" />
@@ -281,21 +325,26 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 </form.Field>
               )}
             </form.Subscribe>
-            <form.Subscribe
-              selector={(state) => [state.isSubmitting]}
-            >
+            <form.Subscribe selector={(state) => [state.isSubmitting]}>
               {([isSubmitting]) => (
                 <div className="flex gap-3 pt-4">
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
                     disabled={isSubmitting}
-                    aria-describedby={isSubmitting ? "submitting-status" : undefined}
+                    aria-describedby={
+                      isSubmitting ? 'submitting-status' : undefined
+                    }
                   >
-                    {isSubmitting ? "Submitting..." : "Submit"}
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
                   </Button>
                   {isSubmitting && (
-                    <div id="submitting-status" className="sr-only" role="status" aria-live="polite">
+                    <div
+                      id="submitting-status"
+                      className="sr-only"
+                      role="status"
+                      aria-live="polite"
+                    >
                       Form is being submitted
                     </div>
                   )}

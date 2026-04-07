@@ -10,7 +10,10 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-15T12:00:30Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate);
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+      );
 
       expect(diff).toBe(30);
     });
@@ -21,7 +24,11 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-15T12:30:00Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate, 'minute');
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+        'minute',
+      );
 
       expect(diff).toBe(30);
     });
@@ -32,7 +39,11 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-15T14:00:00Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate, 'hour');
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+        'hour',
+      );
 
       expect(diff).toBe(2);
     });
@@ -43,7 +54,11 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-17T12:00:00Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate, 'day');
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+        'day',
+      );
 
       expect(diff).toBe(2);
     });
@@ -54,7 +69,10 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-15T12:00:00Z';
       const pastDate = '2024-01-15T12:00:30Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate);
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+      );
 
       expect(diff).toBe(-30);
     });
@@ -90,7 +108,11 @@ describe('useDayJs', () => {
       const futureDate = '2024-01-22T12:00:00Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate, 'week');
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+        'week',
+      );
 
       expect(diff).toBe(1);
     });
@@ -101,7 +123,11 @@ describe('useDayJs', () => {
       const futureDate = '2024-03-15T12:00:00Z';
       const pastDate = '2024-01-15T12:00:00Z';
 
-      const diff = result.current.getTimeDifferenceBetweenTwoDates(futureDate, pastDate, 'month');
+      const diff = result.current.getTimeDifferenceBetweenTwoDates(
+        futureDate,
+        pastDate,
+        'month',
+      );
 
       expect(diff).toBe(2);
     });
@@ -232,8 +258,12 @@ describe('useDayJs', () => {
 
       // Note: Since functions are created inside the hook, they may not be referentially equal
       // but their behavior should be consistent
-      expect(typeof firstResult.getTimeDifferenceBetweenTwoDates).toBe('function');
-      expect(typeof secondResult.getTimeDifferenceBetweenTwoDates).toBe('function');
+      expect(typeof firstResult.getTimeDifferenceBetweenTwoDates).toBe(
+        'function',
+      );
+      expect(typeof secondResult.getTimeDifferenceBetweenTwoDates).toBe(
+        'function',
+      );
     });
   });
 });

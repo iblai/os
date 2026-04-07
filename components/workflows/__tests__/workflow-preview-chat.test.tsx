@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { WorkflowPreviewChat } from "../workflow-preview-chat";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { WorkflowPreviewChat } from '../workflow-preview-chat';
 
 // Mock scrollTo on HTMLDivElement
 const mockScrollTo = vi.fn();
-Object.defineProperty(HTMLDivElement.prototype, "scrollTo", {
+Object.defineProperty(HTMLDivElement.prototype, 'scrollTo', {
   value: mockScrollTo,
   writable: true,
 });
@@ -20,7 +20,7 @@ let capturedErrorHandler: ((message: string) => void) | undefined;
 
 const mockStartNewChat = vi.fn();
 
-vi.mock("@iblai/iblai-js/web-utils", () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useAdvancedChat: vi.fn(
     (options: { errorHandler?: (msg: string) => void }) => {
       capturedErrorHandler = options.errorHandler;
@@ -29,10 +29,10 @@ vi.mock("@iblai/iblai-js/web-utils", () => ({
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: false,
@@ -42,16 +42,16 @@ vi.mock("@iblai/iblai-js/web-utils", () => ({
       };
     },
   ),
-  ANONYMOUS_USERNAME: "anonymous",
+  ANONYMOUS_USERNAME: 'anonymous',
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
   },
 }));
 
-vi.mock("@/components/chat/chat-messages", () => ({
+vi.mock('@/components/chat/chat-messages', () => ({
   ChatMessages: ({
     messages,
     highlightedMessageId,
@@ -63,10 +63,10 @@ vi.mock("@/components/chat/chat-messages", () => ({
   }) => (
     <div data-testid="chat-messages">
       <span data-testid="message-count">{messages.length}</span>
-      <span data-testid="highlighted-id">{highlightedMessageId ?? "none"}</span>
+      <span data-testid="highlighted-id">{highlightedMessageId ?? 'none'}</span>
       <button
         data-testid="submit-from-messages"
-        onClick={() => handleSubmit("test message")}
+        onClick={() => handleSubmit('test message')}
       >
         Submit from messages
       </button>
@@ -74,7 +74,7 @@ vi.mock("@/components/chat/chat-messages", () => ({
   ),
 }));
 
-vi.mock("@/components/chat-input-form", () => ({
+vi.mock('@/components/chat-input-form', () => ({
   ChatInputForm: ({
     onSubmit,
     sessionId,
@@ -102,14 +102,14 @@ vi.mock("@/components/chat-input-form", () => ({
       <span data-testid="is-streaming">{String(isStreaming)}</span>
       <span data-testid="is-connecting">{String(isConnecting)}</span>
       <span data-testid="compact-mode">{String(compactMode)}</span>
-      <button data-testid="submit-message" onClick={() => onSubmit("Hello")}>
+      <button data-testid="submit-message" onClick={() => onSubmit('Hello')}>
         Send
       </button>
     </div>
   ),
 }));
 
-vi.mock("@/components/chat/loading-message", () => ({
+vi.mock('@/components/chat/loading-message', () => ({
   LoadingMessage: ({
     mentorName,
     profileImage,
@@ -124,72 +124,72 @@ vi.mock("@/components/chat/loading-message", () => ({
   ),
 }));
 
-const mockUseAxdToken = vi.fn((): string | null => "test-token");
-vi.mock("@/hooks/use-tokens", () => ({
+const mockUseAxdToken = vi.fn((): string | null => 'test-token');
+vi.mock('@/hooks/use-tokens', () => ({
   useAxdToken: () => mockUseAxdToken(),
 }));
 
-const mockUseUsername = vi.fn((): string | null => "test-user");
-vi.mock("@/hooks/use-user", () => ({
+const mockUseUsername = vi.fn((): string | null => 'test-user');
+vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-vi.mock("@/lib/config", () => ({
+vi.mock('@/lib/config', () => ({
   config: {
-    baseWsUrl: () => "wss://test.example.com",
+    baseWsUrl: () => 'wss://test.example.com',
   },
 }));
 
-vi.mock("@/lib/utils", () => ({
+vi.mock('@/lib/utils', () => ({
   redirectToAuthSpa: vi.fn(),
 }));
 
-vi.mock("@/lib/eventBus", () => ({
+vi.mock('@/lib/eventBus', () => ({
   default: {
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn(),
   },
   RemoteEvents: {
-    newChat: "newChat",
+    newChat: 'newChat',
   },
 }));
 
-describe("WorkflowPreviewChat", () => {
+describe('WorkflowPreviewChat', () => {
   const defaultProps = {
-    tenantKey: "test-tenant",
-    mentorId: "test-mentor-id",
+    tenantKey: 'test-tenant',
+    mentorId: 'test-mentor-id',
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     capturedErrorHandler = undefined;
-    mockUseAxdToken.mockReturnValue("test-token");
-    mockUseUsername.mockReturnValue("test-user");
+    mockUseAxdToken.mockReturnValue('test-token');
+    mockUseUsername.mockReturnValue('test-user');
     mockScrollTo.mockClear();
   });
 
-  describe("rendering", () => {
-    it("should render the chat container", () => {
+  describe('rendering', () => {
+    it('should render the chat container', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
       // With empty messages, the placeholder is shown instead of ChatMessages
-      expect(screen.getByText("Preview your agent")).toBeInTheDocument();
-      expect(screen.getByTestId("chat-input-form")).toBeInTheDocument();
+      expect(screen.getByText('Preview your agent')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
 
-    it("should render ChatMessages component when messages exist", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should render ChatMessages component when messages exist', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
-          messages: [{ id: 1, content: "Hello", role: "user" }],
+          messages: [{ id: 1, content: 'Hello', role: 'user' }],
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -200,69 +200,69 @@ describe("WorkflowPreviewChat", () => {
       });
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("chat-messages")).toBeInTheDocument();
+      expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
     });
 
-    it("should render ChatInputForm component", () => {
+    it('should render ChatInputForm component', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("chat-input-form")).toBeInTheDocument();
+      expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
   });
 
-  describe("props passing", () => {
-    it("should pass tenantKey to ChatInputForm", () => {
+  describe('props passing', () => {
+    it('should pass tenantKey to ChatInputForm', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("tenant-key")).toHaveTextContent("test-tenant");
+      expect(screen.getByTestId('tenant-key')).toHaveTextContent('test-tenant');
     });
 
-    it("should not pass mentorId to ChatInputForm", () => {
+    it('should not pass mentorId to ChatInputForm', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("mentor-id")).toHaveTextContent("");
+      expect(screen.getByTestId('mentor-id')).toHaveTextContent('');
     });
 
-    it("should pass username to ChatInputForm", () => {
+    it('should pass username to ChatInputForm', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("username")).toHaveTextContent("test-user");
+      expect(screen.getByTestId('username')).toHaveTextContent('test-user');
     });
 
-    it("should pass sessionId to ChatInputForm", () => {
+    it('should pass sessionId to ChatInputForm', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("session-id")).toHaveTextContent(
-        "test-session-id",
+      expect(screen.getByTestId('session-id')).toHaveTextContent(
+        'test-session-id',
       );
     });
 
-    it("should pass compactMode as true", () => {
+    it('should pass compactMode as true', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("compact-mode")).toHaveTextContent("true");
+      expect(screen.getByTestId('compact-mode')).toHaveTextContent('true');
     });
   });
 
-  describe("message handling", () => {
-    it("should call sendMessage when form is submitted", async () => {
+  describe('message handling', () => {
+    it('should call sendMessage when form is submitted', async () => {
       const user = userEvent.setup();
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      await user.click(screen.getByTestId("submit-message"));
+      await user.click(screen.getByTestId('submit-message'));
 
-      expect(mockSendMessage).toHaveBeenCalledWith("chat", "Hello", {
+      expect(mockSendMessage).toHaveBeenCalledWith('chat', 'Hello', {
         visible: true,
       });
     });
 
-    it("should call sendMessage when submitted from messages", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should call sendMessage when submitted from messages', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
-          messages: [{ id: 1, content: "Hello", role: "user" }],
+          messages: [{ id: 1, content: 'Hello', role: 'user' }],
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -275,31 +275,31 @@ describe("WorkflowPreviewChat", () => {
       const user = userEvent.setup();
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      await user.click(screen.getByTestId("submit-from-messages"));
+      await user.click(screen.getByTestId('submit-from-messages'));
 
-      expect(mockSendMessage).toHaveBeenCalledWith("chat", "test message", {
+      expect(mockSendMessage).toHaveBeenCalledWith('chat', 'test message', {
         visible: true,
       });
     });
   });
 
-  describe("loading state", () => {
-    it("should not show loading message when not pending or streaming", () => {
+  describe('loading state', () => {
+    it('should not show loading message when not pending or streaming', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.queryByTestId("loading-message")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
     });
 
-    it("should show loading message when isPending is true", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should show loading message when isPending is true', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: true,
         isStreaming: false,
@@ -308,20 +308,20 @@ describe("WorkflowPreviewChat", () => {
       } as any);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("loading-message")).toBeInTheDocument();
+      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
     });
 
-    it("should show loading message when isStreaming with no content", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should show loading message when isStreaming with no content', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: true,
@@ -330,49 +330,49 @@ describe("WorkflowPreviewChat", () => {
       } as any);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("loading-message")).toBeInTheDocument();
+      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
     });
 
-    it("should not show loading message when streaming with content", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should not show loading message when streaming with content', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: true,
-        currentStreamingMessage: { content: "Streaming content" },
+        currentStreamingMessage: { content: 'Streaming content' },
         isConnected: true,
       } as any);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.queryByTestId("loading-message")).not.toBeInTheDocument();
+      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
     });
   });
 
-  describe("connection state", () => {
-    it("should pass isConnecting false when connected", () => {
+  describe('connection state', () => {
+    it('should pass isConnecting false when connected', () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("is-connecting")).toHaveTextContent("false");
+      expect(screen.getByTestId('is-connecting')).toHaveTextContent('false');
     });
 
-    it("should pass isConnecting true when not connected", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass isConnecting true when not connected', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: false,
@@ -381,26 +381,26 @@ describe("WorkflowPreviewChat", () => {
       } as any);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("is-connecting")).toHaveTextContent("true");
+      expect(screen.getByTestId('is-connecting')).toHaveTextContent('true');
     });
   });
 
-  describe("message filtering", () => {
-    it("should filter out first assistant message", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('message filtering', () => {
+    it('should filter out first assistant message', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [
-          { id: 1, content: "Welcome", role: "assistant" },
-          { id: 2, content: "Hello", role: "user" },
-          { id: 3, content: "Hi there", role: "assistant" },
+          { id: 1, content: 'Welcome', role: 'assistant' },
+          { id: 2, content: 'Hello', role: 'user' },
+          { id: 3, content: 'Hi there', role: 'assistant' },
         ],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: false,
@@ -410,23 +410,23 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
       // Should have 2 messages (filtering out first assistant message)
-      expect(screen.getByTestId("message-count")).toHaveTextContent("2");
+      expect(screen.getByTestId('message-count')).toHaveTextContent('2');
     });
 
-    it("should not filter if first message is from user", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should not filter if first message is from user', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [
-          { id: 1, content: "Hello", role: "user" },
-          { id: 2, content: "Hi there", role: "assistant" },
+          { id: 1, content: 'Hello', role: 'user' },
+          { id: 2, content: 'Hi there', role: 'assistant' },
         ],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: false,
@@ -436,20 +436,20 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
       // Should have all 2 messages
-      expect(screen.getByTestId("message-count")).toHaveTextContent("2");
+      expect(screen.getByTestId('message-count')).toHaveTextContent('2');
     });
 
-    it("should handle empty messages array", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should handle empty messages array', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: false,
@@ -459,52 +459,52 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
       // With empty messages, the placeholder is shown instead of ChatMessages
-      expect(screen.getByText("Preview your agent")).toBeInTheDocument();
-      expect(screen.queryByTestId("chat-messages")).not.toBeInTheDocument();
+      expect(screen.getByText('Preview your agent')).toBeInTheDocument();
+      expect(screen.queryByTestId('chat-messages')).not.toBeInTheDocument();
     });
   });
 
-  describe("without mentorId", () => {
-    it("should render without mentorId", () => {
+  describe('without mentorId', () => {
+    it('should render without mentorId', () => {
       render(<WorkflowPreviewChat tenantKey="test-tenant" />);
       // With empty messages (default mock), the placeholder is shown
-      expect(screen.getByText("Preview your agent")).toBeInTheDocument();
+      expect(screen.getByText('Preview your agent')).toBeInTheDocument();
     });
 
-    it("should pass empty string for mentorId when undefined", () => {
+    it('should pass empty string for mentorId when undefined', () => {
       render(<WorkflowPreviewChat tenantKey="test-tenant" />);
-      expect(screen.getByTestId("mentor-id")).toHaveTextContent("");
+      expect(screen.getByTestId('mentor-id')).toHaveTextContent('');
     });
   });
 
-  describe("streaming state", () => {
-    it("should pass isStreaming to ChatInputForm", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('streaming state', () => {
+    it('should pass isStreaming to ChatInputForm', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockReturnValue({
         messages: [],
         sendMessage: mockSendMessage,
         stopGenerating: mockStopGenerating,
         setMessage: mockSetMessage,
-        activeTab: "chat",
-        mentorName: "Test Mentor",
-        profileImage: "/test-image.png",
-        sessionId: "test-session-id",
+        activeTab: 'chat',
+        mentorName: 'Test Mentor',
+        profileImage: '/test-image.png',
+        sessionId: 'test-session-id',
         enableSafetyDisclaimer: false,
         isPending: false,
         isStreaming: true,
-        currentStreamingMessage: { content: "streaming" },
+        currentStreamingMessage: { content: 'streaming' },
         isConnected: true,
       } as any);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("is-streaming")).toHaveTextContent("true");
+      expect(screen.getByTestId('is-streaming')).toHaveTextContent('true');
     });
   });
 
-  describe("errorHandler callback", () => {
-    it("should call toast.error when error occurs", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
-      const { toast } = await import("sonner");
+  describe('errorHandler callback', () => {
+    it('should call toast.error when error occurs', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { toast } = await import('sonner');
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -513,10 +513,10 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -530,18 +530,18 @@ describe("WorkflowPreviewChat", () => {
       expect(capturedErrorHandler).toBeDefined();
 
       act(() => {
-        capturedErrorHandler?.("Test error message");
+        capturedErrorHandler?.('Test error message');
       });
 
-      expect(toast.error).toHaveBeenCalledWith("Test error message");
+      expect(toast.error).toHaveBeenCalledWith('Test error message');
     });
   });
 
-  describe("username and token handling", () => {
-    it("should pass anonymous username when username is null", async () => {
+  describe('username and token handling', () => {
+    it('should pass anonymous username when username is null', async () => {
       mockUseUsername.mockReturnValue(null);
 
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedUsername: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { username?: string }) => {
@@ -551,10 +551,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -566,13 +566,13 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(capturedUsername).toBe("anonymous");
+      expect(capturedUsername).toBe('anonymous');
     });
 
-    it("should pass empty string for token when useAxdToken returns null", async () => {
+    it('should pass empty string for token when useAxdToken returns null', async () => {
       mockUseAxdToken.mockReturnValue(null);
 
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedToken: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { token?: string }) => {
@@ -582,10 +582,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -597,33 +597,33 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(capturedToken).toBe("");
+      expect(capturedToken).toBe('');
     });
 
-    it("should pass empty string for username to ChatInputForm when username is null", async () => {
+    it('should pass empty string for username to ChatInputForm when username is null', async () => {
       mockUseUsername.mockReturnValue(null);
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(screen.getByTestId("username")).toHaveTextContent("");
+      expect(screen.getByTestId('username')).toHaveTextContent('');
     });
   });
 
-  describe("scroll behavior", () => {
-    it("should scroll to bottom when messages change", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('scroll behavior', () => {
+    it('should scroll to bottom when messages change', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
-          messages: [{ id: 1, content: "Hello", role: "user" }],
+          messages: [{ id: 1, content: 'Hello', role: 'user' }],
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -637,13 +637,13 @@ describe("WorkflowPreviewChat", () => {
       await waitFor(() => {
         expect(mockScrollTo).toHaveBeenCalledWith({
           top: expect.any(Number),
-          behavior: "smooth",
+          behavior: 'smooth',
         });
       });
     });
 
-    it("should scroll to bottom when isPending changes", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should scroll to bottom when isPending changes', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -652,10 +652,10 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: true,
           isStreaming: false,
@@ -671,8 +671,8 @@ describe("WorkflowPreviewChat", () => {
       });
     });
 
-    it("should scroll to bottom when isStreaming changes", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should scroll to bottom when isStreaming changes', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
@@ -681,10 +681,10 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: true,
@@ -701,23 +701,23 @@ describe("WorkflowPreviewChat", () => {
     });
   });
 
-  describe("highlight message functionality", () => {
-    it("should pass handleHighlightMessage to ChatMessages", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('highlight message functionality', () => {
+    it('should pass handleHighlightMessage to ChatMessages', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
           messages: [
-            { id: 1, content: "Hello", role: "user" },
-            { id: 2, content: "Hi there", role: "assistant" },
+            { id: 1, content: 'Hello', role: 'user' },
+            { id: 2, content: 'Hi there', role: 'assistant' },
           ],
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -730,13 +730,13 @@ describe("WorkflowPreviewChat", () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
 
       // Initial state should show 'none' for highlighted message
-      expect(screen.getByTestId("highlighted-id")).toHaveTextContent("none");
+      expect(screen.getByTestId('highlighted-id')).toHaveTextContent('none');
     });
   });
 
-  describe("useAdvancedChat configuration", () => {
-    it("should pass correct wsUrl to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('useAdvancedChat configuration', () => {
+    it('should pass correct wsUrl to useAdvancedChat', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedWsUrl: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { wsUrl?: string }) => {
@@ -746,10 +746,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -761,11 +761,11 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(capturedWsUrl).toBe("wss://test.example.com/ws/langflow/");
+      expect(capturedWsUrl).toBe('wss://test.example.com/ws/langflow/');
     });
 
-    it("should pass correct stopGenerationWsUrl to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass correct stopGenerationWsUrl to useAdvancedChat', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedStopGenerationWsUrl: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { stopGenerationWsUrl?: string }) => {
@@ -775,10 +775,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -791,12 +791,12 @@ describe("WorkflowPreviewChat", () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
 
       expect(capturedStopGenerationWsUrl).toBe(
-        "wss://test.example.com/ws/langflow-stop-generation/",
+        'wss://test.example.com/ws/langflow-stop-generation/',
       );
     });
 
-    it("should pass redirectToAuthSpa to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass redirectToAuthSpa to useAdvancedChat', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedRedirectToAuthSpa: (() => void) | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { redirectToAuthSpa?: () => void }) => {
@@ -806,10 +806,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -824,8 +824,8 @@ describe("WorkflowPreviewChat", () => {
       expect(capturedRedirectToAuthSpa).toBeDefined();
     });
 
-    it("should pass mentorId to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass mentorId to useAdvancedChat', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedMentorId: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { mentorId?: string }) => {
@@ -835,10 +835,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -850,11 +850,11 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(capturedMentorId).toBe("test-mentor-id");
+      expect(capturedMentorId).toBe('test-mentor-id');
     });
 
-    it("should pass empty string for mentorId to useAdvancedChat when undefined", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass empty string for mentorId to useAdvancedChat when undefined', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedMentorId: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { mentorId?: string }) => {
@@ -864,10 +864,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -879,11 +879,11 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat tenantKey="test-tenant" />);
 
-      expect(capturedMentorId).toBe("");
+      expect(capturedMentorId).toBe('');
     });
 
-    it("should pass tenantKey to useAdvancedChat", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should pass tenantKey to useAdvancedChat', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       let capturedTenantKey: string | undefined;
       vi.mocked<any>(useAdvancedChat).mockImplementation(
         (options: { tenantKey?: string }) => {
@@ -893,10 +893,10 @@ describe("WorkflowPreviewChat", () => {
             sendMessage: mockSendMessage,
             stopGenerating: mockStopGenerating,
             setMessage: mockSetMessage,
-            activeTab: "chat",
-            mentorName: "Test Mentor",
-            profileImage: "/test-image.png",
-            sessionId: "test-session-id",
+            activeTab: 'chat',
+            mentorName: 'Test Mentor',
+            profileImage: '/test-image.png',
+            sessionId: 'test-session-id',
             enableSafetyDisclaimer: false,
             isPending: false,
             isStreaming: false,
@@ -908,13 +908,13 @@ describe("WorkflowPreviewChat", () => {
 
       render(<WorkflowPreviewChat {...defaultProps} />);
 
-      expect(capturedTenantKey).toBe("test-tenant");
+      expect(capturedTenantKey).toBe('test-tenant');
     });
   });
 
-  describe("loading state with streaming message having empty content", () => {
-    it("should show loading message when streaming with empty string content", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+  describe('loading state with streaming message having empty content', () => {
+    it('should show loading message when streaming with empty string content', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -922,14 +922,14 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: true,
-          currentStreamingMessage: { content: "" },
+          currentStreamingMessage: { content: '' },
           isConnected: true,
         };
       });
@@ -937,11 +937,11 @@ describe("WorkflowPreviewChat", () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
       // Empty content should still not show loading message as it's truthy (but empty)
       // Actually, '' is falsy, so it should show loading message
-      expect(screen.getByTestId("loading-message")).toBeInTheDocument();
+      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
     });
 
-    it("should show loading message when both isPending and isStreaming are true", async () => {
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+    it('should show loading message when both isPending and isStreaming are true', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -949,10 +949,10 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: true,
           isStreaming: true,
@@ -962,14 +962,14 @@ describe("WorkflowPreviewChat", () => {
       });
 
       render(<WorkflowPreviewChat {...defaultProps} />);
-      expect(screen.getByTestId("loading-message")).toBeInTheDocument();
+      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
     });
   });
 
-  describe("noop callbacks passed to ChatInputForm", () => {
-    it("should pass noop functions that do not throw when called", async () => {
+  describe('noop callbacks passed to ChatInputForm', () => {
+    it('should pass noop functions that do not throw when called', async () => {
       // Update the ChatInputForm mock to capture the noop callbacks
-      vi.doMock("@/components/chat-input-form", () => ({
+      vi.doMock('@/components/chat-input-form', () => ({
         ChatInputForm: (props: {
           onScreenSharingClick: () => void;
           onPhoneCallClick: () => void;
@@ -1018,7 +1018,7 @@ describe("WorkflowPreviewChat", () => {
       // Note: These noop functions are defined at module level and passed as callbacks
       // They cannot throw errors when called since they are empty functions
       // This test verifies the component doesn't break when these callbacks are invoked
-      const { useAdvancedChat } = await import("@iblai/iblai-js/web-utils");
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       vi.mocked<any>(useAdvancedChat).mockImplementation((options) => {
         capturedErrorHandler = options.errorHandler;
         return {
@@ -1026,10 +1026,10 @@ describe("WorkflowPreviewChat", () => {
           sendMessage: mockSendMessage,
           stopGenerating: mockStopGenerating,
           setMessage: mockSetMessage,
-          activeTab: "chat",
-          mentorName: "Test Mentor",
-          profileImage: "/test-image.png",
-          sessionId: "test-session-id",
+          activeTab: 'chat',
+          mentorName: 'Test Mentor',
+          profileImage: '/test-image.png',
+          sessionId: 'test-session-id',
           enableSafetyDisclaimer: false,
           isPending: false,
           isStreaming: false,
@@ -1041,7 +1041,7 @@ describe("WorkflowPreviewChat", () => {
       render(<WorkflowPreviewChat {...defaultProps} />);
 
       // The component should render successfully with noop functions
-      expect(screen.getByTestId("chat-input-form")).toBeInTheDocument();
+      expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
   });
 });

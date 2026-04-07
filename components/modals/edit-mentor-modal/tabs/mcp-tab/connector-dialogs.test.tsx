@@ -1,6 +1,21 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from '@testing-library/react';
 
 import {
   ConnectorDialogs,
@@ -38,9 +53,18 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useOauthFindMutation: () => [mockOauthFind, { isLoading: false }],
   useLazyStartOAuthFlowQuery: () => [mockStartOAuthFlow, { isLoading: false }],
   useCreateMCPServerMutation: () => [mockCreateMCPServer, { isLoading: false }],
-  usePartialUpdateMCPServerMutation: () => [mockUpdateMCPServer, { isLoading: false }],
-  useCreateMCPServerConnectionMutation: () => [mockCreateMCPServerConnection, { isLoading: false }],
-  usePatchMCPServerConnectionMutation: () => [mockPatchMCPServerConnection, { isLoading: false }],
+  usePartialUpdateMCPServerMutation: () => [
+    mockUpdateMCPServer,
+    { isLoading: false },
+  ],
+  useCreateMCPServerConnectionMutation: () => [
+    mockCreateMCPServerConnection,
+    { isLoading: false },
+  ],
+  usePatchMCPServerConnectionMutation: () => [
+    mockPatchMCPServerConnection,
+    { isLoading: false },
+  ],
   useGetConnectedServicesQuery: () => ({
     data: [],
     isLoading: false,
@@ -77,7 +101,11 @@ const mockSetPendingOAuthServer = vi.fn();
 const mockRemovePendingOAuthServer = vi.fn();
 
 vi.mock('@/hooks/use-local-storage', () => ({
-  useLocalStorage: () => [null, mockSetPendingOAuthServer, mockRemovePendingOAuthServer],
+  useLocalStorage: () => [
+    null,
+    mockSetPendingOAuthServer,
+    mockRemovePendingOAuthServer,
+  ],
 }));
 
 /**
@@ -85,7 +113,12 @@ vi.mock('@/hooks/use-local-storage', () => ({
  */
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -117,7 +150,10 @@ vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open, onOpenChange }: any) =>
     open ? (
       <div data-testid="dialog">
-        <button data-testid="dialog-close-trigger" onClick={() => onOpenChange?.(false)}>
+        <button
+          data-testid="dialog-close-trigger"
+          onClick={() => onOpenChange?.(false)}
+        >
           Close
         </button>
         {children}
@@ -133,8 +169,12 @@ vi.mock('@/components/ui/dialog', () => ({
       {children}
     </div>
   ),
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: any) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
@@ -152,12 +192,18 @@ vi.mock('@/components/ui/textarea', () => ({
 
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children, value, onValueChange }: any) => (
-    <select data-testid="select" value={value} onChange={(e) => onValueChange(e.target.value)}>
+    <select
+      data-testid="select"
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+    >
       {children}
     </select>
   ),
   SelectContent: ({ children }: any) => <>{children}</>,
-  SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
+  SelectItem: ({ children, value }: any) => (
+    <option value={value}>{children}</option>
+  ),
   SelectTrigger: ({ children }: any) => <>{children}</>,
   SelectValue: () => null,
 }));
@@ -170,7 +216,8 @@ vi.mock('@/components/ui/radio-group', () => ({
         return React.cloneElement(child, {
           onClick: () => {
             const radio = child.props.children?.find?.(
-              (c: any) => c?.type?.displayName === 'RadioGroupItem' || c?.props?.value,
+              (c: any) =>
+                c?.type?.displayName === 'RadioGroupItem' || c?.props?.value,
             );
             const val = radio?.props?.value;
             if (val) onValueChange(val);
@@ -209,7 +256,9 @@ vi.mock('lucide-react', () => ({
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div data-testid="tooltip">{children}</div>,
-  TooltipContent: ({ children }: any) => <div data-testid="tooltip-content">{children}</div>,
+  TooltipContent: ({ children }: any) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
   TooltipProvider: ({ children }: any) => <>{children}</>,
   TooltipTrigger: ({ children, ...props }: any) => (
     <span data-testid="tooltip-trigger" {...props}>
@@ -332,10 +381,14 @@ describe('ConnectorDialogs', () => {
 
     it('enables Connect button when required fields are filled', () => {
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'My Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.test.com' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.test.com' },
+      });
 
       const connectButton = screen.getByText('Connect');
       expect(connectButton).not.toBeDisabled();
@@ -343,14 +396,20 @@ describe('ConnectorDialogs', () => {
 
     it('calls onAddConnector with form data when submitting', () => {
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       const descriptionTextarea = screen.getByPlaceholderText(
         'Describe what this connector does...',
       );
 
       fireEvent.change(nameInput, { target: { value: 'Test Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.test.com/mcp' } });
-      fireEvent.change(descriptionTextarea, { target: { value: 'Test description' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.test.com/mcp' },
+      });
+      fireEvent.change(descriptionTextarea, {
+        target: { value: 'Test description' },
+      });
 
       const connectButton = screen.getByText('Connect');
       fireEvent.click(connectButton);
@@ -367,7 +426,9 @@ describe('ConnectorDialogs', () => {
 
     it('closes dialog after submitting custom connector', async () => {
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -381,16 +442,26 @@ describe('ConnectorDialogs', () => {
 
     it('submits connector with image file', async () => {
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // Upload an image first
-      const imageFile = new File(['test'], 'connector.png', { type: 'image/png' });
+      const imageFile = new File(['test'], 'connector.png', {
+        type: 'image/png',
+      });
       Object.defineProperty(imageFile, 'size', { value: 1024 });
       fireEvent.change(fileInput, { target: { files: [imageFile] } });
 
-      fireEvent.change(nameInput, { target: { value: 'Connector With Image' } });
-      fireEvent.change(serverInput, { target: { value: 'https://test.com/mcp' } });
+      fireEvent.change(nameInput, {
+        target: { value: 'Connector With Image' },
+      });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://test.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -418,7 +489,9 @@ describe('ConnectorDialogs', () => {
 
       expect(screen.getByText('Token Type')).toBeInTheDocument();
       expect(screen.getAllByTestId('select').length).toBe(3);
-      expect(screen.getByPlaceholderText('Enter your token')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter your token'),
+      ).toBeInTheDocument();
     });
 
     it('hides API key fields when No Authentication is selected', () => {
@@ -439,7 +512,9 @@ describe('ConnectorDialogs', () => {
 
       // Verify token-related fields are shown
       expect(screen.getByText('Token Type')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Enter your token')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Enter your token'),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('lock-icon')).toBeInTheDocument();
     });
   });
@@ -502,7 +577,9 @@ describe('ConnectorDialogs', () => {
       // Then select OAuth - token fields should be hidden
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
       expect(screen.queryByText('Token Type')).not.toBeInTheDocument();
-      expect(screen.queryByPlaceholderText('Enter your token')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Enter your token'),
+      ).not.toBeInTheDocument();
     });
 
     it('enables Connect button when OAuth is selected with valid name and URL', () => {
@@ -511,10 +588,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       const connectButton = screen.getByText('Connect');
       expect(connectButton).not.toBeDisabled();
@@ -548,7 +629,9 @@ describe('ConnectorDialogs', () => {
 
     it('shows description for tenant scope', () => {
       expect(
-        screen.getByText('OAuth connection will be available for all mentors in this tenant.'),
+        screen.getByText(
+          'OAuth connection will be available for all mentors in this tenant.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -558,7 +641,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authScopeSelect, { target: { value: 'mentor' } });
 
       expect(
-        screen.getByText('OAuth connection will only be available for this mentor.'),
+        screen.getByText(
+          'OAuth connection will only be available for this mentor.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -568,7 +653,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authScopeSelect, { target: { value: 'user' } });
 
       expect(
-        screen.getByText('Each user will need to authenticate individually when chatting.'),
+        screen.getByText(
+          'Each user will need to authenticate individually when chatting.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -577,7 +664,9 @@ describe('ConnectorDialogs', () => {
       const authSelect = selects[1];
       fireEvent.change(authSelect, { target: { value: 'none' } });
 
-      expect(screen.queryByText('Authentication Scope')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Authentication Scope'),
+      ).not.toBeInTheDocument();
     });
 
     it('does not show auth scope dropdown when api-key auth is selected', () => {
@@ -585,7 +674,9 @@ describe('ConnectorDialogs', () => {
       const authSelect = selects[1];
       fireEvent.change(authSelect, { target: { value: 'api-key' } });
 
-      expect(screen.queryByText('Authentication Scope')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Authentication Scope'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -622,7 +713,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 1, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -632,10 +725,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -664,7 +761,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -674,10 +773,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -706,7 +809,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 20, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -716,10 +821,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://custom-oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://custom-oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -749,7 +858,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 20, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -759,14 +870,20 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       const descriptionTextarea = screen.getByPlaceholderText(
         'Describe what this connector does...',
       );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://custom-oauth.example.com/mcp' } });
-      fireEvent.change(descriptionTextarea, { target: { value: 'OAuth test description' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://custom-oauth.example.com/mcp' },
+      });
+      fireEvent.change(descriptionTextarea, {
+        target: { value: 'OAuth test description' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -801,7 +918,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 20, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -815,10 +934,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authScopeSelect, { target: { value: 'user' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'User OAuth' } });
-      fireEvent.change(serverInput, { target: { value: 'https://custom-oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://custom-oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -849,7 +972,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 20, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -859,10 +984,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -907,15 +1036,21 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://invalid-oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://invalid-oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
       await waitFor(() => {
-        expect(screen.getByText('OAuth configuration not found for this URL')).toBeInTheDocument();
+        expect(
+          screen.getByText('OAuth configuration not found for this URL'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -936,10 +1071,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://invalid.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://invalid.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -969,10 +1108,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://invalid.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://invalid.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -981,7 +1124,9 @@ describe('ConnectorDialogs', () => {
       });
 
       // Change URL - error should clear
-      fireEvent.change(serverInput, { target: { value: 'https://new-url.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://new-url.com/mcp' },
+      });
 
       await waitFor(() => {
         expect(screen.queryByText('OAuth error')).not.toBeInTheDocument();
@@ -1002,10 +1147,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -1022,10 +1171,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -1219,7 +1372,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 42, name: 'OAuth Server' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://new-oauth.example.com/auth' }),
+        unwrap: vi.fn().mockResolvedValue({
+          auth_url: 'https://new-oauth.example.com/auth',
+        }),
       });
 
       render(
@@ -1233,8 +1388,12 @@ describe('ConnectorDialogs', () => {
       );
 
       // Change the URL
-      const serverInput = screen.getByDisplayValue('https://oauth.example.com/mcp');
-      fireEvent.change(serverInput, { target: { value: 'https://new-oauth.example.com/mcp' } });
+      const serverInput = screen.getByDisplayValue(
+        'https://oauth.example.com/mcp',
+      );
+      fireEvent.change(serverInput, {
+        target: { value: 'https://new-oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Update'));
 
@@ -1295,7 +1454,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://featured-oauth.example.com/auth' }),
+        unwrap: vi.fn().mockResolvedValue({
+          auth_url: 'https://featured-oauth.example.com/auth',
+        }),
       });
 
       render(
@@ -1309,7 +1470,9 @@ describe('ConnectorDialogs', () => {
       );
 
       // Change URL to match featured server
-      const serverInput = screen.getByDisplayValue('https://oauth.example.com/mcp');
+      const serverInput = screen.getByDisplayValue(
+        'https://oauth.example.com/mcp',
+      );
       fireEvent.change(serverInput, {
         target: { value: 'https://featured-oauth.example.com/mcp' },
       });
@@ -1491,7 +1654,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(
@@ -1508,10 +1673,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -1559,10 +1728,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -1576,7 +1749,9 @@ describe('ConnectorDialogs', () => {
     it('handles valid image file upload', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toBeInTheDocument();
 
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -1593,14 +1768,18 @@ describe('ConnectorDialogs', () => {
       const { toast } = await import('sonner');
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 
       fireEvent.change(fileInput, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Please select a valid image file.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Please select a valid image file.',
+        );
       });
     });
 
@@ -1608,7 +1787,9 @@ describe('ConnectorDialogs', () => {
       const { toast } = await import('sonner');
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       const file = new File(['test'], 'large.png', { type: 'image/png' });
       Object.defineProperty(file, 'size', { value: 3 * 1024 * 1024 }); // 3MB
@@ -1616,14 +1797,18 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Image size must be less than 2MB.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Image size must be less than 2MB.',
+        );
       });
     });
 
     it('handles empty file selection', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       fireEvent.change(fileInput, { target: { files: [] } });
 
@@ -1634,7 +1819,9 @@ describe('ConnectorDialogs', () => {
     it('revokes previous object URL when uploading new image', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // Upload first image
       const file1 = new File(['test1'], 'test1.png', { type: 'image/png' });
@@ -1654,7 +1841,9 @@ describe('ConnectorDialogs', () => {
     it('revokes existing object URL when clearing file selection', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // First upload an image to set objectUrlRef.current
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -1680,7 +1869,9 @@ describe('ConnectorDialogs', () => {
     it('handles clearing file selection with null files property', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // First upload an image
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -1704,7 +1895,9 @@ describe('ConnectorDialogs', () => {
     it('revokes object URL when dialog is closed via resetForm', async () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // First upload an image to set objectUrlRef.current
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -1734,7 +1927,9 @@ describe('ConnectorDialogs', () => {
     it('revokes object URL when editing an existing server with prior image upload', async () => {
       const { rerender } = render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       // First upload an image to set objectUrlRef.current
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -1757,7 +1952,12 @@ describe('ConnectorDialogs', () => {
         description: 'Editing server',
       };
 
-      rerender(<ConnectorDialogs {...defaultProps} editingServer={editingServer as any} />);
+      rerender(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={editingServer as any}
+        />,
+      );
 
       await waitFor(() => {
         expect(URL.revokeObjectURL).toHaveBeenCalled();
@@ -1775,7 +1975,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(transportSelect, { target: { value: 'sse' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -1800,7 +2002,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(transportSelect, { target: { value: 'websocket' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -1823,7 +2027,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'invalid-url' } });
@@ -1862,10 +2068,14 @@ describe('ConnectorDialogs', () => {
 
       // Fill in valid name and URL
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
-      fireEvent.change(serverInput, { target: { value: 'https://valid-url.com' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://valid-url.com' },
+      });
 
       // Now clear the fields to test validation
       fireEvent.change(nameInput, { target: { value: '' } });
@@ -1878,7 +2088,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs open={true} onClose={mockOnClose} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -1903,7 +2115,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'Bearer secret-token-123',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithCredentials as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithCredentials as any}
+        />,
+      );
 
       // Should show masked token indicator
       const tokenInput = screen.getByPlaceholderText('Enter your token');
@@ -1920,7 +2137,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'Basic dXNlcjpwYXNz',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithBasicAuth as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithBasicAuth as any}
+        />,
+      );
 
       const selects = screen.getAllByTestId('select');
       // Auth method should be api-key
@@ -1937,7 +2159,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'Bearer original-token',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithCredentials as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithCredentials as any}
+        />,
+      );
 
       // Just click Update without changing token
       fireEvent.click(screen.getByText('Update'));
@@ -1961,7 +2188,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'Bearer original-token',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithCredentials as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithCredentials as any}
+        />,
+      );
 
       const tokenInput = screen.getByPlaceholderText('Enter your token');
       fireEvent.change(tokenInput, { target: { value: 'new-secret-token' } });
@@ -1987,7 +2219,12 @@ describe('ConnectorDialogs', () => {
         credentials: '',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithNoCredentials as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithNoCredentials as any}
+        />,
+      );
 
       const selects = screen.getAllByTestId('select');
       // Auth method should be no-auth
@@ -2004,7 +2241,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'Bearer secret',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithCredentials as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithCredentials as any}
+        />,
+      );
 
       expect(screen.getByText(/Existing token is hidden/)).toBeInTheDocument();
     });
@@ -2020,7 +2262,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -2058,7 +2302,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -2076,7 +2322,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
@@ -2117,7 +2365,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockCreateMCPServer.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Server creation failed' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Server creation failed' } }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2127,10 +2377,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2144,7 +2398,9 @@ describe('ConnectorDialogs', () => {
     it('cleans up object URL on unmount', () => {
       const { unmount } = render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       const file = new File(['test'], 'test.png', { type: 'image/png' });
       Object.defineProperty(file, 'size', { value: 1024 });
 
@@ -2187,7 +2443,9 @@ describe('ConnectorDialogs', () => {
       };
 
       mockGetMCPServers.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ results: [existingNonOAuthServer] }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ results: [existingNonOAuthServer] }),
       });
       mockOauthFind.mockReturnValue({
         unwrap: vi.fn().mockResolvedValue({
@@ -2200,7 +2458,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ id: 20, name: 'OAuth Connector' }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2210,10 +2470,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2257,7 +2521,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2266,10 +2532,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2280,7 +2550,10 @@ describe('ConnectorDialogs', () => {
 
       // Window.open should be called with auth_url
       await waitFor(() => {
-        expect(window.open).toHaveBeenCalledWith('https://oauth.example.com/auth', '_blank');
+        expect(window.open).toHaveBeenCalledWith(
+          'https://oauth.example.com/auth',
+          '_blank',
+        );
       });
     });
 
@@ -2299,7 +2572,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       // Simulate connected service being found on poll
@@ -2313,10 +2588,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2340,7 +2619,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2349,10 +2630,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2392,7 +2677,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2401,10 +2688,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'New OAuth Server' } });
-      fireEvent.change(serverInput, { target: { value: 'https://new-oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://new-oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2449,7 +2740,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -2459,16 +2752,23 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
       await waitFor(() => {
         expect(mockStartOAuthFlow).toHaveBeenCalled();
-        expect(window.open).toHaveBeenCalledWith('https://oauth.example.com/auth', '_blank');
+        expect(window.open).toHaveBeenCalledWith(
+          'https://oauth.example.com/auth',
+          '_blank',
+        );
       });
     });
 
@@ -2487,7 +2787,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -2497,10 +2799,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2533,10 +2839,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2597,21 +2907,33 @@ describe('ConnectorDialogs', () => {
       });
 
       // Render without tenantKey
-      render(<ConnectorDialogs {...defaultProps} username="test-user" mentorId="mentor-123" />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          username="test-user"
+          mentorId="mentor-123"
+        />,
+      );
 
       const selects = screen.getAllByTestId('select');
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
       await waitFor(() => {
-        expect(toastMock.error).toHaveBeenCalledWith('Missing required parameters');
+        expect(toastMock.error).toHaveBeenCalledWith(
+          'Missing required parameters',
+        );
       });
     });
 
@@ -2632,21 +2954,33 @@ describe('ConnectorDialogs', () => {
       });
 
       // Render without username
-      render(<ConnectorDialogs {...defaultProps} tenantKey="test-tenant" mentorId="mentor-123" />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          tenantKey="test-tenant"
+          mentorId="mentor-123"
+        />,
+      );
 
       const selects = screen.getAllByTestId('select');
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
       await waitFor(() => {
-        expect(toastMock.error).toHaveBeenCalledWith('Missing required parameters');
+        expect(toastMock.error).toHaveBeenCalledWith(
+          'Missing required parameters',
+        );
       });
     });
 
@@ -2675,10 +3009,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2714,10 +3052,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2731,7 +3073,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [] }),
       });
       mockOauthFind.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'OAuth service not found' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'OAuth service not found' } }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2740,10 +3084,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2766,16 +3114,22 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
       await waitFor(() => {
         // Should show the default error message
-        expect(screen.getByText(/cannot be used for OAuth/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/cannot be used for OAuth/),
+        ).toBeInTheDocument();
       });
     });
 
@@ -2792,10 +3146,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2816,7 +3174,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockCreateMCPServer.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Creation failed' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Creation failed' } }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -2825,10 +3185,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2847,11 +3211,15 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'api-key' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       const tokenInput = screen.getByPlaceholderText('Enter your token');
 
       fireEvent.change(nameInput, { target: { value: 'Token Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
       fireEvent.change(tokenInput, { target: { value: 'my-secret-token' } });
 
       fireEvent.click(screen.getByText('Connect'));
@@ -2880,11 +3248,17 @@ describe('ConnectorDialogs', () => {
       }
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       const tokenInput = screen.getByPlaceholderText('Enter your token');
 
-      fireEvent.change(nameInput, { target: { value: 'Basic Auth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com/mcp' } });
+      fireEvent.change(nameInput, {
+        target: { value: 'Basic Auth Connector' },
+      });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
       fireEvent.change(tokenInput, { target: { value: 'user:pass' } });
 
       fireEvent.click(screen.getByText('Connect'));
@@ -2904,10 +3278,14 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Public Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -2927,7 +3305,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       // Description input might have different placeholder text or be a textarea
       const descInput =
@@ -2935,10 +3315,14 @@ describe('ConnectorDialogs', () => {
         document.querySelector('input[placeholder*="description"]');
 
       fireEvent.change(nameInput, { target: { value: 'Described Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
 
       if (descInput) {
-        fireEvent.change(descInput, { target: { value: 'This is my connector' } });
+        fireEvent.change(descInput, {
+          target: { value: 'This is my connector' },
+        });
       }
 
       fireEvent.click(screen.getByText('Connect'));
@@ -2965,22 +3349,41 @@ describe('ConnectorDialogs', () => {
     };
 
     it('shows Update button instead of Connect when editing', () => {
-      render(<ConnectorDialogs {...defaultProps} editingServer={existingServer as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={existingServer as any}
+        />,
+      );
 
       expect(screen.getByText('Update')).toBeInTheDocument();
       expect(screen.queryByText('Connect')).not.toBeInTheDocument();
     });
 
     it('pre-fills form with existing server data', () => {
-      render(<ConnectorDialogs {...defaultProps} editingServer={existingServer as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={existingServer as any}
+        />,
+      );
 
       expect(screen.getByDisplayValue('Existing Server')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('https://existing.example.com/mcp')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Existing description')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('https://existing.example.com/mcp'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('Existing description'),
+      ).toBeInTheDocument();
     });
 
     it('calls onAddConnector with updated data when updating', async () => {
-      render(<ConnectorDialogs {...defaultProps} editingServer={existingServer as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={existingServer as any}
+        />,
+      );
 
       const nameInput = screen.getByDisplayValue('Existing Server');
       fireEvent.change(nameInput, { target: { value: 'Updated Server' } });
@@ -3034,7 +3437,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       // First poll returns no connected service, second poll returns one
@@ -3055,10 +3460,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3094,7 +3503,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3104,10 +3515,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3151,7 +3566,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3161,10 +3578,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3209,7 +3630,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3219,10 +3642,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3264,7 +3691,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3274,10 +3703,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3318,7 +3751,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3328,10 +3763,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3377,13 +3816,17 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({
         data: [{ id: 100, provider: 'google', service: 'test-service' }],
       });
       mockCreateMCPServerConnection.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Connection failed' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Connection failed' } }),
       });
 
       render(<ConnectorDialogs {...oauthProps} />);
@@ -3392,10 +3835,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3421,7 +3868,9 @@ describe('ConnectorDialogs', () => {
     it('triggers file input when thumbnail area is clicked', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       const clickSpy = vi.spyOn(fileInput, 'click');
 
       // Find the image icon which is inside the clickable thumbnail area
@@ -3437,7 +3886,9 @@ describe('ConnectorDialogs', () => {
     it('file input exists and accepts images', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toBeInTheDocument();
       expect(fileInput.accept).toBe('image/*');
     });
@@ -3456,10 +3907,14 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
 
       // Start submission
       fireEvent.click(screen.getByText('Connect'));
@@ -3503,10 +3958,14 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com' },
+      });
 
       // Close the dialog
       const closeButton = screen.getByTestId('dialog-close-trigger');
@@ -3520,17 +3979,23 @@ describe('ConnectorDialogs', () => {
       const { rerender } = render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'Test' } });
-      fireEvent.change(serverInput, { target: { value: 'https://api.example.com' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com' },
+      });
 
       // Close and reopen dialog
       rerender(<ConnectorDialogs {...defaultProps} open={false} />);
       rerender(<ConnectorDialogs {...defaultProps} open={true} />);
 
       // Form should be reset
-      expect(screen.getByPlaceholderText('Enter connector name')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Enter connector name')).toHaveValue(
+        '',
+      );
     });
   });
 
@@ -3560,7 +4025,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] }); // Never find service
 
@@ -3570,10 +4037,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3604,7 +4075,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
 
@@ -3614,10 +4087,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3659,7 +4136,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({
         data: [{ id: 100, provider: 'google', service: 'test-service' }],
@@ -3674,10 +4153,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3697,7 +4180,9 @@ describe('ConnectorDialogs', () => {
 
       await waitFor(
         () => {
-          expect(toastMock.success).toHaveBeenCalledWith('OAuth connector connected successfully');
+          expect(toastMock.success).toHaveBeenCalledWith(
+            'OAuth connector connected successfully',
+          );
         },
         { timeout: 3000 },
       );
@@ -3729,7 +4214,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       // First call throws, subsequent calls succeed
@@ -3748,10 +4235,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3796,7 +4287,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({
         data: [{ id: 100, provider: 'google', service: 'test-service' }],
@@ -3811,10 +4304,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3850,7 +4347,9 @@ describe('ConnectorDialogs', () => {
         unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
       mockRefetchConnected.mockResolvedValue({
         data: [{ id: NaN, provider: 'google', service: 'test-service' }], // Invalid ID
@@ -3862,10 +4361,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -3890,11 +4393,15 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       // Set empty name (whitespace) but valid server
       fireEvent.change(nameInput, { target: { value: '   ' } });
-      fireEvent.change(serverInput, { target: { value: 'https://valid.server.com' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://valid.server.com' },
+      });
 
       // Button should be disabled
       const connectButton = screen.getByText('Connect');
@@ -3905,7 +4412,9 @@ describe('ConnectorDialogs', () => {
       render(<ConnectorDialogs {...defaultProps} />);
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       // Set valid name but empty server (whitespace)
       fireEvent.change(nameInput, { target: { value: 'Valid Name' } });
@@ -3946,7 +4455,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
       });
     });
 
@@ -3969,10 +4480,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4007,10 +4522,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4045,10 +4564,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(selects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4085,7 +4608,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
     });
@@ -4105,10 +4630,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4148,10 +4677,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4191,10 +4724,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4234,10 +4771,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4277,10 +4818,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4327,7 +4872,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
       });
       mockRefetchConnected.mockResolvedValue({ data: [] });
     });
@@ -4347,10 +4894,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4388,10 +4939,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4429,10 +4984,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4466,10 +5025,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4515,7 +5078,9 @@ describe('ConnectorDialogs', () => {
         }),
       });
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://auth.example.com/oauth' }),
       });
     });
 
@@ -4536,10 +5101,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4571,10 +5140,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4608,10 +5181,14 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelects[1], { target: { value: 'oauth' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
 
       fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://oauth.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -4727,7 +5304,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid when name and server are valid', () => {
-      const result = validateConnectorForm('Test Connector', 'https://example.com');
+      const result = validateConnectorForm(
+        'Test Connector',
+        'https://example.com',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4735,7 +5315,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid with trimmed name containing whitespace around it', () => {
-      const result = validateConnectorForm('  Test Connector  ', 'https://example.com');
+      const result = validateConnectorForm(
+        '  Test Connector  ',
+        'https://example.com',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4743,7 +5326,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid with trimmed server containing whitespace around it', () => {
-      const result = validateConnectorForm('Test Connector', '  https://example.com  ');
+      const result = validateConnectorForm(
+        'Test Connector',
+        '  https://example.com  ',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4751,7 +5337,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid for http protocol', () => {
-      const result = validateConnectorForm('Test Connector', 'http://example.com');
+      const result = validateConnectorForm(
+        'Test Connector',
+        'http://example.com',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4759,7 +5348,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid for URL with path', () => {
-      const result = validateConnectorForm('Test Connector', 'https://example.com/mcp/server');
+      const result = validateConnectorForm(
+        'Test Connector',
+        'https://example.com/mcp/server',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4767,7 +5359,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns valid for URL with port', () => {
-      const result = validateConnectorForm('Test Connector', 'https://example.com:8080');
+      const result = validateConnectorForm(
+        'Test Connector',
+        'https://example.com:8080',
+      );
       expect(result).toEqual({
         isValid: true,
         error: null,
@@ -4807,7 +5402,10 @@ describe('ConnectorDialogs', () => {
     });
 
     it('returns error over custom fallback when error is provided', () => {
-      const result = getValidationErrorMessage('Error message', 'Custom fallback');
+      const result = getValidationErrorMessage(
+        'Error message',
+        'Custom fallback',
+      );
       expect(result).toBe('Error message');
     });
   });
@@ -4909,7 +5507,9 @@ describe('ConnectorDialogs', () => {
     it('returns invalid for string with spaces', () => {
       const result = validateCustomTokenType('My Token');
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Token type may only contain letters, numbers, and hyphens.');
+      expect(result.error).toBe(
+        'Token type may only contain letters, numbers, and hyphens.',
+      );
     });
 
     it('returns invalid for string with special characters', () => {
@@ -4944,7 +5544,9 @@ describe('ConnectorDialogs', () => {
 
       // Other should be present as an option in the token type select
       const options = screen.getAllByRole('option');
-      const optionValues = options.map((o: HTMLElement) => (o as HTMLOptionElement).value);
+      const optionValues = options.map(
+        (o: HTMLElement) => (o as HTMLOptionElement).value,
+      );
       expect(optionValues).toContain('Other');
       // OAuth should NOT be present as a token type option
       expect(optionValues).not.toContain('OAuth');
@@ -4960,9 +5562,13 @@ describe('ConnectorDialogs', () => {
       const tokenTypeSelect = screen.getAllByTestId('select')[2];
       fireEvent.change(tokenTypeSelect, { target: { value: 'Other' } });
 
-      expect(screen.getByPlaceholderText('e.g. X-Custom-Auth')).toBeInTheDocument();
       expect(
-        screen.getByText('Alphanumeric characters and hyphens only. Max 50 characters.'),
+        screen.getByPlaceholderText('e.g. X-Custom-Auth'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Alphanumeric characters and hyphens only. Max 50 characters.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -4973,7 +5579,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'api-key' } });
 
       // Should not show custom input for Bearer (default)
-      expect(screen.queryByPlaceholderText('e.g. X-Custom-Auth')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('e.g. X-Custom-Auth'),
+      ).not.toBeInTheDocument();
     });
 
     it('disables submit when Other is selected but custom type is empty', () => {
@@ -4984,7 +5592,9 @@ describe('ConnectorDialogs', () => {
       fireEvent.change(authSelect, { target: { value: 'api-key' } });
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       fireEvent.change(nameInput, { target: { value: 'Test' } });
       fireEvent.change(serverInput, { target: { value: 'https://test.com' } });
 
@@ -5015,10 +5625,14 @@ describe('ConnectorDialogs', () => {
 
       // Fill other fields
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       const tokenInput = screen.getByPlaceholderText('Enter your token');
       fireEvent.change(nameInput, { target: { value: 'Custom Token Server' } });
-      fireEvent.change(serverInput, { target: { value: 'https://custom.example.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://custom.example.com/mcp' },
+      });
       fireEvent.change(tokenInput, { target: { value: 'my-secret-token' } });
 
       fireEvent.click(screen.getByText('Connect'));
@@ -5042,7 +5656,12 @@ describe('ConnectorDialogs', () => {
         credentials: 'X-Custom-Header secret-value',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithCustomAuth as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithCustomAuth as any}
+        />,
+      );
 
       // Auth method should be api-key
       const selects = screen.getAllByTestId('select');
@@ -5050,7 +5669,9 @@ describe('ConnectorDialogs', () => {
       // Token type should be Other
       expect(selects[2]).toHaveValue('Other');
       // Custom input should show the parsed type
-      expect(screen.getByPlaceholderText('e.g. X-Custom-Auth')).toHaveValue('X-Custom-Header');
+      expect(screen.getByPlaceholderText('e.g. X-Custom-Auth')).toHaveValue(
+        'X-Custom-Header',
+      );
     });
 
     it('pre-fills known token type without showing Other', () => {
@@ -5063,14 +5684,21 @@ describe('ConnectorDialogs', () => {
         credentials: 'Basic dXNlcjpwYXNz',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithBasicAuth as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithBasicAuth as any}
+        />,
+      );
 
       const selects = screen.getAllByTestId('select');
       expect(selects[1]).toHaveValue('api-key');
       // Token type should be Basic, not Other
       expect(selects[2]).toHaveValue('Basic');
       // Custom input should NOT be shown
-      expect(screen.queryByPlaceholderText('e.g. X-Custom-Auth')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('e.g. X-Custom-Auth'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -5090,7 +5718,9 @@ describe('ConnectorDialogs', () => {
 
     it('shows tenant helper text by default', () => {
       render(<ConnectorDialogs {...defaultProps} />);
-      expect(screen.getByText('This MCP will be available for all mentors.')).toBeInTheDocument();
+      expect(
+        screen.getByText('This MCP will be available for all mentors.'),
+      ).toBeInTheDocument();
     });
 
     it('sends mentor as null when tenant scope is selected', async () => {
@@ -5104,9 +5734,13 @@ describe('ConnectorDialogs', () => {
       );
 
       const nameInput = screen.getByPlaceholderText('Enter connector name');
-      const serverInput = screen.getByPlaceholderText('https://api.example.com/mcp');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
       fireEvent.change(nameInput, { target: { value: 'Test Connector' } });
-      fireEvent.change(serverInput, { target: { value: 'https://test.com/mcp' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://test.com/mcp' },
+      });
 
       fireEvent.click(screen.getByText('Connect'));
 
@@ -5130,7 +5764,12 @@ describe('ConnectorDialogs', () => {
         mentor: 'mentor-123',
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithMentor as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithMentor as any}
+        />,
+      );
 
       const radioGroup = screen.getByTestId('radio-group');
       expect(radioGroup).toHaveAttribute('data-value', 'this-mentor');
@@ -5147,7 +5786,12 @@ describe('ConnectorDialogs', () => {
         mentor: null,
       };
 
-      render(<ConnectorDialogs {...defaultProps} editingServer={serverWithoutMentor as any} />);
+      render(
+        <ConnectorDialogs
+          {...defaultProps}
+          editingServer={serverWithoutMentor as any}
+        />,
+      );
 
       const radioGroup = screen.getByTestId('radio-group');
       expect(radioGroup).toHaveAttribute('data-value', 'tenant');
@@ -5172,14 +5816,20 @@ describe('ConnectorDialogs', () => {
       );
 
       // Verify it starts as this-mentor
-      expect(screen.getByTestId('radio-group')).toHaveAttribute('data-value', 'this-mentor');
+      expect(screen.getByTestId('radio-group')).toHaveAttribute(
+        'data-value',
+        'this-mentor',
+      );
 
       // Close and reopen without editingServer
       rerender(<ConnectorDialogs {...defaultProps} open={false} />);
       rerender(<ConnectorDialogs {...defaultProps} open={true} />);
 
       // Should be reset to tenant
-      expect(screen.getByTestId('radio-group')).toHaveAttribute('data-value', 'tenant');
+      expect(screen.getByTestId('radio-group')).toHaveAttribute(
+        'data-value',
+        'tenant',
+      );
     });
   });
 });

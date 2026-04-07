@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { AddResourceModal } from "@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal";
+import { useEffect, useState } from 'react';
+import { AddResourceModal } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
 
 export function AddResourceListener() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,11 +12,11 @@ export function AddResourceListener() {
     };
 
     // Add event listener for the custom event
-    window.addEventListener("openAddResourceModal", handleOpenModal);
+    window.addEventListener('openAddResourceModal', handleOpenModal);
 
     // Clean up the event listener when the component unmounts
     return () => {
-      window.removeEventListener("openAddResourceModal", handleOpenModal);
+      window.removeEventListener('openAddResourceModal', handleOpenModal);
     };
   }, []);
 

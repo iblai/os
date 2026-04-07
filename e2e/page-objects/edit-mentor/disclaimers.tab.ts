@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect } from '@playwright/test';
 
 export class DisclaimersTab {
   readonly page: Page;
@@ -13,24 +13,24 @@ export class DisclaimersTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.userAgreementSwitch = dialog.getByRole("switch", {
+    this.userAgreementSwitch = dialog.getByRole('switch', {
       name: /user agreement/i,
     });
-    this.activeStatus = dialog.getByText("Active").first();
+    this.activeStatus = dialog.getByText('Active').first();
     // H20 fix: buttons are just "Edit" — first is User Agreement, second is Advisory
-    this.editButtons = dialog.getByRole("button", { name: "Edit" });
-    this.saveButton = dialog.getByRole("button", { name: /save/i }).first();
+    this.editButtons = dialog.getByRole('button', { name: 'Edit' });
+    this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
   }
 
   async enableUserAgreement(): Promise<void> {
     await expect(this.userAgreementSwitch).toBeVisible({ timeout: 10_000 });
     const isEnabled =
-      (await this.userAgreementSwitch.getAttribute("aria-checked")) === "true";
+      (await this.userAgreementSwitch.getAttribute('aria-checked')) === 'true';
     if (!isEnabled) {
       await this.userAgreementSwitch.click();
       await expect(this.userAgreementSwitch).toHaveAttribute(
-        "aria-checked",
-        "true",
+        'aria-checked',
+        'true',
         { timeout: 10_000 },
       );
     }
@@ -39,12 +39,12 @@ export class DisclaimersTab {
   async disableUserAgreement(): Promise<void> {
     await expect(this.userAgreementSwitch).toBeVisible({ timeout: 10_000 });
     const isEnabled =
-      (await this.userAgreementSwitch.getAttribute("aria-checked")) === "true";
+      (await this.userAgreementSwitch.getAttribute('aria-checked')) === 'true';
     if (isEnabled) {
       await this.userAgreementSwitch.click();
       await expect(this.userAgreementSwitch).toHaveAttribute(
-        "aria-checked",
-        "false",
+        'aria-checked',
+        'false',
         { timeout: 10_000 },
       );
     }
@@ -53,8 +53,8 @@ export class DisclaimersTab {
   async isUserAgreementEnabled(): Promise<boolean> {
     return (
       (await this.userAgreementSwitch
-        .getAttribute("aria-checked")
-        .catch(() => "false")) === "true"
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
     );
   }
 
@@ -63,7 +63,7 @@ export class DisclaimersTab {
     await expect(this.editButtons.first()).toBeVisible({ timeout: 10_000 });
     await this.editButtons.first().click();
     const editModal = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /edit|user agreement/i })
       .last();
     await expect(editModal).toBeVisible({ timeout: 10_000 });
@@ -76,7 +76,7 @@ export class DisclaimersTab {
     await expect(this.editButtons.nth(1)).toBeVisible({ timeout: 10_000 });
     await this.editButtons.nth(1).click();
     const editModal = this.page
-      .getByRole("dialog")
+      .getByRole('dialog')
       .filter({ hasText: /edit.*advisory|advisory/i })
       .last();
     await expect(editModal).toBeVisible({ timeout: 10_000 });

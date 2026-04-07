@@ -26,10 +26,14 @@ app.whenReady().then(() => {
   // start Next.js server when app launches in production
   if (!isDev) {
     const { spawn } = require('child_process');
-    const server = spawn('node', [path.join(__dirname, '.next/standalone/apps/mentor/server.js')]);
+    const server = spawn('node', [
+      path.join(__dirname, '.next/standalone/apps/mentor/server.js'),
+    ]);
 
     server.stdout.on('data', (d) => console.log('[server]', d.toString()));
-    server.stderr.on('data', (d) => console.error('[server error]', d.toString()));
+    server.stderr.on('data', (d) =>
+      console.error('[server error]', d.toString()),
+    );
   }
 
   createWindow();

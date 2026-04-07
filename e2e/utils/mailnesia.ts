@@ -1,4 +1,4 @@
-import { BrowserContext, Page, expect } from "@playwright/test";
+import { BrowserContext, Page, expect } from '@playwright/test';
 
 /**
  * Opens the mailnesia mailbox in a new page and polls for an email
@@ -19,9 +19,9 @@ export async function waitForMailnesiaEmail(
   let found = false;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    await emailPage.goto(mailboxUrl, { waitUntil: "domcontentloaded" });
+    await emailPage.goto(mailboxUrl, { waitUntil: 'domcontentloaded' });
     try {
-      await expect(emailPage.getByRole("link", { name: linkText })).toBeVisible(
+      await expect(emailPage.getByRole('link', { name: linkText })).toBeVisible(
         { timeout: 2_000 },
       );
       found = true;
@@ -48,6 +48,6 @@ export async function waitForMailnesiaEmail(
  * e.g. "test+123@mailnesia.com" → "https://mailnesia.com/mailbox/test+123"
  */
 export function getMailnesiaMailboxUrl(email: string): string {
-  const localPart = email.split("@")[0];
+  const localPart = email.split('@')[0];
   return `https://mailnesia.com/mailbox/${localPart}`;
 }

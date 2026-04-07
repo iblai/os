@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { isFileAccepted } from '../utils';
 
-const createFile = (name: string, type: string) => new File([''], name, { type });
+const createFile = (name: string, type: string) =>
+  new File([''], name, { type });
 
 describe('isFileAccepted', () => {
   it('should accept any file when acceptedTypes is empty', () => {
@@ -69,21 +70,30 @@ describe('isFileAccepted', () => {
     const acceptedTypes = ['image/*', '.pdf', '.docx', 'text/plain'];
 
     it('should accept a file matching the wildcard', () => {
-      expect(isFileAccepted(createFile('pic.png', 'image/png'), acceptedTypes)).toBe(true);
+      expect(
+        isFileAccepted(createFile('pic.png', 'image/png'), acceptedTypes),
+      ).toBe(true);
     });
 
     it('should accept a file matching an extension', () => {
-      expect(isFileAccepted(createFile('doc.pdf', 'application/pdf'), acceptedTypes)).toBe(true);
+      expect(
+        isFileAccepted(createFile('doc.pdf', 'application/pdf'), acceptedTypes),
+      ).toBe(true);
     });
 
     it('should accept a file matching an exact MIME type', () => {
-      expect(isFileAccepted(createFile('notes.txt', 'text/plain'), acceptedTypes)).toBe(true);
+      expect(
+        isFileAccepted(createFile('notes.txt', 'text/plain'), acceptedTypes),
+      ).toBe(true);
     });
 
     it('should reject a file matching none of the types', () => {
-      expect(isFileAccepted(createFile('app.exe', 'application/x-msdownload'), acceptedTypes)).toBe(
-        false,
-      );
+      expect(
+        isFileAccepted(
+          createFile('app.exe', 'application/x-msdownload'),
+          acceptedTypes,
+        ),
+      ).toBe(false);
     });
   });
 });

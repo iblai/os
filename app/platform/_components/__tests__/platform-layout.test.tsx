@@ -4,7 +4,13 @@ import React from 'react';
 
 // Mock dependencies before importing the component
 vi.mock('../app-layout', () => ({
-  default: ({ children, defaultOpen }: { children: React.ReactNode; defaultOpen: boolean }) => (
+  default: ({
+    children,
+    defaultOpen,
+  }: {
+    children: React.ReactNode;
+    defaultOpen: boolean;
+  }) => (
     <div data-testid="app-layout" data-default-open={defaultOpen}>
       {children}
     </div>
@@ -383,7 +389,10 @@ describe('PlatformLayout', () => {
 
       // Wait for effect to run
       await waitFor(() => {
-        expect(screen.getByTestId('app-layout')).toHaveAttribute('data-default-open', 'true');
+        expect(screen.getByTestId('app-layout')).toHaveAttribute(
+          'data-default-open',
+          'true',
+        );
       });
 
       const initialReadCount = cookieReadCount;

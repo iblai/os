@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
 import { Provider } from 'react-redux';
@@ -58,7 +64,9 @@ vi.mock('next/dynamic', () => ({
       if (!isOpen) return null;
       return (
         <div data-testid="prompt-gallery-modal">
-          <button onClick={() => onSelectPrompt?.('Suggested prompt')}>Select Prompt</button>
+          <button onClick={() => onSelectPrompt?.('Suggested prompt')}>
+            Select Prompt
+          </button>
           <button onClick={() => onClose?.()}>Close</button>
         </div>
       );
@@ -82,7 +90,8 @@ vi.mock('@/hooks/use-chat-file-upload', () => ({
 }));
 
 vi.mock('@/lib/utils', () => ({
-  cn: (...args: (string | boolean | undefined)[]) => args.filter(Boolean).join(' '),
+  cn: (...args: (string | boolean | undefined)[]) =>
+    args.filter(Boolean).join(' '),
   isLoggedIn: vi.fn(() => mockIsLoggedIn),
 }));
 
@@ -96,7 +105,11 @@ vi.mock('@/hooks/use-voice-chat', () => ({
 }));
 
 vi.mock('@/components/chat-input-form/voice-chat-button', () => ({
-  VoiceChatButton: ({ handleMicrophoneBtnClick, processing, recording }: any) => (
+  VoiceChatButton: ({
+    handleMicrophoneBtnClick,
+    processing,
+    recording,
+  }: any) => (
     <button data-testid="voice-chat-button" onClick={handleMicrophoneBtnClick}>
       Voice {processing ? 'Processing' : recording ? 'Recording' : 'Idle'}
     </button>
@@ -104,7 +117,9 @@ vi.mock('@/components/chat-input-form/voice-chat-button', () => ({
 }));
 
 vi.mock('@/components/retrieved-documents-button', () => ({
-  RetrievedDocumentsButton: () => <button data-testid="retrieved-docs-button">Docs</button>,
+  RetrievedDocumentsButton: () => (
+    <button data-testid="retrieved-docs-button">Docs</button>
+  ),
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
@@ -120,7 +135,11 @@ vi.mock('@/components/chat/stop-streaming-button', () => ({
 }));
 
 vi.mock('@/components/chat/submit-message-button', () => ({
-  SubmitMessageButton: ({ isPreviewMode, isUploading, allowAnonymousAccess }: any) => (
+  SubmitMessageButton: ({
+    isPreviewMode,
+    isUploading,
+    allowAnonymousAccess,
+  }: any) => (
     <button
       data-testid="submit-button"
       data-allow-anon={allowAnonymousAccess ? 'true' : 'false'}
@@ -143,7 +162,11 @@ vi.mock('@/hooks/use-responsive', () => ({
 }));
 
 vi.mock('@/components/chat-input-form/inside-buttons', () => ({
-  InsideButtons: ({ activeOptions, onOptionClick, onOpenPromptGallery }: any) => (
+  InsideButtons: ({
+    activeOptions,
+    onOptionClick,
+    onOpenPromptGallery,
+  }: any) => (
     <div data-testid="inside-buttons">
       <button onClick={() => onOptionClick('canvas')}>Canvas</button>
       <button data-testid="open-prompt-gallery" onClick={onOpenPromptGallery}>
@@ -170,7 +193,8 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
-    selectShowingSharedChat: (state: any) => state.chatSliceShared?.showingSharedChat ?? false,
+    selectShowingSharedChat: (state: any) =>
+      state.chatSliceShared?.showingSharedChat ?? false,
   };
 });
 
@@ -344,7 +368,9 @@ describe('ChatInputForm', () => {
       maxFilesPerMessage: 5,
     };
     mockUseMentorSettings.mockImplementation(() => mockMentorSettings);
-    mockUseModelFileUploadCapabilities.mockImplementation(() => mockFileUploadCapabilities);
+    mockUseModelFileUploadCapabilities.mockImplementation(
+      () => mockFileUploadCapabilities,
+    );
     mockFreeTrialDialogState.FreeTrialDialog = null;
     mockFreeTrialDialogState.isModalOpen = false;
     mockFreeTrialDialogState.executeWithTrialCheck = mockExecuteWithTrialCheck;
@@ -352,8 +378,13 @@ describe('ChatInputForm', () => {
     mockExecuteWithTrialCheck.mockImplementation((fn: () => void) => fn());
   });
 
-  const renderWithRedux = (component: React.ReactElement, preloadedState = {}) => {
-    return render(<Provider store={createMockStore(preloadedState)}>{component}</Provider>);
+  const renderWithRedux = (
+    component: React.ReactElement,
+    preloadedState = {},
+  ) => {
+    return render(
+      <Provider store={createMockStore(preloadedState)}>{component}</Provider>,
+    );
   };
 
   describe('rendering', () => {
@@ -432,7 +463,9 @@ describe('ChatInputForm', () => {
 
       expect(screen.queryByTestId('upload-menu')).not.toBeInTheDocument();
       expect(screen.queryByTestId('inside-buttons')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('screen-sharing-button')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('screen-sharing-button'),
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId('voice-chat-button')).not.toBeInTheDocument();
       expect(screen.queryByTestId('voice-call-button')).not.toBeInTheDocument();
       expect(screen.queryByTestId('outside-buttons')).not.toBeInTheDocument();
@@ -472,7 +505,9 @@ describe('ChatInputForm', () => {
     it('should prevent submission while files are uploading', async () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: '1', uploadStatus: 'uploading', fileName: 'test.pdf' }],
+          attachedFiles: [
+            { id: '1', uploadStatus: 'uploading', fileName: 'test.pdf' },
+          ],
         },
       });
 
@@ -487,7 +522,9 @@ describe('ChatInputForm', () => {
     it('should render file attachments list', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: '1', fileName: 'document.pdf', uploadStatus: 'success' }],
+          attachedFiles: [
+            { id: '1', fileName: 'document.pdf', uploadStatus: 'success' },
+          ],
         },
       });
 
@@ -496,8 +533,12 @@ describe('ChatInputForm', () => {
     });
 
     it('should fall back to empty attached files when state is missing', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {},
       });
@@ -510,7 +551,9 @@ describe('ChatInputForm', () => {
     it('should disable textarea when files are uploading', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: '1', uploadStatus: 'uploading', fileName: 'test.pdf' }],
+          attachedFiles: [
+            { id: '1', uploadStatus: 'uploading', fileName: 'test.pdf' },
+          ],
         },
       });
 
@@ -520,7 +563,9 @@ describe('ChatInputForm', () => {
     it('should not disable textarea when files are uploaded successfully', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: '1', uploadStatus: 'success', fileName: 'test.pdf' }],
+          attachedFiles: [
+            { id: '1', uploadStatus: 'success', fileName: 'test.pdf' },
+          ],
         },
       });
 
@@ -532,7 +577,9 @@ describe('ChatInputForm', () => {
     it('should route upload errors through toast', async () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />);
 
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const options = (useChatFileUpload as any).mock.calls[0][0];
       options.errorHandler('Upload failed');
 
@@ -597,7 +644,9 @@ describe('ChatInputForm', () => {
 
   describe('disclaimer', () => {
     it('should render disclaimer when provided in mentor settings', async () => {
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           disclaimer: 'This is a test disclaimer',
@@ -622,8 +671,14 @@ describe('ChatInputForm', () => {
 
       renderWithRedux(<ChatInputForm {...defaultProps} />);
 
-      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute('data-allow-anon', 'true');
-      expect(screen.getByTestId('submit-button')).toHaveAttribute('data-allow-anon', 'true');
+      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute(
+        'data-allow-anon',
+        'true',
+      );
+      expect(screen.getByTestId('submit-button')).toHaveAttribute(
+        'data-allow-anon',
+        'true',
+      );
     });
 
     it('should allow anonymous access for shared chats', () => {
@@ -634,8 +689,14 @@ describe('ChatInputForm', () => {
         },
       });
 
-      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute('data-allow-anon', 'true');
-      expect(screen.getByTestId('submit-button')).toHaveAttribute('data-allow-anon', 'false');
+      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute(
+        'data-allow-anon',
+        'true',
+      );
+      expect(screen.getByTestId('submit-button')).toHaveAttribute(
+        'data-allow-anon',
+        'false',
+      );
     });
 
     it('should allow anonymous access for visiting tenants', () => {
@@ -643,17 +704,25 @@ describe('ChatInputForm', () => {
 
       renderWithRedux(<ChatInputForm {...defaultProps} />);
 
-      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute('data-allow-anon', 'true');
+      expect(screen.getByTestId('auto-resize-textarea')).toHaveAttribute(
+        'data-allow-anon',
+        'true',
+      );
     });
   });
 
   describe('active tools', () => {
     it('should pass activeTools to InsideButtons', () => {
       renderWithRedux(
-        <ChatInputForm {...defaultProps} activeTools={['canvas', 'deep_research']} />,
+        <ChatInputForm
+          {...defaultProps}
+          activeTools={['canvas', 'deep_research']}
+        />,
       );
 
-      expect(screen.getByTestId('active-options')).toHaveTextContent('canvas,deep_research');
+      expect(screen.getByTestId('active-options')).toHaveTextContent(
+        'canvas,deep_research',
+      );
     });
 
     it('should call updateSessionTools when option is clicked', async () => {
@@ -668,7 +737,9 @@ describe('ChatInputForm', () => {
 
   describe('file input', () => {
     it('should have hidden file input element', () => {
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
       const fileInput = container.querySelector('input[type="file"]');
       expect(fileInput).toBeInTheDocument();
@@ -676,14 +747,18 @@ describe('ChatInputForm', () => {
     });
 
     it('should accept correct file types', () => {
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
       const fileInput = container.querySelector('input[type="file"]');
       expect(fileInput).toHaveAttribute('accept', '.pdf,.docx');
     });
 
     it('should allow multiple files', () => {
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
       const fileInput = container.querySelector('input[type="file"]');
       expect(fileInput).toHaveAttribute('multiple');
@@ -692,15 +767,23 @@ describe('ChatInputForm', () => {
 
   describe('screen sharing modal state', () => {
     it('should reflect screen sharing modal open state', () => {
-      renderWithRedux(<ChatInputForm {...defaultProps} isScreenSharingModalOpen={true} />);
+      renderWithRedux(
+        <ChatInputForm {...defaultProps} isScreenSharingModalOpen={true} />,
+      );
 
-      expect(screen.getByTestId('screen-sharing-button')).toHaveTextContent('Active');
+      expect(screen.getByTestId('screen-sharing-button')).toHaveTextContent(
+        'Active',
+      );
     });
 
     it('should reflect screen sharing modal closed state', () => {
-      renderWithRedux(<ChatInputForm {...defaultProps} isScreenSharingModalOpen={false} />);
+      renderWithRedux(
+        <ChatInputForm {...defaultProps} isScreenSharingModalOpen={false} />,
+      );
 
-      expect(screen.getByTestId('screen-sharing-button')).toHaveTextContent('Inactive');
+      expect(screen.getByTestId('screen-sharing-button')).toHaveTextContent(
+        'Inactive',
+      );
     });
   });
 
@@ -721,17 +804,25 @@ describe('ChatInputForm', () => {
 
   describe('file input change', () => {
     it('should handle file input change and upload files', async () => {
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const mockUploadFiles = vi.fn();
       (useChatFileUpload as any).mockReturnValue({
         uploadFiles: mockUploadFiles,
         retryUpload: vi.fn(),
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const file = new File(['test content'], 'test.pdf', {
+        type: 'application/pdf',
+      });
 
       Object.defineProperty(fileInput, 'files', {
         value: [file],
@@ -746,17 +837,25 @@ describe('ChatInputForm', () => {
     });
 
     it('should reset file input after upload', async () => {
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const mockUploadFiles = vi.fn();
       (useChatFileUpload as any).mockReturnValue({
         uploadFiles: mockUploadFiles,
         retryUpload: vi.fn(),
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const file = new File(['test content'], 'test.pdf', {
+        type: 'application/pdf',
+      });
 
       Object.defineProperty(fileInput, 'files', {
         value: [file],
@@ -771,16 +870,22 @@ describe('ChatInputForm', () => {
     });
 
     it('should pluralize notification when multiple files are selected', async () => {
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const mockUploadFiles = vi.fn();
       (useChatFileUpload as any).mockReturnValue({
         uploadFiles: mockUploadFiles,
         retryUpload: vi.fn(),
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       const files = [
         new File(['test1'], 'test1.pdf', { type: 'application/pdf' }),
         new File(['test2'], 'test2.pdf', { type: 'application/pdf' }),
@@ -801,16 +906,22 @@ describe('ChatInputForm', () => {
     });
 
     it('should not upload when no files are selected', async () => {
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const mockUploadFiles = vi.fn();
       (useChatFileUpload as any).mockReturnValue({
         uploadFiles: mockUploadFiles,
         retryUpload: vi.fn(),
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
 
       Object.defineProperty(fileInput, 'files', {
         value: [],
@@ -826,17 +937,25 @@ describe('ChatInputForm', () => {
   describe('upload notifications', () => {
     it('should clear input notification after upload', async () => {
       vi.useFakeTimers();
-      const { useChatFileUpload } = await import('@/hooks/use-chat-file-upload');
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
       const mockUploadFiles = vi.fn().mockResolvedValue(undefined);
       (useChatFileUpload as any).mockReturnValue({
         uploadFiles: mockUploadFiles,
         retryUpload: vi.fn(),
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
-      const fileInput = container.querySelector('input[type=\"file\"]') as HTMLInputElement;
-      const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
+      const fileInput = container.querySelector(
+        'input[type=\"file\"]',
+      ) as HTMLInputElement;
+      const file = new File(['test content'], 'test.pdf', {
+        type: 'application/pdf',
+      });
 
       Object.defineProperty(fileInput, 'files', {
         value: [file],
@@ -901,7 +1020,9 @@ describe('ChatInputForm', () => {
     it('should prevent submission when files are in pending status', async () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: '1', uploadStatus: 'pending', fileName: 'test.pdf' }],
+          attachedFiles: [
+            { id: '1', uploadStatus: 'pending', fileName: 'test.pdf' },
+          ],
         },
       });
 
@@ -916,7 +1037,9 @@ describe('ChatInputForm', () => {
 
   describe('upload menu trigger', () => {
     it('should trigger file input when upload menu is clicked', () => {
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
       const uploadMenu = screen.getByTestId('upload-menu');
       fireEvent.click(uploadMenu);
@@ -953,7 +1076,9 @@ describe('ChatInputForm', () => {
         maxFilesPerMessage: 5,
       });
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
 
       const fileInput = container.querySelector('input[type="file"]');
       // Should fallback to MENTOR_CHAT_DOCUMENTS_EXTENSIONS
@@ -965,7 +1090,9 @@ describe('ChatInputForm', () => {
     it('should dispatch remove file action when remove is clicked', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: 'file-1', fileName: 'test.pdf', uploadStatus: 'success' }],
+          attachedFiles: [
+            { id: 'file-1', fileName: 'test.pdf', uploadStatus: 'success' },
+          ],
         },
       });
 
@@ -980,7 +1107,9 @@ describe('ChatInputForm', () => {
       // TODO: Fix mock hoisting issue - mockRetryUpload call not detected
       renderWithRedux(<ChatInputForm {...defaultProps} />, {
         files: {
-          attachedFiles: [{ id: 'file-2', fileName: 'retry.pdf', uploadStatus: 'error' }],
+          attachedFiles: [
+            { id: 'file-2', fileName: 'retry.pdf', uploadStatus: 'error' },
+          ],
         },
       });
 
@@ -1010,9 +1139,13 @@ describe('ChatInputForm', () => {
       fireEvent.click(screen.getByText('Select Prompt'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('auto-resize-textarea')).toHaveValue('Suggested prompt');
+        expect(screen.getByTestId('auto-resize-textarea')).toHaveValue(
+          'Suggested prompt',
+        );
       });
-      expect(screen.queryByTestId('prompt-gallery-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('prompt-gallery-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('should close prompt gallery when close is clicked', async () => {
@@ -1024,7 +1157,9 @@ describe('ChatInputForm', () => {
       fireEvent.click(screen.getByText('Close'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('prompt-gallery-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('prompt-gallery-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -1072,9 +1207,12 @@ describe('ChatInputForm', () => {
       } as any;
       mockCheckRbacPermission.mockReturnValue(false);
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />, {
-        rbac: { rbacPermissions: { '/mentors/42/': {} } },
-      });
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+        {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        },
+      );
 
       const form = container.querySelector('form');
       fireEvent.dragOver(form!, { dataTransfer: { files: [] } });
@@ -1092,9 +1230,12 @@ describe('ChatInputForm', () => {
       } as any;
       mockCheckRbacPermission.mockReturnValue(false);
 
-      const { container } = renderWithRedux(<ChatInputForm {...defaultProps} />, {
-        rbac: { rbacPermissions: { '/mentors/42/': {} } },
-      });
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+        {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        },
+      );
 
       const form = container.querySelector('form');
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
@@ -1128,8 +1269,12 @@ describe('ChatInputForm', () => {
         },
       } as any;
 
-      renderWithRedux(<ChatInputForm {...defaultProps} chatAreaMaxWidth={800} />);
-      const disclaimerSection = screen.getByText('Test disclaimer').closest('div.mt-1');
+      renderWithRedux(
+        <ChatInputForm {...defaultProps} chatAreaMaxWidth={800} />,
+      );
+      const disclaimerSection = screen
+        .getByText('Test disclaimer')
+        .closest('div.mt-1');
       expect(disclaimerSection).toHaveStyle({ maxWidth: '800px' });
     });
   });

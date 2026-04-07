@@ -22,10 +22,13 @@ export const ToastErrorMessage = ({
   return (
     <div>
       <span>
-        Sorry about that! {String(plainMessage).match(/[.!?]$/) ? plainMessage : `${plainMessage}.`}{' '}
+        Sorry about that!{' '}
+        {String(plainMessage).match(/[.!?]$/)
+          ? plainMessage
+          : `${plainMessage}.`}{' '}
         Please try again or{' '}
         <a
-          className="text-blue-600 hover:text-blue-800 toast-wrapped-contact-tag"
+          className="toast-wrapped-contact-tag text-blue-600 hover:text-blue-800"
           href={`mailto:${supportEmail}`}
         >
           contact us

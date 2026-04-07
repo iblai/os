@@ -1,9 +1,9 @@
-import { config } from "@/lib/config";
-import { LOCAL_STORAGE_KEYS } from "@/lib/constants";
-import { isJSON } from "@/lib/utils";
-import { useEffect, useRef } from "react";
-import { useFreeTrial } from "./use-free-trial";
-import { getUserName } from "@/features/utils";
+import { config } from '@/lib/config';
+import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { isJSON } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
+import { useFreeTrial } from './use-free-trial';
+import { getUserName } from '@/features/utils';
 
 export const useExternalPricing = () => {
   const PRICING_URL = config.externalPricingPageUrl();
@@ -19,8 +19,8 @@ export const useExternalPricing = () => {
       token: window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY),
       success_url: getPaymentSuccessCallbackUrl(),
       cancel_url: window.location.href,
-      mode: "subscription",
-      metric_type: "user_count",
+      mode: 'subscription',
+      metric_type: 'user_count',
       metered: false,
       ...(userOnFreeTrial()
         ? {
@@ -40,7 +40,7 @@ export const useExternalPricing = () => {
       // Add type assertion to fix TypeScript error
       (
         pricingBoxIframeRef?.current as unknown as HTMLIFrameElement
-      )?.contentWindow?.postMessage(JSON.stringify({ data: dataToSend }), "*");
+      )?.contentWindow?.postMessage(JSON.stringify({ data: dataToSend }), '*');
     }
     if (message?.payment_initialization_launched) {
       if (message?.payment_initialization_successful) {
@@ -52,10 +52,10 @@ export const useExternalPricing = () => {
   };
 
   useEffect(() => {
-    window.addEventListener("message", handleIframePostMessageInteractions);
+    window.addEventListener('message', handleIframePostMessageInteractions);
     return () => {
       window.removeEventListener(
-        "message",
+        'message',
         handleIframePostMessageInteractions,
       );
     };
