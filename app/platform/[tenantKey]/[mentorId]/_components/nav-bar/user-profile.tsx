@@ -34,10 +34,7 @@ import {
   onAccountDeleted,
 } from '@/lib/utils';
 import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
-import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
-import { useLazyGetTenantMetadataQuery } from '@/features/tenants/api-slice';
-import { MentorVisibilityEnum, UserApp } from '@iblai/iblai-api';
-import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import { UserApp } from '@iblai/iblai-api';
 import {
   selectRbacPermissions,
   updateRbacPermissions,
@@ -121,8 +118,6 @@ export function UserProfile() {
 
   const { currentTenant, saveCurrentTenant } = useCurrentTenant();
   const { userTenants = [], saveUserTenants } = useUserTenants();
-  const [fetchTenantMetadata] = useLazyGetTenantMetadataQuery();
-  const [loadingTenantInfo, setLoadingTenantInfo] = useState(false);
 
   const dispatch = useAppDispatch();
   const topBannerOptions = useAppSelector(
@@ -167,17 +162,6 @@ export function UserProfile() {
     org: tenantKey,
   });
 
-  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
-    {
-      mentor: mentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? ANONYMOUS_USERNAME,
-    },
-    {
-      skip: !mentorId || !tenantKey,
-    },
-  );
   const rbacPermissions = useAppSelector(selectRbacPermissions);
 
   // Local LLM download hook for Tauri app

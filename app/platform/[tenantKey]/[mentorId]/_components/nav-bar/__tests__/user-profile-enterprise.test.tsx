@@ -292,12 +292,14 @@ describe('UserProfile - Enterprise Billing Bypass Logic with isStripeActivated',
       });
 
       it('returns false when tenant has no is_admin property', () => {
+        // Deliberately malformed — the test verifies the guard rejects a
+        // tenant missing `is_admin`. Cast through `unknown` to bypass the
+        // type check without leaving an unused @ts-expect-error lying around.
         const malformedTenant = {
           key: 'tenant-123',
           org: 'org-123',
-        };
+        } as unknown as MockTenant;
 
-        // @ts-expect-error - Testing malformed tenant without is_admin property
         expect(
           shouldCallBillingAPIs(configStripeEnabled, malformedTenant),
         ).toBe(false);

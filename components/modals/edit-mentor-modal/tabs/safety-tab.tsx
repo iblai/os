@@ -230,8 +230,7 @@ export function SafetyTab() {
                           isSystem: true,
                           name: 'moderation_system_prompt',
                           // @ts-expect-error moderation_system_prompt not in type of mentorSettings
-                          prompt:
-                            mentorSettings?.moderation_system_prompt ?? '',
+                          prompt: mentorSettings?.moderation_system_prompt ?? '',
                         })
                       }
                       disabled={isDisabled || disabled}
@@ -312,9 +311,7 @@ export function SafetyTab() {
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
                           {/* @ts-expect-error safety_system_prompt not in type of mentorSettings */}
-                          {parsePrompt(
-                            mentorSettings?.safety_system_prompt ?? '',
-                          )}
+                          {parsePrompt(mentorSettings?.safety_system_prompt ?? '')}
                         </Markdown>
                       </div>
                     </div>
@@ -374,10 +371,8 @@ export function SafetyTab() {
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
-                          {/* @ts-expect-error moderation_system_prompt not in type of mentorSettings */}
-                          {parsePrompt(
-                            mentorSettings?.moderation_response ?? '',
-                          )}
+                          {/* @ts-expect-error moderation_response not in type of mentorSettings */}
+                          {parsePrompt(mentorSettings?.moderation_response ?? '')}
                         </Markdown>
                       </div>
                     </div>
