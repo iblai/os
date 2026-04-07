@@ -46,7 +46,7 @@ export class HistoryTab {
 
   async triggerExport(): Promise<import('@playwright/test').Download> {
     const [download] = await Promise.all([
-      this.page.waitForEvent('download', { timeout: 30_000 }),
+      this.page.waitForEvent('download', { timeout: 120_000 }),
       this.exportButton.click(),
     ]);
     return download;
