@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.7](https://github.com/iblai/mentorai/compare/v0.44.6...v0.44.7) (2026-04-07)
+
+### Bug Fixes
+
+* close billing modal tab on upgrade button click ([4333887](https://github.com/iblai/mentorai/commit/43338879939e130afd972470d501d3eb82e01ce4))
+* close billing modal tab on upgrade button click > test coverage ([de21e58](https://github.com/iblai/mentorai/commit/de21e5803afba839536ff0ed2dccd6afe7268806))
+
 ## [0.44.6](https://github.com/iblai/mentorai/compare/v0.44.5...v0.44.6) (2026-04-06)
 
 ### Bug Fixes
