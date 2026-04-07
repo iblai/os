@@ -199,72 +199,76 @@ export function UserProfile() {
     onSelectFoundryModel,
   } = useModelDownload();
 
-  useEffect(() => {
-    if (!username || !tenantKey || !mentorPublicSettings) {
-      return;
-    }
-
-    const allowsAnonymousChat = mentorPublicSettings.allow_anonymous === true;
-    const viewableByAnyone =
-      mentorPublicSettings.mentor_visibility ===
-      MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
-
-    if (!allowsAnonymousChat || !viewableByAnyone) {
-      return;
-    }
-
-    const tenantAlreadyAdded = userTenants.some(
-      (tenant) => tenant.key === tenantKey,
-    );
-
-    if (tenantAlreadyAdded) {
-      const existingTenant = userTenants.find(
-        (tenant) => tenant.key === tenantKey,
-      );
-      if (existingTenant && currentTenant?.key !== tenantKey) {
-        saveCurrentTenant(existingTenant);
-      }
-      return;
-    }
-
-    if (loadingTenantInfo) {
-      return;
-    }
-
-    setLoadingTenantInfo(true);
-    fetchTenantMetadata({ tenantKey })
-      .unwrap()
-      .then((metadata) => {
-        const newTenant: Tenant = {
-          key: tenantKey,
-          org: tenantKey,
-          is_admin: false,
-          platform_name: metadata?.platform_name || tenantKey,
-          name: metadata?.platform_name || tenantKey,
-        };
-
-        const updatedTenants = [...userTenants, newTenant];
-        saveUserTenants(updatedTenants);
-        saveCurrentTenant(newTenant);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch tenant metadata', error);
-      })
-      .finally(() => {
-        setLoadingTenantInfo(false);
-      });
-  }, [
-    currentTenant?.key,
-    fetchTenantMetadata,
-    loadingTenantInfo,
-    mentorId,
-    mentorPublicSettings,
-    saveCurrentTenant,
-    saveUserTenants,
-    tenantKey,
-    userTenants,
-    username,
-  ]);
+  // TODO: The tenant provider already handles fetching tenant metadata and
+  // syncing currentTenant/userTenants for anonymous-viewable mentors. This
+  // effect is commented out so we can monitor whether removing the duplicate
+  // fetch causes any regressions. If nothing breaks, delete this block.
+  // useEffect(() => {
+  //   if (!username || !tenantKey || !mentorPublicSettings) {
+  //     return;
+  //   }
+  //
+  //   const allowsAnonymousChat = mentorPublicSettings.allow_anonymous === true;
+  //   const viewableByAnyone =
+  //     mentorPublicSettings.mentor_visibility ===
+  //     MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
+  //
+  //   if (!allowsAnonymousChat || !viewableByAnyone) {
+  //     return;
+  //   }
+  //
+  //   const tenantAlreadyAdded = userTenants.some(
+  //     (tenant) => tenant.key === tenantKey,
+  //   );
+  //
+  //   if (tenantAlreadyAdded) {
+  //     const existingTenant = userTenants.find(
+  //       (tenant) => tenant.key === tenantKey,
+  //     );
+  //     if (existingTenant && currentTenant?.key !== tenantKey) {
+  //       saveCurrentTenant(existingTenant);
+  //     }
+  //     return;
+  //   }
+  //
+  //   if (loadingTenantInfo) {
+  //     return;
+  //   }
+  //
+  //   setLoadingTenantInfo(true);
+  //   fetchTenantMetadata({ tenantKey })
+  //     .unwrap()
+  //     .then((metadata) => {
+  //       const newTenant: Tenant = {
+  //         key: tenantKey,
+  //         org: tenantKey,
+  //         is_admin: false,
+  //         platform_name: metadata?.platform_name || tenantKey,
+  //         name: metadata?.platform_name || tenantKey,
+  //       };
+  //
+  //       const updatedTenants = [...userTenants, newTenant];
+  //       saveUserTenants(updatedTenants);
+  //       saveCurrentTenant(newTenant);
+  //     })
+  //     .catch((error) => {
+  //       console.error('Failed to fetch tenant metadata', error);
+  //     })
+  //     .finally(() => {
+  //       setLoadingTenantInfo(false);
+  //     });
+  // }, [
+  //   currentTenant?.key,
+  //   fetchTenantMetadata,
+  //   loadingTenantInfo,
+  //   mentorId,
+  //   mentorPublicSettings,
+  //   saveCurrentTenant,
+  //   saveUserTenants,
+  //   tenantKey,
+  //   userTenants,
+  //   username,
+  // ]);
   const { visitingTenant } = useVisitingTenant();
 
   const handleGetSubscriptionRelatedData = async () => {

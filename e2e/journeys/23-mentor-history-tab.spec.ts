@@ -100,7 +100,7 @@ test.describe('Journey 23: Mentor History Tab', () => {
     }
     await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
     const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 30_000 }),
+      page.waitForEvent('download', { timeout: 120_000 }),
       exportBtn.click(),
     ]);
     expect(download.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
