@@ -3,14 +3,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { DefaultMentorsSection } from '../default-mentors-section';
-import { ExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  ExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Mock the data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
 }));
 
 // Mock useNavigate hook
@@ -29,7 +33,8 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   return {
     ...actual,
     isLoggedIn: () => mockIsLoggedIn(),
-    redirectToAuthSpaJoinTenant: (...args: unknown[]) => mockRedirectToAuthSpaJoinTenant(...args),
+    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
+      mockRedirectToAuthSpaJoinTenant(...args),
   };
 });
 
@@ -46,7 +51,12 @@ vi.mock('@/hoc/withPermissions', () => ({
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -62,7 +72,9 @@ vi.mock('@/components/spinner', () => ({
 
 // Mock child components
 vi.mock('../mentor-card-with-star', () => ({
-  MentorCardWithStar: ({ mentor }: any) => <div data-testid="mentor-card">{mentor.name}</div>,
+  MentorCardWithStar: ({ mentor }: any) => (
+    <div data-testid="mentor-card">{mentor.name}</div>
+  ),
 }));
 
 // Mock EmptyState component
@@ -122,10 +134,14 @@ describe('DefaultMentorsSection', () => {
     },
   ];
 
-  const renderWithContext = (contextOverrides: Partial<ExplorePageContextValue> = {}) => {
+  const renderWithContext = (
+    contextOverrides: Partial<ExplorePageContextValue> = {},
+  ) => {
     return render(
       <TooltipProvider>
-        <ExplorePageContext.Provider value={{ ...mockContextValue, ...contextOverrides }}>
+        <ExplorePageContext.Provider
+          value={{ ...mockContextValue, ...contextOverrides }}
+        >
           <DefaultMentorsSection />
         </ExplorePageContext.Provider>
       </TooltipProvider>,
@@ -148,14 +164,18 @@ describe('DefaultMentorsSection', () => {
     it('renders the All Mentors heading by default', () => {
       renderWithContext();
 
-      expect(screen.getByRole('heading', { name: /All Mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /All Mentors/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders default subtext', () => {
       renderWithContext();
 
       expect(
-        screen.getByText('Explore mentors and specialized learning assistants.'),
+        screen.getByText(
+          'Explore mentors and specialized learning assistants.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -169,14 +189,18 @@ describe('DefaultMentorsSection', () => {
     it('renders mentors list with proper roles', () => {
       renderWithContext();
 
-      expect(screen.getByRole('list', { name: /All mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('list', { name: /All mentors/i }),
+      ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
 
     it('renders Create Mentor button when user has permission', () => {
       renderWithContext();
 
-      expect(screen.getByRole('button', { name: /Create new mentor/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Create new mentor/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -192,9 +216,13 @@ describe('DefaultMentorsSection', () => {
         },
       });
 
-      expect(screen.getByRole('heading', { name: /Mathematics/i })).toBeInTheDocument();
       expect(
-        screen.getByText('Explore mathematics mentors and specialized learning assistants.'),
+        screen.getByRole('heading', { name: /Mathematics/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Explore mathematics mentors and specialized learning assistants.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -209,9 +237,13 @@ describe('DefaultMentorsSection', () => {
         },
       });
 
-      expect(screen.getByRole('heading', { name: /Science/i })).toBeInTheDocument();
       expect(
-        screen.getByText('Explore science mentors and specialized learning assistants.'),
+        screen.getByRole('heading', { name: /Science/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Explore science mentors and specialized learning assistants.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -226,8 +258,12 @@ describe('DefaultMentorsSection', () => {
         },
       });
 
-      expect(screen.getByRole('heading', { name: /OpenAI Mentors/i })).toBeInTheDocument();
-      expect(screen.getByText('Explore mentors powered by OpenAI.')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /OpenAI Mentors/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Explore mentors powered by OpenAI.'),
+      ).toBeInTheDocument();
     });
 
     it('prioritizes subject over category in title', () => {
@@ -241,7 +277,9 @@ describe('DefaultMentorsSection', () => {
         },
       });
 
-      expect(screen.getByRole('heading', { name: /Physics/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /Physics/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -352,7 +390,9 @@ describe('DefaultMentorsSection', () => {
       const user = userEvent.setup();
       renderWithContext();
 
-      const createButton = screen.getByRole('button', { name: /Create new mentor/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create new mentor/i,
+      });
       await user.click(createButton);
 
       expect(mockOpenCreateMentorModal).toHaveBeenCalled();
@@ -364,10 +404,14 @@ describe('DefaultMentorsSection', () => {
 
       renderWithContext();
 
-      const createButton = screen.getByRole('button', { name: /Create new mentor/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create new mentor/i,
+      });
       await user.click(createButton);
 
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith('test-tenant');
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
       expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
   });
@@ -382,7 +426,9 @@ describe('DefaultMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByRole('button', { name: /Load more mentors/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Load more mentors/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not show See more button when there is no next page', () => {
@@ -394,7 +440,9 @@ describe('DefaultMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.queryByRole('button', { name: /Load more mentors/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Load more mentors/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('loads more mentors when See more is clicked', async () => {
@@ -407,7 +455,9 @@ describe('DefaultMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more mentors/i,
+      });
       await user.click(seeMoreButton);
 
       await waitFor(() => {
@@ -441,7 +491,9 @@ describe('DefaultMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByRole('button', { name: /Load more mentors/i });
+      const seeMoreButton = screen.getByRole('button', {
+        name: /Load more mentors/i,
+      });
       expect(seeMoreButton).toBeDisabled();
     });
   });
@@ -450,7 +502,9 @@ describe('DefaultMentorsSection', () => {
     it('resets pagination when search changes', () => {
       const { rerender } = render(
         <TooltipProvider>
-          <ExplorePageContext.Provider value={{ ...mockContextValue, debouncedSearch: '' }}>
+          <ExplorePageContext.Provider
+            value={{ ...mockContextValue, debouncedSearch: '' }}
+          >
             <DefaultMentorsSection />
           </ExplorePageContext.Provider>
         </TooltipProvider>,
@@ -500,7 +554,10 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       const listItems = screen.getAllByRole('listitem');
-      expect(listItems[0]).toHaveAttribute('aria-label', expect.stringContaining('Mentor 1'));
+      expect(listItems[0]).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Mentor 1'),
+      );
     });
   });
 });

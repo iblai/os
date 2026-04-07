@@ -25,13 +25,13 @@ export function AuthModal({ isOpen, onClose, tenantKey }: Props) {
         <DialogDescription className="sr-only">
           Please login to continue using the chat.
         </DialogDescription>
-        <div className="text-sm text-gray-500 text-center mt-4">
+        <div className="mt-4 text-center text-sm text-gray-500">
           Create an account or login to continue
         </div>
         <div className="flex justify-center">
           <Logo tenantKey={tenantKey} />
         </div>
-        <div className="flex justify-end mt-4">
+        <div className="mt-4 flex justify-end">
           <Button
             onClick={() => redirectToAuthSpaJoinTenant(tenantKey)}
             className="ibl-button-primary cursor-pointer"

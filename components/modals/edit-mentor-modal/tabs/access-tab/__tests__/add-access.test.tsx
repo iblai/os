@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +15,7 @@ import type { DefaultMentorRole } from '../shared';
 const mockUseParams = vi.fn();
 const mockUseUsername = vi.fn();
 const mockUsePlatformUsersQuery = vi.fn();
+const mockUseGetRbacGroupsQuery = vi.fn();
 const mockUseUpdateRbacMentorAccessMutation = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockToastError = vi.fn();
@@ -24,11 +31,28 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  usePlatformUsersQuery: (...args: unknown[]) => mockUsePlatformUsersQuery(...args),
-  useUpdateRbacMentorAccessMutation: () => mockUseUpdateRbacMentorAccessMutation(),
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
+  usePlatformUsersQuery: (...args: unknown[]) =>
+    mockUsePlatformUsersQuery(...args),
+  useGetRbacGroupsQuery: (...args: unknown[]) =>
+    mockUseGetRbacGroupsQuery(...args),
+  useUpdateRbacMentorAccessMutation: () =>
+    mockUseUpdateRbacMentorAccessMutation(),
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockUseGetMentorSettingsQuery(...args),
   isPoliciesResponse: (results: unknown) =>
     results && typeof results === 'object' && 'data' in (results as object),
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppSelector: () => ({}),
+}));
+
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  selectRbacPermissions: 'selectRbacPermissions',
+}));
+
+vi.mock('@/hoc/withPermissions', () => ({
+  checkRbacPermission: () => true,
 }));
 
 vi.mock('sonner', () => ({
@@ -68,10 +92,26 @@ describe('AddAccessDialog', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: [
-          { id: 1, name: 'User One', username: 'user1', email: 'user1@example.com' },
-          { id: 2, name: 'User Two', username: 'user2', email: 'user2@example.com' },
+          {
+            id: 1,
+            name: 'User One',
+            username: 'user1',
+            email: 'user1@example.com',
+          },
+          {
+            id: 2,
+            name: 'User Two',
+            username: 'user2',
+            email: 'user2@example.com',
+          },
         ],
       },
+      isFetching: false,
+      isLoading: false,
+    });
+
+    mockUseGetRbacGroupsQuery.mockReturnValue({
+      data: undefined,
       isFetching: false,
       isLoading: false,
     });
@@ -93,13 +133,17 @@ describe('AddAccessDialog', () => {
   it('renders the create role access button', () => {
     render(<AddAccessDialog {...defaultProps} />);
 
-    expect(screen.getByRole('button', { name: /create role access/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /create role access/i }),
+    ).toBeInTheDocument();
   });
 
   it('disables button when isLoading is true', () => {
     render(<AddAccessDialog {...defaultProps} isLoading={true} />);
 
-    expect(screen.getByRole('button', { name: /create role access/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /create role access/i }),
+    ).toBeDisabled();
   });
 
   it('disables button when mentorDbId is not available', () => {
@@ -109,14 +153,18 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    expect(screen.getByRole('button', { name: /create role access/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /create role access/i }),
+    ).toBeDisabled();
   });
 
   it('opens dialog when clicking create role access button', async () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Create mentor role access')).toBeInTheDocument();
@@ -126,9 +174,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.getByRole('combobox', {
+      name: /select role/i,
+    });
     expect(selectTrigger).toBeInTheDocument();
   });
 
@@ -136,7 +188,9 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // The Create button should be disabled when no role is selected
     expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
@@ -154,7 +208,9 @@ describe('AddAccessDialog', () => {
     render(<AddAccessDialog {...defaultProps} />);
 
     // Button is disabled when mentor context is missing, so this test validates the button state
-    expect(screen.getByRole('button', { name: /create role access/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /create role access/i }),
+    ).toBeDisabled();
   });
 
   it('shows error when role already exists', async () => {
@@ -162,10 +218,14 @@ describe('AddAccessDialog', () => {
     render(<AddAccessDialog {...defaultProps} availableRoles={[]} />);
 
     // Dialog should auto-close when no available roles
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // Select should be disabled with no roles
-    const selectTrigger = screen.queryByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.queryByRole('combobox', {
+      name: /select role/i,
+    });
     if (selectTrigger) {
       expect(selectTrigger).toBeDisabled();
     }
@@ -175,7 +235,9 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /cancel/i }));
@@ -189,7 +251,9 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     expect(screen.getByText('No users selected yet.')).toBeInTheDocument();
   });
@@ -198,9 +262,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     expect(searchInput).toBeInTheDocument();
   });
 
@@ -208,14 +276,20 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'a');
     await user.click(searchInput); // Focus to show results
 
     await waitFor(() => {
-      expect(screen.getByText('Type at least two characters to search.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Type at least two characters to search.'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -229,9 +303,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'test');
     await user.click(searchInput);
 
@@ -244,9 +322,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
     await user.click(searchInput);
 
@@ -260,9 +342,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -275,7 +361,9 @@ describe('AddAccessDialog', () => {
 
     await waitFor(() => {
       // User should appear in selected users area
-      expect(screen.queryByText('No users selected yet.')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('No users selected yet.'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -283,9 +371,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -297,12 +389,16 @@ describe('AddAccessDialog', () => {
 
     // Wait for user to be added
     await waitFor(() => {
-      const removeButtons = screen.queryAllByRole('button', { name: /remove/i });
+      const removeButtons = screen.queryAllByRole('button', {
+        name: /remove/i,
+      });
       expect(removeButtons.length).toBeGreaterThan(0);
     });
 
-    // Remove user
-    const removeButton = screen.getByRole('button', { name: /remove user one/i });
+    // Remove user (email takes precedence in sr-only label)
+    const removeButton = screen.getByRole('button', {
+      name: /remove user1@example.com/i,
+    });
     await user.click(removeButton);
 
     await waitFor(() => {
@@ -314,12 +410,18 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     const onAccessCreated = vi.fn().mockResolvedValue(undefined);
 
-    render(<AddAccessDialog {...defaultProps} onAccessCreated={onAccessCreated} />);
+    render(
+      <AddAccessDialog {...defaultProps} onAccessCreated={onAccessCreated} />,
+    );
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // Select role
-    const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.getByRole('combobox', {
+      name: /select role/i,
+    });
     await user.click(selectTrigger);
 
     await waitFor(() => {
@@ -347,10 +449,14 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // Select role
-    const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.getByRole('combobox', {
+      name: /select role/i,
+    });
     await user.click(selectTrigger);
 
     await waitFor(() => {
@@ -378,9 +484,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'nonexistent');
 
     await waitFor(() => {
@@ -392,7 +502,9 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     // Press escape to close
@@ -404,7 +516,9 @@ describe('AddAccessDialog', () => {
   });
 
   it('clears selected role when it becomes unavailable', async () => {
-    const { rerender } = render(<AddAccessDialog {...defaultProps} availableRoles={['editor']} />);
+    const { rerender } = render(
+      <AddAccessDialog {...defaultProps} availableRoles={['editor']} />,
+    );
 
     // Rerender with empty available roles
     rerender(<AddAccessDialog {...defaultProps} availableRoles={[]} />);
@@ -417,7 +531,14 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ user_id: 1, name: 'User One', username: 'user1', email: 'user1@example.com' }],
+        results: [
+          {
+            user_id: 1,
+            name: 'User One',
+            username: 'user1',
+            email: 'user1@example.com',
+          },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -425,9 +546,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -440,7 +565,14 @@ describe('AddAccessDialog', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: {
-          data: [{ id: 1, name: 'User One', username: 'user1', email: 'user1@example.com' }],
+          data: [
+            {
+              id: 1,
+              name: 'User One',
+              username: 'user1',
+              email: 'user1@example.com',
+            },
+          ],
         },
       },
       isFetching: false,
@@ -449,9 +581,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -467,7 +603,12 @@ describe('AddAccessDialog', () => {
           null,
           undefined,
           'invalid',
-          { id: 1, name: 'Valid User', username: 'valid', email: 'valid@example.com' },
+          {
+            id: 1,
+            name: 'Valid User',
+            username: 'valid',
+            email: 'valid@example.com',
+          },
           { name: 'No ID User', username: 'noid', email: 'noid@example.com' },
         ],
       },
@@ -477,9 +618,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -493,9 +638,13 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -507,7 +656,9 @@ describe('AddAccessDialog', () => {
 
     // Wait for user to be added, then search again
     await waitFor(() => {
-      expect(screen.queryByText('No users selected yet.')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('No users selected yet.'),
+      ).not.toBeInTheDocument();
     });
 
     // Try to search again - the selected user should not appear in results
@@ -518,7 +669,9 @@ describe('AddAccessDialog', () => {
     await waitFor(() => {
       // Only User Two should be visible in results now
       const buttons = screen.getAllByRole('button');
-      const userOneButtons = buttons.filter((btn) => btn.textContent?.includes('User One'));
+      const userOneButtons = buttons.filter((btn) =>
+        btn.textContent?.includes('User One'),
+      );
       // One in selected area, none in search results (since already selected)
       expect(userOneButtons.length).toBeLessThanOrEqual(1);
     });
@@ -535,7 +688,9 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // The create button should show loading state
     const createButton = screen.getByRole('button', { name: /creating/i });
@@ -548,9 +703,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     // Results should be visible
@@ -571,11 +730,17 @@ describe('AddAccessDialog', () => {
 
   it('handles focus event on search input with existing search term', async () => {
     const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
 
     // Type search term
     await user.type(searchInput, 'user');
@@ -588,13 +753,21 @@ describe('AddAccessDialog', () => {
     await waitFor(() => {
       expect(screen.getByText('User One')).toBeInTheDocument();
     });
+
+    // Flush the pending blur timeout so it doesn't fire after teardown
+    await act(async () => {
+      vi.advanceTimersByTime(150);
+    });
+    vi.useRealTimers();
   });
 
   it('displays user email as fallback when name is missing', async () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ id: 1, name: '', username: 'user1', email: 'user1@example.com' }],
+        results: [
+          { id: 1, name: '', username: 'user1', email: 'user1@example.com' },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -602,9 +775,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -616,7 +793,14 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ id: '123', name: 'User One', username: 'user1', email: 'user1@example.com' }],
+        results: [
+          {
+            id: '123',
+            name: 'User One',
+            username: 'user1',
+            email: 'user1@example.com',
+          },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -624,9 +808,13 @@ describe('AddAccessDialog', () => {
 
     render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -638,22 +826,32 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     const onAccessCreated = vi.fn().mockResolvedValue(undefined);
 
-    render(<AddAccessDialog {...defaultProps} onAccessCreated={onAccessCreated} />);
+    render(
+      <AddAccessDialog {...defaultProps} onAccessCreated={onAccessCreated} />,
+    );
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // Select role
-    const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.getByRole('combobox', {
+      name: /select role/i,
+    });
     await user.click(selectTrigger);
 
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /editor/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('option', { name: /editor/i }),
+      ).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('option', { name: /editor/i }));
 
     // Add a user
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -664,7 +862,9 @@ describe('AddAccessDialog', () => {
 
     // Wait for user to be added
     await waitFor(() => {
-      expect(screen.queryByText('No users selected yet.')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('No users selected yet.'),
+      ).not.toBeInTheDocument();
     });
 
     // Submit with users
@@ -685,14 +885,20 @@ describe('AddAccessDialog', () => {
     const user = userEvent.setup();
     const { rerender } = render(<AddAccessDialog {...defaultProps} />);
 
-    await user.click(screen.getByRole('button', { name: /create role access/i }));
+    await user.click(
+      screen.getByRole('button', { name: /create role access/i }),
+    );
 
     // Select role
-    const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+    const selectTrigger = screen.getByRole('combobox', {
+      name: /select role/i,
+    });
     await user.click(selectTrigger);
 
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /editor/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('option', { name: /editor/i }),
+      ).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('option', { name: /editor/i }));
@@ -718,14 +924,20 @@ describe('AddAccessDialog', () => {
         <AddAccessDialog {...defaultProps} availableRoles={['editor']} />,
       );
 
-      await user.click(screen.getByRole('button', { name: /create role access/i }));
+      await user.click(
+        screen.getByRole('button', { name: /create role access/i }),
+      );
 
       // Select editor role
-      const selectTrigger = screen.getByRole('combobox', { name: /select role/i });
+      const selectTrigger = screen.getByRole('combobox', {
+        name: /select role/i,
+      });
       await user.click(selectTrigger);
 
       await waitFor(() => {
-        expect(screen.getByRole('option', { name: /editor/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('option', { name: /editor/i }),
+        ).toBeInTheDocument();
       });
 
       await user.click(screen.getByRole('option', { name: /editor/i }));
@@ -755,14 +967,18 @@ describe('AddAccessDialog', () => {
       render(<AddAccessDialog {...defaultProps} />);
 
       // Button should be disabled when platform context is missing
-      expect(screen.getByRole('button', { name: /create role access/i })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: /create role access/i }),
+      ).toBeDisabled();
     });
 
     it('handles empty selectedRole when trying to submit', async () => {
       const user = userEvent.setup();
       render(<AddAccessDialog {...defaultProps} />);
 
-      await user.click(screen.getByRole('button', { name: /create role access/i }));
+      await user.click(
+        screen.getByRole('button', { name: /create role access/i }),
+      );
 
       // The Create button should be disabled when no role is selected
       const createButton = screen.getByRole('button', { name: /^create$/i });

@@ -67,7 +67,8 @@ const mockPromptCategories = [
 ];
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetPromptCategoriesQuery: vi.fn(() => ({
@@ -508,7 +509,9 @@ describe('EditPromptModal', () => {
 
   describe('Loading and Disabled States', () => {
     it('disables form fields when prompt categories are loading', async () => {
-      const { useGetPromptCategoriesQuery } = await import('@iblai/iblai-js/data-layer');
+      const { useGetPromptCategoriesQuery } = await import(
+        '@iblai/iblai-js/data-layer'
+      );
       vi.mocked(useGetPromptCategoriesQuery).mockReturnValue({
         data: undefined,
         isLoading: true,
@@ -586,7 +589,9 @@ describe('EditPromptModal', () => {
         </Provider>,
       );
 
-      expect(screen.getByRole('button', { name: /saving/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /saving/i }),
+      ).toBeInTheDocument();
     });
 
     it('shows "Save" text on button when isEditing is false', () => {
@@ -604,7 +609,9 @@ describe('EditPromptModal', () => {
         </Provider>,
       );
 
-      expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^save$/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -661,7 +668,9 @@ describe('EditPromptModal', () => {
 
   describe('Prompt Categories Query', () => {
     it('skips fetching categories for system prompts', async () => {
-      const { useGetPromptCategoriesQuery } = await import('@iblai/iblai-js/data-layer');
+      const { useGetPromptCategoriesQuery } = await import(
+        '@iblai/iblai-js/data-layer'
+      );
       const mockQuery = vi.mocked(useGetPromptCategoriesQuery);
 
       const store = createTestStore();
@@ -691,7 +700,9 @@ describe('EditPromptModal', () => {
     });
 
     it('fetches categories for non-system prompts', async () => {
-      const { useGetPromptCategoriesQuery } = await import('@iblai/iblai-js/data-layer');
+      const { useGetPromptCategoriesQuery } = await import(
+        '@iblai/iblai-js/data-layer'
+      );
       const mockQuery = vi.mocked(useGetPromptCategoriesQuery);
 
       const store = createTestStore();
@@ -865,7 +876,10 @@ describe('EditPromptModal', () => {
   // --------------------------------------------------------------------------
 
   describe('Different Prompt Types', () => {
-    const promptTypes: Array<{ name: SystemPrompt | SafetyPrompt; isSystem: boolean }> = [
+    const promptTypes: Array<{
+      name: SystemPrompt | SafetyPrompt;
+      isSystem: boolean;
+    }> = [
       { name: 'system_prompt', isSystem: true },
       { name: 'proactive_prompt', isSystem: true },
       { name: 'guided_prompt_instructions', isSystem: true },
@@ -889,7 +903,8 @@ describe('EditPromptModal', () => {
             : {
                 category: 'General',
                 id: 1,
-                promptVisibility: PromptVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+                promptVisibility:
+                  PromptVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
               }),
         };
 
@@ -938,11 +953,16 @@ describe('EditPromptModal', () => {
         </Provider>,
       );
 
-      const form = screen.getByRole('button', { name: /save/i }).closest('form');
+      const form = screen
+        .getByRole('button', { name: /save/i })
+        .closest('form');
       expect(form).toBeInTheDocument();
 
       if (form) {
-        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        const submitEvent = new Event('submit', {
+          bubbles: true,
+          cancelable: true,
+        });
         const preventDefaultSpy = vi.spyOn(submitEvent, 'preventDefault');
         const stopPropagationSpy = vi.spyOn(submitEvent, 'stopPropagation');
 

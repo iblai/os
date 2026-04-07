@@ -2,7 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Plus, ChevronDown } from 'lucide-react';
 import {
@@ -27,17 +32,26 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 const EditMemoryModal = dynamic(
-  () => import('./edit-memory-modal').then((module) => ({ default: module.EditMemoryModal })),
+  () =>
+    import('./edit-memory-modal').then((module) => ({
+      default: module.EditMemoryModal,
+    })),
   { ssr: false },
 );
 
 const AddMemoryModal = dynamic(
-  () => import('./add-memory-modal').then((module) => ({ default: module.AddMemoryModal })),
+  () =>
+    import('./add-memory-modal').then((module) => ({
+      default: module.AddMemoryModal,
+    })),
   { ssr: false },
 );
 
 const DeleteMemoryModal = dynamic(
-  () => import('./delete-memory-modal').then((module) => ({ default: module.DeleteMemoryModal })),
+  () =>
+    import('./delete-memory-modal').then((module) => ({
+      default: module.DeleteMemoryModal,
+    })),
   { ssr: false },
 );
 
@@ -72,15 +86,16 @@ export function SavedMemoriesModal({
 }: SavedMemoriesModalProps) {
   const { tenantKey: tenantKeyParam } = useParams<TenantKeyMentorIdParams>();
   // API hooks
-  const { data: memoriesResponse, isLoading: isLoadingMemories } = useGetMemoriesQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username || !open,
-    },
-  );
+  const { data: memoriesResponse, isLoading: isLoadingMemories } =
+    useGetMemoriesQuery(
+      {
+        tenantKey,
+        username: username ?? '',
+      },
+      {
+        skip: !tenantKey || !username || !open,
+      },
+    );
 
   const { data: categoriesResponse } = useGetMemoryCategoriesQuery(
     {
@@ -94,7 +109,8 @@ export function SavedMemoriesModal({
 
   const [deleteMemory, { isLoading: isDeleting }] = useDeleteMemoryMutation();
   const [deleteMemoryByCategory] = useDeleteMemoryByCategoryMutation();
-  const [updateMemoryEntry, { isLoading: isEditing }] = useUpdateMemoryEntryMutation();
+  const [updateMemoryEntry, { isLoading: isEditing }] =
+    useUpdateMemoryEntryMutation();
   const [createMemory, { isLoading: isSaving }] = useCreateMemoryMutation();
 
   // Transform API data to local format
@@ -125,7 +141,9 @@ export function SavedMemoriesModal({
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
+    null,
+  );
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [newMemoryContent, setNewMemoryContent] = useState('');
   const [newMemoryCategory, setNewMemoryCategory] = useState('');
@@ -228,7 +246,9 @@ export function SavedMemoriesModal({
     if (!newMemoryContent.trim() || !tenantKey || !username) return;
 
     try {
-      const apiCategory = transformCategoryToApi(newMemoryCategory || selectedCategory);
+      const apiCategory = transformCategoryToApi(
+        newMemoryCategory || selectedCategory,
+      );
 
       await createMemory({
         tenantKey,
@@ -266,23 +286,25 @@ export function SavedMemoriesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] bg-background text-foreground border-border mx-4 sm:mx-auto">
+      <DialogContent className="bg-background text-foreground border-border mx-4 max-h-[80vh] max-w-4xl sm:mx-auto">
         <DialogHeader className="space-y-0">
           <div className="">
-            <DialogTitle className="text-md font-medium">Saved Memories</DialogTitle>
+            <DialogTitle className="text-md font-medium">
+              Saved Memories
+            </DialogTitle>
           </div>
         </DialogHeader>
 
         <div className="space-y-4 overflow-x-hidden">
-          <div className="border-t border-border"></div>
+          <div className="border-border border-t"></div>
 
           <div className="flex items-center justify-between gap-4">
-            <div className="hidden sm:flex space-x-8 overflow-x-auto flex-1 scrollbar-none border-border border-b">
+            <div className="scrollbar-none border-border hidden flex-1 space-x-8 overflow-x-auto border-b sm:flex">
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`relative py-2 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategory === category
                       ? 'text-[#38A1E5]'
                       : 'text-muted-foreground hover:text-foreground'
@@ -291,7 +313,7 @@ export function SavedMemoriesModal({
                   {category}
                   {selectedCategory === category && (
                     <div
-                      className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-[#38A1E5] transition-all duration-200"
+                      className="absolute bottom-0 left-1/2 h-0.5 -translate-x-1/2 transform bg-[#38A1E5] transition-all duration-200"
                       style={{ width: `${category.length * 0.55}em` }}
                     />
                   )}
@@ -299,10 +321,16 @@ export function SavedMemoriesModal({
               ))}
             </div>
 
-            <div className="sm:hidden py-2 w-full">
-              <DropdownMenu open={showMobileDropdown} onOpenChange={setShowMobileDropdown}>
+            <div className="w-full py-2 sm:hidden">
+              <DropdownMenu
+                open={showMobileDropdown}
+                onOpenChange={setShowMobileDropdown}
+              >
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-transparent"
+                  >
                     {selectedCategory}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -315,7 +343,9 @@ export function SavedMemoriesModal({
                         setSelectedCategory(category);
                         setShowMobileDropdown(false);
                       }}
-                      className={selectedCategory === category ? 'bg-accent' : ''}
+                      className={
+                        selectedCategory === category ? 'bg-accent' : ''
+                      }
                     >
                       {category}
                     </DropdownMenuItem>
@@ -324,25 +354,29 @@ export function SavedMemoriesModal({
               </DropdownMenu>
             </div>
 
-            <Button onClick={startAddMemory} size="sm" className="ibl-button-primary shrink-0">
-              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <Button
+              onClick={startAddMemory}
+              size="sm"
+              className="ibl-button-primary shrink-0"
+            >
+              <Plus className="mr-1 h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Add Memory</span>
               <span className="sm:hidden">Add</span>
             </Button>
           </div>
 
-          <div className="space-y-3 max-h-96 overflow-y-auto px-1 sm:px-0">
+          <div className="max-h-96 space-y-3 overflow-y-auto px-1 sm:px-0">
             {isLoadingMemories ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 <p>Loading memories...</p>
               </div>
             ) : (
               filteredMemories.map((memory: any) => (
                 <div
                   key={memory.id}
-                  className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border"
+                  className="bg-card border-border flex items-start gap-3 rounded-lg border p-3"
                 >
-                  <div className="flex-1 text-sm text-foreground leading-relaxed">
+                  <div className="text-foreground flex-1 text-sm leading-relaxed">
                     {memory.content}
                   </div>
                   <DropdownMenu>
@@ -350,14 +384,18 @@ export function SavedMemoriesModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        className="text-muted-foreground hover:text-foreground h-6 w-6 flex-shrink-0 p-0"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => startEdit(memory)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(memory.id)}>
+                      <DropdownMenuItem onClick={() => startEdit(memory)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowDeleteConfirm(memory.id)}
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -367,16 +405,20 @@ export function SavedMemoriesModal({
             )}
           </div>
 
-          {filteredMemories.length > 0 && selectedCategory.toLowerCase() !== 'all' && (
-            <div className="flex justify-end pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setShowBulkDeleteConfirm(true)}>
-                Delete All
-              </Button>
-            </div>
-          )}
+          {filteredMemories.length > 0 &&
+            selectedCategory.toLowerCase() !== 'all' && (
+              <div className="border-border flex justify-end border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                >
+                  Delete All
+                </Button>
+              </div>
+            )}
 
           {filteredMemories.length === 0 && !isLoadingMemories && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-muted-foreground py-8 text-center">
               <p>No saved memories yet.</p>
             </div>
           )}
@@ -412,7 +454,9 @@ export function SavedMemoriesModal({
       <DeleteMemoryModal
         open={!!showDeleteConfirm}
         onOpenChange={(open) => !open && setShowDeleteConfirm(null)}
-        onConfirm={() => showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)}
+        onConfirm={() =>
+          showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)
+        }
         onCancel={() => setShowDeleteConfirm(null)}
         isDeleting={isDeleting}
       />

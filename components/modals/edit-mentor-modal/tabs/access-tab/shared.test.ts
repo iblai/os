@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { formatRoleName, getErrorMessage, roleDescriptions, DEFAULT_MENTOR_ROLES } from './shared';
+import {
+  formatRoleName,
+  getErrorMessage,
+  roleDescriptions,
+  DEFAULT_MENTOR_ROLES,
+} from './shared';
 
 describe('shared access-tab utilities', () => {
   describe('formatRoleName', () => {
@@ -20,7 +25,9 @@ describe('shared access-tab utilities', () => {
     });
 
     it('should handle multiple separators', () => {
-      expect(formatRoleName('super_admin-level_one')).toBe('Super Admin Level One');
+      expect(formatRoleName('super_admin-level_one')).toBe(
+        'Super Admin Level One',
+      );
     });
 
     it('should handle empty string', () => {
@@ -76,12 +83,18 @@ describe('shared access-tab utilities', () => {
     });
 
     it('should prioritize error.data.detail over error.message', () => {
-      const error = { data: { detail: 'Detail message' }, message: 'Regular message' };
+      const error = {
+        data: { detail: 'Detail message' },
+        message: 'Regular message',
+      };
       expect(getErrorMessage(error)).toBe('Detail message');
     });
 
     it('should prioritize error.data.message over error.message when detail is missing', () => {
-      const error = { data: { message: 'Data message' }, message: 'Regular message' };
+      const error = {
+        data: { message: 'Data message' },
+        message: 'Regular message',
+      };
       expect(getErrorMessage(error)).toBe('Data message');
     });
 
@@ -93,6 +106,18 @@ describe('shared access-tab utilities', () => {
     it('should handle error.data being a string', () => {
       const error = { data: 'string data', message: 'Regular message' };
       expect(getErrorMessage(error)).toBe('Regular message');
+    });
+
+    it('should return joined emails_to_add from error.data', () => {
+      const error = {
+        data: { emails_to_add: ['invalid@x.com', 'bad@y.com'] },
+      };
+      expect(getErrorMessage(error)).toBe('invalid@x.com, bad@y.com');
+    });
+
+    it('should return joined usernames_to_add from error.data', () => {
+      const error = { data: { usernames_to_add: ['alice', 'bob'] } };
+      expect(getErrorMessage(error)).toBe('alice, bob');
     });
   });
 
@@ -108,8 +133,9 @@ describe('shared access-tab utilities', () => {
       expect(DEFAULT_MENTOR_ROLES).toContain('editor');
     });
 
-    it('should have only one role', () => {
-      expect(DEFAULT_MENTOR_ROLES.length).toBe(1);
+    it('should include editor and chat roles', () => {
+      expect(DEFAULT_MENTOR_ROLES.length).toBe(2);
+      expect(DEFAULT_MENTOR_ROLES).toContain('chat');
     });
   });
 });

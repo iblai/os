@@ -38,19 +38,26 @@ describe('useOneDrivePicker v2', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock OneDrive global
     mockOneDriveOpen = vi.fn();
-    (window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }).OneDrive = {
+    (
+      window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }
+    ).OneDrive = {
       open: mockOneDriveOpen,
     };
 
     // Mock document.body.appendChild
-    appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
-      return node as HTMLScriptElement;
-    });
+    appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: Node) => {
+        return node as HTMLScriptElement;
+      });
 
     // Default mock implementations
     mockGetCredentials.mockReturnValue({
@@ -103,7 +110,9 @@ describe('useOneDrivePicker v2', () => {
     });
 
     it('should show error toast when credentials fail to load', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
@@ -111,7 +120,9 @@ describe('useOneDrivePicker v2', () => {
       renderHook(() => useOneDrivePicker());
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to load OneDrive credentials');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to load OneDrive credentials',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -126,7 +137,9 @@ describe('useOneDrivePicker v2', () => {
       renderHook(() => useOneDrivePicker());
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('OneDrive credentials not found');
+        expect(toast.error).toHaveBeenCalledWith(
+          'OneDrive credentials not found',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -178,7 +191,9 @@ describe('useOneDrivePicker v2', () => {
         result.current.pickOneDriveFile();
       });
 
-      expect(toast.error).toHaveBeenCalledWith('OneDrive credentials are not loaded yet');
+      expect(toast.error).toHaveBeenCalledWith(
+        'OneDrive credentials are not loaded yet',
+      );
 
       consoleSpy.mockRestore();
     });
@@ -297,7 +312,9 @@ describe('useOneDrivePicker v2', () => {
       if (mockOneDriveOpen.mock.calls.length > 0) {
         const options = mockOneDriveOpen.mock.calls[0][0];
         options.error();
-        expect(toast.error).toHaveBeenCalledWith('Failed to pick OneDrive file');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to pick OneDrive file',
+        );
       }
 
       consoleSpy.mockRestore();

@@ -14,7 +14,11 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     platform_key: string;
     report_name: string;
   }) => (
-    <div data-testid="analytics-report-download" data-platform-key={platform_key} data-report-name={report_name}>
+    <div
+      data-testid="analytics-report-download"
+      data-platform-key={platform_key}
+      data-report-name={report_name}
+    >
       AnalyticsReportDownload
     </div>
   ),

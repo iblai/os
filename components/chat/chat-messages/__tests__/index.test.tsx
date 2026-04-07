@@ -65,10 +65,16 @@ vi.mock('@/components/chat/chat-messages/user-message-bubble', () => ({
       data-content={message.content}
       data-highlighted={isHighlighted}
     >
-      <button data-testid="highlight-btn" onClick={() => onHighlightMessage(parseInt(message.id))}>
+      <button
+        data-testid="highlight-btn"
+        onClick={() => onHighlightMessage(parseInt(message.id))}
+      >
         Highlight
       </button>
-      <button data-testid="preview-image-btn" onClick={() => onPreviewImage('/test-image.jpg')}>
+      <button
+        data-testid="preview-image-btn"
+        onClick={() => onPreviewImage('/test-image.jpg')}
+      >
         Preview
       </button>
     </div>
@@ -76,7 +82,13 @@ vi.mock('@/components/chat/chat-messages/user-message-bubble', () => ({
 }));
 
 vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
-  ImagePreviewModal: ({ url, onClose }: { url: string; onClose: () => void }) => (
+  ImagePreviewModal: ({
+    url,
+    onClose,
+  }: {
+    url: string;
+    onClose: () => void;
+  }) => (
     <div data-testid="image-preview-modal">
       <span data-testid="preview-url">{url}</span>
       <button data-testid="close-modal-btn" onClick={onClose}>
@@ -169,7 +181,9 @@ describe('ChatMessages', () => {
     it('should pass mentor name to AIMessageBubble', () => {
       renderWithRedux(<ChatMessages {...defaultProps} />);
 
-      expect(screen.getByTestId('mentor-name')).toHaveTextContent('Test Mentor');
+      expect(screen.getByTestId('mentor-name')).toHaveTextContent(
+        'Test Mentor',
+      );
     });
 
     it('should pass formatted timestamp to AIMessageBubble', () => {
@@ -208,14 +222,18 @@ describe('ChatMessages', () => {
 
   describe('message highlighting', () => {
     it('should pass isHighlighted=true when message index matches highlightedMessageId', () => {
-      renderWithRedux(<ChatMessages {...defaultProps} highlightedMessageId={0} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} highlightedMessageId={0} />,
+      );
 
       const userBubble = screen.getByTestId('user-message-bubble');
       expect(userBubble).toHaveAttribute('data-highlighted', 'true');
     });
 
     it('should pass isHighlighted=false when message index does not match', () => {
-      renderWithRedux(<ChatMessages {...defaultProps} highlightedMessageId={5} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} highlightedMessageId={5} />,
+      );
 
       const userBubble = screen.getByTestId('user-message-bubble');
       expect(userBubble).toHaveAttribute('data-highlighted', 'false');
@@ -315,7 +333,9 @@ describe('ChatMessages', () => {
             // Close modal
             const closeBtn = screen.getByTestId('close-modal-btn');
             fireEvent.click(closeBtn);
-            expect(screen.queryByTestId('image-preview-modal')).not.toBeInTheDocument();
+            expect(
+              screen.queryByTestId('image-preview-modal'),
+            ).not.toBeInTheDocument();
           }
         },
         { timeout: 100 },
@@ -325,10 +345,16 @@ describe('ChatMessages', () => {
 
   describe('empty messages', () => {
     it('should render nothing when messages array is empty', () => {
-      const { container } = renderWithRedux(<ChatMessages {...defaultProps} messages={[]} />);
+      const { container } = renderWithRedux(
+        <ChatMessages {...defaultProps} messages={[]} />,
+      );
 
-      expect(container.querySelectorAll('[data-testid="user-message-bubble"]')).toHaveLength(0);
-      expect(container.querySelectorAll('[data-testid="ai-message-bubble"]')).toHaveLength(0);
+      expect(
+        container.querySelectorAll('[data-testid="user-message-bubble"]'),
+      ).toHaveLength(0);
+      expect(
+        container.querySelectorAll('[data-testid="ai-message-bubble"]'),
+      ).toHaveLength(0);
     });
   });
 
@@ -353,7 +379,9 @@ describe('ChatMessages', () => {
 
   describe('streamingArtifactId', () => {
     it('should pass streamingArtifactId to AIMessageBubble', () => {
-      renderWithRedux(<ChatMessages {...defaultProps} streamingArtifactId={123} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} streamingArtifactId={123} />,
+      );
 
       // Component renders without error with streamingArtifactId
       expect(screen.getByTestId('ai-message-bubble')).toBeInTheDocument();
@@ -385,7 +413,10 @@ describe('ChatMessages', () => {
       } as Message;
 
       renderWithRedux(
-        <ChatMessages {...defaultProps} messages={[userMessage, assistantMessage, replyMessage]} />,
+        <ChatMessages
+          {...defaultProps}
+          messages={[userMessage, assistantMessage, replyMessage]}
+        />,
       );
 
       const userBubbles = screen.getAllByTestId('user-message-bubble');
@@ -400,7 +431,9 @@ describe('ChatMessages', () => {
         replyTo: null,
       } as Message;
 
-      renderWithRedux(<ChatMessages {...defaultProps} messages={[messageWithNullReply]} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} messages={[messageWithNullReply]} />,
+      );
 
       expect(screen.getByTestId('user-message-bubble')).toBeInTheDocument();
     });
@@ -435,7 +468,9 @@ describe('ChatMessages', () => {
         id: '42',
       };
 
-      renderWithRedux(<ChatMessages {...defaultProps} messages={[messageWithNumericId]} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} messages={[messageWithNumericId]} />,
+      );
 
       expect(screen.getByTestId('user-message-bubble')).toBeInTheDocument();
     });
@@ -446,7 +481,9 @@ describe('ChatMessages', () => {
         id: 'msg-abc-123',
       };
 
-      renderWithRedux(<ChatMessages {...defaultProps} messages={[messageWithStringId]} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} messages={[messageWithStringId]} />,
+      );
 
       expect(screen.getByTestId('user-message-bubble')).toBeInTheDocument();
     });
@@ -476,7 +513,9 @@ describe('ChatMessages', () => {
         { ...userMessage, id: '3', content: 'Third' },
       ];
 
-      renderWithRedux(<ChatMessages {...defaultProps} messages={userOnlyMessages} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} messages={userOnlyMessages} />,
+      );
 
       expect(screen.getAllByTestId('user-message-bubble')).toHaveLength(3);
       expect(screen.queryByTestId('ai-message-bubble')).not.toBeInTheDocument();
@@ -488,10 +527,14 @@ describe('ChatMessages', () => {
         { ...assistantMessage, id: '2', content: 'Second' },
       ];
 
-      renderWithRedux(<ChatMessages {...defaultProps} messages={aiOnlyMessages} />);
+      renderWithRedux(
+        <ChatMessages {...defaultProps} messages={aiOnlyMessages} />,
+      );
 
       expect(screen.getAllByTestId('ai-message-bubble')).toHaveLength(2);
-      expect(screen.queryByTestId('user-message-bubble')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('user-message-bubble'),
+      ).not.toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { ManageMemories } from '../manage-memories';
@@ -15,12 +21,18 @@ const mockUpdateMemoryEntry = vi.fn();
 const mockCreateMemory = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetFilteredMemoriesQuery: (...args: any[]) => mockGetFilteredMemoriesQuery(...args),
-  useGetMemoryCategoriesQuery: (...args: any[]) => mockGetMemoryCategoriesQuery(...args),
-  useGetMemoryFiltersQuery: (...args: any[]) => mockGetMemoryFiltersQuery(...args),
+  useGetFilteredMemoriesQuery: (...args: any[]) =>
+    mockGetFilteredMemoriesQuery(...args),
+  useGetMemoryCategoriesQuery: (...args: any[]) =>
+    mockGetMemoryCategoriesQuery(...args),
+  useGetMemoryFiltersQuery: (...args: any[]) =>
+    mockGetMemoryFiltersQuery(...args),
   useDeleteMemoryMutation: () => [mockDeleteMemory, { isLoading: false }],
   useDeleteMemoryByCategoryMutation: () => [mockDeleteMemoryByCategory],
-  useUpdateMemoryEntryMutation: () => [mockUpdateMemoryEntry, { isLoading: false }],
+  useUpdateMemoryEntryMutation: () => [
+    mockUpdateMemoryEntry,
+    { isLoading: false },
+  ],
   useCreateMemoryMutation: () => [mockCreateMemory, { isLoading: false }],
 }));
 
@@ -63,7 +75,10 @@ vi.mock('next/dynamic', () => ({
             <button data-testid="edit-cancel-btn" onClick={props.onCancel}>
               Cancel
             </button>
-            <button data-testid="edit-close-btn" onClick={() => props.onOpenChange(false)}>
+            <button
+              data-testid="edit-close-btn"
+              onClick={() => props.onOpenChange(false)}
+            >
               Close Edit
             </button>
           </div>
@@ -83,7 +98,10 @@ vi.mock('next/dynamic', () => ({
             <button data-testid="add-cancel-btn" onClick={props.onCancel}>
               Cancel Add
             </button>
-            <button data-testid="add-close-btn" onClick={() => props.onOpenChange(false)}>
+            <button
+              data-testid="add-close-btn"
+              onClick={() => props.onOpenChange(false)}
+            >
               Close Add
             </button>
           </div>
@@ -99,7 +117,10 @@ vi.mock('next/dynamic', () => ({
             <button data-testid="bulk-delete-cancel" onClick={props.onCancel}>
               Cancel Bulk Delete
             </button>
-            <button data-testid="bulk-close-btn" onClick={() => props.onOpenChange(false)}>
+            <button
+              data-testid="bulk-close-btn"
+              onClick={() => props.onOpenChange(false)}
+            >
               Close Bulk
             </button>
           </div>
@@ -114,7 +135,10 @@ vi.mock('next/dynamic', () => ({
             <button data-testid="delete-cancel-btn" onClick={props.onCancel}>
               Cancel Delete
             </button>
-            <button data-testid="delete-close-btn" onClick={() => props.onOpenChange(false)}>
+            <button
+              data-testid="delete-close-btn"
+              onClick={() => props.onOpenChange(false)}
+            >
               Close Delete
             </button>
           </div>
@@ -136,8 +160,12 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div data-testid="popover">{children}</div>,
-  PopoverTrigger: ({ children }: any) => <div data-testid="popover-trigger">{children}</div>,
-  PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
+  PopoverTrigger: ({ children }: any) => (
+    <div data-testid="popover-trigger">{children}</div>
+  ),
+  PopoverContent: ({ children }: any) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/command', () => ({
@@ -145,9 +173,15 @@ vi.mock('@/components/ui/command', () => ({
   CommandInput: ({ placeholder }: any) => (
     <input data-testid="command-input" placeholder={placeholder} />
   ),
-  CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
-  CommandEmpty: ({ children }: any) => <div data-testid="command-empty">{children}</div>,
-  CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
+  CommandList: ({ children }: any) => (
+    <div data-testid="command-list">{children}</div>
+  ),
+  CommandEmpty: ({ children }: any) => (
+    <div data-testid="command-empty">{children}</div>
+  ),
+  CommandGroup: ({ children }: any) => (
+    <div data-testid="command-group">{children}</div>
+  ),
   CommandItem: ({ children, onSelect, value }: any) => (
     <div data-testid="command-item" data-value={value} onClick={onSelect}>
       {children}
@@ -174,14 +208,20 @@ vi.mock('@/components/ui/calendar', () => ({
 }));
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
-  DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
-  DropdownMenuContent: ({ children }: any) => <div data-testid="dropdown-content">{children}</div>,
+  DropdownMenu: ({ children }: any) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
+  DropdownMenuContent: ({ children }: any) => (
+    <div data-testid="dropdown-content">{children}</div>
+  ),
   DropdownMenuItem: ({ children, onClick }: any) => (
     <div data-testid="dropdown-item" onClick={onClick}>
       {children}
     </div>
   ),
-  DropdownMenuTrigger: ({ children }: any) => <div data-testid="dropdown-trigger">{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => (
+    <div data-testid="dropdown-trigger">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ibl-pagination', () => ({
@@ -309,8 +349,12 @@ describe('ManageMemories', () => {
     });
 
     mockDeleteMemory.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockDeleteMemoryByCategory.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockUpdateMemoryEntry.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+    mockDeleteMemoryByCategory.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockUpdateMemoryEntry.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
     mockCreateMemory.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
   });
 
@@ -328,8 +372,12 @@ describe('ManageMemories', () => {
     it('renders category tabs', () => {
       render(<ManageMemories {...defaultProps} />);
       expect(screen.getAllByText('All').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Personal Info').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Learning Style').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Personal Info').length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Learning Style').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     it('renders the Add Memory button', () => {
@@ -406,7 +454,9 @@ describe('ManageMemories', () => {
 
       // Only personal_info memories should show
       expect(screen.getByText('User preference value')).toBeInTheDocument();
-      expect(screen.queryByText('Visual learner preference')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Visual learner preference'),
+      ).not.toBeInTheDocument();
     });
 
     it('shows "Delete All" button when a non-All category is selected with memories', () => {
@@ -464,12 +514,16 @@ describe('ManageMemories', () => {
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Memory deleted successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Memory deleted successfully',
+        );
       });
     });
 
     it('shows error toast on failed delete', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockDeleteMemory.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Delete failed')),
       });
@@ -499,7 +553,9 @@ describe('ManageMemories', () => {
       const cancelBtn = screen.getByTestId('delete-cancel-btn');
       fireEvent.click(cancelBtn);
 
-      expect(screen.queryByTestId('delete-memory-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('delete-memory-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('closes delete modal via onOpenChange(false)', () => {
@@ -513,11 +569,15 @@ describe('ManageMemories', () => {
       const closeBtn = screen.getByTestId('delete-close-btn');
       fireEvent.click(closeBtn);
 
-      expect(screen.queryByTestId('delete-memory-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('delete-memory-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('does not call deleteMemory when tenantKey is missing', async () => {
-      render(<ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />);
+      render(
+        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+      );
 
       const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
@@ -531,7 +591,13 @@ describe('ManageMemories', () => {
     });
 
     it('does not call deleteMemory when username is null', async () => {
-      render(<ManageMemories tenantKey="test-tenant" username={null} mentorId="mentor-1" />);
+      render(
+        <ManageMemories
+          tenantKey="test-tenant"
+          username={null}
+          mentorId="mentor-1"
+        />,
+      );
 
       const deleteItems = screen.getAllByText('Delete');
       fireEvent.click(deleteItems[0]);
@@ -603,7 +669,9 @@ describe('ManageMemories', () => {
     });
 
     it('shows error toast on failed bulk delete', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockDeleteMemoryByCategory.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Bulk delete failed')),
       });
@@ -627,7 +695,9 @@ describe('ManageMemories', () => {
     });
 
     it('does not call bulk delete when tenantKey is missing', async () => {
-      render(<ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />);
+      render(
+        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+      );
 
       const categoryButtons = screen.getAllByText('Personal Info');
       const tabButton = categoryButtons.find((el) => el.tagName === 'BUTTON');
@@ -697,7 +767,9 @@ describe('ManageMemories', () => {
       const editItems = screen.getAllByText('Edit');
       fireEvent.click(editItems[0]);
 
-      const textarea = screen.getByTestId('edit-content-input') as HTMLTextAreaElement;
+      const textarea = screen.getByTestId(
+        'edit-content-input',
+      ) as HTMLTextAreaElement;
       expect(textarea.value).toBe('User preference value');
     });
 
@@ -733,12 +805,16 @@ describe('ManageMemories', () => {
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Memory updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Memory updated successfully',
+        );
       });
     });
 
     it('shows error toast on failed edit', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUpdateMemoryEntry.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -807,7 +883,9 @@ describe('ManageMemories', () => {
       const addBtn = screen.getByText('Add Memory');
       fireEvent.click(addBtn);
 
-      const textarea = screen.getByTestId('add-content-input') as HTMLTextAreaElement;
+      const textarea = screen.getByTestId(
+        'add-content-input',
+      ) as HTMLTextAreaElement;
       fireEvent.change(textarea, { target: { value: 'New memory content' } });
 
       const saveBtn = screen.getByTestId('add-save-btn');
@@ -842,12 +920,16 @@ describe('ManageMemories', () => {
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Memory created successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Memory created successfully',
+        );
       });
     });
 
     it('shows error toast on failed create', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockCreateMemory.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Create failed')),
       });
@@ -1052,7 +1134,9 @@ describe('ManageMemories', () => {
     });
 
     it('skips query when tenantKey is missing', () => {
-      render(<ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />);
+      render(
+        <ManageMemories tenantKey="" username="testuser" mentorId="mentor-1" />,
+      );
       expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
@@ -1060,7 +1144,13 @@ describe('ManageMemories', () => {
     });
 
     it('skips query when username is null', () => {
-      render(<ManageMemories tenantKey="test-tenant" username={null} mentorId="mentor-1" />);
+      render(
+        <ManageMemories
+          tenantKey="test-tenant"
+          username={null}
+          mentorId="mentor-1"
+        />,
+      );
       expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),
@@ -1068,7 +1158,13 @@ describe('ManageMemories', () => {
     });
 
     it('skips query when mentorId is missing', () => {
-      render(<ManageMemories tenantKey="test-tenant" username="testuser" mentorId="" />);
+      render(
+        <ManageMemories
+          tenantKey="test-tenant"
+          username="testuser"
+          mentorId=""
+        />,
+      );
       expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ skip: true }),

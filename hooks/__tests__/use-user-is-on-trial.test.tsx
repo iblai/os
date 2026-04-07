@@ -51,7 +51,8 @@ vi.mock('@/lib/utils', () => ({
     // (!currentTenant?.is_enterprise || (currentTenant?.key === 'main' && currentTenant?.is_enterprise))
     return (
       mockStripeEnabled === 'true' &&
-      (!tenant?.is_enterprise || (tenant?.key === 'main' && tenant?.is_enterprise))
+      (!tenant?.is_enterprise ||
+        (tenant?.key === 'main' && tenant?.is_enterprise))
     );
   },
 }));
@@ -156,7 +157,10 @@ describe('useUserIsOnTrial - with isStripeActivated', () => {
         is_admin: false,
         is_enterprise: true,
       };
-      mockUserTenants = [mockCurrentTenant, { key: 'other', org: 'other', is_admin: false }]; // Multiple tenants
+      mockUserTenants = [
+        mockCurrentTenant,
+        { key: 'other', org: 'other', is_admin: false },
+      ]; // Multiple tenants
       mockStripeEnabled = 'true';
 
       const { result } = renderHook(() => useUserIsOnTrial());
@@ -375,31 +379,59 @@ describe('useUserIsOnTrial - with isStripeActivated', () => {
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(false);
 
       // isStripeActivated false (stripe disabled)
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: false, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: false,
+        is_enterprise: false,
+      };
       mockUserTenants = [mockCurrentTenant];
       mockStripeEnabled = 'false';
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(false);
 
       // Multiple tenants
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: false, is_enterprise: false };
-      mockUserTenants = [mockCurrentTenant, { key: 'other', org: 'other', is_admin: false }];
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: false,
+        is_enterprise: false,
+      };
+      mockUserTenants = [
+        mockCurrentTenant,
+        { key: 'other', org: 'other', is_admin: false },
+      ];
       mockStripeEnabled = 'true';
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(false);
 
       // Not main tenant
-      mockCurrentTenant = { key: 'other', org: 'other', is_admin: false, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'other',
+        org: 'other',
+        is_admin: false,
+        is_enterprise: false,
+      };
       mockUserTenants = [mockCurrentTenant];
       mockStripeEnabled = 'true';
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(false);
 
       // Is admin
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: true, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: true,
+        is_enterprise: false,
+      };
       mockUserTenants = [mockCurrentTenant];
       mockStripeEnabled = 'true';
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(false);
 
       // All conditions met = on trial
-      mockCurrentTenant = { key: 'main', org: 'main', is_admin: false, is_enterprise: false };
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main',
+        is_admin: false,
+        is_enterprise: false,
+      };
       mockUserTenants = [mockCurrentTenant];
       mockStripeEnabled = 'true';
       expect(renderHook(() => useUserIsOnTrial()).result.current).toBe(true);

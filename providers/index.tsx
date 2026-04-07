@@ -1,6 +1,11 @@
 'use client';
 
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
 
 import { config } from '@/lib/config';
 import {
@@ -27,7 +32,7 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { hasNonExpiredAuthToken, redirectToAuthSpa } from '@/lib/utils';
 import AppProvider from './app-provider';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -59,7 +64,10 @@ import { toast } from 'sonner';
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { sanitizeCss } from '@iblai/iblai-js/web-containers';
-import { isTauriOfflineMode, isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
+import {
+  isTauriOfflineMode,
+  isOfflineServerOrigin,
+} from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
@@ -86,26 +94,37 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   });
 
   const loadDataLayer = () => {
-    initializeDataLayer(config.dmUrl(), config.lmsUrl(), LocalStorageService.getInstance(), {
-      401: () => {
-        // Don't redirect to auth when in Tauri offline mode
-        if (isTauriApp() && isTauriOfflineMode()) {
-          console.log('[auth-redirect] Skipping 401 redirect - Tauri offline mode');
-          return;
-        }
-        // Don't redirect on shareable links — the user may be visiting a
-        // different tenant and some tenant-scoped API calls will 401.  The
-        // public-settings endpoint still provides all the data we need.
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('token')) {
-          console.log('[auth-redirect] Skipping 401 redirect - shareable link');
-          return;
-        }
-        console.log('[auth-redirect] API returned 401 Unauthorized');
-        redirectToAuthSpa(undefined, undefined, true);
+    initializeDataLayer(
+      config.dmUrl(),
+      config.lmsUrl(),
+      config.legacyLmsUrl(),
+      LocalStorageService.getInstance(),
+      {
+        401: () => {
+          // Don't redirect to auth when in Tauri offline mode
+          if (isTauriApp() && isTauriOfflineMode()) {
+            console.log(
+              '[auth-redirect] Skipping 401 redirect - Tauri offline mode',
+            );
+            return;
+          }
+          // Don't redirect on shareable links — the user may be visiting a
+          // different tenant and some tenant-scoped API calls will 401.  The
+          // public-settings endpoint still provides all the data we need.
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.get('token')) {
+            console.log(
+              '[auth-redirect] Skipping 401 redirect - shareable link',
+            );
+            return;
+          }
+          console.log('[auth-redirect] API returned 401 Unauthorized');
+          redirectToAuthSpa(undefined, undefined, true);
+        },
+        402: () =>
+          handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
       },
-      402: () => handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
-    });
+    );
     setReady(true);
   };
 
@@ -128,15 +147,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { tenant: tenantKey, saveTenant } = useTenantKey();
 
   const isAdmin = useIsAdmin();
-  const { tenantKey: tenantKeyParams, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const { tenantKey: tenantKeyParams, mentorId } =
+    useParams<TenantKeyMentorIdParams>();
   const [getMentorPublicSettings] = useLazyGetMentorPublicSettingsQuery();
 
   // Check if we're in Tauri offline mode early - needed to skip API calls
   // Use isOfflineServerOrigin() as primary check since it works before Tauri scripts run
-  const isTauriOfflineEarly = isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
+  const isTauriOfflineEarly =
+    isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
 
   // Debug logging - always log in potential offline scenarios
-  if (typeof window !== 'undefined' && typeof localStorage?.getItem === 'function') {
+  if (
+    typeof window !== 'undefined' &&
+    typeof localStorage?.getItem === 'function'
+  ) {
     const isOfflineOrigin = isOfflineServerOrigin();
     if (isOfflineOrigin || isTauriApp()) {
       console.log('[Providers] Tauri offline mode check:', {
@@ -149,12 +173,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         localStorageFlag: localStorage.getItem('tauri_offline_mode'),
         isTauriOfflineEarly,
       });
-      console.log('[Providers] useParams result:', { tenantKeyParams, mentorId });
+      console.log('[Providers] useParams result:', {
+        tenantKeyParams,
+        mentorId,
+      });
     }
   }
 
   // Skip tenant metadata API call in Tauri offline mode
-  const { metadata } = useTenantMetadata({ org: tenantKeyParams, skip: isTauriOfflineEarly });
+  const { metadata } = useTenantMetadata({
+    org: tenantKeyParams,
+    skip: isTauriOfflineEarly,
+  });
   const tenantAdvancedCSS = isJSON(metadata?.mentor_advanced_css)
     ? sanitizeCss(JSON.parse(metadata?.mentor_advanced_css) as string)
     : '';
@@ -164,7 +194,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   const email = searchParams.get('email');
 
-  if (email) {
+  if (email && typeof window !== 'undefined') {
     window.location.href = `${config.authUrl()}/login?enforce_logout=1&logout=1&email=${encodeURIComponent(email)}&app=mentor&redirect-to=${window.location.origin}`;
     return;
   }
@@ -173,10 +203,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const [defaultEmbedCSS, setDefaultEmbedCSS] = useState('');
   const router = useRouter();
 
-  const fullPathname = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
+  const fullPathname =
+    pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
   const switchingMentor = searchParams.get('switching-mentor');
   const isSsoLoginRoute = /^\/sso-login/.test(pathname);
   const isVersionRoute = /^\/version/.test(pathname);
+  // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
+  // to prevent it from redirecting when the URL's mentorId changes during navigation.
+  const isWorkflowPage = /\/workflows\//.test(pathname);
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -211,20 +245,138 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     router.push(`/platform/${tenantKey}/${mentorId}`);
   }
 
-  function onLoadMentorsPermissions(rbacPermissions: Record<string, unknown> | undefined) {
+  function onLoadMentorsPermissions(
+    rbacPermissions: Record<string, unknown> | undefined,
+  ) {
     dispatch(updateRbacPermissions(rbacPermissions ?? {}));
   }
 
   async function handleMentorNotFound() {
     const existingParams = searchParams.toString();
     const errorUrl = `/error/404?errorType=${customErrorMessages.mentorNotFound.key}`;
-    const finalUrl = existingParams ? `${errorUrl}&${existingParams}` : errorUrl;
+    const finalUrl = existingParams
+      ? `${errorUrl}&${existingParams}`
+      : errorUrl;
     router.push(finalUrl);
   }
 
-  function onLoadPlatformpermissions(rbacPermissions: Record<string, unknown> | undefined) {
+  function onLoadPlatformpermissions(
+    rbacPermissions: Record<string, unknown> | undefined,
+  ) {
     dispatch(updateRbacPermissions(rbacPermissions ?? {}));
   }
+
+  const middleware = useMemo(() => {
+    const map = new Map();
+
+    // allow user to go to version page without auth
+    map.set(new RegExp('^\/version'), async () => false);
+
+    map.set(
+      new RegExp('^\/provider-association\/stripe\/callback\/([a-zA-Z0-9_-]+)'),
+      () => {
+        return false;
+      },
+    );
+
+    // allow user to view an anonymous mentor
+    map.set(
+      new RegExp('^\/platform\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)'),
+      async () => {
+        // Re-check Tauri offline mode at middleware execution time
+        // This is important because the script may have set the flag after React rendered
+        const isOfflineNow = isTauriApp() && isTauriOfflineMode();
+
+        // In Tauri offline mode, skip the API call and allow access
+        // The cached data will be used by the page components
+        if (isOfflineNow) {
+          console.log(
+            '[Providers] Tauri offline mode - skipping getMentorPublicSettings middleware',
+          );
+          return false;
+        }
+
+        // Don't make API call if params aren't ready yet
+        if (!mentorId || !tenantKeyParams) {
+          console.log(
+            '[Providers] Params not ready, skipping getMentorPublicSettings',
+            {
+              mentorId,
+              tenantKeyParams,
+              isOfflineNow,
+            },
+          );
+          return false;
+        }
+
+        console.log(
+          'calling getMentorPublicSettings',
+          JSON.stringify({
+            mentorId,
+            tenantKeyParams,
+            username,
+            isOfflineNow,
+          }),
+        );
+
+        try {
+          const response = await getMentorPublicSettings(
+            {
+              mentor: mentorId,
+              org: tenantKeyParams,
+              // @ts-ignore
+              userId: username ?? ANONYMOUS_USERNAME,
+            },
+            true, // preferCacheValue - use cached data if available
+          ).unwrap();
+          if (isInIframe()) {
+            setExternalCSS(response.custom_css ?? '');
+            setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
+            setExternalJS(response?.custom_javascript ?? '');
+            console.log('getMentorPublicSettings response', {
+              allow_anonymous: response?.allow_anonymous,
+            });
+          }
+
+          if (
+            response?.allow_anonymous ||
+            response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
+          ) {
+            return false;
+          } else {
+            return true;
+          }
+        } catch (error) {
+          console.error(JSON.stringify(error));
+          return false;
+        }
+      },
+    );
+
+    // allow user to go to sso-login page without auth
+    map.set(new RegExp('^\/sso-login'), async () => {
+      return false;
+    });
+
+    // allow user to go to error page without auth
+    map.set(new RegExp('^\/error\/([0-9]+)'), async () => false);
+
+    // allow user to share a chat link without auth
+    map.set(new RegExp('^\/share\/chat\/([a-zA-Z0-9_-]+)'), async () => {
+      return false;
+    });
+
+    // allow user to go to oauth page without auth
+    map.set(new RegExp('^\/uploads\/?'), async () => false);
+
+    // allow user to go to oauth page without auth
+    map.set(new RegExp('^/\\?oauth=.*'), async () => false);
+
+    // allow user to go to google oauth callback page without auth
+    map.set(new RegExp('^\/google-oauth-callback\/?'), async () => false);
+
+    return map;
+  }, [mentorId, tenantKeyParams, username]);
 
   if (!ready) return null;
 
@@ -232,7 +384,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // This prevents any provider from blocking rendering while waiting for API responses
   // But we still need to provide stub contexts so hooks don't crash
   if (isTauriOfflineEarly) {
-    console.log('[Providers] Tauri offline mode - bypassing provider chain, rendering directly');
+    console.log(
+      '[Providers] Tauri offline mode - bypassing provider chain, rendering directly',
+    );
     // Hide initial loader since we're rendering directly
     hideInitialLoader();
 
@@ -269,103 +423,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const middleware = new Map();
-
-  // allow user to go to version page without auth
-  middleware.set(new RegExp('^\/version'), async () => false);
-
-  middleware.set(new RegExp('^\/provider-association\/stripe\/callback\/([a-zA-Z0-9_-]+)'), () => {
-    return false;
-  });
-
-  // allow user to view an anonymous mentor
-  middleware.set(new RegExp('^\/platform\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)'), async () => {
-    // Re-check Tauri offline mode at middleware execution time
-    // This is important because the script may have set the flag after React rendered
-    const isOfflineNow = isTauriApp() && isTauriOfflineMode();
-
-    // In Tauri offline mode, skip the API call and allow access
-    // The cached data will be used by the page components
-    if (isOfflineNow) {
-      console.log('[Providers] Tauri offline mode - skipping getMentorPublicSettings middleware');
-      return false;
-    }
-
-    // Don't make API call if params aren't ready yet
-    if (!mentorId || !tenantKeyParams) {
-      console.log('[Providers] Params not ready, skipping getMentorPublicSettings', {
-        mentorId,
-        tenantKeyParams,
-        isOfflineNow,
-      });
-      return false;
-    }
-
-    console.log(
-      'calling getMentorPublicSettings',
-      JSON.stringify({
-        mentorId,
-        tenantKeyParams,
-        username,
-        isOfflineNow,
-      }),
-    );
-
-    try {
-      const response = await getMentorPublicSettings(
-        {
-          mentor: mentorId,
-          org: tenantKeyParams,
-          // @ts-ignore
-          userId: username ?? ANONYMOUS_USERNAME,
-        },
-        true, // preferCacheValue - use cached data if available
-      ).unwrap();
-      if (isInIframe()) {
-        setExternalCSS(response.custom_css ?? '');
-        setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
-        setExternalJS(response?.custom_javascript ?? '');
-        console.log('getMentorPublicSettings response', {
-          allow_anonymous: response?.allow_anonymous,
-        });
-      }
-
-      if (
-        response?.allow_anonymous ||
-        response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
-      ) {
-        return false;
-      } else {
-        return true;
-      }
-    } catch (error) {
-      console.error(JSON.stringify(error));
-      return false;
-    }
-  });
-
-  // allow user to go to sso-login page without auth
-  middleware.set(new RegExp('^\/sso-login'), async () => {
-    return false;
-  });
-
-  // allow user to go to error page without auth
-  middleware.set(new RegExp('^\/error\/([0-9]+)'), async () => false);
-
-  // allow user to share a chat link without auth
-  middleware.set(new RegExp('^\/share\/chat\/([a-zA-Z0-9_-]+)'), async () => {
-    return false;
-  });
-
-  // allow user to go to oauth page without auth
-  middleware.set(new RegExp('^\/uploads\/?'), async () => false);
-
-  // allow user to go to oauth page without auth
-  middleware.set(new RegExp('^/\\?oauth=.*'), async () => false);
-
-  // allow user to go to google oauth callback page without auth
-  middleware.set(new RegExp('^\/google-oauth-callback\/?'), async () => false);
-
   return (
     <>
       <SentryInit />
@@ -382,7 +439,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           // Don't redirect to auth when in Tauri offline mode
           /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
           if (isTauriOffline) {
-            console.log('[Providers] Skipping auth redirect - Tauri offline mode');
+            console.log(
+              '[Providers] Skipping auth redirect - Tauri offline mode',
+            );
             return;
           }
           redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
@@ -400,7 +459,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         pathname={fullPathname}
         token={searchParams.get('token') ?? undefined}
         storageService={LocalStorageService.getInstance()}
-        enableStorageSync={!showingSharedChat && !isTauriOffline && !searchParams.get('token')}
+        enableStorageSync={
+          !showingSharedChat && !isTauriOffline && !searchParams.get('token')
+        }
         fallback={
           isPreviewMode ? null : (
             <div className="flex h-dvh w-screen items-center justify-center">
@@ -444,11 +505,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               </div>
             )
           }
-          redirectToAuthSpa={(redirectTo, platformKey, logout, saveRedirect) => {
+          redirectToAuthSpa={(
+            redirectTo,
+            platformKey,
+            logout,
+            saveRedirect,
+          ) => {
             // Don't redirect to auth when in Tauri offline mode
             /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
             if (isTauriOffline) {
-              console.log('[Providers] Skipping TenantProvider auth redirect - Tauri offline mode');
+              console.log(
+                '[Providers] Skipping TenantProvider auth redirect - Tauri offline mode',
+              );
               return;
             }
             redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
@@ -459,6 +527,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }}
           setUseMentorProvider={setUseMentorProvider}
           onLoadPlatformPermissions={onLoadPlatformpermissions}
+          skipCustomDomainCheck={window.location.origin === config.mentorUrl()}
         >
           {useMentorProvider ? (
             <MentorProvider
@@ -481,22 +550,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 if (!embed) redirectToNoMentorsPage();
               }}
               redirectToCreateMentor={() => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 redirectToCreateMentor();
               }}
               redirectToMentor={(tKey: string, mId: string) => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
+                if (isWorkflowPage) return;
                 redirectToMentor(tKey, mId);
               }}
               onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={mentorId}
+              requestedMentorId={isWorkflowPage ? undefined : mentorId}
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
@@ -516,9 +588,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't show mentor not found when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) {
-                  console.log('[Providers] Skipping mentor not found - Tauri offline mode');
+                  console.log(
+                    '[Providers] Skipping mentor not found - Tauri offline mode',
+                  );
                   return;
                 }
+                if (isWorkflowPage) return;
                 await handleMentorNotFound();
               }}
               onComplete={() => {

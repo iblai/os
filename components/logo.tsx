@@ -16,8 +16,12 @@ type Props = {
   tenantKey?: string;
 };
 
-export default function Logo({ className, tenantKey: tenantKeyFromProps }: Props) {
-  const { tenantKey: tenantKeyFromParams } = useParams<TenantKeyMentorIdParams>();
+export default function Logo({
+  className,
+  tenantKey: tenantKeyFromProps,
+}: Props) {
+  const { tenantKey: tenantKeyFromParams } =
+    useParams<TenantKeyMentorIdParams>();
   const { navigateToHome } = useNavigate();
   const tenantKey = tenantKeyFromProps || tenantKeyFromParams;
 
@@ -26,7 +30,7 @@ export default function Logo({ className, tenantKey: tenantKeyFromProps }: Props
   const [logoUrl, setLogoUrl] = React.useState('');
 
   const loadLogo = async () => {
-    setLogoUrl(`${config.axdUrl()}/api/core/orgs/${tenantKey}/logo/`);
+    setLogoUrl(`${config.dmUrl()}/api/core/orgs/${tenantKey}/logo/`);
   };
 
   function handleLogoError() {
@@ -46,7 +50,10 @@ export default function Logo({ className, tenantKey: tenantKeyFromProps }: Props
   }, [tenantKey, useSpecialIframeLogo, mentorSettings?.profileImage]);
 
   return (
-    <button onClick={navigateToHome} className="flex cursor-pointer items-center">
+    <button
+      onClick={navigateToHome}
+      className="flex cursor-pointer items-center"
+    >
       {logoUrl && (
         <>
           <Image

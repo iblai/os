@@ -35,16 +35,24 @@ describe('analytics/reports page', () => {
   });
 
   it('should render component', () => {
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockUseSelector.mockReturnValue(null);
     render(<ReportsPage />);
     expect(screen.getByTestId('analytics-reports')).toBeInTheDocument();
   });
 
   it('should pass correct props', () => {
-    mockUseParams.mockReturnValue({ tenantKey: 'my-tenant', mentorId: 'my-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'my-tenant',
+      mentorId: 'my-mentor',
+    });
     mockUseSelector.mockReturnValue({ unique_id: 'selected-id' });
     render(<ReportsPage />);
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('selected-id');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'selected-id',
+    );
   });
 });

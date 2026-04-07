@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
  * Hook that wraps sendMessage to include artifact context when canvas is open
  * This should be used in the chat component
  */
-export function useCanvasAwareSend(originalSendMessage: (text: string, options?: any) => void) {
+export function useCanvasAwareSend(
+  originalSendMessage: (text: string, options?: any) => void,
+) {
   const [canvasArtifact, setCanvasArtifact] = useState<{
     id: string;
     title: string;
@@ -31,11 +33,20 @@ export function useCanvasAwareSend(originalSendMessage: (text: string, options?:
     };
 
     window.addEventListener('canvas-active' as any, handleCanvasActive as any);
-    window.addEventListener('canvas-inactive' as any, handleCanvasInactive as any);
+    window.addEventListener(
+      'canvas-inactive' as any,
+      handleCanvasInactive as any,
+    );
 
     return () => {
-      window.removeEventListener('canvas-active' as any, handleCanvasActive as any);
-      window.removeEventListener('canvas-inactive' as any, handleCanvasInactive as any);
+      window.removeEventListener(
+        'canvas-active' as any,
+        handleCanvasActive as any,
+      );
+      window.removeEventListener(
+        'canvas-inactive' as any,
+        handleCanvasInactive as any,
+      );
     };
   }, []);
 

@@ -13,7 +13,9 @@ describe('top-banner/top-banner-slice', () => {
 
   describe('reducer', () => {
     it('should return the initial state', () => {
-      expect(topBannerSlice.reducer(undefined, { type: 'unknown' })).toEqual(initialState);
+      expect(topBannerSlice.reducer(undefined, { type: 'unknown' })).toEqual(
+        initialState,
+      );
     });
   });
 
@@ -26,7 +28,10 @@ describe('top-banner/top-banner-slice', () => {
         parentContainerSelector: '',
       };
 
-      const state = topBannerSlice.reducer(initialState, setTopBannerOptions(options));
+      const state = topBannerSlice.reducer(
+        initialState,
+        setTopBannerOptions(options),
+      );
 
       expect(state.topBannerOptions.bannerText).toBe('New banner text');
     });
@@ -39,7 +44,10 @@ describe('top-banner/top-banner-slice', () => {
         parentContainerSelector: '',
       };
 
-      const state = topBannerSlice.reducer(initialState, setTopBannerOptions(options));
+      const state = topBannerSlice.reducer(
+        initialState,
+        setTopBannerOptions(options),
+      );
 
       expect(state.topBannerOptions.loading).toBe(true);
     });
@@ -52,7 +60,10 @@ describe('top-banner/top-banner-slice', () => {
         parentContainerSelector: '',
       };
 
-      const state = topBannerSlice.reducer(initialState, setTopBannerOptions(options));
+      const state = topBannerSlice.reducer(
+        initialState,
+        setTopBannerOptions(options),
+      );
 
       expect(state.topBannerOptions.enabled).toBe(true);
     });
@@ -65,7 +76,10 @@ describe('top-banner/top-banner-slice', () => {
         parentContainerSelector: '#container',
       };
 
-      const state = topBannerSlice.reducer(initialState, setTopBannerOptions(options));
+      const state = topBannerSlice.reducer(
+        initialState,
+        setTopBannerOptions(options),
+      );
 
       expect(state.topBannerOptions.parentContainerSelector).toBe('#container');
     });
@@ -87,7 +101,10 @@ describe('top-banner/top-banner-slice', () => {
         parentContainerSelector: '#existing',
       };
 
-      const state = topBannerSlice.reducer(existingState, setTopBannerOptions(partialOptions));
+      const state = topBannerSlice.reducer(
+        existingState,
+        setTopBannerOptions(partialOptions),
+      );
 
       expect(state.topBannerOptions.bannerText).toBe('Updated text');
       expect(state.topBannerOptions.loading).toBe(false);
@@ -104,9 +121,14 @@ describe('top-banner/top-banner-slice', () => {
         onUpgrade: 'https://upgrade.com',
       };
 
-      const state = topBannerSlice.reducer(initialState, setTopBannerOptions(options as any));
+      const state = topBannerSlice.reducer(
+        initialState,
+        setTopBannerOptions(options as any),
+      );
 
-      expect((state.topBannerOptions as any).onUpgrade).toBe('https://upgrade.com');
+      expect((state.topBannerOptions as any).onUpgrade).toBe(
+        'https://upgrade.com',
+      );
     });
   });
 

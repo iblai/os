@@ -3,7 +3,11 @@
 import { ScreenShare } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn, isSafariBrowser } from '@/lib/utils';
 
 type Props = {
@@ -28,7 +32,11 @@ export function ScreenSharingButton({
     return 'Enable Screen Sharing';
   }
 
-  if (!screenSharing || !navigator.mediaDevices?.getDisplayMedia || isSafariBrowser()) {
+  if (
+    !screenSharing ||
+    !navigator.mediaDevices?.getDisplayMedia ||
+    isSafariBrowser()
+  ) {
     return null;
   }
 
@@ -39,6 +47,7 @@ export function ScreenSharingButton({
           <Button
             variant="ghost"
             size="icon"
+            type="button"
             className={cn(
               'h-9 w-9 text-gray-400',
               isScreenSharingModalOpen && 'ibl-button-primary',

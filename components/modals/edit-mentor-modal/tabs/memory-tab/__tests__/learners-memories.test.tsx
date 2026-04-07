@@ -17,8 +17,10 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMemoryFiltersQuery: (...args: any[]) => mockGetMemoryFiltersQuery(...args),
-  useGetFilteredMemoriesQuery: (...args: any[]) => mockGetFilteredMemoriesQuery(...args),
+  useGetMemoryFiltersQuery: (...args: any[]) =>
+    mockGetMemoryFiltersQuery(...args),
+  useGetFilteredMemoriesQuery: (...args: any[]) =>
+    mockGetFilteredMemoriesQuery(...args),
 }));
 
 vi.mock('../utils', () => ({
@@ -52,8 +54,12 @@ vi.mock('@/components/ui/popover', () => ({
       {children}
     </div>
   ),
-  PopoverTrigger: ({ children }: any) => <div data-testid="popover-trigger">{children}</div>,
-  PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
+  PopoverTrigger: ({ children }: any) => (
+    <div data-testid="popover-trigger">{children}</div>
+  ),
+  PopoverContent: ({ children }: any) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/command', () => ({
@@ -61,9 +67,15 @@ vi.mock('@/components/ui/command', () => ({
   CommandInput: ({ placeholder }: any) => (
     <input data-testid="command-input" placeholder={placeholder} />
   ),
-  CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
-  CommandEmpty: ({ children }: any) => <div data-testid="command-empty">{children}</div>,
-  CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
+  CommandList: ({ children }: any) => (
+    <div data-testid="command-list">{children}</div>
+  ),
+  CommandEmpty: ({ children }: any) => (
+    <div data-testid="command-empty">{children}</div>
+  ),
+  CommandGroup: ({ children }: any) => (
+    <div data-testid="command-group">{children}</div>
+  ),
   CommandItem: ({ children, onSelect, value }: any) => (
     <div data-testid="command-item" data-value={value} onClick={onSelect}>
       {children}
@@ -80,21 +92,31 @@ vi.mock('@/components/ui/select', () => ({
       })}
     </div>
   ),
-  SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span data-testid="select-value">{placeholder}</span>,
+  SelectTrigger: ({ children }: any) => (
+    <div data-testid="select-trigger">{children}</div>
+  ),
+  SelectValue: ({ placeholder }: any) => (
+    <span data-testid="select-value">{placeholder}</span>
+  ),
   SelectContent: ({ children, onValueChange }: any) => (
     <div data-testid="select-content">
       {React.Children.map(children, (child: any) => {
         if (!child) return null;
         if (Array.isArray(child)) {
-          return child.map((c: any) => (c ? React.cloneElement(c, { onValueChange }) : null));
+          return child.map((c: any) =>
+            c ? React.cloneElement(c, { onValueChange }) : null,
+          );
         }
         return React.cloneElement(child, { onValueChange });
       })}
     </div>
   ),
   SelectItem: ({ children, value, onValueChange }: any) => (
-    <div data-testid="select-item" data-value={value} onClick={() => onValueChange?.(value)}>
+    <div
+      data-testid="select-item"
+      data-value={value}
+      onClick={() => onValueChange?.(value)}
+    >
       {children}
     </div>
   ),
@@ -227,8 +249,12 @@ describe('LearnersMemories', () => {
 
     it('renders category options from filters data', () => {
       render(<LearnersMemories />);
-      expect(screen.getAllByText('Personal Info').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Personal Info').length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
   });
 
@@ -287,8 +313,12 @@ describe('LearnersMemories', () => {
 
     it('displays category badge for each memory', () => {
       render(<LearnersMemories />);
-      expect(screen.getAllByText('Personal Info').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Personal Info').length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     it('shows first entry content as preview', () => {
@@ -313,7 +343,9 @@ describe('LearnersMemories', () => {
   describe('Memory Selection', () => {
     it('shows detail view placeholder when no memory is selected', () => {
       render(<LearnersMemories />);
-      expect(screen.getByText('Select a memory to view details.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a memory to view details.'),
+      ).toBeInTheDocument();
     });
 
     it('shows memory details when a memory card is clicked', () => {
@@ -438,7 +470,9 @@ describe('LearnersMemories', () => {
       const selectDateBtn = screen.getAllByTestId('calendar-select')[0];
       fireEvent.click(selectDateBtn);
 
-      expect(screen.getAllByText(/Jan 01 - Jan 31/).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText(/Jan 01 - Jan 31/).length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 

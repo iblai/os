@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { USERS_ENDPOINTS, USERS_QUERY_KEYS, USERS_REDUCER_PATH } from '../constants';
+import {
+  USERS_ENDPOINTS,
+  USERS_QUERY_KEYS,
+  USERS_REDUCER_PATH,
+} from '../constants';
 import { SERVICES } from '../../constants';
 
 describe('users/constants', () => {

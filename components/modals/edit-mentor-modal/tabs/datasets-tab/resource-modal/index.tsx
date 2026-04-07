@@ -1,14 +1,14 @@
-import { ResourceType } from "../resource-types";
+import { ResourceType } from '../resource-types';
 import {
   Dialog,
   DialogTitle,
   DialogHeader,
   DialogContent,
-} from "@/components/ui/dialog";
-import { GithubFileUploadModal } from "./github-file-upload-modal";
-import { LocalFileUploadModal } from "./local-file-upload-modal";
-import { UrlUploadModal } from "./url-upload-model";
-import { WebsiteCrawlModal } from "./website-crawl-modal";
+} from '@/components/ui/dialog';
+import { GithubFileUploadModal } from './github-file-upload-modal';
+import { LocalFileUploadModal } from './local-file-upload-modal';
+import { UrlUploadModal } from './url-upload-model';
+import { WebsiteCrawlModal } from './website-crawl-modal';
 
 type Props = {
   resource: ResourceType;
@@ -25,14 +25,14 @@ export function ResourceModal({ resource, isOpen, onClose }: Props) {
             {resource.name}
           </DialogTitle>
         </DialogHeader>
-        {resource.type === "github" && <GithubFileUploadModal />}
-        {resource.type === "local" && (
+        {resource.type === 'github' && <GithubFileUploadModal />}
+        {resource.type === 'local' && (
           <LocalFileUploadModal resource={resource} />
         )}
-        {resource.type === "webcrawler" && (
+        {resource.type === 'webcrawler' && (
           <WebsiteCrawlModal resource={resource} />
         )}
-        {resource.type === "url" && <UrlUploadModal resource={resource} />}
+        {resource.type === 'url' && <UrlUploadModal resource={resource} />}
       </DialogContent>
     </Dialog>
   );

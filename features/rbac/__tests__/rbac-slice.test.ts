@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import rbacReducer, { updateRbacPermissions, selectRbacPermissions } from '../rbac-slice';
+import rbacReducer, {
+  updateRbacPermissions,
+  selectRbacPermissions,
+} from '../rbac-slice';
 
 describe('rbac/rbac-slice', () => {
   const initialState = {
@@ -22,7 +25,10 @@ describe('rbac/rbac-slice', () => {
         mentor: {},
       };
 
-      const state = rbacReducer(initialState, updateRbacPermissions(permissions));
+      const state = rbacReducer(
+        initialState,
+        updateRbacPermissions(permissions),
+      );
 
       expect(state.rbacPermissions).toEqual(permissions);
     });
@@ -36,7 +42,10 @@ describe('rbac/rbac-slice', () => {
         },
       };
 
-      const state = rbacReducer(initialState, updateRbacPermissions(permissions));
+      const state = rbacReducer(
+        initialState,
+        updateRbacPermissions(permissions),
+      );
 
       expect(state.rbacPermissions).toEqual(permissions);
     });
@@ -60,7 +69,10 @@ describe('rbac/rbac-slice', () => {
         },
       };
 
-      const state = rbacReducer(existingState, updateRbacPermissions(newPermissions as any));
+      const state = rbacReducer(
+        existingState,
+        updateRbacPermissions(newPermissions as any),
+      );
 
       expect(state.rbacPermissions).toEqual({
         mentors: {
@@ -95,7 +107,10 @@ describe('rbac/rbac-slice', () => {
         mentor: {},
       };
 
-      const state = rbacReducer(existingState, updateRbacPermissions(newPermissions as any));
+      const state = rbacReducer(
+        existingState,
+        updateRbacPermissions(newPermissions as any),
+      );
 
       expect(state.rbacPermissions).toEqual(newPermissions);
     });

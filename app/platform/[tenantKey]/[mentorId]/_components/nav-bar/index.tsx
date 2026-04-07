@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
 
 import {
   PenSquare,
@@ -38,7 +38,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import { NotificationDropdown } from '@iblai/iblai-js/web-containers';
@@ -51,7 +55,12 @@ import {
   useForkMentorMutation,
   useEditMentorMutation,
 } from '@iblai/iblai-js/data-layer';
-import { useIsAdmin, useIsVisiting, useUserIsStudent, useUsername } from '@/hooks/use-user';
+import {
+  useIsAdmin,
+  useIsVisiting,
+  useUserIsStudent,
+  useUsername,
+} from '@/hooks/use-user';
 import { MODALS, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
@@ -75,7 +84,10 @@ import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { useUserType } from '@/hooks/use-user-type';
 import { rbacPermissionToDisplay } from '@/hoc/utils';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { analyticsActions, selectSelectedMentor } from '@/features/analytics/slice';
+import {
+  analyticsActions,
+  selectSelectedMentor,
+} from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -83,14 +95,22 @@ import { toast } from 'sonner';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
-import { isTauriOfflineMode, isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
+import {
+  isTauriOfflineMode,
+  isOfflineServerOrigin,
+} from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 
-const menuItems = [
+export const menuItems = [
   {
     icon: PenSquare,
     label: 'New Chat',
-    userTypes: [UserType.ANONYMOUS, UserType.STUDENT, UserType.FREE_TRIAL, UserType.ADMIN],
+    userTypes: [
+      UserType.ANONYMOUS,
+      UserType.STUDENT,
+      UserType.FREE_TRIAL,
+      UserType.ADMIN,
+    ],
     rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#chat`,
     permissionFieldsCheck: [],
     mentorVisibility: [
@@ -104,7 +124,8 @@ const menuItems = [
     label: 'Settings',
     tab: MODALS.EDIT_MENTOR.tabs.settings,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#show_settings`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#show_settings`,
     permissionFieldsCheck: [
       'mentor_name',
       'mentor_description',
@@ -127,7 +148,8 @@ const menuItems = [
     label: 'Access',
     tab: MODALS.EDIT_MENTOR.tabs.access,
     userTypes: [UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#read_shared_mentor`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#read_shared_mentor`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },
@@ -150,7 +172,11 @@ const menuItems = [
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (_mentorDbId: number) =>
       `/mentors/${_mentorDbId}/prompts/#list&/mentors/${_mentorDbId}/#view_prompts_menu`,
-    permissionFieldsCheck: ['system_prompt', 'proactive_prompt', 'guided_prompt_instructions'],
+    permissionFieldsCheck: [
+      'system_prompt',
+      'proactive_prompt',
+      'guided_prompt_instructions',
+    ],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -161,8 +187,13 @@ const menuItems = [
     label: 'Safety',
     tab: MODALS.EDIT_MENTOR.tabs.safety,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#view_moderation_logs`,
-    permissionFieldsCheck: ['safety_system_prompt', 'moderation_system_prompt', 'safety_response'],
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#view_moderation_logs`,
+    permissionFieldsCheck: [
+      'safety_system_prompt',
+      'moderation_system_prompt',
+      'safety_response',
+    ],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -199,7 +230,8 @@ const menuItems = [
     label: 'MCP',
     tab: MODALS.EDIT_MENTOR.tabs.mcp,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/mcpservers/#list`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/mcpservers/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -211,7 +243,8 @@ const menuItems = [
     label: 'Memory',
     tab: MODALS.EDIT_MENTOR.tabs.memory,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/memory/#list`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/memory/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -229,7 +262,8 @@ const menuItems = [
     label: 'History',
     tab: MODALS.EDIT_MENTOR.tabs.history,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#view_chat_history`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#view_chat_history`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -241,7 +275,8 @@ const menuItems = [
     label: 'Datasets',
     tab: MODALS.EDIT_MENTOR.tabs.datasets,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/documents/#list`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/documents/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -265,7 +300,8 @@ const menuItems = [
     label: 'Embed',
     tab: MODALS.EDIT_MENTOR.tabs.embed,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#can_use_embed`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#can_use_embed`,
     permissionFieldsCheck: ['custom_css', 'allow_anonymous'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -276,7 +312,8 @@ const menuItems = [
     icon: LineChart,
     label: 'Analytics',
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/#view_analytics`,
+    rbacResource: (_mentorDbId: number) =>
+      `/mentors/${_mentorDbId}/#view_analytics`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -285,28 +322,22 @@ const menuItems = [
   },
 ];
 
-const getFilteredMenuItems = (
+export const getFilteredMenuItems = (
   isUserTypeAllowed: (item: any) => boolean,
   isAdmin: boolean,
   tenantKey: string | undefined,
   mentorSettings: any,
   config: any,
   rbacPermissions: any,
-  isNewlyUserOnPreFreeOrAdvertisingMode: (isAdminAction: boolean) => boolean | undefined,
 ) => {
-  // Check if New Chat should always be shown for pre-free/advertising users
-  const shouldAlwaysShowNewChat = isNewlyUserOnPreFreeOrAdvertisingMode(true);
+  // New Chat (first item) is always included for all users
+  const newChatItem = menuItems[0];
 
-  // Filter all menu items including New Chat
+  // Filter remaining items (admin/settings items)
   const filteredItems = menuItems
-    .filter(
-      (item) => isUserTypeAllowed(item) || (shouldAlwaysShowNewChat && item.label === 'New Chat'),
-    )
+    .slice(1)
+    .filter((item) => isUserTypeAllowed(item))
     .filter((item) => {
-      // Always include New Chat for pre-free/advertising users
-      if (shouldAlwaysShowNewChat && item.label === 'New Chat') {
-        return true;
-      }
       if (
         (isAdmin && tenantKey === config.mainTenantKey()) ||
         mentorSettings?.platform_key !== config.mainTenantKey() ||
@@ -320,10 +351,6 @@ const getFilteredMenuItems = (
       return false;
     })
     .filter((item) => {
-      // Always include New Chat for pre-free/advertising users
-      if (shouldAlwaysShowNewChat && item.label === 'New Chat') {
-        return true;
-      }
       // Include item only if both permission checks pass (AND logic)
       const hasFieldPermission = rbacPermissionToDisplay(
         item.permissionFieldsCheck,
@@ -332,11 +359,14 @@ const getFilteredMenuItems = (
       const hasRbacPermission =
         !item.rbacResource ||
         (mentorSettings &&
-          checkRbacPermission(rbacPermissions, item.rbacResource?.(mentorSettings!.mentor_id)));
+          checkRbacPermission(
+            rbacPermissions,
+            item.rbacResource?.(mentorSettings!.mentor_id),
+          ));
       return hasFieldPermission && hasRbacPermission;
     });
 
-  return filteredItems;
+  return [newChatItem, ...filteredItems];
 };
 
 export function NavBar() {
@@ -349,16 +379,12 @@ export function NavBar() {
   const isAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
-  const {
-    executeWithTrialCheck,
-    FreeTrialDialog,
-    closeModal,
-    isModalOpen,
-    isNewlyUserOnPreFreeOrAdvertisingMode,
-  } = useShowFreeTrialDialog();
+  const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
+    useShowFreeTrialDialog();
 
   // Check if we're in Tauri offline mode - skip API calls if so
-  const isTauriOffline = isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
+  const isTauriOffline =
+    isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode());
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
     {
@@ -386,7 +412,9 @@ export function NavBar() {
       return;
     }
 
-    console.log('[auth-redirect] User login from navbar without tenant key or login not required');
+    console.log(
+      '[auth-redirect] User login from navbar without tenant key or login not required',
+    );
     redirectToAuthSpa();
   }, [requiresLoginForChat, tenantKey]);
 
@@ -401,7 +429,8 @@ export function NavBar() {
     getUpdatedModalStack,
     navigateToNotifications,
   } = useNavigate();
-  const [isProviderSelectionOpen, setIsProviderSelectionOpen] = React.useState(false);
+  const [isProviderSelectionOpen, setIsProviderSelectionOpen] =
+    React.useState(false);
 
   const userIsVisiting = useIsVisiting();
 
@@ -474,6 +503,9 @@ export function NavBar() {
   const [forkMentor, { isLoading: isForkingMentor }] = useForkMentorMutation();
 
   const [editMentor] = useEditMentorMutation();
+  const searchParams = useSearchParams();
+  const hideNavbarRaw = searchParams.get('hide-navbar');
+  const hideNavbar = hideNavbarRaw === '1' || hideNavbarRaw === 'true';
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
@@ -494,7 +526,8 @@ export function NavBar() {
       }).unwrap();
       if (
         // @ts-expect-error settings is not part of the forkedMentor object
-        forkedMentor?.settings?.mentor_visibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE
+        forkedMentor?.settings?.mentor_visibility ===
+        MentorVisibilityEnum.VIEWABLE_BY_ANYONE
       ) {
         await editMentor({
           // @ts-expect-error mentor is not part of the useEditMentorMutation Query definition
@@ -524,8 +557,10 @@ export function NavBar() {
     }
   };
 
-  const selectedMentorName = mentorSettingsCombinedPublicAndPrivate?.mentorName || '';
-  const selectedMentorCategory = mentorSettingsCombinedPublicAndPrivate?.llmName ?? '';
+  const selectedMentorName =
+    mentorSettingsCombinedPublicAndPrivate?.mentorName || '';
+  const selectedMentorCategory =
+    mentorSettingsCombinedPublicAndPrivate?.llmName ?? '';
 
   const filteredItems = getFilteredMenuItems(
     isUserTypeAllowed,
@@ -534,12 +569,12 @@ export function NavBar() {
     mentorSettings,
     config,
     rbacPermissions,
-    isNewlyUserOnPreFreeOrAdvertisingMode,
   );
 
   const showForkButton =
     !(isAdmin && tenantKey === config.mainTenantKey()) &&
-    mentorSettings?.mentor_visibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
+    mentorSettings?.mentor_visibility ===
+      MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
     // @ts-ignore
     mentorSettings?.platform_key === config.mainTenantKey() &&
     mentorSettings?.forkable;
@@ -552,7 +587,8 @@ export function NavBar() {
         analyticsActions.setSelectedMentor({
           slug: mentorSettingsCombinedPublicAndPrivate?.mentorSlug ?? '',
           name: mentorSettingsCombinedPublicAndPrivate?.mentorName ?? '',
-          profileImage: mentorSettingsCombinedPublicAndPrivate?.profileImage ?? '',
+          profileImage:
+            mentorSettingsCombinedPublicAndPrivate?.profileImage ?? '',
         }),
       );
     }
@@ -561,10 +597,12 @@ export function NavBar() {
   const pathname = usePathname();
   const isPromptGalleryOrAnalytics =
     pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
   const isOnChatPage =
     !pathname.includes('/prompt-gallery') &&
     !pathname.includes('/analytics') &&
-    !pathname.includes('/explore');
+    !pathname.includes('/explore') &&
+    !isWorkflowsPage;
 
   const handleAvatarClick = () => {
     // Open the mentor menu instead of the profile
@@ -584,6 +622,9 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
+  if (hideNavbar) {
+    return <></>;
+  }
   if (embedMode) {
     return (
       <EmbedNavBar
@@ -592,7 +633,9 @@ export function NavBar() {
         toggleSidebar={toggleSidebar}
         openSidebar={openSidebar}
         mentorName={selectedMentorName}
-        profileImage={mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''}
+        profileImage={
+          mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''
+        }
         tenantKey={tenantKey}
       />
     );
@@ -600,7 +643,7 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="flex h-16 items-center bg-white pr-4 mb-4 z-10 border-b border-[#D0E0FF]">
+      <nav className="z-10 mb-4 flex h-16 items-center border-b border-[#D0E0FF] bg-white pr-4">
         <div className="flex items-center">
           {/* Add drawer toggle button for tablet view */}
           {isMobile && (
@@ -632,7 +675,9 @@ export function NavBar() {
                   <Button
                     variant="ghost"
                     className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() => !userIsVisiting && setIsProviderSelectionOpen(true)}
+                    onClick={() =>
+                      !userIsVisiting && setIsProviderSelectionOpen(true)
+                    }
                     aria-label="LLM Model Selector"
                   >
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
@@ -652,7 +697,9 @@ export function NavBar() {
                     <span className="max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {selectedMentorCategory}
                     </span>
-                    {!userIsStudent && <ChevronDown className="h-4 w-4 text-gray-500" />}
+                    {!userIsStudent && (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
@@ -662,6 +709,7 @@ export function NavBar() {
             )}
 
             {!pathname.includes('/explore') &&
+              !isWorkflowsPage &&
               mentorId &&
               (isPromptGalleryOrAnalytics ? (
                 <TooltipProvider>
@@ -683,10 +731,15 @@ export function NavBar() {
                           </AvatarFallback>
                         </Avatar>
                         <span>{selectedAnalyticsMentor?.name}</span>
-                        {!userIsStudent && <ChevronDown className="h-4 w-4 text-gray-500" />}
+                        {!userIsStudent && (
+                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                        )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent className="ibl-tooltip-content" side="bottom">
+                    <TooltipContent
+                      className="ibl-tooltip-content"
+                      side="bottom"
+                    >
                       Select Mentor
                     </TooltipContent>
                   </Tooltip>
@@ -703,7 +756,9 @@ export function NavBar() {
                       aria-label="Selected mentor dropdown button"
                     >
                       <User className="h-4 w-4 text-[#646464]" />
-                      <span className="hidden sm:block">{selectedMentorName}</span>
+                      <span className="hidden sm:block">
+                        {selectedMentorName}
+                      </span>
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -755,7 +810,7 @@ export function NavBar() {
                           aria-busy={isForkingMentor}
                         >
                           {isForkingMentor ? (
-                            <Loader2 className="mr-3 h-4 w-4 text-gray-600 animate-spin" />
+                            <Loader2 className="mr-3 h-4 w-4 animate-spin text-gray-600" />
                           ) : (
                             <GitFork className="mr-3 h-4 w-4 text-gray-600" />
                           )}
@@ -791,7 +846,9 @@ export function NavBar() {
                         height={20}
                         className="text-gray-500"
                       />
-                      <span className="whitespace-nowrap hidden lg:flex">My Mentors</span>
+                      <span className="hidden whitespace-nowrap lg:flex">
+                        My Mentors
+                      </span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
@@ -806,11 +863,21 @@ export function NavBar() {
         <div className="ml-auto flex items-center gap-0 xl:gap-6">
           {visibleToLoggedInUsersOnly && isAdmin && !userIsVisiting && (
             <div className="hidden items-center gap-2 xl:flex">
-              <span className={cn('text-sm', userIsStudent ? 'font-semibold' : 'text-gray-500')}>
+              <span
+                className={cn(
+                  'text-sm',
+                  userIsStudent ? 'font-semibold' : 'text-gray-500',
+                )}
+              >
                 Learner
               </span>
               <LearnerModeSwitch />
-              <span className={cn('text-sm', userIsStudent ? 'text-gray-500' : 'font-semibold')}>
+              <span
+                className={cn(
+                  'text-sm',
+                  userIsStudent ? 'text-gray-500' : 'font-semibold',
+                )}
+              >
                 Instructor
               </span>
             </div>
@@ -846,10 +913,16 @@ export function NavBar() {
         />
       )}
       {showEditMentorModal && (
-        <EditMentorModal isOpen={showEditMentorModal} onClose={closeEditMentorModal} />
+        <EditMentorModal
+          isOpen={showEditMentorModal}
+          onClose={closeEditMentorModal}
+        />
       )}
       {showCreateMentorModal && (
-        <CreateMentorModal isOpen={showCreateMentorModal} onClose={closeCreateMentorModal} />
+        <CreateMentorModal
+          isOpen={showCreateMentorModal}
+          onClose={closeCreateMentorModal}
+        />
       )}
       {isMyMentorsModalOpen && (
         <MyMentorsModal
@@ -867,7 +940,9 @@ export function NavBar() {
             mentorId,
             isAdmin,
           }}
-          useGravatarPicFallback={config.enableGravatarOnProfilePic() !== 'false'}
+          useGravatarPicFallback={
+            config.enableGravatarOnProfilePic() !== 'false'
+          }
           currentSPA={config.iblPlatform() || 'mentor'}
           authURL={config.authUrl()}
           currentPlatformBaseDomain={config.platformBaseDomain()}
@@ -893,7 +968,11 @@ export function NavBar() {
         <FreeTrialDialog isOpen={isModalOpen} onClose={closeModal} />
       )}
       {openModal && (
-        <AuthModal isOpen={openModal} onClose={handleCloseModal} tenantKey={tenantKey ?? ''} />
+        <AuthModal
+          isOpen={openModal}
+          onClose={handleCloseModal}
+          tenantKey={tenantKey ?? ''}
+        />
       )}
     </>
   );

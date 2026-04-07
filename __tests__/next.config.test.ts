@@ -5,7 +5,6 @@ vi.mock('@sentry/nextjs', () => ({
   withSentryConfig: vi.fn((config) => config),
 }));
 
-
 describe('next.config', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -90,7 +89,9 @@ describe('next.config', () => {
     const config = (await import('../next.config')).default;
 
     expect(config.serverExternalPackages).toContain('@sentry/node');
-    expect(config.serverExternalPackages).toContain('@opentelemetry/instrumentation');
+    expect(config.serverExternalPackages).toContain(
+      '@opentelemetry/instrumentation',
+    );
   });
 
   it('should enable production browser source maps', async () => {
@@ -110,9 +111,12 @@ describe('next.config', () => {
   });
 
   it('should parse NEXT_IMAGE_PATTERNS environment variable', async () => {
-    process.env.NEXT_IMAGE_PATTERNS = 'https://example.com,https://test.amazonaws.com,invalid-url';
+    process.env.NEXT_IMAGE_PATTERNS =
+      'https://example.com,https://test.amazonaws.com,invalid-url';
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     vi.resetModules();
     const config = (await import('../next.config')).default;
@@ -139,7 +143,8 @@ describe('next.config', () => {
 
     // Check for default patterns
     const hasDefaultPattern = config.images?.remotePatterns?.some(
-      (pattern) => pattern.hostname === 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
+      (pattern) =>
+        pattern.hostname === 'hebbkx1anhila5yf.public.blob.vercel-storage.com',
     );
     expect(hasDefaultPattern).toBe(true);
   });
@@ -195,6 +200,25 @@ describe('next.config', () => {
     }
   });
 
+  it('should return cache-control headers for HTML pages', async () => {
+    vi.resetModules();
+    const config = (await import('../next.config')).default;
+
+    expect(config.headers).toBeDefined();
+    const headers = await config.headers!();
+    expect(headers).toEqual([
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+    ]);
+  });
+
   it('should configure turbopack rules', async () => {
     vi.resetModules();
     const config = (await import('../next.config')).default;
@@ -204,7 +228,8 @@ describe('next.config', () => {
   });
 
   it('should parse URL patterns correctly', async () => {
-    process.env.NEXT_IMAGE_PATTERNS = 'https://example.com:8080/path,https://test.amazonaws.com';
+    process.env.NEXT_IMAGE_PATTERNS =
+      'https://example.com:8080/path,https://test.amazonaws.com';
 
     vi.resetModules();
     const config = (await import('../next.config')).default;
@@ -216,14 +241,19 @@ describe('next.config', () => {
     const examplePattern = patterns?.find((p) => p.hostname === 'example.com');
     expect(examplePattern?.protocol).toBe('https');
 
-    const testPattern = patterns?.find((p) => p.hostname === 'test.amazonaws.com');
+    const testPattern = patterns?.find(
+      (p) => p.hostname === 'test.amazonaws.com',
+    );
     expect(testPattern?.protocol).toBe('https');
   });
 
   it('should filter out null patterns from invalid URLs', async () => {
-    process.env.NEXT_IMAGE_PATTERNS = 'https://valid.com,not-a-url,https://also-valid.com';
+    process.env.NEXT_IMAGE_PATTERNS =
+      'https://valid.com,not-a-url,https://also-valid.com';
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {});
 
     vi.resetModules();
     const config = (await import('../next.config')).default;

@@ -11,7 +11,11 @@ import { CanvasView } from '../canvas-view';
 // Mock CanvasComponent - now handles both document and code types since CodeCanvasComponent is disabled
 vi.mock('../canvas-component', () => ({
   CanvasComponent: (props: any) => (
-    <div data-testid="canvas-component" data-title={props.title} data-content={props.content}>
+    <div
+      data-testid="canvas-component"
+      data-title={props.title}
+      data-content={props.content}
+    >
       <span>Document Canvas: {props.title}</span>
       <span>Artifact ID: {props.artifactId}</span>
       <button onClick={props.onClose}>Close</button>
@@ -59,7 +63,9 @@ describe('CanvasView', () => {
     it('passes title to CanvasComponent', () => {
       render(<CanvasView {...defaultProps} canvasTitle="My Document" />);
 
-      expect(screen.getByText('Document Canvas: My Document')).toBeInTheDocument();
+      expect(
+        screen.getByText('Document Canvas: My Document'),
+      ).toBeInTheDocument();
     });
 
     it('passes content to CanvasComponent', () => {
@@ -101,13 +107,25 @@ describe('CanvasView', () => {
     });
 
     it('passes title to CanvasComponent for code type', () => {
-      render(<CanvasView {...defaultProps} canvasType="code" canvasTitle="main.py" />);
+      render(
+        <CanvasView
+          {...defaultProps}
+          canvasType="code"
+          canvasTitle="main.py"
+        />,
+      );
 
       expect(screen.getByText('Document Canvas: main.py')).toBeInTheDocument();
     });
 
     it('passes content to CanvasComponent for code type', () => {
-      render(<CanvasView {...defaultProps} canvasType="code" canvasContent="print('Hello')" />);
+      render(
+        <CanvasView
+          {...defaultProps}
+          canvasType="code"
+          canvasContent="print('Hello')"
+        />,
+      );
 
       const canvas = screen.getByTestId('canvas-component');
       expect(canvas).toHaveAttribute('data-content', "print('Hello')");
@@ -115,20 +133,26 @@ describe('CanvasView', () => {
 
     it('accepts fileExtension prop even when CodeCanvasComponent is disabled', () => {
       // fileExtension is accepted but not used since CodeCanvasComponent is disabled
-      render(<CanvasView {...defaultProps} canvasType="code" fileExtension="py" />);
+      render(
+        <CanvasView {...defaultProps} canvasType="code" fileExtension="py" />,
+      );
 
       expect(screen.getByTestId('canvas-component')).toBeInTheDocument();
     });
 
     it('passes artifactId to CanvasComponent for code type', () => {
-      render(<CanvasView {...defaultProps} canvasType="code" artifactId={789} />);
+      render(
+        <CanvasView {...defaultProps} canvasType="code" artifactId={789} />,
+      );
 
       expect(screen.getByText('Artifact ID: 789')).toBeInTheDocument();
     });
 
     it('passes onClose to CanvasComponent for code type', () => {
       const onClose = vi.fn();
-      render(<CanvasView {...defaultProps} canvasType="code" onClose={onClose} />);
+      render(
+        <CanvasView {...defaultProps} canvasType="code" onClose={onClose} />,
+      );
 
       const closeButton = screen.getByText('Close');
       closeButton.click();
@@ -143,7 +167,9 @@ describe('CanvasView', () => {
 
   describe('Component Key Management', () => {
     it('uses artifactId in component key', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} artifactId={1} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} artifactId={1} />,
+      );
 
       const canvas1 = screen.getByTestId('canvas-component');
       expect(canvas1).toBeInTheDocument();
@@ -156,7 +182,9 @@ describe('CanvasView', () => {
     });
 
     it('uses refreshTrigger to force remount', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} refreshTrigger={0} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} refreshTrigger={0} />,
+      );
 
       expect(screen.getByTestId('canvas-component')).toBeInTheDocument();
 
@@ -178,7 +206,9 @@ describe('CanvasView', () => {
 
   describe('Refresh Trigger', () => {
     it('updates refresh key when trigger changes', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} refreshTrigger={1} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} refreshTrigger={1} />,
+      );
 
       rerender(<CanvasView {...defaultProps} refreshTrigger={2} />);
 
@@ -187,7 +217,9 @@ describe('CanvasView', () => {
     });
 
     it('ignores zero or negative refresh triggers', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} refreshTrigger={0} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} refreshTrigger={0} />,
+      );
 
       rerender(<CanvasView {...defaultProps} refreshTrigger={0} />);
 
@@ -323,7 +355,9 @@ describe('CanvasView', () => {
     });
 
     it('handles special characters in title', () => {
-      render(<CanvasView {...defaultProps} canvasTitle="<script>test</script>" />);
+      render(
+        <CanvasView {...defaultProps} canvasTitle="<script>test</script>" />,
+      );
 
       expect(screen.getByTestId('canvas-component')).toBeInTheDocument();
     });
@@ -348,7 +382,9 @@ describe('CanvasView', () => {
   describe('Type Switching', () => {
     // Note: Since CodeCanvasComponent is disabled, both types render CanvasComponent
     it('maintains CanvasComponent when switching from document to code type', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} canvasType="document" />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} canvasType="document" />,
+      );
 
       expect(screen.getByTestId('canvas-component')).toBeInTheDocument();
 
@@ -359,7 +395,9 @@ describe('CanvasView', () => {
     });
 
     it('maintains CanvasComponent when switching from code to document type', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} canvasType="code" />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} canvasType="code" />,
+      );
 
       // Code type also uses CanvasComponent since CodeCanvasComponent is disabled
       expect(screen.getByTestId('canvas-component')).toBeInTheDocument();
@@ -376,7 +414,9 @@ describe('CanvasView', () => {
 
   describe('ArtifactId Changes', () => {
     it('increments refresh key when artifactId changes', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} artifactId={100} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} artifactId={100} />,
+      );
 
       expect(screen.getByText('Artifact ID: 100')).toBeInTheDocument();
 
@@ -386,7 +426,9 @@ describe('CanvasView', () => {
     });
 
     it('handles artifactId changing to undefined', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} artifactId={100} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} artifactId={100} />,
+      );
 
       rerender(<CanvasView {...defaultProps} artifactId={undefined} />);
 
@@ -394,7 +436,9 @@ describe('CanvasView', () => {
     });
 
     it('handles artifactId changing from undefined', () => {
-      const { rerender } = render(<CanvasView {...defaultProps} artifactId={undefined} />);
+      const { rerender } = render(
+        <CanvasView {...defaultProps} artifactId={undefined} />,
+      );
 
       rerender(<CanvasView {...defaultProps} artifactId={100} />);
 

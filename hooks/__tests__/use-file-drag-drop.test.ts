@@ -32,7 +32,9 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn() },
 }));
 
-const createDragEvent = (overrides: Record<string, unknown> = {}): React.DragEvent => {
+const createDragEvent = (
+  overrides: Record<string, unknown> = {},
+): React.DragEvent => {
   const preventDefault = vi.fn();
   return {
     preventDefault,
@@ -110,7 +112,9 @@ describe('useFileDragDrop', () => {
   describe('handleDragOver', () => {
     it('should set isDraggingFile to true when dragging files', () => {
       const { result } = renderHook(() => useFileDragDrop(defaultOptions));
-      const event = createDragEvent({ dataTransfer: { types: ['Files'], files: [] } });
+      const event = createDragEvent({
+        dataTransfer: { types: ['Files'], files: [] },
+      });
 
       act(() => {
         result.current.handleDragOver(event);
@@ -122,7 +126,9 @@ describe('useFileDragDrop', () => {
 
     it('should not set isDraggingFile when dragging non-file content', () => {
       const { result } = renderHook(() => useFileDragDrop(defaultOptions));
-      const event = createDragEvent({ dataTransfer: { types: ['text/plain'], files: [] } });
+      const event = createDragEvent({
+        dataTransfer: { types: ['text/plain'], files: [] },
+      });
 
       act(() => {
         result.current.handleDragOver(event);
@@ -144,7 +150,9 @@ describe('useFileDragDrop', () => {
 
       // Then leave the container (relatedTarget is null = left the container)
       act(() => {
-        result.current.handleDragLeave(createDragEvent({ relatedTarget: null }));
+        result.current.handleDragLeave(
+          createDragEvent({ relatedTarget: null }),
+        );
       });
 
       expect(result.current.isDraggingFile).toBe(false);
@@ -194,44 +202,66 @@ describe('useFileDragDrop', () => {
 
     it('should reject all unsupported files with a toast error', async () => {
       const { result } = renderHook(() => useFileDragDrop(defaultOptions));
-      const file = new File(['test'], 'app.exe', { type: 'application/x-msdownload' });
+      const file = new File(['test'], 'app.exe', {
+        type: 'application/x-msdownload',
+      });
       const event = createDragEvent({ dataTransfer: { files: [file] } });
 
       await act(async () => {
         await result.current.handleDrop(event);
       });
 
-      expect(toast.error).toHaveBeenCalledWith('The dropped file type is not supported.');
+      expect(toast.error).toHaveBeenCalledWith(
+        'The dropped file type is not supported.',
+      );
       expect(mockUploadFiles).not.toHaveBeenCalled();
     });
 
     it('should partially reject unsupported files in a mixed drop', async () => {
       const { result } = renderHook(() => useFileDragDrop(defaultOptions));
-      const pdfFile = new File(['test'], 'doc.pdf', { type: 'application/pdf' });
-      const exeFile = new File(['test'], 'app.exe', { type: 'application/x-msdownload' });
-      const event = createDragEvent({ dataTransfer: { files: [pdfFile, exeFile] } });
+      const pdfFile = new File(['test'], 'doc.pdf', {
+        type: 'application/pdf',
+      });
+      const exeFile = new File(['test'], 'app.exe', {
+        type: 'application/x-msdownload',
+      });
+      const event = createDragEvent({
+        dataTransfer: { files: [pdfFile, exeFile] },
+      });
 
       await act(async () => {
         await result.current.handleDrop(event);
       });
 
       expect(mockUploadFiles).toHaveBeenCalledWith([pdfFile]);
-      expect(toast.error).toHaveBeenCalledWith('1 file was rejected due to unsupported type.');
+      expect(toast.error).toHaveBeenCalledWith(
+        '1 file was rejected due to unsupported type.',
+      );
     });
 
     it('should pluralize rejection message for multiple rejected files', async () => {
       const { result } = renderHook(() => useFileDragDrop(defaultOptions));
-      const pdfFile = new File(['test'], 'doc.pdf', { type: 'application/pdf' });
-      const exeFile = new File(['test'], 'a.exe', { type: 'application/x-msdownload' });
-      const batFile = new File(['test'], 'b.bat', { type: 'application/x-msdos-program' });
-      const event = createDragEvent({ dataTransfer: { files: [pdfFile, exeFile, batFile] } });
+      const pdfFile = new File(['test'], 'doc.pdf', {
+        type: 'application/pdf',
+      });
+      const exeFile = new File(['test'], 'a.exe', {
+        type: 'application/x-msdownload',
+      });
+      const batFile = new File(['test'], 'b.bat', {
+        type: 'application/x-msdos-program',
+      });
+      const event = createDragEvent({
+        dataTransfer: { files: [pdfFile, exeFile, batFile] },
+      });
 
       await act(async () => {
         await result.current.handleDrop(event);
       });
 
       expect(mockUploadFiles).toHaveBeenCalledWith([pdfFile]);
-      expect(toast.error).toHaveBeenCalledWith('2 files were rejected due to unsupported type.');
+      expect(toast.error).toHaveBeenCalledWith(
+        '2 files were rejected due to unsupported type.',
+      );
     });
 
     it('should not upload when drop has no files', async () => {

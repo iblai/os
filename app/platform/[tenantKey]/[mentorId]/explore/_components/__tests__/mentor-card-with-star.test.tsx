@@ -3,7 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { MentorCardWithStar } from '../mentor-card-with-star';
-import { ExplorePageContext, ExplorePageContextValue } from '../explore-page-context';
+import {
+  ExplorePageContext,
+  ExplorePageContextValue,
+} from '../explore-page-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 /**
@@ -67,7 +70,9 @@ describe('MentorCardWithStar', () => {
   ) => {
     return render(
       <TooltipProvider>
-        <ExplorePageContext.Provider value={{ ...mockContextValue, ...contextOverrides }}>
+        <ExplorePageContext.Provider
+          value={{ ...mockContextValue, ...contextOverrides }}
+        >
           <MentorCardWithStar mentor={mentor} />
         </ExplorePageContext.Provider>
       </TooltipProvider>,
@@ -88,7 +93,9 @@ describe('MentorCardWithStar', () => {
     it('renders mentor description', () => {
       renderWithContext(mockMentor);
 
-      expect(screen.getByText('A helpful mentor for testing')).toBeInTheDocument();
+      expect(
+        screen.getByText('A helpful mentor for testing'),
+      ).toBeInTheDocument();
     });
 
     it('renders avatar component when profile_image is provided', () => {
@@ -118,7 +125,10 @@ describe('MentorCardWithStar', () => {
     });
 
     it('does not render updated date when null', () => {
-      renderWithContext({ ...mockMentor, updated_at: null as unknown as string });
+      renderWithContext({
+        ...mockMentor,
+        updated_at: null as unknown as string,
+      });
 
       expect(screen.queryByText(/Updated on/)).not.toBeInTheDocument();
     });
@@ -128,37 +138,50 @@ describe('MentorCardWithStar', () => {
     it('renders star button with add to favorites label when not starred', () => {
       renderWithContext(mockMentor);
 
-      expect(screen.getByRole('button', { name: /Add to favorites/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Add to favorites/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders star button with remove from favorites label when starred', () => {
       const starredMentor = { ...mockMentor, starred: true };
       renderWithContext(starredMentor);
 
-      expect(screen.getByRole('button', { name: /Remove from favorites/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Remove from favorites/i }),
+      ).toBeInTheDocument();
     });
 
     it('calls toggleFavorite when star button is clicked', async () => {
       const user = userEvent.setup();
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       await user.click(starButton);
 
-      expect(mockToggleFavorite).toHaveBeenCalledWith(mockMentor, expect.any(Object));
+      expect(mockToggleFavorite).toHaveBeenCalledWith(
+        mockMentor,
+        expect.any(Object),
+      );
     });
 
     it('disables star button when username is not available', () => {
       renderWithContext(mockMentor, { username: null });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).toBeDisabled();
     });
 
     it('disables star button when toggling is in progress for this mentor', () => {
       renderWithContext(mockMentor, { togglingMentorId: '1' });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).toBeDisabled();
     });
 
@@ -166,21 +189,27 @@ describe('MentorCardWithStar', () => {
       renderWithContext(mockMentor, { togglingMentorId: '1' });
 
       // Loading spinner should be visible (Loader2 component)
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton.querySelector('.animate-spin')).toBeInTheDocument();
     });
 
     it('does not show loading spinner when toggling a different mentor', () => {
       renderWithContext(mockMentor, { togglingMentorId: '999' });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton.querySelector('.animate-spin')).not.toBeInTheDocument();
     });
 
     it('star icon is unfilled when not starred', () => {
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       const starIcon = starButton.querySelector('svg');
       expect(starIcon).toHaveClass('text-gray-400');
       expect(starIcon).not.toHaveClass('fill-current');
@@ -190,7 +219,9 @@ describe('MentorCardWithStar', () => {
       const starredMentor = { ...mockMentor, starred: true };
       renderWithContext(starredMentor);
 
-      const starButton = screen.getByRole('button', { name: /Remove from favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Remove from favorites/i,
+      });
       const starIcon = starButton.querySelector('svg');
       expect(starIcon).toHaveClass('text-[#38A1E5]');
       expect(starIcon).toHaveClass('fill-current');
@@ -200,7 +231,9 @@ describe('MentorCardWithStar', () => {
       const user = userEvent.setup();
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       await user.click(starButton);
 
       // toggleFavorite should be called, but handleMentorClick should not
@@ -211,14 +244,18 @@ describe('MentorCardWithStar', () => {
     it('disables star button when username is empty string', () => {
       renderWithContext(mockMentor, { username: '' });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).toBeDisabled();
     });
 
     it('enables star button when not toggling and username is available', () => {
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).not.toBeDisabled();
     });
 
@@ -226,7 +263,9 @@ describe('MentorCardWithStar', () => {
       const numericIdMentor = { id: 123, name: 'Numeric' };
       renderWithContext(numericIdMentor, { togglingMentorId: '123' });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).toBeDisabled();
       expect(starButton.querySelector('.animate-spin')).toBeInTheDocument();
     });
@@ -247,7 +286,9 @@ describe('MentorCardWithStar', () => {
       const user = userEvent.setup();
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       await user.click(starButton);
 
       expect(mockHandleMentorClick).not.toHaveBeenCalled();
@@ -283,7 +324,9 @@ describe('MentorCardWithStar', () => {
     it('does not navigate when Enter is pressed on star button', () => {
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       fireEvent.keyDown(starButton, { key: 'Enter' });
 
       expect(mockHandleMentorClick).not.toHaveBeenCalled();
@@ -292,7 +335,9 @@ describe('MentorCardWithStar', () => {
     it('does not navigate when Space is pressed on star button', () => {
       renderWithContext(mockMentor);
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       fireEvent.keyDown(starButton, { key: ' ' });
 
       expect(mockHandleMentorClick).not.toHaveBeenCalled();
@@ -335,7 +380,10 @@ describe('MentorCardWithStar', () => {
       renderWithContext(noDescMentor);
 
       const card = screen.getByLabelText(/Explore mentor: Test Mentor/i);
-      expect(card).toHaveAttribute('aria-label', 'Explore mentor: Test Mentor. ');
+      expect(card).toHaveAttribute(
+        'aria-label',
+        'Explore mentor: Test Mentor. ',
+      );
     });
 
     it('card is focusable with tabIndex', () => {
@@ -355,7 +403,9 @@ describe('MentorCardWithStar', () => {
       const starredMentor = { ...mockMentor, starred: true };
       renderWithContext(starredMentor);
 
-      expect(screen.getByLabelText(/Remove from favorites/i)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/Remove from favorites/i),
+      ).toBeInTheDocument();
     });
 
     it('avatar has accessible fallback text', () => {
@@ -405,8 +455,12 @@ describe('MentorCardWithStar', () => {
       const notStarredMentor = { ...mockMentor, starred: false };
       renderWithContext(notStarredMentor);
 
-      expect(screen.getByRole('button', { name: /Add to favorites/i })).toBeInTheDocument();
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      expect(
+        screen.getByRole('button', { name: /Add to favorites/i }),
+      ).toBeInTheDocument();
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       const starIcon = starButton.querySelector('svg');
       expect(starIcon).not.toHaveClass('fill-current');
     });
@@ -454,7 +508,9 @@ describe('MentorCardWithStar', () => {
       // togglingMentorId '42' should match id 42 converted to string
       renderWithContext(numericIdMentor, { togglingMentorId: '42' });
 
-      const starButton = screen.getByRole('button', { name: /Add to favorites/i });
+      const starButton = screen.getByRole('button', {
+        name: /Add to favorites/i,
+      });
       expect(starButton).toBeDisabled();
     });
   });

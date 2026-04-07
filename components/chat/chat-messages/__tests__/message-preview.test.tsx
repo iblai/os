@@ -29,7 +29,10 @@ vi.mock('../canvas-message-preview', () => ({
     <div data-testid="canvas-message-preview">
       <span data-testid="canvas-title">{title}</span>
       <span data-testid="canvas-streaming">{String(isStreaming)}</span>
-      <button data-testid="canvas-open-btn" onClick={() => onOpenCanvas?.(payload)}>
+      <button
+        data-testid="canvas-open-btn"
+        onClick={() => onOpenCanvas?.(payload)}
+      >
         Open
       </button>
     </div>
@@ -39,7 +42,9 @@ vi.mock('../canvas-message-preview', () => ({
 describe('MessagePreview', () => {
   const mockOnOpenCanvas = vi.fn();
 
-  const createArtifactVersion = (overrides: Partial<ArtifactVersion> = {}): ArtifactVersion => ({
+  const createArtifactVersion = (
+    overrides: Partial<ArtifactVersion> = {},
+  ): ArtifactVersion => ({
     id: 1,
     artifact: {
       id: 100,
@@ -70,13 +75,25 @@ describe('MessagePreview', () => {
 
   describe('rendering without artifact versions', () => {
     it('should render plain markdown content when no artifact versions', () => {
-      render(<MessagePreview content="# Hello World" onOpenCanvas={mockOnOpenCanvas} />);
+      render(
+        <MessagePreview
+          content="# Hello World"
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('# Hello World');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        '# Hello World',
+      );
     });
 
     it('should render Markdown component for content', () => {
-      render(<MessagePreview content="Some **bold** text" onOpenCanvas={mockOnOpenCanvas} />);
+      render(
+        <MessagePreview
+          content="Some **bold** text"
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
 
       expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
     });
@@ -104,7 +121,9 @@ describe('MessagePreview', () => {
     });
 
     it('should display artifact title', () => {
-      const artifactVersions = [createArtifactVersion({ title: 'Custom Artifact Title' })];
+      const artifactVersions = [
+        createArtifactVersion({ title: 'Custom Artifact Title' }),
+      ];
 
       render(
         <MessagePreview
@@ -114,7 +133,9 @@ describe('MessagePreview', () => {
         />,
       );
 
-      expect(screen.getByTestId('canvas-title')).toHaveTextContent('Custom Artifact Title');
+      expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+        'Custom Artifact Title',
+      );
     });
 
     it('should use artifact.title as fallback when version title is missing', () => {
@@ -143,7 +164,9 @@ describe('MessagePreview', () => {
       );
 
       // Should fall back to artifact.title
-      expect(screen.getByTestId('canvas-title')).toHaveTextContent('Artifact Level Title');
+      expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+        'Artifact Level Title',
+      );
     });
 
     it('should show "Untitled Artifact" when no title is available', () => {
@@ -171,7 +194,9 @@ describe('MessagePreview', () => {
         />,
       );
 
-      expect(screen.getByTestId('canvas-title')).toHaveTextContent('Untitled Artifact');
+      expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+        'Untitled Artifact',
+      );
     });
   });
 
@@ -200,7 +225,9 @@ describe('MessagePreview', () => {
         />,
       );
 
-      expect(screen.getByTestId('canvas-title')).toHaveTextContent('Current Version');
+      expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+        'Current Version',
+      );
     });
 
     it('should use highest version number when no is_current', () => {
@@ -544,7 +571,9 @@ describe('MessagePreview', () => {
         />,
       );
 
-      expect(screen.getByTestId('markdown-content')).toHaveTextContent('Some text content');
+      expect(screen.getByTestId('markdown-content')).toHaveTextContent(
+        'Some text content',
+      );
       expect(screen.getByTestId('canvas-message-preview')).toBeInTheDocument();
     });
 
@@ -604,7 +633,9 @@ describe('MessagePreview', () => {
         />,
       );
 
-      expect(screen.getByTestId('canvas-title')).toHaveTextContent('Original Title');
+      expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+        'Original Title',
+      );
 
       // Dispatch title update event
       const event = new CustomEvent('artifact-title-updated', {
@@ -613,7 +644,9 @@ describe('MessagePreview', () => {
       window.dispatchEvent(event);
 
       await waitFor(() => {
-        expect(screen.getByTestId('canvas-title')).toHaveTextContent('Updated Title');
+        expect(screen.getByTestId('canvas-title')).toHaveTextContent(
+          'Updated Title',
+        );
       });
     });
 

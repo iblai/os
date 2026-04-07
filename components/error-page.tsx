@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import type React from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import type React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 // @ts-expect-error - error-utils module does not exist yet
-import { getErrorData, type ErrorData } from "@/lib/error-utils";
+import { getErrorData, type ErrorData } from '@/lib/error-utils';
 
 interface ErrorPageProps {
   errorCode: string;
@@ -23,8 +23,8 @@ export function ErrorPage({
   customDescription,
   customIcon,
   showHomeButton = true,
-  homeButtonText = "Back to Home",
-  homeButtonHref = "/",
+  homeButtonText = 'Back to Home',
+  homeButtonHref = '/',
 }: ErrorPageProps) {
   // Get default error data based on error code
   const defaultErrorData: ErrorData = getErrorData(errorCode);
@@ -35,7 +35,7 @@ export function ErrorPage({
   const icon = customIcon || defaultErrorData.icon;
 
   console.error(
-    `Error page shown to user: title --> ${title}, description --> ${description}`
+    `Error page shown to user: title --> ${title}, description --> ${description}`,
   );
 
   return (
@@ -48,10 +48,10 @@ export function ErrorPage({
 
         {/* Right side - Error content */}
         <div className="flex flex-col items-center">
-          <h1 className="text-9xl font-bold text-blue-5000 text-center">
+          <h1 className="text-blue-5000 text-center text-9xl font-bold">
             {errorCode}
           </h1>
-          <h2 className="mt-8 text-4xl font-medium text-gray-500 text-center">
+          <h2 className="mt-8 text-center text-4xl font-medium text-gray-500">
             {title}
           </h2>
           <p
@@ -72,14 +72,14 @@ export function ErrorPage({
       {/* Footer with logo */}
       <div className="mt-16 flex items-center justify-center">
         <div className="flex items-end justify-center text-sm text-gray-500">
-          <span className="flex items-end h-6 text-xs">
+          <span className="flex h-6 items-end text-xs">
             Powered by
             <Image
               src="/iblai-logo.png"
               alt="ibl.ai"
               width={43}
               height={19}
-              className="h-4 w-auto mx-2 mb-1"
+              className="mx-2 mb-1 h-4 w-auto"
             />
             in New York
           </span>

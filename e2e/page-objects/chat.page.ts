@@ -1,0 +1,64 @@
+import { Page, Locator, expect } from '@playwright/test';
+
+export class ChatPage {
+  readonly page: Page;
+
+  readonly chatInput: Locator;
+  readonly sendButton: Locator;
+  readonly newChatButton: Locator;
+  readonly userMessages: Locator;
+  readonly aiMessages: Locator;
+  readonly canvasToggle: Locator;
+  readonly createMentorDialog: Locator;
+  readonly loginBanner: Locator;
+  readonly uploadButton: Locator;
+  readonly voiceCallButton: Locator;
+  readonly voiceInputButton: Locator;
+  readonly dragOverlay: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.chatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
+      exact: true,
+    });
+    this.sendButton = page.getByRole('button', { name: 'Send message' });
+    this.newChatButton = page.getByRole('button', { name: 'New Chat' });
+    this.userMessages = page.locator('.chat-user-message-query');
+    this.aiMessages = page.locator('.chat-ai-message-response');
+    this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    this.createMentorDialog = page.getByRole('dialog', {
+      name: /create.*mentor/i,
+    });
+    this.loginBanner = page.getByRole('button', { name: /log in/i });
+    this.uploadButton = page.getByRole('button', { name: 'Attach File' });
+    this.voiceCallButton = page.getByRole('button', { name: 'Voice call' });
+    this.voiceInputButton = page.getByRole('button', { name: 'Voice input' });
+    this.dragOverlay = page.locator(
+      '[data-testid="drag-overlay"], [class*="drag-overlay"]',
+    );
+  }
+
+  async sendMessage(text: string): Promise<void> {
+    await expect(this.chatInput).toBeVisible({ timeout: 15_000 });
+    await this.chatInput.fill(text);
+    await expect(this.sendButton).toBeEnabled({ timeout: 10_000 });
+    await this.page.waitForTimeout(5_000);
+    await this.sendButton.click();
+  }
+
+  async waitForAIResponse(timeout = 60_000): Promise<void> {
+    await expect(this.aiMessages.first()).toBeVisible({ timeout });
+  }
+
+  async waitForUserMessage(text: string, timeout = 30_000): Promise<void> {
+    await expect(
+      this.page.locator('.chat-user-message-query', { hasText: text }),
+    ).toBeVisible({ timeout });
+  }
+
+  async startNewChat(): Promise<void> {
+    await expect(this.newChatButton).toBeVisible({ timeout: 5_000 });
+    await this.newChatButton.click();
+  }
+}

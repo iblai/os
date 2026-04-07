@@ -214,7 +214,9 @@ describe('UserProfile - Anonymous Mentor Handling', () => {
       render(<UserProfile />);
 
       await waitFor(() => {
-        expect(mockFetchTenantMetadata).toHaveBeenCalledWith({ tenantKey: 'new-tenant' });
+        expect(mockFetchTenantMetadata).toHaveBeenCalledWith({
+          tenantKey: 'new-tenant',
+        });
       });
     });
 
@@ -232,7 +234,9 @@ describe('UserProfile - Anonymous Mentor Handling', () => {
     });
 
     it('should handle metadata fetch error gracefully', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockFetchTenantMetadata.mockReturnValue({
         unwrap: () => Promise.reject(new Error('Fetch failed')),
       });

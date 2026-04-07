@@ -53,7 +53,7 @@ export function SearchSection({
           role="tablist"
           aria-label="Filter mentors by category"
         >
-          <div className="scrollbar-none w-full flex flex-nowrap justify-start gap-1 overflow-x-auto sm:gap-2">
+          <div className="scrollbar-none flex w-full flex-nowrap justify-start gap-1 overflow-x-auto sm:gap-2">
             {categories.map((category) => (
               <button
                 key={category.value}
@@ -62,10 +62,10 @@ export function SearchSection({
                 aria-selected={activeTab === category.value}
                 aria-controls={`tabpanel-${category.value}`}
                 className={cn(
-                  'flex-shrink-0 rounded-md font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-1 focus:ring-blue-200 focus:ring-offset-1 px-3 py-1 text-sm',
+                  'flex-shrink-0 rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors focus:ring-1 focus:ring-blue-200 focus:ring-offset-1 focus:outline-none',
                   activeTab === category.value
                     ? 'bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
                 )}
                 onClick={() => onTabChange(category.value)}
                 aria-label={`Filter by ${category.label} category`}

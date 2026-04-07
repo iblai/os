@@ -17,7 +17,10 @@ interface DocumentSidebarProps {
   sessionId: string;
 }
 
-export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarProps) {
+export function DocumentSidebar({
+  isModal = false,
+  sessionId,
+}: DocumentSidebarProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const params = useParams<{ tenantKey: string }>();
   const username = useUsername();
@@ -70,7 +73,8 @@ export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarP
               <div
                 className={cn(
                   'flex cursor-pointer items-center gap-2 border-b border-gray-200 p-4 transition-colors duration-200',
-                  isCollapsed && 'h-[80px] justify-center rounded-tl-[5px] rounded-bl-[5px] p-2',
+                  isCollapsed &&
+                    'h-[80px] justify-center rounded-tl-[5px] rounded-bl-[5px] p-2',
                   'hover:bg-blue-100',
                 )}
                 onClick={toggleCollapse}
@@ -79,7 +83,9 @@ export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarP
                 <FileText className="h-5 w-5 shrink-0 text-blue-600" />
                 {!isCollapsed && (
                   <>
-                    <h2 className="text-base font-medium text-[#646464]">Retrieved Documents</h2>
+                    <h2 className="text-base font-medium text-[#646464]">
+                      Retrieved Documents
+                    </h2>
                     <ChevronRight
                       className={cn(
                         'ml-auto h-4 w-4 text-gray-400 transition-transform',
@@ -93,7 +99,10 @@ export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarP
 
             {(!isCollapsed || isModal) && (
               <>
-                <div className="flex-1 overflow-auto" style={{ backgroundColor: '#F3F6FB' }}>
+                <div
+                  className="flex-1 overflow-auto"
+                  style={{ backgroundColor: '#F3F6FB' }}
+                >
                   <div className="mt-0 space-y-1 p-2">
                     {vectorDocuments.map((doc, index) => (
                       <React.Fragment key={index}>
@@ -102,8 +111,12 @@ export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarP
                             <Radio className="mt-1 h-4 w-4 text-gray-400" />
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center justify-between">
-                                <Link href={doc.source ?? ''} target="_blank" className="min-w-0">
-                                  <span className="text-sm font-semibold text-[#646464] hover:text-blue-600 break-words">
+                                <Link
+                                  href={doc.source ?? ''}
+                                  target="_blank"
+                                  className="min-w-0"
+                                >
+                                  <span className="text-sm font-semibold break-words text-[#646464] hover:text-blue-600">
                                     {doc.title}
                                   </span>
                                 </Link>
@@ -113,7 +126,7 @@ export function DocumentSidebar({ isModal = false, sessionId }: DocumentSidebarP
                                   </span>
                                 </div>
                               </div>
-                              <p className="pt-[10px] text-[14px] text-gray-600 line-clamp-6">
+                              <p className="line-clamp-6 pt-[10px] text-[14px] text-gray-600">
                                 {doc.snippet}
                               </p>
                             </div>

@@ -29,7 +29,9 @@ describe('Card components', () => {
   describe('CardHeader', () => {
     it('should render with children', () => {
       render(<CardHeader data-testid="card-header">Header content</CardHeader>);
-      expect(screen.getByTestId('card-header')).toHaveTextContent('Header content');
+      expect(screen.getByTestId('card-header')).toHaveTextContent(
+        'Header content',
+      );
     });
 
     it('should apply custom className', () => {
@@ -38,7 +40,9 @@ describe('Card components', () => {
           Header
         </CardHeader>,
       );
-      expect(screen.getByTestId('card-header')).toHaveClass('custom-header-class');
+      expect(screen.getByTestId('card-header')).toHaveClass(
+        'custom-header-class',
+      );
     });
 
     it('should forward ref', () => {
@@ -60,7 +64,9 @@ describe('Card components', () => {
           Title
         </CardTitle>,
       );
-      expect(screen.getByTestId('card-title')).toHaveClass('custom-title-class');
+      expect(screen.getByTestId('card-title')).toHaveClass(
+        'custom-title-class',
+      );
     });
 
     it('should forward ref', () => {
@@ -72,17 +78,26 @@ describe('Card components', () => {
 
   describe('CardContent', () => {
     it('should render with children', () => {
-      render(<CardContent data-testid="card-content">Content here</CardContent>);
-      expect(screen.getByTestId('card-content')).toHaveTextContent('Content here');
+      render(
+        <CardContent data-testid="card-content">Content here</CardContent>,
+      );
+      expect(screen.getByTestId('card-content')).toHaveTextContent(
+        'Content here',
+      );
     });
 
     it('should apply custom className', () => {
       render(
-        <CardContent className="custom-content-class" data-testid="card-content">
+        <CardContent
+          className="custom-content-class"
+          data-testid="card-content"
+        >
           Content
         </CardContent>,
       );
-      expect(screen.getByTestId('card-content')).toHaveClass('custom-content-class');
+      expect(screen.getByTestId('card-content')).toHaveClass(
+        'custom-content-class',
+      );
     });
 
     it('should forward ref', () => {
@@ -99,14 +114,20 @@ describe('Card components', () => {
           <CardHeader data-testid="full-card-header">
             <CardTitle data-testid="full-card-title">My Card Title</CardTitle>
           </CardHeader>
-          <CardContent data-testid="full-card-content">Card body content here</CardContent>
+          <CardContent data-testid="full-card-content">
+            Card body content here
+          </CardContent>
         </Card>,
       );
 
       expect(screen.getByTestId('full-card')).toBeInTheDocument();
       expect(screen.getByTestId('full-card-header')).toBeInTheDocument();
-      expect(screen.getByTestId('full-card-title')).toHaveTextContent('My Card Title');
-      expect(screen.getByTestId('full-card-content')).toHaveTextContent('Card body content here');
+      expect(screen.getByTestId('full-card-title')).toHaveTextContent(
+        'My Card Title',
+      );
+      expect(screen.getByTestId('full-card-content')).toHaveTextContent(
+        'Card body content here',
+      );
     });
   });
 });

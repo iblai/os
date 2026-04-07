@@ -49,7 +49,9 @@ describe('Canvas Utils', () => {
     });
 
     it('should preserve valid characters', () => {
-      expect(sanitizeFilename('valid-file_name.txt')).toBe('valid-file_name.txt');
+      expect(sanitizeFilename('valid-file_name.txt')).toBe(
+        'valid-file_name.txt',
+      );
     });
 
     it('should remove control characters', () => {
@@ -140,7 +142,9 @@ describe('Canvas Utils', () => {
     });
 
     it('should return undefined for invalid JSON', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const result = safeParseRecord('invalid json');
       expect(result).toBeUndefined();
       consoleSpy.mockRestore();
@@ -247,17 +251,23 @@ describe('Canvas Utils', () => {
     });
 
     it('should skip null, undefined, and empty string values', () => {
-      const result = findValueByKey({ name: null, user: { name: 'John' } }, ['name']);
+      const result = findValueByKey({ name: null, user: { name: 'John' } }, [
+        'name',
+      ]);
       expect(result).toBe('John');
     });
 
     it('should skip empty string values', () => {
-      const result = findValueByKey({ name: '', user: { name: 'John' } }, ['name']);
+      const result = findValueByKey({ name: '', user: { name: 'John' } }, [
+        'name',
+      ]);
       expect(result).toBe('John');
     });
 
     it('should handle deeply nested objects', () => {
-      const result = findValueByKey({ a: { b: { c: { name: 'deep' } } } }, ['name']);
+      const result = findValueByKey({ a: { b: { c: { name: 'deep' } } } }, [
+        'name',
+      ]);
       expect(result).toBe('deep');
     });
 
@@ -362,7 +372,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should find match with normalized whitespace', () => {
-      const result = calculateMarkdownIndices('hello  world', 'say hello world here');
+      const result = calculateMarkdownIndices(
+        'hello  world',
+        'say hello world here',
+      );
       expect(result).toEqual({ start: 4, end: 15 });
     });
 
@@ -377,13 +390,19 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle text with markdown formatting', () => {
-      const result = calculateMarkdownIndices('bold text', '**bold text** here');
+      const result = calculateMarkdownIndices(
+        'bold text',
+        '**bold text** here',
+      );
       // Should find it accounting for markdown
       expect(result).not.toBeNull();
     });
 
     it('should use first and last word fallback', () => {
-      const result = calculateMarkdownIndices('hello wonderful world', 'hello my wonderful world');
+      const result = calculateMarkdownIndices(
+        'hello wonderful world',
+        'hello my wonderful world',
+      );
       expect(result).not.toBeNull();
     });
   });
@@ -391,33 +410,35 @@ describe('Canvas Utils', () => {
   describe('stripHtml', () => {
     beforeEach(() => {
       // Mock document.createElement for jsdom
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
-        if (tag === 'div') {
-          const mockDiv = {
-            _innerHTML: '',
-            _textContent: '',
-            get innerText() {
-              return this._textContent;
-            },
-            get innerHTML() {
-              return this._innerHTML;
-            },
-            set innerHTML(value: string) {
-              this._innerHTML = value;
-              // Simple HTML stripping for test
-              this._textContent = value.replace(/<[^>]*>/g, '');
-            },
-            get textContent() {
-              return this._textContent;
-            },
-            set textContent(value: string) {
-              this._textContent = value;
-            },
-          };
-          return mockDiv as unknown as HTMLDivElement;
-        }
-        return document.createElement(tag);
-      });
+      (vi.spyOn(document, 'createElement') as any).mockImplementation(
+        (tag: string) => {
+          if (tag === 'div') {
+            const mockDiv = {
+              _innerHTML: '',
+              _textContent: '',
+              get innerText() {
+                return this._textContent;
+              },
+              get innerHTML() {
+                return this._innerHTML;
+              },
+              set innerHTML(value: string) {
+                this._innerHTML = value;
+                // Simple HTML stripping for test
+                this._textContent = value.replace(/<[^>]*>/g, '');
+              },
+              get textContent() {
+                return this._textContent;
+              },
+              set textContent(value: string) {
+                this._textContent = value;
+              },
+            };
+            return mockDiv as unknown as HTMLDivElement;
+          }
+          return document.createElement(tag);
+        },
+      );
     });
 
     it('should strip HTML tags', () => {
@@ -492,7 +513,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle link syntax [text](url)', () => {
-      const result = calculateMarkdownIndices('text', '[text](http://example.com) is a link');
+      const result = calculateMarkdownIndices(
+        'text',
+        '[text](http://example.com) is a link',
+      );
       expect(result).not.toBeNull();
     });
 
@@ -502,7 +526,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle multiple markdown formatting', () => {
-      const result = calculateMarkdownIndices('bold italic', '**bold** *italic* code');
+      const result = calculateMarkdownIndices(
+        'bold italic',
+        '**bold** *italic* code',
+      );
       expect(result).not.toBeNull();
     });
 
@@ -512,7 +539,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle fuzzy match with stripped markdown', () => {
-      const result = calculateMarkdownIndices('hello world', '**hello** *world* here');
+      const result = calculateMarkdownIndices(
+        'hello world',
+        '**hello** *world* here',
+      );
       expect(result).not.toBeNull();
     });
 
@@ -527,12 +557,18 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle multi-word selection spanning formatting', () => {
-      const result = calculateMarkdownIndices('first second third', 'first **second** third');
+      const result = calculateMarkdownIndices(
+        'first second third',
+        'first **second** third',
+      );
       expect(result).not.toBeNull();
     });
 
     it('should handle whitespace variations in search', () => {
-      const result = calculateMarkdownIndices('word1    word2', 'word1 word2 word3');
+      const result = calculateMarkdownIndices(
+        'word1    word2',
+        'word1 word2 word3',
+      );
       expect(result).not.toBeNull();
     });
 
@@ -572,13 +608,19 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle partial word match failure', () => {
-      const result = calculateMarkdownIndices('hello world extra', 'hello world');
+      const result = calculateMarkdownIndices(
+        'hello world extra',
+        'hello world',
+      );
       // Might return null or partial match
       expect(result === null || result).toBeDefined();
     });
 
     it('should handle search text longer than markdown', () => {
-      const result = calculateMarkdownIndices('this is a very long search text', 'short');
+      const result = calculateMarkdownIndices(
+        'this is a very long search text',
+        'short',
+      );
       expect(result).toBeNull();
     });
 
@@ -616,7 +658,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle underscore heavy markdown', () => {
-      const result = calculateMarkdownIndices('emphasis', '__emphasis__ and _more_');
+      const result = calculateMarkdownIndices(
+        'emphasis',
+        '__emphasis__ and _more_',
+      );
       expect(result).not.toBeNull();
     });
 
@@ -631,7 +676,10 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle fallback first/last word matching', () => {
-      const result = calculateMarkdownIndices('first extra word last', 'first word last');
+      const result = calculateMarkdownIndices(
+        'first extra word last',
+        'first word last',
+      );
       // Falls back to first/last word matching
       expect(result).not.toBeNull();
     });
@@ -667,9 +715,13 @@ describe('Canvas Utils', () => {
     it('should trigger fuzzy match with ratio mapping (lines 368-374)', () => {
       // Create content where exact match fails but fuzzy match succeeds
       // Need content with lots of formatting to make ratio calculation meaningful
-      const heavyFormattedMarkdown = '**bold** _italic_ `code` [link](url) **more**';
+      const heavyFormattedMarkdown =
+        '**bold** _italic_ `code` [link](url) **more**';
       // Search for text that only exists in stripped version
-      const result = calculateMarkdownIndices('bold italic code link more', heavyFormattedMarkdown);
+      const result = calculateMarkdownIndices(
+        'bold italic code link more',
+        heavyFormattedMarkdown,
+      );
       expect(result).not.toBeNull();
     });
 
@@ -677,18 +729,25 @@ describe('Canvas Utils', () => {
       // Target the link removal regex: /\[([^\]]+)\]\([^)]+\)/g
       const markdownWithLink =
         '[click here](https://example.com/long/path) and [another link](http://test.com)';
-      const result = calculateMarkdownIndices('click here and another link', markdownWithLink);
+      const result = calculateMarkdownIndices(
+        'click here and another link',
+        markdownWithLink,
+      );
       expect(result).not.toBeNull();
     });
 
     it('should handle multiple links in markdown', () => {
       const multiLinkMarkdown = 'Start [first](url1) middle [second](url2) end';
-      const result = calculateMarkdownIndices('first middle second', multiLinkMarkdown);
+      const result = calculateMarkdownIndices(
+        'first middle second',
+        multiLinkMarkdown,
+      );
       expect(result).not.toBeNull();
     });
 
     it('should handle link with complex URL', () => {
-      const complexLink = '[text](https://example.com/path?query=value&other=123#anchor)';
+      const complexLink =
+        '[text](https://example.com/path?query=value&other=123#anchor)';
       const result = calculateMarkdownIndices('text', complexLink);
       expect(result).not.toBeNull();
     });
@@ -902,32 +961,34 @@ describe('Canvas Utils', () => {
 
   describe('stripHtml edge cases', () => {
     beforeEach(() => {
-      vi.spyOn(document, 'createElement').mockImplementation((tag) => {
-        if (tag === 'div') {
-          const mockDiv = {
-            _innerHTML: '',
-            _textContent: '',
-            get innerText() {
-              return this._textContent;
-            },
-            get innerHTML() {
-              return this._innerHTML;
-            },
-            set innerHTML(value: string) {
-              this._innerHTML = value;
-              this._textContent = value.replace(/<[^>]*>/g, '');
-            },
-            get textContent() {
-              return this._textContent;
-            },
-            set textContent(value: string) {
-              this._textContent = value;
-            },
-          };
-          return mockDiv as unknown as HTMLDivElement;
-        }
-        return document.createElement(tag);
-      });
+      (vi.spyOn(document, 'createElement') as any).mockImplementation(
+        (tag: string) => {
+          if (tag === 'div') {
+            const mockDiv = {
+              _innerHTML: '',
+              _textContent: '',
+              get innerText() {
+                return this._textContent;
+              },
+              get innerHTML() {
+                return this._innerHTML;
+              },
+              set innerHTML(value: string) {
+                this._innerHTML = value;
+                this._textContent = value.replace(/<[^>]*>/g, '');
+              },
+              get textContent() {
+                return this._textContent;
+              },
+              set textContent(value: string) {
+                this._textContent = value;
+              },
+            };
+            return mockDiv as unknown as HTMLDivElement;
+          }
+          return document.createElement(tag);
+        },
+      );
     });
 
     it('should handle self-closing tags', () => {
@@ -936,7 +997,9 @@ describe('Canvas Utils', () => {
     });
 
     it('should handle nested HTML with attributes', () => {
-      const result = stripHtml('<div class="test"><span id="inner">content</span></div>');
+      const result = stripHtml(
+        '<div class="test"><span id="inner">content</span></div>',
+      );
       expect(result).toBe('content');
     });
   });
@@ -1058,7 +1121,9 @@ describe('Canvas Utils', () => {
     });
 
     it('should return undefined when all sources are undefined', () => {
-      expect(resolveArtifactIdFromSources(undefined, undefined, undefined)).toBeUndefined();
+      expect(
+        resolveArtifactIdFromSources(undefined, undefined, undefined),
+      ).toBeUndefined();
     });
 
     it('should skip artifactId if not a finite number (NaN)', () => {
@@ -1089,7 +1154,13 @@ describe('Canvas Utils', () => {
 
   describe('shouldProcessEditorChange', () => {
     it('should return suppressed when suppressNextOnChange is true', () => {
-      const result = shouldProcessEditorChange(true, true, true, 'content', 'saved');
+      const result = shouldProcessEditorChange(
+        true,
+        true,
+        true,
+        'content',
+        'saved',
+      );
       expect(result).toEqual({
         shouldProcess: false,
         shouldMarkEdited: false,
@@ -1098,7 +1169,13 @@ describe('Canvas Utils', () => {
     });
 
     it('should return not_initialized when hasInitializedEditor is false', () => {
-      const result = shouldProcessEditorChange(false, false, true, 'content', 'saved');
+      const result = shouldProcessEditorChange(
+        false,
+        false,
+        true,
+        'content',
+        'saved',
+      );
       expect(result).toEqual({
         shouldProcess: false,
         shouldMarkEdited: false,
@@ -1107,7 +1184,13 @@ describe('Canvas Utils', () => {
     });
 
     it('should return not_viewing_current when isViewingCurrentVersion is false', () => {
-      const result = shouldProcessEditorChange(false, true, false, 'content', 'saved');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        false,
+        'content',
+        'saved',
+      );
       expect(result).toEqual({
         shouldProcess: false,
         shouldMarkEdited: false,
@@ -1116,7 +1199,13 @@ describe('Canvas Utils', () => {
     });
 
     it('should return unchanged when markdown matches last saved', () => {
-      const result = shouldProcessEditorChange(false, true, true, 'same content', 'same content');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        true,
+        'same content',
+        'same content',
+      );
       expect(result).toEqual({
         shouldProcess: false,
         shouldMarkEdited: false,
@@ -1125,7 +1214,13 @@ describe('Canvas Utils', () => {
     });
 
     it('should return process when content has changed', () => {
-      const result = shouldProcessEditorChange(false, true, true, 'new content', 'old content');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        true,
+        'new content',
+        'old content',
+      );
       expect(result).toEqual({
         shouldProcess: true,
         shouldMarkEdited: true,
@@ -1135,12 +1230,24 @@ describe('Canvas Utils', () => {
 
     it('should compare content directly (caller provides trimmed values)', () => {
       // The function expects already-trimmed values from the caller
-      const result = shouldProcessEditorChange(false, true, true, 'content', 'content');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        true,
+        'content',
+        'content',
+      );
       expect(result.reason).toBe('unchanged');
     });
 
     it('should detect change when only whitespace differs significantly', () => {
-      const result = shouldProcessEditorChange(false, true, true, 'content with more', 'content');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        true,
+        'content with more',
+        'content',
+      );
       expect(result.reason).toBe('process');
     });
 
@@ -1150,12 +1257,24 @@ describe('Canvas Utils', () => {
     });
 
     it('should detect change from empty to content', () => {
-      const result = shouldProcessEditorChange(false, true, true, 'new content', '');
+      const result = shouldProcessEditorChange(
+        false,
+        true,
+        true,
+        'new content',
+        '',
+      );
       expect(result.reason).toBe('process');
     });
 
     it('should prioritize suppressed over not_initialized', () => {
-      const result = shouldProcessEditorChange(true, false, true, 'content', 'saved');
+      const result = shouldProcessEditorChange(
+        true,
+        false,
+        true,
+        'content',
+        'saved',
+      );
       expect(result.reason).toBe('suppressed');
     });
   });
@@ -1166,7 +1285,9 @@ describe('Canvas Utils', () => {
     });
 
     it('should return dismiss action for Escape key', () => {
-      expect(getHighlightInputKeyAction('Escape')).toEqual({ action: 'dismiss' });
+      expect(getHighlightInputKeyAction('Escape')).toEqual({
+        action: 'dismiss',
+      });
     });
 
     it('should return none action for other keys', () => {

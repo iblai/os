@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { AddResourceModal } from "./modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import { AddResourceModal } from './modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
 
 export function DatasetTab() {
   const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);

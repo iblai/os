@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { ProjectLandingPage } from '../project-landing-page';
@@ -10,16 +16,17 @@ import subscriptionSlice from '@/features/subscription/subscription-slice';
 import topBannerSlice from '@/features/top-banner/top-banner-slice';
 
 // Hoist mocks to ensure they're available before module imports
-const { mockUseUserIsStudent, mockIsLoggedIn, mockUseShowFreeTrialDialog } = vi.hoisted(() => ({
-  mockUseUserIsStudent: vi.fn(),
-  mockIsLoggedIn: vi.fn(),
-  mockUseShowFreeTrialDialog: vi.fn(() => ({
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-    executeWithTrialCheck: (fn: () => void) => fn(),
-  })),
-}));
+const { mockUseUserIsStudent, mockIsLoggedIn, mockUseShowFreeTrialDialog } =
+  vi.hoisted(() => ({
+    mockUseUserIsStudent: vi.fn(),
+    mockIsLoggedIn: vi.fn(),
+    mockUseShowFreeTrialDialog: vi.fn(() => ({
+      FreeTrialDialog: null,
+      closeModal: vi.fn(),
+      isModalOpen: false,
+      executeWithTrialCheck: (fn: () => void) => fn(),
+    })),
+  }));
 
 vi.mock('@/hooks/use-user', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/use-user')>();
@@ -192,7 +199,8 @@ vi.mock('next/dynamic', () => ({
 }));
 
 vi.mock('@/components/icons/svg-icons', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/icons/svg-icons')>();
+  const actual =
+    await importOriginal<typeof import('@/components/icons/svg-icons')>();
   return {
     ...actual,
     OpenFolderIcon: ({ className }: { className?: string }) => (
@@ -242,7 +250,9 @@ vi.mock('../project-action-buttons', () => ({
       <button onClick={onInstructionsClick} data-testid="instructions-button">
         Instructions
       </button>
-      {instructions !== undefined && <div data-testid="instructions-preview">{instructions}</div>}
+      {instructions !== undefined && (
+        <div data-testid="instructions-preview">{instructions}</div>
+      )}
     </div>
   ),
 }));
@@ -328,7 +338,10 @@ vi.mock('@/components/chat-input-form', () => ({
           }
         }}
       />
-      <button onClick={() => props.onSubmit('test message')} data-testid="submit-button">
+      <button
+        onClick={() => props.onSubmit('test message')}
+        data-testid="submit-button"
+      >
         Submit
       </button>
     </div>
@@ -389,8 +402,13 @@ const createMockStore = (preloadedState = {}) =>
     },
   });
 
-const renderWithRedux = (component: React.ReactElement, preloadedState = {}) => {
-  return render(<Provider store={createMockStore(preloadedState)}>{component}</Provider>);
+const renderWithRedux = (
+  component: React.ReactElement,
+  preloadedState = {},
+) => {
+  return render(
+    <Provider store={createMockStore(preloadedState)}>{component}</Provider>,
+  );
 };
 
 describe('ProjectLandingPage', () => {
@@ -402,7 +420,7 @@ describe('ProjectLandingPage', () => {
   const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
   const mockSetSessionTools = vi.fn().mockResolvedValue(undefined);
 
-  const defaultMentors: Mentor[] = [
+  const defaultMentors = [
     {
       id: 1,
       name: 'Mentor 1',
@@ -419,9 +437,9 @@ describe('ProjectLandingPage', () => {
       slug: 'mentor-2',
       created_at: '2024-01-01T00:00:00Z',
     },
-  ];
+  ] as unknown as Mentor[];
 
-  const defaultProject: Project = {
+  const defaultProject = {
     id: 1,
     name: 'Test Project',
     description: 'Test Description',
@@ -437,7 +455,7 @@ describe('ProjectLandingPage', () => {
     updated_at: '2024-01-01T00:00:00Z',
     mentors: defaultMentors,
     instructions: 'Test instructions',
-  };
+  } as unknown as Project;
 
   const defaultProps = {
     project: defaultProject,
@@ -506,7 +524,9 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         name: 'Very Long Project Name That Should Be Truncated',
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithLongName} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} project={projectWithLongName} />,
+      );
       expect(
         screen.getByText('Very Long Project Name That Should Be Truncated'),
       ).toBeInTheDocument();
@@ -517,7 +537,9 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         name: '',
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithEmptyName} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} project={projectWithEmptyName} />,
+      );
       const header = screen.getByRole('heading', { level: 1 });
       expect(header).toBeInTheDocument();
       expect(header.textContent).toBe('');
@@ -538,7 +560,9 @@ describe('ProjectLandingPage', () => {
       mockUseUserIsStudent.mockReturnValue(true);
 
       renderWithRedux(<ProjectLandingPage {...defaultProps} />);
-      expect(screen.queryByTestId('project-action-buttons')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-action-buttons'),
+      ).not.toBeInTheDocument();
     });
 
     it('should hide action buttons when user is logged in and is a student', () => {
@@ -546,7 +570,9 @@ describe('ProjectLandingPage', () => {
       mockUseUserIsStudent.mockReturnValue(true);
 
       renderWithRedux(<ProjectLandingPage {...defaultProps} />);
-      expect(screen.queryByTestId('project-action-buttons')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-action-buttons'),
+      ).not.toBeInTheDocument();
     });
 
     it('should hide action buttons when user is not logged in and not a student', () => {
@@ -554,7 +580,9 @@ describe('ProjectLandingPage', () => {
       mockUseUserIsStudent.mockReturnValue(false);
 
       renderWithRedux(<ProjectLandingPage {...defaultProps} />);
-      expect(screen.queryByTestId('project-action-buttons')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-action-buttons'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -571,8 +599,15 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         mentors: [],
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithoutMentors} />);
-      expect(screen.queryByTestId('project-mentors-list')).not.toBeInTheDocument();
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithoutMentors}
+        />,
+      );
+      expect(
+        screen.queryByTestId('project-mentors-list'),
+      ).not.toBeInTheDocument();
     });
 
     it('should not render mentors list when mentors is undefined', () => {
@@ -580,8 +615,15 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         mentors: undefined as any,
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithoutMentors} />);
-      expect(screen.queryByTestId('project-mentors-list')).not.toBeInTheDocument();
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithoutMentors}
+        />,
+      );
+      expect(
+        screen.queryByTestId('project-mentors-list'),
+      ).not.toBeInTheDocument();
     });
 
     it('should not render mentors list when mentors is null', () => {
@@ -589,8 +631,15 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         mentors: null as any,
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithoutMentors} />);
-      expect(screen.queryByTestId('project-mentors-list')).not.toBeInTheDocument();
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithoutMentors}
+        />,
+      );
+      expect(
+        screen.queryByTestId('project-mentors-list'),
+      ).not.toBeInTheDocument();
     });
 
     it('should map mentor properties correctly', () => {
@@ -611,7 +660,10 @@ describe('ProjectLandingPage', () => {
         ],
       };
       renderWithRedux(
-        <ProjectLandingPage {...defaultProps} project={projectWithExtendedMentors} />,
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithExtendedMentors}
+        />,
       );
       expect(screen.getByTestId('project-mentors-list')).toBeInTheDocument();
     });
@@ -649,7 +701,9 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('project-files-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('project-files-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -663,7 +717,9 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(instructionsButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('project-instructions-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('project-instructions-modal'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -677,14 +733,18 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(instructionsButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('project-instructions-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('project-instructions-modal'),
+        ).toBeInTheDocument();
       });
 
       const closeButton = screen.getByText('Close Instructions');
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('project-instructions-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('project-instructions-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -695,7 +755,9 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(addMentorButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-mentor-to-project-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('add-mentor-to-project-modal'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -706,14 +768,18 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(addMentorButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-mentor-to-project-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('add-mentor-to-project-modal'),
+        ).toBeInTheDocument();
       });
 
       const closeButton = screen.getByText('Close Add Mentor');
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('add-mentor-to-project-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('add-mentor-to-project-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -724,7 +790,9 @@ describe('ProjectLandingPage', () => {
       fireEvent.click(addMentorButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('project-name')).toHaveTextContent('Test Project');
+        expect(screen.getByTestId('project-name')).toHaveTextContent(
+          'Test Project',
+        );
       });
     });
   });
@@ -757,7 +825,9 @@ describe('ProjectLandingPage', () => {
       mockUseUserIsStudent.mockReturnValue(false);
 
       renderWithRedux(<ProjectLandingPage {...defaultProps} />);
-      expect(screen.getByTestId('instructions-preview')).toHaveTextContent('Test instructions');
+      expect(screen.getByTestId('instructions-preview')).toHaveTextContent(
+        'Test instructions',
+      );
     });
 
     it('should handle project without instructions', () => {
@@ -769,9 +839,14 @@ describe('ProjectLandingPage', () => {
         instructions: undefined,
       };
       renderWithRedux(
-        <ProjectLandingPage {...defaultProps} project={projectWithoutInstructions} />,
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithoutInstructions}
+        />,
       );
-      expect(screen.queryByTestId('instructions-preview')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('instructions-preview'),
+      ).not.toBeInTheDocument();
     });
 
     it('should handle empty instructions string', () => {
@@ -783,7 +858,10 @@ describe('ProjectLandingPage', () => {
         instructions: '',
       };
       renderWithRedux(
-        <ProjectLandingPage {...defaultProps} project={projectWithEmptyInstructions} />,
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithEmptyInstructions}
+        />,
       );
       const preview = screen.getByTestId('instructions-preview');
       expect(preview).toHaveTextContent('');
@@ -796,25 +874,35 @@ describe('ProjectLandingPage', () => {
         ...defaultProject,
         mentors: [defaultProject.mentors[0]],
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithSingleMentor} />);
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithSingleMentor}
+        />,
+      );
       expect(screen.getByTestId('project-mentors-list')).toBeInTheDocument();
       expect(screen.getByText('Mentor 1')).toBeInTheDocument();
     });
 
     it('should handle project with many mentors', () => {
-      const manyMentors: Mentor[] = Array.from({ length: 10 }, (_, i) => ({
+      const manyMentors = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         name: `Mentor ${i + 1}`,
         description: `Description ${i + 1}`,
         unique_id: `mentor-${i + 1}`,
         slug: `mentor-${i + 1}`,
         created_at: '2024-01-01T00:00:00Z',
-      }));
+      })) as unknown as Mentor[];
       const projectWithManyMentors = {
         ...defaultProject,
         mentors: manyMentors,
-      };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithManyMentors} />);
+      } as unknown as Project;
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithManyMentors}
+        />,
+      );
       expect(screen.getByTestId('project-mentors-list')).toBeInTheDocument();
       expect(screen.getByText('Mentor 1')).toBeInTheDocument();
       expect(screen.getByText('Mentor 10')).toBeInTheDocument();
@@ -826,7 +914,9 @@ describe('ProjectLandingPage', () => {
     });
 
     it('should handle username as null', () => {
-      renderWithRedux(<ProjectLandingPage {...defaultProps} username={null as any} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} username={null as any} />,
+      );
       expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
 
@@ -875,13 +965,18 @@ describe('ProjectLandingPage', () => {
     });
 
     it('should handle empty activeTools array', () => {
-      renderWithRedux(<ProjectLandingPage {...defaultProps} activeTools={[]} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} activeTools={[]} />,
+      );
       expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
 
     it('should handle activeTools with multiple values', () => {
       renderWithRedux(
-        <ProjectLandingPage {...defaultProps} activeTools={['canvas', 'web_browsing']} />,
+        <ProjectLandingPage
+          {...defaultProps}
+          activeTools={['canvas', 'web_browsing']}
+        />,
       );
       expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
     });
@@ -922,7 +1017,9 @@ describe('ProjectLandingPage', () => {
       // Open instructions modal (files should still be open)
       fireEvent.click(screen.getByTestId('instructions-button'));
       await waitFor(() => {
-        expect(screen.getByTestId('project-instructions-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('project-instructions-modal'),
+        ).toBeInTheDocument();
         expect(screen.getByTestId('project-files-modal')).toBeInTheDocument();
       });
     });
@@ -939,34 +1036,46 @@ describe('ProjectLandingPage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('project-files-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('project-instructions-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('project-instructions-modal'),
+        ).toBeInTheDocument();
       });
 
       // Close files modal
       fireEvent.click(screen.getByText('Close Files'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('project-files-modal')).not.toBeInTheDocument();
-        expect(screen.getByTestId('project-instructions-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('project-files-modal'),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByTestId('project-instructions-modal'),
+        ).toBeInTheDocument();
       });
     });
   });
 
   describe('username fallback', () => {
     it('should use empty string when username is null', () => {
-      renderWithRedux(<ProjectLandingPage {...defaultProps} username={null as any} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} username={null as any} />,
+      );
       const chatForm = screen.getByTestId('chat-input-form');
       expect(chatForm).toBeInTheDocument();
     });
 
     it('should use empty string when username is undefined', () => {
-      renderWithRedux(<ProjectLandingPage {...defaultProps} username={undefined as any} />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} username={undefined as any} />,
+      );
       const chatForm = screen.getByTestId('chat-input-form');
       expect(chatForm).toBeInTheDocument();
     });
 
     it('should pass username value when provided', () => {
-      renderWithRedux(<ProjectLandingPage {...defaultProps} username="test-user" />);
+      renderWithRedux(
+        <ProjectLandingPage {...defaultProps} username="test-user" />,
+      );
       const chatForm = screen.getByTestId('chat-input-form');
       expect(chatForm).toBeInTheDocument();
     });
@@ -987,7 +1096,12 @@ describe('ProjectLandingPage', () => {
           },
         ],
       };
-      renderWithRedux(<ProjectLandingPage {...defaultProps} project={projectWithMinimalMentor} />);
+      renderWithRedux(
+        <ProjectLandingPage
+          {...defaultProps}
+          project={projectWithMinimalMentor}
+        />,
+      );
       expect(screen.getByTestId('project-mentors-list')).toBeInTheDocument();
     });
 
@@ -1000,19 +1114,27 @@ describe('ProjectLandingPage', () => {
 
   describe('component structure', () => {
     it('should have correct container classes', () => {
-      const { container } = renderWithRedux(<ProjectLandingPage {...defaultProps} />);
-      const mainContainer = container.querySelector('.flex.flex-col.h-full.max-w-4xl');
+      const { container } = renderWithRedux(
+        <ProjectLandingPage {...defaultProps} />,
+      );
+      const mainContainer = container.querySelector(
+        '.flex.flex-col.h-full.max-w-4xl',
+      );
       expect(mainContainer).toBeInTheDocument();
     });
 
     it('should have correct header structure', () => {
-      const { container } = renderWithRedux(<ProjectLandingPage {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ProjectLandingPage {...defaultProps} />,
+      );
       const header = container.querySelector('.border-b.border-gray-200');
       expect(header).toBeInTheDocument();
     });
 
     it('should have correct background section', () => {
-      const { container } = renderWithRedux(<ProjectLandingPage {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <ProjectLandingPage {...defaultProps} />,
+      );
       const bgSection = container.querySelector('.bg-\\[\\#FBFBFB\\]');
       expect(bgSection).toBeInTheDocument();
     });

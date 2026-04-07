@@ -51,7 +51,9 @@ describe('useTauri', () => {
 
       const { result } = renderHook(() => useTauri());
 
-      await expect(result.current.invoke('test_command')).rejects.toThrow('Tauri is not available');
+      await expect(result.current.invoke('test_command')).rejects.toThrow(
+        'Tauri is not available',
+      );
 
       consoleSpy.mockRestore();
     });
@@ -61,9 +63,9 @@ describe('useTauri', () => {
 
       const { result } = renderHook(() => useTauri());
 
-      await expect(result.current.listen('test_event', () => {})).rejects.toThrow(
-        'Tauri is not available',
-      );
+      await expect(
+        result.current.listen('test_event', () => {}),
+      ).rejects.toThrow('Tauri is not available');
 
       consoleSpy.mockRestore();
     });
@@ -101,7 +103,9 @@ describe('useTauri', () => {
         await result.current.invoke('test_command', { arg1: 'value1' });
       });
 
-      expect(mockInvoke).toHaveBeenCalledWith('test_command', { arg1: 'value1' });
+      expect(mockInvoke).toHaveBeenCalledWith('test_command', {
+        arg1: 'value1',
+      });
 
       consoleSpy.mockRestore();
     });
@@ -142,7 +146,10 @@ describe('useTauri', () => {
         await result.current.listen('test_event', mockHandler);
       });
 
-      expect(mockListen).toHaveBeenCalledWith('test_event', expect.any(Function));
+      expect(mockListen).toHaveBeenCalledWith(
+        'test_event',
+        expect.any(Function),
+      );
 
       consoleSpy.mockRestore();
     });
@@ -171,7 +178,8 @@ describe('useTauri', () => {
     it('should call handler with payload when event fires', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const mockHandler = vi.fn();
-      let capturedEventHandler: ((event: { payload: unknown }) => void) | null = null;
+      let capturedEventHandler: ((event: { payload: unknown }) => void) | null =
+        null;
 
       mockListen.mockImplementation((_event, handler) => {
         capturedEventHandler = handler;
@@ -223,7 +231,9 @@ describe('useTauri', () => {
   describe('when Tauri API loading fails', () => {
     it('should handle API import error and remain unavailable', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
 
       // Make the import reject by having invoke throw during import
@@ -380,7 +390,9 @@ describe('useTauri', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
 
-      const mockGlobalInvoke = vi.fn().mockResolvedValue({ result: 'from_global' });
+      const mockGlobalInvoke = vi
+        .fn()
+        .mockResolvedValue({ result: 'from_global' });
       const mockGlobalListen = vi.fn().mockResolvedValue(() => {});
 
       // Set up window with __TAURI_INTERNALS__
@@ -413,7 +425,9 @@ describe('useTauri', () => {
   describe('dynamic import fallback with error', () => {
     it('should log error when dynamic import fails', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
 
       // No global window Tauri object set, so sync check will fail
@@ -443,7 +457,9 @@ describe('useTauri', () => {
       // This test verifies the getTauriAPIs function error handling (lines 27-28)
       // by simulating an environment where the tauri modules fail to import
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
 
       // Remove global Tauri objects to force dynamic import path
@@ -471,7 +487,9 @@ describe('useTauri', () => {
     it('should handle dynamic import rejection in useEffect catch block', async () => {
       // This test specifically targets line 121 - the catch block in useEffect
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
 
       // Remove global Tauri objects
@@ -517,7 +535,9 @@ describe('useTauri error path coverage', () => {
       isTauriApp: () => true,
     }));
 
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // Dynamically import after setting up mocks
@@ -568,7 +588,9 @@ describe('useTauri - getTauriAPIs error handling', () => {
       isTauriApp: () => true,
     }));
 
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // No global Tauri objects so sync check fails
@@ -592,7 +614,10 @@ describe('useTauri - getTauriAPIs error handling', () => {
     expect(result.current.isAvailable).toBe(false);
 
     // Error should have been logged
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load Tauri APIs:', expect.any(Error));
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to load Tauri APIs:',
+      expect.any(Error),
+    );
 
     consoleSpy.mockRestore();
     consoleErrorSpy.mockRestore();
@@ -619,7 +644,9 @@ describe('useTauri - dynamic import promise rejection', () => {
       isTauriApp: () => true,
     }));
 
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // No global Tauri objects so sync check fails

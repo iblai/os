@@ -10,7 +10,10 @@ vi.mock('react-redux', () => ({
 
 // Mock subscription slice
 vi.mock('@/features/subscription/subscription-slice', () => ({
-  setOpenPricingModal: (value: boolean) => ({ type: 'SET_OPEN_PRICING_MODAL', payload: value }),
+  setOpenPricingModal: (value: boolean) => ({
+    type: 'SET_OPEN_PRICING_MODAL',
+    payload: value,
+  }),
 }));
 
 // Mock TRIGGERS constant
@@ -291,8 +294,10 @@ describe('useTopTrialBanner', () => {
 
       // Manually set the banner ref to simulate it being assigned
       act(() => {
-        (result.current.bannerRef as React.MutableRefObject<HTMLDivElement | null>).current =
-          bannerElement;
+        (
+          result.current
+            .bannerRef as React.MutableRefObject<HTMLDivElement | null>
+        ).current = bannerElement;
       });
 
       // Trigger resize to call updateParentHeight

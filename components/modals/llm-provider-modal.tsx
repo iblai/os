@@ -13,7 +13,13 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { canSwitchLLm, canSwitchProvider, cn, getLLMProviderDetails, Provider } from '@/lib/utils';
+import {
+  canSwitchLLm,
+  canSwitchProvider,
+  cn,
+  getLLMProviderDetails,
+  Provider,
+} from '@/lib/utils';
 
 interface LLM {
   llm_name: string;
@@ -70,7 +76,7 @@ export function LLMProviderModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="space-y-6 p-4 max-w-4xl">
+      <DialogContent className="max-w-4xl space-y-6 p-4">
         <DialogDescription className="sr-only">
           Select select on of the mentors provided by {llmProvider.name}
         </DialogDescription>
@@ -79,7 +85,8 @@ export function LLMProviderModal({
         </DialogHeader>
 
         <p className="text-sm text-gray-600">
-          Choose your preferred LLM from the available provider to tailor your experience.
+          Choose your preferred LLM from the available provider to tailor your
+          experience.
         </p>
 
         <div className="relative">
@@ -100,10 +107,16 @@ export function LLMProviderModal({
               mentorSettings?.llm_name === llm.llm_name &&
               mentorSettings?.llm_provider === llmProvider.name;
 
-            const providerDetails = getLLMProviderDetails(llmProvider.name, llm.llm_name);
+            const providerDetails = getLLMProviderDetails(
+              llmProvider.name,
+              llm.llm_name,
+            );
 
             const isDisabled =
-              !switchLLMAllowed || isSelecting || isActive || !switchProviderAllowed;
+              !switchLLMAllowed ||
+              isSelecting ||
+              isActive ||
+              !switchProviderAllowed;
 
             return (
               <button
@@ -133,7 +146,9 @@ export function LLMProviderModal({
                     loading="lazy"
                   />
                 </span>
-                <span className="text-sm font-medium text-[#646464] text-left">{llm.llm_name}</span>
+                <span className="text-left text-sm font-medium text-[#646464]">
+                  {llm.llm_name}
+                </span>
               </button>
             );
           })}

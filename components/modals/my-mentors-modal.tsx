@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useUserIsStudent } from '@/hooks/use-user';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useAppDispatch } from '@/lib/hooks';
 import { analyticsActions } from '@/features/analytics/slice';
 import { useParams, usePathname } from 'next/navigation';
@@ -26,7 +31,11 @@ interface Props {
   hideCreateButton?: boolean;
 }
 
-export function MyMentorsModal({ isOpen, onClose, hideCreateButton = false }: Props) {
+export function MyMentorsModal({
+  isOpen,
+  onClose,
+  hideCreateButton = false,
+}: Props) {
   const { mentorId } = useParams<TenantKeyMentorIdParams>();
   const dispatch = useAppDispatch();
   const pathname = usePathname();
@@ -108,7 +117,7 @@ export function MyMentorsModal({ isOpen, onClose, hideCreateButton = false }: Pr
                 </Button>
               )}
             </div>
-            <div className="min-h-0 flex-1 grid grid-cols-1 gap-3 overflow-y-auto px-1 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto px-1 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {mentors.map((mentor) => {
                 return (
                   <div
@@ -130,10 +139,12 @@ export function MyMentorsModal({ isOpen, onClose, hideCreateButton = false }: Pr
                         </Avatar>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="mb-1 text-base font-medium text-gray-700">{mentor.name}</h3>
+                        <h3 className="mb-1 text-base font-medium text-gray-700">
+                          {mentor.name}
+                        </h3>
                       </div>
                     </div>
-                    <p className="mb-3 text-sm text-gray-600 line-clamp-2">
+                    <p className="mb-3 line-clamp-2 text-sm text-gray-600">
                       {/* @ts-ignore */}
                       {mentor.description}
                     </p>

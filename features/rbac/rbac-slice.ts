@@ -18,7 +18,10 @@ const rbacSlice = createSlice({
   name: 'rbac',
   initialState,
   reducers: {
-    updateRbacPermissions: (state, action: PayloadAction<RbacPermissions | {}>) => {
+    updateRbacPermissions: (
+      state,
+      action: PayloadAction<RbacPermissions | {}>,
+    ) => {
       state.rbacPermissions = {
         ...state.rbacPermissions,
         ...action.payload,
@@ -31,4 +34,5 @@ export const { updateRbacPermissions } = rbacSlice.actions;
 
 export default rbacSlice.reducer;
 
-export const selectRbacPermissions = (state: RootState) => state.rbac.rbacPermissions;
+export const selectRbacPermissions = (state: RootState) =>
+  state.rbac.rbacPermissions;

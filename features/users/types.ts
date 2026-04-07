@@ -7,7 +7,7 @@ export interface ProfileImage {
 }
 
 export interface UserProfile {
-  account_privacy: "private" | "public";
+  account_privacy: 'private' | 'public';
   profile_image: ProfileImage;
   username: string;
   bio: string | null;

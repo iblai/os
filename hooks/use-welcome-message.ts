@@ -106,7 +106,6 @@ export default function useWelcome({
   };
 
   const handleSendProactivePrompt = () => {
-    console.log('######################## handling send proactive prompt');
     if (greetingMethod === 'proactive_prompt') {
       webSocket.current = new WebSocket(wsUrl);
 
@@ -128,7 +127,15 @@ export default function useWelcome({
     return () => {
       _endConnection();
     };
-  }, [sessionId, tenantKey, username, mentorUniqueId, greetingMethod, proactiveResponse]);
+  }, [
+    sessionId,
+    tenantKey,
+    username,
+    mentorUniqueId,
+    greetingMethod,
+    proactiveResponse,
+    isNewSession,
+  ]);
 
   return { welcomeMessage, handleSendProactivePrompt };
 }

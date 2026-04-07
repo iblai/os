@@ -16,19 +16,23 @@ describe('useIsMobile', () => {
       matches: window.innerWidth < 768,
       media: query,
       onchange: null,
-      addEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
-        if (type === 'change') {
-          mediaQueryListeners.push(listener);
-        }
-      }),
-      removeEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
-        if (type === 'change') {
-          const index = mediaQueryListeners.indexOf(listener);
-          if (index > -1) {
-            mediaQueryListeners.splice(index, 1);
+      addEventListener: vi.fn(
+        (type: string, listener: (event: MediaQueryListEvent) => void) => {
+          if (type === 'change') {
+            mediaQueryListeners.push(listener);
           }
-        }
-      }),
+        },
+      ),
+      removeEventListener: vi.fn(
+        (type: string, listener: (event: MediaQueryListEvent) => void) => {
+          if (type === 'change') {
+            const index = mediaQueryListeners.indexOf(listener);
+            if (index > -1) {
+              mediaQueryListeners.splice(index, 1);
+            }
+          }
+        },
+      ),
       dispatchEvent: vi.fn(),
     }));
 
@@ -78,7 +82,10 @@ describe('useIsMobile', () => {
 
     expect(mockMatchMedia).toHaveBeenCalledWith('(max-width: 767px)');
     const mockMql = mockMatchMedia.mock.results[0].value;
-    expect(mockMql.addEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(mockMql.addEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function),
+    );
   });
 
   it('should remove event listener on unmount', () => {
@@ -88,7 +95,10 @@ describe('useIsMobile', () => {
     unmount();
 
     const mockMql = mockMatchMedia.mock.results[0].value;
-    expect(mockMql.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(mockMql.removeEventListener).toHaveBeenCalledWith(
+      'change',
+      expect.any(Function),
+    );
   });
 
   it('should update when window width changes', () => {

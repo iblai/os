@@ -4,7 +4,10 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import { useForm } from '@tanstack/react-form';
-import { useGetPromptCategoriesQuery, useCreatePromptMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useGetPromptCategoriesQuery,
+  useCreatePromptMutation,
+} from '@iblai/iblai-js/data-layer';
 import { PromptVisibilityEnum } from '@iblai/iblai-api';
 import { MENTOR_VISIBILITY } from '@/lib/constants';
 
@@ -15,7 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useUsername } from '@/hooks/use-user';
 import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@iblai/iblai-js/web-containers';
@@ -46,7 +54,8 @@ interface AddPromptModalProps {
 export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
   const username = useUsername();
   const { getMentorId } = useNavigate();
-  const { tenantKey, mentorId: mentorIdParam } = useParams<TenantKeyMentorIdParams>();
+  const { tenantKey, mentorId: mentorIdParam } =
+    useParams<TenantKeyMentorIdParams>();
 
   const mentorId = getMentorId() ?? mentorIdParam;
 
@@ -60,7 +69,8 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
       userId: username ?? '',
     });
 
-  const [createPrompt, { isLoading: isCreatingPrompt }] = useCreatePromptMutation();
+  const [createPrompt, { isLoading: isCreatingPrompt }] =
+    useCreatePromptMutation();
 
   const form = useForm({
     defaultValues,
@@ -97,7 +107,9 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="w-full">
           <DialogHeader>
-            <DialogTitle className="ibl-dialog-title">Add New Prompt</DialogTitle>
+            <DialogTitle className="ibl-dialog-title">
+              Add New Prompt
+            </DialogTitle>
           </DialogHeader>
 
           <form
@@ -116,13 +128,18 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
 
                 return (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Category</Label>
+                    <Label className="text-sm font-medium text-gray-700">
+                      Category
+                    </Label>
                     <Select
                       value={field.state.value}
                       onValueChange={field.handleChange}
                       disabled={isDisabled}
                     >
-                      <SelectTrigger className="py-6" aria-label="Select a category">
+                      <SelectTrigger
+                        className="py-6"
+                        aria-label="Select a category"
+                      >
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -134,7 +151,9 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                       </SelectContent>
                     </Select>
                     {hasNoValueAndIsDirty && (
-                      <p className="text-red-500 text-xs">Category is required</p>
+                      <p className="text-xs text-red-500">
+                        Category is required
+                      </p>
                     )}
                   </div>
                 );
@@ -145,13 +164,20 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
               {(field) => {
                 return (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Visibility</Label>
+                    <Label className="text-sm font-medium text-gray-700">
+                      Visibility
+                    </Label>
                     <Select
                       value={field.state.value}
-                      onValueChange={(value) => field.handleChange(value as PromptVisibilityEnum)}
+                      onValueChange={(value) =>
+                        field.handleChange(value as PromptVisibilityEnum)
+                      }
                       disabled={isDisabled}
                     >
-                      <SelectTrigger className="py-6" aria-label="Select visibility">
+                      <SelectTrigger
+                        className="py-6"
+                        aria-label="Select visibility"
+                      >
                         <SelectValue placeholder="Select visibility" />
                       </SelectTrigger>
                       <SelectContent>
@@ -163,7 +189,9 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                       </SelectContent>
                     </Select>
                     {!field.state.value && field.state.meta.isDirty && (
-                      <p className="text-red-500 text-xs">Visibility is required</p>
+                      <p className="text-xs text-red-500">
+                        Visibility is required
+                      </p>
                     )}
                   </div>
                 );
@@ -178,7 +206,10 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
 
                 return (
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700" htmlFor="prompt-textarea">
+                    <Label
+                      className="text-sm font-medium text-gray-700"
+                      htmlFor="prompt-textarea"
+                    >
                       Prompt
                     </Label>
                     <RichTextEditor
@@ -187,7 +218,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                       disabled={isDisabled}
                     />
                     {hasNoValueAndIsDirty && (
-                      <p className="text-red-500 text-xs">Prompt is required</p>
+                      <p className="text-xs text-red-500">Prompt is required</p>
                     )}
                   </div>
                 );
@@ -195,7 +226,9 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
             </form.Field>
 
             <div className="flex justify-end">
-              <form.Subscribe selector={(state) => ({ isFormValue: state.canSubmit })}>
+              <form.Subscribe
+                selector={(state) => ({ isFormValue: state.canSubmit })}
+              >
                 {({ isFormValue }) => (
                   <Button
                     type="submit"

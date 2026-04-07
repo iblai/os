@@ -111,7 +111,10 @@ describe('useExternalPricing', () => {
 
       renderHook(() => useExternalPricing());
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function),
+      );
     });
 
     it('should remove message event listener on unmount', () => {
@@ -120,7 +123,10 @@ describe('useExternalPricing', () => {
       const { unmount } = renderHook(() => useExternalPricing());
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function),
+      );
     });
 
     it('should send data to iframe when ready message is received', () => {
@@ -136,7 +142,9 @@ describe('useExternalPricing', () => {
       // Set the iframe ref
       act(() => {
         (
-          result.current.pricingBoxIframeRef as React.MutableRefObject<typeof mockIframe | null>
+          result.current.pricingBoxIframeRef as React.MutableRefObject<
+            typeof mockIframe | null
+          >
         ).current = mockIframe;
       });
 
@@ -168,7 +176,9 @@ describe('useExternalPricing', () => {
 
       act(() => {
         (
-          result.current.pricingBoxIframeRef as React.MutableRefObject<typeof mockIframe | null>
+          result.current.pricingBoxIframeRef as React.MutableRefObject<
+            typeof mockIframe | null
+          >
         ).current = mockIframe;
       });
 
@@ -183,7 +193,10 @@ describe('useExternalPricing', () => {
         expect.stringContaining('"is_free_trial":true'),
         '*',
       );
-      expect(mockPostMessage).toHaveBeenCalledWith(expect.stringContaining('"trial_days":5'), '*');
+      expect(mockPostMessage).toHaveBeenCalledWith(
+        expect.stringContaining('"trial_days":5'),
+        '*',
+      );
       expect(mockPostMessage).toHaveBeenCalledWith(
         expect.stringContaining('"skip_card":true'),
         '*',

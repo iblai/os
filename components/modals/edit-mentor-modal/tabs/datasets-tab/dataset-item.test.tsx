@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { DatasetItem, Dataset } from './dataset-item';
@@ -38,7 +44,10 @@ vi.mock('@/hooks/use-user', () => ({
  * Handles API calls for training document operations
  */
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useEditTrainingDocumentMutation: () => [mockEditTrainingDocument, { isLoading: false }],
+  useEditTrainingDocumentMutation: () => [
+    mockEditTrainingDocument,
+    { isLoading: false },
+  ],
 }));
 
 /**
@@ -250,7 +259,11 @@ describe('DatasetItem', () => {
       const link = screen.getByRole('link', { name: 'Test Document' });
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-      expect(link).toHaveClass('text-blue-600', 'hover:text-blue-800', 'hover:underline');
+      expect(link).toHaveClass(
+        'text-blue-600',
+        'hover:text-blue-800',
+        'hover:underline',
+      );
     });
 
     /**
@@ -261,7 +274,9 @@ describe('DatasetItem', () => {
       const datasetWithoutName = { ...mockDataset, document_name: '' };
       render(<DatasetItem dataset={datasetWithoutName} />);
 
-      const link = screen.getByRole('link', { name: 'https://example.com/document' });
+      const link = screen.getByRole('link', {
+        name: 'https://example.com/document',
+      });
       expect(link).toBeInTheDocument();
     });
 
@@ -370,7 +385,9 @@ describe('DatasetItem', () => {
         });
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Training document updated successfully');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Training document updated successfully',
+      );
     });
 
     /**
@@ -381,7 +398,9 @@ describe('DatasetItem', () => {
       const privateDataset = { ...mockDataset, access: 'private' };
       render(<DatasetItem dataset={privateDataset} />);
 
-      const visibilityButton = screen.getByTestId('eyeoff-icon').closest('button');
+      const visibilityButton = screen
+        .getByTestId('eyeoff-icon')
+        .closest('button');
       fireEvent.click(visibilityButton!);
 
       await waitFor(() => {
@@ -479,7 +498,9 @@ describe('DatasetItem', () => {
         expect(screen.getByTestId('train-or-delete-modal')).toBeInTheDocument();
       });
 
-      expect(screen.queryByTestId('delete-dataset-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('delete-dataset-modal'),
+      ).not.toBeInTheDocument();
     });
 
     /**
@@ -503,7 +524,9 @@ describe('DatasetItem', () => {
 
       await waitFor(() => {
         // Train-or-delete modal should close, delete modal should open
-        expect(screen.queryByTestId('train-or-delete-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('train-or-delete-modal'),
+        ).not.toBeInTheDocument();
         expect(screen.getByTestId('delete-dataset-modal')).toBeInTheDocument();
       });
     });
@@ -536,7 +559,9 @@ describe('DatasetItem', () => {
       fireEvent.click(scheduleButton!);
 
       await waitFor(() => {
-        expect(screen.getByTestId('retrain-schedule-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('retrain-schedule-modal'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -545,7 +570,11 @@ describe('DatasetItem', () => {
      * Verifies that file-based documents cannot be scheduled for retraining
      */
     it('disables retrain button for file-type documents', () => {
-      const fileDataset = { ...mockDataset, is_trained: true, document_type: 'file' };
+      const fileDataset = {
+        ...mockDataset,
+        is_trained: true,
+        document_type: 'file',
+      };
       render(<DatasetItem dataset={fileDataset} />);
 
       const scheduleButton = screen.getByTestId('clock-icon').closest('button');
@@ -557,7 +586,11 @@ describe('DatasetItem', () => {
      * Verifies cloud storage providers cannot be scheduled
      */
     it('disables retrain button for cloud storage documents', () => {
-      const cloudDataset = { ...mockDataset, is_trained: true, document_type: 'google drive' };
+      const cloudDataset = {
+        ...mockDataset,
+        is_trained: true,
+        document_type: 'google drive',
+      };
       render(<DatasetItem dataset={cloudDataset} />);
 
       const scheduleButton = screen.getByTestId('clock-icon').closest('button');
@@ -601,7 +634,9 @@ describe('DatasetItem', () => {
       fireEvent.click(scheduleButton!);
 
       await waitFor(() => {
-        expect(screen.getByTestId('retrain-schedule-modal')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('retrain-schedule-modal'),
+        ).toBeInTheDocument();
       });
 
       // Close modal
@@ -609,7 +644,9 @@ describe('DatasetItem', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('retrain-schedule-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('retrain-schedule-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -635,7 +672,9 @@ describe('DatasetItem', () => {
       fireEvent.click(visibilityButton!);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update training document');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update training document',
+        );
       });
     });
 
@@ -644,7 +683,9 @@ describe('DatasetItem', () => {
      * Verifies error logging integration
      */
     it('logs error to console when update fails', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const mockError = new Error('Update failed');
       mockEditTrainingDocument.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(mockError),
@@ -698,7 +739,9 @@ describe('DatasetItem', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('delete-dataset-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('delete-dataset-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -709,8 +752,12 @@ describe('DatasetItem', () => {
     it('does not render modals initially', () => {
       render(<DatasetItem dataset={mockDataset} />);
 
-      expect(screen.queryByTestId('delete-dataset-modal')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('retrain-schedule-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('delete-dataset-modal'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('retrain-schedule-modal'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -816,10 +863,16 @@ describe('DatasetItem', () => {
 
       providers.forEach((provider) => {
         cleanup();
-        const cloudDataset = { ...mockDataset, is_trained: true, document_type: provider };
+        const cloudDataset = {
+          ...mockDataset,
+          is_trained: true,
+          document_type: provider,
+        };
         render(<DatasetItem dataset={cloudDataset} />);
 
-        const scheduleButton = screen.getByTestId('clock-icon').closest('button');
+        const scheduleButton = screen
+          .getByTestId('clock-icon')
+          .closest('button');
         expect(scheduleButton).toBeDisabled();
       });
     });

@@ -26,8 +26,17 @@ vi.mock('livekit-client', () => ({
 vi.mock('@livekit/components-react', () => ({
   formatChatMessageLinks: vi.fn((text) => text),
   RoomContext: {
-    Provider: ({ children, value }: { children: React.ReactNode; value: any }) => (
-      <div data-testid="room-context" data-room={JSON.stringify(value ? 'room' : null)}>
+    Provider: ({
+      children,
+      value,
+    }: {
+      children: React.ReactNode;
+      value: any;
+    }) => (
+      <div
+        data-testid="room-context"
+        data-room={JSON.stringify(value ? 'room' : null)}
+      >
         {children}
       </div>
     ),
@@ -115,14 +124,18 @@ describe('LiveKitScreenSharing', () => {
 
   describe('rendering', () => {
     it('should render RoomContext.Provider with room', () => {
-      const { getByTestId } = render(<LiveKitScreenSharing {...defaultProps} />);
+      const { getByTestId } = render(
+        <LiveKitScreenSharing {...defaultProps} />,
+      );
 
       const roomContext = getByTestId('room-context');
       expect(roomContext).toBeInTheDocument();
     });
 
     it('should render VideoConference with hidden class', () => {
-      const { getByTestId } = render(<LiveKitScreenSharing {...defaultProps} />);
+      const { getByTestId } = render(
+        <LiveKitScreenSharing {...defaultProps} />,
+      );
 
       const videoConference = getByTestId('video-conference');
       expect(videoConference).toHaveClass('hidden');
@@ -346,7 +359,8 @@ describe('LiveKitScreenSharing', () => {
       render(<LiveKitScreenSharing {...defaultProps} />);
 
       const screenSharingStartedCalls = mockPostMessage.mock.calls.filter(
-        (call: unknown[]) => (call[0] as { type: string }).type === 'MENTOR:SCREENSHARING_STARTED',
+        (call: unknown[]) =>
+          (call[0] as { type: string }).type === 'MENTOR:SCREENSHARING_STARTED',
       );
       expect(screenSharingStartedCalls.length).toBe(0);
     });

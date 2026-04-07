@@ -45,7 +45,10 @@ import {
 } from '@iblai/iblai-js/web-utils';
 import { useSidebar } from '@/components/ui/sidebar';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { getCurrentArtifactTitle, getFirstMessageWithContent } from '@/lib/utils';
+import {
+  getCurrentArtifactTitle,
+  getFirstMessageWithContent,
+} from '@/lib/utils';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Markdown from '@/components/markdown';
 
@@ -54,7 +57,10 @@ interface RecentMessagesProps {
   mentorId: string;
 }
 
-export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProps) {
+export function RecentMessages({
+  onSelectMessage,
+  mentorId,
+}: RecentMessagesProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const dispatch = useAppDispatch();
   const params = useParams<{ tenantKey: string }>();
@@ -74,7 +80,9 @@ export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProp
           ...state,
           data: {
             ...state.data,
-            results: state.data?.results?.filter((result) => result.mentor.unique_id === mentorId),
+            results: state.data?.results?.filter(
+              (result) => result.mentor.unique_id === mentorId,
+            ),
           },
         };
       },
@@ -82,7 +90,9 @@ export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProp
   );
 
   const isStreaming = useAppSelector(selectStreaming);
-  const numberOfActiveChatMessages = useAppSelector(selectNumberOfActiveChatMessages);
+  const numberOfActiveChatMessages = useAppSelector(
+    selectNumberOfActiveChatMessages,
+  );
   const activeChatMessages = useAppSelector(selectActiveChatMessages);
 
   const [pinMessage] = useAddPinnedMessageMutation();
@@ -235,18 +245,26 @@ export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProp
 
   return (
     <div>
-      <Accordion type="single" collapsible defaultValue="recent" className="w-full">
+      <Accordion
+        type="single"
+        collapsible
+        defaultValue="recent"
+        className="w-full"
+      >
         <AccordionItem value="recent" className="border-none">
-          <AccordionTrigger className="text-sm font-medium hover:no-underline cursor-pointer py-1.5 px-2 space-x-1 text-gray-700 hover:bg-[#c9d8f8] rounded-md">
+          <AccordionTrigger className="cursor-pointer space-x-1 rounded-md px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-[#c9d8f8] hover:no-underline">
             <span className="flex items-center gap-3">
               <MessageCircle className="h-4 w-4 text-gray-500" />
               Recent
             </span>
           </AccordionTrigger>
-          <AccordionContent className="pb-0 ml-4 mt-1">
+          <AccordionContent className="mt-1 ml-4 pb-0">
             <div className="space-y-1 border-l border-[#D0E0FF]">
               {recentMessages?.results
-                ?.filter((result) => !isLoggedIn() || result.mentor.unique_id === mentorId)
+                ?.filter(
+                  (result) =>
+                    !isLoggedIn() || result.mentor.unique_id === mentorId,
+                )
                 .map((result: any) => (
                   <div className="group relative" key={result?.session_id}>
                     <Button
@@ -274,24 +292,36 @@ export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProp
                       </div>
                       <div className="-ml-1 line-clamp-1 flex-1 overflow-hidden pr-6 text-left text-xs text-gray-800 [&_*]:!my-0 [&_*]:!text-xs [&_*]:!leading-snug [&_*]:!font-normal [&_*]:!text-gray-800 [&_h2]:!border-0">
                         {(() => {
-                          const content = getFirstMessageWithContent(result.messages);
+                          const content = getFirstMessageWithContent(
+                            result.messages,
+                          );
 
                           if (!content) {
-                            const artifactTitle = getCurrentArtifactTitle(result.messages);
+                            const artifactTitle = getCurrentArtifactTitle(
+                              result.messages,
+                            );
                             if (artifactTitle) {
                               return artifactTitle;
                             }
                             return 'No content';
                           }
 
-                          return <Markdown className="!space-y-0">{content}</Markdown>;
+                          return (
+                            <Markdown className="!space-y-0">
+                              {content}
+                            </Markdown>
+                          );
                         })()}
                       </div>
                     </Button>
                     <div className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0"
+                          >
                             <span className="sr-only">More chat options</span>
                             <MoreHorizontal className="h-4 w-4 text-gray-400" />
                           </Button>
@@ -301,11 +331,15 @@ export function RecentMessages({ onSelectMessage, mentorId }: RecentMessagesProp
                             <Pin className="mr-2 h-4 w-4" />
                             <span>Pin</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExport(result.messages)}>
+                          <DropdownMenuItem
+                            onClick={() => handleExport(result.messages)}
+                          >
                             <Download className="mr-2 h-4 w-4" />
                             <span>Export</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(result)}>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(result)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete</span>
                           </DropdownMenuItem>

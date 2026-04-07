@@ -2,10 +2,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ---- Hoisted mocks (safe to use inside vi.mock factories) ----
 const mocked = vi.hoisted(() => ({
-  setSubscriptionStatus: vi.fn((payload: any) => ({ type: 'setSubscriptionStatus', payload })),
-  setPricingModalData: vi.fn((payload: any) => ({ type: 'setPricingModalData', payload })),
-  setOpenPricingModal: vi.fn((open: boolean) => ({ type: 'setOpenPricingModal', payload: open })),
-  setTopBannerOptions: vi.fn((payload: any) => ({ type: 'setTopBannerOptions', payload })),
+  setSubscriptionStatus: vi.fn((payload: any) => ({
+    type: 'setSubscriptionStatus',
+    payload,
+  })),
+  setPricingModalData: vi.fn((payload: any) => ({
+    type: 'setPricingModalData',
+    payload,
+  })),
+  setOpenPricingModal: vi.fn((open: boolean) => ({
+    type: 'setOpenPricingModal',
+    payload: open,
+  })),
+  setTopBannerOptions: vi.fn((payload: any) => ({
+    type: 'setTopBannerOptions',
+    payload,
+  })),
   infoSpy: vi.fn(),
   errorSpy: vi.fn(),
 }));
@@ -61,14 +73,17 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     CREDIT_EXHAUSTED: {
       NO_APP: 'Upgrade to create your own mentors.',
       ADMIN: 'You’ve used all your credits.',
-      PRO_PACKAGE: ({ expiryDate }: { expiryDate: string }) => `Pro exhausted until ${expiryDate}`,
+      PRO_PACKAGE: ({ expiryDate }: { expiryDate: string }) =>
+        `Pro exhausted until ${expiryDate}`,
       FREE_PACKAGE: ({ expiryDate }: { expiryDate: string }) =>
         `Free exhausted until ${expiryDate}`,
       STARTER_PACKAGE: ({ expiryDate }: { expiryDate: string }) =>
         `Starter exhausted until ${expiryDate}`,
       STUDENT: 'Your organization has run out of credits.',
-      STUDENT_UNDER_PAID_PACKAGE_EMAIL_BODY: ({ currentTenantOrg, userEmail }: any) =>
-        `Hey team, org=${currentTenantOrg} user=${userEmail}`,
+      STUDENT_UNDER_PAID_PACKAGE_EMAIL_BODY: ({
+        currentTenantOrg,
+        userEmail,
+      }: any) => `Hey team, org=${currentTenantOrg} user=${userEmail}`,
       STUDENT_UNDER_PAID_PACKAGE_EMAIL_SUBJECT: ({ currentTenantOrg }: any) =>
         `Out of credits: ${currentTenantOrg}`,
       FREE_TRIAL_LIMIT: 'Upgrade to create your own mentors.',
@@ -82,11 +97,13 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       ADD_CREDITS: 'Add Credits 😎',
     },
     TOAST_MESSAGES: {
-      PRICING_PAGE_LOAD_ERROR: 'Error loading pricing page data. Please try again later.',
+      PRICING_PAGE_LOAD_ERROR:
+        'Error loading pricing page data. Please try again later.',
       TOP_UP_CREDIT_TRIGGER_LOAD_ERROR:
         'Error loading top up credit trigger data. Please try again later.',
       REDIRECTING_BILLING_PAGE: 'Redirecting to billing page...',
-      BILLING_PAGE_TRIGGER_LOAD_ERROR: 'Error loading billing page data. Please try again later.',
+      BILLING_PAGE_TRIGGER_LOAD_ERROR:
+        'Error loading billing page data. Please try again later.',
     },
   },
 }));
@@ -148,7 +165,10 @@ describe('MentorSubscriptionFlowV2', () => {
       userTenants: [{ key: 'tenant-1' }, { key: 'tenant-2' }],
     };
     const flow = new MentorSubscriptionFlowV2(configWithTenants as any);
-    expect(flow.getUserTenants()).toEqual([{ key: 'tenant-1' }, { key: 'tenant-2' }]);
+    expect(flow.getUserTenants()).toEqual([
+      { key: 'tenant-1' },
+      { key: 'tenant-2' },
+    ]);
   });
 
   it('isUserAdmin returns admin status', () => {
@@ -198,7 +218,10 @@ describe('MentorSubscriptionFlowV2', () => {
     expect(mocked.infoSpy).toHaveBeenCalledWith('Redirecting...');
     vi.advanceTimersByTime(500);
     expect(window.location.href).toBe(target);
-    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
   });
 
   it('handlePricingPageDisplayFlow dispatches modal data and opens modal', () => {
@@ -216,9 +239,14 @@ describe('MentorSubscriptionFlowV2', () => {
       publishableKey: 'pk-123',
       pricingTableId: 'tbl-1',
     });
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'setPricingModalData' }));
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'setPricingModalData' }),
+    );
     expect(mocked.setOpenPricingModal).toHaveBeenCalledWith(true);
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: false });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: false,
+    });
     expect(mocked.setSubscriptionStatus).toHaveBeenCalled();
     const statusCalls = mocked.setSubscriptionStatus.mock.calls as any[];
     const statusPayload = statusCalls[statusCalls.length - 1][0];
@@ -228,27 +256,39 @@ describe('MentorSubscriptionFlowV2', () => {
   it('handleBeforePricingPageDisplayFlow sets banner loading true', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleBeforePricingPageDisplayFlow();
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: true });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: true,
+    });
   });
 
   it('handleFailureOnPaymentFlow shows error and clears loading', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleFailureOnPaymentFlow();
     expect(mocked.errorSpy).toHaveBeenCalled();
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: false });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: false,
+    });
   });
 
   it('handleFailureOnTopUpCreditTriggerFlow shows error and clears loading', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleFailureOnTopUpCreditTriggerFlow();
     expect(mocked.errorSpy).toHaveBeenCalled();
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: false });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: false,
+    });
   });
 
   it('handleBeforeTopUpCreditTriggerFlow sets loading true', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleBeforeTopUpCreditTriggerFlow();
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: true });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: true,
+    });
   });
 
   it('handleRedirectToBillingPageFlow delegates to URL redirect with toast', () => {
@@ -272,7 +312,10 @@ describe('MentorSubscriptionFlowV2', () => {
     expect(mocked.infoSpy).toHaveBeenCalled();
     vi.advanceTimersByTime(500);
     expect(window.location.href).toBe(url);
-    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
   });
 
   it('handlePaidPlanCreditExhaustedFlow sets banner and status for TOP_UP_CREDIT', () => {
@@ -319,12 +362,17 @@ describe('MentorSubscriptionFlowV2', () => {
   it('handleBeforeBillingPageTriggerFlow sets banner loading true', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleBeforeBillingPageTriggerFlow();
-    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({ foo: 'bar', loading: true });
+    expect(mocked.setTopBannerOptions).toHaveBeenCalledWith({
+      foo: 'bar',
+      loading: true,
+    });
   });
 
   it('handleCreditExhaustedWithUserOnProPackageFlow sets top-up action', () => {
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
-    flow.handleCreditExhaustedWithUserOnProPackageFlow({ expiryDate: '2025-03-01' } as any);
+    flow.handleCreditExhaustedWithUserOnProPackageFlow({
+      expiryDate: '2025-03-01',
+    } as any);
     const bannerCalls3 = mocked.setTopBannerOptions.mock.calls as any[];
     const bannerPayload = bannerCalls3[bannerCalls3.length - 1][0];
     expect(bannerPayload.onUpgrade).toBe('TRIGGER_TOP_UP_CREDIT');
@@ -345,7 +393,9 @@ describe('MentorSubscriptionFlowV2', () => {
   });
 
   it('handleOpenContactAdminFlow opens mailto with subject and body', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
+    const openSpy = vi
+      .spyOn(window, 'open')
+      .mockImplementation(() => null as any);
     const flow = new MentorSubscriptionFlowV2(baseConfig as any);
     flow.handleOpenContactAdminFlow('admin@org.com');
     expect(openSpy).toHaveBeenCalled();
@@ -353,9 +403,13 @@ describe('MentorSubscriptionFlowV2', () => {
     expect(calls.length).toBeGreaterThan(0);
     const url = String(calls[calls.length - 1]?.[0] ?? '');
     expect(url.startsWith('mailto:admin@org.com?subject=')).toBe(true);
-    expect(url.includes(encodeURIComponent('Out of credits: org-1'))).toBe(true);
+    expect(url.includes(encodeURIComponent('Out of credits: org-1'))).toBe(
+      true,
+    );
     expect(url.includes(encodeURIComponent('org=org-1'))).toBe(true);
-    expect(url.includes(encodeURIComponent('user=user@example.com'))).toBe(true);
+    expect(url.includes(encodeURIComponent('user=user@example.com'))).toBe(
+      true,
+    );
     openSpy.mockRestore();
   });
 });

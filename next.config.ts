@@ -3,15 +3,19 @@ import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
 const envPatterns = process.env.NEXT_IMAGE_PATTERNS?.trim();
-const rawPatterns = envPatterns ? envPatterns.split(',') : [
-  'https://hebbkx1anhila5yf.public.blob.vercel-storage.com',
-  'https://s3.*.amazonaws.com',
-  'https://base.manager.iblai.tech',
-  'https://base.manager.iblai.org',
-  'https://base.manager.iblai.app',
-  'https://base.manager.dev2.iblai.org',
-  'https://base.manager.ai.syr.edu',
-];
+const rawPatterns = envPatterns
+  ? envPatterns.split(',')
+  : [
+      'https://hebbkx1anhila5yf.public.blob.vercel-storage.com',
+      'https://s3.*.amazonaws.com',
+      'https://base.manager.iblai.tech',
+      'https://base.manager.iblai.org',
+      'https://base.manager.iblai.app',
+      'https://base.manager.dev2.iblai.org',
+      'https://base.manager.ai.syr.edu',
+      'https://api.iblai.org',
+      'https://api.iblai.app',
+    ];
 
 const remotePatterns = rawPatterns
   .map((url: string) => {
@@ -44,6 +48,22 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns,
+  },
+  // Prevent CDN/browser from serving stale HTML that references old chunk hashes.
+  // Static assets under /_next/static/ already get immutable caching from Next.js.
+  async headers() {
+    return [
+      {
+        // HTML pages — always revalidate so chunk references are fresh
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+    ];
   },
   serverExternalPackages: [
     'import-in-the-middle',

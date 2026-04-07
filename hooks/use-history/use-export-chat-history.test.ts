@@ -28,7 +28,10 @@ describe('useExportChatHistory', () => {
     vi.clearAllMocks();
 
     // Default mock implementations
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'mentor-123' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'mentor-123',
+    });
     mockGetMentorId.mockReturnValue(null);
 
     mockUseReports.mockReturnValue({
@@ -115,6 +118,7 @@ describe('useExportChatHistory', () => {
           start_date: undefined,
           sentiment: undefined,
           topics: undefined,
+          source: 'http://localhost:3000',
         },
       });
     });
@@ -271,6 +275,7 @@ describe('useExportChatHistory', () => {
           end_date: '2024-12-31',
           sentiment: 'negative',
           topics: 'topic1,topic2,topic3',
+          source: 'http://localhost:3000',
         },
       });
     });
@@ -320,7 +325,10 @@ describe('useExportChatHistory', () => {
     });
 
     it('should handle undefined mentor id in params', () => {
-      mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: undefined });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'test-tenant',
+        mentorId: undefined,
+      });
       mockGetMentorId.mockReturnValue(null);
 
       const { result } = renderHook(() => useExportChatHistory());

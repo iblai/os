@@ -49,7 +49,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'recent-mentor');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'recent-mentor',
+        );
       });
 
       expect(defaultProps.onAuthSuccess).toHaveBeenCalled();
@@ -70,7 +73,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'featured-mentor');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'featured-mentor',
+        );
       });
     });
 
@@ -98,7 +104,10 @@ describe('useMentorProvider', () => {
       );
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'default-mentor');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'default-mentor',
+        );
       });
     });
 
@@ -125,7 +134,10 @@ describe('useMentorProvider', () => {
       );
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'default-mentor');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'default-mentor',
+        );
       });
     });
 
@@ -147,7 +159,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'featured-1');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'featured-1',
+        );
       });
     });
   });
@@ -210,7 +225,10 @@ describe('useMentorProvider', () => {
 
       await waitFor(() => {
         expect(mockFetchSeedMentors).toHaveBeenCalled();
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'seeded-mentor');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'seeded-mentor',
+        );
       });
     });
 
@@ -273,13 +291,19 @@ describe('useMentorProvider', () => {
       const error = new Error('API Error');
       mockFetchMentors.mockRejectedValueOnce(error);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => {});
 
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.onAuthFailure).toHaveBeenCalledWith('Unexpected error: API Error');
+        expect(defaultProps.onAuthFailure).toHaveBeenCalledWith(
+          'Unexpected error: API Error',
+        );
         expect(defaultProps.redirectToAuthSpa).toHaveBeenCalled();
       });
 
@@ -290,13 +314,19 @@ describe('useMentorProvider', () => {
     it('should handle non-Error exceptions', async () => {
       mockFetchMentors.mockRejectedValueOnce('String error');
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const consoleLogSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => {});
 
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.onAuthFailure).toHaveBeenCalledWith('Unexpected error: String error');
+        expect(defaultProps.onAuthFailure).toHaveBeenCalledWith(
+          'Unexpected error: String error',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -330,7 +360,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'featured');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'featured',
+        );
       });
     });
 
@@ -342,7 +375,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
 
@@ -384,7 +420,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
 
@@ -491,7 +530,10 @@ describe('useMentorProvider', () => {
       );
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
 
@@ -520,7 +562,10 @@ describe('useMentorProvider', () => {
 
       await waitFor(() => {
         // Should fall through to first featured mentor
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'featured-1');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'featured-1',
+        );
       });
     });
 
@@ -539,7 +584,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'featured-1');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'featured-1',
+        );
       });
     });
 
@@ -563,7 +611,10 @@ describe('useMentorProvider', () => {
       );
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
 
@@ -613,7 +664,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', 'non-featured');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          'non-featured',
+        );
       });
     });
 
@@ -638,7 +692,10 @@ describe('useMentorProvider', () => {
       );
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
 
@@ -660,7 +717,10 @@ describe('useMentorProvider', () => {
       renderHook(() => useMentorProvider(defaultProps));
 
       await waitFor(() => {
-        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith('tenant-1', '');
+        expect(defaultProps.redirectToMentor).toHaveBeenCalledWith(
+          'tenant-1',
+          '',
+        );
       });
     });
   });

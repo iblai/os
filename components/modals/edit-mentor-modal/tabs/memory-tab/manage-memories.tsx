@@ -5,14 +5,25 @@ import dynamic from 'next/dynamic';
 import type { DateRange } from 'react-day-picker';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Plus, ChevronDown, Calendar, ChevronsUpDown, Check } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Plus,
+  ChevronDown,
+  Calendar,
+  ChevronsUpDown,
+  Check,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover';
 import {
   Command,
   CommandInput,
@@ -40,17 +51,26 @@ import IblPagination from '@/components/ibl-pagination';
 import { useEffect } from 'react';
 
 const EditMemoryModal = dynamic(
-  () => import('./edit-memory-modal').then((module) => ({ default: module.EditMemoryModal })),
+  () =>
+    import('./edit-memory-modal').then((module) => ({
+      default: module.EditMemoryModal,
+    })),
   { ssr: false },
 );
 
 const AddMemoryModal = dynamic(
-  () => import('./add-memory-modal').then((module) => ({ default: module.AddMemoryModal })),
+  () =>
+    import('./add-memory-modal').then((module) => ({
+      default: module.AddMemoryModal,
+    })),
   { ssr: false },
 );
 
 const DeleteMemoryModal = dynamic(
-  () => import('./delete-memory-modal').then((module) => ({ default: module.DeleteMemoryModal })),
+  () =>
+    import('./delete-memory-modal').then((module) => ({
+      default: module.DeleteMemoryModal,
+    })),
   { ssr: false },
 );
 
@@ -79,7 +99,11 @@ interface ManageMemoriesProps {
   mentorId: string;
 }
 
-export function ManageMemories({ tenantKey, username, mentorId }: ManageMemoriesProps) {
+export function ManageMemories({
+  tenantKey,
+  username,
+  mentorId,
+}: ManageMemoriesProps) {
   const itemsPerPage = 10;
 
   // Filter state
@@ -139,7 +163,8 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
 
   const [deleteMemory, { isLoading: isDeleting }] = useDeleteMemoryMutation();
   const [deleteMemoryByCategory] = useDeleteMemoryByCategoryMutation();
-  const [updateMemoryEntry, { isLoading: isEditing }] = useUpdateMemoryEntryMutation();
+  const [updateMemoryEntry, { isLoading: isEditing }] =
+    useUpdateMemoryEntryMutation();
   const [createMemory, { isLoading: isSaving }] = useCreateMemoryMutation();
 
   const learners = memoryFilters?.users ?? [];
@@ -150,7 +175,9 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
   };
 
   // Calculate total pages based on count and limit
-  const totalPages = memoriesResponse ? Math.ceil(memoriesResponse.count / itemsPerPage) : 0;
+  const totalPages = memoriesResponse
+    ? Math.ceil(memoriesResponse.count / itemsPerPage)
+    : 0;
 
   // Transform API data to local format
   const memories = useMemo(() => {
@@ -183,7 +210,9 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
+    null,
+  );
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [newMemoryContent, setNewMemoryContent] = useState('');
   const [newMemoryCategory, setNewMemoryCategory] = useState('');
@@ -286,7 +315,9 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
     if (!newMemoryContent.trim() || !tenantKey || !username) return;
 
     try {
-      const apiCategory = transformCategoryToApi(newMemoryCategory || selectedCategory);
+      const apiCategory = transformCategoryToApi(
+        newMemoryCategory || selectedCategory,
+      );
 
       await createMemory({
         tenantKey,
@@ -327,19 +358,21 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
     <>
       <div className="space-y-6">
         {/* User Filter and Date Range */}
-        <div className="border rounded-lg p-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="relative flex-1 min-w-[200px]">
+        <div className="rounded-lg border p-4">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="relative min-w-[200px] flex-1">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-label="Search for User"
-                    className="w-full justify-between font-normal bg-transparent"
+                    className="w-full justify-between bg-transparent font-normal"
                   >
                     {selectedLearner
-                      ? learners.find((learner) => learner.username === selectedLearner)?.email
+                      ? learners.find(
+                          (learner) => learner.username === selectedLearner,
+                        )?.email
                       : 'Search for User'}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -375,11 +408,15 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                             <Check
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedLearner === learner.username ? 'opacity-100' : 'opacity-0',
+                                selectedLearner === learner.username
+                                  ? 'opacity-100'
+                                  : 'opacity-0',
                               )}
                             />
                             <div className="flex flex-col">
-                              <span className="font-medium text-gray-700">{learner.email}</span>
+                              <span className="font-medium text-gray-700">
+                                {learner.email}
+                              </span>
                             </div>
                           </CommandItem>
                         ))}
@@ -394,7 +431,7 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="flex items-center gap-2 whitespace-nowrap font-normal bg-transparent w-full lg:w-auto"
+                  className="flex w-full items-center gap-2 bg-transparent font-normal whitespace-nowrap lg:w-auto"
                 >
                   <Calendar className="h-4 w-4" />
                   {dateRange?.from && dateRange?.to
@@ -417,12 +454,12 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <div className="hidden sm:flex space-x-8 overflow-x-auto flex-1 scrollbar-none">
+            <div className="scrollbar-none hidden flex-1 space-x-8 overflow-x-auto sm:flex">
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`relative py-2 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategory === category
                       ? 'text-[#38A1E5]'
                       : 'text-gray-600 hover:text-gray-900'
@@ -431,7 +468,7 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                   {category}
                   {selectedCategory === category && (
                     <div
-                      className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-[#38A1E5] transition-all duration-200"
+                      className="absolute bottom-0 left-1/2 h-0.5 -translate-x-1/2 transform bg-[#38A1E5] transition-all duration-200"
                       style={{ width: `${category.length * 0.55}em` }}
                     />
                   )}
@@ -439,10 +476,16 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
               ))}
             </div>
 
-            <div className="sm:hidden py-2 w-full">
-              <DropdownMenu open={showMobileDropdown} onOpenChange={setShowMobileDropdown}>
+            <div className="w-full py-2 sm:hidden">
+              <DropdownMenu
+                open={showMobileDropdown}
+                onOpenChange={setShowMobileDropdown}
+              >
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-transparent"
+                  >
                     {selectedCategory}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
@@ -455,7 +498,9 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
                         setSelectedCategory(category);
                         setShowMobileDropdown(false);
                       }}
-                      className={selectedCategory === category ? 'bg-gray-100' : ''}
+                      className={
+                        selectedCategory === category ? 'bg-gray-100' : ''
+                      }
                     >
                       {category}
                     </DropdownMenuItem>
@@ -464,8 +509,12 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
               </DropdownMenu>
             </div>
 
-            <Button onClick={startAddMemory} size="sm" className="ibl-button-primary shrink-0">
-              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <Button
+              onClick={startAddMemory}
+              size="sm"
+              className="ibl-button-primary shrink-0"
+            >
+              <Plus className="mr-1 h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Add Memory</span>
               <span className="sm:hidden">Add</span>
             </Button>
@@ -474,47 +523,59 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
 
         <div className="space-y-3 px-1 sm:px-0">
           {isLoadingMemories ? (
-            <div className="text-center py-8 text-gray-600">
+            <div className="py-8 text-center text-gray-600">
               <p>Loading memories...</p>
             </div>
           ) : (
             filteredMemories.map((memory: any) => {
               const timeAgo = memory.insertedAt
-                ? formatDistanceToNow(new Date(memory.insertedAt), { addSuffix: true })
+                ? formatDistanceToNow(new Date(memory.insertedAt), {
+                    addSuffix: true,
+                  })
                 : '';
               const displayEmail = memory.email || memory.username || 'Unknown';
 
               return (
                 <div
                   key={memory.id}
-                  className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200"
+                  className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3"
                 >
                   <div className="flex-1">
                     {(timeAgo || displayEmail) && (
-                      <div className="flex items-center justify-between mb-2">
-                        {timeAgo && <span className="text-sm text-gray-600">{timeAgo}</span>}
+                      <div className="mb-2 flex items-center justify-between">
+                        {timeAgo && (
+                          <span className="text-sm text-gray-600">
+                            {timeAgo}
+                          </span>
+                        )}
                         {displayEmail && (
-                          <span className="text-sm text-gray-900 max-w-[100px] sm:max-w-[200px] truncate">
+                          <span className="max-w-[100px] truncate text-sm text-gray-900 sm:max-w-[200px]">
                             {displayEmail}
                           </span>
                         )}
                       </div>
                     )}
-                    <div className="text-sm text-gray-900 leading-relaxed">{memory.content}</div>
+                    <div className="text-sm leading-relaxed text-gray-900">
+                      {memory.content}
+                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-gray-600 hover:text-gray-900 flex-shrink-0"
+                        className="h-6 w-6 flex-shrink-0 p-0 text-gray-600 hover:text-gray-900"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => startEdit(memory)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(memory.id)}>
+                      <DropdownMenuItem onClick={() => startEdit(memory)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowDeleteConfirm(memory.id)}
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -525,30 +586,36 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
           )}
         </div>
 
-        {filteredMemories.length > 0 && selectedCategory.toLowerCase() !== 'all' && (
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowBulkDeleteConfirm(true)}>
-              Delete All
-            </Button>
-          </div>
-        )}
+        {filteredMemories.length > 0 &&
+          selectedCategory.toLowerCase() !== 'all' && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+              >
+                Delete All
+              </Button>
+            </div>
+          )}
 
         {filteredMemories.length === 0 && !isLoadingMemories && (
-          <div className="text-center py-8 text-gray-600">
+          <div className="py-8 text-center text-gray-600">
             <p>No saved memories yet.</p>
           </div>
         )}
 
-        {!isLoadingMemories && filteredMemories.length > 0 && totalPages > 1 && (
-          <div className="flex justify-center pt-4">
-            <IblPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              disabled={isFetching || isLoadingMemories}
-            />
-          </div>
-        )}
+        {!isLoadingMemories &&
+          filteredMemories.length > 0 &&
+          totalPages > 1 && (
+            <div className="flex justify-center pt-4">
+              <IblPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                disabled={isFetching || isLoadingMemories}
+              />
+            </div>
+          )}
       </div>
 
       <EditMemoryModal
@@ -580,7 +647,9 @@ export function ManageMemories({ tenantKey, username, mentorId }: ManageMemories
       <DeleteMemoryModal
         open={!!showDeleteConfirm}
         onOpenChange={(open: boolean) => !open && setShowDeleteConfirm(null)}
-        onConfirm={() => showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)}
+        onConfirm={() =>
+          showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)
+        }
         onCancel={() => setShowDeleteConfirm(null)}
         isDeleting={isDeleting}
       />

@@ -1,4 +1,10 @@
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +15,7 @@ import type { MentorAccessPolicy } from '../shared';
 const mockUseParams = vi.fn();
 const mockUseUsername = vi.fn();
 const mockUsePlatformUsersQuery = vi.fn();
+const mockUseGetRbacGroupsQuery = vi.fn();
 const mockUseUpdateRbacMentorAccessMutation = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockToastError = vi.fn();
@@ -24,11 +31,28 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  usePlatformUsersQuery: (...args: unknown[]) => mockUsePlatformUsersQuery(...args),
-  useUpdateRbacMentorAccessMutation: () => mockUseUpdateRbacMentorAccessMutation(),
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
+  usePlatformUsersQuery: (...args: unknown[]) =>
+    mockUsePlatformUsersQuery(...args),
+  useGetRbacGroupsQuery: (...args: unknown[]) =>
+    mockUseGetRbacGroupsQuery(...args),
+  useUpdateRbacMentorAccessMutation: () =>
+    mockUseUpdateRbacMentorAccessMutation(),
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockUseGetMentorSettingsQuery(...args),
   isPoliciesResponse: (results: unknown) =>
     results && typeof results === 'object' && 'data' in (results as object),
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppSelector: () => ({}),
+}));
+
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  selectRbacPermissions: 'selectRbacPermissions',
+}));
+
+vi.mock('@/hoc/withPermissions', () => ({
+  checkRbacPermission: () => true,
 }));
 
 vi.mock('sonner', () => ({
@@ -75,10 +99,26 @@ describe('RoleAccessPanel', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: [
-          { id: 3, name: 'New User', username: 'newuser', email: 'newuser@example.com' },
-          { id: 4, name: 'Another User', username: 'anotheruser', email: 'another@example.com' },
+          {
+            id: 3,
+            name: 'New User',
+            username: 'newuser',
+            email: 'newuser@example.com',
+          },
+          {
+            id: 4,
+            name: 'Another User',
+            username: 'anotheruser',
+            email: 'another@example.com',
+          },
         ],
       },
+      isFetching: false,
+      isLoading: false,
+    });
+
+    mockUseGetRbacGroupsQuery.mockReturnValue({
+      data: undefined,
       isFetching: false,
       isLoading: false,
     });
@@ -87,7 +127,9 @@ describe('RoleAccessPanel', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
 
-    mockUseUpdateRbacMentorAccessMutation.mockReturnValue([mockUpdateMentorAccess]);
+    mockUseUpdateRbacMentorAccessMutation.mockReturnValue([
+      mockUpdateMentorAccess,
+    ]);
 
     mockUseGetMentorSettingsQuery.mockReturnValue({
       data: { mentor_id: 123 },
@@ -105,20 +147,30 @@ describe('RoleAccessPanel', () => {
   it('displays assigned users', () => {
     render(<RoleAccessPanel {...defaultProps} />);
 
-    expect(screen.getByText('user1')).toBeInTheDocument();
-    expect(screen.getByText('user2')).toBeInTheDocument();
+    // email takes precedence over username in display
+    expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+    expect(screen.getByText('user2@example.com')).toBeInTheDocument();
   });
 
   it('shows empty state when no users are assigned', () => {
-    render(<RoleAccessPanel {...defaultProps} policy={{ ...defaultPolicy, users: [] }} />);
+    render(
+      <RoleAccessPanel
+        {...defaultProps}
+        policy={{ ...defaultPolicy, users: [] }}
+      />,
+    );
 
-    expect(screen.getByText('No users have this role yet.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No users have this role yet.'),
+    ).toBeInTheDocument();
   });
 
   it('shows user search input', () => {
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     expect(searchInput).toBeInTheDocument();
   });
 
@@ -126,12 +178,16 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'a');
     await user.click(searchInput);
 
     await waitFor(() => {
-      expect(screen.getByText('Type at least two characters to search.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Type at least two characters to search.'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -145,7 +201,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'test');
     await user.click(searchInput);
 
@@ -158,7 +216,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'new');
     await user.click(searchInput);
 
@@ -171,9 +231,13 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
 
-    render(<RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />);
+    render(
+      <RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />,
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'new');
 
     await waitFor(() => {
@@ -201,7 +265,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
 
-    render(<RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />);
+    render(
+      <RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />,
+    );
 
     // Find and click remove button for user1
     const removeButton = screen.getByRole('button', { name: /remove user1/i });
@@ -228,7 +294,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'new');
 
     await waitFor(() => {
@@ -253,7 +321,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'new');
 
     await waitFor(() => {
@@ -294,7 +364,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'nonexistent');
 
     await waitFor(() => {
@@ -306,7 +378,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -325,7 +399,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -345,9 +421,13 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
 
-    render(<RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />);
+    render(
+      <RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />,
+    );
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -367,7 +447,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -385,7 +467,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -404,7 +488,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'us');
 
     // Click away
@@ -422,7 +508,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'u');
 
     // Click away
@@ -440,8 +528,18 @@ describe('RoleAccessPanel', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: [
-          { id: 1, name: 'User One', username: 'user1', email: 'user1@example.com' }, // Already assigned
-          { id: 3, name: 'New User', username: 'newuser', email: 'newuser@example.com' },
+          {
+            id: 1,
+            name: 'User One',
+            username: 'user1',
+            email: 'user1@example.com',
+          }, // Already assigned
+          {
+            id: 3,
+            name: 'New User',
+            username: 'newuser',
+            email: 'newuser@example.com',
+          },
         ],
       },
       isFetching: false,
@@ -450,7 +548,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -459,7 +559,9 @@ describe('RoleAccessPanel', () => {
       // User One should NOT be in results (already assigned)
       const options = screen.getAllByRole('option');
       const userOneOption = options.find(
-        (opt) => opt.textContent?.includes('User One') && opt.getAttribute('role') === 'option',
+        (opt) =>
+          opt.textContent?.includes('User One') &&
+          opt.getAttribute('role') === 'option',
       );
       expect(userOneOption).toBeUndefined();
     });
@@ -480,10 +582,11 @@ describe('RoleAccessPanel', () => {
     expect(screen.getByText('user1@example.com')).toBeInTheDocument();
   });
 
-  it('displays username when it is not numeric', () => {
+  it('displays email when available', () => {
     render(<RoleAccessPanel {...defaultProps} />);
 
-    expect(screen.getByText('user1')).toBeInTheDocument();
+    // email takes precedence over username
+    expect(screen.getByText('user1@example.com')).toBeInTheDocument();
   });
 
   it('disables buttons during pending operations', async () => {
@@ -546,7 +649,14 @@ describe('RoleAccessPanel', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: {
-          data: [{ id: 3, name: 'New User', username: 'newuser', email: 'newuser@example.com' }],
+          data: [
+            {
+              id: 3,
+              name: 'New User',
+              username: 'newuser',
+              email: 'newuser@example.com',
+            },
+          ],
         },
       },
       isFetching: false,
@@ -555,7 +665,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -568,7 +680,12 @@ describe('RoleAccessPanel', () => {
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
         results: [
-          { user_id: 3, name: 'New User', username: 'newuser', email: 'newuser@example.com' },
+          {
+            user_id: 3,
+            name: 'New User',
+            username: 'newuser',
+            email: 'newuser@example.com',
+          },
         ],
       },
       isFetching: false,
@@ -577,7 +694,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -589,7 +708,14 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ id: '3', name: 'New User', username: 'newuser', email: 'newuser@example.com' }],
+        results: [
+          {
+            id: '3',
+            name: 'New User',
+            username: 'newuser',
+            email: 'newuser@example.com',
+          },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -597,7 +723,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -613,7 +741,12 @@ describe('RoleAccessPanel', () => {
           null,
           undefined,
           'invalid',
-          { id: 3, name: 'Valid User', username: 'valid', email: 'valid@example.com' },
+          {
+            id: 3,
+            name: 'Valid User',
+            username: 'valid',
+            email: 'valid@example.com',
+          },
           { name: 'No ID User', username: 'noid', email: 'noid@example.com' },
         ],
       },
@@ -623,7 +756,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -636,7 +771,14 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ id: 3, name: 'Only User', username: 'only', email: 'only@example.com' }],
+        results: [
+          {
+            id: 3,
+            name: 'Only User',
+            username: 'only',
+            email: 'only@example.com',
+          },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -644,7 +786,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -663,7 +807,9 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.click(searchInput);
 
     // Press ArrowDown without showing results
@@ -683,7 +829,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -711,7 +859,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -745,7 +895,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -803,7 +955,14 @@ describe('RoleAccessPanel', () => {
     const user = userEvent.setup();
     mockUsePlatformUsersQuery.mockReturnValue({
       data: {
-        results: [{ id: 3, name: '', username: 'newuser', email: 'newuser@example.com' }],
+        results: [
+          {
+            id: 3,
+            name: '',
+            username: 'newuser',
+            email: 'newuser@example.com',
+          },
+        ],
       },
       isFetching: false,
       isLoading: false,
@@ -811,7 +970,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -828,7 +989,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'new');
 
     await waitFor(() => {
@@ -854,7 +1017,9 @@ describe('RoleAccessPanel', () => {
 
     render(<RoleAccessPanel {...defaultProps} />);
 
-    const searchInput = screen.getByPlaceholderText(/search by name, username, or email/i);
+    const searchInput = screen.getByPlaceholderText(
+      /search by name, username, or email/i,
+    );
     await user.type(searchInput, 'user');
 
     await waitFor(() => {
@@ -869,8 +1034,15 @@ describe('RoleAccessPanel', () => {
   });
 
   it('handles undefined users array in policy', () => {
-    render(<RoleAccessPanel {...defaultProps} policy={{ ...defaultPolicy, users: undefined }} />);
+    render(
+      <RoleAccessPanel
+        {...defaultProps}
+        policy={{ ...defaultPolicy, users: undefined }}
+      />,
+    );
 
-    expect(screen.getByText('No users have this role yet.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No users have this role yet.'),
+    ).toBeInTheDocument();
   });
 });

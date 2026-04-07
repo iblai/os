@@ -23,7 +23,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/hooks', () => ({
-  useAppSelector: (selector: (s: typeof mockReduxState) => unknown) => selector(mockReduxState),
+  useAppSelector: (selector: (s: typeof mockReduxState) => unknown) =>
+    selector(mockReduxState),
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
@@ -136,7 +137,9 @@ describe('useMentorTimeTrackingConfig', () => {
 
       render(<HookHarness onReady={(api) => (hookApi = api)} />);
 
-      expect(hookApi!.getCurrentUrl()).toBe('https://example.com/platform/tenant123/mentor456');
+      expect(hookApi!.getCurrentUrl()).toBe(
+        'https://example.com/platform/tenant123/mentor456',
+      );
     });
 
     it('returns "/" when window is undefined (SSR)', () => {
@@ -152,7 +155,9 @@ describe('useMentorTimeTrackingConfig', () => {
 
       // The function checks typeof window at call time
       // In browser environment it returns the href
-      expect(hookApi!.getCurrentUrl()).toBe('https://example.com/platform/tenant123/mentor456');
+      expect(hookApi!.getCurrentUrl()).toBe(
+        'https://example.com/platform/tenant123/mentor456',
+      );
     });
   });
 
@@ -206,8 +211,14 @@ describe('useMentorTimeTrackingConfig', () => {
       const callback = vi.fn();
       hookApi!.onRouteChange(callback);
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('popstate', expect.any(Function));
-      expect(addEventListenerSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'popstate',
+        expect.any(Function),
+      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'beforeunload',
+        expect.any(Function),
+      );
     });
 
     it('calls callback when pathname changes during polling', () => {
@@ -335,15 +346,23 @@ describe('useMentorTimeTrackingConfig', () => {
       cleanup();
 
       expect(clearIntervalSpy).toHaveBeenCalled();
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('popstate', expect.any(Function));
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'popstate',
+        expect.any(Function),
+      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'beforeunload',
+        expect.any(Function),
+      );
     });
 
     it('stores callback reference and calls it on pathname change via useEffect', () => {
       const callback = vi.fn();
       let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
 
-      const { rerender } = render(<HookHarness onReady={(api) => (hookApi = api)} />);
+      const { rerender } = render(
+        <HookHarness onReady={(api) => (hookApi = api)} />,
+      );
 
       // Register the route change callback
       hookApi!.onRouteChange(callback);
@@ -425,13 +444,20 @@ describe('MentorTimeTrackingProvider', () => {
     render(<MentorTimeTrackingProvider />);
 
     expect(TimeTrackingProviderMock).toHaveBeenCalled();
-    const passedProps = TimeTrackingProviderMock.mock.calls[0][0] as Record<string, unknown>;
+    const passedProps = TimeTrackingProviderMock.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
 
     expect((passedProps.getTenantKey as () => string)()).toBe('tenant123');
-    expect((passedProps.getMentorId as () => string | undefined)()).toBe('mentor456');
+    expect((passedProps.getMentorId as () => string | undefined)()).toBe(
+      'mentor456',
+    );
     expect((passedProps.getCurrentUrl as () => string)()).toBe(
       'https://example.com/platform/tenant123/mentor456',
     );
-    expect((passedProps.getSessionUuid as () => string | undefined)()).toBe('session-uuid-0');
+    expect((passedProps.getSessionUuid as () => string | undefined)()).toBe(
+      'session-uuid-0',
+    );
   });
 });

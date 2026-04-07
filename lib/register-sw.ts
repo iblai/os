@@ -49,13 +49,33 @@ function notifyStatusChange(): void {
 }
 
 /**
- * Register the service worker
+ * Wait for the page to reach a fully loaded state.
+ * Returns immediately if the page is already loaded.
+ */
+function waitForPageLoad(): Promise<void> {
+  if (typeof document === 'undefined') return Promise.resolve();
+  if (document.readyState === 'complete') return Promise.resolve();
+  return new Promise((resolve) => {
+    window.addEventListener('load', () => resolve(), { once: true });
+  });
+}
+
+/**
+ * Register the service worker.
+ * Defers registration until the page is fully loaded to avoid
+ * interfering with chunk loading — especially in WebKit/Safari where
+ * early SW registration can cause ChunkLoadError timeouts.
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isServiceWorkerSupported()) {
     console.log('[SW Registration] Service workers not supported');
     return null;
   }
+
+  // Wait for the page to be fully loaded before registering.
+  // This prevents the service worker from intercepting in-flight
+  // chunk requests during initial page load.
+  await waitForPageLoad();
 
   try {
     // Get the base path from environment or default to empty
@@ -77,7 +97,10 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
       if (newWorker) {
         newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          if (
+            newWorker.state === 'installed' &&
+            navigator.serviceWorker.controller
+          ) {
             // New service worker is installed but waiting
             console.log('[SW Registration] New service worker available');
             updateAvailable = true;
@@ -150,7 +173,10 @@ export function clearAllCaches(): void {
  */
 export function setTauriMode(isTauri: boolean): void {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SET_TAURI', data: isTauri });
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_TAURI',
+      data: isTauri,
+    });
     console.log('[SW Registration] Set Tauri mode:', isTauri);
   }
 }
@@ -160,7 +186,10 @@ export function setTauriMode(isTauri: boolean): void {
  */
 export function setOfflineStatus(isOffline: boolean): void {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'SET_OFFLINE', data: isOffline });
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_OFFLINE',
+      data: isOffline,
+    });
     console.log('[SW Registration] Set offline status:', isOffline);
   }
 }
@@ -183,7 +212,9 @@ export async function getCacheStatus(): Promise<Record<string, number> | null> {
     };
 
     navigator.serviceWorker.addEventListener('message', messageHandler);
-    navigator.serviceWorker.controller.postMessage({ type: 'GET_CACHE_STATUS' });
+    navigator.serviceWorker.controller.postMessage({
+      type: 'GET_CACHE_STATUS',
+    });
 
     // Timeout after 5 seconds
     setTimeout(() => {

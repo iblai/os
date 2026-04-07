@@ -11,7 +11,13 @@ describe('Loader component', () => {
     const outerDiv = container.firstChild as HTMLElement;
     expect(outerDiv).toBeInTheDocument();
     expect(outerDiv.tagName).toBe('DIV');
-    expect(outerDiv).toHaveClass('flex', 'h-full', 'w-full', 'items-center', 'justify-center');
+    expect(outerDiv).toHaveClass(
+      'flex',
+      'h-full',
+      'w-full',
+      'items-center',
+      'justify-center',
+    );
   });
 
   it('should render the spinner element', () => {

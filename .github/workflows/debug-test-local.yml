@@ -1,0 +1,435 @@
+name: Debug Test (Local)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to checkout (leave blank for default branch)'
+        required: false
+        type: string
+        default: ''
+      test-files:
+        description: 'Spec files (space-separated, e.g. tests/accept-invite/user-can-accept-invite.spec.ts tests/chat/*.spec.ts)'
+        required: true
+        type: string
+      browser:
+        description: 'Browser to test'
+        required: false
+        default: 'chrome'
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - safari
+          - edge
+          - all
+      mentor-image:
+        description: 'Mentor image URI to deploy (e.g. <account-id>.dkr.ecr.us-east-1.amazonaws.com/ibl-mentor-spa-pro:<tag>). If blank, builds from branch.'
+        required: false
+        type: string
+        default: ''
+      workers:
+        description: 'Playwright workers'
+        required: false
+        type: string
+        default: '1'
+
+run-name: 'Local Debug - ${{ inputs.branch || github.ref_name }} - ${{ inputs.browser }} - ${{ inputs.test-files }}'
+
+concurrency:
+  group: debug-test-local-mentor
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================
+  # CONFIG
+  # ============================================================
+  config:
+    runs-on: ubuntu-22.04
+    environment: iblai.app
+    outputs:
+      nodes-json: ${{ steps.config.outputs.nodes-json }}
+      venv-name: ${{ steps.config.outputs.venv-name }}
+    steps:
+      - name: Output config
+        id: config
+        run: |
+          echo "nodes-json<<EOF" >> $GITHUB_OUTPUT
+          echo '${{ vars.NODES }}' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "venv-name=${{ vars.IBL_CLI_VENV_NAME }}" >> $GITHUB_OUTPUT
+
+  # ============================================================
+  # DOMAIN LOCK
+  # ============================================================
+  acquire-domain:
+    needs: [config]
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
+    with:
+      action: acquire
+      app-type: testing
+      context: 'Local debug - ${{ github.actor }} - ${{ inputs.browser }}'
+      allowed-domains: '3'
+      max-wait: 18000
+
+  # ============================================================
+  # CHECK PRODUCTION VERSIONS
+  # ============================================================
+  check-prod-versions:
+    needs: [config, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: image-deploy-ops-new
+    environment: iblai.app
+    outputs:
+      mentor-uri: ${{ steps.read-mentor.outputs.image-uri }}
+      auth-uri: ${{ steps.read-auth.outputs.image-uri }}
+    steps:
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/iblai-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Setup SSH
+        uses: ./.ops/.github/actions/setup-ssh
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+
+      - name: Read mentor version from prod
+        id: read-mentor
+        uses: ./.ops/.github/actions/read-prod-versions
+        with:
+          app-name: mentor
+          nodes-json: ${{ vars.NODES_SPA_CHECK }}
+
+      - name: Read auth version from prod
+        id: read-auth
+        uses: ./.ops/.github/actions/read-prod-versions
+        with:
+          app-name: auth
+          nodes-json: ${{ vars.NODES_SPA_CHECK }}
+
+  # ============================================================
+  # BUILD MENTOR IMAGE (only if mentor-image not provided)
+  # ============================================================
+  build-app-image:
+    needs: [config, acquire-domain]
+    if: >-
+      always() &&
+      needs.acquire-domain.result == 'success' &&
+      inputs.mentor-image == ''
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      image-name: ibl-mentor-spa-pro
+      registry-type: ecr
+      event-name: workflow_dispatch
+
+  # ============================================================
+  # DEPLOY MENTOR APP
+  # ============================================================
+  deploy-app:
+    needs: [config, acquire-domain, check-prod-versions, build-app-image]
+    if: >-
+      always() &&
+      needs.acquire-domain.result == 'success' &&
+      needs.check-prod-versions.result == 'success' &&
+      needs.build-app-image.result != 'failure'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    with:
+      app-name: MENTOR
+      image-uri: ${{ inputs.mentor-image != '' && inputs.mentor-image || needs.build-app-image.outputs.image-uri }}
+      deployment-path: /ibl/app/ibl-spa/mentor3
+      nodes-json: ${{ needs.config.outputs.nodes-json }}
+      venv-name: ${{ needs.config.outputs.venv-name }}
+    secrets:
+      ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # DEPLOY AUTH (uses prod auth image)
+  # ============================================================
+  deploy-auth:
+    needs: [config, acquire-domain, check-prod-versions, deploy-app]
+    if: >-
+      always() &&
+      needs.acquire-domain.result == 'success' &&
+      needs.check-prod-versions.result == 'success' &&
+      needs.deploy-app.result != 'failure'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    with:
+      app-name: AUTH
+      image-uri: ${{ needs.check-prod-versions.outputs.auth-uri }}
+      deployment-path: /ibl/app/ibl-spa/auth3
+      nodes-json: ${{ needs.config.outputs.nodes-json }}
+      venv-name: ${{ needs.config.outputs.venv-name }}
+    secrets:
+      ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # HEALTH CHECK
+  # ============================================================
+  health-check:
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+      ]
+    if: always() && needs.deploy-auth.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    with:
+      app-name: MENTOR
+      expected-image-uri: ${{ inputs.mentor-image != '' && inputs.mentor-image || needs.build-app-image.outputs.image-uri }}
+      deployment-path: /ibl/app/ibl-spa/mentor3
+      nodes-json: ${{ needs.config.outputs.nodes-json }}
+      venv-name: ${{ needs.config.outputs.venv-name }}
+      health-port: '5007'
+    secrets:
+      ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # RUN TESTS (directly on runner, like local execution)
+  # ============================================================
+  run-tests:
+    needs: [config, acquire-domain, check-prod-versions, health-check]
+    if: always() && needs.health-check.result == 'success'
+    runs-on: ubuntu-22.04
+    environment: iblai.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/iblai-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Determine test user
+        id: test-user
+        uses: ./.ops/.github/actions/determine-test-user
+        with:
+          domain-number: '3'
+          app-type: mentor
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Create e2e .env
+        run: |
+          cat > e2e/.env.production <<ENVEOF
+          MENTOR_NEXTJS_HOST=${{ steps.test-user.outputs.mentor-domain }}
+          AUTH_HOST=${{ steps.test-user.outputs.auth-domain }}
+          PLAYWRIGHT_USERNAME=iblaiuserchromenew@ibleducation.com
+          PLAYWRIGHT_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}
+          PLAYWRIGHT_USERNAME_CHROME=iblaiuserchromenew@ibleducation.com
+          PLAYWRIGHT_PASSWORD_CHROME=${{ secrets.TEST_USER_PASSWORD }}
+          PLAYWRIGHT_USERNAME_FIREFOX=${{ steps.test-user.outputs.username-firefox }}
+          PLAYWRIGHT_PASSWORD_FIREFOX=${{ secrets.TEST_USER_PASSWORD }}
+          PLAYWRIGHT_USERNAME_SAFARI=${{ steps.test-user.outputs.username-safari }}
+          PLAYWRIGHT_PASSWORD_SAFARI=${{ secrets.TEST_USER_PASSWORD }}
+          PLAYWRIGHT_USERNAME_EDGE=${{ steps.test-user.outputs.username-edge }}
+          PLAYWRIGHT_PASSWORD_EDGE=${{ secrets.TEST_USER_PASSWORD }}
+          AUTH_FLOW=${{ vars.AUTH_FLOW }}
+          AUTH_IDP=${{ vars.AUTH_IDP }}
+          PLATFORM=mentor
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' e2e/.env.production
+          echo "Generated e2e/.env.production:"
+          cat e2e/.env.production
+
+      - name: Display test parameters
+        run: |
+          echo "================================================================================"
+          echo "  DEBUG TEST PARAMETERS"
+          echo "================================================================================"
+          echo ""
+          echo "  Branch:          ${{ inputs.branch || github.ref_name }}"
+          BROWSERS="${{ inputs.browser == 'all' && 'chrome firefox safari edge' || inputs.browser }}"
+          echo "  Browser(s):      $BROWSERS"
+          echo "  Workers:         ${{ inputs.workers }}"
+          echo ""
+          echo "  Mentor domain:   ${{ steps.test-user.outputs.mentor-domain }}"
+          echo "  Auth domain:     ${{ steps.test-user.outputs.auth-domain }}"
+          echo "  Mentor image:    ${{ inputs.mentor-image || 'building from branch' }}"
+          echo ""
+          echo "  Test user:       iblaiuserchromenew@ibleducation.com"
+          echo "  Auth flow:       ${{ vars.AUTH_FLOW }}"
+          echo ""
+          echo "  Spec files:"
+          for f in ${{ inputs.test-files }}; do
+            echo "    - $f"
+          done
+          echo ""
+          echo "================================================================================"
+
+      - name: Run Playwright tests
+        env:
+          CI: true
+          NODE_ENV: production
+          PLAYWRIGHT_HTML_OPEN: never
+          DEBUG: pw:api,pw:browser
+        run: |
+          BROWSERS="${{ inputs.browser == 'all' && 'chrome firefox safari edge' || inputs.browser }}"
+          OVERALL_EXIT=0
+
+          for BROWSER in $BROWSERS; do
+            PROJECT="mentor-desktop-${BROWSER}"
+            echo ""
+            echo "================================================================================"
+            echo "  Running: $PROJECT"
+            echo "================================================================================"
+            echo ""
+
+            set +e
+            npx playwright test \
+              ${{ inputs.test-files }} \
+              --config e2e/playwright.config.ts \
+              --project="$PROJECT" \
+              --workers=${{ inputs.workers }} \
+              --reporter=list \
+              --trace=on
+            EXIT_CODE=$?
+            set -e
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "FAILED: $BROWSER (exit: $EXIT_CODE)"
+              OVERALL_EXIT=1
+            else
+              echo "PASSED: $BROWSER"
+            fi
+          done
+
+          exit $OVERALL_EXIT
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.browser }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # ============================================================
+  # RELEASE DOMAIN LOCK
+  # ============================================================
+  release-domain:
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+        health-check,
+        run-tests,
+      ]
+    if: >-
+      always() &&
+      needs.acquire-domain.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
+    with:
+      action: release
+      app-type: testing
+      domain-number: '3'
+
+  # ============================================================
+  # SUMMARY
+  # ============================================================
+  summary:
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+        health-check,
+        run-tests,
+        release-domain,
+      ]
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Local Debug Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Parameters" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ inputs.branch || github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Browser | ${{ inputs.browser }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Workers | ${{ inputs.workers }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mentor domain | \`https://mentorai3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth domain | \`https://login3.stg.iblai.app\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test user | \`iblaiuserchromenew@ibleducation.com\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mentor image | \`${{ inputs.mentor-image || needs.build-app-image.outputs.image-uri || 'built from branch' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test files | \`${{ inputs.test-files }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|:------:|" >> $GITHUB_STEP_SUMMARY
+
+          for PAIR in \
+            "Domain Lock:${{ needs.acquire-domain.result }}" \
+            "Build Mentor:${{ needs.build-app-image.result }}" \
+            "Deploy Mentor:${{ needs.deploy-app.result }}" \
+            "Deploy Auth:${{ needs.deploy-auth.result }}" \
+            "Health Check:${{ needs.health-check.result }}" \
+            "Tests:${{ needs.run-tests.result }}" \
+            "Release Domain:${{ needs.release-domain.result }}"
+          do
+            STAGE="${PAIR%%:*}"
+            RESULT="${PAIR#*:}"
+            if [[ "$RESULT" == "success" ]]; then
+              echo "| $STAGE | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+            elif [[ "$RESULT" == "skipped" ]]; then
+              echo "| $STAGE | :fast_forward: skipped |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $STAGE | :x: $RESULT |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check test results
+        if: always()
+        run: |
+          TEST_RESULT="${{ needs.run-tests.result }}"
+          if [[ "$TEST_RESULT" != "success" ]]; then
+            echo "Tests did not pass (result: $TEST_RESULT)"
+            exit 1
+          fi
+          echo "Tests passed!"

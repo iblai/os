@@ -37,7 +37,10 @@ describe('useGoogleDrivePicker v2', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock gapi global
@@ -49,9 +52,11 @@ describe('useGoogleDrivePicker v2', () => {
     };
 
     // Mock document.body.appendChild - don't auto-trigger onload to avoid race conditions
-    appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
-      return node as HTMLScriptElement;
-    });
+    appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: Node) => {
+        return node as HTMLScriptElement;
+      });
 
     // Default mock implementations
     mockGetCredentials.mockReturnValue({
@@ -110,12 +115,16 @@ describe('useGoogleDrivePicker v2', () => {
       await waitFor(() => {
         expect(result.current.credentials.clientId).toBe('test-client-id');
         expect(result.current.credentials.developerKey).toBe('test-dev-key');
-        expect(result.current.credentials.clientSecret).toBe('test-client-secret');
+        expect(result.current.credentials.clientSecret).toBe(
+          'test-client-secret',
+        );
       });
     });
 
     it('should show error toast when credentials fetch fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
@@ -123,7 +132,9 @@ describe('useGoogleDrivePicker v2', () => {
       renderHook(() => useGoogleDrivePicker());
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to fetch Google Drive credentials');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to fetch Google Drive credentials',
+        );
       });
 
       consoleSpy.mockRestore();

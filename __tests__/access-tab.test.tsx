@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,8 @@ const mockUseUsername = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUseGetRbacMentorAccessListQuery = vi.fn();
+const mockGetRbacPermissions = vi.fn();
+const mockDispatch = vi.fn();
 const renderedAddAccessProps: Array<Record<string, unknown>> = [];
 const renderedRoleAccessProps: Array<Record<string, unknown>> = [];
 
@@ -27,35 +29,59 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockUseGetMentorSettingsQuery(...args),
   useGetRbacMentorAccessListQuery: (...args: unknown[]) =>
     mockUseGetRbacMentorAccessListQuery(...args),
+  useGetRbacPermissionsMutation: () => [mockGetRbacPermissions],
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/access-tab/add-access', () => ({
-  AddAccessDialog: (props: {
-    availableRoles: string[];
-    isLoading: boolean;
-    onAccessCreated: () => Promise<void>;
-  }) => {
-    renderedAddAccessProps.push(props);
-    return (
-      <div data-testid="add-access-dialog">
-        add-access-{props.availableRoles.join(',')}-{props.isLoading ? 'loading' : 'ready'}
-      </div>
-    );
-  },
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => mockDispatch,
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/access-tab/update-access', () => ({
-  RoleAccessPanel: (props: {
-    policy: Record<string, unknown>;
-    onAccessUpdated: () => Promise<void>;
-  }) => {
-    renderedRoleAccessProps.push(props);
-    return <div data-testid="role-access-panel">role-panel-{props.policy?.role as string}</div>;
-  },
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  updateRbacPermissions: (payload: unknown) => ({
+    type: 'rbac/updateRbacPermissions',
+    payload,
+  }),
 }));
+
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/access-tab/add-access',
+  () => ({
+    AddAccessDialog: (props: {
+      availableRoles: string[];
+      isLoading: boolean;
+      onAccessCreated: () => Promise<void>;
+    }) => {
+      renderedAddAccessProps.push(props);
+      return (
+        <div data-testid="add-access-dialog">
+          add-access-{props.availableRoles.join(',')}-
+          {props.isLoading ? 'loading' : 'ready'}
+        </div>
+      );
+    },
+  }),
+);
+
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/access-tab/update-access',
+  () => ({
+    RoleAccessPanel: (props: {
+      policy: Record<string, unknown>;
+      onAccessUpdated: () => Promise<void>;
+    }) => {
+      renderedRoleAccessProps.push(props);
+      return (
+        <div data-testid="role-access-panel">
+          role-panel-{props.policy?.role as string}
+        </div>
+      );
+    },
+  }),
+);
 
 const createAccessQueryState = (overrides: Record<string, unknown> = {}) => ({
   data: { policies: [] },
@@ -69,7 +95,11 @@ const createAccessQueryState = (overrides: Record<string, unknown> = {}) => ({
 
 describe('AccessTab', () => {
   beforeEach(() => {
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-from-route' });
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-from-route',
+    });
     mockUseUsername.mockReturnValue('mentor-user');
     mockGetMentorId.mockReturnValue('mentor-from-navigate');
 
@@ -78,11 +108,58 @@ describe('AccessTab', () => {
       isLoading: false,
     });
 
-    mockUseGetRbacMentorAccessListQuery.mockReturnValue(createAccessQueryState());
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState(),
+    );
+    mockGetRbacPermissions.mockReturnValue({
+      unwrap: () => Promise.resolve({}),
+    });
 
     renderedAddAccessProps.length = 0;
     renderedRoleAccessProps.length = 0;
   });
+
+  /* ---------- RBAC permission fetch on mount ---------- */
+
+  it('fetches RBAC permissions on mount with correct args', async () => {
+    render(<AccessTab />);
+
+    await waitFor(() => {
+      expect(mockGetRbacPermissions).toHaveBeenCalledWith({
+        requestBody: {
+          platform_key: 'tenant-1',
+          resources: ['/users/', '/groups/'],
+        },
+      });
+    });
+  });
+
+  it('dispatches updateRbacPermissions after successful fetch', async () => {
+    const permResult = { '/users/': { list: true } };
+    mockGetRbacPermissions.mockReturnValue({
+      unwrap: () => Promise.resolve(permResult),
+    });
+
+    render(<AccessTab />);
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/updateRbacPermissions',
+        payload: { ...permResult },
+      });
+    });
+  });
+
+  it('does not fetch permissions when tenantKey is missing', () => {
+    mockUseParams.mockReturnValue({
+      tenantKey: undefined,
+      mentorId: 'mentor-from-route',
+    });
+    render(<AccessTab />);
+    expect(mockGetRbacPermissions).not.toHaveBeenCalled();
+  });
+
+  /* ---------- Loading / error / empty states ---------- */
 
   it('renders loading placeholders while queries are loading', () => {
     mockUseGetMentorSettingsQuery.mockReturnValue({
@@ -94,7 +171,9 @@ describe('AccessTab', () => {
 
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2);
     expect(screen.queryByTestId('add-access-dialog')).not.toBeInTheDocument();
-    expect(screen.queryByText('Access management is unavailable.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Access management is unavailable.'),
+    ).not.toBeInTheDocument();
   });
 
   it('shows manage unavailable state when mentor context is missing', () => {
@@ -105,7 +184,9 @@ describe('AccessTab', () => {
 
     render(<AccessTab />);
 
-    expect(screen.getByText('Access management is unavailable.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Access management is unavailable.'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('add-access-dialog')).not.toBeInTheDocument();
   });
 
@@ -128,11 +209,16 @@ describe('AccessTab', () => {
 
     render(<AccessTab />);
 
-    expect(screen.getByRole('heading', { name: 'Access control' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Access control' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Viewer')).toBeInTheDocument();
-    expect(screen.getByText('1 user assigned to this role')).toBeInTheDocument();
-    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
-    expect(screen.getByTestId('add-access-dialog')).toHaveTextContent('add-access-editor-ready');
+    expect(
+      screen.getByText('1 user assigned to this role'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('add-access-dialog')).toHaveTextContent(
+      'add-access-editor,chat-ready',
+    );
   });
 
   it('shows empty state when there are no access policies', () => {
@@ -144,17 +230,24 @@ describe('AccessTab', () => {
 
     render(<AccessTab />);
 
-    expect(screen.getByText('No roles available for this mentor.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No roles available for this mentor.'),
+    ).toBeInTheDocument();
   });
 
   it('hides add access dialog when all default roles already exist', () => {
-    // DEFAULT_MENTOR_ROLES is currently ['editor'] only (viewer/chat not yet functional)
     const policies = [
       {
         id: 1,
         mentor_id: 101,
         platform_key: 'tenant-1',
         role: 'editor',
+      },
+      {
+        id: 2,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'chat',
       },
     ];
 
@@ -180,7 +273,9 @@ describe('AccessTab', () => {
 
     render(<AccessTab />);
 
-    expect(screen.getByText('Unable to load mentor access.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Unable to load mentor access.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
@@ -204,9 +299,71 @@ describe('AccessTab', () => {
 
     render(<AccessTab />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit Viewer access' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Edit Viewer access' }),
+    );
 
-    expect(screen.getByTestId('role-access-panel')).toHaveTextContent('role-panel-viewer');
-    expect(renderedRoleAccessProps.at(-1)?.policy).toMatchObject({ role: 'viewer' });
+    expect(screen.getByTestId('role-access-panel')).toHaveTextContent(
+      'role-panel-viewer',
+    );
+    expect(renderedRoleAccessProps.at(-1)?.policy).toMatchObject({
+      role: 'viewer',
+    });
+  });
+
+  it('closes role access dialog and clears editing state', async () => {
+    const user = userEvent.setup();
+    const policies = [
+      {
+        id: 1,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'viewer',
+        users: [],
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    // Open dialog
+    await user.click(
+      screen.getByRole('button', { name: 'Edit Viewer access' }),
+    );
+    expect(screen.getByTestId('role-access-panel')).toBeInTheDocument();
+
+    // Close via Escape (triggers onOpenChange(false))
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('role-access-panel')).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls refetch when onAccessCreated is invoked', async () => {
+    const refetchMock = vi.fn();
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies: [] },
+        refetch: refetchMock,
+      }),
+    );
+
+    render(<AccessTab />);
+
+    // The AddAccessDialog receives onAccessCreated as a prop
+    const addAccessProps = renderedAddAccessProps.at(-1);
+    expect(addAccessProps).toBeDefined();
+
+    const onAccessCreated =
+      addAccessProps?.onAccessCreated as () => Promise<void>;
+    await onAccessCreated();
+
+    expect(refetchMock).toHaveBeenCalled();
   });
 });

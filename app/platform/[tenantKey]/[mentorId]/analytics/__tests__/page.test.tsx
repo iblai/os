@@ -76,7 +76,9 @@ describe('analytics page', () => {
 
     render(<AnalyticsPage />);
 
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('selected-mentor-id');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'selected-mentor-id',
+    );
   });
 
   it('should fallback to mentorId when selectedMentorInfo is null', () => {
@@ -89,7 +91,9 @@ describe('analytics page', () => {
 
     render(<AnalyticsPage />);
 
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('fallback-mentor');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'fallback-mentor',
+    );
   });
 
   it('should fallback to mentorId when selectedMentorInfo has no unique_id', () => {
@@ -104,6 +108,8 @@ describe('analytics page', () => {
 
     render(<AnalyticsPage />);
 
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('fallback-mentor');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'fallback-mentor',
+    );
   });
 });

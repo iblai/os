@@ -26,7 +26,9 @@ describe('useChatMode', () => {
     });
 
     it('should return "default" when chat=default', () => {
-      mockGet.mockImplementation((key: string) => (key === 'chat' ? 'default' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'chat' ? 'default' : null,
+      );
 
       const { result } = renderHook(() => useChatMode());
 
@@ -34,7 +36,9 @@ describe('useChatMode', () => {
     });
 
     it('should return "advanced" when chat=advanced', () => {
-      mockGet.mockImplementation((key: string) => (key === 'chat' ? 'advanced' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'chat' ? 'advanced' : null,
+      );
 
       const { result } = renderHook(() => useChatMode());
 
@@ -42,7 +46,9 @@ describe('useChatMode', () => {
     });
 
     it('should return the parameter value even if it is unexpected', () => {
-      mockGet.mockImplementation((key: string) => (key === 'chat' ? 'unknown' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'chat' ? 'unknown' : null,
+      );
 
       const { result } = renderHook(() => useChatMode());
 
@@ -68,7 +74,9 @@ describe('useChatMode', () => {
 
       expect(result.current).toBe('default');
 
-      mockGet.mockImplementation((key: string) => (key === 'chat' ? 'advanced' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'chat' ? 'advanced' : null,
+      );
       rerender();
 
       expect(result.current).toBe('advanced');

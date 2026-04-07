@@ -3,7 +3,11 @@
 import React from 'react';
 import { cn, isLoggedIn } from '@/lib/utils';
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AuthPopover } from '@/components/auth-popover';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
@@ -56,11 +60,14 @@ export const AppSidebarContent: React.FC<Props> = ({
               <>
                 {userIsLoggedIn ? (
                   <SidebarMenuButton
-                    className={cn('cursor-pointer space-x-1 mb-1 text-gray-700', {
-                      'border border-[#c9d8f8] flex items-center justify-center py-4 h-9':
-                        item.hasBorder,
-                      'hover:bg-[#c9d8f8]': !item.hasBorder,
-                    })}
+                    className={cn(
+                      'mb-1 cursor-pointer space-x-1 text-gray-700',
+                      {
+                        'flex h-9 items-center justify-center border border-[#c9d8f8] py-4':
+                          item.hasBorder,
+                        'hover:bg-[#c9d8f8]': !item.hasBorder,
+                      },
+                    )}
                     onClick={() => {
                       setOpenMobile(false);
                       if (item.isAnAdminAction) {
@@ -78,11 +85,14 @@ export const AppSidebarContent: React.FC<Props> = ({
                     {item.isAnAdminAction ? (
                       <AuthPopover tenantKey={tenantKey}>
                         <SidebarMenuButton
-                          className={cn('cursor-pointer space-x-1 mb-1 text-gray-700', {
-                            'border border-[#c9d8f8] flex items-center justify-center py-4 h-9':
-                              item.hasBorder,
-                            'hover:bg-[#c9d8f8]': !item.hasBorder,
-                          })}
+                          className={cn(
+                            'mb-1 cursor-pointer space-x-1 text-gray-700',
+                            {
+                              'flex h-9 items-center justify-center border border-[#c9d8f8] py-4':
+                                item.hasBorder,
+                              'hover:bg-[#c9d8f8]': !item.hasBorder,
+                            },
+                          )}
                         >
                           <item.icon className="h-5 w-5 text-gray-500" />
                           <span>{item.label}</span>
@@ -90,11 +100,14 @@ export const AppSidebarContent: React.FC<Props> = ({
                       </AuthPopover>
                     ) : (
                       <SidebarMenuButton
-                        className={cn('cursor-pointer space-x-1 mb-1 text-gray-700', {
-                          'border border-[#c9d8f8] flex items-center justify-center py-4 h-9':
-                            item.hasBorder,
-                          'hover:bg-[#c9d8f8]': !item.hasBorder,
-                        })}
+                        className={cn(
+                          'mb-1 cursor-pointer space-x-1 text-gray-700',
+                          {
+                            'flex h-9 items-center justify-center border border-[#c9d8f8] py-4':
+                              item.hasBorder,
+                            'hover:bg-[#c9d8f8]': !item.hasBorder,
+                          },
+                        )}
                         onClick={() => {
                           setOpenMobile(false);
                           item.onClick();
@@ -113,7 +126,7 @@ export const AppSidebarContent: React.FC<Props> = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <SidebarMenuButton
-                        className={cn('cursor-pointer text-gray-700 mb-0', {
+                        className={cn('mb-0 cursor-pointer text-gray-700', {
                           'border border-[#c9d8f8]': item.hasBorder,
                           'hover:bg-[#c9d8f8]': !item.hasBorder,
                         })}
@@ -129,7 +142,10 @@ export const AppSidebarContent: React.FC<Props> = ({
                         <span>{item.label}</span>
                       </SidebarMenuButton>
                     </TooltipTrigger>
-                    <TooltipContent className="ibl-tooltip-content" side="right">
+                    <TooltipContent
+                      className="ibl-tooltip-content"
+                      side="right"
+                    >
                       {item.label}
                     </TooltipContent>
                   </Tooltip>
@@ -140,17 +156,23 @@ export const AppSidebarContent: React.FC<Props> = ({
                         <AuthPopover tenantKey={tenantKey}>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton
-                              className={cn('cursor-pointer text-gray-700 mb-0', {
-                                'border border-[#c9d8f8]': item.hasBorder,
-                                'hover:bg-[#c9d8f8]': !item.hasBorder,
-                              })}
+                              className={cn(
+                                'mb-0 cursor-pointer text-gray-700',
+                                {
+                                  'border border-[#c9d8f8]': item.hasBorder,
+                                  'hover:bg-[#c9d8f8]': !item.hasBorder,
+                                },
+                              )}
                             >
                               <item.icon className="h-5 w-5" />
                               <span>{item.label}</span>
                             </SidebarMenuButton>
                           </TooltipTrigger>
                         </AuthPopover>
-                        <TooltipContent className="ibl-tooltip-content" side="right">
+                        <TooltipContent
+                          className="ibl-tooltip-content"
+                          side="right"
+                        >
                           {item.label}
                         </TooltipContent>
                       </Tooltip>
@@ -158,7 +180,7 @@ export const AppSidebarContent: React.FC<Props> = ({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <SidebarMenuButton
-                            className={cn('cursor-pointer text-gray-700 mb-0', {
+                            className={cn('mb-0 cursor-pointer text-gray-700', {
                               'border border-[#c9d8f8]': item.hasBorder,
                               'hover:bg-[#c9d8f8]': !item.hasBorder,
                             })}
@@ -170,7 +192,10 @@ export const AppSidebarContent: React.FC<Props> = ({
                             <span>{item.label}</span>
                           </SidebarMenuButton>
                         </TooltipTrigger>
-                        <TooltipContent className="ibl-tooltip-content" side="right">
+                        <TooltipContent
+                          className="ibl-tooltip-content"
+                          side="right"
+                        >
                           {item.label}
                         </TooltipContent>
                       </Tooltip>

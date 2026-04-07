@@ -1,7 +1,10 @@
 import { useState, useCallback } from 'react';
-import { useGetDisclaimersQuery, useAgreeToDisclaimerMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useGetDisclaimersQuery,
+  useAgreeToDisclaimerMutation,
+} from '@iblai/iblai-js/data-layer';
 import { useUsername } from './use-user';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
@@ -9,27 +12,26 @@ import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
 export function useUserAgreement() {
   const username = useUsername();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const searchParams = useSearchParams();
-  const isAccessingPublicRoute = !!searchParams.get('token');
-
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
-  const [userHasAgreedToDisclaimer, setUserHasAgreedToDisclaimer] = useState(false);
+  const [userHasAgreedToDisclaimer, setUserHasAgreedToDisclaimer] =
+    useState(false);
   const [pendingSubmitContent, setPendingSubmitContent] = useState<string>('');
   const [isAgreeing, setIsAgreeing] = useState(false);
 
-  const { data: disclaimers, isLoading: isDisclaimersLoading } = useGetDisclaimersQuery(
-    {
-      org: tenantKey,
-      userId: username ?? '',
-      params: {
-        mentor_id: mentorId,
-        scope: 'mentor',
+  const { data: disclaimers, isLoading: isDisclaimersLoading } =
+    useGetDisclaimersQuery(
+      {
+        org: tenantKey,
+        userId: username ?? '',
+        params: {
+          mentor_id: mentorId,
+          scope: 'mentor',
+        },
       },
-    },
-    {
-      skip: !mentorId || !tenantKey || !username || isAccessingPublicRoute,
-    },
-  );
+      {
+        skip: !mentorId || !tenantKey || !username,
+      },
+    );
 
   const [agreeToDisclaimer] = useAgreeToDisclaimerMutation();
 
@@ -46,7 +48,8 @@ export function useUserAgreement() {
     } as const);
 
   const hasUserAgreement = Boolean(userAgreementRecord?.active);
-  const hasUserAgreedToDisclaimer = userAgreementRecord?.has_agreed || userHasAgreedToDisclaimer;
+  const hasUserAgreedToDisclaimer =
+    userAgreementRecord?.has_agreed || userHasAgreedToDisclaimer;
 
   const handleDisclaimerAgree = useCallback(async () => {
     if (!userAgreementRecord?.id) {

@@ -111,9 +111,13 @@ describe('register-sw', () => {
     });
 
     it('should handle registration error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockServiceWorker.register = vi.fn().mockRejectedValue(new Error('Registration failed'));
+      mockServiceWorker.register = vi
+        .fn()
+        .mockRejectedValue(new Error('Registration failed'));
 
       vi.resetModules();
       const { registerServiceWorker } = await import('../register-sw');
@@ -139,7 +143,9 @@ describe('register-sw', () => {
 
     it('should unregister successfully after registration', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const { registerServiceWorker, unregisterServiceWorker } = await import('../register-sw');
+      const { registerServiceWorker, unregisterServiceWorker } = await import(
+        '../register-sw'
+      );
 
       await registerServiceWorker();
       const result = await unregisterServiceWorker();
@@ -156,12 +162,16 @@ describe('register-sw', () => {
       (mockRegistration as { waiting: ServiceWorker | null }).waiting =
         mockWaiting as unknown as ServiceWorker;
 
-      const { registerServiceWorker, skipWaiting } = await import('../register-sw');
+      const { registerServiceWorker, skipWaiting } = await import(
+        '../register-sw'
+      );
       await registerServiceWorker();
 
       skipWaiting();
 
-      expect(mockWaiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(mockWaiting.postMessage).toHaveBeenCalledWith({
+        type: 'SKIP_WAITING',
+      });
       consoleSpy.mockRestore();
     });
 
@@ -178,7 +188,9 @@ describe('register-sw', () => {
 
       clearAllCaches();
 
-      expect(mockController.postMessage).toHaveBeenCalledWith({ type: 'CLEAR_CACHE' });
+      expect(mockController.postMessage).toHaveBeenCalledWith({
+        type: 'CLEAR_CACHE',
+      });
     });
   });
 
@@ -189,7 +201,10 @@ describe('register-sw', () => {
 
       setTauriMode(true);
 
-      expect(mockController.postMessage).toHaveBeenCalledWith({ type: 'SET_TAURI', data: true });
+      expect(mockController.postMessage).toHaveBeenCalledWith({
+        type: 'SET_TAURI',
+        data: true,
+      });
       consoleSpy.mockRestore();
     });
 
@@ -199,7 +214,10 @@ describe('register-sw', () => {
 
       setTauriMode(false);
 
-      expect(mockController.postMessage).toHaveBeenCalledWith({ type: 'SET_TAURI', data: false });
+      expect(mockController.postMessage).toHaveBeenCalledWith({
+        type: 'SET_TAURI',
+        data: false,
+      });
       consoleSpy.mockRestore();
     });
   });
@@ -211,14 +229,18 @@ describe('register-sw', () => {
 
       setOfflineStatus(true);
 
-      expect(mockController.postMessage).toHaveBeenCalledWith({ type: 'SET_OFFLINE', data: true });
+      expect(mockController.postMessage).toHaveBeenCalledWith({
+        type: 'SET_OFFLINE',
+        data: true,
+      });
       consoleSpy.mockRestore();
     });
   });
 
   describe('getCacheStatus', () => {
     it('should return null when no controller', async () => {
-      (mockServiceWorker as { controller: ServiceWorker | null }).controller = null;
+      (mockServiceWorker as { controller: ServiceWorker | null }).controller =
+        null;
 
       vi.resetModules();
       const { getCacheStatus } = await import('../register-sw');
@@ -280,8 +302,14 @@ describe('register-sw', () => {
 
       const cleanup = setupNetworkListeners();
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
-      expect(addEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'online',
+        expect.any(Function),
+      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'offline',
+        expect.any(Function),
+      );
       expect(typeof cleanup).toBe('function');
 
       addEventListenerSpy.mockRestore();
@@ -294,8 +322,14 @@ describe('register-sw', () => {
       const cleanup = setupNetworkListeners();
       cleanup();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'online',
+        expect.any(Function),
+      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'offline',
+        expect.any(Function),
+      );
 
       removeEventListenerSpy.mockRestore();
     });
@@ -319,14 +353,18 @@ describe('register-sw', () => {
     it('should setup controller change listener', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const addEventListenerSpy = vi.fn();
-      (mockServiceWorker as { addEventListener: any }).addEventListener = addEventListenerSpy;
+      (mockServiceWorker as { addEventListener: any }).addEventListener =
+        addEventListenerSpy;
 
       vi.resetModules();
       const { initServiceWorker } = await import('../register-sw');
 
       await initServiceWorker();
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith('controllerchange', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'controllerchange',
+        expect.any(Function),
+      );
 
       consoleSpy.mockRestore();
     });
@@ -355,9 +393,12 @@ describe('register-sw', () => {
 
       await registerServiceWorker();
 
-      expect(mockServiceWorker.register).toHaveBeenCalledWith('/custom-path/sw.js', {
-        scope: '/custom-path',
-      });
+      expect(mockServiceWorker.register).toHaveBeenCalledWith(
+        '/custom-path/sw.js',
+        {
+          scope: '/custom-path',
+        },
+      );
 
       delete process.env.NEXT_PUBLIC_BASE_PATH;
       consoleSpy.mockRestore();
@@ -379,9 +420,9 @@ describe('register-sw', () => {
       await registerServiceWorker();
 
       // Get the updatefound callback
-      const updatefoundCallback = (mockRegistration.addEventListener as any).mock.calls.find(
-        (call: any) => call[0] === 'updatefound',
-      )?.[1];
+      const updatefoundCallback = (
+        mockRegistration.addEventListener as any
+      ).mock.calls.find((call: any) => call[0] === 'updatefound')?.[1];
 
       expect(updatefoundCallback).toBeDefined();
 
@@ -390,9 +431,10 @@ describe('register-sw', () => {
         updatefoundCallback();
 
         // Get the statechange callback
-        const statechangeCallback = mockInstallingWorker.addEventListener.mock.calls.find(
-          (call: any) => call[0] === 'statechange',
-        )?.[1];
+        const statechangeCallback =
+          mockInstallingWorker.addEventListener.mock.calls.find(
+            (call: any) => call[0] === 'statechange',
+          )?.[1];
 
         expect(statechangeCallback).toBeDefined();
 
@@ -412,15 +454,16 @@ describe('register-sw', () => {
 
     it('should handle updatefound with no installing worker', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      (mockRegistration as { installing: ServiceWorker | null }).installing = null;
+      (mockRegistration as { installing: ServiceWorker | null }).installing =
+        null;
 
       const { registerServiceWorker } = await import('../register-sw');
       await registerServiceWorker();
 
       // Get the updatefound callback
-      const updatefoundCallback = (mockRegistration.addEventListener as any).mock.calls.find(
-        (call: any) => call[0] === 'updatefound',
-      )?.[1];
+      const updatefoundCallback = (
+        mockRegistration.addEventListener as any
+      ).mock.calls.find((call: any) => call[0] === 'updatefound')?.[1];
 
       // Should not throw when no installing worker
       expect(() => updatefoundCallback?.()).not.toThrow();
@@ -438,22 +481,26 @@ describe('register-sw', () => {
       (mockRegistration as { installing: ServiceWorker | null }).installing =
         mockInstallingWorker as unknown as ServiceWorker;
 
-      (mockServiceWorker as { controller: ServiceWorker | null }).controller = null;
+      (mockServiceWorker as { controller: ServiceWorker | null }).controller =
+        null;
 
-      const { registerServiceWorker, getServiceWorkerStatus } = await import('../register-sw');
+      const { registerServiceWorker, getServiceWorkerStatus } = await import(
+        '../register-sw'
+      );
       await registerServiceWorker();
 
       // Get the updatefound callback
-      const updatefoundCallback = (mockRegistration.addEventListener as any).mock.calls.find(
-        (call: any) => call[0] === 'updatefound',
-      )?.[1];
+      const updatefoundCallback = (
+        mockRegistration.addEventListener as any
+      ).mock.calls.find((call: any) => call[0] === 'updatefound')?.[1];
 
       if (updatefoundCallback) {
         updatefoundCallback();
 
-        const statechangeCallback = mockInstallingWorker.addEventListener.mock.calls.find(
-          (call: any) => call[0] === 'statechange',
-        )?.[1];
+        const statechangeCallback =
+          mockInstallingWorker.addEventListener.mock.calls.find(
+            (call: any) => call[0] === 'statechange',
+          )?.[1];
 
         // Simulate state change to 'installed' without controller
         mockInstallingWorker.state = 'installed';
@@ -522,7 +569,8 @@ describe('register-sw', () => {
           }, 100);
         }
       });
-      (mockServiceWorker as { addEventListener: any }).addEventListener = mockAddEventListener;
+      (mockServiceWorker as { addEventListener: any }).addEventListener =
+        mockAddEventListener;
 
       vi.resetModules();
       const { getCacheStatus } = await import('../register-sw');
@@ -544,10 +592,14 @@ describe('register-sw', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      mockRegistration.unregister = vi.fn().mockRejectedValue(new Error('Unregister failed'));
+      mockRegistration.unregister = vi
+        .fn()
+        .mockRejectedValue(new Error('Unregister failed'));
 
       vi.resetModules();
-      const { registerServiceWorker, unregisterServiceWorker } = await import('../register-sw');
+      const { registerServiceWorker, unregisterServiceWorker } = await import(
+        '../register-sw'
+      );
 
       await registerServiceWorker();
       const result = await unregisterServiceWorker();
@@ -609,22 +661,25 @@ describe('register-sw', () => {
       (mockServiceWorker as { controller: ServiceWorker | null }).controller =
         mockController as ServiceWorker;
 
-      const { registerServiceWorker, onUpdate } = await import('../register-sw');
+      const { registerServiceWorker, onUpdate } = await import(
+        '../register-sw'
+      );
 
       onUpdate(callback);
       await registerServiceWorker();
 
       // Get the updatefound callback
-      const updatefoundCallback = (mockRegistration.addEventListener as any).mock.calls.find(
-        (call: any) => call[0] === 'updatefound',
-      )?.[1];
+      const updatefoundCallback = (
+        mockRegistration.addEventListener as any
+      ).mock.calls.find((call: any) => call[0] === 'updatefound')?.[1];
 
       if (updatefoundCallback) {
         updatefoundCallback();
 
-        const statechangeCallback = mockInstallingWorker.addEventListener.mock.calls.find(
-          (call: any) => call[0] === 'statechange',
-        )?.[1];
+        const statechangeCallback =
+          mockInstallingWorker.addEventListener.mock.calls.find(
+            (call: any) => call[0] === 'statechange',
+          )?.[1];
 
         mockInstallingWorker.state = 'installed';
         if (statechangeCallback) {
@@ -642,7 +697,9 @@ describe('register-sw', () => {
       const callback = vi.fn();
 
       vi.resetModules();
-      const { registerServiceWorker, onStatusChange } = await import('../register-sw');
+      const { registerServiceWorker, onStatusChange } = await import(
+        '../register-sw'
+      );
 
       onStatusChange(callback);
       await registerServiceWorker();

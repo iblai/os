@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 
@@ -30,7 +36,9 @@ vi.mock('next/navigation', () => ({
 
 // Mock next/image
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
+  default: ({ src, alt, ...props }: any) => (
+    <img src={src} alt={alt} {...props} />
+  ),
 }));
 
 // Mock next/dynamic - make dynamic imports synchronous
@@ -71,9 +79,14 @@ vi.mock('@/hooks/use-copy-to-clipboard', () => ({
 
 // Mock data-layer
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useEditMentorMutation: () => [mockEditMentor, { isLoading: mockEditMentorLoading() }],
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockGetMentorSettingsQuery(...args),
-  useGetMentorCategoriesQuery: (...args: unknown[]) => mockGetMentorCategoriesQuery(...args),
+  useEditMentorMutation: () => [
+    mockEditMentor,
+    { isLoading: mockEditMentorLoading() },
+  ],
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+  useGetMentorCategoriesQuery: (...args: unknown[]) =>
+    mockGetMentorCategoriesQuery(...args),
 }));
 
 // Mock sonner
@@ -89,13 +102,22 @@ const mockWithFormPermissionsCanDelete = vi.fn();
 
 vi.mock('@/hoc/withPermissions', () => ({
   default: ({ children }: any) =>
-    children({ disabled: false, canDelete: mockWithFormPermissionsCanDelete() }),
+    children({
+      disabled: false,
+      canDelete: mockWithFormPermissionsCanDelete(),
+    }),
 }));
 
 // Mock UI components to avoid Radix UI jsdom issues
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, type, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} type={type} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      type={type}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -114,7 +136,15 @@ vi.mock('@/components/ui/switch', () => ({
 }));
 
 vi.mock('@/components/ui/input', () => ({
-  Input: ({ value, onChange, disabled, placeholder, readOnly, className, ...props }: any) => (
+  Input: ({
+    value,
+    onChange,
+    disabled,
+    placeholder,
+    readOnly,
+    className,
+    ...props
+  }: any) => (
     <input
       value={value}
       onChange={onChange}
@@ -128,7 +158,14 @@ vi.mock('@/components/ui/input', () => ({
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
-  Textarea: ({ value, onChange, disabled, placeholder, className, ...props }: any) => (
+  Textarea: ({
+    value,
+    onChange,
+    disabled,
+    placeholder,
+    className,
+    ...props
+  }: any) => (
     <textarea
       value={value}
       onChange={onChange}
@@ -152,14 +189,18 @@ vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipContent: ({ children }: any) => <div>{children}</div>,
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
-  TooltipTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  TooltipTrigger: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children, value, onValueChange, disabled }: any) => (
     <div data-testid="select-root" data-value={value} data-disabled={disabled}>
       {React.Children.map(children, (child: any) =>
-        child ? React.cloneElement(child, { onValueChange, currentValue: value }) : null,
+        child
+          ? React.cloneElement(child, { onValueChange, currentValue: value })
+          : null,
       )}
     </div>
   ),
@@ -169,14 +210,20 @@ vi.mock('@/components/ui/select', () => ({
     </button>
   ),
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
+  SelectContent: ({ children }: any) => (
+    <div data-testid="select-content">{children}</div>
+  ),
   SelectItem: ({ children, value, ...props }: any) => (
     <div
       role="option"
+      aria-selected={false}
       data-value={value}
       onClick={() => {
         // Find parent Select's onValueChange through DOM traversal
-        const event = new CustomEvent('select-value', { detail: value, bubbles: true });
+        const event = new CustomEvent('select-value', {
+          detail: value,
+          bubbles: true,
+        });
         props.ref?.current?.dispatchEvent(event);
       }}
       {...props}
@@ -188,17 +235,28 @@ vi.mock('@/components/ui/select', () => ({
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div>{children}</div>,
-  PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
-  PopoverTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  PopoverContent: ({ children }: any) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
+  PopoverTrigger: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/command', () => ({
   Command: ({ children }: any) => <div>{children}</div>,
   CommandEmpty: ({ children }: any) => <div>{children}</div>,
   CommandGroup: ({ children }: any) => <div>{children}</div>,
-  CommandInput: (props: any) => <input data-testid="command-input" {...props} />,
+  CommandInput: (props: any) => (
+    <input data-testid="command-input" {...props} />
+  ),
   CommandItem: ({ children, value, onSelect }: any) => (
-    <div role="option" data-value={value} onClick={() => onSelect?.(value)}>
+    <div
+      role="option"
+      aria-selected={false}
+      data-value={value}
+      onClick={() => onSelect?.(value)}
+    >
       {children}
     </div>
   ),
@@ -257,7 +315,10 @@ describe('SettingsTab', () => {
 
     Element.prototype.scrollIntoView = vi.fn();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentorLoading.mockReturnValue(false);
@@ -299,7 +360,9 @@ describe('SettingsTab', () => {
 
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
-        screen.getByText("Configure your mentor's basic settings and preferences."),
+        screen.getByText(
+          "Configure your mentor's basic settings and preferences.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -321,7 +384,9 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByText('Description')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('A helpful test mentor description')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('A helpful test mentor description'),
+      ).toBeInTheDocument();
     });
 
     it('renders the Category field', () => {
@@ -368,14 +433,16 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // "Anyone" appears as both a visibility option and a chat access option
-      expect(screen.getAllByRole('option', { name: 'Anyone' }).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByRole('option', { name: 'Anyone' }).length,
+      ).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Authenticated Users')).toBeInTheDocument();
     });
 
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('LTI Accessible?')).toBeInTheDocument();
+      expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
     });
 
     it('renders Show Attachment toggle', () => {
@@ -430,7 +497,9 @@ describe('SettingsTab', () => {
     it('renders Delete button when canDelete is true', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /delete/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not render Delete button when canDelete is false', () => {
@@ -438,24 +507,38 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.queryByRole('button', { name: /^delete$/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /^delete$/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('renders the settings form content region', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByRole('region', { name: 'Settings form content' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: 'Settings form content' }),
+      ).toBeInTheDocument();
     });
 
     it('renders tooltips for fields', () => {
       render(<SettingsTab />);
 
       // "More info about chat access" appears twice: once for "Who Can View?" and once for "Who Can Chat?"
-      expect(screen.getAllByLabelText('More info about chat access')).toHaveLength(2);
-      expect(screen.getByLabelText('More info about lti accessibility')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show attachment')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show voice call')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show voice record')).toBeInTheDocument();
+      expect(
+        screen.getAllByLabelText('More info about chat access'),
+      ).toHaveLength(2);
+      expect(
+        screen.getByLabelText('More info about lti accessibility'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show attachment'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show voice call'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show voice record'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -478,7 +561,9 @@ describe('SettingsTab', () => {
       const user = userEvent.setup();
       render(<SettingsTab />);
 
-      const textarea = screen.getByDisplayValue('A helpful test mentor description');
+      const textarea = screen.getByDisplayValue(
+        'A helpful test mentor description',
+      );
       await user.clear(textarea);
       await user.type(textarea, 'Updated description');
 
@@ -501,11 +586,15 @@ describe('SettingsTab', () => {
       const user = userEvent.setup();
       render(<SettingsTab />);
 
-      const textarea = screen.getByDisplayValue('A helpful test mentor description');
+      const textarea = screen.getByDisplayValue(
+        'A helpful test mentor description',
+      );
       await user.clear(textarea);
 
       await waitFor(() => {
-        expect(screen.getByText('Mentor description is required')).toBeInTheDocument();
+        expect(
+          screen.getByText('Mentor description is required'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -555,7 +644,9 @@ describe('SettingsTab', () => {
     it('toggles show voice record switch', () => {
       render(<SettingsTab />);
 
-      const voiceRecordSwitch = screen.getByLabelText('Show voice record disabled');
+      const voiceRecordSwitch = screen.getByLabelText(
+        'Show voice record disabled',
+      );
       expect(voiceRecordSwitch).not.toBeChecked();
 
       fireEvent.click(voiceRecordSwitch);
@@ -582,7 +673,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Unique ID copied to clipboard')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Unique ID copied to clipboard'),
+      ).toBeInTheDocument();
     });
 
     it('shows copy icon when status is idle', () => {
@@ -590,7 +683,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Copy unique ID to clipboard')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Copy unique ID to clipboard'),
+      ).toBeInTheDocument();
     });
 
     it('disables copy button when no mentor ID', () => {
@@ -633,12 +728,16 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast on failed submit', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -689,7 +788,9 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' });
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toBeTruthy();
 
       await userEvent.upload(fileInput, file);
@@ -758,8 +859,12 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const file = new File(['test-content'], 'photo.png', { type: 'image/png' });
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(['test-content'], 'photo.png', {
+        type: 'image/png',
+      });
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toBeTruthy();
 
       // Manually trigger change event since the input is hidden
@@ -788,7 +893,9 @@ describe('SettingsTab', () => {
     it('renders file input with image accept type', () => {
       render(<SettingsTab />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toHaveAttribute('accept', 'image/*');
     });
   });
@@ -822,7 +929,9 @@ describe('SettingsTab', () => {
       fireEvent.click(cancelButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('delete-mentor-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('delete-mentor-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -1186,7 +1295,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show attachment disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Show attachment disabled'),
+      ).not.toBeChecked();
     });
 
     it('reflects show_voice_call false in switch', () => {
@@ -1197,7 +1308,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice call disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Show voice call disabled'),
+      ).not.toBeChecked();
     });
 
     it('reflects show_voice_record true in switch', () => {
@@ -1252,7 +1365,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Is lti accessible disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Is lti accessible disabled'),
+      ).not.toBeChecked();
     });
   });
 
@@ -1263,10 +1378,18 @@ describe('SettingsTab', () => {
     it('has proper aria-labels for switch toggles', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show attachment enabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Show voice call enabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Show voice record disabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Is lti accessible disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show attachment enabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show voice call enabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show voice record disabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Is lti accessible disabled'),
+      ).toBeInTheDocument();
     });
 
     it('has accessible remove image button', () => {
@@ -1278,7 +1401,9 @@ describe('SettingsTab', () => {
     it('has accessible copy button', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Copy unique ID to clipboard')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Copy unique ID to clipboard'),
+      ).toBeInTheDocument();
     });
 
     it('has accessible category select', () => {

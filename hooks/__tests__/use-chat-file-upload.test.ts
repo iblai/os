@@ -9,11 +9,23 @@ const mocked = vi.hoisted(() => ({
   getFileUploadUrl: vi.fn(),
   uploadToS3: vi.fn(),
   addFiles: vi.fn((payload: any) => ({ type: 'addFiles', payload })),
-  updateFileProgress: vi.fn((payload: any) => ({ type: 'updateFileProgress', payload })),
-  updateFileStatus: vi.fn((payload: any) => ({ type: 'updateFileStatus', payload })),
+  updateFileProgress: vi.fn((payload: any) => ({
+    type: 'updateFileProgress',
+    payload,
+  })),
+  updateFileStatus: vi.fn((payload: any) => ({
+    type: 'updateFileStatus',
+    payload,
+  })),
   updateFileUrl: vi.fn((payload: any) => ({ type: 'updateFileUrl', payload })),
-  updateFileMetadata: vi.fn((payload: any) => ({ type: 'updateFileMetadata', payload })),
-  updateFileRetryCount: vi.fn((payload: any) => ({ type: 'updateFileRetryCount', payload })),
+  updateFileMetadata: vi.fn((payload: any) => ({
+    type: 'updateFileMetadata',
+    payload,
+  })),
+  updateFileRetryCount: vi.fn((payload: any) => ({
+    type: 'updateFileRetryCount',
+    payload,
+  })),
   selectSessionId: vi.fn(),
 }));
 
@@ -48,7 +60,11 @@ describe('useChatFileUpload', () => {
     errorHandler: mockErrorHandler,
   };
 
-  const mockFile = (name: string, size: number, type: string = 'image/png'): File => {
+  const mockFile = (
+    name: string,
+    size: number,
+    type: string = 'image/png',
+  ): File => {
     const file = new File(['content'], name, { type });
     Object.defineProperty(file, 'size', { value: size });
     return file;
@@ -89,7 +105,11 @@ describe('useChatFileUpload', () => {
         const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
         const file1 = mockFile('test1.png', 5 * 1024 * 1024); // 5MB
-        const file2 = mockFile('test2.pdf', 10 * 1024 * 1024, 'application/pdf'); // 10MB
+        const file2 = mockFile(
+          'test2.pdf',
+          10 * 1024 * 1024,
+          'application/pdf',
+        ); // 10MB
 
         await result.current.uploadFiles([file1, file2]);
 
@@ -136,7 +156,9 @@ describe('useChatFileUpload', () => {
         const file = mockFile('test.png', 1024);
         await result.current.uploadFiles([file]);
 
-        expect(mockErrorHandler).toHaveBeenCalledWith('This model does not support file uploads');
+        expect(mockErrorHandler).toHaveBeenCalledWith(
+          'This model does not support file uploads',
+        );
         expect(mocked.addFiles).not.toHaveBeenCalled();
       });
 
@@ -342,12 +364,14 @@ describe('useChatFileUpload', () => {
       });
 
       it('should track upload progress', async () => {
-        mocked.uploadToS3.mockImplementation(async (_url, _file, _type, onProgress) => {
-          onProgress(25);
-          onProgress(50);
-          onProgress(75);
-          onProgress(100);
-        });
+        mocked.uploadToS3.mockImplementation(
+          async (_url, _file, _type, onProgress) => {
+            onProgress(25);
+            onProgress(50);
+            onProgress(75);
+            onProgress(100);
+          },
+        );
 
         const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -362,9 +386,15 @@ describe('useChatFileUpload', () => {
         });
 
         const progressCalls = mocked.updateFileProgress.mock.calls;
-        expect(progressCalls.some((call) => call[0].progress === 25)).toBe(true);
-        expect(progressCalls.some((call) => call[0].progress === 50)).toBe(true);
-        expect(progressCalls.some((call) => call[0].progress === 75)).toBe(true);
+        expect(progressCalls.some((call) => call[0].progress === 25)).toBe(
+          true,
+        );
+        expect(progressCalls.some((call) => call[0].progress === 50)).toBe(
+          true,
+        );
+        expect(progressCalls.some((call) => call[0].progress === 75)).toBe(
+          true,
+        );
       });
 
       it('should update status to success after successful upload', async () => {
@@ -397,7 +427,9 @@ describe('useChatFileUpload', () => {
 
     describe('error handling', () => {
       it('should handle error when getting upload URL fails', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         mocked.getFileUploadUrl.mockReturnValue({
           unwrap: vi.fn().mockRejectedValue(new Error('API Error')),
@@ -412,7 +444,9 @@ describe('useChatFileUpload', () => {
           expect(mockErrorHandler).toHaveBeenCalled();
         });
 
-        expect(mockErrorHandler).toHaveBeenCalledWith('Failed to get upload URL for test.png');
+        expect(mockErrorHandler).toHaveBeenCalledWith(
+          'Failed to get upload URL for test.png',
+        );
         expect(mocked.updateFileStatus).toHaveBeenCalledWith({
           id: expect.any(String),
           status: 'error',
@@ -427,7 +461,9 @@ describe('useChatFileUpload', () => {
       });
 
       it('should handle error when S3 upload fails', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         mocked.uploadToS3.mockRejectedValue(new Error('Upload failed'));
 
@@ -440,7 +476,9 @@ describe('useChatFileUpload', () => {
           expect(mockErrorHandler).toHaveBeenCalled();
         });
 
-        expect(mockErrorHandler).toHaveBeenCalledWith('Failed to upload test.png');
+        expect(mockErrorHandler).toHaveBeenCalledWith(
+          'Failed to upload test.png',
+        );
         expect(mocked.updateFileStatus).toHaveBeenCalledWith({
           id: expect.any(String),
           status: 'error',
@@ -455,7 +493,9 @@ describe('useChatFileUpload', () => {
       });
 
       it('should not upload files that failed to get upload URL', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         mocked.getFileUploadUrl
           .mockReturnValueOnce({
@@ -484,7 +524,9 @@ describe('useChatFileUpload', () => {
       });
 
       it('should continue uploading other files when one fails', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         mocked.uploadToS3
           .mockResolvedValueOnce(undefined)
@@ -503,8 +545,12 @@ describe('useChatFileUpload', () => {
 
         // One should succeed, one should fail
         const statusCalls = mocked.updateFileStatus.mock.calls;
-        const successCalls = statusCalls.filter((call) => call[0].status === 'success');
-        const errorCalls = statusCalls.filter((call) => call[0].status === 'error');
+        const successCalls = statusCalls.filter(
+          (call) => call[0].status === 'success',
+        );
+        const errorCalls = statusCalls.filter(
+          (call) => call[0].status === 'error',
+        );
 
         expect(successCalls.length).toBeGreaterThan(0);
         expect(errorCalls.length).toBeGreaterThan(0);
@@ -513,7 +559,9 @@ describe('useChatFileUpload', () => {
       });
 
       it('should handle errorHandler being undefined', async () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         mocked.uploadToS3.mockRejectedValue(new Error('Upload failed'));
 
@@ -522,7 +570,9 @@ describe('useChatFileUpload', () => {
           userId: 'test-user',
         };
 
-        const { result } = renderHook(() => useChatFileUpload(propsWithoutHandler));
+        const { result } = renderHook(() =>
+          useChatFileUpload(propsWithoutHandler),
+        );
 
         const file = mockFile('test.png', 1024);
         await result.current.uploadFiles([file]);
@@ -851,7 +901,9 @@ describe('useChatFileUpload', () => {
     });
 
     it('should handle retry when file not found in map', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -866,7 +918,9 @@ describe('useChatFileUpload', () => {
     });
 
     it('should handle error when getting upload URL fails on retry', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -891,7 +945,9 @@ describe('useChatFileUpload', () => {
         expect(mockErrorHandler).toHaveBeenCalled();
       });
 
-      expect(mockErrorHandler).toHaveBeenCalledWith('Failed to retry upload for test.png');
+      expect(mockErrorHandler).toHaveBeenCalledWith(
+        'Failed to retry upload for test.png',
+      );
       expect(mocked.updateFileStatus).toHaveBeenCalledWith({
         id: fileId,
         status: 'error',
@@ -901,7 +957,9 @@ describe('useChatFileUpload', () => {
     });
 
     it('should handle error when S3 upload fails on retry', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -924,7 +982,9 @@ describe('useChatFileUpload', () => {
         expect(mockErrorHandler).toHaveBeenCalled();
       });
 
-      expect(mockErrorHandler).toHaveBeenCalledWith('Failed to retry upload for test.png');
+      expect(mockErrorHandler).toHaveBeenCalledWith(
+        'Failed to retry upload for test.png',
+      );
       expect(mocked.updateFileStatus).toHaveBeenCalledWith({
         id: fileId,
         status: 'error',
@@ -934,11 +994,13 @@ describe('useChatFileUpload', () => {
     });
 
     it('should track progress during retry upload', async () => {
-      mocked.uploadToS3.mockImplementation(async (_url, _file, _type, onProgress) => {
-        onProgress(30);
-        onProgress(60);
-        onProgress(90);
-      });
+      mocked.uploadToS3.mockImplementation(
+        async (_url, _file, _type, onProgress) => {
+          onProgress(30);
+          onProgress(60);
+          onProgress(90);
+        },
+      );
 
       const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -953,11 +1015,13 @@ describe('useChatFileUpload', () => {
 
       vi.clearAllMocks();
 
-      mocked.uploadToS3.mockImplementation(async (_url, _file, _type, onProgress) => {
-        onProgress(20);
-        onProgress(40);
-        onProgress(60);
-      });
+      mocked.uploadToS3.mockImplementation(
+        async (_url, _file, _type, onProgress) => {
+          onProgress(20);
+          onProgress(40);
+          onProgress(60);
+        },
+      );
 
       await result.current.retryUpload(fileId);
 
@@ -1032,13 +1096,15 @@ describe('useChatFileUpload', () => {
 
   describe('integration scenarios', () => {
     it('should handle complete upload flow with progress tracking', async () => {
-      mocked.uploadToS3.mockImplementation(async (_url, _file, _type, onProgress) => {
-        onProgress(0);
-        onProgress(25);
-        onProgress(50);
-        onProgress(75);
-        onProgress(100);
-      });
+      mocked.uploadToS3.mockImplementation(
+        async (_url, _file, _type, onProgress) => {
+          onProgress(0);
+          onProgress(25);
+          onProgress(50);
+          onProgress(75);
+          onProgress(100);
+        },
+      );
 
       const { result } = renderHook(() => useChatFileUpload(defaultProps));
 
@@ -1073,7 +1139,9 @@ describe('useChatFileUpload', () => {
     });
 
     it('should handle mixed success and failure scenario', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       mocked.getFileUploadUrl
         .mockReturnValueOnce({
@@ -1108,7 +1176,9 @@ describe('useChatFileUpload', () => {
 
       // 2 files should have uploaded successfully
       const statusCalls = mocked.updateFileStatus.mock.calls;
-      const successCalls = statusCalls.filter((call) => call[0].status === 'success');
+      const successCalls = statusCalls.filter(
+        (call) => call[0].status === 'success',
+      );
       expect(successCalls.length).toBe(2);
 
       consoleErrorSpy.mockRestore();

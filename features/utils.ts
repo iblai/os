@@ -19,8 +19,14 @@ export type ExtendedFetchBaseQueryError = FetchBaseQueryError & {
   data?: { detail?: string; message?: string } | string;
 };
 
-const isErrorObject = (data: unknown): data is { detail?: string; message?: string } => {
-  return typeof data === 'object' && data !== null && ('detail' in data || 'message' in data);
+const isErrorObject = (
+  data: unknown,
+): data is { detail?: string; message?: string } => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    ('detail' in data || 'message' in data)
+  );
 };
 
 export const getServiceUrl = (service: SERVICES) => {
@@ -132,7 +138,11 @@ export const iblFetchBaseQuery: BaseQueryFn<
 };
 
 export const getUserName = () => {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return null;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return null;
   try {
     return JSON.parse(localStorage.getItem('userData')!)?.user_nicename;
   } catch {
@@ -141,7 +151,11 @@ export const getUserName = () => {
 };
 
 export const getUserId = () => {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return null;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return null;
   try {
     return JSON.parse(localStorage.getItem('userData')!)?.user_id;
   } catch {
@@ -150,7 +164,11 @@ export const getUserId = () => {
 };
 
 export const getUserEmail = () => {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return null;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return null;
   try {
     return JSON.parse(localStorage.getItem('userData')!)?.user_email;
   } catch {

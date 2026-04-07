@@ -34,9 +34,17 @@ export function FileCard({ fileName, fileType }: Props) {
       return <FileAudio className="h-5 w-5 text-blue-500" />;
     } else if (type.includes('video')) {
       return <FileVideo className="h-5 w-5 text-blue-500" />;
-    } else if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+    } else if (
+      type.includes('spreadsheet') ||
+      type.includes('excel') ||
+      type.includes('csv')
+    ) {
       return <FileSpreadsheet className="h-5 w-5 text-blue-500" />;
-    } else if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+    } else if (
+      type.includes('zip') ||
+      type.includes('compressed') ||
+      type.includes('archive')
+    ) {
       return <FileArchive className="h-5 w-5 text-blue-500" />;
     } else if (
       type.includes('javascript') ||
@@ -51,7 +59,9 @@ export function FileCard({ fileName, fileType }: Props) {
     // If MIME type doesn't match, check by extension
     if (['doc', 'docx', 'txt', 'rtf'].includes(extension)) {
       return <FileText className="h-5 w-5 text-blue-500" />;
-    } else if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
+    } else if (
+      ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)
+    ) {
       return <FileImage className="h-5 w-5 text-blue-500" />;
     } else if (['pdf'].includes(extension)) {
       return <FilePdf className="h-5 w-5 text-blue-500" />;
@@ -64,9 +74,19 @@ export function FileCard({ fileName, fileType }: Props) {
     } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
       return <FileArchive className="h-5 w-5 text-blue-500" />;
     } else if (
-      ['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(
-        extension,
-      )
+      [
+        'js',
+        'ts',
+        'jsx',
+        'tsx',
+        'html',
+        'css',
+        'json',
+        'py',
+        'java',
+        'c',
+        'cpp',
+      ].includes(extension)
     ) {
       return <FileCode className="h-5 w-5 text-blue-500" />;
     }
@@ -76,13 +96,15 @@ export function FileCard({ fileName, fileType }: Props) {
   };
 
   return (
-    <div className="flex items-center bg-white rounded-lg border border-gray-200 p-3 mb-2 max-w-xs">
-      <div className="bg-blue-100 text-blue-600 p-2 rounded-lg mr-3 shrink-0">
+    <div className="mb-2 flex max-w-xs items-center rounded-lg border border-gray-200 bg-white p-3">
+      <div className="mr-3 shrink-0 rounded-lg bg-blue-100 p-2 text-blue-600">
         {getFileIcon(fileName, fileType)}
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="font-medium text-gray-900 text-sm truncate">{fileName}</h3>
-        <p className="text-gray-500 text-xs truncate">{fileType}</p>
+        <h3 className="truncate text-sm font-medium text-gray-900">
+          {fileName}
+        </h3>
+        <p className="truncate text-xs text-gray-500">{fileType}</p>
       </div>
     </div>
   );

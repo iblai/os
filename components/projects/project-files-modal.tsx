@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { Search, Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,15 +46,17 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0">
+        <DialogContent className="max-h-[85vh] max-w-4xl overflow-hidden p-0">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-4">
-            <DialogTitle className="text-xl font-semibold text-gray-900">Project Files</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              Project Files
+            </DialogTitle>
           </DialogHeader>
 
           <Separator className="bg-gray-200" />
 
           <div
-            className="flex-1 p-3 lg:p-4 space-y-4"
+            className="flex-1 space-y-4 p-3 lg:p-4"
             style={{
               overflowY: 'auto',
               overflowX: 'hidden',
@@ -72,7 +79,9 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
                   />
                 </div>
                 <Button
-                  onClick={() => executeWithTrialCheck(() => openAddResourceModal())}
+                  onClick={() =>
+                    executeWithTrialCheck(() => openAddResourceModal())
+                  }
                   size="sm"
                   className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                 >
@@ -84,7 +93,7 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
                 <div className="overflow-x-auto sm:mx-0">
                   <div className="inline-block min-w-full align-middle">
                     {isDatasetsLoading ? (
-                      <div className="flex items-center justify-center w-full py-10">
+                      <div className="flex w-full items-center justify-center py-10">
                         <Spinner />
                       </div>
                     ) : (

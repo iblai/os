@@ -1,0 +1,11 @@
+name,age,email,department,salary
+Alice Johnson,30,alice@example.com,Engineering,95000
+Bob Smith,25,bob@example.com,Marketing,72000
+Carol Williams,35,carol@example.com,Engineering,105000
+David Brown,28,david@example.com,Sales,68000
+Eva Martinez,32,eva@example.com,Engineering,98000
+Frank Lee,40,frank@example.com,Management,120000
+Grace Kim,27,grace@example.com,Marketing,74000
+Henry Wilson,33,henry@example.com,Sales,71000
+Iris Chen,29,iris@example.com,Engineering,92000
+Jack Davis,38,jack@example.com,Management,115000

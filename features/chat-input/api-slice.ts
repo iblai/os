@@ -25,7 +25,8 @@ export const chatInputSlice: Slice<ChatInputState> = createSlice({
 });
 
 export const chatInputSliceSelectors = {
-  selectTextareaInput: (state: { chatInput: ChatInputState }) => state.chatInput.textareaInput,
+  selectTextareaInput: (state: { chatInput: ChatInputState }) =>
+    state.chatInput.textareaInput,
 };
 
 export const chatInputSliceActions = chatInputSlice.actions;

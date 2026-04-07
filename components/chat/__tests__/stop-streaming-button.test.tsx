@@ -83,6 +83,8 @@ describe('StopStreamingButton', () => {
     );
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
-    expect(ref.current).toBe(screen.getByRole('button', { name: 'Stop streaming' }));
+    expect(ref.current).toBe(
+      screen.getByRole('button', { name: 'Stop streaming' }),
+    );
   });
 });

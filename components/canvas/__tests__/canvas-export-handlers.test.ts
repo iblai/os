@@ -102,14 +102,21 @@ vi.mock('jspdf', () => {
 });
 
 // Mock canvas-utils with hoisted mocks for dynamic behavior
-const { mockSanitizeFilename, mockEscapeHtml, mockStripHtml, mockSplitTextIntoLines } = vi.hoisted(
-  () => ({
-    mockSanitizeFilename: vi.fn((name: string) => name.replace(/[^a-zA-Z0-9-_]/g, '_')),
-    mockEscapeHtml: vi.fn((str: string) => str.replace(/</g, '&lt;').replace(/>/g, '&gt;')),
-    mockStripHtml: vi.fn((html: string) => html.replace(/<[^>]+>/g, '')),
-    mockSplitTextIntoLines: vi.fn((text: string) => [text]),
-  }),
-);
+const {
+  mockSanitizeFilename,
+  mockEscapeHtml,
+  mockStripHtml,
+  mockSplitTextIntoLines,
+} = vi.hoisted(() => ({
+  mockSanitizeFilename: vi.fn((name: string) =>
+    name.replace(/[^a-zA-Z0-9-_]/g, '_'),
+  ),
+  mockEscapeHtml: vi.fn((str: string) =>
+    str.replace(/</g, '&lt;').replace(/>/g, '&gt;'),
+  ),
+  mockStripHtml: vi.fn((html: string) => html.replace(/<[^>]+>/g, '')),
+  mockSplitTextIntoLines: vi.fn((text: string) => [text]),
+}));
 
 vi.mock('../canvas-utils', () => ({
   sanitizeFilename: mockSanitizeFilename,
@@ -196,9 +203,13 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        mockAppendChild,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        mockRemoveChild,
+      );
     });
 
     afterEach(() => {
@@ -302,7 +313,9 @@ describe('canvas-export-handlers', () => {
       // Ensure probe is removed
       if (mockProbe && mockOwnerDoc.body.removeChild) {
         try {
-          (mockOwnerDoc.body.removeChild as ReturnType<typeof vi.fn>)(mockProbe);
+          (mockOwnerDoc.body.removeChild as ReturnType<typeof vi.fn>)(
+            mockProbe,
+          );
         } catch (e) {
           // Ignore
         }
@@ -375,7 +388,9 @@ describe('canvas-export-handlers', () => {
       mockOwnerDoc.createElement = vi.fn().mockImplementation(() => {
         throw new Error('Test error');
       });
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const result = convertOklchToRgb('oklch(0.5 0.2 180)', mockOwnerDoc);
 
@@ -410,9 +425,13 @@ describe('canvas-export-handlers', () => {
 
       document.documentElement.style.setProperty = mockSetProperty;
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockProbe);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockProbe);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockProbe);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockProbe as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        () => mockProbe,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        () => mockProbe,
+      );
     });
 
     afterEach(() => {
@@ -530,7 +549,10 @@ describe('canvas-export-handlers', () => {
 
       revert();
 
-      expect(mockSetProperty).toHaveBeenCalledWith('--primary', 'oklch(0.5 0.2 180)');
+      expect(mockSetProperty).toHaveBeenCalledWith(
+        '--primary',
+        'oklch(0.5 0.2 180)',
+      );
     });
   });
 
@@ -575,7 +597,9 @@ describe('canvas-export-handlers', () => {
           removeChild: vi.fn(),
         },
         defaultView: {
-          getComputedStyle: vi.fn().mockReturnValue({ color: 'rgb(255, 0, 0)' }),
+          getComputedStyle: vi
+            .fn()
+            .mockReturnValue({ color: 'rgb(255, 0, 0)' }),
         },
       } as unknown as Document;
     });
@@ -584,7 +608,9 @@ describe('canvas-export-handlers', () => {
       // Clean up probe if it was added to body
       if (mockProbe && mockOwnerDoc.body.removeChild) {
         try {
-          (mockOwnerDoc.body.removeChild as ReturnType<typeof vi.fn>)(mockProbe);
+          (mockOwnerDoc.body.removeChild as ReturnType<typeof vi.fn>)(
+            mockProbe,
+          );
         } catch (e) {
           // Ignore
         }
@@ -616,19 +642,23 @@ describe('canvas-export-handlers', () => {
     });
 
     it('removes property if conversion fails', () => {
-      (mockOwnerDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>).mockReturnValue({
+      (
+        mockOwnerDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>
+      ).mockReturnValue({
         color: 'rgba(0, 0, 0, 0)',
       });
 
       sanitizeElementColors(mockElement, mockOwnerDoc);
 
-      expect(mockElement.style.removeProperty).toHaveBeenCalledWith('background-color');
+      expect(mockElement.style.removeProperty).toHaveBeenCalledWith(
+        'background-color',
+      );
     });
 
     it('skips non-oklch properties', () => {
-      (mockElement.style.getPropertyValue as ReturnType<typeof vi.fn>).mockReturnValue(
-        'rgb(255, 0, 0)',
-      );
+      (
+        mockElement.style.getPropertyValue as ReturnType<typeof vi.fn>
+      ).mockReturnValue('rgb(255, 0, 0)');
 
       sanitizeElementColors(mockElement, mockOwnerDoc);
 
@@ -658,9 +688,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('preserves property priority', () => {
-      (mockElement.style.getPropertyPriority as ReturnType<typeof vi.fn>).mockReturnValue(
-        'important',
-      );
+      (
+        mockElement.style.getPropertyPriority as ReturnType<typeof vi.fn>
+      ).mockReturnValue('important');
 
       sanitizeElementColors(mockElement, mockOwnerDoc);
 
@@ -739,13 +769,15 @@ describe('canvas-export-handlers', () => {
     });
 
     it('returns array of converted variables', () => {
-      const mockComputedProbe = { color: 'rgb(100, 150, 200)' } as CSSStyleDeclaration;
-      (mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>).mockImplementation(
-        (el) => {
-          if (el === mockProbe) return mockComputedProbe;
-          return mockRootComputed;
-        },
-      );
+      const mockComputedProbe = {
+        color: 'rgb(100, 150, 200)',
+      } as CSSStyleDeclaration;
+      (
+        mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>
+      ).mockImplementation((el) => {
+        if (el === mockProbe) return mockComputedProbe;
+        return mockRootComputed;
+      });
 
       const result = sanitizeCssVariables(mockDoc);
 
@@ -753,17 +785,22 @@ describe('canvas-export-handlers', () => {
     });
 
     it('sets property on document element', () => {
-      const mockComputedProbe = { color: 'rgb(100, 150, 200)' } as CSSStyleDeclaration;
-      (mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>).mockImplementation(
-        (el) => {
-          if (el === mockProbe) return mockComputedProbe;
-          return mockRootComputed;
-        },
-      );
+      const mockComputedProbe = {
+        color: 'rgb(100, 150, 200)',
+      } as CSSStyleDeclaration;
+      (
+        mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>
+      ).mockImplementation((el) => {
+        if (el === mockProbe) return mockComputedProbe;
+        return mockRootComputed;
+      });
 
       sanitizeCssVariables(mockDoc);
 
-      expect(mockSetProperty).toHaveBeenCalledWith('--primary', 'rgb(100, 150, 200)');
+      expect(mockSetProperty).toHaveBeenCalledWith(
+        '--primary',
+        'rgb(100, 150, 200)',
+      );
     });
 
     it('skips non-CSS variable properties', () => {
@@ -774,9 +811,9 @@ describe('canvas-export-handlers', () => {
         getPropertyValue: vi.fn().mockReturnValue('oklch(0.5 0.2 180)'),
       } as unknown as CSSStyleDeclaration;
 
-      (mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>).mockReturnValue(
-        mockRootComputed,
-      );
+      (
+        mockDoc.defaultView!.getComputedStyle as ReturnType<typeof vi.fn>
+      ).mockReturnValue(mockRootComputed);
 
       const result = sanitizeCssVariables(mockDoc);
 
@@ -784,9 +821,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('skips non-oklch values', () => {
-      (mockRootComputed.getPropertyValue as ReturnType<typeof vi.fn>).mockReturnValue(
-        'rgb(255, 0, 0)',
-      );
+      (
+        mockRootComputed.getPropertyValue as ReturnType<typeof vi.fn>
+      ).mockReturnValue('rgb(255, 0, 0)');
 
       const result = sanitizeCssVariables(mockDoc);
 
@@ -794,7 +831,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('handles empty variables', () => {
-      (mockRootComputed.getPropertyValue as ReturnType<typeof vi.fn>).mockReturnValue('');
+      (
+        mockRootComputed.getPropertyValue as ReturnType<typeof vi.fn>
+      ).mockReturnValue('');
 
       const result = sanitizeCssVariables(mockDoc);
 
@@ -819,15 +858,17 @@ describe('canvas-export-handlers', () => {
       realCreateElement = document.createElement.bind(document);
 
       // Mock document.createElement for tempDiv
-      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-        if (tag === 'div') {
-          const div = realCreateElement('div');
-          tempDivs.push(div);
-          createdElements.push(div);
-          return div;
-        }
-        return realCreateElement(tag);
-      });
+      (vi.spyOn(document, 'createElement') as any).mockImplementation(
+        (tag: string) => {
+          if (tag === 'div') {
+            const div = realCreateElement('div');
+            tempDivs.push(div);
+            createdElements.push(div);
+            return div;
+          }
+          return realCreateElement(tag);
+        },
+      );
     });
 
     afterEach(() => {
@@ -917,9 +958,13 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        () => mockAnchor,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        () => mockAnchor,
+      );
     });
 
     afterEach(() => {
@@ -964,7 +1009,9 @@ describe('canvas-export-handlers', () => {
     it('shows success toast on export', () => {
       exportAsDOCX('# Test Content', 'Test Title');
 
-      expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as DOCX');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Document exported as DOCX',
+      );
     });
 
     it('escapes HTML in title', () => {
@@ -1008,9 +1055,13 @@ describe('canvas-export-handlers', () => {
       });
       stubbedGlobals.push('URL');
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        () => mockAnchor,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        () => mockAnchor,
+      );
     });
 
     afterEach(() => {
@@ -1056,7 +1107,9 @@ describe('canvas-export-handlers', () => {
     it('shows success toast on export', () => {
       exportAsMarkdown('# Test Content', 'Test Title');
 
-      expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as Markdown');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Document exported as Markdown',
+      );
     });
 
     it('uses text/markdown content type', () => {
@@ -1067,7 +1120,8 @@ describe('canvas-export-handlers', () => {
     });
 
     it('preserves original markdown content', () => {
-      const originalContent = '# Heading\n\n- Item 1\n- Item 2\n\n```js\nconst x = 1;\n```';
+      const originalContent =
+        '# Heading\n\n- Item 1\n- Item 2\n\n```js\nconst x = 1;\n```';
       exportAsMarkdown(originalContent, 'Code Example');
 
       expect(mockClick).toHaveBeenCalled();
@@ -1177,7 +1231,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('processes li element with nested element child via HTML', async () => {
-      mockMarkdownToHtml.mockReturnValue('<ul><li><strong>Bold in list</strong></li></ul>');
+      mockMarkdownToHtml.mockReturnValue(
+        '<ul><li><strong>Bold in list</strong></li></ul>',
+      );
 
       await exportAsPDF('- **Bold in list**', 'Test');
 
@@ -1241,7 +1297,9 @@ describe('canvas-export-handlers', () => {
 
       // Should reset font size after h1
       const setFontSizeCalls = mockPdfSetFontSize.mock.calls;
-      const normalFontSizeIndex = setFontSizeCalls.findIndex((call: any[]) => call[0] === 11);
+      const normalFontSizeIndex = setFontSizeCalls.findIndex(
+        (call: any[]) => call[0] === 11,
+      );
       expect(normalFontSizeIndex).toBeGreaterThan(-1);
     });
 
@@ -1277,7 +1335,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('processes nested child nodes recursively for non-li elements via HTML', async () => {
-      mockMarkdownToHtml.mockReturnValue('<p>Normal and <strong>Bold</strong> text</p>');
+      mockMarkdownToHtml.mockReturnValue(
+        '<p>Normal and <strong>Bold</strong> text</p>',
+      );
 
       await exportAsPDF('Normal and **Bold** text', 'Test');
 
@@ -1286,8 +1346,12 @@ describe('canvas-export-handlers', () => {
 
     it('triggers page break in TEXT_NODE when yPosition exceeds pageHeight', async () => {
       // Mock splitTextIntoLines to return 50 lines to force page break
-      mockSplitTextIntoLines.mockImplementation(() => Array(50).fill('Line of text'));
-      mockMarkdownToHtml.mockReturnValue('Text content that becomes many lines');
+      mockSplitTextIntoLines.mockImplementation(() =>
+        Array(50).fill('Line of text'),
+      );
+      mockMarkdownToHtml.mockReturnValue(
+        'Text content that becomes many lines',
+      );
 
       await exportAsPDF('Long content', 'Test');
 
@@ -1323,7 +1387,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('handles li with nested child elements via processNode recursion', async () => {
-      mockMarkdownToHtml.mockReturnValue('<ul><li><em>Italic in list</em></li></ul>');
+      mockMarkdownToHtml.mockReturnValue(
+        '<ul><li><em>Italic in list</em></li></ul>',
+      );
 
       await exportAsPDF('- *Italic in list*', 'Test');
 
@@ -1332,7 +1398,11 @@ describe('canvas-export-handlers', () => {
 
     it('handles multiple line indexes in li processing (idx < lines.length - 1)', async () => {
       // Mock splitTextIntoLines to return multiple lines
-      mockSplitTextIntoLines.mockImplementation(() => ['Line 1', 'Line 2', 'Line 3']);
+      mockSplitTextIntoLines.mockImplementation(() => [
+        'Line 1',
+        'Line 2',
+        'Line 3',
+      ]);
       mockMarkdownToHtml.mockReturnValue('<ul><li>Multi line item</li></ul>');
 
       await exportAsPDF('- Multi line item', 'Test');
@@ -1354,7 +1424,9 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mock
-      mockStripHtml.mockImplementation((html: string) => html.replace(/<[^>]+>/g, ''));
+      mockStripHtml.mockImplementation((html: string) =>
+        html.replace(/<[^>]+>/g, ''),
+      );
     });
 
     it('handles fallback with page break when content is long', async () => {
@@ -1370,7 +1442,9 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mocks
-      mockStripHtml.mockImplementation((html: string) => html.replace(/<[^>]+>/g, ''));
+      mockStripHtml.mockImplementation((html: string) =>
+        html.replace(/<[^>]+>/g, ''),
+      );
       mockSplitTextIntoLines.mockImplementation((text: string) => [text]);
     });
 
@@ -1384,7 +1458,9 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mock
-      mockStripHtml.mockImplementation((html: string) => html.replace(/<[^>]+>/g, ''));
+      mockStripHtml.mockImplementation((html: string) =>
+        html.replace(/<[^>]+>/g, ''),
+      );
     });
 
     it('triggers element-level page break when many elements exceed page height (lines 215-217)', async () => {
@@ -1407,7 +1483,9 @@ describe('canvas-export-handlers', () => {
       // Return non-empty stripped text so fallback processes it
       mockStripHtml.mockReturnValueOnce('Fallback content');
       // Return 60 lines to force page break inside fallback forEach
-      mockSplitTextIntoLines.mockImplementation(() => Array(60).fill('Line of fallback text'));
+      mockSplitTextIntoLines.mockImplementation(() =>
+        Array(60).fill('Line of fallback text'),
+      );
 
       await exportAsPDF('Test content', 'Short');
 
@@ -1496,7 +1574,9 @@ describe('canvas-export-handlers', () => {
     });
 
     it('throws error for undefined export title', async () => {
-      await expect(exportAsPDF('# Content', undefined as unknown as string)).rejects.toThrow();
+      await expect(
+        exportAsPDF('# Content', undefined as unknown as string),
+      ).rejects.toThrow();
     });
 
     it('handles very long content in markdown export', () => {
@@ -1514,9 +1594,13 @@ describe('canvas-export-handlers', () => {
       } as unknown as HTMLAnchorElement;
       createdElements.push(mockAnchor);
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        () => mockAnchor,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        () => mockAnchor,
+      );
 
       const longContent = 'A'.repeat(100000);
       exportAsMarkdown(longContent, 'Long File');
@@ -1550,9 +1634,13 @@ describe('canvas-export-handlers', () => {
       } as unknown as HTMLAnchorElement;
       createdElements.push(mockAnchor);
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor);
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor);
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor);
+      vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(
+        () => mockAnchor,
+      );
+      vi.spyOn(document.body, 'removeChild').mockImplementation(
+        () => mockAnchor,
+      );
 
       exportAsMarkdown('# Content', '文档名称');
 
@@ -1634,7 +1722,9 @@ describe('canvas-export-handlers', () => {
           removeChild: vi.fn(),
         },
         defaultView: {
-          getComputedStyle: vi.fn().mockReturnValue({ color: 'rgb(255, 0, 0)' }),
+          getComputedStyle: vi
+            .fn()
+            .mockReturnValue({ color: 'rgb(255, 0, 0)' }),
         },
       } as unknown as Document;
 

@@ -1,10 +1,10 @@
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
 interface NavButtonProps {
   icon: React.ReactNode;
@@ -31,19 +31,19 @@ export function NavButton({
   const buttonContent = (
     <Button
       variant="ghost"
-      size={expanded ? undefined : "icon"}
+      size={expanded ? undefined : 'icon'}
       className={cn(
-        "flex items-center hover:bg-[#c9d8f8]",
-        expanded ? "h-8 w-full justify-start px-3" : "h-8 w-8 justify-center",
-        isActive && "bg-blue-50",
+        'flex items-center hover:bg-[#c9d8f8]',
+        expanded ? 'h-8 w-full justify-start px-3' : 'h-8 w-8 justify-center',
+        isActive && 'bg-blue-50',
       )}
       onClick={onClick}
     >
       <span
         className={cn(
-          "text-gray-500",
-          isActive && "text-blue-600",
-          !expanded && "mx-auto", // Center the icon when collapsed
+          'text-gray-500',
+          isActive && 'text-blue-600',
+          !expanded && 'mx-auto', // Center the icon when collapsed
         )}
       >
         {icon}
@@ -51,8 +51,8 @@ export function NavButton({
       {expanded && (
         <span
           className={cn(
-            "ml-2 text-sm text-gray-700",
-            isActive && "font-medium text-blue-600",
+            'ml-2 text-sm text-gray-700',
+            isActive && 'font-medium text-blue-600',
           )}
         >
           {label}
@@ -66,9 +66,7 @@ export function NavButton({
   if (!expanded && tooltip) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          {buttonContent}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
         <TooltipContent className="ibl-tooltip-content" side="right">
           {tooltip}
         </TooltipContent>

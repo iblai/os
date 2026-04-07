@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { SettingsTab } from './settings-tab';
@@ -43,9 +49,14 @@ vi.mock('@/hooks/user-user-actions', () => ({
 const mockEditMentorLoading = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useEditMentorMutation: () => [mockEditMentor, { isLoading: mockEditMentorLoading() }],
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockGetMentorSettingsQuery(...args),
-  useGetMentorCategoriesQuery: (...args: unknown[]) => mockGetMentorCategoriesQuery(...args),
+  useEditMentorMutation: () => [
+    mockEditMentor,
+    { isLoading: mockEditMentorLoading() },
+  ],
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+  useGetMentorCategoriesQuery: (...args: unknown[]) =>
+    mockGetMentorCategoriesQuery(...args),
 }));
 
 vi.mock('@sentry/nextjs', () => ({
@@ -59,26 +70,49 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('next/dynamic', () => ({
-  default: () => {
-    return (props: any) => {
-      if (!props.isOpen) return null;
-      return (
-        <div data-testid="delete-mentor-modal">
-          <button onClick={props.onClose}>Close</button>
-        </div>
-      );
-    };
-  },
-}));
+vi.mock('next/dynamic', () => {
+  let counter = 0;
+  return {
+    default: () => {
+      const index = counter++;
+      if (index === 0) {
+        // DeleteMentorModal
+        function MockDeleteMentorModal(props: any) {
+          if (!props.isOpen) return null;
+          return (
+            <div data-testid="delete-mentor-modal">
+              <button onClick={props.onClose}>Close</button>
+            </div>
+          );
+        }
+        return MockDeleteMentorModal;
+      }
+      // CopyMentorModal
+      function MockCopyMentorModal(props: any) {
+        return (
+          <div data-testid="copy-mentor-modal">
+            <button onClick={props.onClose}>Close Copy</button>
+          </div>
+        );
+      }
+      return MockCopyMentorModal;
+    },
+  };
+});
 
 vi.mock('next/image', () => ({
-  default: (props: any) => <img {...props} />,
+  default: (props: any) => <img alt="" {...props} />,
 }));
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, type, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} type={type} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      type={type}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -92,7 +126,12 @@ vi.mock('@/components/ui/input', () => ({
 
 vi.mock('@/components/ui/textarea', () => ({
   Textarea: ({ value, onChange, disabled, ...props }: any) => (
-    <textarea value={value} onChange={onChange} disabled={disabled} {...props} />
+    <textarea
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      {...props}
+    />
   ),
 }));
 
@@ -116,7 +155,9 @@ vi.mock('@/components/ui/select', () => ({
   Select: ({ children, value, onValueChange, disabled }: any) => (
     <div data-testid="select-root" data-value={value} data-disabled={disabled}>
       {React.Children.map(children, (child: any) =>
-        React.isValidElement(child) ? React.cloneElement(child as any, { onValueChange }) : child,
+        React.isValidElement(child)
+          ? React.cloneElement(child as any, { onValueChange })
+          : child,
       )}
     </div>
   ),
@@ -139,7 +180,9 @@ vi.mock('@/components/ui/select', () => ({
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div>{children}</div>,
-  PopoverTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  PopoverTrigger: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
   PopoverContent: ({ children }: any) => <div>{children}</div>,
 }));
 
@@ -150,7 +193,11 @@ vi.mock('@/components/ui/command', () => ({
   CommandEmpty: ({ children }: any) => <div>{children}</div>,
   CommandGroup: ({ children }: any) => <div>{children}</div>,
   CommandItem: ({ children, value, onSelect, ...props }: any) => (
-    <div onClick={() => onSelect(value)} data-testid={`category-item-${value}`} {...props}>
+    <div
+      onClick={() => onSelect(value)}
+      data-testid={`category-item-${value}`}
+      {...props}
+    >
       {children}
     </div>
   ),
@@ -160,11 +207,14 @@ vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipContent: ({ children }: any) => <div>{children}</div>,
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
-  TooltipTrigger: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  TooltipTrigger: ({ children, ...props }: any) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  default: ({ children }: any) => children({ disabled: false, canDelete: true }),
+  default: ({ children }: any) =>
+    children({ disabled: false, canDelete: true }),
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -201,6 +251,8 @@ const defaultMentorSettings = {
   show_voice_call: true,
   show_voice_record: false,
   is_lti_accessible: false,
+  forkable: true,
+  forkable_with_training_data: true,
   permissions: {
     field: {
       mentor_name: { read: true, write: true },
@@ -226,7 +278,10 @@ describe('SettingsTab', () => {
     cleanup();
     vi.clearAllMocks();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentorLoading.mockReturnValue(false);
@@ -262,7 +317,9 @@ describe('SettingsTab', () => {
 
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
-        screen.getByText("Configure your mentor's basic settings and preferences."),
+        screen.getByText(
+          "Configure your mentor's basic settings and preferences.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -277,7 +334,9 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByText('Description')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('A test mentor description')).toBeInTheDocument();
+      expect(
+        screen.getByDisplayValue('A test mentor description'),
+      ).toBeInTheDocument();
     });
 
     it('renders Category field', () => {
@@ -302,7 +361,7 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('LTI Accessible?')).toBeInTheDocument();
+      expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
     });
 
     it('renders Show Attachment toggle', () => {
@@ -347,7 +406,9 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // "More info about chat access" is shared by Who Can View and Who Can Chat
-      const chatAccessTriggers = screen.getAllByLabelText('More info about chat access');
+      const chatAccessTriggers = screen.getAllByLabelText(
+        'More info about chat access',
+      );
       const otherTriggers = [
         screen.getByLabelText('More info about lti accessibility'),
         screen.getByLabelText('More info about show attachment'),
@@ -363,7 +424,9 @@ describe('SettingsTab', () => {
     it('clicking tooltip triggers does not call editMentor', async () => {
       render(<SettingsTab />);
 
-      const chatAccessTriggers = screen.getAllByLabelText('More info about chat access');
+      const chatAccessTriggers = screen.getAllByLabelText(
+        'More info about chat access',
+      );
       fireEvent.click(chatAccessTriggers[0]);
       fireEvent.click(chatAccessTriggers[1]);
 
@@ -375,7 +438,9 @@ describe('SettingsTab', () => {
     it('clicking LTI Accessible tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
-      const tooltipTrigger = screen.getByLabelText('More info about lti accessibility');
+      const tooltipTrigger = screen.getByLabelText(
+        'More info about lti accessibility',
+      );
       fireEvent.click(tooltipTrigger);
 
       await waitFor(() => {
@@ -386,7 +451,9 @@ describe('SettingsTab', () => {
     it('clicking Show Attachment tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
-      const tooltipTrigger = screen.getByLabelText('More info about show attachment');
+      const tooltipTrigger = screen.getByLabelText(
+        'More info about show attachment',
+      );
       fireEvent.click(tooltipTrigger);
 
       await waitFor(() => {
@@ -397,7 +464,9 @@ describe('SettingsTab', () => {
     it('clicking Show Voice Call tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
-      const tooltipTrigger = screen.getByLabelText('More info about show voice call');
+      const tooltipTrigger = screen.getByLabelText(
+        'More info about show voice call',
+      );
       fireEvent.click(tooltipTrigger);
 
       await waitFor(() => {
@@ -408,7 +477,9 @@ describe('SettingsTab', () => {
     it('clicking Show Voice Record tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
-      const tooltipTrigger = screen.getByLabelText('More info about show voice record');
+      const tooltipTrigger = screen.getByLabelText(
+        'More info about show voice record',
+      );
       fireEvent.click(tooltipTrigger);
 
       await waitFor(() => {
@@ -446,12 +517,16 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when form submission fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -512,7 +587,9 @@ describe('SettingsTab', () => {
       const toggle = screen.getByLabelText('Show attachment enabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Show attachment disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Show attachment disabled'),
+      ).not.toBeChecked();
     });
 
     it('toggles show_voice_call switch', () => {
@@ -521,7 +598,9 @@ describe('SettingsTab', () => {
       const toggle = screen.getByLabelText('Show voice call enabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Show voice call disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Show voice call disabled'),
+      ).not.toBeChecked();
     });
 
     it('toggles show_voice_record switch', () => {
@@ -577,7 +656,9 @@ describe('SettingsTab', () => {
       const descInput = screen.getByDisplayValue('A test mentor description');
       fireEvent.change(descInput, { target: { value: '' } });
 
-      expect(screen.getByText('Mentor description is required')).toBeInTheDocument();
+      expect(
+        screen.getByText('Mentor description is required'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -750,7 +831,9 @@ describe('SettingsTab', () => {
       fireEvent.click(screen.getByText('Close'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('delete-mentor-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('delete-mentor-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -834,25 +917,43 @@ describe('SettingsTab', () => {
     it('has proper aria-labels for switches', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show attachment enabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Show voice call enabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Show voice record disabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Is lti accessible disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show attachment enabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show voice call enabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Show voice record disabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Is lti accessible disabled'),
+      ).toBeInTheDocument();
     });
 
     it('has proper region label for settings form content', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Settings form content')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Settings form content'),
+      ).toBeInTheDocument();
     });
 
     it('has accessible tooltip triggers', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('More info about lti accessibility')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show attachment')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show voice call')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about show voice record')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about lti accessibility'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show attachment'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show voice call'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about show voice record'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -907,7 +1008,9 @@ describe('SettingsTab', () => {
     it('handles file upload via file input', () => {
       render(<SettingsTab />);
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
       expect(fileInput).toBeInTheDocument();
 
       const file = new File(['test'], 'test.png', { type: 'image/png' });
@@ -964,10 +1067,135 @@ describe('SettingsTab', () => {
               show_voice_call: true,
               show_voice_record: false,
               is_lti_accessible: false,
+              forkable: true,
             }),
           }),
         );
       });
+    });
+  });
+
+  describe('Allow Copies Toggle', () => {
+    it('renders Allow Copies toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Allow Copies')).toBeInTheDocument();
+    });
+
+    it('reflects forkable checked state', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Allow copies enabled');
+      expect(toggle).toBeChecked();
+    });
+
+    it('reflects forkable unchecked state', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Allow copies disabled');
+      expect(toggle).not.toBeChecked();
+    });
+
+    it('toggles forkable switch', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Allow copies enabled');
+      fireEvent.click(toggle);
+
+      expect(screen.getByLabelText('Allow copies disabled')).not.toBeChecked();
+    });
+
+    it('submits forkable value when saving', async () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Allow copies enabled');
+      fireEvent.click(toggle);
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              forkable: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('has tooltip with description', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about allow copies'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Copy Mentor Button', () => {
+    it('renders Copy button when mentor is forkable', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Copy')).toBeInTheDocument();
+    });
+
+    it('hides Copy button when mentor is not forkable', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.queryByText('Copy')).not.toBeInTheDocument();
+    });
+
+    it('opens copy modal when Copy button is clicked', async () => {
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByText('Copy');
+      fireEvent.click(copyButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('copy-mentor-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('closes copy modal when close is clicked', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Copy'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('copy-mentor-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Close Copy'));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId('copy-mentor-modal'),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it('disables Copy button when loading', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: defaultMentorSettings,
+        isLoading: true,
+      });
+
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByText('Copy');
+      expect(copyButton).toBeDisabled();
     });
   });
 });

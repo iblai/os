@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { MENTORS_ENDPOINTS, MENTORS_QUERY_KEYS, MENTORS_REDUCER_PATH } from '../constants';
+import {
+  MENTORS_ENDPOINTS,
+  MENTORS_QUERY_KEYS,
+  MENTORS_REDUCER_PATH,
+} from '../constants';
 import { SERVICES } from '../../constants';
 
 describe('mentors/constants', () => {
@@ -14,7 +18,9 @@ describe('mentors/constants', () => {
       const username = 'testuser';
       const path = MENTORS_ENDPOINTS.GET_MENTORS.path(tenantKey, username);
 
-      expect(path).toBe(`/api/search/orgs/${tenantKey}/users/${username}/mentors/`);
+      expect(path).toBe(
+        `/api/search/orgs/${tenantKey}/users/${username}/mentors/`,
+      );
     });
 
     it('should have SEED_MENTORS endpoint configuration', () => {
@@ -27,7 +33,9 @@ describe('mentors/constants', () => {
       const username = 'testuser';
       const path = MENTORS_ENDPOINTS.SEED_MENTORS.path(tenantKey, username);
 
-      expect(path).toBe(`/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor/seed/`);
+      expect(path).toBe(
+        `/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor/seed/`,
+      );
     });
 
     it('should have GET_MENTOR endpoint configuration', () => {
@@ -39,22 +47,35 @@ describe('mentors/constants', () => {
       const tenantKey = 'test-tenant';
       const username = 'testuser';
       const mentorId = 'mentor-123';
-      const path = MENTORS_ENDPOINTS.GET_MENTOR.path(tenantKey, username, mentorId);
+      const path = MENTORS_ENDPOINTS.GET_MENTOR.path(
+        tenantKey,
+        username,
+        mentorId,
+      );
 
-      expect(path).toBe(`/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentors/${mentorId}/`);
+      expect(path).toBe(
+        `/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentors/${mentorId}/`,
+      );
     });
 
     it('should have CREATE_MENTOR_WITH_SETTINGS endpoint configuration', () => {
       expect(MENTORS_ENDPOINTS.CREATE_MENTOR_WITH_SETTINGS).toBeDefined();
-      expect(MENTORS_ENDPOINTS.CREATE_MENTOR_WITH_SETTINGS.service).toBe(SERVICES.AXD);
+      expect(MENTORS_ENDPOINTS.CREATE_MENTOR_WITH_SETTINGS.service).toBe(
+        SERVICES.AXD,
+      );
     });
 
     it('should generate correct path for CREATE_MENTOR_WITH_SETTINGS', () => {
       const tenantKey = 'test-tenant';
       const username = 'testuser';
-      const path = MENTORS_ENDPOINTS.CREATE_MENTOR_WITH_SETTINGS.path(tenantKey, username);
+      const path = MENTORS_ENDPOINTS.CREATE_MENTOR_WITH_SETTINGS.path(
+        tenantKey,
+        username,
+      );
 
-      expect(path).toBe(`/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor-with-settings/`);
+      expect(path).toBe(
+        `/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor-with-settings/`,
+      );
     });
 
     it('should have UPDATE_MENTOR endpoint configuration', () => {
@@ -66,9 +87,15 @@ describe('mentors/constants', () => {
       const tenantKey = 'test-tenant';
       const username = 'testuser';
       const mentorId = 'mentor-123';
-      const path = MENTORS_ENDPOINTS.UPDATE_MENTOR.path(tenantKey, username, mentorId);
+      const path = MENTORS_ENDPOINTS.UPDATE_MENTOR.path(
+        tenantKey,
+        username,
+        mentorId,
+      );
 
-      expect(path).toBe(`/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentors/${mentorId}/`);
+      expect(path).toBe(
+        `/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentors/${mentorId}/`,
+      );
     });
   });
 

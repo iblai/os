@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# coverage
+coverage/
+
+# playwright
+test-results/
+playwright-report/
+e2e/playwright-report/
+e2e/test-results.json
+
+# environment & secrets
+.env
+.env.*
+
+# lock files
+pnpm-lock.yaml
+
+# auto-generated
+*.min.js
+*.min.css
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Turbo
+.turbo/
+
+# Sentry
+.sentryclirc

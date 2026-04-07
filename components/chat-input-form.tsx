@@ -27,7 +27,10 @@ import { ScreenSharingButton } from './chat-input-form/screen-sharing-button';
 import AutoResizeTextarea from './auto-resize-text-area';
 import { OutsideButtons } from './chat-input-form/outside-buttons';
 import { UploadMenu } from './chat-input-form/upload-menu';
-import { chatInputSliceActions, chatInputSliceSelectors } from '@/features/chat-input/api-slice';
+import {
+  chatInputSliceActions,
+  chatInputSliceSelectors,
+} from '@/features/chat-input/api-slice';
 import { useResponsive } from '@/hooks/use-responsive';
 import { InsideButtons } from './chat-input-form/inside-buttons';
 import { VoiceCallButton } from './chat-input-form/voice-call-button';
@@ -42,7 +45,10 @@ import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 
 const PromptGalleryModal = dynamic(
-  () => import('@/components/modals/prompt-gallery-modal').then((mod) => mod.PromptGalleryModal),
+  () =>
+    import('@/components/modals/prompt-gallery-modal').then(
+      (mod) => mod.PromptGalleryModal,
+    ),
   {
     ssr: false,
   },
@@ -120,7 +126,9 @@ export function ChatInputForm({
   // Check if user has chat permission via RBAC
   const mentorDbId = mentorSettings?.data?.mentorDbId;
   const mentorRbacKey = mentorDbId ? `/mentors/${mentorDbId}/` : null;
-  const hasMentorRbacData = mentorRbacKey ? mentorRbacKey in rbacPermissions : false;
+  const hasMentorRbacData = mentorRbacKey
+    ? mentorRbacKey in rbacPermissions
+    : false;
   const hasChatPermission =
     mentorDbId && hasMentorRbacData
       ? checkRbacPermission(rbacPermissions, `/mentors/${mentorDbId}/#chat`)
@@ -134,13 +142,19 @@ export function ChatInputForm({
     executeWithTrialCheck,
   } = useShowFreeTrialDialog();
   const embedMode = useEmbedMode();
-  const inputValue = useAppSelector(chatInputSliceSelectors.selectTextareaInput);
+  const inputValue = useAppSelector(
+    chatInputSliceSelectors.selectTextareaInput,
+  );
   const containerRef = useRef<HTMLFormElement>(null);
-  const { containerWidth } = useResponsive(containerRef as React.RefObject<HTMLElement>);
+  const { containerWidth } = useResponsive(
+    containerRef as React.RefObject<HTMLElement>,
+  );
 
   const [textAreaRows] = useState(1);
   const [isPromptGalleryOpen, setIsPromptGalleryOpen] = useState(false);
-  const [fileAddedNotification, setFileAddedNotification] = useState<string | null>(null);
+  const [fileAddedNotification, setFileAddedNotification] = useState<
+    string | null
+  >(null);
   const fileUploadInputRef = useRef<HTMLInputElement>(null);
   const isTabletOrMobile = useMediaQuery({ maxWidth: 1023 });
   const isAccessingPublicRoute = useAccessingPublicRoute();
@@ -159,11 +173,10 @@ export function ChatInputForm({
     },
   });
 
-  const isAnonymousAccessAllowed = mentorSettings?.data?.allowAnonymous === true;
-  const visibleToLoggedInUsersOnly =
-    !isAccessingPublicRoute || isLoggedIn() || isAnonymousAccessAllowed;
+  const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
   const isMentorViewableByAnyone =
-    mentorSettings?.data?.mentorVisibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
+    mentorSettings?.data?.mentorVisibility ===
+    MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
 
   const setInputValue = (input: string) => {
     dispatch(chatInputSliceActions.setTextareaInput(input));
@@ -174,16 +187,20 @@ export function ChatInputForm({
     setIsPromptGalleryOpen(false);
   };
 
-  const { handleMicrophoneBtnClick, processing, recording, time } = useVoiceChat({
-    sendMessage: handleSelectPrompt,
-  });
+  const { handleMicrophoneBtnClick, processing, recording, time } =
+    useVoiceChat({
+      sendMessage: handleSelectPrompt,
+    });
 
   // Get attached files from Redux store with a fallback for when the state is not yet available
-  const attachedFiles = useAppSelector((state: RootState) => state.files.attachedFiles || []);
+  const attachedFiles = useAppSelector(
+    (state: RootState) => state.files.attachedFiles || [],
+  );
 
   // Check if any files are currently uploading
   const hasUploadingFiles = attachedFiles.some(
-    (file) => file.uploadStatus === 'pending' || file.uploadStatus === 'uploading',
+    (file) =>
+      file.uploadStatus === 'pending' || file.uploadStatus === 'uploading',
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -203,12 +220,16 @@ export function ChatInputForm({
     dispatch(removeFile(id));
   };
 
-  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
 
       // Show notification
-      setFileAddedNotification(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`);
+      setFileAddedNotification(
+        `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`,
+      );
 
       // Upload files (validation happens inside the hook)
       await uploadFiles(files);
@@ -251,20 +272,24 @@ export function ChatInputForm({
     <>
       {isTabletOrMobile && !isPreviewMode && !embedMode && !compactMode && (
         <div
-          className="pl-4 pt-4 flex justify-end w-full mx-auto"
-          style={chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined}
+          className="mx-auto flex w-full justify-end pt-4 pl-4"
+          style={
+            chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
+          }
         >
           <RetrievedDocumentsButton sessionId={sessionId} />
         </div>
       )}
       {mentorSettings?.data?.disclaimer && !compactMode && (
         <div
-          className="mt-1 pb-1 w-full mx-auto"
-          style={chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined}
+          className="mx-auto mt-1 w-full pb-1"
+          style={
+            chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
+          }
         >
           <p
             id="chat-input-disclaimer"
-            className="text-[0.625rem] text-gray-500 text-center italic"
+            className="text-center text-[0.625rem] text-gray-500 italic"
           >
             {mentorSettings?.data?.disclaimer}
           </p>
@@ -273,10 +298,15 @@ export function ChatInputForm({
       <form
         ref={containerRef}
         onSubmit={handleSubmit}
-        className={cn('mt-4 pb-2 w-full mx-auto', CSS_CLASS_NAMES.CHAT.TEXTAREA)}
-        style={chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined}
+        className={cn(
+          'mx-auto mt-4 w-full pb-2',
+          CSS_CLASS_NAMES.CHAT.TEXTAREA,
+        )}
+        style={
+          chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
+        }
       >
-        <div className="relative rounded-2xl border border-gray-200 bg-[#fbfbfb] pb-3 shadow-xs overflow-hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-[#fbfbfb] pb-3 shadow-xs">
           <FileAttachmentsList
             attachedFiles={attachedFiles}
             onRemoveFile={handleRemoveFile}
@@ -291,14 +321,20 @@ export function ChatInputForm({
           )}
 
           <div className="grid">
-            <label id="chat-input-label" htmlFor="chat-input-textarea" className="sr-only">
+            <label
+              id="chat-input-label"
+              htmlFor="chat-input-textarea"
+              className="sr-only"
+            >
               Ask anything
             </label>
             <AutoResizeTextarea
               id="chat-input-textarea"
               aria-labelledby="chat-input-label"
               aria-describedby={
-                mentorSettings?.data?.disclaimer ? 'chat-input-disclaimer' : undefined
+                mentorSettings?.data?.disclaimer
+                  ? 'chat-input-disclaimer'
+                  : undefined
               }
               value={inputValue}
               onChange={handleInputChange}
@@ -314,14 +350,18 @@ export function ChatInputForm({
               disabled={isChatDisabledByRbac || hasUploadingFiles}
               allowEmptySubmit={attachedFiles.length > 0}
               allowAnonymousAccess={
-                isMentorViewableByAnyone || showingSharedChat || !!userIsVisiting
+                isMentorViewableByAnyone ||
+                showingSharedChat ||
+                !!userIsVisiting
               }
               embedMode={embedMode}
             />
-            <div className="flex items-center px-2 gap-2">
+            <div className="flex items-center gap-2 px-2">
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <UploadMenu
-                  onFileInputTrigger={() => executeWithTrialCheck(triggerFileInput)}
+                  onFileInputTrigger={() =>
+                    executeWithTrialCheck(triggerFileInput)
+                  }
                   disabled={isChatDisabledByRbac || !sessionId}
                 />
               )}
@@ -355,7 +395,9 @@ export function ChatInputForm({
                 {visibleToLoggedInUsersOnly && !compactMode && (
                   <VoiceChatButton
                     isPreviewMode={isPreviewMode}
-                    handleMicrophoneBtnClick={() => executeWithTrialCheck(handleMicrophoneBtnClick)}
+                    handleMicrophoneBtnClick={() =>
+                      executeWithTrialCheck(handleMicrophoneBtnClick)
+                    }
                     processing={processing}
                     recording={recording}
                     disabled={isChatDisabledByRbac}
@@ -404,7 +446,7 @@ export function ChatInputForm({
         </div>
 
         {visibleToLoggedInUsersOnly && !compactMode && (
-          <div className="w-full flex justify-center">
+          <div className="flex w-full justify-center">
             <OutsideButtons
               activeOptions={activeTools}
               onOptionClick={updateSessionTools}
@@ -432,7 +474,10 @@ export function ChatInputForm({
         />
       )}
       {isFreeTrialModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog isOpen={isFreeTrialModalOpen} onClose={closeFreeTrialModal} />
+        <FreeTrialDialog
+          isOpen={isFreeTrialModalOpen}
+          onClose={closeFreeTrialModal}
+        />
       )}
     </>
   );

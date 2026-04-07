@@ -38,13 +38,13 @@ export interface MessageEntry {
 
 export interface Message {
   data: MessageData;
-  type: "ai" | "human";
+  type: 'ai' | 'human';
 }
 
 export interface MessageData {
   id: string | null;
   name: string | null;
-  type: "ai" | "human";
+  type: 'ai' | 'human';
   content: string;
   example: boolean;
   tool_calls?: unknown[]; // Adjust if tool_calls has a structure

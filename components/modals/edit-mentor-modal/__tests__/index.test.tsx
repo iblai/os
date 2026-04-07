@@ -78,7 +78,8 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
-      item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL),
+      item.userTypes.includes(UserType.ADMIN) ||
+      item.userTypes.includes(UserType.FREE_TRIAL),
   }),
 }));
 
@@ -91,7 +92,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
@@ -166,14 +168,19 @@ vi.mock('../tabs/memory-tab', () => ({
 }));
 
 vi.mock('../tabs/disclaimers-tab', () => ({
-  DisclaimersTab: () => <div data-testid="disclaimers-tab">Disclaimers Tab</div>,
+  DisclaimersTab: () => (
+    <div data-testid="disclaimers-tab">Disclaimers Tab</div>
+  ),
 }));
 
 // ============================================================================
 // TEST STORE FACTORY
 // ============================================================================
 
-function createTestStore(preloadedStack: ModalInfo[] = [], rbacPermissions: object = {}) {
+function createTestStore(
+  preloadedStack: ModalInfo[] = [],
+  rbacPermissions: object = {},
+) {
   return configureStore({
     reducer: {
       modals: modalReducer,
@@ -301,7 +308,9 @@ describe('EditMentorModal', () => {
       // Look for it in h2 heading elements
       await waitFor(() => {
         const headings = screen.getAllByRole('heading');
-        const editHeading = headings.find((h) => h.textContent?.includes('Edit'));
+        const editHeading = headings.find((h) =>
+          h.textContent?.includes('Edit'),
+        );
         expect(editHeading).toBeTruthy();
       });
     });
@@ -437,15 +446,20 @@ describe('EditMentorModal - Tab Filtering Logic', () => {
     return tabs
       .filter(isUserTypeAllowed)
       .filter((item) => {
-        const isAdminOnMainTenant = isAdmin && tenantKey === config.mainTenantKey();
-        const mentorNotOnMainTenant = mentorSettings.platform_key !== config.mainTenantKey();
+        const isAdminOnMainTenant =
+          isAdmin && tenantKey === config.mainTenantKey();
+        const mentorNotOnMainTenant =
+          mentorSettings.platform_key !== config.mainTenantKey();
         const visibilityMatches = item.mentorVisibility.includes(
           mentorSettings.mentor_visibility as MentorVisibilityEnum,
         );
-        const isNonAdminOnMainTenant = !isAdmin && tenantKey === config.mainTenantKey();
+        const isNonAdminOnMainTenant =
+          !isAdmin && tenantKey === config.mainTenantKey();
         const visibilityAllowed = visibilityMatches && !isNonAdminOnMainTenant;
 
-        return isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed;
+        return (
+          isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed
+        );
       })
       .filter((item) => {
         const hasFieldPermission = rbacPermissionToDisplay(
@@ -454,7 +468,10 @@ describe('EditMentorModal - Tab Filtering Logic', () => {
         );
         const hasRbacPermission =
           !item.rbacResource ||
-          checkRbacPermission(rbacPermissions, item.rbacResource(mentorSettings.mentor_id));
+          checkRbacPermission(
+            rbacPermissions,
+            item.rbacResource(mentorSettings.mentor_id),
+          );
         return hasFieldPermission && hasRbacPermission;
       });
   }
@@ -466,7 +483,8 @@ describe('EditMentorModal - Tab Filtering Logic', () => {
       label: 'Settings',
       value: 'settings',
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#show_settings`,
+      rbacResource: (mentorDbId: number) =>
+        `/mentors/${mentorDbId}/#show_settings`,
       permissionFieldsCheck: ['mentor_name', 'mentor_description'],
       mentorVisibility: [
         MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -477,7 +495,8 @@ describe('EditMentorModal - Tab Filtering Logic', () => {
       label: 'Access',
       value: 'access',
       userTypes: [UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#read_shared_mentor`,
+      rbacResource: (mentorDbId: number) =>
+        `/mentors/${mentorDbId}/#read_shared_mentor`,
       permissionFieldsCheck: [],
       mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
     },
@@ -680,7 +699,10 @@ describe('EditMentorModal - Tab Filtering Logic', () => {
         },
       };
 
-      const strictCheckRbacPermission = (_: object, resource: string): boolean => {
+      const strictCheckRbacPermission = (
+        _: object,
+        resource: string,
+      ): boolean => {
         // Deny access to LLM
         if (resource.includes('llms')) return false;
         return true;

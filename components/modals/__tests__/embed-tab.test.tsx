@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 
 // Mock @iblai/iblai-web-mentor before any imports that use it
 vi.mock('@iblai/iblai-web-mentor', () => ({}));
@@ -18,7 +24,9 @@ function validateCss(css: string): { isValid: boolean; errors: string[] } {
   const openBraces = (css.match(/\{/g) || []).length;
   const closeBraces = (css.match(/\}/g) || []).length;
   if (openBraces !== closeBraces) {
-    errors.push(`Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`);
+    errors.push(
+      `Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`,
+    );
   }
 
   // Check for balanced parentheses
@@ -59,21 +67,27 @@ function validateJavaScript(js: string): {
   // Check for smart/curly quotes (common when copying from Word, websites, etc.)
   const hasSmartQuotes = /[\u2018\u2019\u201C\u201D]/.test(js);
   if (hasSmartQuotes) {
-    errors.push('Smart quotes detected (" " \' \'). Replace with straight quotes (" \')');
+    errors.push(
+      'Smart quotes detected (" " \' \'). Replace with straight quotes (" \')',
+    );
   }
 
   // Check for balanced braces
   const openBraces = (js.match(/\{/g) || []).length;
   const closeBraces = (js.match(/\}/g) || []).length;
   if (openBraces !== closeBraces) {
-    errors.push(`Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`);
+    errors.push(
+      `Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`,
+    );
   }
 
   // Check for balanced brackets
   const openBrackets = (js.match(/\[/g) || []).length;
   const closeBrackets = (js.match(/\]/g) || []).length;
   if (openBrackets !== closeBrackets) {
-    errors.push(`Missing ${openBrackets > closeBrackets ? 'closing' : 'opening'} bracket(s)`);
+    errors.push(
+      `Missing ${openBrackets > closeBrackets ? 'closing' : 'opening'} bracket(s)`,
+    );
   }
 
   // Check for balanced parentheses
@@ -85,7 +99,9 @@ function validateJavaScript(js: string): {
 
   // Check for unclosed strings across the entire code (not per-line, to handle wrapped/multiline content)
   // Use negative lookbehind to avoid stripping URLs (e.g., https://) as comments
-  const jsWithoutComments = js.replace(/(?<!:)\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const jsWithoutComments = js
+    .replace(/(?<!:)\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
   const singleQuotes = (jsWithoutComments.match(/(?<!\\)'/g) || []).length;
   const doubleQuotes = (jsWithoutComments.match(/(?<!\\)"/g) || []).length;
   const templateLiterals = (jsWithoutComments.match(/(?<!\\)`/g) || []).length;
@@ -150,7 +166,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
   useGetMentorSettingsQuery: () => mockGetMentorSettingsQuery(),
   useGetShareableLinkQuery: () => mockGetShareableLinkQuery(),
-  useCreateShareableLinkMutation: () => [mockCreateShareableLink, { data: null }],
+  useCreateShareableLinkMutation: () => [
+    mockCreateShareableLink,
+    { data: null },
+  ],
   useUpdateShareableLinkMutation: () => [mockUpdateShareableLink],
 }));
 
@@ -160,9 +179,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: () => ({
     data: { allow_anonymous: false, custom_css: '', mentor_visibility: '' },
   }),
-  useCreateRedirectTokenMutation: () => [vi.fn(), { isLoading: false, data: null }],
+  useCreateRedirectTokenMutation: () => [
+    vi.fn(),
+    { isLoading: false, data: null },
+  ],
   useGetShareableLinkQuery: () => mockGetShareableLinkQuery(),
-  useCreateShareableLinkMutation: () => [mockCreateShareableLink, { data: null }],
+  useCreateShareableLinkMutation: () => [
+    mockCreateShareableLink,
+    { data: null },
+  ],
   useUpdateShareableLinkMutation: () => [mockUpdateShareableLink],
 }));
 
@@ -178,7 +203,8 @@ const createEmbedTabMock = (overrides = {}) => ({
     handleSubmit: vi.fn(),
     getFieldValue: vi.fn(),
     state: { isSubmitting: false },
-    Field: ({ children }: any) => children({ state: { value: '' }, handleChange: vi.fn() }),
+    Field: ({ children }: any) =>
+      children({ state: { value: '' }, handleChange: vi.fn() }),
     Subscribe: ({ children }: any) => children(['default']),
   },
   createTokenHandler: vi.fn(),
@@ -276,7 +302,9 @@ vi.mock('@/components/ui/input', () => ({
 }));
 
 vi.mock('@/components/ui/textarea', () => ({
-  Textarea: ({ ...props }: any) => <textarea data-testid="textarea" {...props} />,
+  Textarea: ({ ...props }: any) => (
+    <textarea data-testid="textarea" {...props} />
+  ),
 }));
 
 vi.mock('@/components/ui/tooltip', () => ({
@@ -299,7 +327,10 @@ vi.mock('@/components/ui/dialog', () => ({
     <div data-testid="dialog" data-open={open}>
       {children}
       {onOpenChange && (
-        <button data-testid="dialog-close-trigger" onClick={() => onOpenChange(false)}>
+        <button
+          data-testid="dialog-close-trigger"
+          onClick={() => onOpenChange(false)}
+        >
           Close Dialog
         </button>
       )}
@@ -327,7 +358,9 @@ vi.mock('@/components/ui/tabs', () => ({
   TabsContent: ({ children, value }: any) => (
     <div data-testid={`tabs-content-${value}`}>{children}</div>
   ),
-  TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
+  TabsList: ({ children }: any) => (
+    <div data-testid="tabs-list">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/tabs', () => ({
@@ -349,7 +382,9 @@ vi.mock('@/components/ui/toaster', () => ({
 }));
 
 vi.mock('@/components/copy-code-block', () => ({
-  CopyCodeBlock: ({ code }: any) => <pre data-testid="copy-code-block">{code}</pre>,
+  CopyCodeBlock: ({ code }: any) => (
+    <pre data-testid="copy-code-block">{code}</pre>
+  ),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -378,7 +413,9 @@ vi.mock('@/lib/constants', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
+  default: ({ src, alt, ...props }: any) => (
+    <img src={src} alt={alt} {...props} />
+  ),
 }));
 
 vi.mock('lucide-react', () => ({
@@ -395,7 +432,9 @@ vi.mock('lucide-react', () => ({
   ChevronUp: () => <span data-testid="icon-chevron-up">ChevronUp</span>,
   AlertCircle: () => <span data-testid="icon-alert-circle">AlertCircle</span>,
   Check: () => <span data-testid="icon-check">Check</span>,
-  AlertTriangle: () => <span data-testid="icon-alert-triangle">AlertTriangle</span>,
+  AlertTriangle: () => (
+    <span data-testid="icon-alert-triangle">AlertTriangle</span>
+  ),
   Code2: () => <span data-testid="icon-code">Code</span>,
   ShieldAlert: () => <span data-testid="icon-shield">Shield</span>,
   Mail: () => <span data-testid="icon-mail">Mail</span>,
@@ -558,21 +597,27 @@ describe('JavaScript Validation', () => {
       const js = `eval("alert('test')");`;
       const result = validateJavaScript(js);
       expect(result.isValid).toBe(true);
-      expect(result.warnings).toContain('Usage of eval() is discouraged for security reasons');
+      expect(result.warnings).toContain(
+        'Usage of eval() is discouraged for security reasons',
+      );
     });
 
     it('warns about document.write usage', () => {
       const js = `document.write("<p>Hello</p>");`;
       const result = validateJavaScript(js);
       expect(result.isValid).toBe(true);
-      expect(result.warnings).toContain('document.write() may cause unexpected behavior');
+      expect(result.warnings).toContain(
+        'document.write() may cause unexpected behavior',
+      );
     });
 
     it('warns about innerHTML usage', () => {
       const js = `element.innerHTML = "<p>Hello</p>";`;
       const result = validateJavaScript(js);
       expect(result.isValid).toBe(true);
-      expect(result.warnings).toContain('innerHTML usage detected - ensure content is sanitized');
+      expect(result.warnings).toContain(
+        'innerHTML usage detected - ensure content is sanitized',
+      );
     });
 
     it('detects multiple warnings', () => {
@@ -706,12 +751,19 @@ describe('EmbedTab Component', () => {
     mockToast.mockReset();
     mockUseEmbedTab.mockReset();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
 
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockCreateShareableLink.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockUpdateShareableLink.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+    mockCreateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockUpdateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
 
     mockGetMentorSettingsQuery.mockReturnValue({
       data: {
@@ -745,7 +797,9 @@ describe('EmbedTab Component', () => {
     it('renders the embed tab with title and description', () => {
       render(<EmbedTab />);
       expect(screen.getByText('Embed')).toBeInTheDocument();
-      expect(screen.getByText('Configure embedding options for your mentor.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Configure embedding options for your mentor.'),
+      ).toBeInTheDocument();
     });
 
     it('renders Advanced CSS section', () => {
@@ -793,7 +847,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Find and click the Advanced JavaScript button
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       expect(jsButton).toBeInTheDocument();
 
       // Click to expand
@@ -823,7 +879,10 @@ describe('EmbedTab Component', () => {
   describe('Edge Cases', () => {
     it('handles missing mentorId from getMentorId by using params', () => {
       mockGetMentorId.mockReturnValue(null);
-      mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'params-mentor' });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'test-tenant',
+        mentorId: 'params-mentor',
+      });
 
       render(<EmbedTab />);
 
@@ -890,7 +949,9 @@ describe('EmbedTab Component', () => {
       });
 
       const textarea = screen.getAllByTestId('textarea')[0];
-      fireEvent.change(textarea, { target: { value: '.test { color: red; }' } });
+      fireEvent.change(textarea, {
+        target: { value: '.test { color: red; }' },
+      });
 
       expect(textarea).toHaveValue('.test { color: red; }');
     });
@@ -900,7 +961,9 @@ describe('EmbedTab Component', () => {
     it('shows JS textarea when Advanced JavaScript section is expanded', async () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -912,7 +975,9 @@ describe('EmbedTab Component', () => {
     it('updates JS value when typing in textarea', async () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -967,14 +1032,18 @@ describe('EmbedTab Component', () => {
     it('renders create embed button', () => {
       render(<EmbedTab />);
 
-      const createButton = screen.getByRole('button', { name: /Create Embed/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Embed/i,
+      });
       expect(createButton).toBeInTheDocument();
     });
 
     it('create embed button can be clicked', async () => {
       render(<EmbedTab />);
 
-      const createButton = screen.getByRole('button', { name: /Create Embed/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Embed/i,
+      });
       fireEvent.click(createButton);
 
       // Button should be clickable
@@ -1031,7 +1100,9 @@ describe('EmbedTab Component', () => {
     it('has accessible labels for JS section', () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       expect(jsButton).toHaveAttribute('aria-expanded');
       expect(jsButton).toHaveAttribute('aria-label');
     });
@@ -1045,7 +1116,9 @@ describe('EmbedTab Component', () => {
       fireEvent.click(cssButton);
 
       await waitFor(() => {
-        const saveButton = screen.getByRole('button', { name: /Save advanced CSS/i });
+        const saveButton = screen.getByRole('button', {
+          name: /Save advanced CSS/i,
+        });
         expect(saveButton).toBeInTheDocument();
       });
     });
@@ -1064,10 +1137,14 @@ describe('EmbedTab Component', () => {
 
       // Enter CSS
       const textarea = screen.getAllByTestId('textarea')[0];
-      fireEvent.change(textarea, { target: { value: '.test { color: red; }' } });
+      fireEvent.change(textarea, {
+        target: { value: '.test { color: red; }' },
+      });
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save advanced CSS/i });
+      const saveButton = screen.getByRole('button', {
+        name: /Save advanced CSS/i,
+      });
       fireEvent.click(saveButton);
 
       // Verify save was attempted
@@ -1090,10 +1167,14 @@ describe('EmbedTab Component', () => {
 
       // Enter CSS
       const textarea = screen.getAllByTestId('textarea')[0];
-      fireEvent.change(textarea, { target: { value: '.test { color: blue; }' } });
+      fireEvent.change(textarea, {
+        target: { value: '.test { color: blue; }' },
+      });
 
       await waitFor(() => {
-        const discardButton = screen.getByRole('button', { name: /Discard changes/i });
+        const discardButton = screen.getByRole('button', {
+          name: /Discard changes/i,
+        });
         expect(discardButton).toBeInTheDocument();
       });
     });
@@ -1112,11 +1193,15 @@ describe('EmbedTab Component', () => {
 
       // Enter CSS
       const textarea = screen.getAllByTestId('textarea')[0];
-      fireEvent.change(textarea, { target: { value: '.changed { color: green; }' } });
+      fireEvent.change(textarea, {
+        target: { value: '.changed { color: green; }' },
+      });
 
       // Click discard button
       await waitFor(() => {
-        const discardButton = screen.getByRole('button', { name: /Discard changes/i });
+        const discardButton = screen.getByRole('button', {
+          name: /Discard changes/i,
+        });
         fireEvent.click(discardButton);
       });
 
@@ -1131,11 +1216,15 @@ describe('EmbedTab Component', () => {
     it('shows Save button when JS section is expanded and enabled', async () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
-        const saveButton = screen.getByRole('button', { name: /Save advanced JavaScript/i });
+        const saveButton = screen.getByRole('button', {
+          name: /Save advanced JavaScript/i,
+        });
         expect(saveButton).toBeInTheDocument();
       });
     });
@@ -1144,7 +1233,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1155,10 +1246,14 @@ describe('EmbedTab Component', () => {
       // Enter JavaScript (get the JS textarea, not CSS)
       const textareas = screen.getAllByTestId('textarea');
       const jsTextarea = textareas[textareas.length - 1]; // JS is the last textarea
-      fireEvent.change(jsTextarea, { target: { value: 'console.log("test");' } });
+      fireEvent.change(jsTextarea, {
+        target: { value: 'console.log("test");' },
+      });
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save advanced JavaScript/i });
+      const saveButton = screen.getByRole('button', {
+        name: /Save advanced JavaScript/i,
+      });
       fireEvent.click(saveButton);
 
       // Verify save was attempted
@@ -1171,7 +1266,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1185,7 +1282,9 @@ describe('EmbedTab Component', () => {
       fireEvent.change(jsTextarea, { target: { value: 'alert("test");' } });
 
       await waitFor(() => {
-        const discardButtons = screen.getAllByRole('button', { name: /Discard changes/i });
+        const discardButtons = screen.getAllByRole('button', {
+          name: /Discard changes/i,
+        });
         expect(discardButtons.length).toBeGreaterThan(0);
       });
     });
@@ -1194,7 +1293,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1209,7 +1310,9 @@ describe('EmbedTab Component', () => {
 
       // Click discard button
       await waitFor(() => {
-        const discardButtons = screen.getAllByRole('button', { name: /Discard changes/i });
+        const discardButtons = screen.getAllByRole('button', {
+          name: /Discard changes/i,
+        });
         fireEvent.click(discardButtons[discardButtons.length - 1]);
       });
 
@@ -1245,7 +1348,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1266,7 +1371,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1329,10 +1436,14 @@ describe('EmbedTab Component', () => {
 
       // Enter CSS
       const textarea = screen.getAllByTestId('textarea')[0];
-      fireEvent.change(textarea, { target: { value: '.error { color: red; }' } });
+      fireEvent.change(textarea, {
+        target: { value: '.error { color: red; }' },
+      });
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save advanced CSS/i });
+      const saveButton = screen.getByRole('button', {
+        name: /Save advanced CSS/i,
+      });
       fireEvent.click(saveButton);
 
       // Component should handle error
@@ -1349,7 +1460,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1360,10 +1473,14 @@ describe('EmbedTab Component', () => {
       // Enter JavaScript
       const textareas = screen.getAllByTestId('textarea');
       const jsTextarea = textareas[textareas.length - 1];
-      fireEvent.change(jsTextarea, { target: { value: 'console.log("error");' } });
+      fireEvent.change(jsTextarea, {
+        target: { value: 'console.log("error");' },
+      });
 
       // Click save button
-      const saveButton = screen.getByRole('button', { name: /Save advanced JavaScript/i });
+      const saveButton = screen.getByRole('button', {
+        name: /Save advanced JavaScript/i,
+      });
       fireEvent.click(saveButton);
 
       // Component should handle error
@@ -1426,12 +1543,16 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       // Should show disabled notice
       await waitFor(() => {
-        expect(screen.getByText(/Custom JavaScript is Disabled/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Custom JavaScript is Disabled/i),
+        ).toBeInTheDocument();
       });
     });
 
@@ -1454,7 +1575,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Expand JS section
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       // Should show security-related text
@@ -1492,14 +1615,18 @@ describe('EmbedTab Component', () => {
     it('renders create embed button', () => {
       render(<EmbedTab />);
 
-      const createButton = screen.getByRole('button', { name: /Create Embed/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Embed/i,
+      });
       expect(createButton).toBeInTheDocument();
     });
 
     it('can click create embed button', async () => {
       render(<EmbedTab />);
 
-      const createButton = screen.getByRole('button', { name: /Create Embed/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Embed/i,
+      });
       fireEvent.click(createButton);
 
       await waitFor(() => {
@@ -1510,7 +1637,9 @@ describe('EmbedTab Component', () => {
     it('shows generating state when submitting', async () => {
       render(<EmbedTab />);
 
-      const createButton = screen.getByRole('button', { name: /Create Embed/i });
+      const createButton = screen.getByRole('button', {
+        name: /Create Embed/i,
+      });
       expect(createButton).not.toBeDisabled();
     });
   });
@@ -1569,7 +1698,9 @@ describe('EmbedTab Component', () => {
     it('handles rapid JS section expand/collapse', async () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
 
       // Rapid clicks
       fireEvent.click(jsButton);
@@ -1585,7 +1716,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       const cssButton = screen.getByRole('button', { name: /Advanced CSS/i });
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
 
       fireEvent.click(cssButton);
       fireEvent.click(jsButton);
@@ -1664,7 +1797,9 @@ describe('EmbedTab Component', () => {
     it('preserves JS value during typing', async () => {
       render(<EmbedTab />);
 
-      const jsButton = screen.getByRole('button', { name: /Advanced JavaScript/i });
+      const jsButton = screen.getByRole('button', {
+        name: /Advanced JavaScript/i,
+      });
       fireEvent.click(jsButton);
 
       await waitFor(() => {
@@ -1802,7 +1937,8 @@ describe('EmbedTab Component', () => {
             handleSubmit: vi.fn(),
             getFieldValue: vi.fn(),
             state: { isSubmitting: true },
-            Field: ({ children }: any) => children({ state: { value: '' }, handleChange: vi.fn() }),
+            Field: ({ children }: any) =>
+              children({ state: { value: '' }, handleChange: vi.fn() }),
             Subscribe: ({ children }: any) => children(['default']),
           },
         }),
@@ -1820,7 +1956,8 @@ describe('EmbedTab Component', () => {
             handleSubmit: vi.fn(),
             getFieldValue: vi.fn(),
             state: { isSubmitting: false },
-            Field: ({ children }: any) => children({ state: { value: '' }, handleChange: vi.fn() }),
+            Field: ({ children }: any) =>
+              children({ state: { value: '' }, handleChange: vi.fn() }),
             Subscribe: ({ children }: any) => children(['default']),
           },
         }),
@@ -1973,7 +2110,9 @@ describe('EmbedTab Component', () => {
       });
 
       mockCreateShareableLink.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ token: 'new-token-123', enabled: true }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ token: 'new-token-123', enabled: true }),
       });
 
       render(<EmbedTab />);
@@ -2133,7 +2272,9 @@ describe('EmbedTab Component', () => {
       });
 
       mockCreateShareableLink.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ token: 'new-regenerated-token', enabled: true }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ token: 'new-regenerated-token', enabled: true }),
       });
 
       render(<EmbedTab />);
@@ -2206,7 +2347,10 @@ describe('EmbedTab Component', () => {
       expect(backgroundColorInput).not.toBeNull();
       fireEvent.change(backgroundColorInput!, { target: { value: '#ff0000' } });
 
-      expect(mockUpdateConfig).toHaveBeenCalledWith('backgroundColor', '#ff0000');
+      expect(mockUpdateConfig).toHaveBeenCalledWith(
+        'backgroundColor',
+        '#ff0000',
+      );
     });
 
     it('updates textColor via color input', () => {
@@ -2240,11 +2384,17 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Find the subtitleTextColor input by id
-      const subtitleTextColorInput = document.getElementById('subtitleTextColor');
+      const subtitleTextColorInput =
+        document.getElementById('subtitleTextColor');
       expect(subtitleTextColorInput).not.toBeNull();
-      fireEvent.change(subtitleTextColorInput!, { target: { value: '#0000ff' } });
+      fireEvent.change(subtitleTextColorInput!, {
+        target: { value: '#0000ff' },
+      });
 
-      expect(mockUpdateConfig).toHaveBeenCalledWith('subtitleTextColor', '#0000ff');
+      expect(mockUpdateConfig).toHaveBeenCalledWith(
+        'subtitleTextColor',
+        '#0000ff',
+      );
     });
 
     it('updates borderRadius via range slider', () => {
@@ -2461,7 +2611,9 @@ describe('EmbedTab Component', () => {
         onload: null as ((event: any) => void) | null,
         result: 'data:image/png;base64,dGVzdA==',
       };
-      vi.spyOn(global, 'FileReader').mockImplementation(() => mockReader as any);
+      vi.spyOn(global, 'FileReader').mockImplementation(
+        () => mockReader as any,
+      );
 
       fireEvent.change(fileInput!, { target: { files: [file] } });
 
@@ -2712,7 +2864,9 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
 
       // Find and click the Remove Image button
-      const removeImageButton = screen.getByRole('button', { name: /Remove Image/i });
+      const removeImageButton = screen.getByRole('button', {
+        name: /Remove Image/i,
+      });
       fireEvent.click(removeImageButton);
 
       expect(mockUpdateMultipleConfig).toHaveBeenCalledWith({ image: null });

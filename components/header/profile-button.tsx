@@ -65,7 +65,9 @@ export function ProfileButton({
         {isMobile && (
           <div className="px-2 py-2">
             <div className="flex items-center justify-between">
-              <span className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}>
+              <span
+                className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
+              >
                 Learner
               </span>
               <Switch
@@ -73,7 +75,9 @@ export function ProfileButton({
                 onCheckedChange={setIsInstructor}
                 className="data-[state=checked]:bg-blue-500"
               />
-              <span className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}>
+              <span
+                className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
+              >
                 Instructor
               </span>
             </div>

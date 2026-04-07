@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 
 import { AppSidebar } from '../index';
 
@@ -31,6 +37,7 @@ const mockSetOpenMobile = vi.hoisted(() => vi.fn());
 const mockSaveCachedSessionId = vi.hoisted(() => vi.fn());
 const mockUseLocalStorage = vi.hoisted(() => vi.fn());
 
+let mockSearchParams = new URLSearchParams();
 let mockSessionId = 'session-123';
 let mockEmbedMode = false;
 let mockUserIsStudent = false;
@@ -49,7 +56,10 @@ let mockNavigationItems = {
 
 const mockFreeTrialDialogState = vi.hoisted(() => ({
   executeWithTrialCheck: vi.fn((callback: () => void) => callback()),
-  FreeTrialDialog: null as React.ComponentType<{ onClose: () => void; isOpen: boolean }> | null,
+  FreeTrialDialog: null as React.ComponentType<{
+    onClose: () => void;
+    isOpen: boolean;
+  }> | null,
   closeModal: vi.fn(),
   isModalOpen: false,
 }));
@@ -58,6 +68,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => mockUsePathname(),
   useParams: () => mockUseParams(),
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('@/lib/hooks', () => ({
@@ -147,7 +158,9 @@ vi.mock('@/components/ui/sidebar', () => ({
 }));
 
 vi.mock('../toggle-sidebar-button', () => ({
-  ToggleSidebarButton: () => <button data-testid="toggle-sidebar">Toggle</button>,
+  ToggleSidebarButton: () => (
+    <button data-testid="toggle-sidebar">Toggle</button>
+  ),
 }));
 
 vi.mock('../pinned-messages', () => ({
@@ -245,7 +258,11 @@ vi.mock('../recent-messages', () => ({
                 artifact_versions: [
                   {
                     id: 'av-1',
-                    artifact: { id: 'art-1', title: 'Artifact', content: 'Content' },
+                    artifact: {
+                      id: 'art-1',
+                      title: 'Artifact',
+                      content: 'Content',
+                    },
                     title: 'Version 1',
                     content: 'V1 Content',
                     version_number: 1,
@@ -311,7 +328,9 @@ vi.mock('../recent-messages', () => ({
 }));
 
 vi.mock('../projects-sidebar-dropdown', () => ({
-  ProjectsSidebarDropdown: () => <div data-testid="projects-dropdown">Projects</div>,
+  ProjectsSidebarDropdown: () => (
+    <div data-testid="projects-dropdown">Projects</div>
+  ),
 }));
 
 vi.mock('../app-sidebar-footer', () => ({
@@ -331,7 +350,10 @@ vi.mock('../app-sidebar-content', () => ({
     );
 
     return (
-      <div data-testid="sidebar-content-items" data-items={updatedItems?.length || 0}>
+      <div
+        data-testid="sidebar-content-items"
+        data-items={updatedItems?.length || 0}
+      >
         {updatedItems?.map((item: any, i: number) => (
           <div
             key={item.label || i}
@@ -374,6 +396,7 @@ describe('AppSidebar', () => {
       tenantKey: 'main',
     });
 
+    mockSearchParams = new URLSearchParams();
     mockSessionId = 'session-123';
     mockEmbedMode = false;
     mockUserIsStudent = false;
@@ -387,11 +410,18 @@ describe('AppSidebar', () => {
         { label: 'New Chat', href: '/new', userTypes: ['admin'] },
         { label: 'History', href: '/history', userTypes: ['admin'] },
       ],
-      footerItems: [{ label: 'Settings', href: '/settings', userTypes: ['admin'] }],
+      footerItems: [
+        { label: 'Settings', href: '/settings', userTypes: ['admin'] },
+      ],
     };
-    mockUseLocalStorage.mockImplementation(() => [mockCachedSessionId, mockSaveCachedSessionId]);
+    mockUseLocalStorage.mockImplementation(() => [
+      mockCachedSessionId,
+      mockSaveCachedSessionId,
+    ]);
 
-    mockFreeTrialDialogState.executeWithTrialCheck = vi.fn((callback: () => void) => callback());
+    mockFreeTrialDialogState.executeWithTrialCheck = vi.fn(
+      (callback: () => void) => callback(),
+    );
     mockFreeTrialDialogState.FreeTrialDialog = null;
     mockFreeTrialDialogState.closeModal = vi.fn();
     mockFreeTrialDialogState.isModalOpen = false;
@@ -589,7 +619,11 @@ describe('AppSidebar', () => {
 
   it('renders FreeTrialDialog when modal is open', () => {
     const MockFreeTrialDialog = ({ onClose, isOpen }: any) => (
-      <div data-testid="free-trial-dialog" data-open={isOpen} onClick={onClose} />
+      <div
+        data-testid="free-trial-dialog"
+        data-open={isOpen}
+        onClick={onClose}
+      />
     );
     MockFreeTrialDialog.displayName = 'MockFreeTrialDialog';
     mockFreeTrialDialogState.FreeTrialDialog = MockFreeTrialDialog;
@@ -763,7 +797,9 @@ describe('AppSidebar', () => {
   it('handles message with complete artifact version data', async () => {
     render(<AppSidebar />);
 
-    fireEvent.click(screen.getByTestId('select-recent-message-complete-artifact'));
+    fireEvent.click(
+      screen.getByTestId('select-recent-message-complete-artifact'),
+    );
 
     await waitFor(() => {
       expect(mockChatActions.setNewMessages).toHaveBeenCalled();
@@ -947,5 +983,79 @@ describe('AppSidebar', () => {
     const messagesArg = mockChatActions.setNewMessages.mock.calls[0][0];
     // Recent message has type 'ai', so role should be 'ai'
     expect(messagesArg[0].role).toBe('ai');
+  });
+
+  describe('hide-sidebar query parameter', () => {
+    it('renders nothing when hide-sidebar=1', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=1');
+
+      const { container } = render(<AppSidebar />);
+
+      expect(container.innerHTML).toBe('');
+      expect(screen.queryByTestId('sidebar')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-header')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-content')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-footer')).not.toBeInTheDocument();
+    });
+
+    it('renders nothing when hide-sidebar=true', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=true');
+
+      const { container } = render(<AppSidebar />);
+
+      expect(container.innerHTML).toBe('');
+      expect(screen.queryByTestId('sidebar')).not.toBeInTheDocument();
+    });
+
+    it('does not render FreeTrialDialog when sidebar is hidden', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=1');
+      const MockFreeTrialDialog = ({ onClose, isOpen }: any) => (
+        <div
+          data-testid="free-trial-dialog"
+          data-open={isOpen}
+          onClick={onClose}
+        />
+      );
+      MockFreeTrialDialog.displayName = 'MockFreeTrialDialog';
+      mockFreeTrialDialogState.FreeTrialDialog = MockFreeTrialDialog;
+      mockFreeTrialDialogState.isModalOpen = true;
+
+      render(<AppSidebar />);
+
+      expect(screen.queryByTestId('free-trial-dialog')).not.toBeInTheDocument();
+    });
+
+    it('renders sidebar when hide-sidebar=0', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=0');
+
+      render(<AppSidebar />);
+
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-header')).toBeInTheDocument();
+    });
+
+    it('renders sidebar when hide-sidebar=false', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=false');
+
+      render(<AppSidebar />);
+
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    });
+
+    it('renders sidebar when hide-sidebar is absent', () => {
+      mockSearchParams = new URLSearchParams();
+
+      render(<AppSidebar />);
+
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    });
+
+    it('renders sidebar when hide-sidebar has empty value', () => {
+      mockSearchParams = new URLSearchParams('hide-sidebar=');
+
+      render(<AppSidebar />);
+
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    });
   });
 });

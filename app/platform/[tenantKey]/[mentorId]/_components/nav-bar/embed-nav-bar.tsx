@@ -12,7 +12,11 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -91,7 +95,9 @@ export function EmbedNavBar({
             icon: BadgeHelp,
             onClick: () => {
               window.open(
-                addProtocolToUrl(metadata?.help_center_url || config.helpCenterUrl()),
+                addProtocolToUrl(
+                  metadata?.help_center_url || config.helpCenterUrl(),
+                ),
                 '_blank',
               );
             },
@@ -102,7 +108,10 @@ export function EmbedNavBar({
       label: 'Support',
       icon: ShieldQuestion,
       onClick: () => {
-        window.open(`mailto:${metadata?.support_email || config.supportEmail()}`, '_blank');
+        window.open(
+          `mailto:${metadata?.support_email || config.supportEmail()}`,
+          '_blank',
+        );
       },
     },
   ];
@@ -128,8 +137,8 @@ export function EmbedNavBar({
   ];
 
   return (
-    <nav className="flex h-16 items-center bg-white px-4 w-full">
-      <div className="flex items-center gap-2 w-full">
+    <nav className="flex h-16 w-full items-center bg-white px-4">
+      <div className="flex w-full items-center gap-2">
         {/* Toggle sidebar button */}
         {isMobile && visibleToLoggedInUsersOnly && (
           <Tooltip>
@@ -158,7 +167,7 @@ export function EmbedNavBar({
             eventBus.emit(RemoteEvents.newChat);
             dispatch(chatActions.setShouldStartNewChat(true));
           }}
-          className="flex items-center gap-4 cursor-pointer"
+          className="flex cursor-pointer items-center gap-4"
           aria-label={`Start new chat with ${mentorName}`}
         >
           <Avatar
@@ -207,7 +216,7 @@ export function EmbedNavBar({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

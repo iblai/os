@@ -21,16 +21,18 @@ export function ProjectChatItem({
     <Button
       variant="ghost"
       className={cn(
-        'w-full flex items-center gap-2 px-2 py-1 h-8 hover:bg-[#c9d8f8] rounded-md pl-4',
+        'flex h-8 w-full items-center gap-2 rounded-md px-2 py-1 pl-4 hover:bg-[#c9d8f8]',
         isActive && 'bg-[#c9d8f8] hover:bg-[#c9d8f8]',
       )}
       onClick={onClick}
     >
       <Avatar className="h-4 w-4">
         <AvatarImage src={avatar} alt={title} />
-        <AvatarFallback className="text-[0.625rem]">{title.substring(0, 2)}</AvatarFallback>
+        <AvatarFallback className="text-[0.625rem]">
+          {title.substring(0, 2)}
+        </AvatarFallback>
       </Avatar>
-      <span className="text-sm text-gray-700 text-left flex-1 pr-8 overflow-hidden text-ellipsis whitespace-nowrap">
+      <span className="flex-1 overflow-hidden pr-8 text-left text-sm text-ellipsis whitespace-nowrap text-gray-700">
         {title}
       </span>
     </Button>

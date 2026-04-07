@@ -20,6 +20,7 @@ const {
   mockHandleTenantSwitch,
   mockIsStripeActivated,
   mockFetchTenantMetadata,
+  mockOnAccountDeleted,
 } = vi.hoisted(() => ({
   mockRouterPush: vi.fn(),
   mockRouterReplace: vi.fn(),
@@ -37,6 +38,7 @@ const {
   mockHandleTenantSwitch: vi.fn(),
   mockIsStripeActivated: vi.fn(),
   mockFetchTenantMetadata: vi.fn(),
+  mockOnAccountDeleted: vi.fn(),
 }));
 
 // Mock next/navigation
@@ -112,6 +114,7 @@ vi.mock('@/lib/utils', () => ({
   handleLogout: mockHandleLogout,
   handleTenantSwitch: mockHandleTenantSwitch,
   isStripeActivated: mockIsStripeActivated,
+  onAccountDeleted: mockOnAccountDeleted,
 }));
 
 // Mock subscription flow class
@@ -203,6 +206,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
       onUpgradeClick: props.onUpgradeClick,
       onBillingTabRequest: props.onBillingTabRequest,
       onModalOpenChange: props.onModalOpenChange,
+      onAccountDeleted: props.onAccountDeleted,
     };
 
     return (
@@ -215,8 +219,27 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         <span data-testid="billing-url">{props.billingURL || ''}</span>
         <span data-testid="top-up-url">{props.topUpURL || ''}</span>
         <span data-testid="current-plan">{props.currentPlan || ''}</span>
-        <span data-testid="show-tenant-switcher">{String(props.showTenantSwitcher)}</span>
-        <button data-testid="profile-btn" onClick={() => props.onProfileClick?.()}>
+        <span data-testid="show-tenant-switcher">
+          {String(props.showTenantSwitcher)}
+        </span>
+        <span data-testid="show-learner-mode-switch">
+          {String(props.showLearnerModeSwitch)}
+        </span>
+        <span data-testid="billing-enabled">
+          {String(props.billingEnabled)}
+        </span>
+        <span data-testid="top-up-enabled">{String(props.topUpEnabled)}</span>
+        <span data-testid="is-student">{String(props.userIsStudent)}</span>
+        <span data-testid="is-visiting">{String(props.userIsVisiting)}</span>
+        <span data-testid="enable-gravatar">
+          {String(props.enableGravatarOnProfilePic)}
+        </span>
+        <span data-testid="current-spa">{props.currentSPA || ''}</span>
+        <span data-testid="mentor-id">{props.mentorId || ''}</span>
+        <button
+          data-testid="profile-btn"
+          onClick={() => props.onProfileClick?.()}
+        >
           Profile
         </button>
         <button data-testid="logout-btn" onClick={() => props.onLogout?.()}>
@@ -236,14 +259,24 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </button>
         <button
           data-testid="tenant-update-btn"
-          onClick={() => props.onTenantUpdate?.({ key: 'test-tenant', is_admin: true, org: 'org' })}
+          onClick={() =>
+            props.onTenantUpdate?.({
+              key: 'test-tenant',
+              is_admin: true,
+              org: 'org',
+            })
+          }
         >
           Update Tenant
         </button>
         <button
           data-testid="tenant-update-new-btn"
           onClick={() =>
-            props.onTenantUpdate?.({ key: 'new-tenant', is_admin: false, org: 'new-org' })
+            props.onTenantUpdate?.({
+              key: 'new-tenant',
+              is_admin: false,
+              org: 'new-org',
+            })
           }
         >
           Update New Tenant
@@ -254,23 +287,47 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         >
           Load Permissions
         </button>
-        <button data-testid="tab-change-billing-btn" onClick={() => props.onTabChange?.('billing')}>
+        <button
+          data-testid="tab-change-billing-btn"
+          onClick={() => props.onTabChange?.('billing')}
+        >
           Billing Tab
         </button>
-        <button data-testid="tab-change-basic-btn" onClick={() => props.onTabChange?.('basic')}>
+        <button
+          data-testid="tab-change-basic-btn"
+          onClick={() => props.onTabChange?.('basic')}
+        >
           Basic Tab
         </button>
-        <button data-testid="upgrade-btn" onClick={() => props.onUpgradeClick?.()}>
+        <button
+          data-testid="upgrade-btn"
+          onClick={() => props.onUpgradeClick?.()}
+        >
           Upgrade
         </button>
-        <button data-testid="billing-request-btn" onClick={() => props.onBillingTabRequest?.()}>
+        <button
+          data-testid="billing-request-btn"
+          onClick={() => props.onBillingTabRequest?.()}
+        >
           Request Billing
         </button>
-        <button data-testid="modal-open-btn" onClick={() => props.onModalOpenChange?.(true)}>
+        <button
+          data-testid="modal-open-btn"
+          onClick={() => props.onModalOpenChange?.(true)}
+        >
           Open Modal
         </button>
-        <button data-testid="modal-close-btn" onClick={() => props.onModalOpenChange?.(false)}>
+        <button
+          data-testid="modal-close-btn"
+          onClick={() => props.onModalOpenChange?.(false)}
+        >
           Close Modal
+        </button>
+        <button
+          data-testid="account-deleted-btn"
+          onClick={() => props.onAccountDeleted?.()}
+        >
+          Account Deleted
         </button>
       </div>
     );
@@ -338,14 +395,18 @@ describe('UserProfile', () => {
     it('should show tenant switcher for admin users', () => {
       render(<UserProfile />);
 
-      expect(screen.getByTestId('show-tenant-switcher')).toHaveTextContent('true');
+      expect(screen.getByTestId('show-tenant-switcher')).toHaveTextContent(
+        'true',
+      );
     });
   });
 
   describe('callbacks', () => {
     it('should handle profile click', async () => {
       mockIsStripeActivated.mockReturnValue(true);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -359,7 +420,9 @@ describe('UserProfile', () => {
     });
 
     it('should handle logout click', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -371,7 +434,9 @@ describe('UserProfile', () => {
     });
 
     it('should handle tenant change', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -383,8 +448,12 @@ describe('UserProfile', () => {
     });
 
     it('should handle help click', async () => {
-      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const windowOpenSpy = vi
+        .spyOn(window, 'open')
+        .mockImplementation(() => null);
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -392,13 +461,18 @@ describe('UserProfile', () => {
       const helpBtn = screen.getByTestId('help-btn');
       await user.click(helpBtn);
 
-      expect(windowOpenSpy).toHaveBeenCalledWith('https://help.example.com', '_blank');
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        'https://help.example.com',
+        '_blank',
+      );
 
       windowOpenSpy.mockRestore();
     });
 
     it('should handle tenant update for existing tenant', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -411,7 +485,9 @@ describe('UserProfile', () => {
     });
 
     it('should handle tenant update for new tenant', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -428,7 +504,9 @@ describe('UserProfile', () => {
     });
 
     it('should handle load group permissions', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -453,7 +531,9 @@ describe('UserProfile', () => {
 
   describe('tab change handling', () => {
     it('should handle tab change to billing', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -468,7 +548,9 @@ describe('UserProfile', () => {
     });
 
     it('should handle tab change to non-billing tab', async () => {
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -482,7 +564,9 @@ describe('UserProfile', () => {
 
     it('should preserve other search params when changing tabs', async () => {
       mockSearchParamsToString.mockReturnValue('other=value');
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -502,7 +586,9 @@ describe('UserProfile', () => {
     it('should trigger pricing modal on upgrade click', async () => {
       const mockTriggerPricingModal = vi.fn();
       mockBannerButtonTriggerCallback.mockReturnValue(mockTriggerPricingModal);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -510,7 +596,9 @@ describe('UserProfile', () => {
       const upgradeBtn = screen.getByTestId('upgrade-btn');
       await user.click(upgradeBtn);
 
-      expect(mockBannerButtonTriggerCallback).toHaveBeenCalledWith('TRIGGER_PRICING_MODAL');
+      expect(mockBannerButtonTriggerCallback).toHaveBeenCalledWith(
+        'TRIGGER_PRICING_MODAL',
+      );
       expect(mockTriggerPricingModal).toHaveBeenCalled();
     });
   });
@@ -528,7 +616,9 @@ describe('UserProfile', () => {
     });
 
     it('should preserve other search params when closing modal', () => {
-      mockSearchParamsToString.mockReturnValue('other=value&profileTab=billing');
+      mockSearchParamsToString.mockReturnValue(
+        'other=value&profileTab=billing',
+      );
 
       render(<UserProfile />);
 
@@ -560,7 +650,9 @@ describe('UserProfile', () => {
   describe('subscription data fetching', () => {
     it('should fetch subscription data on profile click', async () => {
       mockIsStripeActivated.mockReturnValue(true);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -574,7 +666,9 @@ describe('UserProfile', () => {
 
     it('should fetch billing URL when Stripe is activated and user is admin', async () => {
       mockIsStripeActivated.mockReturnValue(true);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -591,7 +685,9 @@ describe('UserProfile', () => {
 
     it('should not fetch billing URL when Stripe is not activated', async () => {
       mockIsStripeActivated.mockReturnValue(false);
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -605,8 +701,12 @@ describe('UserProfile', () => {
 
     it('should set current plan from subscription package', async () => {
       mockIsStripeActivated.mockReturnValue(true);
-      mockGetUserSubscriptionPackage.mockResolvedValue('org-tenant-pro-monthly');
-      const { default: userEvent } = await import('@testing-library/user-event');
+      mockGetUserSubscriptionPackage.mockResolvedValue(
+        'org-tenant-pro-monthly',
+      );
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -700,7 +800,9 @@ describe('UserProfile', () => {
   describe('plan parsing', () => {
     it('should extract last segment of plan name', async () => {
       mockIsStripeActivated.mockReturnValue(true);
-      mockGetUserSubscriptionPackage.mockResolvedValue('org-tenant-pro-monthly');
+      mockGetUserSubscriptionPackage.mockResolvedValue(
+        'org-tenant-pro-monthly',
+      );
 
       render(<UserProfile />);
 
@@ -762,7 +864,9 @@ describe('UserProfile', () => {
   describe('URL path handling in tab change', () => {
     it('should use pathname only when no other search params exist', async () => {
       mockSearchParamsToString.mockReturnValue('');
-      const { default: userEvent } = await import('@testing-library/user-event');
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
       const user = userEvent.setup();
 
       render(<UserProfile />);
@@ -791,6 +895,250 @@ describe('UserProfile', () => {
         '/platform/test-tenant/mentor-1',
         expect.any(Object),
       );
+    });
+  });
+
+  describe('account deletion', () => {
+    it('should call onAccountDeleted when account deleted button is clicked', async () => {
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+
+      render(<UserProfile />);
+
+      const accountDeletedBtn = screen.getByTestId('account-deleted-btn');
+      await user.click(accountDeletedBtn);
+
+      expect(mockOnAccountDeleted).toHaveBeenCalled();
+    });
+
+    it('should pass onAccountDeleted callback to UserProfileDropdown', () => {
+      render(<UserProfile />);
+
+      expect(capturedCallbacks.onAccountDeleted).toBeDefined();
+      expect(typeof capturedCallbacks.onAccountDeleted).toBe('function');
+    });
+  });
+
+  describe('props passed to UserProfileDropdown', () => {
+    it('should pass showLearnerModeSwitch as true for admin on non-main tenant', () => {
+      render(<UserProfile />);
+
+      // useIsAdmin returns true, tenantKey is 'test-tenant' (not 'main')
+      expect(screen.getByTestId('show-learner-mode-switch')).toHaveTextContent(
+        'true',
+      );
+    });
+
+    it('should pass userIsStudent to dropdown', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('is-student')).toHaveTextContent('false');
+    });
+
+    it('should pass userIsVisiting to dropdown', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('is-visiting')).toHaveTextContent('false');
+    });
+
+    it('should pass enableGravatarOnProfilePic based on config', () => {
+      render(<UserProfile />);
+
+      // config.enableGravatarOnProfilePic() returns 'true', so !== 'false' is true
+      expect(screen.getByTestId('enable-gravatar')).toHaveTextContent('true');
+    });
+
+    it('should pass currentSPA from config', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('current-spa')).toHaveTextContent('mentor');
+    });
+
+    it('should pass mentorId to dropdown', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('mentor-id')).toHaveTextContent('mentor-1');
+    });
+
+    it('should start with billing disabled and top-up disabled', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('billing-enabled')).toHaveTextContent('false');
+      expect(screen.getByTestId('top-up-enabled')).toHaveTextContent('false');
+    });
+  });
+
+  describe('subscription state rendering', () => {
+    it('should render billing URL after successful fetch', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetBillingURL.mockResolvedValue('https://billing.stripe.com/session');
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onBillingTabRequest?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('billing-url')).toHaveTextContent(
+          'https://billing.stripe.com/session',
+        );
+      });
+    });
+
+    it('should render top-up URL after successful fetch', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetTopUpURL.mockResolvedValue('https://topup.stripe.com/session');
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onBillingTabRequest?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('top-up-url')).toHaveTextContent(
+          'https://topup.stripe.com/session',
+        );
+      });
+    });
+
+    it('should render billingEnabled as true when billing URL is set', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetBillingURL.mockResolvedValue('https://billing.stripe.com/session');
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onBillingTabRequest?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('billing-enabled')).toHaveTextContent('true');
+      });
+    });
+
+    it('should render topUpEnabled as true when top-up URL is set', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetTopUpURL.mockResolvedValue('https://topup.stripe.com/session');
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onBillingTabRequest?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('top-up-enabled')).toHaveTextContent('true');
+      });
+    });
+
+    it('should render current plan name after successful fetch', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetUserSubscriptionPackage.mockResolvedValue(
+        'org-tenant-pro-monthly',
+      );
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onProfileClick?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('current-plan')).toHaveTextContent('monthly');
+      });
+    });
+
+    it('should render single-segment plan name correctly', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetUserSubscriptionPackage.mockResolvedValue('premium');
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onProfileClick?.();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('current-plan')).toHaveTextContent('premium');
+      });
+    });
+
+    it('should not update plan when subscription package is null', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetUserSubscriptionPackage.mockResolvedValue(null);
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onProfileClick?.();
+      });
+
+      await waitFor(() => {
+        expect(mockGetUserSubscriptionPackage).toHaveBeenCalled();
+      });
+
+      // Plan should remain empty since null was returned
+      expect(screen.getByTestId('current-plan')).toHaveTextContent('');
+    });
+
+    it('should render empty billing URL when fetch returns null', async () => {
+      mockIsStripeActivated.mockReturnValue(true);
+      mockGetBillingURL.mockResolvedValue(null);
+
+      render(<UserProfile />);
+
+      act(() => {
+        capturedCallbacks.onBillingTabRequest?.();
+      });
+
+      await waitFor(() => {
+        expect(mockGetBillingURL).toHaveBeenCalled();
+      });
+
+      expect(screen.getByTestId('billing-url')).toHaveTextContent('');
+      expect(screen.getByTestId('billing-enabled')).toHaveTextContent('false');
+    });
+  });
+
+  describe('modal close resets tab', () => {
+    it('should reset active tab to basic when modal closes', async () => {
+      mockSearchParamsGet.mockReturnValue('billing');
+
+      render(<UserProfile />);
+
+      // Wait for billing tab to open via URL param
+      await waitFor(() => {
+        expect(screen.getByTestId('active-tab')).toHaveTextContent('billing');
+      });
+
+      // Close the modal
+      act(() => {
+        capturedCallbacks.onModalOpenChange?.(false);
+      });
+
+      // Tab should reset to basic
+      expect(screen.getByTestId('active-tab')).toHaveTextContent('basic');
+      expect(screen.getByTestId('is-modal-open')).toHaveTextContent('false');
+    });
+  });
+
+  describe('tab change updates active tab', () => {
+    it('should update active tab to billing when billing tab is selected', async () => {
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+
+      render(<UserProfile />);
+
+      const tabBtn = screen.getByTestId('tab-change-billing-btn');
+      await user.click(tabBtn);
+
+      expect(screen.getByTestId('active-tab')).toHaveTextContent('billing');
     });
   });
 });

@@ -11,7 +11,9 @@ export const useSubscription = () => {
   const { currentTenant } = useCurrentTenant();
   const { userTenants } = useUserTenants();
   const dispatch = useAppDispatch();
-  const topBannerOptions = useAppSelector((state) => state.topBanner.topBannerOptions);
+  const topBannerOptions = useAppSelector(
+    (state) => state.topBanner.topBannerOptions,
+  );
   const subscriptionFlow = new mentorSubscriptionFlow({
     platformName: config.iblPlatform(),
     currentTenantKey: currentTenant?.key || '',

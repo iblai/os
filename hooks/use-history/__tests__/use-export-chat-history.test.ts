@@ -98,6 +98,7 @@ describe('useExportChatHistory', () => {
         start_date: undefined,
         sentiment: undefined,
         topics: undefined,
+        source: 'http://localhost:3000',
       },
     });
   });

@@ -4,7 +4,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

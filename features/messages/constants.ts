@@ -1,4 +1,4 @@
-import { SERVICES } from "../constants";
+import { SERVICES } from '../constants';
 
 export const MESSAGES_ENDPOINTS = {
   GET_RECENT_MESSAGES: {
@@ -9,7 +9,7 @@ export const MESSAGES_ENDPOINTS = {
 };
 
 export const MESSAGES_QUERY_KEYS = {
-  GET_RECENT_MESSAGES: () => ["recent", "messages"],
+  GET_RECENT_MESSAGES: () => ['recent', 'messages'],
 };
 
-export const MESSAGES_REDUCER_KEY = "messagesApiSliceLocal";
+export const MESSAGES_REDUCER_KEY = 'messagesApiSliceLocal';

@@ -21,7 +21,13 @@ describe('EmptyState component', () => {
 
     // Check for the outer container
     const outerDiv = container.firstChild as HTMLElement;
-    expect(outerDiv).toHaveClass('flex', 'h-60', 'w-full', 'items-center', 'justify-center');
+    expect(outerDiv).toHaveClass(
+      'flex',
+      'h-60',
+      'w-full',
+      'items-center',
+      'justify-center',
+    );
 
     // Check for the inner rounded container
     const innerDiv = outerDiv.firstChild as HTMLElement;

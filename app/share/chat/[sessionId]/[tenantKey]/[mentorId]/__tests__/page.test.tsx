@@ -7,11 +7,12 @@ import ShareChatWithParamsPage from '../page';
 // Mocks
 const mockRedirectToAuthSpa = vi.fn();
 
-let mockParams: { sessionId?: string; tenantKey?: string; mentorId?: string } = {
-  sessionId: 'session-123',
-  tenantKey: 'tenant-abc',
-  mentorId: 'mentor-1',
-};
+let mockParams: { sessionId?: string; tenantKey?: string; mentorId?: string } =
+  {
+    sessionId: 'session-123',
+    tenantKey: 'tenant-abc',
+    mentorId: 'mentor-1',
+  };
 
 let mockSharedChatData: {
   messages: any[];

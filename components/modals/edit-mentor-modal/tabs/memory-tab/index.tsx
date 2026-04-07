@@ -32,7 +32,8 @@ export function MemoryTab() {
 
   const [updateMentorUserSettings] = useUpdateMentorUserSettingsMutation();
 
-  const referenceSavedMemories = mentorUserSettings?.reference_saved_memories ?? false;
+  const referenceSavedMemories =
+    mentorUserSettings?.reference_saved_memories ?? false;
 
   const handleToggleReferenceSavedMemories = async (checked: boolean) => {
     if (!tenantKey || !username || !activeMentorId) return;
@@ -54,20 +55,26 @@ export function MemoryTab() {
 
   return (
     <>
-      <div className="flex lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] items-center">
+      <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Memory</h3>
-          <p className="text-gray-600 text-xs">Configure memory settings for your mentor.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Memory</h3>
+          <p className="text-xs text-gray-600">
+            Configure memory settings for your mentor.
+          </p>
         </div>
       </div>
-      <div className="flex-1 p-3 lg:p-4 space-y-6 overflow-y-auto">
+      <div className="flex-1 space-y-6 overflow-y-auto p-3 lg:p-4">
         {/* Memory Section */}
         <div className="space-y-8">
           {/* Reference saved memories */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-900">Reference saved memories</p>
-              <p className="text-xs text-gray-600">Let mentorAI use memories when responding.</p>
+              <p className="text-sm font-medium text-gray-900">
+                Reference saved memories
+              </p>
+              <p className="text-xs text-gray-600">
+                Let mentorAI use memories when responding.
+              </p>
             </div>
             <Switch
               checked={referenceSavedMemories}
@@ -77,7 +84,11 @@ export function MemoryTab() {
           </div>
 
           {/* Manage memories */}
-          <ManageMemories tenantKey={tenantKey} username={username} mentorId={activeMentorId} />
+          <ManageMemories
+            tenantKey={tenantKey}
+            username={username}
+            mentorId={activeMentorId}
+          />
 
           {/* Learners memories */}
           {/* <LearnersMemories /> */}

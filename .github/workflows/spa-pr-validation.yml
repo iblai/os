@@ -5,18 +5,24 @@ on:
     branches: [main]
     types: [labeled]
 
-run-name: "PR #${{ github.event.pull_request.number }} - Mentor Test Validation"
+run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test Validation'
 
 concurrency:
   group: pr-validation-mentor-${{ github.event.pull_request.number }}
   cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  id-token: write
 
 jobs:
   # ============================================================
   # GATE: Detect what changed, decide what to build/test
   # ============================================================
   gate:
-    if: github.event.label.name == 'run-tests'
+    if: github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-22.04
     environment: iblai.app
     outputs:
@@ -83,7 +89,7 @@ jobs:
   # ============================================================
   check-resumption:
     needs: [gate]
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-test-resumption.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-test-resumption.yml@main
     with:
       app-name: mentor
       pr-number: ${{ github.event.pull_request.number }}
@@ -99,14 +105,52 @@ jobs:
   # ============================================================
   acquire-domain:
     needs: [gate]
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
       action: acquire
       app-type: testing
-      context: "PR #${{ github.event.pull_request.number }} - Mentor Testing"
+      context: 'PR #${{ github.event.pull_request.number }} - Mentor Testing'
       allowed-domains: '3'
       max-wait: 18000
+
+  # ============================================================
+  # PINNED VERSIONS CHECK
+  # ============================================================
+  pinned-versions:
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all dependency versions are pinned
+        run: ./scripts/check-pinned-versions.sh
+
+  # ============================================================
+  # CONVENTIONAL COMMIT CHECK
+  # ============================================================
+  commitlint:
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install commitlint
+        run: npm install --global @commitlint/cli @commitlint/config-conventional
+
+      - name: Validate PR commits
+        run: |
+          echo "Checking commits from origin/${{ github.base_ref }} to HEAD..."
+          npx commitlint --from origin/${{ github.base_ref }} --to HEAD --verbose
 
   # ============================================================
   # VERIFICATION (parallel after domain lock)
@@ -114,27 +158,90 @@ jobs:
   lint:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-linting.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-linting.yml@main
     secrets: inherit
 
   typecheck:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-typecheck.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-typecheck.yml@main
     secrets: inherit
 
   coverage:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
     with:
       coverage-threshold: 95
     secrets: inherit
 
+  e2e-coverage-check:
+    name: 'E2E Journey Coverage'
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check journey coverage (no regression)
+        run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
+
+  claude-review-coverage:
+    name: 'Claude E2E Coverage Review'
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- app/ components/ hooks/ lib/ providers/ | head -100)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "count=$(echo "$CHANGED" | grep -c . || echo 0)" >> $GITHUB_OUTPUT
+
+      - name: Claude coverage analysis
+        if: steps.changes.outputs.count != '0'
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are an E2E coverage analyst. Analyze the changed files in this PR and determine if e2e/coverage.json and e2e/COVERAGE.md are properly updated.
+
+            Changed files:
+            ${{ steps.changes.outputs.files }}
+
+            Tasks:
+            1. Read e2e/coverage.json and e2e/COVERAGE.md
+            2. For each changed file in app/ or components/:
+               - Check if it's listed in a journey's sourceFiles in coverage.json
+               - If it's a new page.tsx route, verify a journey covers it
+               - If it adds new user-visible behavior, check for corresponding checkpoints
+            3. Compare checkpoint counts: current branch vs base branch
+            4. Post a summary comment on the PR with:
+               - Files covered by existing journeys
+               - Files missing coverage (if any)
+               - Checkpoint count change (regression warning if decreased)
+               - Recommended actions (new journeys or checkpoints to add)
+
+            If all changes are covered, approve. If there are gaps, request changes with specific instructions.
+
   claude-review-quality:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
     with:
       pr-number: ${{ github.event.pull_request.number }}
     secrets:
@@ -143,7 +250,7 @@ jobs:
   claude-review-uiux:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
     with:
       pr-number: ${{ github.event.pull_request.number }}
     secrets:
@@ -164,7 +271,7 @@ jobs:
       - name: Checkout ops
         uses: actions/checkout@v4
         with:
-          repository: iblai/ibl-web-ops
+          repository: iblai/iblai-web-ops
           token: ${{ secrets.GIT_TOKEN || github.token }}
           path: .ops
 
@@ -196,7 +303,7 @@ jobs:
       always() &&
       needs.acquire-domain.result == 'success' &&
       needs.gate.outputs.should-build-app == 'true'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
       dockerfile-path: Dockerfile
@@ -208,7 +315,7 @@ jobs:
   build-playwright-image:
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
       dockerfile-path: e2e/Dockerfile
@@ -228,7 +335,7 @@ jobs:
       needs.acquire-domain.result == 'success' &&
       needs.lint.result == 'success' &&
       needs.build-app-image.result != 'failure'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
       app-name: MENTOR
       image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -245,7 +352,7 @@ jobs:
   deploy-auth:
     needs: [gate, acquire-domain, check-prod-versions, deploy-app]
     if: always() && needs.acquire-domain.result == 'success' && needs.deploy-app.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
     with:
       app-name: AUTH
       image-uri: ${{ needs.check-prod-versions.outputs.auth-uri }}
@@ -263,9 +370,10 @@ jobs:
 
   # --- Chrome ---
   verify-chrome:
-    needs: [gate, acquire-domain, deploy-auth, build-app-image, check-prod-versions]
+    needs:
+      [gate, acquire-domain, deploy-auth, build-app-image, check-prod-versions]
     if: always() && needs.deploy-auth.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -278,13 +386,21 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-chrome:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -300,12 +416,13 @@ jobs:
 
   # --- Firefox ---
   verify-firefox:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-chrome]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-chrome]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-chrome.result == 'success' || needs.test-chrome.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -318,13 +435,20 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-firefox:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-firefox]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-firefox,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-firefox.result == 'success' &&
       needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -340,12 +464,13 @@ jobs:
 
   # --- Safari ---
   verify-safari:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-firefox]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-firefox]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-firefox.result == 'success' || needs.test-firefox.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -358,13 +483,20 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-safari:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-safari]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-safari,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-safari.result == 'success' &&
       needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -380,12 +512,13 @@ jobs:
 
   # --- Edge ---
   verify-edge:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-safari]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-safari]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       (needs.test-safari.result == 'success' || needs.test-safari.result == 'skipped')
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
       app-name: MENTOR
       expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
@@ -398,13 +531,20 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-edge:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-edge]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-edge,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
       needs.verify-edge.result == 'success' &&
       needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -423,13 +563,21 @@ jobs:
   # All 4 browsers launch after first health check
   # ============================================================
   test-chrome-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -444,13 +592,21 @@ jobs:
       workers: '3'
 
   test-firefox-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -465,13 +621,21 @@ jobs:
       workers: '3'
 
   test-safari-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -486,13 +650,21 @@ jobs:
       workers: '3'
 
   test-edge-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
       needs.verify-chrome.result == 'success' &&
       needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
       domain-number: '3'
@@ -510,8 +682,19 @@ jobs:
   # SAVE TEST STATUS (for resumption on next run)
   # ============================================================
   save-status:
-    name: "Save Mentor Status"
-    needs: [gate, test-chrome, test-firefox, test-safari, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel]
+    name: 'Save Mentor Status'
+    needs:
+      [
+        gate,
+        test-chrome,
+        test-firefox,
+        test-safari,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+      ]
     if: always()
     runs-on: ubuntu-22.04
     environment: iblai.app
@@ -619,11 +802,42 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [gate, acquire-domain, lint, typecheck, coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
+    needs:
+      [
+        gate,
+        acquire-domain,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-coverage,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        deploy-app,
+        deploy-auth,
+        verify-chrome,
+        test-chrome,
+        verify-firefox,
+        test-firefox,
+        verify-safari,
+        test-safari,
+        verify-edge,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+        save-status,
+      ]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
-    uses: iblai/ibl-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
       action: release
@@ -634,7 +848,39 @@ jobs:
   # FINAL SUMMARY
   # ============================================================
   summary:
-    needs: [gate, acquire-domain, lint, typecheck, coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
+    needs:
+      [
+        gate,
+        acquire-domain,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-coverage,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        deploy-app,
+        deploy-auth,
+        verify-chrome,
+        test-chrome,
+        verify-firefox,
+        test-firefox,
+        verify-safari,
+        test-safari,
+        verify-edge,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+        save-status,
+        release-domain,
+      ]
     if: always()
     runs-on: ubuntu-22.04
     env:
@@ -652,6 +898,20 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|:------:|" >> $GITHUB_STEP_SUMMARY
+
+          PINNED_RESULT="${{ needs.pinned-versions.result }}"
+          if [[ "$PINNED_RESULT" == "success" ]]; then
+            echo "| Pinned Versions | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Pinned Versions | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          COMMITLINT_RESULT="${{ needs.commitlint.result }}"
+          if [[ "$COMMITLINT_RESULT" == "success" ]]; then
+            echo "| Conventional Commits | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Conventional Commits | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
 
           LINT_RESULT="${{ needs.lint.outputs.result }}"
           if [[ "$LINT_RESULT" == "success" ]]; then
@@ -673,6 +933,15 @@ jobs:
           else
             echo "| Unit Coverage | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
           fi
+
+          E2E_COV_RESULT="${{ needs.e2e-coverage-check.result }}"
+          if [[ "$E2E_COV_RESULT" == "success" ]]; then
+            echo "| E2E Journey Coverage | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$E2E_COV_RESULT" == "skipped" ]]; then
+            echo "| E2E Journey Coverage | :fast_forward: SKIPPED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| E2E Journey Coverage | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Claude reviews
@@ -693,6 +962,15 @@ jobs:
             echo "| UI/UX | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| UI/UX | :x: Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          COV_REVIEW_RESULT="${{ needs.claude-review-coverage.result }}"
+          if [[ "$COV_REVIEW_RESULT" == "success" ]]; then
+            echo "| E2E Coverage | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$COV_REVIEW_RESULT" == "skipped" ]]; then
+            echo "| E2E Coverage | :fast_forward: Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| E2E Coverage | :x: Failed |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -742,6 +1020,18 @@ jobs:
           echo "Checking test results..."
           echo "============================================"
 
+          if [[ "${{ needs.pinned-versions.result }}" != "success" ]]; then
+            echo "Pinned versions FAILED"; FAILED=true
+          else
+            echo "Pinned versions PASSED"
+          fi
+
+          if [[ "${{ needs.commitlint.result }}" != "success" ]]; then
+            echo "Conventional commits FAILED"; FAILED=true
+          else
+            echo "Conventional commits PASSED"
+          fi
+
           if [[ "${{ needs.lint.outputs.result }}" != "success" ]]; then
             echo "Linting FAILED"; FAILED=true
           else
@@ -758,6 +1048,12 @@ jobs:
             echo "Unit coverage FAILED"; FAILED=true
           else
             echo "Unit coverage PASSED"
+          fi
+
+          if [[ "${{ needs.e2e-coverage-check.result }}" == "failure" ]]; then
+            echo "E2E journey coverage FAILED"; FAILED=true
+          else
+            echo "E2E journey coverage PASSED"
           fi
 
           echo ""

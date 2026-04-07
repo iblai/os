@@ -46,7 +46,9 @@ describe('useLocalStorage', () => {
 
   describe('initial value', () => {
     it('should return initial value when localStorage is empty', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       expect(result.current[0]).toBe('defaultValue');
     });
@@ -55,7 +57,9 @@ describe('useLocalStorage', () => {
       // Pre-populate the store with a non-JSON string
       store['testKey'] = 'storedValue';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       expect(result.current[0]).toBe('storedValue');
     });
@@ -63,7 +67,9 @@ describe('useLocalStorage', () => {
     it('should support function initializer', () => {
       const initializer = vi.fn(() => 'computedDefault');
 
-      const { result } = renderHook(() => useLocalStorage('testKey', initializer));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', initializer),
+      );
 
       expect(result.current[0]).toBe('computedDefault');
     });
@@ -76,7 +82,11 @@ describe('useLocalStorage', () => {
       // So eventually the value will be the stored value
       // This test verifies the option is being used in the useState initializer
       const { result } = renderHook(() =>
-        useLocalStorage('testKey', { val: 'defaultValue' }, { initializeWithValue: false }),
+        useLocalStorage(
+          'testKey',
+          { val: 'defaultValue' },
+          { initializeWithValue: false },
+        ),
       );
 
       // After effects run, the value is read from localStorage
@@ -87,19 +97,26 @@ describe('useLocalStorage', () => {
   describe('setValue', () => {
     it('should update state and localStorage', () => {
       // Use objects as they round-trip properly through JSON serialization
-      const { result } = renderHook(() => useLocalStorage('testKey', { value: 'default' }));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', { value: 'default' }),
+      );
 
       act(() => {
         result.current[1]({ value: 'newValue' });
       });
 
       expect(result.current[0]).toEqual({ value: 'newValue' });
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('testKey', '{"value":"newValue"}');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(
+        'testKey',
+        '{"value":"newValue"}',
+      );
     });
 
     it('should support function updater', () => {
       // Use objects to test function updater, as objects get properly deserialized
-      const { result } = renderHook(() => useLocalStorage('testKey', { count: 0 }));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', { count: 0 }),
+      );
 
       act(() => {
         result.current[1]((prev) => ({ count: prev.count + 1 }));
@@ -116,7 +133,9 @@ describe('useLocalStorage', () => {
 
     it('should dispatch custom storage event', () => {
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       act(() => {
         result.current[1]('newValue');
@@ -130,7 +149,9 @@ describe('useLocalStorage', () => {
     it('should remove item from localStorage and reset to initial value', () => {
       store['testKey'] = 'storedValue';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       expect(result.current[0]).toBe('storedValue');
 
@@ -144,7 +165,9 @@ describe('useLocalStorage', () => {
 
     it('should dispatch custom storage event on remove', () => {
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       act(() => {
         result.current[2]();
@@ -154,7 +177,9 @@ describe('useLocalStorage', () => {
     });
 
     it('should handle function initializer on remove', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', () => 'computedDefault'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', () => 'computedDefault'),
+      );
 
       act(() => {
         result.current[1]('newValue');
@@ -170,20 +195,27 @@ describe('useLocalStorage', () => {
 
   describe('serialization', () => {
     it('should use default JSON serializer', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', { nested: 'value' }));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', { nested: 'value' }),
+      );
 
       act(() => {
         result.current[1]({ nested: 'updated' });
       });
 
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('testKey', '{"nested":"updated"}');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(
+        'testKey',
+        '{"nested":"updated"}',
+      );
     });
 
     it('should use custom serializer when provided', () => {
       const customSerializer = vi.fn((value: string) => `custom:${value}`);
 
       const { result } = renderHook(() =>
-        useLocalStorage<string>('testKey', 'default', { serializer: customSerializer }),
+        useLocalStorage<string>('testKey', 'default', {
+          serializer: customSerializer,
+        }),
       );
 
       act(() => {
@@ -191,7 +223,10 @@ describe('useLocalStorage', () => {
       });
 
       expect(customSerializer).toHaveBeenCalledWith('testValue');
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('testKey', 'custom:testValue');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(
+        'testKey',
+        'custom:testValue',
+      );
     });
   });
 
@@ -199,7 +234,9 @@ describe('useLocalStorage', () => {
     it('should parse JSON objects from localStorage', () => {
       store['testKey'] = '{"key":"value"}';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', {} as { key: string }));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', {} as { key: string }),
+      );
 
       expect(result.current[0]).toEqual({ key: 'value' });
     });
@@ -207,7 +244,9 @@ describe('useLocalStorage', () => {
     it('should parse JSON arrays from localStorage', () => {
       store['testKey'] = '[1,2,3]';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', [] as number[]));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', [] as number[]),
+      );
 
       expect(result.current[0]).toEqual([1, 2, 3]);
     });
@@ -215,7 +254,9 @@ describe('useLocalStorage', () => {
     it('should return plain string for non-JSON values', () => {
       store['testKey'] = 'plainString';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'default'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'default'),
+      );
 
       expect(result.current[0]).toBe('plainString');
     });
@@ -232,10 +273,14 @@ describe('useLocalStorage', () => {
 
     it('should use custom deserializer when provided', () => {
       store['testKey'] = 'custom:value';
-      const customDeserializer = vi.fn((value: string) => value.replace('custom:', ''));
+      const customDeserializer = vi.fn((value: string) =>
+        value.replace('custom:', ''),
+      );
 
       const { result } = renderHook(() =>
-        useLocalStorage('testKey', 'default', { deserializer: customDeserializer }),
+        useLocalStorage('testKey', 'default', {
+          deserializer: customDeserializer,
+        }),
       );
 
       expect(customDeserializer).toHaveBeenCalledWith('custom:value');
@@ -245,7 +290,9 @@ describe('useLocalStorage', () => {
     it('should return default value on JSON parse error', () => {
       store['testKey'] = '{invalid json';
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       // Non-JSON starting with { should attempt parse and fail
       expect(result.current[0]).toBe('defaultValue');
@@ -254,22 +301,30 @@ describe('useLocalStorage', () => {
 
   describe('error handling', () => {
     it('should handle localStorage.getItem throwing', () => {
-      (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (
+        window.localStorage.getItem as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
         throw new Error('Storage access denied');
       });
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       expect(result.current[0]).toBe('defaultValue');
       expect(console.warn).toHaveBeenCalled();
     });
 
     it('should handle localStorage.setItem throwing', () => {
-      (window.localStorage.setItem as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      (
+        window.localStorage.setItem as ReturnType<typeof vi.fn>
+      ).mockImplementation(() => {
         throw new Error('Quota exceeded');
       });
 
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       act(() => {
         result.current[1]('newValue');
@@ -281,7 +336,9 @@ describe('useLocalStorage', () => {
 
   describe('storage event handling', () => {
     it('should update when storage event is received for same key', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       // Simulate external change to localStorage
       store['testKey'] = 'externalValue';
@@ -294,7 +351,9 @@ describe('useLocalStorage', () => {
     });
 
     it('should ignore storage events for different keys', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       act(() => {
         window.dispatchEvent(new StorageEvent('storage', { key: 'otherKey' }));
@@ -304,13 +363,17 @@ describe('useLocalStorage', () => {
     });
 
     it('should handle custom local-storage events', () => {
-      const { result } = renderHook(() => useLocalStorage('testKey', 'defaultValue'));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', 'defaultValue'),
+      );
 
       // Simulate external change to localStorage
       store['testKey'] = 'updatedValue';
 
       act(() => {
-        window.dispatchEvent(new StorageEvent('local-storage', { key: 'testKey' }));
+        window.dispatchEvent(
+          new StorageEvent('local-storage', { key: 'testKey' }),
+        );
       });
 
       expect(result.current[0]).toBe('updatedValue');
@@ -345,7 +408,9 @@ describe('useLocalStorage', () => {
         },
       };
 
-      const { result } = renderHook(() => useLocalStorage('testKey', {} as typeof complexObj));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', {} as typeof complexObj),
+      );
 
       act(() => {
         result.current[1](complexObj);
@@ -360,7 +425,9 @@ describe('useLocalStorage', () => {
     it('should handle arrays of objects', () => {
       const arrayData = [{ id: 1 }, { id: 2 }];
 
-      const { result } = renderHook(() => useLocalStorage('testKey', [] as typeof arrayData));
+      const { result } = renderHook(() =>
+        useLocalStorage('testKey', [] as typeof arrayData),
+      );
 
       act(() => {
         result.current[1](arrayData);
@@ -389,7 +456,10 @@ describe('useLocalStorage', () => {
         result.current[1](true);
       });
 
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('testKey', 'true');
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(
+        'testKey',
+        'true',
+      );
     });
   });
 
@@ -406,13 +476,17 @@ describe('useLocalStorage', () => {
       delete global.window;
 
       // Dynamically import the hook to trigger module-level IS_SERVER evaluation
-      const { useLocalStorage: useLocalStorageSSR } = await import('../use-local-storage');
+      const { useLocalStorage: useLocalStorageSSR } = await import(
+        '../use-local-storage'
+      );
 
       // Restore window before rendering (renderHook needs window)
       global.window = originalWindow;
 
       // When IS_SERVER is true at module load time, readValue returns initialValue
-      const { result } = renderHook(() => useLocalStorageSSR('testKey', 'serverDefault'));
+      const { result } = renderHook(() =>
+        useLocalStorageSSR('testKey', 'serverDefault'),
+      );
 
       // The hook should return the initial value since IS_SERVER was true at load time
       expect(result.current[0]).toBe('serverDefault');
@@ -430,7 +504,9 @@ describe('useLocalStorage', () => {
       delete global.window;
 
       // Dynamically import the hook to trigger module-level IS_SERVER evaluation
-      const { useLocalStorage: useLocalStorageSSR } = await import('../use-local-storage');
+      const { useLocalStorage: useLocalStorageSSR } = await import(
+        '../use-local-storage'
+      );
 
       // Restore window before rendering (renderHook needs window)
       global.window = originalWindow;
@@ -438,7 +514,9 @@ describe('useLocalStorage', () => {
       // Re-spy on console.warn after restoring window
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const { result } = renderHook(() => useLocalStorageSSR('testKey', 'serverDefault'));
+      const { result } = renderHook(() =>
+        useLocalStorageSSR('testKey', 'serverDefault'),
+      );
 
       // Call setValue - it should warn about server-side usage
       act(() => {
@@ -464,7 +542,9 @@ describe('useLocalStorage', () => {
       delete global.window;
 
       // Dynamically import the hook to trigger module-level IS_SERVER evaluation
-      const { useLocalStorage: useLocalStorageSSR } = await import('../use-local-storage');
+      const { useLocalStorage: useLocalStorageSSR } = await import(
+        '../use-local-storage'
+      );
 
       // Restore window before rendering (renderHook needs window)
       global.window = originalWindow;
@@ -472,7 +552,9 @@ describe('useLocalStorage', () => {
       // Re-spy on console.warn after restoring window
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const { result } = renderHook(() => useLocalStorageSSR('testKey', 'serverDefault'));
+      const { result } = renderHook(() =>
+        useLocalStorageSSR('testKey', 'serverDefault'),
+      );
 
       // Call removeValue - it should warn about server-side usage
       act(() => {

@@ -2,7 +2,12 @@
 
 import React from 'react';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -27,13 +32,17 @@ export function EditUserAgreementModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl mx-4 sm:mx-auto">
+      <DialogContent className="mx-4 max-w-2xl sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-700">Edit User Agreement</DialogTitle>
+          <DialogTitle className="text-gray-700">
+            Edit User Agreement
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-600">User Agreement Content</label>
+            <label className="text-sm font-medium text-gray-600">
+              User Agreement Content
+            </label>
             <Textarea
               value={value}
               onChange={(e) => setValue(e.target.value)}

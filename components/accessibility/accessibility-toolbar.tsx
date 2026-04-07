@@ -44,28 +44,28 @@ function AccessibilityOption({
     <Button
       onClick={onClick}
       variant={isActive ? 'default' : 'outline'}
-      className={`h-24 w-full flex flex-col items-center justify-center gap-1 text-xs font-medium relative ${
+      className={`relative flex h-24 w-full flex-col items-center justify-center gap-1 text-xs font-medium ${
         isActive
-          ? 'bg-[#38A1E5] text-white border-[#38A1E5] hover:bg-[#D0E0FF] hover:text-gray-800'
-          : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
+          ? 'border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#D0E0FF] hover:text-gray-800'
+          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
       }`}
     >
       {isActive && (
-        <div className="absolute top-2 right-2 w-4 h-4 bg-[#38A1E5] rounded-full flex items-center justify-center">
-          <div className="w-2 h-2 bg-white rounded-full" />
+        <div className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-[#38A1E5]">
+          <div className="h-2 w-2 rounded-full bg-white" />
         </div>
       )}
       <div className="text-lg">{icon}</div>
       <span className="text-center leading-tight">{label}</span>
       {isActive && subtext && (
         <>
-          <span className="text-xs text-[#38A1E5] font-medium">{subtext}</span>
+          <span className="text-xs font-medium text-[#38A1E5]">{subtext}</span>
           {options && options.length > 0 && (
-            <div className="flex gap-1 mt-1">
+            <div className="mt-1 flex gap-1">
               {options.map((_, index) => (
                 <div
                   key={index}
-                  className={`w-3 h-1 rounded-full ${index === activeIndex ? 'bg-[#38A1E5]' : 'bg-gray-300'}`}
+                  className={`h-1 w-3 rounded-full ${index === activeIndex ? 'bg-[#38A1E5]' : 'bg-gray-300'}`}
                 />
               ))}
             </div>
@@ -77,8 +77,13 @@ function AccessibilityOption({
 }
 
 export function AccessibilityToolbar() {
-  const { settings, updateSetting, resetSettings, isToolbarOpen, setIsToolbarOpen } =
-    useAccessibility();
+  const {
+    settings,
+    updateSetting,
+    resetSettings,
+    isToolbarOpen,
+    setIsToolbarOpen,
+  } = useAccessibility();
 
   if (!isToolbarOpen) return null;
 
@@ -135,7 +140,11 @@ export function AccessibilityToolbar() {
   };
 
   const getTextSizeLabel = () => {
-    const labels = { normal: 'Normal Text', large: 'Large Text', larger: 'Larger Text' };
+    const labels = {
+      normal: 'Normal Text',
+      large: 'Large Text',
+      larger: 'Larger Text',
+    };
     return labels[settings.textSize];
   };
 
@@ -170,7 +179,11 @@ export function AccessibilityToolbar() {
   };
 
   const getSaturationLabel = () => {
-    const labels = { normal: 'Normal Saturation', high: 'High Saturation', low: 'Low Saturation' };
+    const labels = {
+      normal: 'Normal Saturation',
+      high: 'High Saturation',
+      low: 'Low Saturation',
+    };
     return labels[settings.saturation];
   };
 
@@ -195,9 +208,9 @@ export function AccessibilityToolbar() {
 
   return (
     <>
-      <div className="fixed top-0 right-0 h-full w-80 bg-white z-50 shadow-2xl flex flex-col">
+      <div className="fixed top-0 right-0 z-50 flex h-full w-80 flex-col bg-white shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#38A1E5] to-[#7284FF]  text-white flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#38A1E5] to-[#7284FF] p-4 text-white">
           <h2 className="text-lg font-semibold">Accessibility Menu</h2>
           <Button
             onClick={() => setIsToolbarOpen(false)}
@@ -210,25 +223,33 @@ export function AccessibilityToolbar() {
         </div>
 
         <div
-          className="flex-1 flex flex-col p-4 bg-white overflow-y-auto"
+          className="flex flex-1 flex-col overflow-y-auto bg-white p-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="grid grid-cols-2 gap-3 flex-1">
+          <div className="grid flex-1 grid-cols-2 gap-3">
             <AccessibilityOption
               icon={<Circle className="h-5 w-5" />}
               label="Contrast +"
               isActive={settings.contrastMode !== 'normal'}
               onClick={cycleContrastMode}
-              subtext={settings.contrastMode !== 'normal' ? getContrastLabel() : undefined}
+              subtext={
+                settings.contrastMode !== 'normal'
+                  ? getContrastLabel()
+                  : undefined
+              }
               options={['normal', 'invert', 'dark', 'light']}
-              activeIndex={['normal', 'invert', 'dark', 'light'].indexOf(settings.contrastMode)}
+              activeIndex={['normal', 'invert', 'dark', 'light'].indexOf(
+                settings.contrastMode,
+              )}
             />
 
             <AccessibilityOption
               icon={<Link className="h-5 w-5" />}
               label="Highlight Links"
               isActive={settings.highlightLinks}
-              onClick={() => updateSetting('highlightLinks', !settings.highlightLinks)}
+              onClick={() =>
+                updateSetting('highlightLinks', !settings.highlightLinks)
+              }
             />
 
             <AccessibilityOption
@@ -236,9 +257,13 @@ export function AccessibilityToolbar() {
               label="Bigger Text"
               isActive={settings.textSize !== 'normal'}
               onClick={cycleTextSize}
-              subtext={settings.textSize !== 'normal' ? getTextSizeLabel() : undefined}
+              subtext={
+                settings.textSize !== 'normal' ? getTextSizeLabel() : undefined
+              }
               options={['normal', 'large', 'larger']}
-              activeIndex={['normal', 'large', 'larger'].indexOf(settings.textSize)}
+              activeIndex={['normal', 'large', 'larger'].indexOf(
+                settings.textSize,
+              )}
             />
 
             <AccessibilityOption
@@ -246,16 +271,24 @@ export function AccessibilityToolbar() {
               label="Text Spacing"
               isActive={settings.textSpacing !== 'none'}
               onClick={cycleTextSpacing}
-              subtext={settings.textSpacing !== 'none' ? getTextSpacingLabel() : undefined}
+              subtext={
+                settings.textSpacing !== 'none'
+                  ? getTextSpacingLabel()
+                  : undefined
+              }
               options={['none', 'light', 'moderate', 'heavy']}
-              activeIndex={['none', 'light', 'moderate', 'heavy'].indexOf(settings.textSpacing)}
+              activeIndex={['none', 'light', 'moderate', 'heavy'].indexOf(
+                settings.textSpacing,
+              )}
             />
 
             <AccessibilityOption
               icon={<Pause className="h-5 w-5" />}
               label="Pause Animations"
               isActive={settings.pauseAnimations}
-              onClick={() => updateSetting('pauseAnimations', !settings.pauseAnimations)}
+              onClick={() =>
+                updateSetting('pauseAnimations', !settings.pauseAnimations)
+              }
             />
 
             <AccessibilityOption
@@ -270,9 +303,15 @@ export function AccessibilityToolbar() {
               label="Dyslexia Friendly"
               isActive={settings.dyslexiaFont !== 'normal'}
               onClick={cycleDyslexiaFont}
-              subtext={settings.dyslexiaFont !== 'normal' ? getDyslexiaLabel() : undefined}
+              subtext={
+                settings.dyslexiaFont !== 'normal'
+                  ? getDyslexiaLabel()
+                  : undefined
+              }
               options={['normal', 'dyslexia', 'legible']}
-              activeIndex={['normal', 'dyslexia', 'legible'].indexOf(settings.dyslexiaFont)}
+              activeIndex={['normal', 'dyslexia', 'legible'].indexOf(
+                settings.dyslexiaFont,
+              )}
             />
 
             <AccessibilityOption
@@ -307,11 +346,19 @@ export function AccessibilityToolbar() {
               label="Text Align"
               isActive={settings.textAlign !== 'normal'}
               onClick={cycleTextAlign}
-              subtext={settings.textAlign !== 'normal' ? getTextAlignLabel() : undefined}
+              subtext={
+                settings.textAlign !== 'normal'
+                  ? getTextAlignLabel()
+                  : undefined
+              }
               options={['normal', 'left', 'center', 'right', 'justify']}
-              activeIndex={['normal', 'left', 'center', 'right', 'justify'].indexOf(
-                settings.textAlign,
-              )}
+              activeIndex={[
+                'normal',
+                'left',
+                'center',
+                'right',
+                'justify',
+              ].indexOf(settings.textAlign)}
             />
 
             <AccessibilityOption
@@ -319,17 +366,23 @@ export function AccessibilityToolbar() {
               label="Saturation"
               isActive={settings.saturation !== 'normal'}
               onClick={cycleSaturation}
-              subtext={settings.saturation !== 'normal' ? getSaturationLabel() : undefined}
+              subtext={
+                settings.saturation !== 'normal'
+                  ? getSaturationLabel()
+                  : undefined
+              }
               options={['normal', 'high', 'low']}
-              activeIndex={['normal', 'high', 'low'].indexOf(settings.saturation)}
+              activeIndex={['normal', 'high', 'low'].indexOf(
+                settings.saturation,
+              )}
             />
           </div>
 
           <Button
             onClick={resetSettings}
-            className="w-full bg-gradient-to-r from-[#38A1E5] to-[#7284FF] hover:from-[#2E8BC7] hover:to-[#0066DD] text-white py-3 mt-4 shadow-lg flex-shrink-0"
+            className="mt-4 w-full flex-shrink-0 bg-gradient-to-r from-[#38A1E5] to-[#7284FF] py-3 text-white shadow-lg hover:from-[#2E8BC7] hover:to-[#0066DD]"
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="mr-2 h-4 w-4" />
             Reset All Accessibility Settings
           </Button>
         </div>

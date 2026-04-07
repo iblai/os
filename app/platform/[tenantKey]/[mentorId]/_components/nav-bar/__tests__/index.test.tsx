@@ -1,11 +1,17 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
-import { NavBar } from '../index';
+import { NavBar, getFilteredMenuItems } from '../index';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import rbacReducer from '@/features/rbac/rbac-slice';
@@ -79,7 +85,8 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
-      item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL),
+      item.userTypes.includes(UserType.ADMIN) ||
+      item.userTypes.includes(UserType.FREE_TRIAL),
   }),
 }));
 
@@ -158,7 +165,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
@@ -242,13 +250,33 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
+vi.mock('@/hoc/utils', () => ({
+  rbacPermissionToDisplay: vi.fn(
+    (
+      fields: string[],
+      permissions?: Record<string, { read: boolean; write: boolean }>,
+    ): boolean => {
+      if (!permissions || fields.length === 0) return true;
+      return fields.some((field) => permissions[field]?.read);
+    },
+  ),
+}));
+
+vi.mock('@/hoc/withPermissions', () => ({
+  checkRbacPermission: vi.fn(
+    (_permissions: object, _resource: string): boolean => true,
+  ),
+}));
+
 // Mock child components
 vi.mock('../user-profile', () => ({
   UserProfile: () => <div data-testid="user-profile">User Profile</div>,
 }));
 
 vi.mock('../learner-mode-switch', () => ({
-  LearnerModeSwitch: () => <div data-testid="learner-mode-switch">Learner Mode</div>,
+  LearnerModeSwitch: () => (
+    <div data-testid="learner-mode-switch">Learner Mode</div>
+  ),
 }));
 
 vi.mock('../embed-nav-bar', () => ({
@@ -256,7 +284,13 @@ vi.mock('../embed-nav-bar', () => ({
 }));
 
 vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  MyMentorsModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="my-mentors-modal">
         My Mentors <button onClick={onClose}>Close</button>
@@ -265,7 +299,13 @@ vi.mock('@/components/modals/my-mentors-modal', () => ({
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
-  EditMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="edit-mentor-modal">
         Edit Mentor <button onClick={onClose}>Close</button>
@@ -274,7 +314,13 @@ vi.mock('@/components/modals/edit-mentor-modal', () => ({
 }));
 
 vi.mock('@/components/modals/create-mentor-modal', () => ({
-  CreateMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  CreateMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="create-mentor-modal">
         Create Mentor <button onClick={onClose}>Close</button>
@@ -283,7 +329,13 @@ vi.mock('@/components/modals/create-mentor-modal', () => ({
 }));
 
 vi.mock('@/components/modals/llm-provider-selection-modal', () => ({
-  LLMProviderSelectionModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  LLMProviderSelectionModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="llm-provider-modal">
         LLM Provider <button onClick={onClose}>Close</button>
@@ -301,11 +353,19 @@ vi.mock('@/components/modals/auth-modal', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-  NotificationDropdown: () => <div data-testid="notification-dropdown">Notifications</div>,
+  NotificationDropdown: () => (
+    <div data-testid="notification-dropdown">Notifications</div>
+  ),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  UserProfileModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  UserProfileModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="user-profile-modal">
         User Profile Modal <button onClick={onClose}>Close</button>
@@ -317,7 +377,10 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 // TEST STORE FACTORY
 // ============================================================================
 
-function createTestStore(preloadedStack: ModalInfo[] = [], rbacPermissions: object = {}) {
+function createTestStore(
+  preloadedStack: ModalInfo[] = [],
+  rbacPermissions: object = {},
+) {
   return configureStore({
     reducer: {
       modals: modalReducer,
@@ -487,7 +550,9 @@ describe('NavBar', () => {
         </Provider>,
       );
 
-      expect(screen.getByLabelText('Selected mentor dropdown button')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Selected mentor dropdown button'),
+      ).toBeInTheDocument();
     });
 
     it('dropdown button is clickable', () => {
@@ -499,7 +564,9 @@ describe('NavBar', () => {
         </Provider>,
       );
 
-      const dropdownButton = screen.getByLabelText('Selected mentor dropdown button');
+      const dropdownButton = screen.getByLabelText(
+        'Selected mentor dropdown button',
+      );
       expect(dropdownButton).toBeEnabled();
       // Clicking should not throw
       expect(() => fireEvent.click(dropdownButton)).not.toThrow();
@@ -595,160 +662,167 @@ describe('NavBar', () => {
       const llmButton = screen.getByLabelText('LLM Model Selector');
       expect(llmButton).toBeInTheDocument();
 
-      const dropdownButton = screen.getByLabelText('Selected mentor dropdown button');
+      const dropdownButton = screen.getByLabelText(
+        'Selected mentor dropdown button',
+      );
       expect(dropdownButton).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // hide-navbar Query Param Tests
+  //
+  // The hide-navbar param hides the navbar in both embed and non-embed modes.
+  // Accepted truthy values: "true" and "1".
+  // --------------------------------------------------------------------------
+
+  describe('hide-navbar query param', () => {
+    it('hides navbar when hide-navbar=true', () => {
+      mockSearchParamsRaw = 'hide-navbar=true';
+      const store = createTestStore();
+
+      const { container } = render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('hides navbar when hide-navbar=1', () => {
+      mockSearchParamsRaw = 'hide-navbar=1';
+      const store = createTestStore();
+
+      const { container } = render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('renders normally when hide-navbar=false', () => {
+      mockSearchParamsRaw = 'hide-navbar=false';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+    });
+
+    it('renders normally when hide-navbar=0', () => {
+      mockSearchParamsRaw = 'hide-navbar=0';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+    });
+
+    it('renders normally when hide-navbar param is absent', () => {
+      mockSearchParamsRaw = '';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+    });
+
+    it('hides embed navbar when hide-navbar=true in embed mode', async () => {
+      mockSearchParamsRaw = 'hide-navbar=true';
+
+      vi.resetModules();
+      vi.doMock('@/hooks/use-embed-mode', () => ({
+        useEmbedMode: () => true,
+      }));
+
+      const { NavBar: NavBarEmbed } = await import('../index');
+      const store = createTestStore();
+
+      const { container } = render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('renders EmbedNavBar in embed mode when hide-navbar is absent', async () => {
+      mockSearchParamsRaw = '';
+
+      vi.resetModules();
+      vi.doMock('@/hooks/use-embed-mode', () => ({
+        useEmbedMode: () => true,
+      }));
+
+      const { NavBar: NavBarEmbed } = await import('../index');
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('embed-nav-bar')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     });
   });
 });
 
 // ============================================================================
 // PURE FUNCTION TESTS FOR MENU FILTERING LOGIC
+// These tests call the real exported getFilteredMenuItems from index.tsx
+// so that Istanbul records coverage on the actual source lines.
 // ============================================================================
 
+// Import the mocked modules so we can override their implementations per-test
+import { rbacPermissionToDisplay } from '@/hoc/utils';
+import { checkRbacPermission } from '@/hoc/withPermissions';
+
 describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
-  /**
-   * These tests validate the getFilteredMenuItems function logic that determines
-   * which menu items are shown based on user type, admin status, tenant, and permissions.
-   */
+  const mockConfig = { mainTenantKey: () => 'main' };
 
-  // Mock types for testing
-  interface MockMenuItem {
-    label: string;
-    userTypes: string[];
-    rbacResource?: (mentorDbId: number) => string;
-    permissionFieldsCheck: string[];
-    mentorVisibility: MentorVisibilityEnum[];
-  }
-
-  interface MockMentorSettings {
-    platform_key: string;
-    mentor_visibility: MentorVisibilityEnum;
-    mentor_id: number;
-    permissions?: {
-      field?: Record<string, { read: boolean; write: boolean }>;
-    };
-  }
-
-  interface MockConfig {
-    mainTenantKey: () => string;
-  }
-
-  /**
-   * Pure function that mirrors the getFilteredMenuItems logic.
-   * This allows testing without React component dependencies.
-   */
-  function filterMenuItems(
-    menuItems: MockMenuItem[],
-    isUserTypeAllowed: (item: MockMenuItem) => boolean,
-    isAdmin: boolean,
-    tenantKey: string | undefined,
-    mentorSettings: MockMentorSettings | undefined,
-    config: MockConfig,
-    rbacPermissions: Record<string, boolean>,
-    rbacPermissionToDisplay: (
-      fields: string[],
-      permissions?: Record<string, { read: boolean; write: boolean }>,
-    ) => boolean,
-    checkRbacPermission: (permissions: object, resource: string) => boolean,
-  ): MockMenuItem[] {
-    // Always include first item (New Chat)
-    const firstItem = menuItems[0];
-
-    const filteredItems = menuItems
-      .slice(1)
-      .filter(isUserTypeAllowed)
-      .filter((item) => {
-        if (
-          (isAdmin && tenantKey === config.mainTenantKey()) ||
-          mentorSettings?.platform_key !== config.mainTenantKey() ||
-          (item.mentorVisibility.includes(
-            mentorSettings?.mentor_visibility as MentorVisibilityEnum,
-          ) &&
-            !(!isAdmin && tenantKey === config.mainTenantKey()))
-        ) {
-          return true;
-        }
-        return false;
-      })
-      .filter((item) => {
-        const hasFieldPermission = rbacPermissionToDisplay(
-          item.permissionFieldsCheck,
-          mentorSettings?.permissions?.field,
-        );
-        const hasRbacPermission =
-          !item.rbacResource ||
-          (mentorSettings &&
-            checkRbacPermission(rbacPermissions, item.rbacResource?.(mentorSettings.mentor_id)));
-        return hasFieldPermission && hasRbacPermission;
-      });
-
-    return [firstItem, ...filteredItems];
-  }
-
-  const mockConfig: MockConfig = { mainTenantKey: () => 'main' };
-
-  // Sample menu items for testing
-  const sampleMenuItems: MockMenuItem[] = [
-    {
-      label: 'New Chat',
-      userTypes: [UserType.ANONYMOUS, UserType.STUDENT, UserType.FREE_TRIAL, UserType.ADMIN],
-      permissionFieldsCheck: [],
-      mentorVisibility: [
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-        MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-      ],
-    },
-    {
-      label: 'Settings',
-      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#show_settings`,
-      permissionFieldsCheck: [
-        'mentor_name',
-        'mentor_description',
-        'profile_image',
-        'mentor_visibility',
-        'metadata',
-      ],
-      mentorVisibility: [
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-      ],
-    },
-    {
-      label: 'Access',
-      userTypes: [UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#read_shared_mentor`,
-      permissionFieldsCheck: [],
-      mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    },
-    {
-      label: 'Analytics',
-      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#view_analytics`,
-      permissionFieldsCheck: [],
-      mentorVisibility: [
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-      ],
-    },
-  ];
-
-  const mockRbacPermissionToDisplay = (
-    fields: string[],
-    permissions?: Record<string, { read: boolean; write: boolean }>,
-  ): boolean => {
-    if (!permissions || fields.length === 0) return true;
-    return fields.some((field) => permissions[field]?.read);
-  };
-
-  const mockCheckRbacPermission = (permissions: object, resource: string): boolean => {
-    return (permissions as Record<string, boolean>)[resource] ?? true;
-  };
+  afterEach(() => {
+    // Restore default mock implementations after tests that override them
+    vi.mocked(rbacPermissionToDisplay).mockImplementation(
+      (
+        fields: string[],
+        permissions?: Record<string, { read: boolean; write: boolean }>,
+      ) => {
+        if (!permissions || fields.length === 0) return true;
+        return fields.some((field) => permissions[field]?.read);
+      },
+    );
+    vi.mocked(checkRbacPermission).mockImplementation(
+      (_permissions: object, _resource: string) => true,
+    );
+  });
 
   describe('Admin on main tenant', () => {
     it('shows all menu items that pass user type check', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
@@ -759,68 +833,67 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
             profile_image: { read: true, write: true },
             mentor_visibility: { read: true, write: true },
             metadata: { read: true, write: true },
+            llm_provider: { read: true, write: true },
+            system_prompt: { read: true, write: true },
+            mentor_tools: { read: true, write: true },
           },
         },
       };
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true, // isAdmin
-        'main', // tenantKey
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
+        true,
+        'main',
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
-      expect(result.map((i) => i.label)).toContain('New Chat');
-      expect(result.map((i) => i.label)).toContain('Settings');
-      expect(result.map((i) => i.label)).toContain('Access');
-      expect(result.map((i) => i.label)).toContain('Analytics');
+      const labels = result.map((i: any) => i.label);
+      expect(labels).toContain('New Chat');
+      expect(labels).toContain('Settings');
+      expect(labels).toContain('Access');
+      expect(labels).toContain('Analytics');
+      expect(labels).toContain('LLM');
+      expect(labels).toContain('Prompts');
+      expect(labels).toContain('Tools');
     });
   });
 
   describe('Non-admin on main tenant', () => {
-    it('filters out items not matching mentor visibility for non-admins', () => {
-      const mentorSettings: MockMentorSettings = {
+    it('filters out admin items but always includes New Chat', () => {
+      const mentorSettings = {
         platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
         mentor_id: 123,
         permissions: {
           field: {
             mentor_name: { read: true, write: true },
-            mentor_description: { read: true, write: true },
-            profile_image: { read: true, write: true },
-            mentor_visibility: { read: true, write: true },
-            metadata: { read: true, write: true },
           },
         },
       };
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.STUDENT),
-        false, // isAdmin
-        'main', // tenantKey
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.STUDENT),
+        false,
+        'main',
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
-      // First item (New Chat) is always included
+      // New Chat is always first
       expect(result[0].label).toBe('New Chat');
-      // Non-admin on main tenant with VIEWABLE_BY_ANYONE should not see admin-only items
-      expect(result.map((i) => i.label)).not.toContain('Access');
+      // Non-admin on main tenant should not see admin-only items
+      const labels = result.map((i: any) => i.label);
+      expect(labels).not.toContain('Access');
+      expect(labels).not.toContain('Settings');
     });
   });
 
   describe('User on non-main tenant', () => {
     it('shows items when mentor is on non-main tenant', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
@@ -831,26 +904,24 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true, // isAdmin
-        'custom-tenant', // tenantKey
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
+        true,
+        'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
-      expect(result.map((i) => i.label)).toContain('New Chat');
-      expect(result.map((i) => i.label)).toContain('Settings');
+      const labels = result.map((i: any) => i.label);
+      expect(labels).toContain('New Chat');
+      expect(labels).toContain('Settings');
     });
   });
 
   describe('RBAC permission checks', () => {
     it('filters out items when user lacks field permissions', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
@@ -861,36 +932,37 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const strictRbacPermissionToDisplay = (
-        fields: string[],
-        permissions?: Record<string, { read: boolean; write: boolean }>,
-      ): boolean => {
-        if (fields.length === 0) return true;
-        if (!permissions) return false;
-        return fields.some((field) => permissions[field]?.read);
-      };
+      // Override the mock to be strict about field permissions
+      vi.mocked(rbacPermissionToDisplay).mockImplementation(
+        (
+          fields: string[],
+          permissions?: Record<string, { read: boolean; write: boolean }>,
+        ) => {
+          if (fields.length === 0) return true;
+          if (!permissions) return false;
+          return fields.some((field) => permissions[field]?.read);
+        },
+      );
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
         true,
         'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
-        strictRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
+      const labels = result.map((i: any) => i.label);
       // Settings should be filtered out because no field permissions
-      expect(result.map((i) => i.label)).not.toContain('Settings');
+      expect(labels).not.toContain('Settings');
       // Access and Analytics have empty permissionFieldsCheck, so they pass
-      expect(result.map((i) => i.label)).toContain('Access');
-      expect(result.map((i) => i.label)).toContain('Analytics');
+      expect(labels).toContain('Access');
+      expect(labels).toContain('Analytics');
     });
 
     it('filters out items when RBAC resource check fails', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
@@ -901,72 +973,67 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const strictCheckRbacPermission = (_permissions: object, resource: string): boolean => {
-        // Deny access to analytics
-        if (resource.includes('#view_analytics')) return false;
-        return true;
-      };
+      // Override to deny analytics
+      vi.mocked(checkRbacPermission).mockImplementation(
+        (_permissions: object, resource: string) => {
+          if (resource.includes('#view_analytics')) return false;
+          return true;
+        },
+      );
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
         true,
         'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        strictCheckRbacPermission,
       );
 
-      expect(result.map((i) => i.label)).not.toContain('Analytics');
-      expect(result.map((i) => i.label)).toContain('Settings');
+      const labels = result.map((i: any) => i.label);
+      expect(labels).not.toContain('Analytics');
+      expect(labels).toContain('Settings');
     });
   });
 
   describe('User type filtering', () => {
     it('filters items based on user type', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
       };
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.FREE_TRIAL), // Not ADMIN
-        false, // not admin
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      // Access requires UserType.ADMIN only
-      expect(result.map((i) => i.label)).not.toContain('Access');
-      // Settings allows FREE_TRIAL
-      expect(result.map((i) => i.label)).toContain('Settings');
-    });
-
-    it('always includes New Chat for all user types', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-        mentor_id: 123,
-      };
-
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ANONYMOUS),
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.FREE_TRIAL),
         false,
         'custom-tenant',
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
+      );
+
+      const labels = result.map((i: any) => i.label);
+      // Access requires UserType.ADMIN only
+      expect(labels).not.toContain('Access');
+      // Settings allows FREE_TRIAL
+      expect(labels).toContain('Settings');
+    });
+
+    it('always includes New Chat for all user types', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        mentor_id: 123,
+      };
+
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ANONYMOUS),
+        false,
+        'custom-tenant',
+        mentorSettings,
+        mockConfig,
+        {},
       );
 
       expect(result[0].label).toBe('New Chat');
@@ -975,16 +1042,13 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
 
   describe('Edge cases', () => {
     it('handles undefined mentor settings gracefully', () => {
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
         true,
         'tenant123',
         undefined,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
       // Should at least return New Chat
@@ -993,41 +1057,22 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
     });
 
     it('handles undefined tenant key', () => {
-      const mentorSettings: MockMentorSettings = {
+      const mentorSettings = {
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 123,
       };
 
-      const result = filterMenuItems(
-        sampleMenuItems,
-        (item) => item.userTypes.includes(UserType.ADMIN),
+      const result = getFilteredMenuItems(
+        (item: any) => item.userTypes.includes(UserType.ADMIN),
         true,
         undefined,
         mentorSettings,
         mockConfig,
         {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
       );
 
       expect(result.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('handles empty menu items array', () => {
-      const result = filterMenuItems(
-        [],
-        () => true,
-        true,
-        'tenant123',
-        undefined,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result).toEqual([undefined]); // First item is undefined
     });
   });
 });

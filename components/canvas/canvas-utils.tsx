@@ -23,7 +23,12 @@ export const resolveArtifactIdFromSources = (
 export type EditorChangeDecision = {
   shouldProcess: boolean;
   shouldMarkEdited: boolean;
-  reason: 'suppressed' | 'not_initialized' | 'not_viewing_current' | 'unchanged' | 'process';
+  reason:
+    | 'suppressed'
+    | 'not_initialized'
+    | 'not_viewing_current'
+    | 'unchanged'
+    | 'process';
 };
 
 /**
@@ -37,19 +42,35 @@ export const shouldProcessEditorChange = (
   lastSavedMarkdownTrimmed: string,
 ): EditorChangeDecision => {
   if (suppressNextOnChange) {
-    return { shouldProcess: false, shouldMarkEdited: false, reason: 'suppressed' };
+    return {
+      shouldProcess: false,
+      shouldMarkEdited: false,
+      reason: 'suppressed',
+    };
   }
 
   if (!hasInitializedEditor) {
-    return { shouldProcess: false, shouldMarkEdited: false, reason: 'not_initialized' };
+    return {
+      shouldProcess: false,
+      shouldMarkEdited: false,
+      reason: 'not_initialized',
+    };
   }
 
   if (!isViewingCurrentVersion) {
-    return { shouldProcess: false, shouldMarkEdited: false, reason: 'not_viewing_current' };
+    return {
+      shouldProcess: false,
+      shouldMarkEdited: false,
+      reason: 'not_viewing_current',
+    };
   }
 
   if (markdownTrimmed === lastSavedMarkdownTrimmed) {
-    return { shouldProcess: false, shouldMarkEdited: false, reason: 'unchanged' };
+    return {
+      shouldProcess: false,
+      shouldMarkEdited: false,
+      reason: 'unchanged',
+    };
   }
 
   return { shouldProcess: true, shouldMarkEdited: true, reason: 'process' };
@@ -58,7 +79,10 @@ export const shouldProcessEditorChange = (
 /**
  * Result type for highlight input key handler
  */
-export type HighlightKeyAction = { action: 'submit' } | { action: 'dismiss' } | { action: 'none' };
+export type HighlightKeyAction =
+  | { action: 'submit' }
+  | { action: 'dismiss' }
+  | { action: 'none' };
 
 /**
  * Determine action based on key press in highlight input
@@ -124,7 +148,9 @@ export const getInitialEditorContent = (content?: string): string => {
 /**
  * Safely parse a value as a Record object
  */
-export const safeParseRecord = (value: unknown): Record<string, unknown> | undefined => {
+export const safeParseRecord = (
+  value: unknown,
+): Record<string, unknown> | undefined => {
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
@@ -132,7 +158,10 @@ export const safeParseRecord = (value: unknown): Record<string, unknown> | undef
         return parsed as Record<string, unknown>;
       }
     } catch (error) {
-      console.error('[Canvas] Failed to parse artifact metadata payload', error);
+      console.error(
+        '[Canvas] Failed to parse artifact metadata payload',
+        error,
+      );
     }
     return undefined;
   }
@@ -193,7 +222,11 @@ export const findValueByKey = (
         }
       }
 
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         queue.push(value as Record<string, unknown>);
       }
     }
@@ -275,8 +308,12 @@ const findTextInMarkdown = (
   let searchStart = 0;
   while (searchStart < markdown.length) {
     // Look for the first word in remaining markdown
-    const strippedRemaining = stripMarkdownFormatting(markdown.slice(searchStart));
-    const wordIndex = strippedRemaining.toLowerCase().indexOf(firstWord.toLowerCase());
+    const strippedRemaining = stripMarkdownFormatting(
+      markdown.slice(searchStart),
+    );
+    const wordIndex = strippedRemaining
+      .toLowerCase()
+      .indexOf(firstWord.toLowerCase());
 
     if (wordIndex === -1) break;
 
@@ -318,7 +355,10 @@ const findTextInMarkdown = (
     let matchedWords = 0;
     let currentPos = candidateStart;
 
-    while (currentPos < markdown.length && matchedWords < selectionWords.length) {
+    while (
+      currentPos < markdown.length &&
+      matchedWords < selectionWords.length
+    ) {
       // Skip whitespace and formatting in markdown
       while (
         currentPos < markdown.length &&
@@ -333,7 +373,11 @@ const findTextInMarkdown = (
       const targetWord = selectionWords[matchedWords];
       let wordMatched = true;
 
-      for (let i = 0; i < targetWord.length && currentPos < markdown.length; i++) {
+      for (
+        let i = 0;
+        i < targetWord.length && currentPos < markdown.length;
+        i++
+      ) {
         // Skip inline formatting
         while (
           currentPos < markdown.length &&
@@ -349,7 +393,9 @@ const findTextInMarkdown = (
           break;
         }
 
-        if (markdown[currentPos].toLowerCase() !== targetWord[i].toLowerCase()) {
+        if (
+          markdown[currentPos].toLowerCase() !== targetWord[i].toLowerCase()
+        ) {
           wordMatched = false;
           break;
         }
@@ -413,7 +459,9 @@ export const calculateMarkdownIndices = (
     const lastWord = words[words.length - 1];
 
     // Find first word
-    const firstWordIndex = markdownContent.toLowerCase().indexOf(firstWord.toLowerCase());
+    const firstWordIndex = markdownContent
+      .toLowerCase()
+      .indexOf(firstWord.toLowerCase());
     if (firstWordIndex >= 0) {
       // Find last word after first word
       const searchAfter = firstWordIndex + firstWord.length;
@@ -431,7 +479,10 @@ export const calculateMarkdownIndices = (
   }
 
   // Last resort: fuzzy match with first part of text
-  const firstChunk = normalizedSelected.slice(0, Math.min(50, normalizedSelected.length));
+  const firstChunk = normalizedSelected.slice(
+    0,
+    Math.min(50, normalizedSelected.length),
+  );
   const strippedChunk = stripMarkdownFormatting(firstChunk);
   const strippedMarkdown = stripMarkdownFormatting(markdownContent);
 
@@ -462,7 +513,11 @@ export const stripHtml = (html: string): string => {
 /**
  * Split text into lines that fit within a given width for PDF export
  */
-export const splitTextIntoLines = (text: string, maxWidth: number, pdf: any): string[] => {
+export const splitTextIntoLines = (
+  text: string,
+  maxWidth: number,
+  pdf: any,
+): string[] => {
   const words = text.split(' ');
   const lines: string[] = [];
   let currentLine = '';

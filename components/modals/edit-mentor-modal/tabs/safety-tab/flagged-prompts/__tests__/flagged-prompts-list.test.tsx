@@ -4,7 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { FlaggedPromptsList } from '../flagged-prompts-list';
 import { FlaggedPrompt } from '../types';
 
-const createPrompt = (overrides: Partial<FlaggedPrompt> = {}): FlaggedPrompt => ({
+const createPrompt = (
+  overrides: Partial<FlaggedPrompt> = {},
+): FlaggedPrompt => ({
   id: 'prompt-1',
   userId: 'user-1',
   userEmail: 'john@example.com',
@@ -20,7 +22,13 @@ const createPrompt = (overrides: Partial<FlaggedPrompt> = {}): FlaggedPrompt => 
 
 describe('FlaggedPromptsList', () => {
   it('should render empty state when no prompts are provided', () => {
-    render(<FlaggedPromptsList prompts={[]} selectedPrompt={null} onPromptClick={vi.fn()} />);
+    render(
+      <FlaggedPromptsList
+        prompts={[]}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('No flagged prompts found')).toBeInTheDocument();
   });
@@ -28,7 +36,13 @@ describe('FlaggedPromptsList', () => {
   it('should render prompt details', () => {
     const prompt = createPrompt();
 
-    render(<FlaggedPromptsList prompts={[prompt]} selectedPrompt={null} onPromptClick={vi.fn()} />);
+    render(
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('2 hours ago')).toBeInTheDocument();
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
@@ -40,10 +54,20 @@ describe('FlaggedPromptsList', () => {
   it('should render multiple prompts', () => {
     const prompts = [
       createPrompt({ id: 'prompt-1', userFullName: 'John Doe' }),
-      createPrompt({ id: 'prompt-2', userFullName: 'Jane Smith', userEmail: 'jane@example.com' }),
+      createPrompt({
+        id: 'prompt-2',
+        userFullName: 'Jane Smith',
+        userEmail: 'jane@example.com',
+      }),
     ];
 
-    render(<FlaggedPromptsList prompts={prompts} selectedPrompt={null} onPromptClick={vi.fn()} />);
+    render(
+      <FlaggedPromptsList
+        prompts={prompts}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
@@ -53,7 +77,11 @@ describe('FlaggedPromptsList', () => {
     const prompt = createPrompt();
 
     const { container } = render(
-      <FlaggedPromptsList prompts={[prompt]} selectedPrompt={prompt} onPromptClick={vi.fn()} />,
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={prompt}
+        onPromptClick={vi.fn()}
+      />,
     );
 
     const promptRow = container.querySelector('.bg-gray-100');
@@ -64,7 +92,11 @@ describe('FlaggedPromptsList', () => {
     const prompt = createPrompt();
 
     const { container } = render(
-      <FlaggedPromptsList prompts={[prompt]} selectedPrompt={null} onPromptClick={vi.fn()} />,
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
     );
 
     expect(container.querySelector('.bg-gray-100')).not.toBeInTheDocument();
@@ -75,7 +107,11 @@ describe('FlaggedPromptsList', () => {
     const onPromptClick = vi.fn();
 
     render(
-      <FlaggedPromptsList prompts={[prompt]} selectedPrompt={null} onPromptClick={onPromptClick} />,
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={null}
+        onPromptClick={onPromptClick}
+      />,
     );
 
     fireEvent.click(screen.getByText('John Doe'));
@@ -85,7 +121,13 @@ describe('FlaggedPromptsList', () => {
   it('should apply Moderation type badge styling', () => {
     const prompt = createPrompt({ type: 'Moderation' });
 
-    render(<FlaggedPromptsList prompts={[prompt]} selectedPrompt={null} onPromptClick={vi.fn()} />);
+    render(
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
+    );
 
     const badge = screen.getByText('Moderation');
     expect(badge).toHaveClass('bg-blue-100', 'text-blue-700');
@@ -94,7 +136,13 @@ describe('FlaggedPromptsList', () => {
   it('should apply Safety type badge styling', () => {
     const prompt = createPrompt({ type: 'Safety' });
 
-    render(<FlaggedPromptsList prompts={[prompt]} selectedPrompt={null} onPromptClick={vi.fn()} />);
+    render(
+      <FlaggedPromptsList
+        prompts={[prompt]}
+        selectedPrompt={null}
+        onPromptClick={vi.fn()}
+      />,
+    );
 
     const badge = screen.getByText('Safety');
     expect(badge).toHaveClass('bg-blue-200', 'text-blue-800');
@@ -108,7 +156,11 @@ describe('FlaggedPromptsList', () => {
     const selected = prompts[1];
 
     const { container } = render(
-      <FlaggedPromptsList prompts={prompts} selectedPrompt={selected} onPromptClick={vi.fn()} />,
+      <FlaggedPromptsList
+        prompts={prompts}
+        selectedPrompt={selected}
+        onPromptClick={vi.fn()}
+      />,
     );
 
     const highlightedRows = container.querySelectorAll('.bg-gray-100');

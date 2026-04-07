@@ -31,12 +31,15 @@ export interface ExplorePageContextValue {
   setDefaultMentorsLoading: (isLoading: boolean) => void;
 }
 
-export const ExplorePageContext = React.createContext<ExplorePageContextValue | null>(null);
+export const ExplorePageContext =
+  React.createContext<ExplorePageContextValue | null>(null);
 
 export function useExplorePageContext() {
   const context = React.useContext(ExplorePageContext);
   if (!context) {
-    throw new Error('useExplorePageContext must be used within ExplorePageContextProvider');
+    throw new Error(
+      'useExplorePageContext must be used within ExplorePageContextProvider',
+    );
   }
   return context;
 }

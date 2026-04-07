@@ -10,7 +10,10 @@ const mockDispatch = vi.fn();
 const mockHandle402Error = vi.fn();
 
 // Next.js navigation mocks – must be hoisted before the component import
-let mockParams: Record<string, string> = { tenantKey: 'tenant123', mentorId: 'mentor456' };
+let mockParams: Record<string, string> = {
+  tenantKey: 'tenant123',
+  mentorId: 'mentor456',
+};
 let mockPathname = '/';
 let mockSearchParams = new URLSearchParams();
 let mockRouter = { push: mockPush, replace: mockReplace };
@@ -111,7 +114,8 @@ vi.mock('@/hooks/subscription/use-402-error-check', () => ({
 }));
 
 vi.mock('@/hooks/subscription/constants', () => ({
-  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE: 'You do not have enough credits to proceed.',
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
+    'You do not have enough credits to proceed.',
 }));
 
 // ── lib mocks ───────────────────────────────────────────────────────────────
@@ -133,8 +137,10 @@ vi.mock('@/lib/utils', () => ({
       removeItem: vi.fn(),
     }),
   },
-  saveUserObjectToLocalStorage: (...args: unknown[]) => mockSaveUserObjectToLocalStorage(...args),
-  sendMessageToParentWebsite: (...args: unknown[]) => mockSendMessageToParentWebsite(...args),
+  saveUserObjectToLocalStorage: (...args: unknown[]) =>
+    mockSaveUserObjectToLocalStorage(...args),
+  sendMessageToParentWebsite: (...args: unknown[]) =>
+    mockSendMessageToParentWebsite(...args),
   hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
@@ -144,6 +150,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     dmUrl: () => 'https://dm.test',
     lmsUrl: () => 'https://lms.test',
+    legacyLmsUrl: () => 'https://legacy-lms.test',
     authUrl: () => 'https://auth.test',
     mainTenantKey: () => 'main',
     mentorUrl: () => 'https://mentor.test',
@@ -167,7 +174,10 @@ vi.mock('@/lib/handlers', () => ({
 }));
 
 vi.mock('@/features/rbac/rbac-slice', () => ({
-  updateRbacPermissions: (payload: unknown) => ({ type: 'rbac/update', payload }),
+  updateRbacPermissions: (payload: unknown) => ({
+    type: 'rbac/update',
+    payload,
+  }),
 }));
 
 // ── data-layer ──────────────────────────────────────────────────────────────
@@ -220,7 +230,9 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       pendingIframeMessages = [];
     }
   },
-  TimeTrackingProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  TimeTrackingProvider: ({ children }: { children?: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // ── External providers – capture their props so we can exercise callbacks ───
@@ -230,9 +242,12 @@ let capturedTenantProviderProps: Record<string, unknown> = {};
 let capturedMentorProviderProps: Record<string, unknown> = {};
 
 // Callbacks to invoke on provider props during render (for testing closure-captured values)
-let authProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> = [];
-let tenantProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> = [];
-let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> = [];
+let authProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
+  [];
+let tenantProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
+  [];
+let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
+  [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
@@ -439,8 +454,12 @@ describe('Providers', () => {
       expect(mockInitializeDataLayer).toHaveBeenCalledWith(
         'https://dm.test',
         'https://lms.test',
+        'https://legacy-lms.test',
         expect.anything(),
-        expect.objectContaining({ 401: expect.any(Function), 402: expect.any(Function) }),
+        expect.objectContaining({
+          401: expect.any(Function),
+          402: expect.any(Function),
+        }),
       );
     });
 
@@ -460,9 +479,13 @@ describe('Providers', () => {
 
     it('401 handler redirects to auth spa', () => {
       renderProviders();
-      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[3];
+      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
       errorHandlers?.['401']();
-      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(undefined, undefined, true);
+      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        true,
+      );
     });
 
     it('401 handler skips redirect in Tauri offline mode', () => {
@@ -471,7 +494,7 @@ describe('Providers', () => {
       // Even though Tauri offline would normally short-circuit the render,
       // we test the 401 handler in isolation
       renderProviders();
-      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[3];
+      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
       errorHandlers?.['401']();
       // In Tauri offline the redirect should not happen
       expect(mockRedirectToAuthSpa).not.toHaveBeenCalled();
@@ -479,7 +502,7 @@ describe('Providers', () => {
 
     it('402 handler calls handle402Error', () => {
       renderProviders();
-      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[3];
+      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
       errorHandlers?.['402']();
       expect(mockHandle402Error).toHaveBeenCalledWith({
         error: 'You do not have enough credits to proceed.',
@@ -571,7 +594,8 @@ describe('Providers', () => {
       mockIsOfflineServerOrigin = true;
       renderProviders();
       const tauriLogs = consoleSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'string' && call[0].includes('[Providers]'),
+        (call) =>
+          typeof call[0] === 'string' && call[0].includes('[Providers]'),
       );
       expect(tauriLogs.length).toBeGreaterThan(0);
       consoleSpy.mockRestore();
@@ -582,7 +606,8 @@ describe('Providers', () => {
       mockIsTauriApp = true;
       renderProviders();
       const tauriLogs = consoleSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'string' && call[0].includes('[Providers]'),
+        (call) =>
+          typeof call[0] === 'string' && call[0].includes('[Providers]'),
       );
       expect(tauriLogs.length).toBeGreaterThan(0);
       consoleSpy.mockRestore();
@@ -612,7 +637,9 @@ describe('Providers', () => {
       // Queue a message with axd_token to be processed by the defaultHandler during render
       pendingIframeMessages = [{ axd_token: 'test-token' }];
       renderProviders();
-      expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith({ axd_token: 'test-token' });
+      expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith({
+        axd_token: 'test-token',
+      });
     });
 
     it('default handler does nothing when axd_token is absent', () => {
@@ -645,16 +672,23 @@ describe('Providers', () => {
 
     it('redirectToAuthSpa callback calls the real function', () => {
       renderProviders();
-      const redirectFn = capturedAuthProviderProps.redirectToAuthSpa as Function;
+      const redirectFn =
+        capturedAuthProviderProps.redirectToAuthSpa as Function;
       redirectFn('redirect', 'platform', true, false);
-      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('redirect', 'platform', true, false);
+      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(
+        'redirect',
+        'platform',
+        true,
+        false,
+      );
     });
 
     it('redirectToAuthSpa callback is no-op in Tauri offline mode', () => {
       // Need to test the callback in offline mode – but offline mode renders different JSX
       // Instead, we test the hasNonExpiredAuthToken callback
       renderProviders();
-      const hasTokenFn = capturedAuthProviderProps.hasNonExpiredAuthToken as Function;
+      const hasTokenFn =
+        capturedAuthProviderProps.hasNonExpiredAuthToken as Function;
       expect(hasTokenFn()).toBe(true); // calls mockHasNonExpiredAuthToken which returns true
     });
 
@@ -662,7 +696,9 @@ describe('Providers', () => {
       mockSearchParams = new URLSearchParams('foo=bar');
       mockPathname = '/platform/t1/m1';
       renderProviders();
-      expect(capturedAuthProviderProps.pathname).toBe('/platform/t1/m1?foo=bar');
+      expect(capturedAuthProviderProps.pathname).toBe(
+        '/platform/t1/m1?foo=bar',
+      );
     });
 
     it('passes token from search params', () => {
@@ -691,7 +727,8 @@ describe('Providers', () => {
   describe('TenantProvider configuration', () => {
     it('passes saveUserTokens that calls individual save functions', () => {
       renderProviders();
-      const saveUserTokensFn = capturedTenantProviderProps.saveUserTokens as Function;
+      const saveUserTokensFn =
+        capturedTenantProviderProps.saveUserTokens as Function;
       saveUserTokensFn({
         axd_token: { token: 'axd-tok', expires: 'axd-exp' },
         dm_token: { token: 'dm-tok', expires: 'dm-exp' },
@@ -704,14 +741,20 @@ describe('Providers', () => {
 
     it('handleTenantSwitch calls the real handleTenantSwitch', async () => {
       renderProviders();
-      const handleSwitchFn = capturedTenantProviderProps.handleTenantSwitch as Function;
+      const handleSwitchFn =
+        capturedTenantProviderProps.handleTenantSwitch as Function;
       await handleSwitchFn('new-tenant', true, true);
-      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant', true, undefined);
+      expect(mockHandleTenantSwitch).toHaveBeenCalledWith(
+        'new-tenant',
+        true,
+        undefined,
+      );
     });
 
     it('handleTenantSwitch uses mentorUrl when useCurrentDomain is false', async () => {
       renderProviders();
-      const handleSwitchFn = capturedTenantProviderProps.handleTenantSwitch as Function;
+      const handleSwitchFn =
+        capturedTenantProviderProps.handleTenantSwitch as Function;
       await handleSwitchFn('new-tenant', false, false);
       expect(mockHandleTenantSwitch).toHaveBeenCalledWith(
         'new-tenant',
@@ -722,7 +765,8 @@ describe('Providers', () => {
 
     it('redirectToAuthSpa callback calls the real function', () => {
       renderProviders();
-      const redirectFn = capturedTenantProviderProps.redirectToAuthSpa as Function;
+      const redirectFn =
+        capturedTenantProviderProps.redirectToAuthSpa as Function;
       redirectFn('r', 'p', true, false);
       expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('r', 'p', true, false);
     });
@@ -759,7 +803,8 @@ describe('Providers', () => {
 
     it('redirectToNoMentorsPage navigates to explore page', () => {
       renderProviders();
-      const fn = capturedMentorProviderProps.redirectToNoMentorsPage as Function;
+      const fn =
+        capturedMentorProviderProps.redirectToNoMentorsPage as Function;
       fn();
       expect(mockPush).toHaveBeenCalledWith('/platform/test-tenant/explore');
     });
@@ -767,7 +812,8 @@ describe('Providers', () => {
     it('redirectToNoMentorsPage does nothing in embed mode', () => {
       mockEmbedMode = true;
       renderProviders();
-      const fn = capturedMentorProviderProps.redirectToNoMentorsPage as Function;
+      const fn =
+        capturedMentorProviderProps.redirectToNoMentorsPage as Function;
       fn();
       expect(mockPush).not.toHaveBeenCalled();
     });
@@ -795,7 +841,8 @@ describe('Providers', () => {
 
     it('onLoadMentorsPermissions dispatches updateRbacPermissions', () => {
       renderProviders();
-      const fn = capturedMentorProviderProps.onLoadMentorsPermissions as Function;
+      const fn =
+        capturedMentorProviderProps.onLoadMentorsPermissions as Function;
       fn({ mentors: {}, mentor: {} });
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'rbac/update',
@@ -805,16 +852,22 @@ describe('Providers', () => {
 
     it('onLoadMentorsPermissions dispatches empty object when undefined', () => {
       renderProviders();
-      const fn = capturedMentorProviderProps.onLoadMentorsPermissions as Function;
+      const fn =
+        capturedMentorProviderProps.onLoadMentorsPermissions as Function;
       fn(undefined);
-      expect(mockDispatch).toHaveBeenCalledWith({ type: 'rbac/update', payload: {} });
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/update',
+        payload: {},
+      });
     });
 
     it('handleMentorNotFound navigates to error page', async () => {
       renderProviders();
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
       await fn();
-      expect(mockPush).toHaveBeenCalledWith('/error/404?errorType=mentorNotFound');
+      expect(mockPush).toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
     });
 
     it('handleMentorNotFound includes existing search params', async () => {
@@ -822,7 +875,9 @@ describe('Providers', () => {
       renderProviders();
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
       await fn();
-      expect(mockPush).toHaveBeenCalledWith('/error/404?errorType=mentorNotFound&foo=bar');
+      expect(mockPush).toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound&foo=bar',
+      );
     });
 
     it('onAuthSuccess sends message to parent', () => {
@@ -849,7 +904,9 @@ describe('Providers', () => {
       fn();
       expect(mockReplace).toHaveBeenCalled();
       vi.advanceTimersByTime(1100);
-      expect(toast.success).toHaveBeenCalledWith('Mentor switched successfully');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Mentor switched successfully',
+      );
       vi.useRealTimers();
     });
 
@@ -871,16 +928,24 @@ describe('Providers', () => {
   describe('onLoadPlatformPermissions', () => {
     it('dispatches rbac permissions', () => {
       renderProviders();
-      const fn = capturedTenantProviderProps.onLoadPlatformPermissions as Function;
+      const fn =
+        capturedTenantProviderProps.onLoadPlatformPermissions as Function;
       fn({ mentors: {} });
-      expect(mockDispatch).toHaveBeenCalledWith({ type: 'rbac/update', payload: { mentors: {} } });
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/update',
+        payload: { mentors: {} },
+      });
     });
 
     it('dispatches empty object when undefined', () => {
       renderProviders();
-      const fn = capturedTenantProviderProps.onLoadPlatformPermissions as Function;
+      const fn =
+        capturedTenantProviderProps.onLoadPlatformPermissions as Function;
       fn(undefined);
-      expect(mockDispatch).toHaveBeenCalledWith({ type: 'rbac/update', payload: {} });
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/update',
+        payload: {},
+      });
     });
   });
 
@@ -1067,7 +1132,9 @@ describe('Providers', () => {
 
       it('returns false when getMentorPublicSettings throws', async () => {
         mockUnwrap.mockRejectedValueOnce(new Error('API error'));
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
         renderProviders();
         const fn = getMiddlewareFn('platform');
         expect(await fn!()).toBe(false);
@@ -1083,7 +1150,9 @@ describe('Providers', () => {
       mockIsTauriApp = true;
       mockIsTauriOfflineMode = true;
       renderProviders();
-      expect(capturedMentorProviderProps.redirectToNoMentorsPage).toBeUndefined();
+      expect(
+        capturedMentorProviderProps.redirectToNoMentorsPage,
+      ).toBeUndefined();
     });
   });
 
@@ -1093,7 +1162,8 @@ describe('Providers', () => {
     it('renders children without MentorProvider when setUseMentorProvider sets false', () => {
       renderProviders(<div>Direct Child</div>);
       // Call setUseMentorProvider(false) via TenantProvider prop
-      const setUseMentorProvider = capturedTenantProviderProps.setUseMentorProvider as Function;
+      const setUseMentorProvider =
+        capturedTenantProviderProps.setUseMentorProvider as Function;
       expect(setUseMentorProvider).toBeDefined();
     });
   });
@@ -1149,7 +1219,8 @@ describe('Providers', () => {
       const { useSelector } = await import('react-redux');
       (useSelector as unknown as Mock).mockReturnValue(true);
       renderProviders();
-      const handleSwitchFn = capturedTenantProviderProps.handleTenantSwitch as Function;
+      const handleSwitchFn =
+        capturedTenantProviderProps.handleTenantSwitch as Function;
       await handleSwitchFn('new-tenant', true, true);
       expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
       (useSelector as unknown as Mock).mockReturnValue(false);
@@ -1287,7 +1358,8 @@ describe('Providers', () => {
   describe('useMentorProvider toggle', () => {
     it('renders children without MentorProvider when setUseMentorProvider(false) is called', () => {
       renderProviders(<div>Direct Child</div>);
-      const setUseMentorProviderFn = capturedTenantProviderProps.setUseMentorProvider as Function;
+      const setUseMentorProviderFn =
+        capturedTenantProviderProps.setUseMentorProvider as Function;
       expect(setUseMentorProviderFn).toBeDefined();
       // Trigger the state change
       act(() => {
@@ -1397,7 +1469,8 @@ describe('Providers', () => {
       renderProviders();
       const tauriLogs = consoleSpy.mock.calls.filter(
         (call) =>
-          typeof call[0] === 'string' && call[0].includes('[Providers] Tauri offline mode check'),
+          typeof call[0] === 'string' &&
+          call[0].includes('[Providers] Tauri offline mode check'),
       );
       expect(tauriLogs.length).toBe(0);
       consoleSpy.mockRestore();
@@ -1413,7 +1486,8 @@ describe('Providers', () => {
       renderProviders();
       const tauriLogs = consoleSpy.mock.calls.filter(
         (call) =>
-          typeof call[0] === 'string' && call[0].includes('[Providers] Tauri offline mode check'),
+          typeof call[0] === 'string' &&
+          call[0].includes('[Providers] Tauri offline mode check'),
       );
       expect(tauriLogs.length).toBe(0);
       localStorage.getItem = origGetItem;
@@ -1426,16 +1500,28 @@ describe('Providers', () => {
   describe('AuthProvider redirectToAuthSpa default arguments', () => {
     it('calls redirectToAuthSpa with default arguments when called with no args', () => {
       renderProviders();
-      const redirectFn = capturedAuthProviderProps.redirectToAuthSpa as Function;
+      const redirectFn =
+        capturedAuthProviderProps.redirectToAuthSpa as Function;
       redirectFn();
-      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(undefined, undefined, false, true);
+      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        false,
+        true,
+      );
     });
 
     it('calls redirectToAuthSpa with partial default arguments', () => {
       renderProviders();
-      const redirectFn = capturedAuthProviderProps.redirectToAuthSpa as Function;
+      const redirectFn =
+        capturedAuthProviderProps.redirectToAuthSpa as Function;
       redirectFn('/redirect');
-      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('/redirect', undefined, false, true);
+      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(
+        '/redirect',
+        undefined,
+        false,
+        true,
+      );
     });
   });
 
@@ -1444,10 +1530,15 @@ describe('Providers', () => {
   describe('TenantProvider handleTenantSwitch default args', () => {
     it('uses default useCurrentDomain=true when not provided', async () => {
       renderProviders();
-      const handleSwitchFn = capturedTenantProviderProps.handleTenantSwitch as Function;
+      const handleSwitchFn =
+        capturedTenantProviderProps.handleTenantSwitch as Function;
       await handleSwitchFn('new-tenant', true);
       // useCurrentDomain defaults to true, so mentorUrl should NOT be passed
-      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant', true, undefined);
+      expect(mockHandleTenantSwitch).toHaveBeenCalledWith(
+        'new-tenant',
+        true,
+        undefined,
+      );
     });
   });
 
@@ -1474,7 +1565,9 @@ describe('Providers', () => {
     });
 
     it('invokes AuthProvider hasNonExpiredAuthToken during render', () => {
-      authProviderCallbacksToInvoke = [{ name: 'hasNonExpiredAuthToken', args: [] }];
+      authProviderCallbacksToInvoke = [
+        { name: 'hasNonExpiredAuthToken', args: [] },
+      ];
       renderProviders();
       expect(mockHasNonExpiredAuthToken).toHaveBeenCalled();
     });
@@ -1484,35 +1577,50 @@ describe('Providers', () => {
         { name: 'redirectToAuthSpa', args: ['/', undefined, false, true] },
       ];
       renderProviders();
-      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('/', undefined, false, true);
+      expect(mockRedirectToAuthSpa).toHaveBeenCalledWith(
+        '/',
+        undefined,
+        false,
+        true,
+      );
     });
 
     it('invokes MentorProvider redirectToAuthSpa during render', () => {
-      mentorProviderCallbacksToInvoke = [{ name: 'redirectToAuthSpa', args: [] }];
+      mentorProviderCallbacksToInvoke = [
+        { name: 'redirectToAuthSpa', args: [] },
+      ];
       renderProviders();
       expect(mockRedirectToAuthSpa).toHaveBeenCalled();
     });
 
     it('invokes MentorProvider redirectToNoMentorsPage during render', () => {
-      mentorProviderCallbacksToInvoke = [{ name: 'redirectToNoMentorsPage', args: [] }];
+      mentorProviderCallbacksToInvoke = [
+        { name: 'redirectToNoMentorsPage', args: [] },
+      ];
       renderProviders();
       expect(mockPush).toHaveBeenCalledWith('/platform/test-tenant/explore');
     });
 
     it('invokes MentorProvider redirectToCreateMentor during render', () => {
-      mentorProviderCallbacksToInvoke = [{ name: 'redirectToCreateMentor', args: [] }];
+      mentorProviderCallbacksToInvoke = [
+        { name: 'redirectToCreateMentor', args: [] },
+      ];
       renderProviders();
       expect(mockPush).toHaveBeenCalledWith('/create-mentor');
     });
 
     it('invokes MentorProvider redirectToMentor during render', () => {
-      mentorProviderCallbacksToInvoke = [{ name: 'redirectToMentor', args: ['t', 'm'] }];
+      mentorProviderCallbacksToInvoke = [
+        { name: 'redirectToMentor', args: ['t', 'm'] },
+      ];
       renderProviders();
       expect(mockPush).toHaveBeenCalledWith('/platform/t/m');
     });
 
     it('invokes MentorProvider handleMentorNotFound during render', async () => {
-      mentorProviderCallbacksToInvoke = [{ name: 'handleMentorNotFound', args: [] }];
+      mentorProviderCallbacksToInvoke = [
+        { name: 'handleMentorNotFound', args: [] },
+      ];
       await act(async () => {
         render(
           <Providers>
@@ -1520,7 +1628,9 @@ describe('Providers', () => {
           </Providers>,
         );
       });
-      expect(mockPush).toHaveBeenCalledWith('/error/404?errorType=mentorNotFound');
+      expect(mockPush).toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
     });
   });
 });

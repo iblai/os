@@ -26,13 +26,15 @@ export function useExportChatHistory() {
         },
         autoDownload: true,
         extraRequestBody: {
-          end_date: filters.dateRange?.to ? format(filters.dateRange?.to, 'yyyy-MM-dd') : undefined,
+          end_date: filters.dateRange?.to
+            ? format(filters.dateRange?.to, 'yyyy-MM-dd')
+            : undefined,
           start_date: filters.dateRange?.from
             ? format(filters.dateRange?.from, 'yyyy-MM-dd')
             : undefined,
           sentiment: filters.sentiment,
           topics: filters.topics,
-          source:window.location.origin
+          source: window.location.origin,
         },
       });
     },

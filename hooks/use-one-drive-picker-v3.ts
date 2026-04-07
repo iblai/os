@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
-import { useAddTrainingDocumentMutation, useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useAddTrainingDocumentMutation,
+  useLazyGetCredentialsQuery,
+} from '@iblai/iblai-js/data-layer';
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from './use-user';
@@ -71,7 +74,10 @@ const useOneDrivePicker = () => {
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -87,7 +93,8 @@ const useOneDrivePicker = () => {
       advanced: {
         redirectUri: getFullDomain(),
         // only show folders, images, word files, powerpoint files, excel files, txt, PDF, csv, HTML, XML
-        filter: 'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
+        filter:
+          'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
       },
       success: handleSuccess,
       cancel: function () {

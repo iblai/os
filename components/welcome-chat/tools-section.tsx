@@ -28,7 +28,8 @@ const tools: Tool[] = [
   {
     id: 'quiz',
     name: 'Quiz',
-    description: 'Generate a lesson plan based on standard, topic, or objective.',
+    description:
+      'Generate a lesson plan based on standard, topic, or objective.',
     icon: '/icons/quiz.svg',
     updatedDate: 'February 13, 2025',
     categories: ['Content', 'Questions', 'Student Success'],
@@ -66,7 +67,8 @@ const tools: Tool[] = [
   {
     id: 'syllabus',
     name: 'Syllabus',
-    description: 'Generate a unit plan based on any topic and academic standards.',
+    description:
+      'Generate a unit plan based on any topic and academic standards.',
     icon: '/icons/syllabus.svg',
     updatedDate: 'February 13, 2025',
     isFavorite: true,
@@ -110,7 +112,9 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
   const [sortBy, setSortBy] = useState<SortOption>('most-used');
   const categoryRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
-  const filteredTools = tools.filter((tool) => tool.categories.includes(selectedCategory));
+  const filteredTools = tools.filter((tool) =>
+    tool.categories.includes(selectedCategory),
+  );
 
   // Sort tools based on selected sort option
   const sortedTools = [...filteredTools].sort((a, b) => {
@@ -118,7 +122,9 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
       case 'most-used':
         return b.usageCount - a.usageCount;
       case 'latest':
-        return new Date(b.updatedDate).getTime() - new Date(a.updatedDate).getTime();
+        return (
+          new Date(b.updatedDate).getTime() - new Date(a.updatedDate).getTime()
+        );
       case 'alphabetical':
         return a.name.localeCompare(b.name);
       case 'favorites':
@@ -149,7 +155,10 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
       const newPosition =
         direction === 'left'
           ? Math.max(0, scrollPosition - scrollAmount)
-          : Math.min(container.scrollWidth - container.clientWidth, scrollPosition + scrollAmount);
+          : Math.min(
+              container.scrollWidth - container.clientWidth,
+              scrollPosition + scrollAmount,
+            );
 
       container.scrollTo({ left: newPosition, behavior: 'smooth' });
       setScrollPosition(newPosition);
@@ -181,23 +190,26 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto w-full max-w-6xl px-4">
+      <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Tools</h2>
-        <Button variant="ghost" className="text-blue-600 hover:text-blue-700 p-0 h-auto min-h-6">
+        <Button
+          variant="ghost"
+          className="h-auto min-h-6 p-0 text-blue-600 hover:text-blue-700"
+        >
           Browse All
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
 
       {/* Category Filters and Filter Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {/* Scroll Left Button - visible on small screens */}
           <Button
             variant="ghost"
             size="sm"
-            className="md:hidden flex-shrink-0 p-1 h-8 w-8"
+            className="h-8 w-8 flex-shrink-0 p-1 md:hidden"
             onClick={() => scrollCategories('left')}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -205,7 +217,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
 
           <div
             id="categories-container"
-            className="flex items-center gap-1 overflow-x-auto scrollbar-hide scroll-smooth flex-1"
+            className="scrollbar-hide flex flex-1 items-center gap-1 overflow-x-auto scroll-smooth"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {categories.map((category) => (
@@ -216,17 +228,17 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
                 }}
                 variant="ghost"
                 size="sm"
-                className={`whitespace-nowrap flex-shrink-0 relative px-3 py-2 ${
+                className={`relative flex-shrink-0 px-3 py-2 whitespace-nowrap ${
                   selectedCategory === category
-                    ? 'text-[#38A1E5] hover:text-[#38A1E5] hover:bg-transparent'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'text-[#38A1E5] hover:bg-transparent hover:text-[#38A1E5]'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
                 onClick={() => setSelectedCategory(category)}
               >
                 {category}
                 {selectedCategory === category && (
                   <div
-                    className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#38A1E5] rounded-full"
+                    className="absolute right-3 bottom-0 left-3 h-0.5 rounded-full bg-[#38A1E5]"
                     style={{
                       width: `${category.length * 0.6}em`,
                     }}
@@ -240,7 +252,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="md:hidden flex-shrink-0 p-1 h-8 w-8"
+            className="h-8 w-8 flex-shrink-0 p-1 md:hidden"
             onClick={() => scrollCategories('right')}
           >
             <ChevronRight className="h-4 w-4" />
@@ -249,39 +261,50 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
 
         <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-4 flex-shrink-0 bg-transparent">
-              <Filter className="h-4 w-4 mr-2" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-4 flex-shrink-0 bg-transparent"
+            >
+              <Filter className="mr-2 h-4 w-4" />
               Filter
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {(['most-used', 'latest', 'alphabetical', 'favorites'] as SortOption[]).map(
-              (option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => handleSortChange(option)}
-                  className="flex items-center justify-between cursor-pointer"
-                >
-                  <span>{getSortLabel(option)}</span>
-                  {sortBy === option && <Check className="h-4 w-4 text-[#38A1E5]" />}
-                </DropdownMenuItem>
-              ),
-            )}
+            {(
+              [
+                'most-used',
+                'latest',
+                'alphabetical',
+                'favorites',
+              ] as SortOption[]
+            ).map((option) => (
+              <DropdownMenuItem
+                key={option}
+                onClick={() => handleSortChange(option)}
+                className="flex cursor-pointer items-center justify-between"
+              >
+                <span>{getSortLabel(option)}</span>
+                {sortBy === option && (
+                  <Check className="h-4 w-4 text-[#38A1E5]" />
+                )}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       {/* Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {sortedTools.map((tool) => (
           <Card
             key={tool.id}
-            className="cursor-pointer shadow-xs hover:shadow-sm transition-shadow duration-200 bg-[#F5F8FF] border border-[#D0E0FF] h-full relative"
+            className="relative h-full cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] shadow-xs transition-shadow duration-200 hover:shadow-sm"
             onClick={() => handleToolCardClick(tool.id)} // Use the new handler
           >
-            <CardContent className="p-4 h-full">
-              <div className="flex items-start gap-3 h-full">
-                <div className="flex items-center justify-center w-12 h-12 bg-[#D0E0FF] rounded-lg flex-shrink-0">
+            <CardContent className="h-full p-4">
+              <div className="flex h-full items-start gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
                   <Image
                     src={tool.icon || '/placeholder.svg'}
                     alt={tool.name}
@@ -294,29 +317,35 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
                     }}
                   />
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-gray-900 text-sm">{tool.name}</h3>
+                <div className="flex h-full min-w-0 flex-1 flex-col">
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {tool.name}
+                    </h3>
                     <button
                       onClick={(e) => toggleFavorite(tool.id, e)}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="rounded p-1 transition-colors hover:bg-gray-100"
                     >
                       <Star
                         className={`h-4 w-4 ${
                           favorites.has(tool.id)
-                            ? 'text-[#38A1E5] fill-current'
+                            ? 'fill-current text-[#38A1E5]'
                             : 'text-gray-400 hover:text-[#38A1E5]'
                         }`}
                       />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600 leading-relaxed flex-1 mb-2">
+                  <p className="mb-2 flex-1 text-sm leading-relaxed text-gray-600">
                     {tool.description}
                   </p>
-                  <div className="flex items-center justify-between mt-auto">
-                    <p className="text-xs text-gray-400">Updated on {tool.updatedDate}</p>
+                  <div className="mt-auto flex items-center justify-between">
+                    <p className="text-xs text-gray-400">
+                      Updated on {tool.updatedDate}
+                    </p>
                     {sortBy === 'most-used' && (
-                      <p className="text-xs text-gray-500">{tool.usageCount} uses</p>
+                      <p className="text-xs text-gray-500">
+                        {tool.usageCount} uses
+                      </p>
                     )}
                   </div>
                 </div>

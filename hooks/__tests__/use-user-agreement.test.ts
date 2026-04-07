@@ -11,7 +11,6 @@ vi.mock('../use-user', () => ({
 const mockUseParams = vi.fn();
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
-  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock('sonner', () => ({
@@ -32,7 +31,8 @@ vi.mock('@/constants/disclaimer', () => ({
 const mockUseGetDisclaimersQuery = vi.fn();
 const mockAgreeToDisclaimer = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetDisclaimersQuery: (...args: unknown[]) => mockUseGetDisclaimersQuery(...args),
+  useGetDisclaimersQuery: (...args: unknown[]) =>
+    mockUseGetDisclaimersQuery(...args),
   useAgreeToDisclaimerMutation: () => [mockAgreeToDisclaimer],
 }));
 
@@ -40,7 +40,10 @@ describe('useUserAgreement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUsername.mockReturnValue('testuser');
-    mockUseParams.mockReturnValue({ mentorId: 'mentor-1', tenantKey: 'tenant-1' });
+    mockUseParams.mockReturnValue({
+      mentorId: 'mentor-1',
+      tenantKey: 'tenant-1',
+    });
     mockUseGetDisclaimersQuery.mockReturnValue({
       data: null,
       isLoading: false,
@@ -67,7 +70,9 @@ describe('useUserAgreement', () => {
 
       const { result } = renderHook(() => useUserAgreement());
 
-      expect(result.current.userAgreement.content).toBe('Default disclaimer content');
+      expect(result.current.userAgreement.content).toBe(
+        'Default disclaimer content',
+      );
       expect(result.current.userAgreement.active).toBe(false);
       expect(result.current.hasUserAgreement).toBe(false);
     });
@@ -75,7 +80,14 @@ describe('useUserAgreement', () => {
     it('should return user agreement when disclaimers exist', () => {
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 1, content: 'Custom disclaimer', active: true, has_agreed: false }],
+          results: [
+            {
+              id: 1,
+              content: 'Custom disclaimer',
+              active: true,
+              has_agreed: false,
+            },
+          ],
         },
         isLoading: false,
       });
@@ -92,7 +104,14 @@ describe('useUserAgreement', () => {
     it('should return true when user has already agreed', () => {
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 1, content: 'Custom disclaimer', active: true, has_agreed: true }],
+          results: [
+            {
+              id: 1,
+              content: 'Custom disclaimer',
+              active: true,
+              has_agreed: true,
+            },
+          ],
         },
         isLoading: false,
       });
@@ -110,7 +129,14 @@ describe('useUserAgreement', () => {
       });
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 123, content: 'Custom disclaimer', active: true, has_agreed: false }],
+          results: [
+            {
+              id: 123,
+              content: 'Custom disclaimer',
+              active: true,
+              has_agreed: false,
+            },
+          ],
         },
         isLoading: false,
       });
@@ -132,13 +158,22 @@ describe('useUserAgreement', () => {
     });
 
     it('should handle error when agreeing fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockAgreeToDisclaimer.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('API Error')),
       });
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 123, content: 'Custom disclaimer', active: true, has_agreed: false }],
+          results: [
+            {
+              id: 123,
+              content: 'Custom disclaimer',
+              active: true,
+              has_agreed: false,
+            },
+          ],
         },
         isLoading: false,
       });
@@ -149,13 +184,17 @@ describe('useUserAgreement', () => {
         await result.current.handleDisclaimerAgree();
       });
 
-      expect(mockToast.error).toHaveBeenCalledWith('Failed to update user agreement status');
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Failed to update user agreement status',
+      );
       expect(result.current.isAgreeing).toBe(false);
       consoleSpy.mockRestore();
     });
 
     it('should not call API when no user agreement ID exists', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: { results: [] },
         isLoading: false,
@@ -184,7 +223,10 @@ describe('useUserAgreement', () => {
       const { result } = renderHook(() => useUserAgreement());
 
       act(() => {
-        result.current.checkAgreementAndExecute('test content', executeCallback);
+        result.current.checkAgreementAndExecute(
+          'test content',
+          executeCallback,
+        );
       });
 
       expect(executeCallback).toHaveBeenCalledWith('test content');
@@ -194,7 +236,9 @@ describe('useUserAgreement', () => {
     it('should show modal when user has not agreed to disclaimer', () => {
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 1, content: 'Disclaimer', active: true, has_agreed: false }],
+          results: [
+            { id: 1, content: 'Disclaimer', active: true, has_agreed: false },
+          ],
         },
         isLoading: false,
       });
@@ -203,7 +247,10 @@ describe('useUserAgreement', () => {
       const { result } = renderHook(() => useUserAgreement());
 
       act(() => {
-        result.current.checkAgreementAndExecute('test content', executeCallback);
+        result.current.checkAgreementAndExecute(
+          'test content',
+          executeCallback,
+        );
       });
 
       expect(executeCallback).not.toHaveBeenCalled();
@@ -214,7 +261,9 @@ describe('useUserAgreement', () => {
     it('should execute immediately when user has agreed to disclaimer', () => {
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 1, content: 'Disclaimer', active: true, has_agreed: true }],
+          results: [
+            { id: 1, content: 'Disclaimer', active: true, has_agreed: true },
+          ],
         },
         isLoading: false,
       });
@@ -223,7 +272,10 @@ describe('useUserAgreement', () => {
       const { result } = renderHook(() => useUserAgreement());
 
       act(() => {
-        result.current.checkAgreementAndExecute('test content', executeCallback);
+        result.current.checkAgreementAndExecute(
+          'test content',
+          executeCallback,
+        );
       });
 
       expect(executeCallback).toHaveBeenCalledWith('test content');
@@ -234,7 +286,9 @@ describe('useUserAgreement', () => {
     it('should execute pending content and clear it', () => {
       mockUseGetDisclaimersQuery.mockReturnValue({
         data: {
-          results: [{ id: 1, content: 'Disclaimer', active: true, has_agreed: false }],
+          results: [
+            { id: 1, content: 'Disclaimer', active: true, has_agreed: false },
+          ],
         },
         isLoading: false,
       });

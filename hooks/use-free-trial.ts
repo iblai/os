@@ -1,7 +1,7 @@
-import { config } from "@/lib/config";
-import { useCurrentTenant } from "./use-user";
+import { config } from '@/lib/config';
+import { useCurrentTenant } from './use-user';
 
-import { useGetAllTenants } from "./use-user";
+import { useGetAllTenants } from './use-user';
 
 export const useFreeTrial = () => {
   const { currentTenant } = useCurrentTenant();

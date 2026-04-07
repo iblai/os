@@ -5,7 +5,10 @@ import type { Artifact } from '@iblai/iblai-api';
 
 interface CanvasSendMessageHandlerProps {
   currentArtifact: Artifact | null;
-  sendMessage?: (text: string, options?: { visible?: boolean; artifact?: any }) => void;
+  sendMessage?: (
+    text: string,
+    options?: { visible?: boolean; artifact?: any },
+  ) => void;
   onMessageSent?: () => void;
 }
 
@@ -64,10 +67,16 @@ export function useCanvasSendMessageHandler({
       }
     };
 
-    window.addEventListener('canvas-send-message' as any, handleGlobalMessage as any);
+    window.addEventListener(
+      'canvas-send-message' as any,
+      handleGlobalMessage as any,
+    );
 
     return () => {
-      window.removeEventListener('canvas-send-message' as any, handleGlobalMessage as any);
+      window.removeEventListener(
+        'canvas-send-message' as any,
+        handleGlobalMessage as any,
+      );
     };
   }, [sendFullArtifactUpdate, currentArtifact]);
 
@@ -101,16 +110,25 @@ export function useCanvasUpdateDetector(
         event.detail.artifactId === currentArtifact.id &&
         event.detail.messageId !== lastProcessedMessageIdRef.current
       ) {
-        console.log('[Canvas] Received artifact update from chat:', event.detail);
+        console.log(
+          '[Canvas] Received artifact update from chat:',
+          event.detail,
+        );
         lastProcessedMessageIdRef.current = event.detail.messageId;
         onUpdate(event.detail.content);
       }
     };
 
-    window.addEventListener('artifact-updated' as any, handleArtifactUpdate as any);
+    window.addEventListener(
+      'artifact-updated' as any,
+      handleArtifactUpdate as any,
+    );
 
     return () => {
-      window.removeEventListener('artifact-updated' as any, handleArtifactUpdate as any);
+      window.removeEventListener(
+        'artifact-updated' as any,
+        handleArtifactUpdate as any,
+      );
     };
   }, [currentArtifact, onUpdate]);
 }

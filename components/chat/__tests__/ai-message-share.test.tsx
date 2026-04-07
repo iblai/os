@@ -18,7 +18,10 @@ vi.mock('@/hooks/use-copy-to-clipboard', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useUpdateChatSessionSharedMutation: () => [mockUpdateChatSession, { isLoading: false }],
+  useUpdateChatSessionSharedMutation: () => [
+    mockUpdateChatSession,
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -35,7 +38,9 @@ vi.mock('sonner', () => ({
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipTrigger: ({ children }: any) => <div>{children}</div>,
-  TooltipContent: ({ children }: any) => <div data-testid="tooltip-content">{children}</div>,
+  TooltipContent: ({ children }: any) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
 }));
 
 describe('AIMessageShare', () => {
@@ -72,7 +77,9 @@ describe('AIMessageShare', () => {
 
     await waitFor(() => {
       expect(mockCopy).toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalledWith('Share link copied to clipboard');
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Share link copied to clipboard',
+      );
     });
   });
 
@@ -91,7 +98,9 @@ describe('AIMessageShare', () => {
     });
 
     // Copy is called before the API call (for Safari clipboard gesture support)
-    expect(mockCopy).toHaveBeenCalledWith('http://localhost:3000/share/chat/session-123');
+    expect(mockCopy).toHaveBeenCalledWith(
+      'http://localhost:3000/share/chat/session-123',
+    );
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
