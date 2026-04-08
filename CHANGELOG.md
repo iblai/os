@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.8](https://github.com/iblai/mentorai/compare/v0.45.7...v0.45.8) (2026-04-08)
+
+### Tests
+
+* full pipeline — launch → OCI playwright tests → terminate ([5d89faa](https://github.com/iblai/mentorai/commit/5d89faa6fdf48e5279a3c1a5fe2ee10d79d90516))
+
 ## [0.45.7](https://github.com/iblai/mentorai/compare/v0.45.6...v0.45.7) (2026-04-08)
 
 ### Chores
