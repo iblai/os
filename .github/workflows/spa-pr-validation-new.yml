@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      stg-slot:
+        description: 'Stg slot (1-4) — skips domain-lock'
+        required: false
+        default: '1'
 
 run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test (AMI)'
 
@@ -22,7 +28,9 @@ jobs:
   # GATE: Detect what changed, decide what to build/test
   # ============================================================
   gate:
-    if: github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/')
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/'))
     runs-on: ubuntu-22.04
     environment: iblai.app
     outputs:
@@ -87,6 +95,7 @@ jobs:
   # ============================================================
   acquire-stg-slot:
     needs: [gate]
+    if: github.event_name != 'workflow_dispatch'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
@@ -286,14 +295,15 @@ jobs:
     needs: [gate, acquire-stg-slot, lint, build-app-image, check-prod-versions]
     if: >-
       always() &&
-      needs.acquire-stg-slot.result == 'success' &&
-      needs.lint.result == 'success' &&
+      (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch') &&
+      (needs.lint.result == 'success' || github.event_name == 'workflow_dispatch') &&
       needs.build-app-image.result != 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
       instance-id: ${{ steps.launch.outputs.instance-id }}
       instance-ip: ${{ steps.launch.outputs.instance-ip }}
+      stg-slot: ${{ steps.config.outputs.stg-slot }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
@@ -302,7 +312,11 @@ jobs:
       - name: Resolve stg config
         id: config
         run: |
-          SLOT="${{ needs.acquire-stg-slot.outputs.domain-number }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SLOT="${{ inputs.stg-slot }}"
+          else
+            SLOT="${{ needs.acquire-stg-slot.outputs.domain-number }}"
+          fi
           echo "Acquired stg slot: $SLOT"
 
           declare -A AMIS SUBNETS SGS TGS KEYS
@@ -317,6 +331,7 @@ jobs:
           echo "security-group-id=${SGS[$SLOT]}" >> $GITHUB_OUTPUT
           echo "target-group-arn=${TGS[$SLOT]}" >> $GITHUB_OUTPUT
           echo "key-pair-name=${KEYS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "stg-slot=$SLOT" >> $GITHUB_OUTPUT
 
       - name: Write SSH key
         run: |
@@ -467,7 +482,7 @@ jobs:
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
-      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
       pr-number: ${{ github.event.pull_request.number }}
@@ -487,7 +502,7 @@ jobs:
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
-      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
       pr-number: ${{ github.event.pull_request.number }}
@@ -507,7 +522,7 @@ jobs:
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
-      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
       pr-number: ${{ github.event.pull_request.number }}
@@ -527,7 +542,7 @@ jobs:
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
-      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
       pr-number: ${{ github.event.pull_request.number }}
@@ -617,7 +632,7 @@ jobs:
     with:
       action: release
       app-type: testing
-      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
 
   # ============================================================
   # TERMINATE INFRASTRUCTURE
