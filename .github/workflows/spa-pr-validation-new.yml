@@ -11,10 +11,10 @@ on:
         required: false
         default: '1'
 
-run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test (AMI)'
+run-name: '${{ github.event_name == ''workflow_dispatch'' && format(''Manual stg{0} Test'', inputs.stg-slot) || format(''PR #{0} - Mentor Test (AMI)'', github.event.pull_request.number) }}'
 
 concurrency:
-  group: pr-validation-mentor-ami-${{ github.event.pull_request.number }}
+  group: pr-validation-mentor-ami-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 permissions:
