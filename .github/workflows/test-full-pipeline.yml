@@ -124,17 +124,19 @@ jobs:
             --ssh-key ~/.ssh/deploy-key \
             --git-token ${{ secrets.GIT_TOKEN }}
 
-      - name: Deregister old targets and register new
+      - name: Register new target then deregister old
         run: |
           TG_ARN="${{ steps.config.outputs.target-group-arn }}"
           NEW_ID="${{ steps.launch.outputs.instance-id }}"
+          # Register new FIRST — prevents empty TG (ALB 503) if pipeline fails mid-step
+          aws elbv2 register-targets --target-group-arn "$TG_ARN" --targets Id=$NEW_ID,Port=80
+          echo "Registered $NEW_ID"
+          # Then deregister old targets to prevent split-brain routing
           OLD_TARGETS=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" --query "TargetHealthDescriptions[?Target.Id!='$NEW_ID'].Target.Id" --output text 2>/dev/null)
           for OLD_ID in $OLD_TARGETS; do
             echo "Deregistering: $OLD_ID"
             aws elbv2 deregister-targets --target-group-arn "$TG_ARN" --targets Id=$OLD_ID 2>/dev/null || true
           done
-          aws elbv2 register-targets --target-group-arn "$TG_ARN" --targets Id=$NEW_ID,Port=80
-          echo "Registered $NEW_ID"
 
       - name: Health check
         run: |
