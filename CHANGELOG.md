@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.11](https://github.com/iblai/mentorai/compare/v0.45.10...v0.45.11) (2026-04-08)
+
+### Bug Fixes
+
+* register new ALB target before deregistering old ([54bff2f](https://github.com/iblai/mentorai/commit/54bff2f94f93ff2e76a0f19f265c7b5bf6a6fc71))
+
 ## [0.45.10](https://github.com/iblai/mentorai/compare/v0.45.9...v0.45.10) (2026-04-08)
 
 ### Chores
