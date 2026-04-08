@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.45.9](https://github.com/iblai/mentorai/compare/v0.45.8...v0.45.9) (2026-04-08)
+
 ## [0.45.8](https://github.com/iblai/mentorai/compare/v0.45.7...v0.45.8) (2026-04-08)
 
 ### Tests
