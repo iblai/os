@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.5](https://github.com/iblai/mentorai/compare/v0.45.4...v0.45.5) (2026-04-08)
+
+### Tests
+
+* add focused launch flow test workflow ([4e5b639](https://github.com/iblai/mentorai/commit/4e5b63919d815968a8d38811e302fbd61d98b382))
+
 ## [0.45.4](https://github.com/iblai/mentorai/compare/v0.45.3...v0.45.4) (2026-04-08)
 
 ### Bug Fixes
