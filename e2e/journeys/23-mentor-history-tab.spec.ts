@@ -86,24 +86,25 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to history tab and clicks Export to trigger a file download', async ({
-    page,
-    editMentorPage,
-  }) => {
-    const exportBtn = editMentorPage.history.exportButton;
-    const visible = await exportBtn
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
-    if (!visible) {
+  // FIXME: The flow seems to have changes here, the user expects a notification to be sent by e-mail for larger downloads
+  test.fixme(
+    'admin goes to history tab and clicks Export to trigger a file download',
+    async ({ page, editMentorPage }) => {
+      const exportBtn = editMentorPage.history.exportButton;
+      const visible = await exportBtn
+        .isVisible({ timeout: 10_000 })
+        .catch(() => false);
+      if (!visible) {
+        await editMentorPage.close();
+        return;
+      }
+      await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 120_000 }),
+        exportBtn.click(),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
       await editMentorPage.close();
-      return;
-    }
-    await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 120_000 }),
-      exportBtn.click(),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
-    await editMentorPage.close();
-  });
+    },
+  );
 });

@@ -207,28 +207,28 @@ describe('UserProfile - Tenant Already Exists', () => {
     mockBannerButtonTriggerCallback.mockReturnValue(vi.fn());
   });
 
+  // Historical note: earlier revisions of this file tested an anonymous-mentor
+  // tenant-sync useEffect in `user-profile.tsx`. Commit f2d3d2d intentionally
+  // commented it out because the tenant provider now owns the flow. The tests
+  // below verify the current invariant — `UserProfile` does not mutate tenant
+  // state on mount, even when the URL's tenantKey matches an already-known
+  // non-current tenant (the situation the old `useEffect` tried to reconcile).
   describe('when tenant exists in userTenants but is not current', () => {
-    it('should switch to existing tenant without fetching metadata', async () => {
+    it('does not call saveCurrentTenant on mount (tenant provider owns the switch)', async () => {
       render(<UserProfile />);
 
       await waitFor(() => {
-        expect(mockSaveCurrentTenant).toHaveBeenCalledWith(
-          expect.objectContaining({
-            key: 'existing-tenant',
-            org: 'existing-org',
-          }),
-        );
+        expect(screen.getByTestId('user-profile-dropdown')).toBeInTheDocument();
       });
+      expect(mockSaveCurrentTenant).not.toHaveBeenCalled();
     });
 
-    it('should not call saveUserTenants when tenant already exists', async () => {
+    it('does not call saveUserTenants on mount (tenant list is not mutated client-side)', async () => {
       render(<UserProfile />);
 
       await waitFor(() => {
-        expect(mockSaveCurrentTenant).toHaveBeenCalled();
+        expect(screen.getByTestId('user-profile-dropdown')).toBeInTheDocument();
       });
-
-      // saveUserTenants should NOT be called since tenant already exists
       expect(mockSaveUserTenants).not.toHaveBeenCalled();
     });
 

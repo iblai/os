@@ -286,9 +286,7 @@ export function filterMentorSegments<T extends MentorSegment>(
         !ctx.isAdmin && ctx.tenantKey === mainTenantKey;
       const visibilityAllowed = visibilityMatches && !isNonAdminOnMainTenant;
 
-      return (
-        isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed
-      );
+      return isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed;
     })
     .filter((segment) => {
       const hasFieldPermission = rbacPermissionToDisplay(
@@ -382,13 +380,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       flags: { isMemsearchEnabled },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
-    [
-      isAdmin,
-      tenantKey,
-      mentorSettings,
-      rbacPermissions,
-      isMemsearchEnabled,
-    ],
+    [isAdmin, tenantKey, mentorSettings, rbacPermissions, isMemsearchEnabled],
   );
 
   const filteredSegments = useMemo(

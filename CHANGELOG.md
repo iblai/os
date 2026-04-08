@@ -22,30 +22,30 @@
 
 ### Bug Fixes
 
-* add check for Schedule Retrain button enabled state in dataset management journey ([bb3b1e2](https://github.com/iblai/mentorai/commit/bb3b1e2dd8e37d4ddc2244c8bc7b25d75b15dcd5))
-* **chore:** comment out a use effect that determines the save current tenant flow and not in the tenant provider ([f2d3d2d](https://github.com/iblai/mentorai/commit/f2d3d2de96d83de1569185ee9be63e63f15cca07))
-* increase download event timeout in HistoryTab to improve export reliability ([eaee906](https://github.com/iblai/mentorai/commit/eaee90625c48052307325882be991ba8a85b1118))
-* increase download event timeout in mentor history tab to enhance export reliability ([6ad3606](https://github.com/iblai/mentorai/commit/6ad360652d2796796f29c75a87277e612db3e4d8))
-* update deleteMentor method to use alertdialog for confirmation ([cc5ffa0](https://github.com/iblai/mentorai/commit/cc5ffa0b75109cfd4abacef89932d1cea2328147))
-* update sidebar navigation to conditionally set rbacResource based on mentorId ([cd9fd16](https://github.com/iblai/mentorai/commit/cd9fd167f8e4ade215a37408bec9aef46ac9c8f5))
+- add check for Schedule Retrain button enabled state in dataset management journey ([bb3b1e2](https://github.com/iblai/mentorai/commit/bb3b1e2dd8e37d4ddc2244c8bc7b25d75b15dcd5))
+- **chore:** comment out a use effect that determines the save current tenant flow and not in the tenant provider ([f2d3d2d](https://github.com/iblai/mentorai/commit/f2d3d2de96d83de1569185ee9be63e63f15cca07))
+- increase download event timeout in HistoryTab to improve export reliability ([eaee906](https://github.com/iblai/mentorai/commit/eaee90625c48052307325882be991ba8a85b1118))
+- increase download event timeout in mentor history tab to enhance export reliability ([6ad3606](https://github.com/iblai/mentorai/commit/6ad360652d2796796f29c75a87277e612db3e4d8))
+- update deleteMentor method to use alertdialog for confirmation ([cc5ffa0](https://github.com/iblai/mentorai/commit/cc5ffa0b75109cfd4abacef89932d1cea2328147))
+- update sidebar navigation to conditionally set rbacResource based on mentorId ([cd9fd16](https://github.com/iblai/mentorai/commit/cd9fd167f8e4ade215a37408bec9aef46ac9c8f5))
 
 ### Refactors
 
-* streamline nav-bar and edit-mentor-modal components to utilize mentor segments ([efc2402](https://github.com/iblai/mentorai/commit/efc2402ba4cda8c328e3f815072dd7acc09fc380))
-* update memory management components to use new mentor memory API ([0a93e4f](https://github.com/iblai/mentorai/commit/0a93e4f9429031b31bd260dd1e0f6df31aae2997))
+- streamline nav-bar and edit-mentor-modal components to utilize mentor segments ([efc2402](https://github.com/iblai/mentorai/commit/efc2402ba4cda8c328e3f815072dd7acc09fc380))
+- update memory management components to use new mentor memory API ([0a93e4f](https://github.com/iblai/mentorai/commit/0a93e4f9429031b31bd260dd1e0f6df31aae2997))
 
 ## [0.44.7](https://github.com/iblai/mentorai/compare/v0.44.6...v0.44.7) (2026-04-07)
 
 ### Bug Fixes
 
-* close billing modal tab on upgrade button click ([4333887](https://github.com/iblai/mentorai/commit/43338879939e130afd972470d501d3eb82e01ce4))
-* close billing modal tab on upgrade button click > test coverage ([de21e58](https://github.com/iblai/mentorai/commit/de21e5803afba839536ff0ed2dccd6afe7268806))
+- close billing modal tab on upgrade button click ([4333887](https://github.com/iblai/mentorai/commit/43338879939e130afd972470d501d3eb82e01ce4))
+- close billing modal tab on upgrade button click > test coverage ([de21e58](https://github.com/iblai/mentorai/commit/de21e5803afba839536ff0ed2dccd6afe7268806))
 
 ## [0.44.6](https://github.com/iblai/mentorai/compare/v0.44.5...v0.44.6) (2026-04-06)
 
 ### Bug Fixes
 
-* memoize middleware map to stabilize AuthProvider cookie sync interval ([3eb1e86](https://github.com/iblai/mentorai/commit/3eb1e8604aafa33058ad45b0976e02e4be662919))
+- memoize middleware map to stabilize AuthProvider cookie sync interval ([3eb1e86](https://github.com/iblai/mentorai/commit/3eb1e8604aafa33058ad45b0976e02e4be662919))
 
 ## [0.44.5](https://github.com/iblai/mentorai/compare/v0.44.4...v0.44.5) (2026-04-06)
 

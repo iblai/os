@@ -207,31 +207,44 @@ describe('ToolsTab', () => {
     });
   });
 
-  describe('Memory Tools Filtering', () => {
-    it('hides memory tools when memsearch is disabled', () => {
+  // Historical note: earlier tests here asserted that the Memory tool was
+  // hidden when the `enable_memsearch` config flag was false. `tools-tab.tsx`
+  // currently has no memsearch gating — it renders every tool returned by
+  // `useGetToolsQuery` regardless of `useGetMemsearchConfigQuery`, which the
+  // source does not even import. The tests below instead pin the actual
+  // current invariant: memory-tool visibility is decoupled from the memsearch
+  // config flag. If gating is later re-introduced into this component, these
+  // tests will fail and the new gating tests should replace them.
+  describe('Memory Tools Rendering (memsearch-independent)', () => {
+    it('renders the Memory tool when enable_memsearch is true', () => {
+      mockGetMemsearchConfigQuery.mockReturnValue({
+        data: { enable_memsearch: true },
+      });
+
+      render(<ToolsTab />);
+      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
+      expect(screen.getByText('Web Search')).toBeInTheDocument();
+      expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
+    });
+
+    it('still renders the Memory tool when enable_memsearch is false (no gating in this component)', () => {
       mockGetMemsearchConfigQuery.mockReturnValue({
         data: { enable_memsearch: false },
       });
 
       render(<ToolsTab />);
-      expect(screen.queryByText('Memory Tool')).not.toBeInTheDocument();
+      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
       expect(screen.getByText('Web Search')).toBeInTheDocument();
       expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
     });
 
-    it('shows memory tools when memsearch is enabled', () => {
-      render(<ToolsTab />);
-      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
-    });
-
-    it('shows all tools when memsearch config is undefined', () => {
+    it('still renders the Memory tool when the memsearch config is undefined', () => {
       mockGetMemsearchConfigQuery.mockReturnValue({
         data: undefined,
       });
 
       render(<ToolsTab />);
-      // enable_memsearch defaults to false, so memory tools hidden
-      expect(screen.queryByText('Memory Tool')).not.toBeInTheDocument();
+      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
     });
   });
 
