@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.1](https://github.com/iblai/mentorai/compare/v0.45.0...v0.45.1) (2026-04-08)
+
+### Bug Fixes
+
+* handle workflow_dispatch in run-name and concurrency group ([a9faeb8](https://github.com/iblai/mentorai/commit/a9faeb8418bef2c9be8bc0155e6ce3d2f2685255))
+
 ## [0.45.0](https://github.com/iblai/mentorai/compare/v0.44.8...v0.45.0) (2026-04-08)
 
 ### Features
