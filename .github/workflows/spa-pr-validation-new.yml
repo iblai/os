@@ -79,10 +79,11 @@ jobs:
   # ============================================================
   check-resumption:
     needs: [gate]
+    if: github.event_name != 'workflow_dispatch'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-test-resumption.yml@main
     with:
       app-name: mentor
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
       test-dir: e2e/tests
     secrets:
       s3-bucket: ${{ secrets.S3_LOGS_BUCKET }}
@@ -110,7 +111,7 @@ jobs:
   # ============================================================
   pinned-versions:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -119,7 +120,7 @@ jobs:
 
   commitlint:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -133,19 +134,19 @@ jobs:
 
   lint:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-linting.yml@main
     secrets: inherit
 
   typecheck:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-typecheck.yml@main
     secrets: inherit
 
   coverage:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
     with:
       coverage-threshold: 95
@@ -154,7 +155,7 @@ jobs:
   e2e-coverage-check:
     name: 'E2E Journey Coverage'
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -168,7 +169,7 @@ jobs:
   claude-review-coverage:
     name: 'Claude E2E Coverage Review'
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -210,19 +211,19 @@ jobs:
 
   claude-review-quality:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
     with:
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
   claude-review-uiux:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
     with:
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
@@ -231,7 +232,7 @@ jobs:
   # ============================================================
   check-prod-versions:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: image-deploy-ops-new
     environment: iblai.app
     outputs:
@@ -273,11 +274,11 @@ jobs:
       image-name: ibl-mentor-spa-pro
       registry-type: ecr
       event-name: pull_request
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
 
   build-playwright-image:
     needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
     secrets: inherit
     with:
@@ -286,7 +287,7 @@ jobs:
       image-name: ibl-mentor-playwright
       registry-type: ocir
       event-name: pull_request
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
 
   # ============================================================
   # LAUNCH INFRA + DEPLOY + VERIFY (single job, inline)
@@ -495,7 +496,7 @@ jobs:
       domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
       max-wait: 5400
       total-shards: 1
       run-type: main-chrome
@@ -515,7 +516,7 @@ jobs:
       domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
       max-wait: 5400
       total-shards: 1
       run-type: main-firefox
@@ -535,7 +536,7 @@ jobs:
       domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
       max-wait: 5400
       total-shards: 1
       run-type: main-safari
@@ -555,7 +556,7 @@ jobs:
       domain-number: ${{ needs.launch-and-deploy.outputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ github.event.pull_request.number || '0' }}
       max-wait: 5400
       total-shards: 1
       run-type: main-edge
@@ -583,7 +584,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '0' }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
           PREV_STATUS="/tmp/prev-status.json"
@@ -636,7 +637,7 @@ jobs:
         test-chrome, test-firefox, test-safari, test-edge,
         save-status,
       ]
-    if: always() && needs.acquire-stg-slot.result == 'success'
+    if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
     secrets: inherit
     with:
