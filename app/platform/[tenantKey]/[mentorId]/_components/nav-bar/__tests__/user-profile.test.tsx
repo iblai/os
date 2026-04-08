@@ -601,6 +601,32 @@ describe('UserProfile', () => {
       );
       expect(mockTriggerPricingModal).toHaveBeenCalled();
     });
+
+    it('should close the profile modal when upgrade is clicked', async () => {
+      const mockTriggerPricingModal = vi.fn();
+      mockBannerButtonTriggerCallback.mockReturnValue(mockTriggerPricingModal);
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+
+      render(<UserProfile />);
+
+      // Open the modal first
+      act(() => {
+        capturedCallbacks.onModalOpenChange?.(true);
+      });
+      expect(screen.getByTestId('is-modal-open')).toHaveTextContent('true');
+
+      // Click upgrade
+      const upgradeBtn = screen.getByTestId('upgrade-btn');
+      await user.click(upgradeBtn);
+
+      // Modal should be closed and URL cleaned up
+      expect(mockTriggerPricingModal).toHaveBeenCalled();
+      expect(screen.getByTestId('is-modal-open')).toHaveTextContent('false');
+      expect(mockRouterReplace).toHaveBeenCalled();
+    });
   });
 
   describe('modal open/close handling', () => {
