@@ -88,7 +88,8 @@ export function useScreenSharing({
     } catch (error) {
       console.error(JSON.stringify(error));
       // @ts-ignore error is unknown at the catch binding
-      const errorMessage = error?.error?.error || 'Failed to initiate call. Please try again.';
+      const errorMessage =
+        error?.error?.error || 'Failed to initiate call. Please try again.';
       console.error(JSON.stringify({ tenant: tenantKey, error }));
       toast.error(errorMessage);
       updateConnectionState('error');
