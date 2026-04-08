@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.6](https://github.com/iblai/mentorai/compare/v0.45.5...v0.45.6) (2026-04-08)
+
+### Bug Fixes
+
+* **e2e:** fix auth setup redirect loop and add e2e coverage bot ([9c278a7](https://github.com/iblai/mentorai/commit/9c278a74dc79711940caca5092c083e59861aa42))
+
 ## [0.45.5](https://github.com/iblai/mentorai/compare/v0.45.4...v0.45.5) (2026-04-08)
 
 ### Tests
