@@ -115,7 +115,7 @@ jobs:
 
       - name: Run service update
         env:
-          PYTHONUNBUFFERED: "1"
+          PYTHONUNBUFFERED: '1'
           TERM: dumb
         run: |
           pip install ./.infra ansible-core

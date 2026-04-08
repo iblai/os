@@ -18,7 +18,7 @@ name: E2E Coverage Bot
 # ──────────────────────────────────────────────────────────────────────────────
 
 env:
-  BOT_GITHUB_USERNAME: mentorai-e2e-bot # ← change this to your bot account login
+  BOT_GITHUB_USERNAME: mamigot # ← change this to your bot account login
 
 on:
   pull_request:

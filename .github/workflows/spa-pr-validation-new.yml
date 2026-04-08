@@ -400,7 +400,7 @@ jobs:
 
       - name: Run service update (Ansible)
         env:
-          PYTHONUNBUFFERED: "1"
+          PYTHONUNBUFFERED: '1'
           TERM: dumb
         run: |
           iblai infra service-update \
@@ -485,7 +485,14 @@ jobs:
   # PARALLEL BROWSER TESTS (all 4 after health check)
   # ============================================================
   test-chrome:
-    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-stg-slot,
+        launch-and-deploy,
+        build-playwright-image,
+      ]
     if: >-
       always() &&
       needs.launch-and-deploy.result == 'success' &&
@@ -505,7 +512,14 @@ jobs:
       workers: '3'
 
   test-firefox:
-    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-stg-slot,
+        launch-and-deploy,
+        build-playwright-image,
+      ]
     if: >-
       always() &&
       needs.launch-and-deploy.result == 'success' &&
@@ -525,7 +539,14 @@ jobs:
       workers: '3'
 
   test-safari:
-    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-stg-slot,
+        launch-and-deploy,
+        build-playwright-image,
+      ]
     if: >-
       always() &&
       needs.launch-and-deploy.result == 'success' &&
@@ -545,7 +566,14 @@ jobs:
       workers: '3'
 
   test-edge:
-    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-stg-slot,
+        launch-and-deploy,
+        build-playwright-image,
+      ]
     if: >-
       always() &&
       needs.launch-and-deploy.result == 'success' &&
@@ -630,11 +658,25 @@ jobs:
   release-stg-slot:
     needs:
       [
-        gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
-        coverage, e2e-coverage-check, claude-review-coverage,
-        claude-review-quality, claude-review-uiux, check-prod-versions,
-        build-app-image, build-playwright-image, launch-and-deploy,
-        test-chrome, test-firefox, test-safari, test-edge,
+        gate,
+        acquire-stg-slot,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-coverage,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        launch-and-deploy,
+        test-chrome,
+        test-firefox,
+        test-safari,
+        test-edge,
         save-status,
       ]
     if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
@@ -675,12 +717,28 @@ jobs:
   summary:
     needs:
       [
-        gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
-        coverage, e2e-coverage-check, claude-review-coverage,
-        claude-review-quality, claude-review-uiux, check-prod-versions,
-        build-app-image, build-playwright-image, launch-and-deploy,
-        test-chrome, test-firefox, test-safari, test-edge,
-        save-status, release-stg-slot, terminate-infra,
+        gate,
+        acquire-stg-slot,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-coverage,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        launch-and-deploy,
+        test-chrome,
+        test-firefox,
+        test-safari,
+        test-edge,
+        save-status,
+        release-stg-slot,
+        terminate-infra,
       ]
     if: always()
     runs-on: ubuntu-22.04
