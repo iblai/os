@@ -1,0 +1,655 @@
+name: SPA PR Validation (AMI-based)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [labeled]
+
+run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test (AMI)'
+
+concurrency:
+  group: pr-validation-mentor-ami-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  id-token: write
+
+jobs:
+  # ============================================================
+  # GATE: Detect what changed, decide what to build/test
+  # ============================================================
+  gate:
+    if: github.event.label.name == 'run-tests' && !startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-22.04
+    environment: iblai.app
+    outputs:
+      should-build-app: ${{ steps.decide.outputs.should-build-app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - 'src/**'
+              - 'app/**'
+              - 'components/**'
+              - 'features/**'
+              - 'hooks/**'
+              - 'lib/**'
+              - 'actions/**'
+              - 'contexts/**'
+              - 'public/**'
+              - 'next.config.*'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'tsconfig*.json'
+              - 'tailwind.config.*'
+              - 'Dockerfile'
+            tests:
+              - 'e2e/**'
+
+      - name: Decide build strategy
+        id: decide
+        run: |
+          APP_CHANGED="${{ steps.changes.outputs.app }}"
+          if [[ "$APP_CHANGED" == "true" && "${{ vars.ENABLE_TESTING }}" != "true" ]]; then
+            echo "should-build-app=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-build-app=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================
+  # TEST RESUMPTION CHECK
+  # ============================================================
+  check-resumption:
+    needs: [gate]
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-test-resumption.yml@main
+    with:
+      app-name: mentor
+      pr-number: ${{ github.event.pull_request.number }}
+      test-dir: e2e/tests
+    secrets:
+      s3-bucket: ${{ secrets.S3_LOGS_BUCKET }}
+      aws-access-key-id: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ vars.AWS_REGION }}
+
+  # ============================================================
+  # ACQUIRE STG SLOT (domain-lock picks stg1-4)
+  # ============================================================
+  acquire-stg-slot:
+    needs: [gate]
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
+    with:
+      action: acquire
+      app-type: testing
+      context: 'PR #${{ github.event.pull_request.number }} - Mentor AMI Testing'
+      allowed-domains: '1,2,3,4'
+      max-wait: 18000
+
+  # ============================================================
+  # CODE QUALITY (parallel after slot acquired)
+  # ============================================================
+  pinned-versions:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all dependency versions are pinned
+        run: ./scripts/check-pinned-versions.sh
+
+  commitlint:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --global @commitlint/cli @commitlint/config-conventional
+      - run: npx commitlint --from origin/${{ github.base_ref }} --to HEAD --verbose
+
+  lint:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-linting.yml@main
+    secrets: inherit
+
+  typecheck:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-typecheck.yml@main
+    secrets: inherit
+
+  coverage:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-unit-test-coverage.yml@main
+    with:
+      coverage-threshold: 95
+    secrets: inherit
+
+  e2e-coverage-check:
+    name: 'E2E Journey Coverage'
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
+
+  claude-review-coverage:
+    name: 'Claude E2E Coverage Review'
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- app/ components/ hooks/ lib/ providers/ | head -100)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "count=$(echo "$CHANGED" | grep -c . || echo 0)" >> $GITHUB_OUTPUT
+      - name: Claude coverage analysis
+        if: steps.changes.outputs.count != '0'
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are an E2E coverage analyst. Analyze the changed files in this PR and determine if e2e/coverage.json and e2e/COVERAGE.md are properly updated.
+
+            Changed files:
+            ${{ steps.changes.outputs.files }}
+
+            Tasks:
+            1. Read e2e/coverage.json and e2e/COVERAGE.md
+            2. For each changed file in app/ or components/:
+               - Check if it's listed in a journey's sourceFiles in coverage.json
+               - If it's a new page.tsx route, verify a journey covers it
+               - If it adds new user-visible behavior, check for corresponding checkpoints
+            3. Compare checkpoint counts: current branch vs base branch
+            4. Post a summary comment on the PR with:
+               - Files covered by existing journeys
+               - Files missing coverage (if any)
+               - Checkpoint count change (regression warning if decreased)
+               - Recommended actions (new journeys or checkpoints to add)
+
+            If all changes are covered, approve. If there are gaps, request changes with specific instructions.
+
+  claude-review-quality:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-quality.yml@main
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  claude-review-uiux:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-claude-review-uiux.yml@main
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  # ============================================================
+  # CHECK PRODUCTION VERSIONS (fallback images)
+  # ============================================================
+  check-prod-versions:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    runs-on: image-deploy-ops-new
+    environment: iblai.app
+    outputs:
+      mentor-uri: ${{ steps.read-mentor.outputs.image-uri }}
+      auth-uri: ${{ steps.read-auth.outputs.image-uri }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: iblai/iblai-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+      - uses: ./.ops/.github/actions/setup-ssh
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_DEPLOY_OPS }}
+      - id: read-mentor
+        uses: ./.ops/.github/actions/read-prod-versions
+        with:
+          app-name: mentor
+          nodes-json: ${{ vars.NODES_SPA_CHECK }}
+      - id: read-auth
+        uses: ./.ops/.github/actions/read-prod-versions
+        with:
+          app-name: auth
+          nodes-json: ${{ vars.NODES_SPA_CHECK }}
+
+  # ============================================================
+  # BUILD DOCKER IMAGES
+  # ============================================================
+  build-app-image:
+    needs: [gate, acquire-stg-slot]
+    if: >-
+      always() &&
+      needs.acquire-stg-slot.result == 'success' &&
+      needs.gate.outputs.should-build-app == 'true'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      image-name: ibl-mentor-spa-pro
+      registry-type: ecr
+      event-name: pull_request
+      pr-number: ${{ github.event.pull_request.number }}
+
+  build-playwright-image:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: e2e/Dockerfile
+      build-context: .
+      image-name: ibl-mentor-playwright
+      registry-type: ocir
+      event-name: pull_request
+      pr-number: ${{ github.event.pull_request.number }}
+
+  # ============================================================
+  # LAUNCH INFRASTRUCTURE (EC2 from AMI)
+  # ============================================================
+  launch-infra:
+    needs: [gate, acquire-stg-slot]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-service-update.yml@main
+    with:
+      ami-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_AMI_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_AMI_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_AMI_ID || vars.STG4_AMI_ID }}
+      subnet-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_SUBNET_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_SUBNET_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_SUBNET_ID || vars.STG4_SUBNET_ID }}
+      security-group-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_SG_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_SG_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_SG_ID || vars.STG4_SG_ID }}
+      target-group-arn: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_TG_ARN || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_TG_ARN || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_TG_ARN || vars.STG4_TG_ARN }}
+      key-pair-name: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_KEY_PAIR || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_KEY_PAIR || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_KEY_PAIR || vars.STG4_KEY_PAIR }}
+      project-name: mentor-pr-${{ github.event.pull_request.number }}
+    secrets:
+      aws-access-key-id: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
+      aws-secret-access-key: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
+      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # DEPLOY PR MENTOR IMAGE onto launched instance
+  # ============================================================
+  deploy-app:
+    needs: [gate, acquire-stg-slot, lint, build-app-image, check-prod-versions, launch-infra]
+    if: >-
+      always() &&
+      needs.launch-infra.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.build-app-image.result != 'failure'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    with:
+      app-name: MENTOR
+      image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
+      deployment-path: /ibl/app/ibl-spa/mentor
+      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
+      venv-name: ibl-cli-ops
+    secrets:
+      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # DEPLOY AUTH (prod image) onto launched instance
+  # ============================================================
+  deploy-auth:
+    needs: [gate, acquire-stg-slot, check-prod-versions, launch-infra, deploy-app]
+    if: always() && needs.launch-infra.result == 'success' && needs.deploy-app.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
+    with:
+      app-name: AUTH
+      image-uri: ${{ needs.check-prod-versions.outputs.auth-uri }}
+      deployment-path: /ibl/app/ibl-spa/auth
+      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
+      venv-name: ibl-cli-ops
+    secrets:
+      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # HEALTH CHECK
+  # ============================================================
+  verify:
+    needs: [gate, acquire-stg-slot, deploy-auth, build-app-image, check-prod-versions, launch-infra]
+    if: always() && needs.deploy-auth.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
+    with:
+      app-name: MENTOR
+      expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
+      deployment-path: /ibl/app/ibl-spa/mentor
+      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
+      venv-name: ibl-cli-ops
+      health-port: '5001'
+    secrets:
+      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
+      git-token: ${{ secrets.GIT_TOKEN }}
+
+  # ============================================================
+  # PARALLEL BROWSER TESTS (all 4 after health check)
+  # ============================================================
+  test-chrome:
+    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      pr-number: ${{ github.event.pull_request.number }}
+      max-wait: 5400
+      total-shards: 1
+      run-type: main-chrome
+      browsers: 'chrome'
+      test-files: ${{ needs.check-resumption.outputs.chrome-test-files }}
+      workers: '3'
+
+  test-firefox:
+    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      pr-number: ${{ github.event.pull_request.number }}
+      max-wait: 5400
+      total-shards: 1
+      run-type: main-firefox
+      browsers: 'firefox'
+      test-files: ${{ needs.check-resumption.outputs.firefox-test-files }}
+      workers: '3'
+
+  test-safari:
+    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      pr-number: ${{ github.event.pull_request.number }}
+      max-wait: 5400
+      total-shards: 1
+      run-type: main-safari
+      browsers: 'safari'
+      test-files: ${{ needs.check-resumption.outputs.safari-test-files }}
+      workers: '3'
+
+  test-edge:
+    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      pr-number: ${{ github.event.pull_request.number }}
+      max-wait: 5400
+      total-shards: 1
+      run-type: main-edge
+      browsers: 'edge'
+      test-files: ${{ needs.check-resumption.outputs.edge-test-files }}
+      workers: '3'
+
+  # ============================================================
+  # SAVE TEST STATUS (for resumption on next run)
+  # ============================================================
+  save-status:
+    name: 'Save Mentor Status'
+    needs: [gate, test-chrome, test-firefox, test-safari, test-edge]
+    if: always()
+    runs-on: ubuntu-22.04
+    environment: iblai.app
+    steps:
+      - name: Save browser status to S3
+        env:
+          CHROME_RESULT: ${{ needs.test-chrome.result }}
+          FIREFOX_RESULT: ${{ needs.test-firefox.result }}
+          SAFARI_RESULT: ${{ needs.test-safari.result }}
+          EDGE_RESULT: ${{ needs.test-edge.result }}
+          S3_BUCKET: ${{ secrets.S3_LOGS_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          PREV_STATUS="/tmp/prev-status.json"
+          S3_PATH="s3://$S3_BUCKET/pr/$PR_NUMBER/mentor/run-status.json"
+          aws s3 cp "$S3_PATH" "$PREV_STATUS" --region "$AWS_REGION" 2>/dev/null || echo '{}' > "$PREV_STATUS"
+
+          get_status() {
+            local result=$1 browser=$2
+            if [ "$result" = "skipped" ]; then
+              jq -r ".browsers.${browser} // \"pending\"" "$PREV_STATUS" 2>/dev/null || echo "pending"
+              return
+            fi
+            if [ "$result" != "success" ]; then echo "failed"; return; fi
+            local results_file="/tmp/test-results-${browser}.json"
+            local results_path="s3://$S3_BUCKET/pr/$PR_NUMBER/mentor/test-results-${browser}.json"
+            if aws s3 cp "$results_path" "$results_file" --region "$AWS_REGION" >/dev/null 2>&1; then
+              local failed_count
+              failed_count=$(jq '[.tests | to_entries[] | select(.value == "failed")] | length' "$results_file" 2>/dev/null || echo "-1")
+              if [ "$failed_count" = "0" ] || [ "$failed_count" = "-1" ]; then echo "passed"; else echo "failed"; fi
+            else
+              echo "passed"
+            fi
+          }
+
+          cat > /tmp/run-status.json <<EOF
+          {
+            "commit": "$COMMIT_SHA",
+            "browsers": {
+              "chrome": "$(get_status "$CHROME_RESULT" "chrome")",
+              "firefox": "$(get_status "$FIREFOX_RESULT" "firefox")",
+              "safari": "$(get_status "$SAFARI_RESULT" "safari")",
+              "edge": "$(get_status "$EDGE_RESULT" "edge")"
+            }
+          }
+          EOF
+
+          aws s3 cp /tmp/run-status.json "$S3_PATH" --region "$AWS_REGION" --content-type "application/json"
+          echo "Status saved"
+
+  # ============================================================
+  # RELEASE STG SLOT
+  # ============================================================
+  release-stg-slot:
+    needs:
+      [
+        gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
+        coverage, e2e-coverage-check, claude-review-coverage,
+        claude-review-quality, claude-review-uiux, check-prod-versions,
+        build-app-image, build-playwright-image, launch-infra,
+        deploy-app, deploy-auth, verify,
+        test-chrome, test-firefox, test-safari, test-edge,
+        save-status,
+      ]
+    if: always() && needs.acquire-stg-slot.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-domain-lock.yml@main
+    secrets: inherit
+    with:
+      action: release
+      app-type: testing
+      domain-number: ${{ needs.acquire-stg-slot.outputs.domain-number }}
+
+  # ============================================================
+  # TERMINATE INFRASTRUCTURE
+  # ============================================================
+  terminate-infra:
+    needs: [launch-infra, save-status, release-stg-slot]
+    if: always() && needs.launch-infra.outputs.instance-id != ''
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Terminate EC2 instance
+        run: |
+          echo "Terminating instance ${{ needs.launch-infra.outputs.instance-id }}..."
+          aws ec2 terminate-instances --instance-ids ${{ needs.launch-infra.outputs.instance-id }}
+          echo "Instance terminated"
+
+  # ============================================================
+  # FINAL SUMMARY
+  # ============================================================
+  summary:
+    needs:
+      [
+        gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
+        coverage, e2e-coverage-check, claude-review-coverage,
+        claude-review-quality, claude-review-uiux, check-prod-versions,
+        build-app-image, build-playwright-image, launch-infra,
+        deploy-app, deploy-auth, verify,
+        test-chrome, test-firefox, test-safari, test-edge,
+        save-status, release-stg-slot, terminate-infra,
+      ]
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Mentor PR Test Validation Results (AMI)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR:** #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Stg slot:** stg${{ needs.acquire-stg-slot.outputs.domain-number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Instance:** ${{ needs.launch-infra.outputs.instance-id }} (${{ needs.launch-infra.outputs.instance-ip }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Code Quality" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|:------:|" >> $GITHUB_STEP_SUMMARY
+
+          for PAIR in \
+            "Pinned Versions:${{ needs.pinned-versions.result }}" \
+            "Conventional Commits:${{ needs.commitlint.result }}" \
+            "Linting:${{ needs.lint.outputs.result }}" \
+            "TypeCheck:${{ needs.typecheck.outputs.result }}" \
+            "Unit Coverage:${{ needs.coverage.outputs.result }}" \
+            "E2E Coverage:${{ needs.e2e-coverage-check.result }}"; do
+            CHECK="${PAIR%%:*}"
+            RESULT="${PAIR#*:}"
+            if [[ "$RESULT" == "success" ]]; then
+              echo "| $CHECK | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+            elif [[ "$RESULT" == "skipped" ]]; then
+              echo "| $CHECK | :fast_forward: SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $CHECK | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Infrastructure" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|:------:|" >> $GITHUB_STEP_SUMMARY
+          for PAIR in \
+            "Launch Infra:${{ needs.launch-infra.result }}" \
+            "Deploy App:${{ needs.deploy-app.result }}" \
+            "Deploy Auth:${{ needs.deploy-auth.result }}" \
+            "Health Check:${{ needs.verify.result }}" \
+            "Terminate:${{ needs.terminate-infra.result }}"; do
+            CHECK="${PAIR%%:*}"
+            RESULT="${PAIR#*:}"
+            if [[ "$RESULT" == "success" ]]; then
+              echo "| $CHECK | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $CHECK | :x: $RESULT |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Browser Tests (Parallel)" >> $GITHUB_STEP_SUMMARY
+          echo "| Browser | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|:------:|" >> $GITHUB_STEP_SUMMARY
+          for PAIR in \
+            "Chrome:${{ needs.test-chrome.outputs.result }}" \
+            "Firefox:${{ needs.test-firefox.outputs.result }}" \
+            "Safari:${{ needs.test-safari.outputs.result }}" \
+            "Edge:${{ needs.test-edge.outputs.result }}"; do
+            BROWSER="${PAIR%%:*}"
+            RESULT="${PAIR#*:}"
+            if [[ "$RESULT" == "success" ]]; then
+              echo "| $BROWSER | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+            elif [[ -z "$RESULT" ]]; then
+              echo "| $BROWSER | :fast_forward: SKIPPED |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $BROWSER | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check results
+        id: check-results
+        if: always()
+        run: |
+          FAILED=false
+          for R in "${{ needs.pinned-versions.result }}" "${{ needs.commitlint.result }}" "${{ needs.lint.outputs.result }}" "${{ needs.typecheck.outputs.result }}" "${{ needs.coverage.outputs.result }}"; do
+            [[ "$R" != "success" ]] && FAILED=true
+          done
+          [[ "${{ needs.e2e-coverage-check.result }}" == "failure" ]] && FAILED=true
+          for R in "${{ needs.test-chrome.outputs.result }}" "${{ needs.test-firefox.outputs.result }}" "${{ needs.test-safari.outputs.result }}" "${{ needs.test-edge.outputs.result }}"; do
+            [[ -n "$R" && "$R" != "success" ]] && FAILED=true
+          done
+          if [[ "$FAILED" == "true" ]]; then exit 1; else exit 0; fi
+
+      - name: Update PR gate status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const passed = '${{ steps.check-results.outcome }}' === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: passed ? 'success' : 'failure',
+              context: 'PR Validation',
+              description: passed ? 'All checks passed' : 'Some checks failed',
+            });
