@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.7](https://github.com/iblai/mentorai/compare/v0.45.6...v0.45.7) (2026-04-08)
+
+### Chores
+
+* remove test workflows ([c382836](https://github.com/iblai/mentorai/commit/c3828360e80cd5f12acb968804815d39cc85ef3d))
+
 ## [0.45.6](https://github.com/iblai/mentorai/compare/v0.45.5...v0.45.6) (2026-04-08)
 
 ### Bug Fixes
