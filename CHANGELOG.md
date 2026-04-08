@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.45.3](https://github.com/iblai/mentorai/compare/v0.45.2...v0.45.3) (2026-04-08)
+
+### Bug Fixes
+
+* address TypeScript ignore comments in prompts and safety tabs for better type handling ([a6d6739](https://github.com/iblai/mentorai/commit/a6d67396469d84b6fbf0abed826162390dcb6fde))
+* mark tests in mentor history and memory tabs as FIXME due to flow changes ([d5deb78](https://github.com/iblai/mentorai/commit/d5deb78bf63de35b97761899681d6be78af1ec05))
+* **tests:** update button mock implementation and enhance accessibility in command items ([9bfae2c](https://github.com/iblai/mentorai/commit/9bfae2c0eec45565c8f5d7fb0631e048d75e1e4b))
+* update unit tests ([187d35c](https://github.com/iblai/mentorai/commit/187d35cd24162833f31419748e39a599fa32ea37))
+
+### Chores
+
+* fixed typecheck issues ([e352b3e](https://github.com/iblai/mentorai/commit/e352b3ea048b9e0e473010c1da9aa1baeabb4c19))
+* **tests:** update unit tests coverage for use screen sharing hook ([727a883](https://github.com/iblai/mentorai/commit/727a883cc286f0e3426728cb2bc8ed914c414f21))
+
 ## [0.45.2](https://github.com/iblai/mentorai/compare/v0.45.1...v0.45.2) (2026-04-08)
 
 ### Bug Fixes
