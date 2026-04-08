@@ -280,89 +280,189 @@ jobs:
       pr-number: ${{ github.event.pull_request.number }}
 
   # ============================================================
-  # LAUNCH INFRASTRUCTURE (EC2 from AMI)
+  # LAUNCH INFRA + DEPLOY + VERIFY (single job, inline)
   # ============================================================
-  launch-infra:
-    needs: [gate, acquire-stg-slot]
-    if: always() && needs.acquire-stg-slot.result == 'success'
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-service-update.yml@main
-    with:
-      ami-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_AMI_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_AMI_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_AMI_ID || vars.STG4_AMI_ID }}
-      subnet-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_SUBNET_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_SUBNET_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_SUBNET_ID || vars.STG4_SUBNET_ID }}
-      security-group-id: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_SG_ID || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_SG_ID || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_SG_ID || vars.STG4_SG_ID }}
-      target-group-arn: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_TG_ARN || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_TG_ARN || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_TG_ARN || vars.STG4_TG_ARN }}
-      key-pair-name: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && vars.STG1_KEY_PAIR || needs.acquire-stg-slot.outputs.domain-number == '2' && vars.STG2_KEY_PAIR || needs.acquire-stg-slot.outputs.domain-number == '3' && vars.STG3_KEY_PAIR || vars.STG4_KEY_PAIR }}
-      project-name: mentor-pr-${{ github.event.pull_request.number }}
-    secrets:
-      aws-access-key-id: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
-      aws-secret-access-key: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
-      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
-      git-token: ${{ secrets.GIT_TOKEN }}
-
-  # ============================================================
-  # DEPLOY PR MENTOR IMAGE onto launched instance
-  # ============================================================
-  deploy-app:
-    needs: [gate, acquire-stg-slot, lint, build-app-image, check-prod-versions, launch-infra]
+  launch-and-deploy:
+    needs: [gate, acquire-stg-slot, lint, build-app-image, check-prod-versions]
     if: >-
       always() &&
-      needs.launch-infra.result == 'success' &&
+      needs.acquire-stg-slot.result == 'success' &&
       needs.lint.result == 'success' &&
       needs.build-app-image.result != 'failure'
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
-    with:
-      app-name: MENTOR
-      image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
-      deployment-path: /ibl/app/ibl-spa/mentor
-      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
-      venv-name: ibl-cli-ops
-    secrets:
-      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
-      git-token: ${{ secrets.GIT_TOKEN }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      instance-id: ${{ steps.launch.outputs.instance-id }}
+      instance-ip: ${{ steps.launch.outputs.instance-ip }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Resolve stg config
+        id: config
+        run: |
+          SLOT="${{ needs.acquire-stg-slot.outputs.domain-number }}"
+          echo "Acquired stg slot: $SLOT"
 
-  # ============================================================
-  # DEPLOY AUTH (prod image) onto launched instance
-  # ============================================================
-  deploy-auth:
-    needs: [gate, acquire-stg-slot, check-prod-versions, launch-infra, deploy-app]
-    if: always() && needs.launch-infra.result == 'success' && needs.deploy-app.result == 'success'
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-deployment.yml@main
-    with:
-      app-name: AUTH
-      image-uri: ${{ needs.check-prod-versions.outputs.auth-uri }}
-      deployment-path: /ibl/app/ibl-spa/auth
-      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
-      venv-name: ibl-cli-ops
-    secrets:
-      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
-      git-token: ${{ secrets.GIT_TOKEN }}
+          declare -A AMIS SUBNETS SGS TGS KEYS
+          AMIS[1]="${{ vars.STG1_AMI_ID }}"; AMIS[2]="${{ vars.STG2_AMI_ID }}"; AMIS[3]="${{ vars.STG3_AMI_ID }}"; AMIS[4]="${{ vars.STG4_AMI_ID }}"
+          SUBNETS[1]="${{ vars.STG1_SUBNET_ID }}"; SUBNETS[2]="${{ vars.STG2_SUBNET_ID }}"; SUBNETS[3]="${{ vars.STG3_SUBNET_ID }}"; SUBNETS[4]="${{ vars.STG4_SUBNET_ID }}"
+          SGS[1]="${{ vars.STG1_SG_ID }}"; SGS[2]="${{ vars.STG2_SG_ID }}"; SGS[3]="${{ vars.STG3_SG_ID }}"; SGS[4]="${{ vars.STG4_SG_ID }}"
+          TGS[1]="${{ vars.STG1_TG_ARN }}"; TGS[2]="${{ vars.STG2_TG_ARN }}"; TGS[3]="${{ vars.STG3_TG_ARN }}"; TGS[4]="${{ vars.STG4_TG_ARN }}"
+          KEYS[1]="${{ vars.STG1_KEY_PAIR }}"; KEYS[2]="${{ vars.STG2_KEY_PAIR }}"; KEYS[3]="${{ vars.STG3_KEY_PAIR }}"; KEYS[4]="${{ vars.STG4_KEY_PAIR }}"
 
-  # ============================================================
-  # HEALTH CHECK
-  # ============================================================
-  verify:
-    needs: [gate, acquire-stg-slot, deploy-auth, build-app-image, check-prod-versions, launch-infra]
-    if: always() && needs.deploy-auth.result == 'success'
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
-    with:
-      app-name: MENTOR
-      expected-image-uri: ${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}
-      deployment-path: /ibl/app/ibl-spa/mentor
-      nodes-json: '[{"name": "stg${{ needs.acquire-stg-slot.outputs.domain-number }}", "host": "${{ needs.launch-infra.outputs.instance-ip }}"}]'
-      venv-name: ibl-cli-ops
-      health-port: '5001'
-    secrets:
-      ssh-private-key: ${{ needs.acquire-stg-slot.outputs.domain-number == '1' && secrets.STG1_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '2' && secrets.STG2_SSH_KEY || needs.acquire-stg-slot.outputs.domain-number == '3' && secrets.STG3_SSH_KEY || secrets.STG4_SSH_KEY }}
-      git-token: ${{ secrets.GIT_TOKEN }}
+          echo "ami-id=${AMIS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "subnet-id=${SUBNETS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "security-group-id=${SGS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "target-group-arn=${TGS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "key-pair-name=${KEYS[$SLOT]}" >> $GITHUB_OUTPUT
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          SLOT="${{ needs.acquire-stg-slot.outputs.domain-number }}"
+          case "$SLOT" in
+            1) echo "${{ secrets.STG1_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            2) echo "${{ secrets.STG2_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            3) echo "${{ secrets.STG3_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            4) echo "${{ secrets.STG4_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+          esac
+          chmod 600 ~/.ssh/deploy-key
+
+      - name: Get runner IP and open SSH
+        id: runner-ip
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ steps.config.outputs.security-group-id }} \
+            --protocol tcp --port 22 --cidr ${RUNNER_IP}/32 2>&1 || true
+
+      - name: Launch EC2 from AMI
+        id: launch
+        run: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ${{ steps.config.outputs.ami-id }} \
+            --instance-type t3.2xlarge \
+            --key-name ${{ steps.config.outputs.key-pair-name }} \
+            --subnet-id ${{ steps.config.outputs.subnet-id }} \
+            --security-group-ids ${{ steps.config.outputs.security-group-id }} \
+            --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":200,"VolumeType":"gp3","Encrypted":true}}]' \
+            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=mentor-pr-${{ github.event.pull_request.number }}}]" \
+            --query 'Instances[0].InstanceId' --output text)
+          echo "instance-id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "Instance: $INSTANCE_ID"
+
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          echo "instance-ip=$IP" >> $GITHUB_OUTPUT
+          echo "IP: $IP"
+
+      - name: Wait for SSH
+        run: |
+          for i in $(seq 1 15); do
+            if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} "echo ok" 2>/dev/null; then
+              echo "SSH ready on attempt $i"
+              break
+            fi
+            echo "Attempt $i - retrying in 15s..."
+            sleep 15
+          done
+
+      - name: Checkout infra CLI
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/iblai-infra-cli
+          token: ${{ secrets.GIT_TOKEN }}
+          path: .infra
+
+      - name: Install infra CLI
+        run: |
+          pip install ./.infra
+          pip install ansible-core
+
+      - name: Run service update (Ansible)
+        env:
+          PYTHONUNBUFFERED: "1"
+          TERM: dumb
+        run: |
+          iblai infra service-update \
+            --host ${{ steps.launch.outputs.instance-ip }} \
+            --ssh-key ~/.ssh/deploy-key \
+            --git-token ${{ secrets.GIT_TOKEN }}
+
+      - name: Register in target group
+        run: |
+          aws elbv2 register-targets \
+            --target-group-arn ${{ steps.config.outputs.target-group-arn }} \
+            --targets Id=${{ steps.launch.outputs.instance-id }},Port=80
+          echo "Registered in target group"
+
+      - name: Deploy PR mentor image
+        run: |
+          IMAGE="${{ vars.ENABLE_TESTING == 'true' && vars.MENTOR_IMAGE || needs.build-app-image.outputs.image-uri || needs.check-prod-versions.outputs.mentor-uri }}"
+          echo "Deploying mentor image: $IMAGE"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} "
+            export PYENV_ROOT=/home/ubuntu/.pyenv
+            export PATH=\$PYENV_ROOT/bin:\$PATH
+            eval \"\$(pyenv init -)\"
+            eval \"\$(pyenv virtualenv-init -)\"
+            pyenv activate ibl-cli-ops
+            export IBL_ROOT=/ibl/
+
+            # Login to ECR
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 765174860755.dkr.ecr.us-east-1.amazonaws.com
+
+            # Deploy mentor
+            cd /ibl/app/ibl-spa/mentor/
+            docker compose pull 2>/dev/null || true
+            echo 'DOCKER_IMAGE=$IMAGE' > .env.deploy
+            docker compose down 2>/dev/null
+            docker compose up -d
+            echo 'Mentor deployed'
+
+            # Restart auth
+            cd /ibl/app/ibl-spa/auth/
+            docker compose down 2>/dev/null
+            docker compose up -d
+            echo 'Auth restarted'
+          "
+
+      - name: Wait for mentor health
+        run: |
+          for i in $(seq 1 20); do
+            HTTP=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} \
+              "curl -s -o /dev/null -w '%{http_code}' http://localhost:5001/" 2>/dev/null)
+            echo "Attempt $i: HTTP $HTTP"
+            if echo "$HTTP" | grep -qE '^(200|301|302)$'; then
+              echo "Mentor healthy!"
+              break
+            fi
+            if [ "$i" -eq 10 ]; then
+              echo "Restarting mentor..."
+              ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} \
+                "cd /ibl/app/ibl-spa/mentor/ && docker compose restart" 2>/dev/null
+            fi
+            sleep 15
+          done
+
+      - name: Revoke runner SSH access
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ steps.config.outputs.security-group-id }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.runner-ip.outputs.ip }}/32 2>&1 || true
 
   # ============================================================
   # PARALLEL BROWSER TESTS (all 4 after health check)
   # ============================================================
   test-chrome:
-    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
     if: >-
       always() &&
-      needs.verify.result == 'success' &&
+      needs.launch-and-deploy.result == 'success' &&
       needs.check-resumption.outputs.chrome-resumption-mode != 'all-passed'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
@@ -379,10 +479,10 @@ jobs:
       workers: '3'
 
   test-firefox:
-    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
     if: >-
       always() &&
-      needs.verify.result == 'success' &&
+      needs.launch-and-deploy.result == 'success' &&
       needs.check-resumption.outputs.firefox-resumption-mode != 'all-passed'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
@@ -399,10 +499,10 @@ jobs:
       workers: '3'
 
   test-safari:
-    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
     if: >-
       always() &&
-      needs.verify.result == 'success' &&
+      needs.launch-and-deploy.result == 'success' &&
       needs.check-resumption.outputs.safari-resumption-mode != 'all-passed'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
@@ -419,10 +519,10 @@ jobs:
       workers: '3'
 
   test-edge:
-    needs: [gate, check-resumption, acquire-stg-slot, deploy-auth, build-playwright-image, verify]
+    needs: [gate, check-resumption, acquire-stg-slot, launch-and-deploy, build-playwright-image]
     if: >-
       always() &&
-      needs.verify.result == 'success' &&
+      needs.launch-and-deploy.result == 'success' &&
       needs.check-resumption.outputs.edge-resumption-mode != 'all-passed'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
@@ -507,8 +607,7 @@ jobs:
         gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
         coverage, e2e-coverage-check, claude-review-coverage,
         claude-review-quality, claude-review-uiux, check-prod-versions,
-        build-app-image, build-playwright-image, launch-infra,
-        deploy-app, deploy-auth, verify,
+        build-app-image, build-playwright-image, launch-and-deploy,
         test-chrome, test-firefox, test-safari, test-edge,
         save-status,
       ]
@@ -524,8 +623,8 @@ jobs:
   # TERMINATE INFRASTRUCTURE
   # ============================================================
   terminate-infra:
-    needs: [launch-infra, save-status, release-stg-slot]
-    if: always() && needs.launch-infra.outputs.instance-id != ''
+    needs: [launch-and-deploy, save-status, release-stg-slot]
+    if: always() && needs.launch-and-deploy.result != 'skipped'
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
@@ -534,8 +633,14 @@ jobs:
     steps:
       - name: Terminate EC2 instance
         run: |
-          echo "Terminating instance ${{ needs.launch-infra.outputs.instance-id }}..."
-          aws ec2 terminate-instances --instance-ids ${{ needs.launch-infra.outputs.instance-id }}
+          INSTANCE_ID="${{ needs.launch-and-deploy.outputs.instance-id }}"
+          if [ -n "$INSTANCE_ID" ]; then
+            echo "Terminating instance $INSTANCE_ID..."
+            aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+            echo "Instance terminated"
+          else
+            echo "No instance to terminate"
+          fi
           echo "Instance terminated"
 
   # ============================================================
@@ -547,8 +652,7 @@ jobs:
         gate, acquire-stg-slot, pinned-versions, commitlint, lint, typecheck,
         coverage, e2e-coverage-check, claude-review-coverage,
         claude-review-quality, claude-review-uiux, check-prod-versions,
-        build-app-image, build-playwright-image, launch-infra,
-        deploy-app, deploy-auth, verify,
+        build-app-image, build-playwright-image, launch-and-deploy,
         test-chrome, test-firefox, test-safari, test-edge,
         save-status, release-stg-slot, terminate-infra,
       ]
@@ -561,7 +665,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**PR:** #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Stg slot:** stg${{ needs.acquire-stg-slot.outputs.domain-number }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Instance:** ${{ needs.launch-infra.outputs.instance-id }} (${{ needs.launch-infra.outputs.instance-ip }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Instance:** ${{ needs.launch-and-deploy.outputs.instance-id }} (${{ needs.launch-and-deploy.outputs.instance-ip }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "## Code Quality" >> $GITHUB_STEP_SUMMARY
@@ -591,10 +695,7 @@ jobs:
           echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|:------:|" >> $GITHUB_STEP_SUMMARY
           for PAIR in \
-            "Launch Infra:${{ needs.launch-infra.result }}" \
-            "Deploy App:${{ needs.deploy-app.result }}" \
-            "Deploy Auth:${{ needs.deploy-auth.result }}" \
-            "Health Check:${{ needs.verify.result }}" \
+            "Launch & Deploy:${{ needs.launch-and-deploy.result }}" \
             "Terminate:${{ needs.terminate-infra.result }}"; do
             CHECK="${PAIR%%:*}"
             RESULT="${PAIR#*:}"
