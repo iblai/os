@@ -50,15 +50,17 @@ vi.mock('sonner', () => ({
 }));
 
 // ---- UI primitive stubs ----
-vi.mock('@/components/ui/button', () => ({
-  Button: React.forwardRef(
+vi.mock('@/components/ui/button', () => {
+  const Button = React.forwardRef(
     ({ children, onClick, disabled, ...rest }: any, ref: any) => (
       <button ref={ref} onClick={onClick} disabled={disabled} {...rest}>
         {children}
       </button>
     ),
-  ),
-}));
+  );
+  Button.displayName = 'Button';
+  return { Button };
+});
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
@@ -84,7 +86,12 @@ vi.mock('@/components/ui/command', () => ({
   CommandEmpty: ({ children }: any) => <div>{children}</div>,
   CommandGroup: ({ children }: any) => <div>{children}</div>,
   CommandItem: ({ children, onSelect }: any) => (
-    <div data-testid="command-item" role="option" onClick={() => onSelect?.()}>
+    <div
+      data-testid="command-item"
+      role="option"
+      aria-selected={false}
+      onClick={() => onSelect?.()}
+    >
       {children}
     </div>
   ),

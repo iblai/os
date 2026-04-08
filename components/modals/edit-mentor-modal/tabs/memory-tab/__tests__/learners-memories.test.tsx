@@ -44,13 +44,17 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 // Rather than mocking each shadcn component individually, we stub them to
 // render their children directly. This preserves visible text and event
 // wiring while keeping the test DOM small and assertable.
-vi.mock('@/components/ui/button', () => ({
-  Button: React.forwardRef(({ children, onClick, ...rest }: any, ref: any) => (
-    <button ref={ref} onClick={onClick} {...rest}>
-      {children}
-    </button>
-  )),
-}));
+vi.mock('@/components/ui/button', () => {
+  const Button = React.forwardRef(
+    ({ children, onClick, ...rest }: any, ref: any) => (
+      <button ref={ref} onClick={onClick} {...rest}>
+        {children}
+      </button>
+    ),
+  );
+  Button.displayName = 'Button';
+  return { Button };
+});
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div>{children}</div>,
@@ -65,7 +69,12 @@ vi.mock('@/components/ui/command', () => ({
   CommandEmpty: ({ children }: any) => <div>{children}</div>,
   CommandGroup: ({ children }: any) => <div>{children}</div>,
   CommandItem: ({ children, onSelect }: any) => (
-    <div data-testid="command-item" role="option" onClick={() => onSelect?.()}>
+    <div
+      data-testid="command-item"
+      role="option"
+      aria-selected={false}
+      onClick={() => onSelect?.()}
+    >
       {children}
     </div>
   ),
