@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.0](https://github.com/iblai/mentorai/compare/v0.44.8...v0.45.0) (2026-04-08)
+
+### Features
+
+* add spa-pr-validation-new.yml to main for testing ([9cf949f](https://github.com/iblai/mentorai/commit/9cf949fa58da0407cfe5eb07b1f918c53f7b8f55))
+
 ## [0.44.8](https://github.com/iblai/mentorai/compare/v0.44.7...v0.44.8) (2026-04-07)
 
 ### Bug Fixes
