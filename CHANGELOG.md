@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.10](https://github.com/iblai/mentorai/compare/v0.45.9...v0.45.10) (2026-04-08)
+
+### Chores
+
+* add mamigot as code owner for entire repo ([613f0ea](https://github.com/iblai/mentorai/commit/613f0ea8cb476f433fe9343a9aab62d064037bbc))
+
 ## [0.45.9](https://github.com/iblai/mentorai/compare/v0.45.8...v0.45.9) (2026-04-08)
 
 ## [0.45.8](https://github.com/iblai/mentorai/compare/v0.45.7...v0.45.8) (2026-04-08)
