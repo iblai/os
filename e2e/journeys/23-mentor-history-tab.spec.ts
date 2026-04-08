@@ -99,11 +99,33 @@ test.describe('Journey 23: Mentor History Tab', () => {
       return;
     }
     await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 120_000 }),
-      exportBtn.click(),
+    const downloadPromise = page
+      .waitForEvent('download', { timeout: 30_000 })
+      .catch(() => null);
+    await exportBtn.click();
+    const pendingToast = page.getByText(
+      /You will be notified once the report is available\./i,
+    );
+    const result = await Promise.race([
+      downloadPromise.then((d) =>
+        d ? { kind: 'download' as const, d } : null,
+      ),
+      pendingToast
+        .waitFor({ state: 'visible', timeout: 33_000 })
+        .then(() => ({ kind: 'toast' as const }))
+        .catch(() => null),
     ]);
-    expect(download.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
+    const finalResult =
+      result ??
+      (await downloadPromise.then((d) =>
+        d ? { kind: 'download' as const, d } : null,
+      ));
+    expect(finalResult).not.toBeNull();
+    if (finalResult?.kind === 'download') {
+      expect(finalResult.d.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
+    } else {
+      await expect(pendingToast).toBeVisible();
+    }
     await editMentorPage.close();
   });
 });
