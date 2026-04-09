@@ -12,7 +12,7 @@ on:
         required: false
         default: 'chrome'
 
-run-name: "Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})"
+run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})'
 
 jobs:
   # ============================================================

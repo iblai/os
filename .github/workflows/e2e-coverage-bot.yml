@@ -63,6 +63,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.E2E_COVERAGE_BOT_TOKEN }}
+          allowed_tools: 'Bash,Read,Write,Edit,Glob,Grep'
           direct_prompt: |
             You are the E2E coverage bot for the MentorAI repository.
             Your job is to review this PR for e2e test coverage, update coverage files when tests are present, and post a GitHub review as a required reviewer.
