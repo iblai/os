@@ -232,3 +232,4 @@ jobs:
             - Be specific in REQUEST_CHANGES messages — name the exact files and what tests are needed
             - Do not modify any source files, only `e2e/coverage.json` and `e2e/COVERAGE.md`
             - If unsure which journey a new route belongs to, create a new journey entry with a sensible `id` and `name`
+            - **You MUST run the `gh pr review` bash command — do not just describe what you would do. The PR review must be posted as a GitHub review (approve or request-changes), not as a comment.**
