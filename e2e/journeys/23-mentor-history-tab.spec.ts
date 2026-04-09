@@ -86,7 +86,7 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to history tab and clicks Export to trigger a file download', async ({
+  test('admin goes to history tab and clicks on Export to trigger a file download', async ({
     page,
     editMentorPage,
   }) => {
