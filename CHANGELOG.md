@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.14](https://github.com/iblai/mentorai/compare/v0.45.13...v0.45.14) (2026-04-09)
+
+### Bug Fixes
+
+* **ci:** skip e2e coverage bot for Dependabot PRs ([c4ec729](https://github.com/iblai/mentorai/commit/c4ec72925a35389c267cdbbfd4993f36a2bdcc60))
+
 ## [0.45.13](https://github.com/iblai/mentorai/compare/v0.45.12...v0.45.13) (2026-04-09)
 
 ### Bug Fixes
