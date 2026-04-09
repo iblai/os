@@ -4,25 +4,25 @@
 
 ### Bug Fixes
 
-* **ci:** instruct coverage bot to actually execute gh pr review command ([d8df598](https://github.com/iblai/mentorai/commit/d8df598a452c069c78adeb7eaeff3c16978db1eb))
+- **ci:** instruct coverage bot to actually execute gh pr review command ([d8df598](https://github.com/iblai/mentorai/commit/d8df598a452c069c78adeb7eaeff3c16978db1eb))
 
 ## [0.45.14](https://github.com/iblai/mentorai/compare/v0.45.13...v0.45.14) (2026-04-09)
 
 ### Bug Fixes
 
-* **ci:** skip e2e coverage bot for Dependabot PRs ([c4ec729](https://github.com/iblai/mentorai/commit/c4ec72925a35389c267cdbbfd4993f36a2bdcc60))
+- **ci:** skip e2e coverage bot for Dependabot PRs ([c4ec729](https://github.com/iblai/mentorai/commit/c4ec72925a35389c267cdbbfd4993f36a2bdcc60))
 
 ## [0.45.13](https://github.com/iblai/mentorai/compare/v0.45.12...v0.45.13) (2026-04-09)
 
 ### Bug Fixes
 
-* **ci:** remove claude-review-coverage job references from spa-pr-validation ([d3156df](https://github.com/iblai/mentorai/commit/d3156df4b631db7fa266a27f80d2ae3d6280a501))
+- **ci:** remove claude-review-coverage job references from spa-pr-validation ([d3156df](https://github.com/iblai/mentorai/commit/d3156df4b631db7fa266a27f80d2ae3d6280a501))
 
 ## [0.45.12](https://github.com/iblai/mentorai/compare/v0.45.11...v0.45.12) (2026-04-09)
 
 ### Bug Fixes
 
-* **e2e:** fix workflow bot if condition and improve workflow test utils ([a4b2154](https://github.com/iblai/mentorai/commit/a4b215432b44f5f14042a8aeb316bb3fb97cee5d))
+- **e2e:** fix workflow bot if condition and improve workflow test utils ([a4b2154](https://github.com/iblai/mentorai/commit/a4b215432b44f5f14042a8aeb316bb3fb97cee5d))
 
 ## [0.45.11](https://github.com/iblai/mentorai/compare/v0.45.10...v0.45.11) (2026-04-08)
 
