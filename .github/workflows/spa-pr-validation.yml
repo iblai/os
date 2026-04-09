@@ -771,7 +771,6 @@ jobs:
         typecheck,
         coverage,
         e2e-coverage-check,
-        claude-review-coverage,
         claude-review-quality,
         claude-review-uiux,
         check-prod-versions,
@@ -817,7 +816,6 @@ jobs:
         typecheck,
         coverage,
         e2e-coverage-check,
-        claude-review-coverage,
         claude-review-quality,
         claude-review-uiux,
         check-prod-versions,
@@ -923,14 +921,7 @@ jobs:
             echo "| UI/UX | :x: Failed |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          COV_REVIEW_RESULT="${{ needs.claude-review-coverage.result }}"
-          if [[ "$COV_REVIEW_RESULT" == "success" ]]; then
-            echo "| E2E Coverage | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
-          elif [[ "$COV_REVIEW_RESULT" == "skipped" ]]; then
-            echo "| E2E Coverage | :fast_forward: Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| E2E Coverage | :x: Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
+          # E2E coverage review is handled by the dedicated e2e-coverage-bot.yml workflow
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Browser test results
