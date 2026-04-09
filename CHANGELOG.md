@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.16](https://github.com/iblai/mentorai/compare/v0.45.15...v0.45.16) (2026-04-09)
+
+### Bug Fixes
+
+* resolve strict mode violation for "More options" button and allow CI bot tools ([d35161b](https://github.com/iblai/mentorai/commit/d35161b34452dcfe53aa8138fd4296a01228e0e8)), closes [#main-content-container](https://github.com/iblai/mentorai/issues/main-content-container)
+
 ## [0.45.15](https://github.com/iblai/mentorai/compare/v0.45.14...v0.45.15) (2026-04-09)
 
 ### Bug Fixes
