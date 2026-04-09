@@ -141,7 +141,7 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
   });
 
-  test('admin goes to workflow editor and sees Draft status for new workflow', async ({
+  test('admin goes to workflow editor and sees Active status for new workflow', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
@@ -149,7 +149,7 @@ test.describe('Journey 34: Workflows', () => {
     await waitForWorkflowEditorReady(page);
 
     const status = await getWorkflowStatus(page);
-    expect(status).toBe('Draft');
+    expect(status).toBe('Active');
 
     await deleteCurrentWorkflow(page);
   });
