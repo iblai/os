@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.12](https://github.com/iblai/mentorai/compare/v0.45.11...v0.45.12) (2026-04-09)
+
+### Bug Fixes
+
+* **e2e:** fix workflow bot if condition and improve workflow test utils ([a4b2154](https://github.com/iblai/mentorai/commit/a4b215432b44f5f14042a8aeb316bb3fb97cee5d))
+
 ## [0.45.11](https://github.com/iblai/mentorai/compare/v0.45.10...v0.45.11) (2026-04-08)
 
 ### Bug Fixes
