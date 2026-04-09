@@ -29,7 +29,7 @@ jobs:
     name: E2E Coverage Bot
     runs-on: ubuntu-latest
     # Skip commits made by the bot itself to prevent infinite loops
-    if: github.actor != env.BOT_GITHUB_USERNAME
+    if: github.actor != 'mamigot'
     permissions:
       contents: write # allow Claude to commit coverage file updates
       pull-requests: write # allow gh pr review to post reviews

@@ -10,14 +10,25 @@ import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 export async function navigateToWorkflowsPage(page: Page): Promise<void> {
   const { platformKey: tenantKey, mentorId } = parsePlatformUrl(page.url());
 
+  // Log localStorage tokens before navigating to help diagnose redirect-to-login issues
+  const tokenSnapshot = await page.evaluate(() => {
+    const keys = ['dm_token', 'axd_token', 'axd_token_expires', 'edx_jwt_token'];
+    return Object.fromEntries(keys.map((k) => [k, localStorage.getItem(k) ? 'present' : 'NULL']));
+  });
+  logger.info(`[navigateToWorkflowsPage] localStorage before goto: ${JSON.stringify(tokenSnapshot)}`);
+
   await page.goto(
     `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/workflows/${mentorId}`,
     { waitUntil: 'domcontentloaded', timeout: 60_000 },
   );
 
+  logger.info(`[navigateToWorkflowsPage] URL after goto: ${page.url()}`);
+
   await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
     timeout: 60_000,
   });
+
+  logger.info(`[navigateToWorkflowsPage] URL after safeWaitForURL: ${page.url()}`);
 
   const heading = page.getByRole('heading', { name: 'Workflows' });
   await expect(heading).toBeVisible({ timeout: 30_000 });
@@ -120,9 +131,7 @@ export async function openWorkflowByName(
  * Delete the currently open workflow via the more options menu.
  */
 export async function deleteCurrentWorkflow(page: Page): Promise<void> {
-  const moreButton = page
-    .locator('button')
-    .filter({ has: page.locator('svg.lucide-more-horizontal') });
+  const moreButton = page.getByRole('button', { name: 'More options' });
   await expect(moreButton).toBeVisible({ timeout: 10_000 });
   await moreButton.click();
 
