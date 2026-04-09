@@ -685,6 +685,7 @@ export default function WorkflowDetailPage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="More options"
                     className="text-muted-foreground hover:text-foreground"
                   >
                     <MoreHorizontal className="h-5 w-5" />
