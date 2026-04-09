@@ -1,0 +1,234 @@
+name: E2E Coverage Bot
+
+# ──────────────────────────────────────────────────────────────────────────────
+# One-time setup required (outside this file):
+#
+# 1. Create a GitHub account for the bot (e.g. "mentorai-e2e-bot")
+#    → Add it as a repo collaborator with Write access
+#
+# 2. On that account, generate a Classic PAT with scope: repo
+#    → Store it as repo secret: E2E_COVERAGE_BOT_TOKEN
+#
+# 3. In repo Settings → Branches → Protect `main`:
+#    → "Require a pull request before merging"
+#    → Add the bot account as a required reviewer
+#      (or use CODEOWNERS for e2e/coverage.json + e2e/COVERAGE.md)
+#
+# 4. Replace BOT_GITHUB_USERNAME below with the actual bot account login
+# ──────────────────────────────────────────────────────────────────────────────
+
+env:
+  BOT_GITHUB_USERNAME: mamigot # ← change this to your bot account login
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  coverage-bot:
+    name: E2E Coverage Bot
+    runs-on: ubuntu-latest
+    # Skip commits made by the bot itself to prevent infinite loops
+    if: github.actor != env.BOT_GITHUB_USERNAME
+    permissions:
+      contents: write # allow Claude to commit coverage file updates
+      pull-requests: write # allow gh pr review to post reviews
+
+    steps:
+      # Checkout the PR branch using the bot token so git push works
+      # and so `gh` CLI inside Claude is authenticated as the bot account
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.E2E_COVERAGE_BOT_TOKEN }}
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Configure git identity so auto-commits appear as the bot
+      - name: Configure git as bot
+        run: |
+          git config user.name "${{ env.BOT_GITHUB_USERNAME }}"
+          git config user.email "${{ env.BOT_GITHUB_USERNAME }}@users.noreply.github.com"
+
+      # Claude runs as the bot account (github_token = bot PAT),
+      # so gh pr review / gh api calls appear from the bot account.
+      - name: Claude E2E coverage analysis and review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.E2E_COVERAGE_BOT_TOKEN }}
+          direct_prompt: |
+            You are the E2E coverage bot for the MentorAI repository.
+            Your job is to review this PR for e2e test coverage, update coverage files when tests are present, and post a GitHub review as a required reviewer.
+
+            PR number: ${{ github.event.pull_request.number }}
+            Base branch: ${{ github.base_ref }}
+            Head branch: ${{ github.head_ref }}
+            Repository: ${{ github.repository }}
+
+            ## Step 1 — Dismiss stale REQUEST_CHANGES reviews from yourself
+
+            List your previous reviews on this PR and dismiss any with state CHANGES_REQUESTED
+            (so they don't stack up across commits):
+
+            ```bash
+            BOT_LOGIN=$(gh api user --jq .login)
+            PR_NUM=${{ github.event.pull_request.number }}
+            REPO=${{ github.repository }}
+
+            gh api "repos/$REPO/pulls/$PR_NUM/reviews" --paginate \
+              | jq -r ".[] | select(.user.login == \"$BOT_LOGIN\" and .state == \"CHANGES_REQUESTED\") | .id" \
+              | while read review_id; do
+                  gh api -X PUT "repos/$REPO/pulls/$PR_NUM/reviews/$review_id/dismissals" \
+                    -f message="Re-evaluating after new commits." || true
+                done
+            ```
+
+            ## Step 2 — Identify what changed
+
+            ```bash
+            git diff --name-only origin/${{ github.base_ref }}...HEAD
+            ```
+
+            Pay attention to:
+            - New `app/**/page.tsx` files → new app routes that need e2e coverage
+            - New/modified `e2e/journeys/*.spec.ts` files → new or updated e2e journey specs
+            - Changes to `e2e/coverage.json` or `e2e/COVERAGE.md` → developer already updated coverage
+
+            ## Step 3 — Run the mechanical coverage check
+
+            ```bash
+            node e2e/scripts/check-journey-coverage.mjs \
+              --all --no-regress \
+              --base origin/${{ github.base_ref }} 2>&1
+            ```
+
+            Note the exit code (0 = pass, non-zero = fail) and the full output.
+
+            ## Step 4 — Read current coverage state
+
+            Read `e2e/coverage.json` (machine-readable journey→sourceFiles→checkpoints map)
+            and `e2e/COVERAGE.md` (human-readable checklist).
+
+            ## Step 5 — Apply decision logic
+
+            ---
+
+            ### CASE A: New `page.tsx` route(s) added but NO new e2e spec and NO coverage update
+
+            Post REQUEST_CHANGES:
+            ```bash
+            gh pr review ${{ github.event.pull_request.number }} \
+              --request-changes \
+              --body "$(cat <<'REVIEW'
+            ## ❌ E2E Coverage Required
+
+            This PR adds new routes but does not include e2e journey tests or coverage updates.
+
+            **Missing coverage for:**
+            [list each new page.tsx file and the journey/checkpoints needed]
+
+            **To fix:**
+            1. Add a journey spec in `e2e/journeys/` testing the new feature
+            2. In `e2e/coverage.json`: add the route to `sourceFiles[]` and add checkpoint entries with `"status": "covered"`
+            3. In `e2e/COVERAGE.md`: add matching `[x]` checkpoint lines
+
+            Run locally to verify:
+            \`\`\`bash
+            node e2e/scripts/check-journey-coverage.mjs --all
+            \`\`\`
+            REVIEW
+            )"
+            ```
+
+            ---
+
+            ### CASE B: New `page.tsx` route(s) added WITH a new/updated e2e spec, but coverage files NOT updated
+
+            1. Read the new spec file(s) to extract the journey structure and test descriptions
+            2. Update `e2e/coverage.json`:
+               - Add a new journey entry (or update an existing one) with the correct `id`, `name`, `spec` filename, `sourceFiles` array containing the new route(s), and `checkpoints` array derived from the `test('description', ...)` calls in the spec. Set each checkpoint `"status": "covered"`.
+            3. Update `e2e/COVERAGE.md`:
+               - Add the new journey section with `[x]` checkpoints matching the spec
+            4. Commit and push:
+               ```bash
+               git add e2e/coverage.json e2e/COVERAGE.md
+               git commit -m "chore(e2e): update coverage for [feature name] [skip ci]"
+               git push origin ${{ github.head_ref }}
+               ```
+               The `[skip ci]` in the commit message prevents this workflow from looping.
+            5. Post APPROVE:
+               ```bash
+               gh pr review ${{ github.event.pull_request.number }} \
+                 --approve \
+                 --body "## ✅ E2E Coverage Updated
+
+               Coverage files have been automatically updated with the new journey checkpoints.
+
+               **Updated:**
+               - \`e2e/coverage.json\` — new sourceFiles + checkpoints added
+               - \`e2e/COVERAGE.md\` — new \`[x]\` checkpoint lines added"
+               ```
+
+            ---
+
+            ### CASE C: New `page.tsx` route(s) added, e2e spec added, AND coverage files already updated by developer
+
+            Verify the coverage.json changes are correct (spec filename matches, sourceFiles includes the new routes, checkpoints are present).
+            If correct, approve:
+            ```bash
+            gh pr review ${{ github.event.pull_request.number }} \
+              --approve \
+              --body "## ✅ E2E Coverage — All Good
+
+            New routes are covered and coverage files are up to date."
+            ```
+
+            If the coverage.json update looks incomplete or incorrect, request changes explaining what's wrong.
+
+            ---
+
+            ### CASE D: Mechanical check FAILED (checkpoint regression — checkpoint count decreased)
+
+            ```bash
+            gh pr review ${{ github.event.pull_request.number }} \
+              --request-changes \
+              --body "## ❌ E2E Checkpoint Regression
+
+            The checkpoint count in \`e2e/coverage.json\` decreased compared to \`origin/${{ github.base_ref }}\`.
+            Removing or reducing test coverage is not allowed.
+
+            **Coverage check output:**
+            \`\`\`
+            [paste the output from the coverage check here]
+            \`\`\`
+
+            To fix: restore the removed checkpoints or justify the removal by updating COVERAGE.md with a note."
+            ```
+
+            ---
+
+            ### CASE E: No new `page.tsx` files and mechanical check PASSED
+
+            ```bash
+            gh pr review ${{ github.event.pull_request.number }} \
+              --approve \
+              --body "## ✅ E2E Coverage — No Issues
+
+            No new app routes were introduced. All existing coverage is intact."
+            ```
+
+            ---
+
+            ## Important rules
+            - Always dismiss stale REQUEST_CHANGES reviews before posting a new one (Step 1)
+            - Always commit coverage file changes with `[skip ci]` to prevent workflow loops
+            - Be specific in REQUEST_CHANGES messages — name the exact files and what tests are needed
+            - Do not modify any source files, only `e2e/coverage.json` and `e2e/COVERAGE.md`
+            - If unsure which journey a new route belongs to, create a new journey entry with a sensible `id` and `name`

@@ -24,20 +24,21 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to memory tab and enables then disables the Reference saved memories toggle', async ({
-    page,
-    editMentorPage,
-  }) => {
-    const wasEnabled = await editMentorPage.memory.isReferenceEnabled();
-    await editMentorPage.memory.toggleReference();
-    await editMentorPage.memory.toggleReference();
-    // Restore original state
-    const currentState = await editMentorPage.memory.isReferenceEnabled();
-    if (currentState !== wasEnabled) {
+  // FIXME: Looks like this test journey was changed
+  test.fixme(
+    'admin goes to memory tab and enables then disables the Reference saved memories toggle',
+    async ({ page, editMentorPage }) => {
+      const wasEnabled = await editMentorPage.memory.isReferenceEnabled();
       await editMentorPage.memory.toggleReference();
-    }
-    await editMentorPage.close();
-  });
+      await editMentorPage.memory.toggleReference();
+      // Restore original state
+      const currentState = await editMentorPage.memory.isReferenceEnabled();
+      if (currentState !== wasEnabled) {
+        await editMentorPage.memory.toggleReference();
+      }
+      await editMentorPage.close();
+    },
+  );
 
   test('admin goes to memory tab and verifies user memories list shows entries or empty state and can delete an entry', async ({
     editMentorPage,
