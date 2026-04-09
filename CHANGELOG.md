@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.45.15](https://github.com/iblai/mentorai/compare/v0.45.14...v0.45.15) (2026-04-09)
+
+### Bug Fixes
+
+* **ci:** instruct coverage bot to actually execute gh pr review command ([d8df598](https://github.com/iblai/mentorai/commit/d8df598a452c069c78adeb7eaeff3c16978db1eb))
+
 ## [0.45.14](https://github.com/iblai/mentorai/compare/v0.45.13...v0.45.14) (2026-04-09)
 
 ### Bug Fixes
