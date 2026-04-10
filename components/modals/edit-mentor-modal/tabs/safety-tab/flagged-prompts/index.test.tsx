@@ -12,7 +12,8 @@ import { FlaggedPrompt } from './types';
 const mockUseFlaggedPromptsWithPagination = vi.fn();
 
 vi.mock('./use-flagged-prompts-with-pagination', () => ({
-  useFlaggedPromptsWithPagination: (...args: any[]) => mockUseFlaggedPromptsWithPagination(...args),
+  useFlaggedPromptsWithPagination: (...args: any[]) =>
+    mockUseFlaggedPromptsWithPagination(...args),
 }));
 
 vi.mock('./flagged-prompts-summary', () => ({
@@ -22,7 +23,9 @@ vi.mock('./flagged-prompts-summary', () => ({
 }));
 
 vi.mock('./flagged-prompts-filters', () => ({
-  FlaggedPromptsFilters: (_props: any) => <div data-testid="filters">Filters</div>,
+  FlaggedPromptsFilters: (_props: any) => (
+    <div data-testid="filters">Filters</div>
+  ),
 }));
 
 vi.mock('./flagged-prompts-list', () => ({
@@ -30,7 +33,11 @@ vi.mock('./flagged-prompts-list', () => ({
     return (
       <div data-testid="list">
         {props.prompts.map((p: FlaggedPrompt) => (
-          <button key={p.id} onClick={() => props.onPromptClick(p)} data-testid={`prompt-${p.id}`}>
+          <button
+            key={p.id}
+            onClick={() => props.onPromptClick(p)}
+            data-testid={`prompt-${p.id}`}
+          >
             {p.userEmail}
           </button>
         ))}
@@ -48,10 +55,16 @@ vi.mock('./flagged-prompt-detail', () => ({
         {props.prompt ? (
           <>
             <span>Detail: {props.prompt.userEmail}</span>
-            <button onClick={props.onContactUser} data-testid="contact-user-btn">
+            <button
+              onClick={props.onContactUser}
+              data-testid="contact-user-btn"
+            >
               Contact
             </button>
-            <button onClick={props.onDeleteSuccess} data-testid="delete-success-btn">
+            <button
+              onClick={props.onDeleteSuccess}
+              data-testid="delete-success-btn"
+            >
               Delete Success
             </button>
           </>
@@ -73,7 +86,10 @@ vi.mock('next/dynamic', () => ({
       return (
         <div data-testid="mobile-detail">
           <span>Mobile: {props.prompt?.userEmail}</span>
-          <button onClick={() => props.onDeleteSuccess?.()} data-testid="mobile-delete-success">
+          <button
+            onClick={() => props.onDeleteSuccess?.()}
+            data-testid="mobile-delete-success"
+          >
             Mobile Delete Success
           </button>
         </div>
@@ -89,7 +105,10 @@ vi.mock('@/components/modals/send-notification-dialog', () => ({
     return props.open ? (
       <div data-testid="notification-dialog">
         <span>Send Notification</span>
-        <button onClick={() => props.onOpenChange(false)} data-testid="close-notification">
+        <button
+          onClick={() => props.onOpenChange(false)}
+          data-testid="close-notification"
+        >
           Close Notification
         </button>
       </div>
@@ -109,10 +128,17 @@ vi.mock('@/components/ibl-pagination', () => ({
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children, className }: any) => <div className={className}>{children}</div>,
-  DialogHeader: ({ children, className }: any) => <div className={className}>{children}</div>,
-  DialogTitle: ({ children, className }: any) => <h2 className={className}>{children}</h2>,
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  DialogHeader: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  DialogTitle: ({ children, className }: any) => (
+    <h2 className={className}>{children}</h2>
+  ),
 }));
 
 // ============================================================================
@@ -179,7 +205,10 @@ describe('FlaggedPromptsModal', () => {
     capturedNotificationProps = {};
     mockUseFlaggedPromptsWithPagination.mockReturnValue(defaultHookReturn);
     // Default: desktop width
-    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    Object.defineProperty(window, 'innerWidth', {
+      value: 1024,
+      writable: true,
+    });
   });
 
   afterEach(() => {

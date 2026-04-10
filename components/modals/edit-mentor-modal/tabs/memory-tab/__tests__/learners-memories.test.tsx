@@ -4,117 +4,95 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
 import { LearnersMemories } from '../learners-memories';
 
-// ---- Mocks ----
-const mockGetMemoryFiltersQuery = vi.fn();
-const mockGetFilteredMemoriesQuery = vi.fn();
+// ---- Query hook mocks ----
+const mockGetMentorMemoriesQuery = vi.fn();
+const mockGetMemoryCategoriesAdminQuery = vi.fn();
+
+// `useParams` and `useUsername` and `useNavigate().getMentorId` are the three
+// inputs that drive the component's mentor/tenant/user context. We expose
+// overridable variables so individual tests can reshape them.
+let mockTenantKey: string | undefined = 'test-tenant';
+let mockMentorIdParam: string | undefined = 'mentor-1';
+let mockUsername: string | null = 'testuser';
+let mockGetMentorIdReturn: string | undefined = undefined;
 
 vi.mock('next/navigation', () => ({
-  useParams: () => ({ tenantKey: 'test-tenant', mentorId: 'mentor-1' }),
+  useParams: () => ({
+    tenantKey: mockTenantKey,
+    mentorId: mockMentorIdParam,
+  }),
 }));
 
 vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => 'testuser',
+  useUsername: () => mockUsername,
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({
+    getMentorId: () => mockGetMentorIdReturn,
+  }),
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMemoryFiltersQuery: (...args: any[]) => mockGetMemoryFiltersQuery(...args),
-  useGetFilteredMemoriesQuery: (...args: any[]) => mockGetFilteredMemoriesQuery(...args),
+  useGetMentorMemoriesQuery: (...args: unknown[]) =>
+    mockGetMentorMemoriesQuery(...args),
+  useGetMemoryCategoriesAdminQuery: (...args: unknown[]) =>
+    mockGetMemoryCategoriesAdminQuery(...args),
 }));
 
-vi.mock('../utils', () => ({
-  transformCategoryToDisplay: (cat: string) =>
-    cat
-      .replace(/_/g, ' ')
-      .split(' ')
-      .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' '),
-}));
-
-// Mock UI components
-vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, ...props }: any) => (
-    <button onClick={onClick} {...props}>
-      {children}
-    </button>
-  ),
-}));
+// ---- UI primitive stubs ----
+// Rather than mocking each shadcn component individually, we stub them to
+// render their children directly. This preserves visible text and event
+// wiring while keeping the test DOM small and assertable.
+vi.mock('@/components/ui/button', () => {
+  const Button = React.forwardRef(
+    ({ children, onClick, ...rest }: any, ref: any) => (
+      <button ref={ref} onClick={onClick} {...rest}>
+        {children}
+      </button>
+    ),
+  );
+  Button.displayName = 'Button';
+  return { Button };
+});
 
 vi.mock('@/components/ui/popover', () => ({
-  Popover: ({ children, open, onOpenChange }: any) => (
-    <div data-testid="popover" data-open={open}>
-      {typeof onOpenChange === 'function' && (
-        <button
-          data-testid="popover-toggle"
-          onClick={() => onOpenChange(!open)}
-          style={{ display: 'none' }}
-        />
-      )}
-      {children}
-    </div>
-  ),
-  PopoverTrigger: ({ children }: any) => <div data-testid="popover-trigger">{children}</div>,
-  PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
+  Popover: ({ children }: any) => <div>{children}</div>,
+  PopoverTrigger: ({ children }: any) => <>{children}</>,
+  PopoverContent: ({ children }: any) => <div>{children}</div>,
 }));
 
 vi.mock('@/components/ui/command', () => ({
-  Command: ({ children }: any) => <div data-testid="command">{children}</div>,
-  CommandInput: ({ placeholder }: any) => (
-    <input data-testid="command-input" placeholder={placeholder} />
-  ),
-  CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
-  CommandEmpty: ({ children }: any) => <div data-testid="command-empty">{children}</div>,
-  CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
-  CommandItem: ({ children, onSelect, value }: any) => (
-    <div data-testid="command-item" data-value={value} onClick={onSelect}>
-      {children}
-    </div>
-  ),
-}));
-
-vi.mock('@/components/ui/select', () => ({
-  Select: ({ children, onValueChange, value }: any) => (
-    <div data-testid="select" data-value={value}>
-      {React.Children.map(children, (child: any) => {
-        if (!child) return null;
-        return React.cloneElement(child, { onValueChange });
-      })}
-    </div>
-  ),
-  SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span data-testid="select-value">{placeholder}</span>,
-  SelectContent: ({ children, onValueChange }: any) => (
-    <div data-testid="select-content">
-      {React.Children.map(children, (child: any) => {
-        if (!child) return null;
-        if (Array.isArray(child)) {
-          return child.map((c: any) => (c ? React.cloneElement(c, { onValueChange }) : null));
-        }
-        return React.cloneElement(child, { onValueChange });
-      })}
-    </div>
-  ),
-  SelectItem: ({ children, value, onValueChange }: any) => (
-    <div data-testid="select-item" data-value={value} onClick={() => onValueChange?.(value)}>
+  Command: ({ children }: any) => <div>{children}</div>,
+  CommandInput: ({ placeholder }: any) => <input placeholder={placeholder} />,
+  CommandList: ({ children }: any) => <div>{children}</div>,
+  CommandEmpty: ({ children }: any) => <div>{children}</div>,
+  CommandGroup: ({ children }: any) => <div>{children}</div>,
+  CommandItem: ({ children, onSelect }: any) => (
+    <div
+      data-testid="command-item"
+      role="option"
+      aria-selected={false}
+      onClick={() => onSelect?.()}
+    >
       {children}
     </div>
   ),
 }));
 
 vi.mock('@/components/ui/calendar', () => ({
-  Calendar: ({ onSelect, mode }: any) => (
-    <div data-testid="calendar" data-mode={mode}>
-      <button
-        data-testid="calendar-select"
-        onClick={() =>
-          onSelect({
-            from: new Date('2024-01-01'),
-            to: new Date('2024-01-31'),
-          })
-        }
-      >
-        Select Date
-      </button>
-    </div>
+  Calendar: ({ onSelect }: any) => (
+    <button
+      data-testid="calendar-select"
+      onClick={() =>
+        onSelect?.({
+          from: new Date('2024-01-01T00:00:00.000Z'),
+          to: new Date('2024-01-31T00:00:00.000Z'),
+        })
+      }
+    >
+      Select Date
+    </button>
   ),
 }));
 
@@ -126,82 +104,85 @@ vi.mock('@/lib/utils', () => ({
   cn: (...classes: any[]) => classes.filter(Boolean).join(' '),
 }));
 
-// ---- Test Data ----
-const mockLearners = [
-  { username: 'learner1', email: 'learner1@example.com', lti_email: '' },
-  { username: 'learner2', email: 'learner2@example.com', lti_email: '' },
-];
+// ---- Test data ----
+const mockCategory = (id: number, name: string, slug: string) => ({
+  id,
+  name,
+  slug,
+});
 
-const mockMemories = [
+const mockMemory = (overrides: Partial<any> = {}) => ({
+  id: overrides.id ?? 1,
+  content: overrides.content ?? 'Memory content',
+  category: overrides.category ?? mockCategory(1, 'Preferences', 'preferences'),
+  username: overrides.username ?? 'alice',
+  created_at: overrides.created_at ?? '2024-01-15T10:30:00.000Z',
+});
+
+const byCategoryResponse = (
+  entries: Array<{
+    category: { id: number; name: string; slug: string };
+    memories: any[];
+  }>,
+) => entries;
+
+const defaultResponse = byCategoryResponse([
   {
-    unique_id: 'mem-1',
-    username: 'learner1',
-    email: 'learner1@example.com',
-    category: 'personal_info',
-    updated_at: '2024-06-15T10:00:00Z',
-    entries: [
-      {
-        unique_id: 'entry-1',
-        key: 'name',
-        value: 'John Doe',
-        inserted_at: '',
-        updated_at: '',
-        expires_at: null,
-        category: 'personal_info',
-      },
-      {
-        unique_id: 'entry-2',
-        key: 'age',
-        value: '30',
-        inserted_at: '',
-        updated_at: '',
-        expires_at: null,
-        category: 'personal_info',
-      },
+    category: mockCategory(1, 'Preferences', 'preferences'),
+    memories: [
+      mockMemory({
+        id: 1,
+        content: 'Loves dark mode',
+        category: mockCategory(1, 'Preferences', 'preferences'),
+        username: 'alice',
+      }),
+      mockMemory({
+        id: 2,
+        content: 'Prefers vim keybindings',
+        category: mockCategory(1, 'Preferences', 'preferences'),
+        username: 'bob',
+      }),
     ],
   },
   {
-    unique_id: 'mem-2',
-    username: 'learner2',
-    email: 'learner2@example.com',
-    category: 'preferences',
-    updated_at: '2024-06-14T10:00:00Z',
-    entries: [
-      {
-        unique_id: 'entry-3',
-        key: 'theme',
-        value: 'dark',
-        inserted_at: '',
-        updated_at: '',
-        expires_at: null,
-        category: 'preferences',
-      },
+    category: mockCategory(2, 'Background', 'background'),
+    memories: [
+      mockMemory({
+        id: 3,
+        content: 'Former backend dev',
+        category: mockCategory(2, 'Background', 'background'),
+        username: 'alice',
+      }),
     ],
   },
+]);
+
+const defaultAdminCategories = [
+  { id: 1, name: 'Preferences', slug: 'preferences' },
+  { id: 2, name: 'Background', slug: 'background' },
+  { id: 3, name: 'Goals', slug: 'goals' },
 ];
 
 describe('LearnersMemories', () => {
   beforeEach(() => {
     cleanup();
-    mockGetMemoryFiltersQuery.mockReset();
-    mockGetFilteredMemoriesQuery.mockReset();
+    mockGetMentorMemoriesQuery.mockReset();
+    mockGetMemoryCategoriesAdminQuery.mockReset();
+    mockTenantKey = 'test-tenant';
+    mockMentorIdParam = 'mentor-1';
+    mockUsername = 'testuser';
+    mockGetMentorIdReturn = undefined;
 
-    mockGetMemoryFiltersQuery.mockReturnValue({
-      data: {
-        categories: ['personal_info', 'preferences'],
-        users: mockLearners,
-      },
-    });
-
-    mockGetFilteredMemoriesQuery.mockReturnValue({
-      data: { results: mockMemories },
+    mockGetMentorMemoriesQuery.mockReturnValue({
+      data: defaultResponse,
       isLoading: false,
     });
+    mockGetMemoryCategoriesAdminQuery.mockReturnValue({
+      data: defaultAdminCategories,
+    });
   });
 
-  afterEach(() => {
-    cleanup();
-  });
+  afterEach(() => cleanup());
 
   describe('Rendering', () => {
     it('renders the header with title and info icon', () => {
@@ -209,352 +190,303 @@ describe('LearnersMemories', () => {
       expect(screen.getByText('Learner Memories')).toBeInTheDocument();
     });
 
-    it('renders the learner selector', () => {
+    it('renders the learner selector with default label', () => {
       render(<LearnersMemories />);
+      // The learner trigger button carries role="combobox", whose accessible
+      // name is derived from aria-label (not text content), so we assert the
+      // label text directly and sanity-check that a combobox exists.
       expect(screen.getByText('Select Learner')).toBeInTheDocument();
+      expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders the date range picker', () => {
+    it('renders the date range picker with default label', () => {
       render(<LearnersMemories />);
-      expect(screen.getByText('Pick a Date Range')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Pick a Date Range/i }),
+      ).toBeInTheDocument();
     });
 
-    it('renders the category select', () => {
+    it('renders the desktop category selector defaulting to "All"', () => {
       render(<LearnersMemories />);
-      const selectItems = screen.getAllByTestId('select-item');
-      expect(selectItems.length).toBeGreaterThanOrEqual(1);
+      // The category button label starts at "All" on mount.
+      const allButtons = screen.getAllByRole('button');
+      const categoryButton = allButtons.find((b) =>
+        /^All/.test(b.textContent ?? ''),
+      );
+      expect(categoryButton).toBeDefined();
     });
 
-    it('renders category options from filters data', () => {
+    it('renders category options from adminCategories data', () => {
       render(<LearnersMemories />);
-      expect(screen.getAllByText('Personal Info').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(1);
+      // Category command items include "All" + the 3 admin categories.
+      const items = screen.getAllByTestId('command-item');
+      const labels = items.map((el) => el.textContent);
+      expect(labels.filter((l) => l?.includes('All')).length).toBeGreaterThan(
+        0,
+      );
+      expect(labels.some((l) => l?.includes('Preferences'))).toBe(true);
+      expect(labels.some((l) => l?.includes('Background'))).toBe(true);
+      expect(labels.some((l) => l?.includes('Goals'))).toBe(true);
+    });
+
+    it('falls back to response-derived categories when adminCategories is empty', () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
+      render(<LearnersMemories />);
+      const items = screen.getAllByTestId('command-item');
+      const labels = items.map((el) => el.textContent);
+      // Derived from the response's two category groups.
+      expect(labels.some((l) => l?.includes('Preferences'))).toBe(true);
+      expect(labels.some((l) => l?.includes('Background'))).toBe(true);
     });
   });
 
-  describe('Loading State', () => {
-    it('shows spinner when memories are loading', () => {
-      mockGetFilteredMemoriesQuery.mockReturnValue({
+  describe('Loading state', () => {
+    it('shows the spinner while memories are loading', () => {
+      mockGetMentorMemoriesQuery.mockReturnValue({
         data: undefined,
         isLoading: true,
       });
-
       render(<LearnersMemories />);
       expect(screen.getByTestId('spinner')).toBeInTheDocument();
     });
   });
 
-  describe('Empty State', () => {
-    it('shows "No Memories" when memories list is empty', () => {
-      mockGetFilteredMemoriesQuery.mockReturnValue({
-        data: { results: [] },
+  describe('Empty state', () => {
+    it('shows "No Memories" when the response array is empty', () => {
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: [],
         isLoading: false,
       });
-
       render(<LearnersMemories />);
       expect(screen.getByText('No Memories')).toBeInTheDocument();
     });
 
-    it('shows "No Memories" when data is undefined', () => {
-      mockGetFilteredMemoriesQuery.mockReturnValue({
+    it('shows "No Memories" when the response is undefined', () => {
+      mockGetMentorMemoriesQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
       });
-
       render(<LearnersMemories />);
       expect(screen.getByText('No Memories')).toBeInTheDocument();
     });
   });
 
-  describe('Memory List', () => {
-    it('renders memory cards for each memory', () => {
+  describe('Memory list rendering', () => {
+    it('flattens memories from all category groups into individual cards', () => {
       render(<LearnersMemories />);
-      // Both usernames appear in the dropdown AND the cards, so use getAllByText
-      const learner1Elements = screen.getAllByText('learner1');
-      expect(learner1Elements.length).toBeGreaterThanOrEqual(1);
-      const learner2Elements = screen.getAllByText('learner2');
-      expect(learner2Elements.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Loves dark mode')).toBeInTheDocument();
+      expect(screen.getByText('Prefers vim keybindings')).toBeInTheDocument();
+      expect(screen.getByText('Former backend dev')).toBeInTheDocument();
     });
 
-    it('shows learner email on each card', () => {
+    it('shows the username on each memory card', () => {
       render(<LearnersMemories />);
-      // Emails appear in both the dropdown and the cards
-      const email1Elements = screen.getAllByText('learner1@example.com');
-      expect(email1Elements.length).toBeGreaterThanOrEqual(1);
-      const email2Elements = screen.getAllByText('learner2@example.com');
-      expect(email2Elements.length).toBeGreaterThanOrEqual(1);
+      // Usernames appear in BOTH the memory cards and the learner-filter
+      // popover command items, so we use getAllByText.
+      expect(screen.getAllByText('alice').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('bob').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('displays category badge for each memory', () => {
+    it('renders "Unknown" when a memory has no username', () => {
+      // Build the memory object directly rather than going through
+      // `mockMemory`, because `??` in the helper would coerce `undefined`
+      // back to the default 'alice'. The source falls through to 'Unknown'
+      // via `memory.username || 'Unknown'`, which treats any falsy value
+      // (undefined, null, empty string) the same way.
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: byCategoryResponse([
+          {
+            category: mockCategory(1, 'Preferences', 'preferences'),
+            memories: [
+              {
+                id: 99,
+                content: 'Anonymous memory',
+                category: mockCategory(1, 'Preferences', 'preferences'),
+                username: undefined,
+                created_at: '2024-01-15T10:30:00.000Z',
+              },
+            ],
+          },
+        ]),
+        isLoading: false,
+      });
       render(<LearnersMemories />);
-      expect(screen.getAllByText('Personal Info').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
     });
 
-    it('shows first entry content as preview', () => {
+    it('renders a category badge for each memory', () => {
       render(<LearnersMemories />);
-      expect(screen.getByText('name: John Doe')).toBeInTheDocument();
-      expect(screen.getByText('theme: dark')).toBeInTheDocument();
-    });
-
-    it('shows entry count for each memory', () => {
-      render(<LearnersMemories />);
-      expect(screen.getByText('2 entries')).toBeInTheDocument();
-      expect(screen.getByText('1 entry')).toBeInTheDocument();
-    });
-
-    it('displays relative time for each memory', () => {
-      render(<LearnersMemories />);
-      const timeElements = screen.getAllByText(/ago/);
-      expect(timeElements.length).toBeGreaterThanOrEqual(2);
-    });
-  });
-
-  describe('Memory Selection', () => {
-    it('shows detail view placeholder when no memory is selected', () => {
-      render(<LearnersMemories />);
-      expect(screen.getByText('Select a memory to view details.')).toBeInTheDocument();
-    });
-
-    it('shows memory details when a memory card is clicked', () => {
-      render(<LearnersMemories />);
-
-      // Find the memory card container that has cursor-pointer class
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      expect(cards.length).toBe(2);
-      fireEvent.click(cards[0]);
-
-      // Should show detail entries
-      expect(screen.getByText('Memory Entries')).toBeInTheDocument();
-    });
-
-    it('highlights selected memory card', () => {
-      render(<LearnersMemories />);
-
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      fireEvent.click(cards[0]);
-
-      expect(cards[0].className).toContain('bg-gray-100');
-    });
-
-    it('shows formatted date in detail panel', () => {
-      render(<LearnersMemories />);
-
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      fireEvent.click(cards[0]);
-
-      expect(screen.getByText(/Jun 15, 2024/)).toBeInTheDocument();
-    });
-
-    it('shows category badge in detail panel', () => {
-      render(<LearnersMemories />);
-
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      fireEvent.click(cards[0]);
-
-      const categoryBadges = screen.getAllByText('Personal Info');
-      expect(categoryBadges.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('switches selected memory when clicking a different card', () => {
-      render(<LearnersMemories />);
-
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      fireEvent.click(cards[0]);
-      expect(screen.getByText('Memory Entries')).toBeInTheDocument();
-
-      // Select second memory
-      fireEvent.click(cards[1]);
-
-      expect(screen.getByText('theme')).toBeInTheDocument();
-      expect(screen.getByText('dark')).toBeInTheDocument();
+      // Preferences badge appears on the two Preferences memories,
+      // Background on the one Background memory. At least one of each.
+      expect(screen.getAllByText('Preferences').length).toBeGreaterThanOrEqual(
+        1,
+      );
+      expect(screen.getAllByText('Background').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
   });
 
-  describe('Learner Selection', () => {
-    it('renders "All Learners" option in dropdown', () => {
+  describe('Memory selection', () => {
+    it('shows the placeholder when no memory is selected', () => {
       render(<LearnersMemories />);
-      expect(screen.getByText('All Learners')).toBeInTheDocument();
+      expect(
+        screen.getByText('Select a memory to view details.'),
+      ).toBeInTheDocument();
     });
 
-    it('renders learner names in dropdown', () => {
+    it('shows the detail panel with content when a memory card is clicked', () => {
+      render(<LearnersMemories />);
+      const card = screen.getByText('Loves dark mode').closest('div');
+      expect(card).not.toBeNull();
+      fireEvent.click(card!);
+
+      // The "Memory Content" heading only appears in the detail panel.
+      expect(screen.getByText('Memory Content')).toBeInTheDocument();
+      // Placeholder should disappear.
+      expect(
+        screen.queryByText('Select a memory to view details.'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('switches the selected memory when a different card is clicked', () => {
+      render(<LearnersMemories />);
+      fireEvent.click(screen.getByText('Loves dark mode').closest('div')!);
+      fireEvent.click(screen.getByText('Former backend dev').closest('div')!);
+
+      // The detail panel should now reflect "Former backend dev" — which
+      // means the content appears at least twice: once in the card list and
+      // once in the detail panel.
+      expect(
+        screen.getAllByText('Former backend dev').length,
+      ).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Learner dropdown derivation', () => {
+    it('derives unique learners from the unfiltered response', () => {
+      render(<LearnersMemories />);
+      // Click the "All Learners" command item would clear the selection.
+      // Learner usernames appear in the popover's command items.
+      const items = screen.getAllByTestId('command-item');
+      const labels = items.map((el) => el.textContent ?? '');
+      expect(labels.some((l) => l.includes('alice'))).toBe(true);
+      expect(labels.some((l) => l.includes('bob'))).toBe(true);
+    });
+
+    it('deduplicates learners even if they appear in multiple memories', () => {
       render(<LearnersMemories />);
       const items = screen.getAllByTestId('command-item');
-      // "All Learners" + 2 learners = 3
-      expect(items.length).toBe(3);
-    });
-
-    it('selects a learner when clicked', () => {
-      render(<LearnersMemories />);
-
-      const learnerItems = screen.getAllByTestId('command-item');
-      // Click learner1 (index 1, after "All Learners")
-      fireEvent.click(learnerItems[1]);
-
-      // Should show selected learner username in the button - learner1 appears multiple places
-      const learner1Elements = screen.getAllByText('learner1');
-      expect(learner1Elements.length).toBeGreaterThanOrEqual(2); // button + dropdown + card
-    });
-
-    it('clears selection when "All Learners" is clicked', () => {
-      render(<LearnersMemories />);
-
-      // Select a learner first
-      const learnerItems = screen.getAllByTestId('command-item');
-      fireEvent.click(learnerItems[1]);
-
-      // Now click "All Learners"
-      const allLearnersItems = screen.getAllByTestId('command-item');
-      fireEvent.click(allLearnersItems[0]);
-
-      expect(screen.getByText('Select Learner')).toBeInTheDocument();
-    });
-  });
-
-  describe('Category Selection', () => {
-    it('renders "All Categories" option', () => {
-      render(<LearnersMemories />);
-      const allCatItems = screen.getAllByText('All Categories');
-      expect(allCatItems.length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('changes category when a category is selected', () => {
-      render(<LearnersMemories />);
-
-      const selectItems = screen.getAllByTestId('select-item');
-      const personalInfoItem = selectItems.find(
-        (el) => el.getAttribute('data-value') === 'personal_info',
+      const aliceItems = items.filter((el) =>
+        el.textContent?.includes('alice'),
       );
-      if (personalInfoItem) fireEvent.click(personalInfoItem);
-
-      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalled();
+      // alice should appear in exactly one learner option (even though
+      // she has two memories in the response).
+      expect(aliceItems.length).toBe(1);
     });
   });
 
-  describe('Date Range Selection', () => {
-    it('updates date range when calendar selection is made', () => {
+  describe('Query skip logic', () => {
+    it('passes skip=true to the memories query when tenantKey is missing', () => {
+      mockTenantKey = undefined;
       render(<LearnersMemories />);
+      // First call is the filtered memories query.
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
+    });
 
-      const selectDateBtn = screen.getAllByTestId('calendar-select')[0];
-      fireEvent.click(selectDateBtn);
+    it('passes skip=true to the memories query when username is missing', () => {
+      mockUsername = null;
+      render(<LearnersMemories />);
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
+    });
 
-      expect(screen.getAllByText(/Jan 01 - Jan 31/).length).toBeGreaterThanOrEqual(1);
+    it('passes skip=true to the memories query when no active mentor id can be resolved', () => {
+      mockMentorIdParam = undefined;
+      mockGetMentorIdReturn = undefined;
+      render(<LearnersMemories />);
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
+    });
+
+    it('passes skip=false when tenant, username, and mentor id are all present', () => {
+      render(<LearnersMemories />);
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[1]).toEqual(expect.objectContaining({ skip: false }));
     });
   });
 
-  describe('Query Parameters', () => {
-    it('passes tenantKey and username to filters query', () => {
+  describe('Active mentor id resolution', () => {
+    it('prefers getMentorId() from useNavigate over the URL mentorId', () => {
+      mockGetMentorIdReturn = 'mentor-from-modal-stack';
+      mockMentorIdParam = 'mentor-from-url';
       render(<LearnersMemories />);
-      expect(mockGetMemoryFiltersQuery).toHaveBeenCalledWith(
-        { tenantKey: 'test-tenant', username: 'testuser' },
-        { skip: false },
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[0]).toEqual(
+        expect.objectContaining({ mentorId: 'mentor-from-modal-stack' }),
       );
     });
 
-    it('passes tenantKey and username to filtered memories query', () => {
+    it('falls back to the URL mentorId when getMentorId() returns undefined', () => {
+      mockGetMentorIdReturn = undefined;
+      mockMentorIdParam = 'mentor-from-url';
       render(<LearnersMemories />);
-      expect(mockGetFilteredMemoriesQuery).toHaveBeenCalledWith(
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[0]).toEqual(
+        expect.objectContaining({ mentorId: 'mentor-from-url' }),
+      );
+    });
+
+    it('passes tenantKey and username straight through to the query', () => {
+      mockTenantKey = 'some-tenant';
+      mockUsername = 'some-user';
+      render(<LearnersMemories />);
+      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(firstCall[0]).toEqual(
         expect.objectContaining({
-          tenantKey: 'test-tenant',
-          username: 'testuser',
+          org: 'some-tenant',
+          userId: 'some-user',
         }),
-        { skip: false },
+      );
+    });
+
+    it('passes the same context to the admin-categories query', () => {
+      render(<LearnersMemories />);
+      const call = mockGetMemoryCategoriesAdminQuery.mock.calls[0];
+      expect(call[0]).toEqual(
+        expect.objectContaining({
+          org: 'test-tenant',
+          mentorId: 'mentor-1',
+        }),
       );
     });
   });
 
-  describe('Edge Cases', () => {
-    it('handles null categories in filters', () => {
-      mockGetMemoryFiltersQuery.mockReturnValue({
-        data: {
-          categories: [null, 'personal_info', null],
-          users: [],
-        },
-      });
-
-      render(<LearnersMemories />);
-      expect(screen.getByText('Learner Memories')).toBeInTheDocument();
-    });
-
-    it('handles undefined memoryFilters data', () => {
-      mockGetMemoryFiltersQuery.mockReturnValue({
-        data: undefined,
-      });
-
-      render(<LearnersMemories />);
-      expect(screen.getByText('Select Learner')).toBeInTheDocument();
-    });
-
-    it('handles memory with no entries', () => {
-      mockGetFilteredMemoriesQuery.mockReturnValue({
-        data: {
-          results: [
-            {
-              unique_id: 'mem-empty',
-              username: 'learnerX',
-              email: 'x@example.com',
-              category: 'personal_info',
-              updated_at: '2024-06-15T10:00:00Z',
-              entries: [],
-            },
-          ],
-        },
-        isLoading: false,
-      });
-
-      render(<LearnersMemories />);
-      expect(screen.getByText('No entries')).toBeInTheDocument();
-      expect(screen.getByText('0 entries')).toBeInTheDocument();
-    });
-
-    it('handles undefined filteredMemoriesData', () => {
-      mockGetFilteredMemoriesQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-      });
-
-      render(<LearnersMemories />);
-      expect(screen.getByText('No Memories')).toBeInTheDocument();
-    });
-
-    it('handles selected memory not found in results', () => {
+  describe('Date range filter', () => {
+    it('includes start_date and end_date in the query params once a range is picked', () => {
       render(<LearnersMemories />);
 
-      // Select first memory
-      const cards = document.querySelectorAll('[class*="cursor-pointer"]');
-      fireEvent.click(cards[0]);
-      expect(screen.getByText('Memory Entries')).toBeInTheDocument();
+      // Initially no date params are sent.
+      const initialCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      expect(initialCall[0]).not.toHaveProperty('params');
 
-      // Replace results with different memories that don't include the selected one
-      mockGetFilteredMemoriesQuery.mockReturnValue({
-        data: {
-          results: [
-            {
-              unique_id: 'mem-different',
-              username: 'other',
-              email: 'other@example.com',
-              category: 'preferences',
-              updated_at: '2024-06-15T10:00:00Z',
-              entries: [
-                {
-                  unique_id: 'e1',
-                  key: 'k',
-                  value: 'v',
-                  inserted_at: '',
-                  updated_at: '',
-                  expires_at: null,
-                  category: 'preferences',
-                },
-              ],
-            },
-          ],
-        },
-        isLoading: false,
-      });
+      // Trigger the calendar's onSelect.
+      fireEvent.click(screen.getByTestId('calendar-select'));
 
-      // The component still has the old selectedMemory state but the memory list changed
-      // Re-render would keep the same state since it's the same component instance
-      // The detail panel should not show Memory Entries because memory.find returns undefined
+      // The filtered query (the one passing `params`) should now include
+      // start_date and end_date derived from the selected range.
+      const calls = mockGetMentorMemoriesQuery.mock.calls;
+      const lastWithParams = calls
+        .map((c) => c[0])
+        .reverse()
+        .find((arg) => arg?.params);
+      expect(lastWithParams?.params).toEqual(
+        expect.objectContaining({
+          start_date: expect.stringMatching(/^2024-01-01$/),
+          end_date: expect.stringMatching(/^2024-01-31$/),
+        }),
+      );
     });
   });
 });

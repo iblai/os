@@ -33,7 +33,8 @@ vi.mock('react-redux', () => ({
 }));
 
 vi.mock('@/lib/hooks', () => ({
-  useAppSelector: (selector: (state: unknown) => unknown) => mockUseAppSelector(selector),
+  useAppSelector: (selector: (state: unknown) => unknown) =>
+    mockUseAppSelector(selector),
 }));
 
 // Store for localStorage mock values - keyed by the actual storage keys
@@ -48,15 +49,25 @@ interface UseLocalStorageOptions {
 const capturedOptions: Record<string, UseLocalStorageOptions | undefined> = {};
 
 vi.mock('@/hooks/use-local-storage', () => ({
-  useLocalStorage: (key: string, defaultValue: unknown, options?: UseLocalStorageOptions) => {
+  useLocalStorage: (
+    key: string,
+    defaultValue: unknown,
+    options?: UseLocalStorageOptions,
+  ) => {
     capturedOptions[key] = options;
     // Invoke the serializer if provided to ensure coverage
     if (options?.serializer) {
-      const value = key in mockLocalStorageValues ? mockLocalStorageValues[key] : defaultValue;
+      const value =
+        key in mockLocalStorageValues
+          ? mockLocalStorageValues[key]
+          : defaultValue;
       // Call serializer with the value to cover that code path
       options.serializer(value);
     }
-    const value = key in mockLocalStorageValues ? mockLocalStorageValues[key] : defaultValue;
+    const value =
+      key in mockLocalStorageValues
+        ? mockLocalStorageValues[key]
+        : defaultValue;
     return [value, mockSetLocalStorage, mockRemoveLocalStorage];
   },
 }));
@@ -86,7 +97,9 @@ vi.mock('@/features/navigation/slice', () => ({
 describe('useUserData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return null when no user data', () => {
@@ -124,7 +137,9 @@ describe('useUserData', () => {
 describe('useDmToken', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return dmToken and saveDmToken', () => {
@@ -146,7 +161,9 @@ describe('useDmToken', () => {
 describe('useDmTokenExpires', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return dmTokenExpires and saveDmTokenExpires', () => {
@@ -162,7 +179,9 @@ describe('useDmTokenExpires', () => {
 describe('useAxdToken', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return axdToken and saveAxdToken', () => {
@@ -178,7 +197,9 @@ describe('useAxdToken', () => {
 describe('useAxdTokenExpires', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return axdTokenExpires and saveAxdTokenExpires', () => {
@@ -194,7 +215,9 @@ describe('useAxdTokenExpires', () => {
 describe('useUsername', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return null when no user data', () => {
@@ -221,7 +244,9 @@ describe('useUsername', () => {
 describe('useCurrentTenant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return currentTenant and saveCurrentTenant', () => {
@@ -232,7 +257,10 @@ describe('useCurrentTenant', () => {
 
     const { result } = renderHook(() => useCurrentTenant());
 
-    expect(result.current.currentTenant).toEqual({ key: 'tenant-1', name: 'Tenant 1' });
+    expect(result.current.currentTenant).toEqual({
+      key: 'tenant-1',
+      name: 'Tenant 1',
+    });
     expect(typeof result.current.saveCurrentTenant).toBe('function');
   });
 
@@ -246,11 +274,15 @@ describe('useCurrentTenant', () => {
 describe('useVisitingTenant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return visitingTenant functions', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.VISITING_TENANT] = { key: 'visiting-tenant' };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.VISITING_TENANT] = {
+      key: 'visiting-tenant',
+    };
 
     const { result } = renderHook(() => useVisitingTenant());
 
@@ -263,7 +295,9 @@ describe('useVisitingTenant', () => {
 describe('useUserTenants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return userTenants and saveUserTenants', () => {
@@ -274,7 +308,10 @@ describe('useUserTenants', () => {
 
     const { result } = renderHook(() => useUserTenants());
 
-    expect(result.current.userTenants).toEqual([{ key: 'tenant-1' }, { key: 'tenant-2' }]);
+    expect(result.current.userTenants).toEqual([
+      { key: 'tenant-1' },
+      { key: 'tenant-2' },
+    ]);
     expect(typeof result.current.saveUserTenants).toBe('function');
   });
 
@@ -288,7 +325,9 @@ describe('useUserTenants', () => {
 describe('useIsAdmin', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return false when no current tenant', () => {
@@ -298,7 +337,10 @@ describe('useIsAdmin', () => {
   });
 
   it('should return true when user is admin', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
 
     const { result } = renderHook(() => useIsAdmin());
 
@@ -320,7 +362,9 @@ describe('useIsAdmin', () => {
 describe('useIsVisiting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return false when no visiting tenant', () => {
@@ -330,7 +374,9 @@ describe('useIsVisiting', () => {
   });
 
   it('should return true when visiting tenant exists', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.VISITING_TENANT] = { key: 'visiting-tenant' };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.VISITING_TENANT] = {
+      key: 'visiting-tenant',
+    };
 
     const { result } = renderHook(() => useIsVisiting());
 
@@ -341,7 +387,9 @@ describe('useIsVisiting', () => {
 describe('useGetAllTenants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return null when no tenants', () => {
@@ -376,7 +424,9 @@ describe('useGetAllTenants', () => {
 describe('useUserIsOnTrial', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
   });
 
   it('should return false when no current tenant', () => {
@@ -386,7 +436,10 @@ describe('useUserIsOnTrial', () => {
   });
 
   it('should return true for main tenant non-admin with single tenant and stripe activated', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'main', is_admin: false };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'main',
+      is_admin: false,
+    };
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }];
 
     const { result } = renderHook(() => useUserIsOnTrial());
@@ -395,7 +448,10 @@ describe('useUserIsOnTrial', () => {
   });
 
   it('should return false when user is admin', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'main', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'main',
+      is_admin: true,
+    };
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }];
 
     const { result } = renderHook(() => useUserIsOnTrial());
@@ -404,8 +460,14 @@ describe('useUserIsOnTrial', () => {
   });
 
   it('should return false when user has multiple tenants', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'main', is_admin: false };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }, { key: 'other' }];
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'main',
+      is_admin: false,
+    };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [
+      { key: 'main' },
+      { key: 'other' },
+    ];
 
     const { result } = renderHook(() => useUserIsOnTrial());
 
@@ -413,8 +475,13 @@ describe('useUserIsOnTrial', () => {
   });
 
   it('should return false when not on main tenant', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'other', is_admin: false };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'other' }];
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'other',
+      is_admin: false,
+    };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [
+      { key: 'other' },
+    ];
 
     const { result } = renderHook(() => useUserIsOnTrial());
 
@@ -426,7 +493,9 @@ describe('useUserIsOnTrial', () => {
 describe('useUserIsStudent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
     mockUseAppSelector.mockReturnValue(false);
     mockPathname.mockReturnValue('/chat');
   });
@@ -467,7 +536,10 @@ describe('useUserIsStudent', () => {
       user_fullname: 'Test User Full',
       user_id: 1,
     };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'main', is_admin: false };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'main',
+      is_admin: false,
+    };
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }];
 
     const { result } = renderHook(() => useUserIsStudent());
@@ -483,7 +555,10 @@ describe('useUserIsStudent', () => {
       user_fullname: 'Test User Full',
       user_id: 1,
     };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [];
     mockUseAppSelector.mockReturnValue(false); // not instructor mode
 
@@ -500,7 +575,10 @@ describe('useUserIsStudent', () => {
       user_fullname: 'Test User Full',
       user_id: 1,
     };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [];
     mockUseAppSelector.mockReturnValue(true); // instructor mode
 
@@ -513,7 +591,9 @@ describe('useUserIsStudent', () => {
 describe('useLearnerMode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach((key) => delete mockLocalStorageValues[key]);
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
     mockPathname.mockReturnValue('/chat');
     mockUseAppSelector.mockReturnValue(false);
   });
@@ -541,7 +621,10 @@ describe('useLearnerMode', () => {
   });
 
   it('should toggle instructor mode for admin on non-admin page', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
     mockPathname.mockReturnValue('/chat');
     mockUseAppSelector.mockReturnValue(false);
 
@@ -555,7 +638,10 @@ describe('useLearnerMode', () => {
   });
 
   it('should show dialog when switching from instructor on admin page', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
     mockPathname.mockReturnValue('/analytics'); // ADMIN_PAGES_SUBPATHS.ADMIN_ANALYTICS
     mockUseAppSelector.mockReturnValue(true); // instructor mode
 
@@ -569,7 +655,10 @@ describe('useLearnerMode', () => {
   });
 
   it('should toggle directly when not on admin page even in instructor mode', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = { key: 'tenant-1', is_admin: true };
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
+      key: 'tenant-1',
+      is_admin: true,
+    };
     mockPathname.mockReturnValue('/chat');
     mockUseAppSelector.mockReturnValue(true); // instructor mode
 

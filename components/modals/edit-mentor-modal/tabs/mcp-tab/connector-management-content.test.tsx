@@ -1,6 +1,14 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup, within, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  within,
+  act,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 import { TransportEnum } from '@iblai/iblai-api';
 
@@ -78,16 +86,24 @@ const mockRefetchMCPServerConnections = vi.fn();
  * Mock data layer
  */
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMCPServersQuery: (params: any, options: any) => mockUseGetMCPServersQuery(params, options),
+  useGetMCPServersQuery: (params: any, options: any) =>
+    mockUseGetMCPServersQuery(params, options),
   useCreateMCPServerMutation: () => [mockCreateMCPServer, { isLoading: false }],
   useUpdateMCPServerMutation: () => [mockUpdateMCPServer, { isLoading: false }],
   useDeleteMCPServerMutation: () => [mockDeleteMCPServer, { isLoading: false }],
-  useGetMentorSettingsQuery: (params: any) => mockUseGetMentorSettingsQuery(params),
+  useGetMentorSettingsQuery: (params: any) =>
+    mockUseGetMentorSettingsQuery(params),
   useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
   useEditMentorJsonMutation: () => [mockEditMentorJson, { isLoading: false }],
   useLazyStartOAuthFlowQuery: () => [mockStartOAuthFlow, { isLoading: false }],
-  useDisconnectServiceMutation: () => [mockDisconnectService, { isLoading: false }],
-  useCreateMCPServerConnectionMutation: () => [mockCreateMCPServerConnection, { isLoading: false }],
+  useDisconnectServiceMutation: () => [
+    mockDisconnectService,
+    { isLoading: false },
+  ],
+  useCreateMCPServerConnectionMutation: () => [
+    mockCreateMCPServerConnection,
+    { isLoading: false },
+  ],
   useGetConnectedServicesQuery: (params: any, options: any) =>
     mockUseGetConnectedServicesQuery(params, options),
   useGetMCPServerConnectionsQuery: (params: any, options: any) =>
@@ -120,7 +136,15 @@ vi.mock('sonner', () => ({
  * Mock UI components
  */
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, disabled, variant, size, className, ...props }: any) => (
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    variant,
+    size,
+    className,
+    ...props
+  }: any) => (
     <button
       onClick={onClick}
       disabled={disabled}
@@ -150,7 +174,10 @@ vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ children, open, onOpenChange }: any) =>
     open ? (
       <div data-testid="dialog">
-        <button data-testid="dialog-close-trigger" onClick={() => onOpenChange?.(false)}>
+        <button
+          data-testid="dialog-close-trigger"
+          onClick={() => onOpenChange?.(false)}
+        >
           Close Dialog
         </button>
         {children}
@@ -174,8 +201,12 @@ vi.mock('@/components/ui/dialog', () => ({
       </div>
     );
   },
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
+  DialogHeader: ({ children }: any) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: any) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
 }));
 
 vi.mock('@/components/spinner', () => ({
@@ -201,8 +232,12 @@ vi.mock('@/components/ui/input', () => ({
 
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: any) => <div data-testid="popover">{children}</div>,
-  PopoverTrigger: ({ children }: any) => <div data-testid="popover-trigger">{children}</div>,
-  PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
+  PopoverTrigger: ({ children }: any) => (
+    <div data-testid="popover-trigger">{children}</div>
+  ),
+  PopoverContent: ({ children }: any) => (
+    <div data-testid="popover-content">{children}</div>
+  ),
 }));
 
 vi.mock('@/components/ui/calendar', () => ({
@@ -211,7 +246,12 @@ vi.mock('@/components/ui/calendar', () => ({
       Calendar Component
       <button
         data-testid="set-date-range"
-        onClick={() => onSelect?.({ from: new Date('2024-06-01'), to: new Date('2024-06-30') })}
+        onClick={() =>
+          onSelect?.({
+            from: new Date('2024-06-01'),
+            to: new Date('2024-06-30'),
+          })
+        }
       >
         Set Date Range
       </button>
@@ -224,11 +264,22 @@ vi.mock('@/components/ui/command', () => ({
   CommandInput: ({ placeholder, ...props }: any) => (
     <input data-testid="command-input" placeholder={placeholder} {...props} />
   ),
-  CommandList: ({ children }: any) => <div data-testid="command-list">{children}</div>,
-  CommandEmpty: ({ children }: any) => <div data-testid="command-empty">{children}</div>,
-  CommandGroup: ({ children }: any) => <div data-testid="command-group">{children}</div>,
+  CommandList: ({ children }: any) => (
+    <div data-testid="command-list">{children}</div>
+  ),
+  CommandEmpty: ({ children }: any) => (
+    <div data-testid="command-empty">{children}</div>
+  ),
+  CommandGroup: ({ children }: any) => (
+    <div data-testid="command-group">{children}</div>
+  ),
   CommandItem: ({ children, value, onSelect, ...props }: any) => (
-    <div data-testid="command-item" data-value={value} onClick={() => onSelect?.(value)} {...props}>
+    <div
+      data-testid="command-item"
+      data-value={value}
+      onClick={() => onSelect?.(value)}
+      {...props}
+    >
       {children}
     </div>
   ),
@@ -256,12 +307,17 @@ vi.mock('@/components/ibl-pagination', () => ({
   ),
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button', () => ({
-  CopyButton: () => <button data-testid="copy-button">Copy</button>,
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button',
+  () => ({
+    CopyButton: () => <button data-testid="copy-button">Copy</button>,
+  }),
+);
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
-  DropdownMenu: ({ children }: any) => <div data-testid="dropdown-menu">{children}</div>,
+  DropdownMenu: ({ children }: any) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
   DropdownMenuContent: ({ children }: any) => (
     <div data-testid="dropdown-menu-content">{children}</div>
   ),
@@ -285,7 +341,9 @@ vi.mock('@/lib/utils', () => ({
 const mockWithFormPermissions = vi.fn(({ children }: any) =>
   children({ disabled: false, canDelete: true }),
 );
-const mockWithPermissions = vi.fn(({ children }: any) => children({ hasPermission: true }));
+const mockWithPermissions = vi.fn(({ children }: any) =>
+  children({ hasPermission: true }),
+);
 vi.mock('@/hoc/withPermissions', () => ({
   default: (props: any) => mockWithFormPermissions(props),
   WithPermissions: (props: any) => mockWithPermissions(props),
@@ -295,11 +353,21 @@ vi.mock('@/hoc/withPermissions', () => ({
  * Mock child components
  */
 vi.mock('./connector-dialogs', () => ({
-  ConnectorDialogs: ({ open, onClose, onAddConnector, onOAuthComplete, editingServer }: any) => {
+  ConnectorDialogs: ({
+    open,
+    onClose,
+    onAddConnector,
+    onOAuthComplete,
+    editingServer,
+  }: any) => {
     mockCallbacks.onOAuthComplete = onOAuthComplete;
     return open ? (
       <div data-testid="connector-dialogs">
-        <button onClick={() => onAddConnector({ name: 'Test Connector', url: 'https://test.com' })}>
+        <button
+          onClick={() =>
+            onAddConnector({ name: 'Test Connector', url: 'https://test.com' })
+          }
+        >
           Add Test Connector
         </button>
         <button
@@ -385,7 +453,9 @@ vi.mock('./connector-dialogs', () => ({
         </button>
         <button
           onClick={() => {
-            const file = new File(['test'], 'mentor-img.png', { type: 'image/png' });
+            const file = new File(['test'], 'mentor-img.png', {
+              type: 'image/png',
+            });
             onAddConnector({
               name: 'Mentor Image Connector',
               url: 'https://mentor-img.test.com',
@@ -400,7 +470,9 @@ vi.mock('./connector-dialogs', () => ({
           <>
             <button
               onClick={() => {
-                const file = new File(['test'], 'updated.png', { type: 'image/png' });
+                const file = new File(['test'], 'updated.png', {
+                  type: 'image/png',
+                });
                 onAddConnector({
                   name: editingServer.name,
                   url: editingServer.url,
@@ -438,10 +510,14 @@ vi.mock('./connector-dialogs', () => ({
 vi.mock('lucide-react', () => ({
   Plus: () => <span data-testid="plus-icon">Plus</span>,
   Plug: () => <span data-testid="plug-icon">Plug</span>,
-  MoreHorizontal: () => <span data-testid="more-horizontal-icon">MoreHorizontal</span>,
+  MoreHorizontal: () => (
+    <span data-testid="more-horizontal-icon">MoreHorizontal</span>
+  ),
   Calendar: () => <span data-testid="calendar-icon">Calendar</span>,
   Edit: () => <span data-testid="edit-icon">Edit</span>,
-  ChevronsUpDown: () => <span data-testid="chevrons-up-down-icon">ChevronsUpDown</span>,
+  ChevronsUpDown: () => (
+    <span data-testid="chevrons-up-down-icon">ChevronsUpDown</span>
+  ),
   Check: () => <span data-testid="check-icon">Check</span>,
   Trash2: () => <span data-testid="trash2-icon">Trash2</span>,
   Link2: () => <span data-testid="link2-icon">Link2</span>,
@@ -513,7 +589,9 @@ const createMockConnection = (
   updated_at: '2024-01-01T00:00:00Z',
 });
 
-const mockConnectionsWithData = (connections: ReturnType<typeof createMockConnection>[]) => {
+const mockConnectionsWithData = (
+  connections: ReturnType<typeof createMockConnection>[],
+) => {
   mockUseGetMCPServerConnectionsQuery.mockReturnValue({
     data: {
       count: connections.length,
@@ -583,7 +661,9 @@ describe('ConnectorManagementContent', () => {
     mockUseGetMentorSettingsQuery.mockReturnValue({
       data: {
         mcp_servers: [1, 2],
-        mentor_tools: [{ name: 'MCP', slug: 'mcp', metadata: { tool_type: 'provider' } }], // 'mcp' already present so toggles don't add it
+        mentor_tools: [
+          { name: 'MCP', slug: 'mcp', metadata: { tool_type: 'provider' } },
+        ], // 'mcp' already present so toggles don't add it
       },
       refetch: vi.fn().mockResolvedValue({}),
     });
@@ -625,7 +705,9 @@ describe('ConnectorManagementContent', () => {
 
     // Default OAuth hooks responses
     mockStartOAuthFlow.mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com' }),
+      unwrap: vi
+        .fn()
+        .mockResolvedValue({ auth_url: 'https://oauth.example.com' }),
     });
 
     mockDisconnectService.mockReturnValue({
@@ -837,8 +919,12 @@ describe('ConnectorManagementContent', () => {
 
       expect(screen.getAllByText('Atlassian MCP').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Github MCP').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('https://api.atlassian.com/mcp').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('https://api.github.com/mcp').length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('https://api.atlassian.com/mcp').length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('https://api.github.com/mcp').length,
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -870,7 +956,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Close Dialogs'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('connector-dialogs')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('connector-dialogs'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -906,7 +994,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Add Test Connector'));
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Test Connector connector added successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Test Connector connector added successfully',
+        );
       });
     });
 
@@ -1060,7 +1150,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Add Test Connector'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to add Test Connector connector');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to add Test Connector connector',
+        );
       });
     });
 
@@ -1074,7 +1166,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Add Test Connector'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('connector-dialogs')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('connector-dialogs'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -1098,7 +1192,9 @@ describe('ConnectorManagementContent', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Remove Connector')).toBeInTheDocument();
-        expect(screen.getByText(/Are you sure you want to remove/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Are you sure you want to remove/),
+        ).toBeInTheDocument();
         // Check for Atlassian MCP text specifically in the confirmation dialog
         const dialog = screen.getByTestId('dialog');
         expect(within(dialog).getByText('Atlassian MCP')).toBeInTheDocument();
@@ -1136,7 +1232,9 @@ describe('ConnectorManagementContent', () => {
       mockDeleteMCPServer.mockReturnValue({
         unwrap: vi
           .fn()
-          .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000))),
+          .mockImplementation(
+            () => new Promise((resolve) => setTimeout(resolve, 1000)),
+          ),
       });
 
       render(<ConnectorManagementContent {...defaultProps} />);
@@ -1152,7 +1250,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       // Check that the dialog shows loading state
@@ -1164,7 +1264,9 @@ describe('ConnectorManagementContent', () => {
           expect(removingText).toBeInTheDocument();
         } else {
           // If no "Removing..." text, the button should at least be disabled
-          const dialogDeleteButton = within(dialog).getByRole('button', { name: /Delete/i });
+          const dialogDeleteButton = within(dialog).getByRole('button', {
+            name: /Delete/i,
+          });
           expect(dialogDeleteButton).toBeDisabled();
         }
         expect(screen.getByText('Cancel')).toBeDisabled();
@@ -1209,7 +1311,9 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion - get the dialog's Delete button
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -1240,11 +1344,15 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Atlassian MCP connector removed successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Atlassian MCP connector removed successfully',
+        );
       });
     });
 
@@ -1267,7 +1375,9 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -1294,7 +1404,9 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -1339,7 +1451,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -1382,7 +1496,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -1419,11 +1535,15 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to remove Atlassian MCP connector');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to remove Atlassian MCP connector',
+        );
       });
     });
   });
@@ -1461,8 +1581,12 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Admin controls have been commented out
-      expect(screen.queryByText('Indexing Connections')).not.toBeInTheDocument();
-      expect(screen.queryByText('Enabling Connections')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Indexing Connections'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Enabling Connections'),
+      ).not.toBeInTheDocument();
       expect(screen.queryByText('Service')).not.toBeInTheDocument();
       expect(screen.queryByText('Storage')).not.toBeInTheDocument();
       expect(screen.queryByText('Indexing')).not.toBeInTheDocument();
@@ -1492,7 +1616,9 @@ describe('ConnectorManagementContent', () => {
      */
     it('handles API rate limiting errors', async () => {
       mockCreateMCPServer.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ status: 429, message: 'Rate limit exceeded' }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ status: 429, message: 'Rate limit exceeded' }),
       });
 
       render(<ConnectorManagementContent {...defaultProps} />);
@@ -1501,7 +1627,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Add Test Connector'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to add Test Connector connector');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to add Test Connector connector',
+        );
       });
     });
 
@@ -1526,11 +1654,15 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to remove Atlassian MCP connector');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to remove Atlassian MCP connector',
+        );
       });
     });
 
@@ -1560,7 +1692,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should handle missing tenantKey gracefully
      */
     it('shows error when tenantKey is missing', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />,
+      );
 
       fireEvent.click(screen.getByText('Add Connector'));
       fireEvent.click(screen.getByText('Add Test Connector'));
@@ -1574,7 +1708,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should handle missing username gracefully
      */
     it('shows error when username is missing', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, username: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, username: '' }} />,
+      );
 
       fireEvent.click(screen.getByText('Add Connector'));
       fireEvent.click(screen.getByText('Add Test Connector'));
@@ -1590,7 +1726,9 @@ describe('ConnectorManagementContent', () => {
     it('skips MCP servers query when parameters are missing', () => {
       mockUseGetMCPServersQuery.mockClear();
 
-      render(<ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />,
+      );
 
       expect(mockUseGetMCPServersQuery).toHaveBeenCalledWith(
         expect.anything(),
@@ -1740,7 +1878,9 @@ describe('ConnectorManagementContent', () => {
         refetch: mockRefetchServers,
       });
 
-      expect(() => render(<ConnectorManagementContent {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<ConnectorManagementContent {...defaultProps} />),
+      ).not.toThrow();
     });
 
     /**
@@ -1760,7 +1900,9 @@ describe('ConnectorManagementContent', () => {
         refetch: mockRefetchServers,
       });
 
-      expect(() => render(<ConnectorManagementContent {...defaultProps} />)).not.toThrow();
+      expect(() =>
+        render(<ConnectorManagementContent {...defaultProps} />),
+      ).not.toThrow();
     });
 
     /**
@@ -1768,7 +1910,9 @@ describe('ConnectorManagementContent', () => {
      */
     it('handles authentication failures', async () => {
       mockCreateMCPServer.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ status: 401, message: 'Unauthorized' }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ status: 401, message: 'Unauthorized' }),
       });
 
       render(<ConnectorManagementContent {...defaultProps} />);
@@ -1777,7 +1921,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Add Test Connector'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to add Test Connector connector');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to add Test Connector connector',
+        );
       });
     });
 
@@ -1785,7 +1931,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should handle component unmounting during async operations
      */
     it('handles component unmounting during async operations', async () => {
-      const { unmount } = render(<ConnectorManagementContent {...defaultProps} />);
+      const { unmount } = render(
+        <ConnectorManagementContent {...defaultProps} />,
+      );
 
       // Start an operation
       fireEvent.click(screen.getByText('Add Connector'));
@@ -1865,7 +2013,11 @@ describe('ConnectorManagementContent', () => {
           expect.objectContaining({
             requestBody: expect.objectContaining({
               mcp_servers: expect.any(Array),
-              tool_slugs: expect.arrayContaining(['web_search', 'code_interpreter', 'mcp']),
+              tool_slugs: expect.arrayContaining([
+                'web_search',
+                'code_interpreter',
+                'mcp',
+              ]),
               can_use_tools: true,
             }),
           }),
@@ -1965,7 +2117,8 @@ describe('ConnectorManagementContent', () => {
       const switches = screen.getAllByTestId('switch');
       // Find the switch that is checked (active)
       const activeSwitch = switches.find(
-        (s) => s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
+        (s) =>
+          s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
       );
 
       if (activeSwitch) {
@@ -2002,7 +2155,8 @@ describe('ConnectorManagementContent', () => {
 
       const switches = screen.getAllByTestId('switch');
       const activeSwitch = switches.find(
-        (s) => s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
+        (s) =>
+          s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
       );
 
       if (activeSwitch) {
@@ -2042,7 +2196,8 @@ describe('ConnectorManagementContent', () => {
 
       const switches = screen.getAllByTestId('switch');
       const activeSwitch = switches.find(
-        (s) => s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
+        (s) =>
+          s.getAttribute('checked') !== null || (s as HTMLInputElement).checked,
       );
 
       if (activeSwitch) {
@@ -2361,7 +2516,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         // Should display the server name
-        expect(screen.getAllByText('Google Drive MCP').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Google Drive MCP').length).toBeGreaterThan(
+          0,
+        );
       });
 
       it('displays oauth provider badge for featured OAuth servers', () => {
@@ -2403,7 +2560,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://accounts.google.com/auth' }),
+          unwrap: vi.fn().mockResolvedValue({
+            auth_url: 'https://accounts.google.com/auth',
+          }),
         });
 
         render(<ConnectorManagementContent {...defaultProps} />);
@@ -2440,7 +2599,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://accounts.google.com/auth' }),
+          unwrap: vi.fn().mockResolvedValue({
+            auth_url: 'https://accounts.google.com/auth',
+          }),
         });
 
         render(<ConnectorManagementContent {...defaultProps} />);
@@ -2449,7 +2610,10 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(window.open).toHaveBeenCalledWith('https://accounts.google.com/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'https://accounts.google.com/auth',
+            '_blank',
+          );
         });
       });
 
@@ -2516,7 +2680,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Drive');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Failed to connect Google Drive',
+          );
         });
       });
 
@@ -2548,7 +2714,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Drive');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Failed to connect Google Drive',
+          );
         });
       });
     });
@@ -2727,7 +2895,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(disconnectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.success).toHaveBeenCalledWith('Service disconnected successfully');
+          expect(toast.success).toHaveBeenCalledWith(
+            'Service disconnected successfully',
+          );
         });
       });
 
@@ -2765,7 +2935,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(disconnectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Failed to disconnect service');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Failed to disconnect service',
+          );
         });
       });
 
@@ -2902,7 +3074,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Missing required parameters or OAuth data');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Missing required parameters or OAuth data',
+          );
         });
       });
 
@@ -2932,7 +3106,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(disconnectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Missing required parameters');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Missing required parameters',
+          );
         });
       });
     });
@@ -2970,7 +3146,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         expect(screen.getByText('Featured Connectors')).toBeInTheDocument();
-        expect(screen.getAllByText('Google Drive MCP').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Google Drive MCP').length).toBeGreaterThan(
+          0,
+        );
       });
 
       it('filters connected OAuth servers from My Connectors section', () => {
@@ -3009,7 +3187,9 @@ describe('ConnectorManagementContent', () => {
 
         // Connected OAuth servers with connected_service are filtered from My Connectors
         // Should show "No connectors configured" since the only server is filtered
-        expect(screen.getByText('No connectors configured')).toBeInTheDocument();
+        expect(
+          screen.getByText('No connectors configured'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -3224,7 +3404,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Streamable HTTP').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Streamable HTTP').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -3252,7 +3434,9 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Should fallback to 'Streamable HTTP'
-      expect(screen.getAllByText('Streamable HTTP').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Streamable HTTP').length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -3411,7 +3595,9 @@ describe('ConnectorManagementContent', () => {
       });
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Google Calendar').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Google Calendar').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -3430,7 +3616,9 @@ describe('ConnectorManagementContent', () => {
     it('shows Not Connected text for unconnected OAuth servers', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Not Connected').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Not Connected').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -3462,7 +3650,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.open).toHaveBeenCalledWith('https://oauth.example.com', '_blank');
+        expect(window.open).toHaveBeenCalledWith(
+          'https://oauth.example.com',
+          '_blank',
+        );
       });
     });
 
@@ -3480,7 +3671,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Calendar');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to connect Google Calendar',
+        );
       });
     });
 
@@ -3498,7 +3691,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Calendar');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to connect Google Calendar',
+        );
       });
     });
 
@@ -3532,7 +3727,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     /**
@@ -3611,7 +3808,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(disconnectButtons[0]);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Service disconnected successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Service disconnected successfully',
+        );
       });
     });
 
@@ -3653,7 +3852,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(disconnectButtons[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to disconnect service');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to disconnect service',
+        );
       });
     });
 
@@ -3712,7 +3913,9 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Should detect connection via connectedServices match
-      expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     /**
@@ -3726,7 +3929,10 @@ describe('ConnectorManagementContent', () => {
           .mockImplementation(
             () =>
               new Promise((resolve) =>
-                setTimeout(() => resolve({ auth_url: 'https://oauth.example.com' }), 2000),
+                setTimeout(
+                  () => resolve({ auth_url: 'https://oauth.example.com' }),
+                  2000,
+                ),
               ),
           ),
       });
@@ -3738,7 +3944,9 @@ describe('ConnectorManagementContent', () => {
 
       // Should show connecting state (may appear multiple times due to featured/regular sections)
       await waitFor(() => {
-        expect(screen.getAllByText('Connecting...').length).toBeGreaterThanOrEqual(1);
+        expect(
+          screen.getAllByText('Connecting...').length,
+        ).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -3749,7 +3957,9 @@ describe('ConnectorManagementContent', () => {
       mockDisconnectService.mockReturnValue({
         unwrap: vi
           .fn()
-          .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 2000))),
+          .mockImplementation(
+            () => new Promise((resolve) => setTimeout(resolve, 2000)),
+          ),
       });
 
       const connectedOAuthServer = {
@@ -3796,25 +4006,27 @@ describe('ConnectorManagementContent', () => {
       };
 
       // Mock to return this server in featured results
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: {
+                results: [serverWithoutOAuthData],
+                count: 1,
+              },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: {
-              results: [serverWithoutOAuthData],
-              count: 1,
-            },
+            data: mockMCPServers,
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: mockMCPServers,
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -3972,7 +4184,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByTestId('pagination').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByTestId('pagination').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     /**
@@ -4061,7 +4275,9 @@ describe('ConnectorManagementContent', () => {
     it('renders search input', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getByPlaceholderText('Search by name...')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search by name...'),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -4143,7 +4359,9 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       const commandItems = screen.getAllByTestId('command-item');
-      const sseItem = commandItems.find((item) => item.getAttribute('data-value') === 'sse');
+      const sseItem = commandItems.find(
+        (item) => item.getAttribute('data-value') === 'sse',
+      );
       if (sseItem) {
         fireEvent.click(sseItem);
       }
@@ -4187,7 +4405,9 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       const commandItems = screen.getAllByTestId('command-item');
-      const sseItem = commandItems.find((item) => item.getAttribute('data-value') === 'sse');
+      const sseItem = commandItems.find(
+        (item) => item.getAttribute('data-value') === 'sse',
+      );
 
       if (sseItem) {
         fireEvent.click(sseItem);
@@ -4207,18 +4427,24 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       const commandItems = screen.getAllByTestId('command-item');
-      const sseItem = commandItems.find((item) => item.getAttribute('data-value') === 'sse');
+      const sseItem = commandItems.find(
+        (item) => item.getAttribute('data-value') === 'sse',
+      );
 
       if (sseItem) {
         fireEvent.click(sseItem);
 
-        const allItem = commandItems.find((item) => item.getAttribute('data-value') === '');
+        const allItem = commandItems.find(
+          (item) => item.getAttribute('data-value') === '',
+        );
         if (allItem) {
           fireEvent.click(allItem);
 
           await waitFor(() => {
             const lastCall =
-              mockUseGetMCPServersQuery.mock.calls[mockUseGetMCPServersQuery.mock.calls.length - 1];
+              mockUseGetMCPServersQuery.mock.calls[
+                mockUseGetMCPServersQuery.mock.calls.length - 1
+              ];
             expect(lastCall[0].transport).toBeFalsy();
           });
         }
@@ -4303,78 +4529,88 @@ describe('ConnectorManagementContent', () => {
      */
     it('shows loading state for featured connectors', () => {
       // Mock based on the params passed (isFeatured flag)
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
-          // Featured connectors - loading
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            // Featured connectors - loading
+            return {
+              data: { results: [oauthFeaturedServer], count: 1 },
+              isLoading: true,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
+          // My connectors - normal
           return {
-            data: { results: [oauthFeaturedServer], count: 1 },
-            isLoading: true,
+            data: mockMCPServers,
+            isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        // My connectors - normal
-        return {
-          data: mockMCPServers,
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getByText('Loading featured connectors...')).toBeInTheDocument();
+      expect(
+        screen.getByText('Loading featured connectors...'),
+      ).toBeInTheDocument();
     });
 
     /**
      * Test: Should show error state for featured connectors
      */
     it('shows error state for featured connectors', () => {
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
-          // Featured connectors - error but with results to show section
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            // Featured connectors - error but with results to show section
+            return {
+              data: { results: [oauthFeaturedServer], count: 1 },
+              isLoading: false,
+              error: { message: 'Failed to load' },
+              refetch: mockRefetchServers,
+            };
+          }
+          // My connectors - normal
           return {
-            data: { results: [oauthFeaturedServer], count: 1 },
+            data: mockMCPServers,
             isLoading: false,
-            error: { message: 'Failed to load' },
+            error: null,
             refetch: mockRefetchServers,
           };
-        }
-        // My connectors - normal
-        return {
-          data: mockMCPServers,
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getByText('Failed to load featured connectors')).toBeInTheDocument();
+      expect(
+        screen.getByText('Failed to load featured connectors'),
+      ).toBeInTheDocument();
     });
 
     /**
      * Test: Should retry loading featured connectors
      */
     it('retries loading featured connectors when clicking Retry', async () => {
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [oauthFeaturedServer], count: 1 },
+              isLoading: false,
+              error: { message: 'Failed to load' },
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [oauthFeaturedServer], count: 1 },
+            data: mockMCPServers,
             isLoading: false,
-            error: { message: 'Failed to load' },
+            error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: mockMCPServers,
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -4436,7 +4672,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('This is a test description').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('This is a test description').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -4445,7 +4683,9 @@ describe('ConnectorManagementContent', () => {
     it('renders server URL when no description', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('https://api.atlassian.com/mcp').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('https://api.atlassian.com/mcp').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -4504,7 +4744,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByTestId('plug-icon').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByTestId('plug-icon').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
   });
 
@@ -4605,7 +4847,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to'),
+        );
       });
     });
 
@@ -4644,7 +4888,9 @@ describe('ConnectorManagementContent', () => {
 
       // Find the switch that's already checked
       const switches = screen.getAllByTestId('switch');
-      const activeSwitch = switches.find((s) => (s as HTMLInputElement).checked);
+      const activeSwitch = switches.find(
+        (s) => (s as HTMLInputElement).checked,
+      );
 
       // Trying to activate an already active connector
       if (activeSwitch) {
@@ -4693,7 +4939,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Close Dialogs'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('connector-dialogs')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('connector-dialogs'),
+        ).not.toBeInTheDocument();
       });
 
       // Open again - should be in add mode, not edit mode
@@ -4723,7 +4971,9 @@ describe('ConnectorManagementContent', () => {
 
       await waitFor(() => {
         const dialog = screen.getByTestId('dialog');
-        expect(within(dialog).getByText(/Are you sure you want to remove/)).toBeInTheDocument();
+        expect(
+          within(dialog).getByText(/Are you sure you want to remove/),
+        ).toBeInTheDocument();
         expect(within(dialog).getByText('Atlassian MCP')).toBeInTheDocument();
       });
     });
@@ -4769,7 +5019,9 @@ describe('ConnectorManagementContent', () => {
 
       await waitFor(() => {
         // Should still show success for creation
-        expect(toast.success).toHaveBeenCalledWith('Test Connector connector added successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Test Connector connector added successfully',
+        );
         // Should show warning for auto-activation failure
         expect((toast as any).warning).toHaveBeenCalledWith(
           expect.stringContaining("couldn't be activated automatically"),
@@ -4795,7 +5047,9 @@ describe('ConnectorManagementContent', () => {
 
       await waitFor(() => {
         // Should still show success for creation
-        expect(toast.success).toHaveBeenCalledWith('Test Connector connector added successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Test Connector connector added successfully',
+        );
       });
     });
   });
@@ -4834,12 +5088,16 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
         // Should show success for delete
-        expect(toast.success).toHaveBeenCalledWith('Atlassian MCP connector removed successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Atlassian MCP connector removed successfully',
+        );
         // Should show warning for settings update failure
         expect((toast as any).warning).toHaveBeenCalledWith(
           expect.stringContaining('still appear as active'),
@@ -4887,9 +5145,18 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
     });
   });
@@ -4932,8 +5199,12 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Both servers should be visible initially
-      expect(screen.getAllByText('Old Server').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('New Server').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Old Server').length).toBeGreaterThanOrEqual(
+        1,
+      );
+      expect(screen.getAllByText('New Server').length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
   });
 
@@ -5098,9 +5369,9 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Connect to your Google Calendar').length).toBeGreaterThanOrEqual(
-        1,
-      );
+      expect(
+        screen.getAllByText('Connect to your Google Calendar').length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -5142,31 +5413,35 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: {
+                results: [featuredRegularServer],
+                count: 1,
+              },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: {
-              results: [featuredRegularServer],
-              count: 1,
-            },
+            data: { results: [], count: 0 },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: { results: [], count: 0 },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Featured regular servers (not OAuth, not token) don't show buttons
       // The server should be rendered
-      expect(screen.getAllByText('Featured Regular').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Featured Regular').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -5182,25 +5457,27 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [myConnector],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [myConnector],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -5243,13 +5520,17 @@ describe('ConnectorManagementContent', () => {
         refetch: mockRefetchServers,
       });
 
-      render(<ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />,
+      );
 
       const connectButtons = screen.getAllByText('Connect');
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Missing required parameters or OAuth data');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Missing required parameters or OAuth data',
+        );
       });
     });
   });
@@ -5359,7 +5640,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
       });
     });
 
@@ -5373,7 +5657,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
     });
 
@@ -5387,7 +5674,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
     });
   });
@@ -5448,7 +5738,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger message from different origin
@@ -5487,7 +5780,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger valid message from same origin
@@ -5535,7 +5831,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger message with wrong provider
@@ -5574,7 +5873,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
       });
 
       // Trigger storage event with matching data
@@ -5621,7 +5923,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
       });
 
       // Trigger storage event with different key
@@ -5657,7 +5962,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
       });
 
       // Trigger storage event with wrong provider (should trigger checkConnection)
@@ -5699,7 +6007,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
       });
 
       // Trigger storage event with invalid JSON
@@ -5739,7 +6050,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
 
       // Trigger focus event (simulates user returning from OAuth window)
@@ -5779,7 +6093,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger valid message
@@ -5796,7 +6113,9 @@ describe('ConnectorManagementContent', () => {
       }
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Google Calendar connected successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Google Calendar connected successfully',
+        );
       });
     });
 
@@ -5805,7 +6124,9 @@ describe('ConnectorManagementContent', () => {
      */
     it('createConnection shows error toast on failure', async () => {
       mockCreateMCPServerConnection.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Connection failed' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Connection failed' } }),
       });
 
       let capturedMessageHandler: ((event: MessageEvent) => void) | undefined;
@@ -5823,13 +6144,18 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger valid message - the handler is async and re-throws after showing toast
       if (capturedMessageHandler) {
         // Call handler and catch the expected rejection (component re-throws after toast.error)
-        const handlerPromise = (capturedMessageHandler as (event: MessageEvent) => Promise<void>)({
+        const handlerPromise = (
+          capturedMessageHandler as (event: MessageEvent) => Promise<void>
+        )({
           origin: window.location.origin,
           data: {
             type: 'GOOGLE_AUTH_SUCCESS',
@@ -5843,7 +6169,9 @@ describe('ConnectorManagementContent', () => {
       }
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to create connection: Connection failed');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to create connection: Connection failed',
+        );
       });
     });
 
@@ -5866,7 +6194,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger message with zero connectedServiceId (falsy but not NaN)
@@ -5905,7 +6236,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
       });
 
       // Trigger message with invalid connectedServiceId
@@ -5947,7 +6281,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
 
       // Trigger focus event
@@ -5971,17 +6308,35 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
-        expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'storage',
+          expect.any(Function),
+        );
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'message',
+          expect.any(Function),
+        );
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
 
       // Advance time by 5 minutes to trigger cleanup timeout
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
 
-      expect(window.removeEventListener).toHaveBeenCalledWith('storage', expect.any(Function));
-      expect(window.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
-      expect(window.removeEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+      expect(window.removeEventListener).toHaveBeenCalledWith(
+        'storage',
+        expect.any(Function),
+      );
+      expect(window.removeEventListener).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function),
+      );
+      expect(window.removeEventListener).toHaveBeenCalledWith(
+        'focus',
+        expect.any(Function),
+      );
     });
 
     /**
@@ -5996,7 +6351,10 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(connectButtons[0]);
 
       await waitFor(() => {
-        expect(window.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+        expect(window.addEventListener).toHaveBeenCalledWith(
+          'focus',
+          expect.any(Function),
+        );
       });
 
       // Advance through 60 polling intervals (5 seconds each = 300 seconds)
@@ -6141,7 +6499,9 @@ describe('ConnectorManagementContent', () => {
 
       mockConnectionsWithData([createMockConnection(10, 100)]);
 
-      render(<ConnectorManagementContent {...{ ...defaultProps, username: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, username: '' }} />,
+      );
 
       const disconnectButtons = screen.getAllByText('Disconnect');
       fireEvent.click(disconnectButtons[0]);
@@ -6211,7 +6571,9 @@ describe('ConnectorManagementContent', () => {
 
       // connectedServices has no matching entry
       mockUseGetConnectedServicesQuery.mockReturnValue({
-        data: [{ id: 999, provider: 'different', service: 'different_service' }],
+        data: [
+          { id: 999, provider: 'different', service: 'different_service' },
+        ],
         isLoading: false,
         error: null,
         refetch: mockRefetchConnected,
@@ -6290,7 +6652,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should show error when tenantKey is missing for delete
      */
     it('shows error when tenantKey is missing for delete', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />,
+      );
 
       // Open delete confirmation dialog
       const serverListDeleteButtons = screen
@@ -6304,7 +6668,9 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -6316,7 +6682,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should show error when username is missing for delete
      */
     it('shows error when username is missing for delete', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, username: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, username: '' }} />,
+      );
 
       // Open delete confirmation dialog
       const serverListDeleteButtons = screen
@@ -6330,7 +6698,9 @@ describe('ConnectorManagementContent', () => {
 
       // Confirm deletion
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -6412,25 +6782,27 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [wsServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [wsServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -6450,25 +6822,27 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [sseServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [sseServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -6518,7 +6892,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should show error when tenantKey is missing for add
      */
     it('shows error when tenantKey is missing for add connector', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, tenantKey: '' }} />,
+      );
 
       fireEvent.click(screen.getByText('Add Connector'));
       fireEvent.click(screen.getByText('Add Test Connector'));
@@ -6532,7 +6908,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should show error when username is missing for add
      */
     it('shows error when username is missing for add connector', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, username: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, username: '' }} />,
+      );
 
       fireEvent.click(screen.getByText('Add Connector'));
       fireEvent.click(screen.getByText('Add Test Connector'));
@@ -6576,7 +6954,9 @@ describe('ConnectorManagementContent', () => {
 
       // Server should be rendered but without Connect button (oauth_service_data required)
       // The card is rendered but without the connect button since oauth_service_data is undefined
-      expect(screen.getAllByText('Missing OAuth Data').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Missing OAuth Data').length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -6623,7 +7003,9 @@ describe('ConnectorManagementContent', () => {
       // After setting date range, only servers in range should be shown
       await waitFor(() => {
         // New server (June 2024) should be visible
-        expect(screen.queryAllByText('New Server').length).toBeGreaterThanOrEqual(1);
+        expect(
+          screen.queryAllByText('New Server').length,
+        ).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -6811,7 +7193,10 @@ describe('ConnectorManagementContent', () => {
           }),
         );
         // Verify tool_slugs was NOT in the call (only can_use_tools and mcp_servers)
-        const lastCall = mockEditMentorJson.mock.calls[mockEditMentorJson.mock.calls.length - 1];
+        const lastCall =
+          mockEditMentorJson.mock.calls[
+            mockEditMentorJson.mock.calls.length - 1
+          ];
         expect(lastCall[0].requestBody.tool_slugs).toBeUndefined();
       });
     });
@@ -6844,7 +7229,10 @@ describe('ConnectorManagementContent', () => {
           }),
         );
         // Verify tool_slugs was NOT in the call (not removing mcp)
-        const lastCall = mockEditMentorJson.mock.calls[mockEditMentorJson.mock.calls.length - 1];
+        const lastCall =
+          mockEditMentorJson.mock.calls[
+            mockEditMentorJson.mock.calls.length - 1
+          ];
         expect(lastCall[0].requestBody.tool_slugs).toBeUndefined();
       });
     });
@@ -6859,7 +7247,9 @@ describe('ConnectorManagementContent', () => {
      * Test: Should throw error when mentorId is empty
      */
     it('throws error when mentorId is empty during toggle', async () => {
-      render(<ConnectorManagementContent {...{ ...defaultProps, mentorId: '' }} />);
+      render(
+        <ConnectorManagementContent {...{ ...defaultProps, mentorId: '' }} />,
+      );
 
       // Toggle a connector
       const switches = screen.getAllByTestId('switch');
@@ -6867,7 +7257,9 @@ describe('ConnectorManagementContent', () => {
 
       await waitFor(() => {
         // Should show error toast for invalid mentor ID
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to'),
+        );
       });
     });
   });
@@ -6890,25 +7282,27 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [regularServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [regularServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -7017,7 +7411,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Something went wrong'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Something went wrong'),
+        );
       });
     });
 
@@ -7037,7 +7433,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Error message'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Error message'),
+        );
       });
     });
 
@@ -7055,7 +7453,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to'),
+        );
       });
     });
   });
@@ -7104,7 +7504,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       const dialog = screen.getByTestId('dialog');
-      const confirmButton = within(dialog).getByRole('button', { name: /Delete/i });
+      const confirmButton = within(dialog).getByRole('button', {
+        name: /Delete/i,
+      });
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
@@ -7158,30 +7560,34 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [httpServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [httpServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Should show Streamable HTTP transport label
-      expect(screen.getAllByText('Streamable HTTP').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Streamable HTTP').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -7196,30 +7602,34 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [unknownTransportServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [unknownTransportServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Should show the raw transport or fallback
-      expect(screen.getAllByText('Unknown Transport Server').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Unknown Transport Server').length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -7240,31 +7650,35 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [customTransportServer],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [customTransportServer],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // The transport label should show the raw transport value since it doesn't match TRANSPORT_OPTIONS
       // Note: we're testing that it renders without crashing and shows something for the transport
-      expect(screen.getAllByText('Custom Transport Server').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Custom Transport Server').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -7535,7 +7949,9 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Non-OAuth server shows switch and server name, not Connect button
-      expect(screen.getAllByText('Already Active Server').length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('Already Active Server').length,
+      ).toBeGreaterThan(0);
       const switches = screen.getAllByTestId('switch');
       expect(switches.length).toBeGreaterThan(0);
     });
@@ -7610,10 +8026,14 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://accounts.google.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://accounts.google.com/auth' }),
       });
 
-      const { unmount } = render(<ConnectorManagementContent {...defaultProps} />);
+      const { unmount } = render(
+        <ConnectorManagementContent {...defaultProps} />,
+      );
 
       const connectButtons = screen.getAllByText('Connect');
       fireEvent.click(connectButtons[0]);
@@ -7871,7 +8291,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       mockCreateMCPServerConnection.mockReturnValue({
@@ -8275,7 +8697,11 @@ describe('ConnectorManagementContent', () => {
       mockUseGetMentorSettingsQuery.mockReturnValue({
         data: {
           mcp_servers: [1, 'invalid', null, { notId: 2 }, NaN, Infinity],
-          mentor_tools: [{ name: 'MCP', slug: 'mcp' }, { notSlug: 'invalid' }, null],
+          mentor_tools: [
+            { name: 'MCP', slug: 'mcp' },
+            { notSlug: 'invalid' },
+            null,
+          ],
         },
         isLoading: false,
         error: null,
@@ -8325,7 +8751,13 @@ describe('ConnectorManagementContent', () => {
         refetch: mockRefetchConnected,
       });
 
-      render(<ConnectorManagementContent tenantKey="" username="test-user" mentorId="123" />);
+      render(
+        <ConnectorManagementContent
+          tenantKey=""
+          username="test-user"
+          mentorId="123"
+        />,
+      );
 
       expect(screen.getByText('Connectors')).toBeInTheDocument();
     });
@@ -8359,7 +8791,13 @@ describe('ConnectorManagementContent', () => {
         refetch: mockRefetchConnected,
       });
 
-      render(<ConnectorManagementContent tenantKey="test-tenant" username="" mentorId="123" />);
+      render(
+        <ConnectorManagementContent
+          tenantKey="test-tenant"
+          username=""
+          mentorId="123"
+        />,
+      );
 
       expect(screen.getByText('Connectors')).toBeInTheDocument();
     });
@@ -8891,7 +9329,9 @@ describe('ConnectorManagementContent', () => {
       vi.spyOn(window, 'removeEventListener').mockImplementation(
         (type: string, listener: EventListenerOrEventListenerObject) => {
           if (windowEventListeners[type]) {
-            windowEventListeners[type] = windowEventListeners[type].filter((l) => l !== listener);
+            windowEventListeners[type] = windowEventListeners[type].filter(
+              (l) => l !== listener,
+            );
           }
           return originalRemoveEventListener.call(window, type, listener);
         },
@@ -8956,7 +9396,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       render(<ConnectorManagementContent {...defaultProps} />);
@@ -8964,14 +9406,21 @@ describe('ConnectorManagementContent', () => {
       // Find and click the connect button (look for exact "Connect" text, not "Add Connector")
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
           expect(mockStartOAuthFlow).toHaveBeenCalled();
-          expect(mockWindowOpen).toHaveBeenCalledWith('https://oauth.example.com/auth', '_blank');
+          expect(mockWindowOpen).toHaveBeenCalledWith(
+            'https://oauth.example.com/auth',
+            '_blank',
+          );
         });
       } else {
         // If no Connect button, the test passes - the OAuth server might be rendered differently
@@ -9033,7 +9482,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       mockCreateMCPServerConnection.mockReturnValue({
@@ -9044,7 +9495,11 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
@@ -9123,7 +9578,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       mockCreateMCPServerConnection.mockReturnValue({
@@ -9134,7 +9591,11 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
@@ -9220,13 +9681,19 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Drive');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Failed to connect Google Drive',
+          );
         });
       } else {
         expect(screen.getByText('Featured Connectors')).toBeInTheDocument();
@@ -9294,13 +9761,19 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith('Failed to connect Google Drive');
+          expect(toast.error).toHaveBeenCalledWith(
+            'Failed to connect Google Drive',
+          );
         });
       } else {
         expect(screen.getByText('Featured Connectors')).toBeInTheDocument();
@@ -9375,12 +9848,16 @@ describe('ConnectorManagementContent', () => {
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Find the disconnect button (Unlink icon)
-      const disconnectButton = screen.getByRole('button', { name: /disconnect/i });
+      const disconnectButton = screen.getByRole('button', {
+        name: /disconnect/i,
+      });
       fireEvent.click(disconnectButton);
 
       await waitFor(() => {
         expect(mockDisconnectService).toHaveBeenCalled();
-        expect(toast.success).toHaveBeenCalledWith('Service disconnected successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Service disconnected successfully',
+        );
       });
     });
 
@@ -9449,11 +9926,15 @@ describe('ConnectorManagementContent', () => {
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      const disconnectButton = screen.getByRole('button', { name: /disconnect/i });
+      const disconnectButton = screen.getByRole('button', {
+        name: /disconnect/i,
+      });
       fireEvent.click(disconnectButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to disconnect service');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to disconnect service',
+        );
       });
     });
 
@@ -9658,7 +10139,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockEditMentorJson.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Server does not exist' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Server does not exist' } }),
       });
 
       render(<ConnectorManagementContent {...defaultProps} />);
@@ -9718,7 +10201,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(switches[0]);
 
         await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to activate'));
+          expect(toast.error).toHaveBeenCalledWith(
+            expect.stringContaining('Failed to activate'),
+          );
         });
       }
     });
@@ -9856,7 +10341,9 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
         // Confirm deletion in the dialog
-        const deleteConfirmBtn = await screen.findByRole('button', { name: /delete/i });
+        const deleteConfirmBtn = await screen.findByRole('button', {
+          name: /delete/i,
+        });
         if (deleteConfirmBtn) {
           fireEvent.click(deleteConfirmBtn);
 
@@ -9926,7 +10413,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       mockCreateMCPServerConnection.mockReturnValue({
@@ -9939,7 +10428,11 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
@@ -10008,11 +10501,15 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       mockCreateMCPServerConnection.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Connection failed' } }),
+        unwrap: vi
+          .fn()
+          .mockRejectedValue({ data: { detail: 'Connection failed' } }),
       });
 
       window.open = vi.fn();
@@ -10021,7 +10518,11 @@ describe('ConnectorManagementContent', () => {
 
       const connectButtons = screen
         .getAllByRole('button')
-        .filter((btn) => btn.textContent === 'Connect' || btn.textContent?.trim() === 'Connect');
+        .filter(
+          (btn) =>
+            btn.textContent === 'Connect' ||
+            btn.textContent?.trim() === 'Connect',
+        );
 
       if (connectButtons.length > 0) {
         fireEvent.click(connectButtons[0]);
@@ -10106,7 +10607,11 @@ describe('ConnectorManagementContent', () => {
       });
 
       render(
-        <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="" />,
+        <ConnectorManagementContent
+          tenantKey="test-tenant"
+          username="test-user"
+          mentorId=""
+        />,
       );
 
       expect(screen.getByText('Connectors')).toBeInTheDocument();
@@ -10451,7 +10956,9 @@ describe('ConnectorManagementContent', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByTestId('connector-dialogs')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('connector-dialogs'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -10626,7 +11133,9 @@ describe('ConnectorManagementContent', () => {
       });
 
       mockStartOAuthFlow.mockReturnValue({
-        unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
       });
 
       window.open = vi.fn();
@@ -10637,7 +11146,9 @@ describe('ConnectorManagementContent', () => {
       const connectButtons = screen
         .getAllByRole('button')
         .filter(
-          (btn) => btn.textContent?.includes('Connect') && !btn.textContent?.includes('Connector'),
+          (btn) =>
+            btn.textContent?.includes('Connect') &&
+            !btn.textContent?.includes('Connector'),
         );
 
       if (connectButtons.length > 0) {
@@ -10842,9 +11353,18 @@ describe('ConnectorManagementContent', () => {
   describe('TRANSPORT_OPTIONS', () => {
     it('contains all expected transport options', () => {
       expect(TRANSPORT_OPTIONS).toHaveLength(4);
-      expect(TRANSPORT_OPTIONS[0]).toEqual({ value: '', label: 'All Transports' });
-      expect(TRANSPORT_OPTIONS[1]).toEqual({ value: TransportEnum.SSE, label: 'SSE' });
-      expect(TRANSPORT_OPTIONS[2]).toEqual({ value: TransportEnum.WEBSOCKET, label: 'WebSocket' });
+      expect(TRANSPORT_OPTIONS[0]).toEqual({
+        value: '',
+        label: 'All Transports',
+      });
+      expect(TRANSPORT_OPTIONS[1]).toEqual({
+        value: TransportEnum.SSE,
+        label: 'SSE',
+      });
+      expect(TRANSPORT_OPTIONS[2]).toEqual({
+        value: TransportEnum.WEBSOCKET,
+        label: 'WebSocket',
+      });
       expect(TRANSPORT_OPTIONS[3]).toEqual({
         value: TransportEnum.STREAMABLE_HTTP,
         label: 'Streamable HTTP',
@@ -10852,7 +11372,9 @@ describe('ConnectorManagementContent', () => {
     });
 
     it('has empty string value for All Transports option', () => {
-      const allOption = TRANSPORT_OPTIONS.find((opt) => opt.label === 'All Transports');
+      const allOption = TRANSPORT_OPTIONS.find(
+        (opt) => opt.label === 'All Transports',
+      );
       expect(allOption?.value).toBe('');
     });
   });
@@ -10869,7 +11391,9 @@ describe('ConnectorManagementContent', () => {
     });
 
     it('returns Streamable HTTP for streamable_http transport', () => {
-      expect(getTransportLabel(TransportEnum.STREAMABLE_HTTP)).toBe('Streamable HTTP');
+      expect(getTransportLabel(TransportEnum.STREAMABLE_HTTP)).toBe(
+        'Streamable HTTP',
+      );
       expect(getTransportLabel('streamable_http')).toBe('Streamable HTTP');
     });
 
@@ -10893,35 +11417,51 @@ describe('ConnectorManagementContent', () => {
   describe('normalizeTransportValue', () => {
     it('returns SSE enum for sse string', () => {
       expect(normalizeTransportValue('sse')).toBe(TransportEnum.SSE);
-      expect(normalizeTransportValue(TransportEnum.SSE)).toBe(TransportEnum.SSE);
+      expect(normalizeTransportValue(TransportEnum.SSE)).toBe(
+        TransportEnum.SSE,
+      );
     });
 
     it('returns WEBSOCKET enum for websocket string', () => {
-      expect(normalizeTransportValue('websocket')).toBe(TransportEnum.WEBSOCKET);
-      expect(normalizeTransportValue(TransportEnum.WEBSOCKET)).toBe(TransportEnum.WEBSOCKET);
+      expect(normalizeTransportValue('websocket')).toBe(
+        TransportEnum.WEBSOCKET,
+      );
+      expect(normalizeTransportValue(TransportEnum.WEBSOCKET)).toBe(
+        TransportEnum.WEBSOCKET,
+      );
     });
 
     it('returns STREAMABLE_HTTP for streamable_http string', () => {
-      expect(normalizeTransportValue('streamable_http')).toBe(TransportEnum.STREAMABLE_HTTP);
+      expect(normalizeTransportValue('streamable_http')).toBe(
+        TransportEnum.STREAMABLE_HTTP,
+      );
       expect(normalizeTransportValue(TransportEnum.STREAMABLE_HTTP)).toBe(
         TransportEnum.STREAMABLE_HTTP,
       );
     });
 
     it('returns STREAMABLE_HTTP as default for undefined', () => {
-      expect(normalizeTransportValue(undefined)).toBe(TransportEnum.STREAMABLE_HTTP);
+      expect(normalizeTransportValue(undefined)).toBe(
+        TransportEnum.STREAMABLE_HTTP,
+      );
     });
 
     it('returns STREAMABLE_HTTP as default for unknown transport', () => {
-      expect(normalizeTransportValue('unknown')).toBe(TransportEnum.STREAMABLE_HTTP);
-      expect(normalizeTransportValue('custom')).toBe(TransportEnum.STREAMABLE_HTTP);
+      expect(normalizeTransportValue('unknown')).toBe(
+        TransportEnum.STREAMABLE_HTTP,
+      );
+      expect(normalizeTransportValue('custom')).toBe(
+        TransportEnum.STREAMABLE_HTTP,
+      );
     });
 
     it('handles case insensitivity', () => {
       // The implementation converts to lowercase first, then compares
       // So 'SSE'.toLowerCase() = 'sse' === TransportEnum.SSE
       expect(normalizeTransportValue('SSE')).toBe(TransportEnum.SSE);
-      expect(normalizeTransportValue('WEBSOCKET')).toBe(TransportEnum.WEBSOCKET);
+      expect(normalizeTransportValue('WEBSOCKET')).toBe(
+        TransportEnum.WEBSOCKET,
+      );
     });
   });
 
@@ -11279,7 +11819,9 @@ describe('ConnectorManagementContent', () => {
 
       // Wait for the server card to render
       await waitFor(() => {
-        expect(screen.getByText('Non-Featured Connected OAuth')).toBeInTheDocument();
+        expect(
+          screen.getByText('Non-Featured Connected OAuth'),
+        ).toBeInTheDocument();
       });
 
       // Find and click the Disconnect button
@@ -12005,7 +12547,9 @@ describe('ConnectorManagementContent', () => {
       mockUseGetMentorSettingsQuery.mockReturnValue({
         data: {
           mcp_servers: [1, 2], // Server 5 is NOT here
-          mentor_tools: [{ name: 'MCP', slug: 'mcp', metadata: { tool_type: 'provider' } }],
+          mentor_tools: [
+            { name: 'MCP', slug: 'mcp', metadata: { tool_type: 'provider' } },
+          ],
         },
         refetch: vi.fn().mockResolvedValue({}),
       });
@@ -12173,7 +12717,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(screen.getByText('Update Without File'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to update'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to update'),
+        );
       });
     });
   });
@@ -12234,7 +12780,9 @@ describe('ConnectorManagementContent', () => {
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to remove'));
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to remove'),
+        );
       });
     });
   });
@@ -12315,7 +12863,9 @@ describe('ConnectorManagementContent', () => {
       const params: OAuthConnectionParams = {
         connectedServiceId: 100,
         isCreatingConnection: false,
-        createMCPServerConnection: vi.fn().mockReturnValue({ unwrap: mockUnwrap }),
+        createMCPServerConnection: vi
+          .fn()
+          .mockReturnValue({ unwrap: mockUnwrap }),
         tenantKey: 'test-tenant',
         username: 'testuser',
         serverId: 1,
@@ -12327,7 +12877,11 @@ describe('ConnectorManagementContent', () => {
         refetchMentorSettings: mockRefetchMentorSettings,
       };
 
-      const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+      const result = await createOAuthConnection(
+        params,
+        mockOnSuccess,
+        mockOnError,
+      );
 
       expect(result).toBe(true);
       expect(mockUnwrap).toHaveBeenCalled();
@@ -12336,18 +12890,24 @@ describe('ConnectorManagementContent', () => {
       expect(mockRefetchConnected).toHaveBeenCalled();
       expect(mockRefetchMentorSettings).toHaveBeenCalled();
       expect(mockOnSuccess).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith('Test Service connected successfully');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Test Service connected successfully',
+      );
     });
 
     it('handles connection error and shows error toast', async () => {
-      const mockUnwrap = vi.fn().mockRejectedValue({ data: { detail: 'Connection failed' } });
+      const mockUnwrap = vi
+        .fn()
+        .mockRejectedValue({ data: { detail: 'Connection failed' } });
       const mockOnSuccess = vi.fn();
       const mockOnError = vi.fn();
 
       const params: OAuthConnectionParams = {
         connectedServiceId: 100,
         isCreatingConnection: false,
-        createMCPServerConnection: vi.fn().mockReturnValue({ unwrap: mockUnwrap }),
+        createMCPServerConnection: vi
+          .fn()
+          .mockReturnValue({ unwrap: mockUnwrap }),
         tenantKey: 'test-tenant',
         username: 'testuser',
         serverId: 1,
@@ -12359,12 +12919,18 @@ describe('ConnectorManagementContent', () => {
         refetchMentorSettings: vi.fn(),
       };
 
-      const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+      const result = await createOAuthConnection(
+        params,
+        mockOnSuccess,
+        mockOnError,
+      );
 
       expect(result).toBe(false);
       expect(mockOnSuccess).not.toHaveBeenCalled();
       expect(mockOnError).toHaveBeenCalled();
-      expect(toast.error).toHaveBeenCalledWith('Failed to create connection: Connection failed');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to create connection: Connection failed',
+      );
     });
 
     it('handles connection error with unknown error message', async () => {
@@ -12374,7 +12940,9 @@ describe('ConnectorManagementContent', () => {
       const params: OAuthConnectionParams = {
         connectedServiceId: 100,
         isCreatingConnection: false,
-        createMCPServerConnection: vi.fn().mockReturnValue({ unwrap: mockUnwrap }),
+        createMCPServerConnection: vi
+          .fn()
+          .mockReturnValue({ unwrap: mockUnwrap }),
         tenantKey: 'test-tenant',
         username: 'testuser',
         serverId: 1,
@@ -12389,7 +12957,9 @@ describe('ConnectorManagementContent', () => {
       const result = await createOAuthConnection(params, vi.fn(), mockOnError);
 
       expect(result).toBe(false);
-      expect(toast.error).toHaveBeenCalledWith('Failed to create connection: Unknown error');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to create connection: Unknown error',
+      );
     });
   });
 
@@ -12400,7 +12970,11 @@ describe('ConnectorManagementContent', () => {
         newValue: JSON.stringify({ connectedServiceId: 100 }),
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toBeNull();
     });
 
@@ -12414,7 +12988,11 @@ describe('ConnectorManagementContent', () => {
         }),
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toEqual({ connectedServiceId: 100, isMatch: true });
     });
 
@@ -12428,7 +13006,11 @@ describe('ConnectorManagementContent', () => {
         }),
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toEqual({ connectedServiceId: 100, isMatch: false });
     });
 
@@ -12442,7 +13024,11 @@ describe('ConnectorManagementContent', () => {
         }),
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toEqual({ connectedServiceId: 100, isMatch: false });
     });
 
@@ -12452,7 +13038,11 @@ describe('ConnectorManagementContent', () => {
         newValue: 'invalid json',
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toBeNull();
     });
 
@@ -12462,7 +13052,11 @@ describe('ConnectorManagementContent', () => {
         newValue: '',
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toBeNull();
     });
 
@@ -12475,7 +13069,11 @@ describe('ConnectorManagementContent', () => {
         }),
       });
 
-      const result = processOAuthStorageEvent(event, 'google', 'google-service');
+      const result = processOAuthStorageEvent(
+        event,
+        'google',
+        'google-service',
+      );
       expect(result).toBeNull();
     });
   });
@@ -12660,7 +13258,9 @@ describe('ConnectorManagementContent', () => {
     });
 
     it('returns null when refetch throws error', async () => {
-      const mockRefetchConnected = vi.fn().mockRejectedValue(new Error('Fetch failed'));
+      const mockRefetchConnected = vi
+        .fn()
+        .mockRejectedValue(new Error('Fetch failed'));
 
       const result = await checkOAuthConnectionComplete(
         mockRefetchConnected,
@@ -12738,7 +13338,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component renders without crashing - check for Connectors section
@@ -12768,7 +13372,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component renders without crashing - check for Connectors section
@@ -12780,7 +13388,9 @@ describe('ConnectorManagementContent', () => {
           data: { mcp_servers: 'not-an-array' },
           isLoading: false,
           error: null,
-          refetch: vi.fn().mockResolvedValue({ data: { mcp_servers: 'not-an-array' } }),
+          refetch: vi
+            .fn()
+            .mockResolvedValue({ data: { mcp_servers: 'not-an-array' } }),
         });
 
         mockUseGetMCPServersQuery.mockReturnValue({
@@ -12798,7 +13408,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component renders without crashing - check for Connectors section
@@ -12810,9 +13424,9 @@ describe('ConnectorManagementContent', () => {
           data: { mcp_servers: [], mentor_tools: 'not-an-array' },
           isLoading: false,
           error: null,
-          refetch: vi
-            .fn()
-            .mockResolvedValue({ data: { mcp_servers: [], mentor_tools: 'not-an-array' } }),
+          refetch: vi.fn().mockResolvedValue({
+            data: { mcp_servers: [], mentor_tools: 'not-an-array' },
+          }),
         });
 
         mockUseGetMCPServersQuery.mockReturnValue({
@@ -12830,7 +13444,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component renders without crashing - check for Connectors section
@@ -12895,11 +13513,17 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Date picker button should exist
-        const datePickerButton = screen.getByRole('button', { name: /pick a date range/i });
+        const datePickerButton = screen.getByRole('button', {
+          name: /pick a date range/i,
+        });
         expect(datePickerButton).toBeInTheDocument();
       });
     });
@@ -12924,7 +13548,14 @@ describe('ConnectorManagementContent', () => {
           }
           return {
             data: {
-              results: [{ id: 1, name: 'Test Server', url: 'http://test.com', transport: 'sse' }],
+              results: [
+                {
+                  id: 1,
+                  name: 'Test Server',
+                  url: 'http://test.com',
+                  transport: 'sse',
+                },
+              ],
               count: 1,
             },
             isLoading: false,
@@ -12941,11 +13572,16 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockEditMentorJson.mockImplementation(() => ({
-          unwrap: () => Promise.reject({ data: { detail: 'Server does not exist' } }),
+          unwrap: () =>
+            Promise.reject({ data: { detail: 'Server does not exist' } }),
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Find and click toggle switch
@@ -12980,7 +13616,14 @@ describe('ConnectorManagementContent', () => {
           }
           return {
             data: {
-              results: [{ id: 1, name: 'Test Server', url: 'http://test.com', transport: 'sse' }],
+              results: [
+                {
+                  id: 1,
+                  name: 'Test Server',
+                  url: 'http://test.com',
+                  transport: 'sse',
+                },
+              ],
               count: 1,
             },
             isLoading: false,
@@ -12997,11 +13640,16 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockEditMentorJson.mockImplementation(() => ({
-          unwrap: () => Promise.reject({ data: { detail: 'Resource not accessible' } }),
+          unwrap: () =>
+            Promise.reject({ data: { detail: 'Resource not accessible' } }),
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const switches = screen.getAllByTestId('switch');
@@ -13035,7 +13683,14 @@ describe('ConnectorManagementContent', () => {
           }
           return {
             data: {
-              results: [{ id: 1, name: 'Test Server', url: 'http://test.com', transport: 'sse' }],
+              results: [
+                {
+                  id: 1,
+                  name: 'Test Server',
+                  url: 'http://test.com',
+                  transport: 'sse',
+                },
+              ],
               count: 1,
             },
             isLoading: false,
@@ -13052,11 +13707,16 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockEditMentorJson.mockImplementation(() => ({
-          unwrap: () => Promise.reject({ data: { detail: 'Some other error' } }),
+          unwrap: () =>
+            Promise.reject({ data: { detail: 'Some other error' } }),
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const switches = screen.getAllByTestId('switch');
@@ -13064,7 +13724,9 @@ describe('ConnectorManagementContent', () => {
           fireEvent.click(switches[0]);
 
           await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Failed to activate'));
+            expect(toast.error).toHaveBeenCalledWith(
+              expect.stringContaining('Failed to activate'),
+            );
           });
         }
       });
@@ -13125,19 +13787,27 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Find disconnect button
         const disconnectButtons = screen
           .getAllByRole('button')
-          .filter((btn) => btn.textContent?.toLowerCase().includes('disconnect'));
+          .filter((btn) =>
+            btn.textContent?.toLowerCase().includes('disconnect'),
+          );
 
         if (disconnectButtons.length > 0) {
           fireEvent.click(disconnectButtons[0]);
 
           await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith('No connected service to disconnect');
+            expect(toast.error).toHaveBeenCalledWith(
+              'No connected service to disconnect',
+            );
           });
         }
       });
@@ -13157,7 +13827,14 @@ describe('ConnectorManagementContent', () => {
           if (params?.featured === true) {
             return {
               data: {
-                results: [{ id: 1, name: 'Test', url: 'http://test.com', transport: 'sse' }],
+                results: [
+                  {
+                    id: 1,
+                    name: 'Test',
+                    url: 'http://test.com',
+                    transport: 'sse',
+                  },
+                ],
                 count: 1,
               },
               isLoading: true,
@@ -13181,7 +13858,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component should render - check for Connectors section since featured only shows if there are servers
@@ -13235,7 +13916,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The server should be visible in My Connectors section (may appear multiple times in DOM)
@@ -13244,8 +13929,12 @@ describe('ConnectorManagementContent', () => {
 
         // Should not have Connect or Disconnect button for non-OAuth server
         const buttons = screen.getAllByRole('button');
-        const connectButton = buttons.find((b) => b.textContent?.toLowerCase() === 'connect');
-        const disconnectButton = buttons.find((b) => b.textContent?.toLowerCase() === 'disconnect');
+        const connectButton = buttons.find(
+          (b) => b.textContent?.toLowerCase() === 'connect',
+        );
+        const disconnectButton = buttons.find(
+          (b) => b.textContent?.toLowerCase() === 'disconnect',
+        );
         expect(connectButton).toBeUndefined();
         expect(disconnectButton).toBeUndefined();
       });
@@ -13279,7 +13968,11 @@ describe('ConnectorManagementContent', () => {
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Open add connector dialog - find button containing "Add Connector" text
@@ -13324,7 +14017,11 @@ describe('ConnectorManagementContent', () => {
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The component should render - check for Connectors section
@@ -13352,7 +14049,14 @@ describe('ConnectorManagementContent', () => {
           }
           return {
             data: {
-              results: [{ id: 1, name: 'Test Server', url: 'http://test.com', transport: 'sse' }],
+              results: [
+                {
+                  id: 1,
+                  name: 'Test Server',
+                  url: 'http://test.com',
+                  transport: 'sse',
+                },
+              ],
               count: 1,
             },
             isLoading: false,
@@ -13369,7 +14073,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The server should show as active (switch is on)
@@ -13400,7 +14108,9 @@ describe('ConnectorManagementContent', () => {
           },
           isLoading: false,
           error: null,
-          refetch: vi.fn().mockResolvedValue({ data: { mcp_servers: [{ id: 1 }, { id: 2 }, 3] } }),
+          refetch: vi.fn().mockResolvedValue({
+            data: { mcp_servers: [{ id: 1 }, { id: 2 }, 3] },
+          }),
         });
 
         // Put servers in My Connectors section (not featured)
@@ -13416,9 +14126,24 @@ describe('ConnectorManagementContent', () => {
           return {
             data: {
               results: [
-                { id: 1, name: 'Server 1', url: 'http://test1.com', transport: 'sse' },
-                { id: 2, name: 'Server 2', url: 'http://test2.com', transport: 'sse' },
-                { id: 3, name: 'Server 3', url: 'http://test3.com', transport: 'sse' },
+                {
+                  id: 1,
+                  name: 'Server 1',
+                  url: 'http://test1.com',
+                  transport: 'sse',
+                },
+                {
+                  id: 2,
+                  name: 'Server 2',
+                  url: 'http://test2.com',
+                  transport: 'sse',
+                },
+                {
+                  id: 3,
+                  name: 'Server 3',
+                  url: 'http://test3.com',
+                  transport: 'sse',
+                },
               ],
               count: 3,
             },
@@ -13436,7 +14161,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component should render switches for the servers - at least 3 switches
@@ -13460,7 +14189,9 @@ describe('ConnectorManagementContent', () => {
           },
           isLoading: false,
           error: null,
-          refetch: vi.fn().mockResolvedValue({ data: { mcp_servers: [], mentor_tools: [] } }),
+          refetch: vi
+            .fn()
+            .mockResolvedValue({ data: { mcp_servers: [], mentor_tools: [] } }),
         });
 
         mockUseGetMCPServersQuery.mockImplementation(() => ({
@@ -13478,7 +14209,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Component should render without errors - check for Connectors section
@@ -13532,7 +14267,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Should not show connect/disconnect buttons for non-OAuth servers
@@ -13566,7 +14305,14 @@ describe('ConnectorManagementContent', () => {
           }
           return {
             data: {
-              results: [{ id: 1, name: 'Last Server', url: 'http://test.com', transport: 'sse' }],
+              results: [
+                {
+                  id: 1,
+                  name: 'Last Server',
+                  url: 'http://test.com',
+                  transport: 'sse',
+                },
+              ],
               count: 1,
             },
             isLoading: false,
@@ -13587,7 +14333,11 @@ describe('ConnectorManagementContent', () => {
         }));
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Find all switches and click the first one (which should be on)
@@ -13651,7 +14401,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Server without oauth_service_data won't have Connect button
@@ -13672,7 +14426,9 @@ describe('ConnectorManagementContent', () => {
           data: { mcp_servers: [1, 2, 3] },
           isLoading: false,
           error: null,
-          refetch: vi.fn().mockResolvedValue({ data: { mcp_servers: [1, 2, 3] } }),
+          refetch: vi
+            .fn()
+            .mockResolvedValue({ data: { mcp_servers: [1, 2, 3] } }),
         });
 
         // Servers with different creation dates
@@ -13726,11 +14482,17 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The date range picker button exists
-        const datePickerButton = screen.getByRole('button', { name: /pick a date range/i });
+        const datePickerButton = screen.getByRole('button', {
+          name: /pick a date range/i,
+        });
         expect(datePickerButton).toBeInTheDocument();
 
         // All servers should be visible initially (no date filter)
@@ -13802,14 +14564,20 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         const mockWindowOpen = vi.fn();
         window.open = mockWindowOpen;
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -13826,7 +14594,10 @@ describe('ConnectorManagementContent', () => {
           });
 
           await waitFor(() => {
-            expect(mockWindowOpen).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+            expect(mockWindowOpen).toHaveBeenCalledWith(
+              'http://oauth.test/auth',
+              '_blank',
+            );
           });
         }
       });
@@ -13884,13 +14655,19 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -13974,7 +14751,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The server should appear as connected (isOAuthServerConnected returns true)
@@ -13982,13 +14763,17 @@ describe('ConnectorManagementContent', () => {
         // Find and click disconnect button
         const disconnectButtons = screen
           .getAllByRole('button')
-          .filter((btn) => btn.textContent?.toLowerCase().includes('disconnect'));
+          .filter((btn) =>
+            btn.textContent?.toLowerCase().includes('disconnect'),
+          );
 
         if (disconnectButtons.length > 0) {
           fireEvent.click(disconnectButtons[0]);
 
           await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith('No connected service to disconnect');
+            expect(toast.error).toHaveBeenCalledWith(
+              'No connected service to disconnect',
+            );
           });
         }
       });
@@ -14045,7 +14830,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         mockCreateMCPServerConnection.mockReturnValue({
@@ -14065,7 +14852,10 @@ describe('ConnectorManagementContent', () => {
         // Verify OAuth flow starts and window opens
         await waitFor(() => {
           expect(mockStartOAuthFlow).toHaveBeenCalled();
-          expect(window.open).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'http://oauth.test/auth',
+            '_blank',
+          );
         });
       });
 
@@ -14075,12 +14865,14 @@ describe('ConnectorManagementContent', () => {
         // Capture event listeners
         const capturedListeners: { [key: string]: EventListener } = {};
         const originalAddEventListener = window.addEventListener;
-        vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
-          if (type === 'storage' || type === 'message' || type === 'focus') {
-            capturedListeners[type] = listener as EventListener;
-          }
-          return originalAddEventListener.call(window, type, listener);
-        });
+        vi.spyOn(window, 'addEventListener').mockImplementation(
+          (type, listener) => {
+            if (type === 'storage' || type === 'message' || type === 'focus') {
+              capturedListeners[type] = listener as EventListener;
+            }
+            return originalAddEventListener.call(window, type, listener);
+          },
+        );
 
         const oauthServer = {
           id: 1,
@@ -14121,7 +14913,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         mockCreateMCPServerConnection.mockReturnValue({
@@ -14139,7 +14933,10 @@ describe('ConnectorManagementContent', () => {
 
         // Wait for window to open (event listeners should be registered by then)
         await waitFor(() => {
-          expect(window.open).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'http://oauth.test/auth',
+            '_blank',
+          );
         });
 
         // Check that storage listener was registered
@@ -14176,12 +14973,14 @@ describe('ConnectorManagementContent', () => {
         // Capture event listeners using spy
         const capturedListeners: { [key: string]: EventListener } = {};
         const originalAddEventListener = window.addEventListener;
-        vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
-          if (type === 'storage' || type === 'message' || type === 'focus') {
-            capturedListeners[type] = listener as EventListener;
-          }
-          return originalAddEventListener.call(window, type, listener);
-        });
+        vi.spyOn(window, 'addEventListener').mockImplementation(
+          (type, listener) => {
+            if (type === 'storage' || type === 'message' || type === 'focus') {
+              capturedListeners[type] = listener as EventListener;
+            }
+            return originalAddEventListener.call(window, type, listener);
+          },
+        );
 
         const oauthServer = {
           id: 1,
@@ -14222,7 +15021,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
@@ -14235,7 +15036,10 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(window.open).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'http://oauth.test/auth',
+            '_blank',
+          );
         });
 
         expect(capturedListeners['storage']).toBeDefined();
@@ -14271,12 +15075,14 @@ describe('ConnectorManagementContent', () => {
         // Capture event listeners using spy
         const capturedListeners: { [key: string]: EventListener } = {};
         const originalAddEventListener = window.addEventListener;
-        vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
-          if (type === 'storage' || type === 'message' || type === 'focus') {
-            capturedListeners[type] = listener as EventListener;
-          }
-          return originalAddEventListener.call(window, type, listener);
-        });
+        vi.spyOn(window, 'addEventListener').mockImplementation(
+          (type, listener) => {
+            if (type === 'storage' || type === 'message' || type === 'focus') {
+              capturedListeners[type] = listener as EventListener;
+            }
+            return originalAddEventListener.call(window, type, listener);
+          },
+        );
 
         const oauthServer = {
           id: 1,
@@ -14317,7 +15123,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
@@ -14330,7 +15138,10 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(window.open).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'http://oauth.test/auth',
+            '_blank',
+          );
         });
 
         expect(capturedListeners['storage']).toBeDefined();
@@ -14361,12 +15172,14 @@ describe('ConnectorManagementContent', () => {
         // Capture event listeners
         const capturedListeners: { [key: string]: EventListener } = {};
         const originalAddEventListener = window.addEventListener;
-        vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
-          if (type === 'storage' || type === 'message' || type === 'focus') {
-            capturedListeners[type] = listener as EventListener;
-          }
-          return originalAddEventListener.call(window, type, listener);
-        });
+        vi.spyOn(window, 'addEventListener').mockImplementation(
+          (type, listener) => {
+            if (type === 'storage' || type === 'message' || type === 'focus') {
+              capturedListeners[type] = listener as EventListener;
+            }
+            return originalAddEventListener.call(window, type, listener);
+          },
+        );
 
         const oauthServer = {
           id: 1,
@@ -14407,7 +15220,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
@@ -14420,7 +15235,10 @@ describe('ConnectorManagementContent', () => {
         fireEvent.click(connectButtons[0]);
 
         await waitFor(() => {
-          expect(window.open).toHaveBeenCalledWith('http://oauth.test/auth', '_blank');
+          expect(window.open).toHaveBeenCalledWith(
+            'http://oauth.test/auth',
+            '_blank',
+          );
         });
 
         expect(capturedListeners['focus']).toBeDefined();
@@ -14493,14 +15311,20 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
         const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -14522,9 +15346,18 @@ describe('ConnectorManagementContent', () => {
           });
 
           // cleanup should have been called - check that event listeners were removed
-          expect(removeEventListenerSpy).toHaveBeenCalledWith('focus', expect.any(Function));
-          expect(removeEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function));
-          expect(removeEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+          expect(removeEventListenerSpy).toHaveBeenCalledWith(
+            'focus',
+            expect.any(Function),
+          );
+          expect(removeEventListenerSpy).toHaveBeenCalledWith(
+            'storage',
+            expect.any(Function),
+          );
+          expect(removeEventListenerSpy).toHaveBeenCalledWith(
+            'message',
+            expect.any(Function),
+          );
         }
 
         removeEventListenerSpy.mockRestore();
@@ -14585,7 +15418,9 @@ describe('ConnectorManagementContent', () => {
             pollCount++;
             if (pollCount >= 2) {
               return Promise.resolve({
-                data: [{ id: 999, provider: 'google', service: 'check-service' }],
+                data: [
+                  { id: 999, provider: 'google', service: 'check-service' },
+                ],
               });
             }
             return Promise.resolve({ data: [] });
@@ -14593,7 +15428,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         mockCreateMCPServerConnection.mockReturnValue({
@@ -14603,7 +15440,11 @@ describe('ConnectorManagementContent', () => {
         window.open = vi.fn();
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -14692,18 +15533,26 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         // Make createConnection fail
         mockCreateMCPServerConnection.mockReturnValue({
-          unwrap: vi.fn().mockRejectedValue({ data: { detail: 'Connection creation failed' } }),
+          unwrap: vi.fn().mockRejectedValue({
+            data: { detail: 'Connection creation failed' },
+          }),
         });
 
         window.open = vi.fn();
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -14794,7 +15643,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         mockCreateMCPServerConnection.mockReturnValue({
@@ -14804,7 +15655,11 @@ describe('ConnectorManagementContent', () => {
         window.open = vi.fn();
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -14895,14 +15750,20 @@ describe('ConnectorManagementContent', () => {
         });
 
         mockStartOAuthFlow.mockReturnValue({
-          unwrap: vi.fn().mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
+          unwrap: vi
+            .fn()
+            .mockResolvedValue({ auth_url: 'http://oauth.test/auth' }),
         });
 
         window.open = vi.fn();
         const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         const connectButtons = screen
@@ -14926,7 +15787,10 @@ describe('ConnectorManagementContent', () => {
           }
 
           // After 60 polls, cleanup should be called
-          expect(removeEventListenerSpy).toHaveBeenCalledWith('focus', expect.any(Function));
+          expect(removeEventListenerSpy).toHaveBeenCalledWith(
+            'focus',
+            expect.any(Function),
+          );
         }
 
         removeEventListenerSpy.mockRestore();
@@ -14999,7 +15863,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Initially all servers should be visible
@@ -15010,7 +15878,11 @@ describe('ConnectorManagementContent', () => {
         // Look for the date range popover trigger
         const calendarButton = screen
           .getAllByRole('button')
-          .find((btn) => btn.className?.includes('calendar') || btn.textContent?.includes('Pick'));
+          .find(
+            (btn) =>
+              btn.className?.includes('calendar') ||
+              btn.textContent?.includes('Pick'),
+          );
 
         if (calendarButton) {
           fireEvent.click(calendarButton);
@@ -15072,7 +15944,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Non-OAuth server should NOT have Connect/Disconnect buttons
@@ -15145,7 +16021,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // The test verifies the update path exists
@@ -15207,7 +16087,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Find the toggle switch
@@ -15259,14 +16143,20 @@ describe('ConnectorManagementContent', () => {
         });
 
         render(
-          <ConnectorManagementContent tenantKey="test-tenant" username="test-user" mentorId="1" />,
+          <ConnectorManagementContent
+            tenantKey="test-tenant"
+            username="test-user"
+            mentorId="1"
+          />,
         );
 
         // Find and click the Add Connector button to open ConnectorDialogs
         const addButton = screen
           .getAllByRole('button')
           .find(
-            (btn) => btn.textContent?.includes('Add') || btn.textContent?.includes('Connector'),
+            (btn) =>
+              btn.textContent?.includes('Add') ||
+              btn.textContent?.includes('Connector'),
           );
 
         if (addButton) {
@@ -15421,32 +16311,38 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [serverNoTransport],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [serverNoTransport],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       render(<ConnectorManagementContent {...defaultProps} />);
 
       // Should render the server with fallback transport label
-      expect(screen.getAllByText('No Transport Server').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('No Transport Server').length).toBeGreaterThan(
+        0,
+      );
       // Should show Streamable HTTP as the transport (the default)
-      expect(screen.getAllByText('Streamable HTTP').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('Streamable HTTP').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     /**
@@ -15461,25 +16357,27 @@ describe('ConnectorManagementContent', () => {
         created_at: '2024-01-01T00:00:00Z',
       };
 
-      mockUseGetMCPServersQuery.mockImplementation((params: any, _options: any) => {
-        if (params.isFeatured) {
+      mockUseGetMCPServersQuery.mockImplementation(
+        (params: any, _options: any) => {
+          if (params.isFeatured) {
+            return {
+              data: { results: [], count: 0 },
+              isLoading: false,
+              error: null,
+              refetch: mockRefetchServers,
+            };
+          }
           return {
-            data: { results: [], count: 0 },
+            data: {
+              results: [serverUndefinedTransport],
+              count: 1,
+            },
             isLoading: false,
             error: null,
             refetch: mockRefetchServers,
           };
-        }
-        return {
-          data: {
-            results: [serverUndefinedTransport],
-            count: 1,
-          },
-          isLoading: false,
-          error: null,
-          refetch: mockRefetchServers,
-        };
-      });
+        },
+      );
 
       // ADDITIONAL BRANCH COVERAGE TESTS
       // ============================================================================
@@ -15669,7 +16567,11 @@ describe('ConnectorManagementContent', () => {
             }),
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).toBeNull();
         });
 
@@ -15679,7 +16581,11 @@ describe('ConnectorManagementContent', () => {
             newValue: null,
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).toBeNull();
         });
 
@@ -15689,7 +16595,11 @@ describe('ConnectorManagementContent', () => {
             newValue: 'invalid-json{',
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).toBeNull();
         });
 
@@ -15703,7 +16613,11 @@ describe('ConnectorManagementContent', () => {
             }),
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).not.toBeNull();
           expect(result?.isMatch).toBe(false);
         });
@@ -15718,7 +16632,11 @@ describe('ConnectorManagementContent', () => {
             }),
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).not.toBeNull();
           expect(result?.isMatch).toBe(false);
         });
@@ -15733,7 +16651,11 @@ describe('ConnectorManagementContent', () => {
             }),
           } as StorageEvent;
 
-          const result = processOAuthStorageEvent(event, 'google', 'google-calendar');
+          const result = processOAuthStorageEvent(
+            event,
+            'google',
+            'google-calendar',
+          );
           expect(result).not.toBeNull();
           expect(result?.isMatch).toBe(true);
           expect(result?.connectedServiceId).toBe(123);
@@ -15804,7 +16726,9 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns null when refetch throws error', async () => {
-          const mockRefetch = vi.fn().mockRejectedValue(new Error('Network error'));
+          const mockRefetch = vi
+            .fn()
+            .mockRejectedValue(new Error('Network error'));
           const result = await checkOAuthConnectionComplete(
             mockRefetch,
             'google',
@@ -15839,7 +16763,11 @@ describe('ConnectorManagementContent', () => {
           };
 
           // This tests the catch block in createOAuthConnection
-          const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+          const result = await createOAuthConnection(
+            params,
+            mockOnSuccess,
+            mockOnError,
+          );
 
           expect(result).toBe(false);
           expect(mockOnError).toHaveBeenCalled();
@@ -15868,7 +16796,11 @@ describe('ConnectorManagementContent', () => {
             refetchMentorSettings: vi.fn().mockResolvedValue({}),
           };
 
-          const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+          const result = await createOAuthConnection(
+            params,
+            mockOnSuccess,
+            mockOnError,
+          );
 
           expect(result).toBe(true);
           expect(mockOnSuccess).toHaveBeenCalled();
@@ -15893,7 +16825,11 @@ describe('ConnectorManagementContent', () => {
             refetchMentorSettings: vi.fn().mockResolvedValue({}),
           };
 
-          const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+          const result = await createOAuthConnection(
+            params,
+            mockOnSuccess,
+            mockOnError,
+          );
 
           expect(result).toBe(false);
           expect(mockOnSuccess).not.toHaveBeenCalled();
@@ -15918,7 +16854,11 @@ describe('ConnectorManagementContent', () => {
             refetchMentorSettings: vi.fn().mockResolvedValue({}),
           };
 
-          const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+          const result = await createOAuthConnection(
+            params,
+            mockOnSuccess,
+            mockOnError,
+          );
 
           expect(result).toBe(false);
           expect(mockOnSuccess).not.toHaveBeenCalled();
@@ -15943,7 +16883,11 @@ describe('ConnectorManagementContent', () => {
             refetchMentorSettings: vi.fn().mockResolvedValue({}),
           };
 
-          const result = await createOAuthConnection(params, mockOnSuccess, mockOnError);
+          const result = await createOAuthConnection(
+            params,
+            mockOnSuccess,
+            mockOnError,
+          );
 
           expect(result).toBe(false);
           expect(mockOnSuccess).not.toHaveBeenCalled();
@@ -16111,7 +17055,11 @@ describe('ConnectorManagementContent', () => {
 
       describe('validateDisconnectOAuthParams', () => {
         it('returns isValid true when all params are valid', () => {
-          const result = validateDisconnectOAuthParams('tenant-key', 'username', 123);
+          const result = validateDisconnectOAuthParams(
+            'tenant-key',
+            'username',
+            123,
+          );
 
           expect(result.isValid).toBe(true);
           expect(result.error).toBeNull();
@@ -16119,7 +17067,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns isValid false when tenantKey is missing', () => {
-          const result = validateDisconnectOAuthParams(undefined, 'username', 123);
+          const result = validateDisconnectOAuthParams(
+            undefined,
+            'username',
+            123,
+          );
 
           expect(result.isValid).toBe(false);
           expect(result.error).toBe('Missing required parameters');
@@ -16135,7 +17087,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns isValid false when username is missing', () => {
-          const result = validateDisconnectOAuthParams('tenant-key', undefined, 123);
+          const result = validateDisconnectOAuthParams(
+            'tenant-key',
+            undefined,
+            123,
+          );
 
           expect(result.isValid).toBe(false);
           expect(result.error).toBe('Missing required parameters');
@@ -16151,7 +17107,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns isValid false when connectedServiceId is null', () => {
-          const result = validateDisconnectOAuthParams('tenant-key', 'username', null);
+          const result = validateDisconnectOAuthParams(
+            'tenant-key',
+            'username',
+            null,
+          );
 
           expect(result.isValid).toBe(false);
           expect(result.error).toBe('No connected service to disconnect');
@@ -16159,7 +17119,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns isValid false when connectedServiceId is 0', () => {
-          const result = validateDisconnectOAuthParams('tenant-key', 'username', 0);
+          const result = validateDisconnectOAuthParams(
+            'tenant-key',
+            'username',
+            0,
+          );
 
           expect(result.isValid).toBe(false);
           expect(result.error).toBe('No connected service to disconnect');
@@ -16167,7 +17131,11 @@ describe('ConnectorManagementContent', () => {
         });
 
         it('returns isValid false when both tenantKey and username are missing', () => {
-          const result = validateDisconnectOAuthParams(undefined, undefined, 123);
+          const result = validateDisconnectOAuthParams(
+            undefined,
+            undefined,
+            123,
+          );
 
           expect(result.isValid).toBe(false);
           expect(result.error).toBe('Missing required parameters');
@@ -16177,90 +17145,189 @@ describe('ConnectorManagementContent', () => {
 
       describe('determineCheckConnectionAction', () => {
         it('returns skip action when isCreatingConnection is true', () => {
-          const result = determineCheckConnectionAction(true, 123, false, 0, 10);
+          const result = determineCheckConnectionAction(
+            true,
+            123,
+            false,
+            0,
+            10,
+          );
           expect(result).toEqual({ action: 'skip', connectedServiceId: null });
         });
 
         it('returns create_and_cleanup when connectedServiceId exists and createConnectionSuccess is true', () => {
-          const result = determineCheckConnectionAction(false, 456, true, 0, 10);
-          expect(result).toEqual({ action: 'create_and_cleanup', connectedServiceId: 456 });
+          const result = determineCheckConnectionAction(
+            false,
+            456,
+            true,
+            0,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'create_and_cleanup',
+            connectedServiceId: 456,
+          });
         });
 
         it('returns continue_polling when connectedServiceId exists but createConnectionSuccess is false', () => {
-          const result = determineCheckConnectionAction(false, 789, false, 0, 10);
-          expect(result).toEqual({ action: 'continue_polling', connectedServiceId: 789 });
+          const result = determineCheckConnectionAction(
+            false,
+            789,
+            false,
+            0,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'continue_polling',
+            connectedServiceId: 789,
+          });
         });
 
         it('returns max_polls_cleanup when pollCount reaches maxPolls', () => {
-          const result = determineCheckConnectionAction(false, null, false, 10, 10);
-          expect(result).toEqual({ action: 'max_polls_cleanup', connectedServiceId: null });
+          const result = determineCheckConnectionAction(
+            false,
+            null,
+            false,
+            10,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'max_polls_cleanup',
+            connectedServiceId: null,
+          });
         });
 
         it('returns max_polls_cleanup when pollCount exceeds maxPolls', () => {
-          const result = determineCheckConnectionAction(false, null, false, 15, 10);
-          expect(result).toEqual({ action: 'max_polls_cleanup', connectedServiceId: null });
+          const result = determineCheckConnectionAction(
+            false,
+            null,
+            false,
+            15,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'max_polls_cleanup',
+            connectedServiceId: null,
+          });
         });
 
         it('returns continue_polling when no connectedServiceId and not at max polls', () => {
-          const result = determineCheckConnectionAction(false, null, false, 5, 10);
-          expect(result).toEqual({ action: 'continue_polling', connectedServiceId: null });
+          const result = determineCheckConnectionAction(
+            false,
+            null,
+            false,
+            5,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'continue_polling',
+            connectedServiceId: null,
+          });
         });
 
         it('returns continue_polling when connectedServiceId is 0 (falsy)', () => {
           const result = determineCheckConnectionAction(false, 0, false, 0, 10);
-          expect(result).toEqual({ action: 'continue_polling', connectedServiceId: 0 });
+          expect(result).toEqual({
+            action: 'continue_polling',
+            connectedServiceId: 0,
+          });
         });
 
         it('handles edge case: isCreatingConnection takes precedence over other conditions', () => {
-          const result = determineCheckConnectionAction(true, 123, true, 10, 10);
+          const result = determineCheckConnectionAction(
+            true,
+            123,
+            true,
+            10,
+            10,
+          );
           expect(result).toEqual({ action: 'skip', connectedServiceId: null });
         });
 
         it('handles edge case: create_and_cleanup takes precedence over max_polls_cleanup', () => {
-          const result = determineCheckConnectionAction(false, 123, true, 10, 10);
-          expect(result).toEqual({ action: 'create_and_cleanup', connectedServiceId: 123 });
+          const result = determineCheckConnectionAction(
+            false,
+            123,
+            true,
+            10,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'create_and_cleanup',
+            connectedServiceId: 123,
+          });
         });
 
         it('handles edge case: max_polls_cleanup when no connectedServiceId at max polls', () => {
-          const result = determineCheckConnectionAction(false, null, false, 10, 10);
-          expect(result).toEqual({ action: 'max_polls_cleanup', connectedServiceId: null });
+          const result = determineCheckConnectionAction(
+            false,
+            null,
+            false,
+            10,
+            10,
+          );
+          expect(result).toEqual({
+            action: 'max_polls_cleanup',
+            connectedServiceId: null,
+          });
         });
       });
 
       describe('determineMessageEventAction', () => {
         it('returns create_and_cleanup when shouldCreate is true and connectedServiceId exists', () => {
           const result = determineMessageEventAction(true, 123);
-          expect(result).toEqual({ action: 'create_and_cleanup', connectedServiceId: 123 });
+          expect(result).toEqual({
+            action: 'create_and_cleanup',
+            connectedServiceId: 123,
+          });
         });
 
         it('returns ignore when shouldCreate is false', () => {
           const result = determineMessageEventAction(false, 123);
-          expect(result).toEqual({ action: 'ignore', connectedServiceId: null });
+          expect(result).toEqual({
+            action: 'ignore',
+            connectedServiceId: null,
+          });
         });
 
         it('returns ignore when connectedServiceId is null', () => {
           const result = determineMessageEventAction(true, null);
-          expect(result).toEqual({ action: 'ignore', connectedServiceId: null });
+          expect(result).toEqual({
+            action: 'ignore',
+            connectedServiceId: null,
+          });
         });
 
         it('returns ignore when both shouldCreate is false and connectedServiceId is null', () => {
           const result = determineMessageEventAction(false, null);
-          expect(result).toEqual({ action: 'ignore', connectedServiceId: null });
+          expect(result).toEqual({
+            action: 'ignore',
+            connectedServiceId: null,
+          });
         });
 
         it('returns ignore when connectedServiceId is 0 (falsy)', () => {
           const result = determineMessageEventAction(true, 0);
-          expect(result).toEqual({ action: 'ignore', connectedServiceId: null });
+          expect(result).toEqual({
+            action: 'ignore',
+            connectedServiceId: null,
+          });
         });
 
         it('handles large connectedServiceId values', () => {
           const result = determineMessageEventAction(true, 999999999);
-          expect(result).toEqual({ action: 'create_and_cleanup', connectedServiceId: 999999999 });
+          expect(result).toEqual({
+            action: 'create_and_cleanup',
+            connectedServiceId: 999999999,
+          });
         });
 
         it('handles negative connectedServiceId values (should still return create_and_cleanup if truthy)', () => {
           const result = determineMessageEventAction(true, -1);
-          expect(result).toEqual({ action: 'create_and_cleanup', connectedServiceId: -1 });
+          expect(result).toEqual({
+            action: 'create_and_cleanup',
+            connectedServiceId: -1,
+          });
         });
       });
 
@@ -16754,7 +17821,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 888;
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -16779,7 +17850,9 @@ describe('ConnectorManagementContent', () => {
 
             // Mock refetchConnected to return matching service on first call
             const refetchMock = vi.fn().mockResolvedValue({
-              data: [{ id: connectedServiceId, provider, service: serviceName }],
+              data: [
+                { id: connectedServiceId, provider, service: serviceName },
+              ],
             });
 
             mockUseGetConnectedServicesQuery.mockReturnValue({
@@ -16790,7 +17863,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -16851,7 +17926,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 889;
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -16875,7 +17954,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             const refetchMock = vi.fn().mockResolvedValue({
-              data: [{ id: connectedServiceId, provider, service: serviceName }],
+              data: [
+                { id: connectedServiceId, provider, service: serviceName },
+              ],
             });
 
             mockUseGetConnectedServicesQuery.mockReturnValue({
@@ -16886,7 +17967,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -16941,7 +18024,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 999;
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -16972,7 +18059,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -17041,7 +18130,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 1001;
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -17072,7 +18165,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -17135,7 +18230,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 1002;
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -17166,7 +18265,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             const mockWindowOpen = vi.fn();
@@ -17225,7 +18326,11 @@ describe('ConnectorManagementContent', () => {
             const serviceName = 'max-poll-service';
             const provider = 'google';
 
-            const oauthServer = createOAuthServerWithService(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerWithService(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -17257,7 +18362,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             const mockWindowOpen = vi.fn();
@@ -17265,7 +18372,10 @@ describe('ConnectorManagementContent', () => {
             window.open = mockWindowOpen;
 
             // Track removeEventListener calls
-            const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+            const removeEventListenerSpy = vi.spyOn(
+              window,
+              'removeEventListener',
+            );
 
             render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -17293,7 +18403,10 @@ describe('ConnectorManagementContent', () => {
 
               // After max polls, cleanup should have been called
               // Cleanup removes event listeners
-              expect(removeEventListenerSpy).toHaveBeenCalledWith('focus', expect.any(Function));
+              expect(removeEventListenerSpy).toHaveBeenCalledWith(
+                'focus',
+                expect.any(Function),
+              );
             }
 
             removeEventListenerSpy.mockRestore();
@@ -17910,7 +19023,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 8001;
 
-            const oauthServer = createOAuthServerData(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerData(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -17941,7 +19058,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -18003,7 +19122,11 @@ describe('ConnectorManagementContent', () => {
             const serviceName = 'origin-mismatch-service';
             const provider = 'google';
 
-            const oauthServer = createOAuthServerData(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerData(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -18034,7 +19157,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             const mockWindowOpen = vi.fn();
@@ -18091,7 +19216,11 @@ describe('ConnectorManagementContent', () => {
             const serviceName = 'max-polls-service';
             const provider = 'google';
 
-            const oauthServer = createOAuthServerData(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerData(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -18123,7 +19252,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             const mockWindowOpen = vi.fn();
@@ -18131,7 +19262,10 @@ describe('ConnectorManagementContent', () => {
             window.open = mockWindowOpen;
 
             // Track event listener removal to verify cleanup
-            const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+            const removeEventListenerSpy = vi.spyOn(
+              window,
+              'removeEventListener',
+            );
 
             render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18184,7 +19318,11 @@ describe('ConnectorManagementContent', () => {
             const provider = 'google';
             const connectedServiceId = 8003;
 
-            const oauthServer = createOAuthServerData(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerData(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -18217,7 +19355,13 @@ describe('ConnectorManagementContent', () => {
                 callCount++;
                 if (callCount > 2) {
                   return Promise.resolve({
-                    data: [{ id: connectedServiceId, provider, service: serviceName }],
+                    data: [
+                      {
+                        id: connectedServiceId,
+                        provider,
+                        service: serviceName,
+                      },
+                    ],
                   });
                 }
                 return Promise.resolve({ data: [] });
@@ -18225,7 +19369,9 @@ describe('ConnectorManagementContent', () => {
             });
 
             mockStartOAuthFlow.mockReturnValue({
-              unwrap: vi.fn().mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+              unwrap: vi.fn().mockResolvedValue({
+                auth_url: 'https://oauth.example.com/auth',
+              }),
             });
 
             mockCreateMCPServerConnection.mockReturnValue({
@@ -18279,7 +19425,11 @@ describe('ConnectorManagementContent', () => {
             const serviceName = 'error-oauth-service';
             const provider = 'google';
 
-            const oauthServer = createOAuthServerData(serverId, serviceName, provider);
+            const oauthServer = createOAuthServerData(
+              serverId,
+              serviceName,
+              provider,
+            );
 
             mockUseGetMCPServersQuery
               .mockReturnValueOnce({
@@ -18382,7 +19532,9 @@ describe('ConnectorManagementContent', () => {
           render(<ConnectorManagementContent {...defaultProps} />);
 
           // Should show loading state
-          expect(screen.getByText('Loading featured connectors...')).toBeInTheDocument();
+          expect(
+            screen.getByText('Loading featured connectors...'),
+          ).toBeInTheDocument();
         });
       });
 
@@ -18429,9 +19581,13 @@ describe('ConnectorManagementContent', () => {
           render(<ConnectorManagementContent {...defaultProps} />);
 
           // Should render the server
-          expect(screen.getAllByText('Undefined Transport Server').length).toBeGreaterThan(0);
+          expect(
+            screen.getAllByText('Undefined Transport Server').length,
+          ).toBeGreaterThan(0);
           // Should show Streamable HTTP as the transport (the default)
-          expect(screen.getAllByText('Streamable HTTP').length).toBeGreaterThanOrEqual(1);
+          expect(
+            screen.getAllByText('Streamable HTTP').length,
+          ).toBeGreaterThanOrEqual(1);
         });
       });
     });
@@ -18483,7 +19639,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         // Should show Disconnect button since connection is detected
-        expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Disconnect').length).toBeGreaterThanOrEqual(
+          1,
+        );
       });
     });
   });
@@ -18523,7 +19681,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         const calls = mockWithFormPermissions.mock.calls;
-        const mcpFieldCalls = calls.filter((call: any) => call[0]?.name === 'mcp_servers');
+        const mcpFieldCalls = calls.filter(
+          (call: any) => call[0]?.name === 'mcp_servers',
+        );
         expect(mcpFieldCalls.length).toBeGreaterThan(0);
       });
 
@@ -18543,7 +19703,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         const calls = mockWithFormPermissions.mock.calls;
-        const mcpFieldCalls = calls.filter((call: any) => call[0]?.name === 'mcp_servers');
+        const mcpFieldCalls = calls.filter(
+          (call: any) => call[0]?.name === 'mcp_servers',
+        );
         expect(mcpFieldCalls.length).toBeGreaterThan(0);
         expect(mcpFieldCalls[0][0].permissions).toEqual(fieldPermissions);
       });
@@ -18560,7 +19722,9 @@ describe('ConnectorManagementContent', () => {
         render(<ConnectorManagementContent {...defaultProps} />);
 
         const calls = mockWithFormPermissions.mock.calls;
-        const mcpFieldCalls = calls.filter((call: any) => call[0]?.name === 'mcp_servers');
+        const mcpFieldCalls = calls.filter(
+          (call: any) => call[0]?.name === 'mcp_servers',
+        );
         expect(mcpFieldCalls.length).toBeGreaterThan(0);
         expect(mcpFieldCalls[0][0].permissions).toEqual({});
       });
@@ -18700,18 +19864,25 @@ describe('ConnectorManagementContent', () => {
         write: boolean;
         delete: boolean;
       }) => ({
-        results: [{ ...mockMCPServers.results[0], permissions: { object: objectPermissions } }],
+        results: [
+          {
+            ...mockMCPServers.results[0],
+            permissions: { object: objectPermissions },
+          },
+        ],
         count: 1,
         next: null,
         previous: null,
       });
 
       it('shows Edit button when server has write permission', () => {
-        mockWithFormPermissions.mockImplementation(({ name, children }: any) => {
-          if (name === MCP_SERVER_PERMISSION_NAME)
+        mockWithFormPermissions.mockImplementation(
+          ({ name, children }: any) => {
+            if (name === MCP_SERVER_PERMISSION_NAME)
+              return children({ disabled: false, canDelete: true });
             return children({ disabled: false, canDelete: true });
-          return children({ disabled: false, canDelete: true });
-        });
+          },
+        );
 
         render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18719,11 +19890,13 @@ describe('ConnectorManagementContent', () => {
       });
 
       it('hides Edit button when server lacks write permission', () => {
-        mockWithFormPermissions.mockImplementation(({ name, children }: any) => {
-          if (name === MCP_SERVER_PERMISSION_NAME)
-            return children({ disabled: true, canDelete: true });
-          return children({ disabled: false, canDelete: true });
-        });
+        mockWithFormPermissions.mockImplementation(
+          ({ name, children }: any) => {
+            if (name === MCP_SERVER_PERMISSION_NAME)
+              return children({ disabled: true, canDelete: true });
+            return children({ disabled: false, canDelete: true });
+          },
+        );
 
         render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18731,11 +19904,13 @@ describe('ConnectorManagementContent', () => {
       });
 
       it('shows Delete button when server has delete permission', () => {
-        mockWithFormPermissions.mockImplementation(({ name, children }: any) => {
-          if (name === MCP_SERVER_PERMISSION_NAME)
+        mockWithFormPermissions.mockImplementation(
+          ({ name, children }: any) => {
+            if (name === MCP_SERVER_PERMISSION_NAME)
+              return children({ disabled: false, canDelete: true });
             return children({ disabled: false, canDelete: true });
-          return children({ disabled: false, canDelete: true });
-        });
+          },
+        );
 
         render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18743,11 +19918,13 @@ describe('ConnectorManagementContent', () => {
       });
 
       it('hides Delete button when server lacks delete permission', () => {
-        mockWithFormPermissions.mockImplementation(({ name, children }: any) => {
-          if (name === MCP_SERVER_PERMISSION_NAME)
-            return children({ disabled: false, canDelete: false });
-          return children({ disabled: false, canDelete: true });
-        });
+        mockWithFormPermissions.mockImplementation(
+          ({ name, children }: any) => {
+            if (name === MCP_SERVER_PERMISSION_NAME)
+              return children({ disabled: false, canDelete: false });
+            return children({ disabled: false, canDelete: true });
+          },
+        );
 
         render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18755,11 +19932,13 @@ describe('ConnectorManagementContent', () => {
       });
 
       it('hides both Edit and Delete when server has neither write nor delete permission', () => {
-        mockWithFormPermissions.mockImplementation(({ name, children }: any) => {
-          if (name === MCP_SERVER_PERMISSION_NAME)
-            return children({ disabled: true, canDelete: false });
-          return children({ disabled: false, canDelete: true });
-        });
+        mockWithFormPermissions.mockImplementation(
+          ({ name, children }: any) => {
+            if (name === MCP_SERVER_PERMISSION_NAME)
+              return children({ disabled: true, canDelete: false });
+            return children({ disabled: false, canDelete: true });
+          },
+        );
 
         render(<ConnectorManagementContent {...defaultProps} />);
 
@@ -18835,7 +20014,12 @@ describe('ConnectorManagementContent', () => {
     });
 
     it('returns null for undefined connections', () => {
-      const result = findMCPServerConnection(undefined, 10, 'testuser', 'mentor-1');
+      const result = findMCPServerConnection(
+        undefined,
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBeNull();
     });
 
@@ -18846,43 +20030,98 @@ describe('ConnectorManagementContent', () => {
 
     it('returns connection for tenant scope regardless of user/mentor', () => {
       const conn = makeConnection({ scope: 'tenant', server: 10 });
-      const result = findMCPServerConnection([conn], 10, 'other-user', 'other-mentor');
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'other-user',
+        'other-mentor',
+      );
       expect(result).toBe(conn);
     });
 
     it('returns connection for user scope when user matches', () => {
-      const conn = makeConnection({ scope: 'user', server: 10, user: 'testuser' });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const conn = makeConnection({
+        scope: 'user',
+        server: 10,
+        user: 'testuser',
+      });
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBe(conn);
     });
 
     it('returns null for user scope when user does not match', () => {
-      const conn = makeConnection({ scope: 'user', server: 10, user: 'other-user' });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const conn = makeConnection({
+        scope: 'user',
+        server: 10,
+        user: 'other-user',
+      });
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBeNull();
     });
 
     it('returns connection for mentor scope when mentor matches', () => {
-      const conn = makeConnection({ scope: 'mentor', server: 10, mentor: 'mentor-1' });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const conn = makeConnection({
+        scope: 'mentor',
+        server: 10,
+        mentor: 'mentor-1',
+      });
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBe(conn);
     });
 
     it('returns null for mentor scope when mentor does not match', () => {
-      const conn = makeConnection({ scope: 'mentor', server: 10, mentor: 'other-mentor' });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const conn = makeConnection({
+        scope: 'mentor',
+        server: 10,
+        mentor: 'other-mentor',
+      });
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBeNull();
     });
 
     it('returns null for inactive connections', () => {
-      const conn = makeConnection({ scope: 'tenant', server: 10, is_active: false });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const conn = makeConnection({
+        scope: 'tenant',
+        server: 10,
+        is_active: false,
+      });
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBeNull();
     });
 
     it('returns null when server ID does not match', () => {
       const conn = makeConnection({ scope: 'tenant', server: 99 });
-      const result = findMCPServerConnection([conn], 10, 'testuser', 'mentor-1');
+      const result = findMCPServerConnection(
+        [conn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       expect(result).toBeNull();
     });
 
@@ -18894,7 +20133,12 @@ describe('ConnectorManagementContent', () => {
         mentor: 'wrong-mentor',
       });
       const tenantConn = makeConnection({ id: 2, scope: 'tenant', server: 10 });
-      const result = findMCPServerConnection([mentorConn, tenantConn], 10, 'testuser', 'mentor-1');
+      const result = findMCPServerConnection(
+        [mentorConn, tenantConn],
+        10,
+        'testuser',
+        'mentor-1',
+      );
       // Should find the tenant one since mentor doesn't match
       expect(result).toBe(tenantConn);
     });

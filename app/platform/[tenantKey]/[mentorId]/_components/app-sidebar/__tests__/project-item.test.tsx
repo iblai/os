@@ -191,8 +191,12 @@ describe('ProjectItem', () => {
 
       // Menu items should appear (Radix portals to body)
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /Rename Project/i })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: /Delete Project/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Rename Project/i }),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Delete Project/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -205,7 +209,9 @@ describe('ProjectItem', () => {
       await user.click(menuTrigger);
 
       // Click rename option
-      const renameOption = await screen.findByRole('menuitem', { name: /Rename Project/i });
+      const renameOption = await screen.findByRole('menuitem', {
+        name: /Rename Project/i,
+      });
       await user.click(renameOption);
 
       expect(mockOnRename).toHaveBeenCalledWith('project-1', 'Test Project');
@@ -220,7 +226,9 @@ describe('ProjectItem', () => {
       await user.click(menuTrigger);
 
       // Click delete option
-      const deleteOption = await screen.findByRole('menuitem', { name: /Delete Project/i });
+      const deleteOption = await screen.findByRole('menuitem', {
+        name: /Delete Project/i,
+      });
       await user.click(deleteOption);
 
       expect(mockOnDelete).toHaveBeenCalledWith('project-1', 'Test Project');
@@ -246,7 +254,9 @@ describe('ProjectItem', () => {
       await user.click(menuTrigger);
 
       // Click rename
-      const renameOption = await screen.findByRole('menuitem', { name: /Rename Project/i });
+      const renameOption = await screen.findByRole('menuitem', {
+        name: /Rename Project/i,
+      });
       await user.click(renameOption);
 
       expect(mockOnClick).not.toHaveBeenCalled();
@@ -266,7 +276,8 @@ describe('ProjectItem', () => {
     it('handles project with long title', () => {
       const longTitleProject = {
         id: 'project-3',
-        title: 'This is a very long project title that should be truncated in the UI',
+        title:
+          'This is a very long project title that should be truncated in the UI',
       };
       render(<ProjectItem {...defaultProps} project={longTitleProject} />);
 
@@ -317,7 +328,9 @@ describe('ProjectItem', () => {
 
       // Menu should still be visible
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /Rename Project/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Rename Project/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -330,12 +343,16 @@ describe('ProjectItem', () => {
       await user.click(menuTrigger);
 
       // Click rename
-      const renameOption = await screen.findByRole('menuitem', { name: /Rename Project/i });
+      const renameOption = await screen.findByRole('menuitem', {
+        name: /Rename Project/i,
+      });
       await user.click(renameOption);
 
       // Menu should close
       await waitFor(() => {
-        expect(screen.queryByRole('menuitem', { name: /Rename Project/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('menuitem', { name: /Rename Project/i }),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -352,7 +369,9 @@ describe('ProjectItem', () => {
 
       // Menu should be open
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /Rename Project/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Rename Project/i }),
+        ).toBeInTheDocument();
       });
 
       // Close menu by clicking outside (pressing Escape)
@@ -360,7 +379,9 @@ describe('ProjectItem', () => {
 
       // Menu should close
       await waitFor(() => {
-        expect(screen.queryByRole('menuitem', { name: /Rename Project/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('menuitem', { name: /Rename Project/i }),
+        ).not.toBeInTheDocument();
       });
     });
   });

@@ -36,13 +36,17 @@ describe('UserMessageBubble Component', () => {
     });
 
     it('should apply highlight style when isHighlighted is true', () => {
-      const { container } = render(<UserMessageBubble {...defaultProps} isHighlighted={true} />);
+      const { container } = render(
+        <UserMessageBubble {...defaultProps} isHighlighted={true} />,
+      );
       const messageContainer = container.querySelector('.message-container');
       expect(messageContainer).toHaveClass('bg-blue-100');
     });
 
     it('should not apply highlight style when isHighlighted is false', () => {
-      const { container } = render(<UserMessageBubble {...defaultProps} isHighlighted={false} />);
+      const { container } = render(
+        <UserMessageBubble {...defaultProps} isHighlighted={false} />,
+      );
       const messageContainer = container.querySelector('.message-container');
       expect(messageContainer).not.toHaveClass('bg-blue-100');
     });
@@ -61,7 +65,9 @@ describe('UserMessageBubble Component', () => {
         },
       };
 
-      const { container } = render(<UserMessageBubble {...messageWithNewline} />);
+      const { container } = render(
+        <UserMessageBubble {...messageWithNewline} />,
+      );
       const messageBubble = container.querySelector('.whitespace-pre-wrap');
 
       expect(messageBubble).toBeInTheDocument();
@@ -80,7 +86,9 @@ describe('UserMessageBubble Component', () => {
         },
       };
 
-      const { container } = render(<UserMessageBubble {...messageWithMultipleNewlines} />);
+      const { container } = render(
+        <UserMessageBubble {...messageWithMultipleNewlines} />,
+      );
       const messageBubble = container.querySelector('.whitespace-pre-wrap');
 
       expect(messageBubble).toBeInTheDocument();
@@ -99,16 +107,22 @@ describe('UserMessageBubble Component', () => {
         },
       };
 
-      const { container } = render(<UserMessageBubble {...messageWithEdgeNewlines} />);
+      const { container } = render(
+        <UserMessageBubble {...messageWithEdgeNewlines} />,
+      );
       const messageBubble = container.querySelector('.whitespace-pre-wrap');
 
       expect(messageBubble).toBeInTheDocument();
-      expect(messageBubble?.textContent).toBe('\nContent with leading newline\n');
+      expect(messageBubble?.textContent).toBe(
+        '\nContent with leading newline\n',
+      );
     });
 
     it('should have whitespace-pre-wrap class on message bubble', () => {
       const { container } = render(<UserMessageBubble {...defaultProps} />);
-      const messageBubble = container.querySelector('.bg-blue-50.text-gray-800');
+      const messageBubble = container.querySelector(
+        '.bg-blue-50.text-gray-800',
+      );
 
       expect(messageBubble).toHaveClass('whitespace-pre-wrap');
     });
@@ -244,7 +258,9 @@ describe('UserMessageBubble Component', () => {
       };
 
       render(<UserMessageBubble {...messageWithReply} />);
-      expect(screen.getByText('Original assistant message')).toBeInTheDocument();
+      expect(
+        screen.getByText('Original assistant message'),
+      ).toBeInTheDocument();
       expect(screen.getByText('This is my reply')).toBeInTheDocument();
     });
 
@@ -287,7 +303,9 @@ describe('UserMessageBubble Component', () => {
 
       const { container } = render(<UserMessageBubble {...emptyMessage} />);
       // Should not have the message content bubble (but container should exist)
-      const messageBubble = container.querySelector('.bg-blue-50.rounded-lg.px-4.py-2');
+      const messageBubble = container.querySelector(
+        '.bg-blue-50.rounded-lg.px-4.py-2',
+      );
       expect(messageBubble).not.toBeInTheDocument();
     });
   });
@@ -307,7 +325,9 @@ describe('UserMessageBubble Component', () => {
         },
       };
 
-      const { container } = render(<UserMessageBubble {...legacyImageMessage} />);
+      const { container } = render(
+        <UserMessageBubble {...legacyImageMessage} />,
+      );
       expect(container.querySelector('img')).toBeInTheDocument();
     });
 

@@ -51,7 +51,10 @@ export function UrlUploadModal({ resource }: Props) {
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -79,7 +82,8 @@ export function UrlUploadModal({ resource }: Props) {
     }
 
     if (resource.name.toLocaleLowerCase() === 'url') {
-      const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+      const urlPattern =
+        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
       if (!urlPattern.test(url)) {
         toast.error('Invalid URL');
         return;

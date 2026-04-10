@@ -2,7 +2,11 @@ import { useState } from 'react';
 
 import { Archive, X } from 'lucide-react';
 
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { MemoryMenu } from './memory-menu';
 
@@ -17,10 +21,10 @@ export function MemoryButton() {
             variant="ghost"
             size="sm"
             type="button"
-            className={`h-8 px-2 text-sm rounded-lg flex items-center gap-1.5 transition-all duration-200 ${
+            className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 ${
               isOpen
-                ? 'text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]'
-                : 'text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF]'
+                ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
             }`}
             onClick={() => {
               setIsOpen(true);
@@ -32,7 +36,7 @@ export function MemoryButton() {
             Memory
             {isOpen && (
               <X
-                className="h-3 w-3 ml-1 cursor-pointer"
+                className="ml-1 h-3 w-3 cursor-pointer"
                 onClick={() => {
                   setIsOpen(false);
                 }}
@@ -40,7 +44,7 @@ export function MemoryButton() {
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 bg-white rounded-lg shadow-xl border border-gray-200 p-0">
+        <PopoverContent className="w-96 rounded-lg border border-gray-200 bg-white p-0 shadow-xl">
           <MemoryMenu
             onClose={() => setIsOpen(false)}
             onSelectMemory={() => {}}

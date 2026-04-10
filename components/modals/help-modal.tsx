@@ -1,8 +1,8 @@
-"use client";
-import { X, PlayCircle, AlertCircle } from "lucide-react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { useMediaQuery } from "react-responsive";
+'use client';
+import { X, PlayCircle, AlertCircle } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { useMediaQuery } from 'react-responsive';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -11,31 +11,31 @@ interface HelpModalProps {
 
 const helpResources = [
   {
-    title: "Create A Study Buddy Mentor",
+    title: 'Create A Study Buddy Mentor',
     icon: PlayCircle,
   },
   {
-    title: "Teaching Assistant Mentor",
+    title: 'Teaching Assistant Mentor',
     icon: PlayCircle,
   },
   {
-    title: "Lesson Planner",
+    title: 'Lesson Planner',
     icon: PlayCircle,
   },
   {
-    title: "Training From a Website",
+    title: 'Training From a Website',
     icon: PlayCircle,
   },
   {
-    title: "Multi-language Support",
+    title: 'Multi-language Support',
     icon: PlayCircle,
   },
   {
-    title: "Customer Support",
+    title: 'Customer Support',
     icon: PlayCircle,
   },
   {
-    title: "Exploring Course Subjects and Topics",
+    title: 'Exploring Course Subjects and Topics',
     icon: PlayCircle,
   },
 ];
@@ -47,7 +47,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      className={`${isMobile ? "h-full w-full" : "w-[400px]"}`}
+      className={`${isMobile ? 'h-full w-full' : 'w-[400px]'}`}
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b py-1.5">

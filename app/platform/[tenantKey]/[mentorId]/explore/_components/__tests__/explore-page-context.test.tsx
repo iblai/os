@@ -44,11 +44,15 @@ describe('ExplorePageContext', () => {
   describe('useExplorePageContext', () => {
     it('throws error when used outside of ExplorePageContextProvider', () => {
       // Suppress console.error for this test since we expect an error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       expect(() => {
         renderHook(() => useExplorePageContext());
-      }).toThrow('useExplorePageContext must be used within ExplorePageContextProvider');
+      }).toThrow(
+        'useExplorePageContext must be used within ExplorePageContextProvider',
+      );
 
       consoleSpy.mockRestore();
     });

@@ -78,7 +78,8 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
-      item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL),
+      item.userTypes.includes(UserType.ADMIN) ||
+      item.userTypes.includes(UserType.FREE_TRIAL),
   }),
 }));
 
@@ -90,12 +91,20 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
+const mockMemsearchEnabled = false;
+
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
       data: mockMentorSettings,
+      isLoading: false,
+      isSuccess: true,
+    }),
+    useGetMemsearchConfigQuery: () => ({
+      data: { enable_memsearch: mockMemsearchEnabled },
       isLoading: false,
       isSuccess: true,
     }),
@@ -166,14 +175,19 @@ vi.mock('../tabs/memory-tab', () => ({
 }));
 
 vi.mock('../tabs/disclaimers-tab', () => ({
-  DisclaimersTab: () => <div data-testid="disclaimers-tab">Disclaimers Tab</div>,
+  DisclaimersTab: () => (
+    <div data-testid="disclaimers-tab">Disclaimers Tab</div>
+  ),
 }));
 
 // ============================================================================
 // TEST STORE FACTORY
 // ============================================================================
 
-function createTestStore(preloadedStack: ModalInfo[] = [], rbacPermissions: object = {}) {
+function createTestStore(
+  preloadedStack: ModalInfo[] = [],
+  rbacPermissions: object = {},
+) {
   return configureStore({
     reducer: {
       modals: modalReducer,
@@ -301,7 +315,9 @@ describe('EditMentorModal', () => {
       // Look for it in h2 heading elements
       await waitFor(() => {
         const headings = screen.getAllByRole('heading');
-        const editHeading = headings.find((h) => h.textContent?.includes('Edit'));
+        const editHeading = headings.find((h) =>
+          h.textContent?.includes('Edit'),
+        );
         expect(editHeading).toBeTruthy();
       });
     });
@@ -383,447 +399,11 @@ describe('EditMentorModal', () => {
   });
 });
 
-// ============================================================================
-// PURE FUNCTION TESTS FOR TAB FILTERING LOGIC
-// ============================================================================
-
-describe('EditMentorModal - Tab Filtering Logic', () => {
-  /**
-   * These tests validate the tab filtering logic that determines
-   * which tabs are shown based on user type, admin status, tenant, and permissions.
-   */
-
-  interface MockTab {
-    label: string;
-    value: string;
-    userTypes: string[];
-    rbacResource?: (mentorDbId: number) => string;
-    permissionFieldsCheck: string[];
-    mentorVisibility: MentorVisibilityEnum[];
-  }
-
-  interface MockMentorSettings {
-    platform_key: string;
-    mentor_visibility: MentorVisibilityEnum;
-    mentor_id: number;
-    permissions?: {
-      field?: Record<string, { read: boolean; write: boolean }>;
-    };
-  }
-
-  interface MockConfig {
-    mainTenantKey: () => string;
-  }
-
-  /**
-   * Pure function that mirrors the tab filtering logic from EditMentorModal.
-   */
-  function filterTabs(
-    tabs: MockTab[],
-    isUserTypeAllowed: (item: MockTab) => boolean,
-    isAdmin: boolean,
-    tenantKey: string | undefined,
-    mentorSettings: MockMentorSettings | undefined,
-    config: MockConfig,
-    rbacPermissions: Record<string, boolean>,
-    rbacPermissionToDisplay: (
-      fields: string[],
-      permissions?: Record<string, { read: boolean; write: boolean }>,
-    ) => boolean,
-    checkRbacPermission: (permissions: object, resource: string) => boolean,
-  ): MockTab[] {
-    if (!mentorSettings) return [];
-
-    return tabs
-      .filter(isUserTypeAllowed)
-      .filter((item) => {
-        const isAdminOnMainTenant = isAdmin && tenantKey === config.mainTenantKey();
-        const mentorNotOnMainTenant = mentorSettings.platform_key !== config.mainTenantKey();
-        const visibilityMatches = item.mentorVisibility.includes(
-          mentorSettings.mentor_visibility as MentorVisibilityEnum,
-        );
-        const isNonAdminOnMainTenant = !isAdmin && tenantKey === config.mainTenantKey();
-        const visibilityAllowed = visibilityMatches && !isNonAdminOnMainTenant;
-
-        return isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed;
-      })
-      .filter((item) => {
-        const hasFieldPermission = rbacPermissionToDisplay(
-          item.permissionFieldsCheck,
-          mentorSettings.permissions?.field,
-        );
-        const hasRbacPermission =
-          !item.rbacResource ||
-          checkRbacPermission(rbacPermissions, item.rbacResource(mentorSettings.mentor_id));
-        return hasFieldPermission && hasRbacPermission;
-      });
-  }
-
-  const mockConfig: MockConfig = { mainTenantKey: () => 'main' };
-
-  const sampleTabs: MockTab[] = [
-    {
-      label: 'Settings',
-      value: 'settings',
-      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#show_settings`,
-      permissionFieldsCheck: ['mentor_name', 'mentor_description'],
-      mentorVisibility: [
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-      ],
-    },
-    {
-      label: 'Access',
-      value: 'access',
-      userTypes: [UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/#read_shared_mentor`,
-      permissionFieldsCheck: [],
-      mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    },
-    {
-      label: 'LLM',
-      value: 'llm',
-      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-      rbacResource: (mentorDbId: number) => `/mentors/${mentorDbId}/llms/#list`,
-      permissionFieldsCheck: ['llm_provider'],
-      mentorVisibility: [
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-      ],
-    },
-  ];
-
-  const mockRbacPermissionToDisplay = (
-    fields: string[],
-    permissions?: Record<string, { read: boolean; write: boolean }>,
-  ): boolean => {
-    if (!permissions || fields.length === 0) return true;
-    return fields.some((field) => permissions[field]?.read);
-  };
-
-  const mockCheckRbacPermission = (): boolean => true;
-
-  describe('Admin on main tenant', () => {
-    it('shows all tabs that pass user type check', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'main',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            mentor_name: { read: true, write: true },
-            mentor_description: { read: true, write: true },
-            llm_provider: { read: true, write: true },
-          },
-        },
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).toContain('Settings');
-      expect(result.map((t) => t.label)).toContain('Access');
-      expect(result.map((t) => t.label)).toContain('LLM');
-    });
-  });
-
-  describe('Non-admin on main tenant', () => {
-    it('filters out admin-only tabs', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'main',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            mentor_name: { read: true, write: true },
-            mentor_description: { read: true, write: true },
-            llm_provider: { read: true, write: true },
-          },
-        },
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.FREE_TRIAL),
-        false,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).not.toContain('Access');
-    });
-
-    it('filters tabs based on mentor visibility for non-admins on main tenant', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'main',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            mentor_name: { read: true, write: true },
-          },
-        },
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.FREE_TRIAL),
-        false,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      // VIEWABLE_BY_ANYONE is not in any tab's mentorVisibility array
-      // and isNonAdminOnMainTenant is true, so visibilityAllowed is false
-      expect(result.length).toBe(0);
-    });
-  });
-
-  describe('User on non-main tenant', () => {
-    it('shows tabs when mentor is on non-main tenant', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            mentor_name: { read: true, write: true },
-          },
-        },
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).toContain('Settings');
-      expect(result.map((t) => t.label)).toContain('Access');
-    });
-  });
-
-  describe('RBAC permission checks', () => {
-    it('filters out tabs when user lacks field permissions', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            // Missing mentor_name, mentor_description - Settings should be filtered
-            llm_provider: { read: true, write: true },
-          },
-        },
-      };
-
-      const strictRbacPermissionToDisplay = (
-        fields: string[],
-        permissions?: Record<string, { read: boolean; write: boolean }>,
-      ): boolean => {
-        if (fields.length === 0) return true;
-        if (!permissions) return false;
-        return fields.some((field) => permissions[field]?.read);
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
-        strictRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).not.toContain('Settings');
-      expect(result.map((t) => t.label)).toContain('LLM');
-      expect(result.map((t) => t.label)).toContain('Access');
-    });
-
-    it('filters out tabs when RBAC resource check fails', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-        permissions: {
-          field: {
-            mentor_name: { read: true, write: true },
-            llm_provider: { read: true, write: true },
-          },
-        },
-      };
-
-      const strictCheckRbacPermission = (_: object, resource: string): boolean => {
-        // Deny access to LLM
-        if (resource.includes('llms')) return false;
-        return true;
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        strictCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).not.toContain('LLM');
-      expect(result.map((t) => t.label)).toContain('Settings');
-    });
-  });
-
-  describe('Edge cases', () => {
-    it('returns empty array when mentor settings is undefined', () => {
-      const result = filterTabs(
-        sampleTabs,
-        () => true,
-        true,
-        'tenant123',
-        undefined,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result).toEqual([]);
-    });
-
-    it('handles tabs with no rbacResource', () => {
-      const tabsWithNoRbac: MockTab[] = [
-        {
-          label: 'Simple Tab',
-          value: 'simple',
-          userTypes: [UserType.ADMIN],
-          permissionFieldsCheck: [],
-          mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-        },
-      ];
-
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'tenant123',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-      };
-
-      const result = filterTabs(
-        tabsWithNoRbac,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'tenant123',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).toContain('Simple Tab');
-    });
-
-    it('handles empty permissions field object', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'tenant123',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 123,
-        permissions: {
-          field: {},
-        },
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      // With empty permissions and admin on main tenant, should still show tabs
-      // that have empty permissionFieldsCheck
-      expect(result.map((t) => t.label)).toContain('Access');
-    });
-  });
-
-  describe('Visibility filtering logic', () => {
-    it('isAdminOnMainTenant bypasses visibility check', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'other-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE, // Not in tab's allowed list
-        mentor_id: 123,
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true, // isAdmin
-        'main', // on main tenant
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      // Admin on main tenant sees all tabs regardless of visibility
-      expect(result.map((t) => t.label)).toContain('Settings');
-    });
-
-    it('mentorNotOnMainTenant bypasses visibility check', () => {
-      const mentorSettings: MockMentorSettings = {
-        platform_key: 'other-tenant', // Not main
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-        mentor_id: 123,
-      };
-
-      const result = filterTabs(
-        sampleTabs,
-        (item) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'other-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
-        mockRbacPermissionToDisplay,
-        mockCheckRbacPermission,
-      );
-
-      expect(result.map((t) => t.label)).toContain('Settings');
-    });
-  });
-});
+// NOTE: A previous version of this file maintained a local duplicate of
+// the modal's tab filtering logic in a 'filterTabs' helper, then unit-tested
+// the duplicate. That logic now lives in the shared useMentorSegments hook
+// (hooks/use-mentor-segments.ts) and is exercised by
+//   - hooks/__tests__/use-mentor-segments.test.tsx
+//   - app/platform/[tenantKey]/[mentorId]/_components/nav-bar/__tests__/index.test.tsx
+// The dead duplicate has been removed so future readers do not update one
+// without the other.

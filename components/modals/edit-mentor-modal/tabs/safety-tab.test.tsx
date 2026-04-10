@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { SafetyTab } from './safety-tab';
@@ -42,8 +48,12 @@ vi.mock('@/hooks/user-user-actions', () => ({
 const mockEditMentorLoading = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useEditMentorMutation: () => [mockEditMentor, { isLoading: mockEditMentorLoading() }],
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockGetMentorSettingsQuery(...args),
+  useEditMentorMutation: () => [
+    mockEditMentor,
+    { isLoading: mockEditMentorLoading() },
+  ],
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
 }));
 
 // Mock Sentry
@@ -80,7 +90,12 @@ vi.mock('next/dynamic', () => ({
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -102,12 +117,19 @@ vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipContent: ({ children }: any) => <div>{children}</div>,
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
-  TooltipTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  TooltipTrigger: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button', () => ({
-  CopyButton: ({ disabled }: any) => <button disabled={disabled}>Copy</button>,
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button',
+  () => ({
+    CopyButton: ({ disabled }: any) => (
+      <button disabled={disabled}>Copy</button>
+    ),
+  }),
+);
 
 const mockWithPermissionsHasPermission = vi.fn();
 
@@ -132,7 +154,9 @@ vi.mock('@/components/modals/edit-prompt-modal', () => ({
         <span data-testid="prompt-label">{selectedPrompt?.label}</span>
         <span data-testid="prompt-name">{selectedPrompt?.name}</span>
         <button
-          onClick={() => handleSave(selectedPrompt, { prompt: 'updated prompt content' })}
+          onClick={() =>
+            handleSave(selectedPrompt, { prompt: 'updated prompt content' })
+          }
           data-testid="save-prompt"
         >
           Save
@@ -178,7 +202,10 @@ describe('SafetyTab', () => {
     cleanup();
     vi.clearAllMocks();
 
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentorLoading.mockReturnValue(false);
@@ -210,7 +237,9 @@ describe('SafetyTab', () => {
       render(<SafetyTab />);
 
       expect(screen.getByText('Safety')).toBeInTheDocument();
-      expect(screen.getByText('Configure safety and moderation settings.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Configure safety and moderation settings.'),
+      ).toBeInTheDocument();
     });
 
     it('renders Moderation Prompt section', () => {
@@ -264,8 +293,12 @@ describe('SafetyTab', () => {
     it('renders tooltips for moderation and safety prompts', () => {
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('More info about moderation prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about safety prompt')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about moderation prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about safety prompt'),
+      ).toBeInTheDocument();
     });
 
     it('displays Active status when moderation is enabled', () => {
@@ -335,12 +368,16 @@ describe('SafetyTab', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when toggle fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -367,8 +404,12 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Moderation Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('moderation_system_prompt');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Moderation Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'moderation_system_prompt',
+        );
       });
     });
 
@@ -380,8 +421,12 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Safety Prompt');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('safety_system_prompt');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Safety Prompt',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'safety_system_prompt',
+        );
       });
     });
 
@@ -393,8 +438,12 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Moderation Response');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('moderation_response');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Moderation Response',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'moderation_response',
+        );
       });
     });
 
@@ -406,8 +455,12 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent('Safety Response');
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('safety_response');
+        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
+          'Safety Response',
+        );
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'safety_response',
+        );
       });
     });
 
@@ -425,7 +478,9 @@ describe('SafetyTab', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-prompt-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-prompt-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -466,12 +521,16 @@ describe('SafetyTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor updated successfully',
+        );
       });
     });
 
     it('shows error toast when prompt edit fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Save failed')),
       });
@@ -522,7 +581,9 @@ describe('SafetyTab', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('flagged-prompts-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('flagged-prompts-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -689,7 +750,9 @@ describe('SafetyTab', () => {
 
       render(<SafetyTab />);
 
-      expect(screen.getByText('<script>alert("xss")</script>')).toBeInTheDocument();
+      expect(
+        screen.getByText('<script>alert("xss")</script>'),
+      ).toBeInTheDocument();
     });
 
     it('handles unicode characters in prompts', () => {
@@ -711,24 +774,40 @@ describe('SafetyTab', () => {
     it('has proper aria-labels for switches', () => {
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('Moderation prompt enabled')).toBeInTheDocument();
-      expect(screen.getByLabelText('Safety prompt disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Moderation prompt enabled'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Safety prompt disabled'),
+      ).toBeInTheDocument();
     });
 
     it('has proper region labels for content areas', () => {
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('Moderation prompt content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Safety prompt content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Moderation response content')).toBeInTheDocument();
-      expect(screen.getByLabelText('Safety response content')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Moderation prompt content'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Safety prompt content'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Moderation response content'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Safety response content'),
+      ).toBeInTheDocument();
     });
 
     it('has accessible tooltips', () => {
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('More info about moderation prompt')).toBeInTheDocument();
-      expect(screen.getByLabelText('More info about safety prompt')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about moderation prompt'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('More info about safety prompt'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -828,7 +907,9 @@ describe('SafetyTab', () => {
 
       render(<SafetyTab />);
 
-      expect(screen.queryByText('View Flagged Prompts')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('View Flagged Prompts'),
+      ).not.toBeInTheDocument();
     });
 
     it('renders View Flagged Prompts when hasPermission is true', () => {
@@ -1155,21 +1236,27 @@ describe('SafetyTab', () => {
       // Test safety_system_prompt
       fireEvent.click(editButtons[1]);
       await waitFor(() => {
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('safety_system_prompt');
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'safety_system_prompt',
+        );
       });
       fireEvent.click(screen.getByTestId('close-prompt-modal'));
 
       // Test moderation_response
       fireEvent.click(editButtons[2]);
       await waitFor(() => {
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('moderation_response');
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'moderation_response',
+        );
       });
       fireEvent.click(screen.getByTestId('close-prompt-modal'));
 
       // Test safety_response
       fireEvent.click(editButtons[3]);
       await waitFor(() => {
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent('safety_response');
+        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
+          'safety_response',
+        );
       });
     });
   });
@@ -1292,7 +1379,9 @@ describe('SafetyTab', () => {
 
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('Moderation prompt disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Moderation prompt disabled'),
+      ).toBeInTheDocument();
     });
 
     it('has correct aria-label when safety is enabled', () => {
@@ -1306,7 +1395,9 @@ describe('SafetyTab', () => {
 
       render(<SafetyTab />);
 
-      expect(screen.getByLabelText('Safety prompt enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Safety prompt enabled'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -1320,7 +1411,9 @@ describe('SafetyTab', () => {
     it('does not render flagged prompts modal when isFlaggedPromptsModalOpen is false', () => {
       render(<SafetyTab />);
 
-      expect(screen.queryByTestId('flagged-prompts-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('flagged-prompts-modal'),
+      ).not.toBeInTheDocument();
     });
   });
 });

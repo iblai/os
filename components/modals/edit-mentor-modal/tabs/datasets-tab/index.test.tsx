@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 
 import { DatasetsTab } from './index';
 
@@ -74,7 +80,9 @@ vi.mock('@/hooks/user-user-actions', () => ({
 vi.mock('@/components/ui/table', () => ({
   Table: ({ children, ...props }: any) => <table {...props}>{children}</table>,
   TableHead: ({ children, ...props }: any) => <th {...props}>{children}</th>,
-  TableHeader: ({ children, ...props }: any) => <thead {...props}>{children}</thead>,
+  TableHeader: ({ children, ...props }: any) => (
+    <thead {...props}>{children}</thead>
+  ),
   TableRow: ({ children, ...props }: any) => <tr {...props}>{children}</tr>,
 }));
 
@@ -499,7 +507,9 @@ describe('DatasetsTab', () => {
       const addButton = screen.getByText('Add Resource');
       fireEvent.click(addButton);
 
-      expect(screen.queryByTestId('add-resource-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('add-resource-modal'),
+      ).not.toBeInTheDocument();
     });
 
     /**
@@ -522,7 +532,9 @@ describe('DatasetsTab', () => {
       fireEvent.click(closeButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('add-resource-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('add-resource-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 

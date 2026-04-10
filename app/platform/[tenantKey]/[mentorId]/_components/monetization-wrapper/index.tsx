@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { useCurrentTenant } from "@/hooks/use-user";
-import type { TenantKeyMentorIdParams } from "@/lib/types";
-import { useAppSelector } from "@/lib/hooks";
-import { TopBanner } from "@iblai/iblai-js/web-containers";
-import { useIsPreviewMode } from "@/hooks/use-is-preview-mode";
-import { PaywallModal } from "@iblai/iblai-js/web-containers";
+import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { useCurrentTenant } from '@/hooks/use-user';
+import type { TenantKeyMentorIdParams } from '@/lib/types';
+import { useAppSelector } from '@/lib/hooks';
+import { TopBanner } from '@iblai/iblai-js/web-containers';
+import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
+import { PaywallModal } from '@iblai/iblai-js/web-containers';
 
 export function MonetizationWrapper() {
   const isPreviewMode = useIsPreviewMode();
@@ -44,7 +44,7 @@ export function MonetizationWrapper() {
       '[data-slot="sidebar-wrapper"]',
     ) as HTMLElement;
     const mainContentContainer = document.querySelector(
-      "#main-content-container > div",
+      '#main-content-container > div',
     ) as HTMLElement;
     const sidebarContainer = document.querySelector(
       '[data-slot="sidebar-container"]',
@@ -52,7 +52,7 @@ export function MonetizationWrapper() {
     const sidebarInset = document.querySelector(
       '[data-slot="sidebar-inset"]',
     ) as HTMLElement;
-    const body = document.querySelector("body") as HTMLElement;
+    const body = document.querySelector('body') as HTMLElement;
 
     setInitialStyles({
       sideBarWrapper: sideBarWrapper
@@ -100,7 +100,7 @@ export function MonetizationWrapper() {
       sideBarWrapper.style.position = `relative`;
     }
     const mainContentContainer = document.querySelector(
-      "#main-content-container > div",
+      '#main-content-container > div',
     ) as HTMLElement;
     if (mainContentContainer) {
       mainContentContainer.style.position = `relative`;
@@ -119,9 +119,9 @@ export function MonetizationWrapper() {
     if (sidebarInset) {
       sidebarInset.style.height = `calc(100dvh - ${topBannerContainerHeight}px)`;
     }
-    const body = document.querySelector("body") as HTMLElement;
+    const body = document.querySelector('body') as HTMLElement;
     if (body) {
-      body.style.overflow = "hidden";
+      body.style.overflow = 'hidden';
     }
   }, []);
 
@@ -135,7 +135,7 @@ export function MonetizationWrapper() {
       sideBarWrapper.style.position = initialStyles.sideBarWrapper.position;
     }
     const mainContentContainer = document.querySelector(
-      "#main-content-container > div",
+      '#main-content-container > div',
     ) as HTMLElement;
     if (mainContentContainer && initialStyles.mainContentContainer) {
       mainContentContainer.style.position =
@@ -155,9 +155,9 @@ export function MonetizationWrapper() {
     if (sidebarInset && initialStyles.sidebarInset) {
       sidebarInset.style.height = initialStyles.sidebarInset.height;
     }
-    const body = document.querySelector("body") as HTMLElement;
+    const body = document.querySelector('body') as HTMLElement;
     if (body) {
-      body.style.overflow = initialStyles.body?.overflow || "auto";
+      body.style.overflow = initialStyles.body?.overflow || 'auto';
     }
   }, [initialStyles]);
 

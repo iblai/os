@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import appReducer, { updateSessionId, appSlice, type AppState } from '../app-slice';
+import appReducer, {
+  updateSessionId,
+  appSlice,
+  type AppState,
+} from '../app-slice';
 
 describe('appSlice', () => {
   describe('initial state', () => {

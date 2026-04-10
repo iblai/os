@@ -69,42 +69,80 @@ describe('MentorCategories', () => {
 
   describe('Basic rendering', () => {
     it('renders category dropdown when categories are provided', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
-      expect(screen.getByRole('button', { name: /Category/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Category/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders subject dropdown when subjects are provided', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
-      expect(screen.getByRole('button', { name: /Subject/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Subject/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders LLM Provider dropdown when llm_providers are provided', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
-      expect(screen.getByRole('button', { name: /LLM Provider/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /LLM Provider/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders Type dropdown when types are provided', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       expect(screen.getByRole('button', { name: /Type/i })).toBeInTheDocument();
     });
 
     it('does not render dropdowns when facets are empty', () => {
-      render(<MentorCategories facets={{}} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories facets={{}} onFiltersChange={mockOnFiltersChange} />,
+      );
 
-      expect(screen.queryByRole('button', { name: /Category/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Subject/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /LLM Provider/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Type/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Category/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Subject/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /LLM Provider/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Type/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('does not render dropdowns when facets are undefined', () => {
       render(<MentorCategories onFiltersChange={mockOnFiltersChange} />);
 
-      expect(screen.queryByRole('button', { name: /Category/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Category/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -119,7 +157,9 @@ describe('MentorCategories', () => {
         />,
       );
 
-      expect(screen.getByRole('button', { name: /Created By/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Created By/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not render Created By dropdown when showCreatedByFilter is false', () => {
@@ -131,7 +171,9 @@ describe('MentorCategories', () => {
         />,
       );
 
-      expect(screen.queryByRole('button', { name: /Created By/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Created By/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('includes Me option when includeMeToCreatedByFilter is true', async () => {
@@ -146,11 +188,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /Me/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Me/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -166,11 +212,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(() => {
-        expect(screen.queryByRole('menuitem', { name: /^Me$/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('menuitem', { name: /^Me$/i }),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -185,11 +235,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /My Organization/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /My Organization/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -204,11 +258,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /Community/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /Community/i }),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -216,13 +274,20 @@ describe('MentorCategories', () => {
   describe('Filter selection', () => {
     it('calls onFiltersChange when a category is selected', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(async () => {
-        const educationOption = screen.getByRole('menuitem', { name: /Education/i });
+        const educationOption = screen.getByRole('menuitem', {
+          name: /Education/i,
+        });
         await user.click(educationOption);
       });
 
@@ -235,13 +300,20 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange when a subject is selected', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const subjectButton = screen.getByRole('button', { name: /Subject/i });
       await user.click(subjectButton);
 
       await waitFor(async () => {
-        const mathOption = screen.getByRole('menuitem', { name: /Mathematics/i });
+        const mathOption = screen.getByRole('menuitem', {
+          name: /Mathematics/i,
+        });
         await user.click(mathOption);
       });
 
@@ -254,7 +326,12 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange when an LLM provider is selected', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const llmButton = screen.getByRole('button', { name: /LLM Provider/i });
       await user.click(llmButton);
@@ -273,7 +350,12 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange when a type is selected', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const typeButton = screen.getByRole('button', { name: /Type/i });
       await user.click(typeButton);
@@ -301,11 +383,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(async () => {
-        const communityOption = screen.getByRole('menuitem', { name: /Community/i });
+        const communityOption = screen.getByRole('menuitem', {
+          name: /Community/i,
+        });
         await user.click(communityOption);
       });
 
@@ -316,14 +402,21 @@ describe('MentorCategories', () => {
   describe('Filter deselection (toggle)', () => {
     it('calls onFiltersChange with selected category first time', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       // First click to select
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(async () => {
-        const educationOption = screen.getByRole('menuitem', { name: /Education/i });
+        const educationOption = screen.getByRole('menuitem', {
+          name: /Education/i,
+        });
         await user.click(educationOption);
       });
 
@@ -342,20 +435,34 @@ describe('MentorCategories', () => {
 
   describe('Clear All functionality', () => {
     it('does not show Clear All button when no filters are active', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
-      expect(screen.queryByRole('button', { name: /Clear All/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Clear All/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('calls onFiltersChange when category is selected', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(async () => {
-        const educationOption = screen.getByRole('menuitem', { name: /Education/i });
+        const educationOption = screen.getByRole('menuitem', {
+          name: /Education/i,
+        });
         await user.click(educationOption);
       });
 
@@ -382,7 +489,9 @@ describe('MentorCategories', () => {
       await user.click(subjectButton);
 
       await waitFor(async () => {
-        const mathOption = screen.getByRole('menuitem', { name: /Mathematics/i });
+        const mathOption = screen.getByRole('menuitem', {
+          name: /Mathematics/i,
+        });
         await user.click(mathOption);
       });
 
@@ -396,7 +505,12 @@ describe('MentorCategories', () => {
 
   describe('Accessibility', () => {
     it('dropdown triggers have aria-haspopup attribute', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       expect(categoryButton).toHaveAttribute('aria-haspopup', 'menu');
@@ -404,19 +518,31 @@ describe('MentorCategories', () => {
 
     it('dropdown menus have proper role and aria-label', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('menu', { name: /Category/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menu', { name: /Category/i }),
+        ).toBeInTheDocument();
       });
     });
 
     it('menu items have proper role', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
@@ -428,7 +554,12 @@ describe('MentorCategories', () => {
 
     it('supports llm provider filter selection', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const llmButton = screen.getByRole('button', { name: /LLM Provider/i });
       await user.click(llmButton);
@@ -449,13 +580,20 @@ describe('MentorCategories', () => {
   describe('Visual states', () => {
     it('calls onFiltersChange with selected category', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(async () => {
-        const educationOption = screen.getByRole('menuitem', { name: /Education/i });
+        const educationOption = screen.getByRole('menuitem', {
+          name: /Education/i,
+        });
         await user.click(educationOption);
       });
 
@@ -470,19 +608,35 @@ describe('MentorCategories', () => {
 
   describe('Promotion/Featured filter', () => {
     it('renders Promotion dropdown', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
-      expect(screen.getByRole('button', { name: /Promotion/i })).toBeInTheDocument();
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
+      expect(
+        screen.getByRole('button', { name: /Promotion/i }),
+      ).toBeInTheDocument();
     });
 
     it('calls onFiltersChange when Featured is selected from Promotion dropdown', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
-      const promotionButton = screen.getByRole('button', { name: /Promotion/i });
+      const promotionButton = screen.getByRole('button', {
+        name: /Promotion/i,
+      });
       await user.click(promotionButton);
 
       await waitFor(async () => {
-        const featuredOption = screen.getByRole('menuitem', { name: /Featured/i });
+        const featuredOption = screen.getByRole('menuitem', {
+          name: /Featured/i,
+        });
         await user.click(featuredOption);
       });
 
@@ -496,21 +650,35 @@ describe('MentorCategories', () => {
 
   describe('Clear All button', () => {
     it('does not show Clear All when no filter is active initially', () => {
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
-      expect(screen.queryByRole('button', { name: /Clear All/i })).not.toBeInTheDocument();
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
+      expect(
+        screen.queryByRole('button', { name: /Clear All/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
   describe('Filter selection behavior', () => {
     it('calls onFiltersChange with selected category value', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const categoryButton = screen.getByRole('button', { name: /Category/i });
       await user.click(categoryButton);
 
       await waitFor(async () => {
-        const educationOption = screen.getByRole('menuitem', { name: /Education/i });
+        const educationOption = screen.getByRole('menuitem', {
+          name: /Education/i,
+        });
         await user.click(educationOption);
       });
 
@@ -523,13 +691,20 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange with selected subject value', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const subjectButton = screen.getByRole('button', { name: /Subject/i });
       await user.click(subjectButton);
 
       await waitFor(async () => {
-        const mathOption = screen.getByRole('menuitem', { name: /Mathematics/i });
+        const mathOption = screen.getByRole('menuitem', {
+          name: /Mathematics/i,
+        });
         await user.click(mathOption);
       });
 
@@ -542,7 +717,12 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange with selected type value', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const typeButton = screen.getByRole('button', { name: /Type/i });
       await user.click(typeButton);
@@ -561,7 +741,12 @@ describe('MentorCategories', () => {
 
     it('calls onFiltersChange with selected LLM provider value', async () => {
       const user = userEvent.setup();
-      render(<MentorCategories facets={mockFacets} onFiltersChange={mockOnFiltersChange} />);
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
 
       const llmButton = screen.getByRole('button', { name: /LLM Provider/i });
       await user.click(llmButton);
@@ -601,11 +786,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(() => {
-        expect(screen.getByRole('menuitem', { name: /My Organization/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole('menuitem', { name: /My Organization/i }),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -623,7 +812,9 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(async () => {
@@ -645,11 +836,15 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const createdByButton = screen.getByRole('button', { name: /Created By/i });
+      const createdByButton = screen.getByRole('button', {
+        name: /Created By/i,
+      });
       await user.click(createdByButton);
 
       await waitFor(async () => {
-        const orgOption = screen.getByRole('menuitem', { name: /My Organization/i });
+        const orgOption = screen.getByRole('menuitem', {
+          name: /My Organization/i,
+        });
         await user.click(orgOption);
       });
 

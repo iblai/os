@@ -34,79 +34,89 @@ type Props = {
   onReply?: (message: Message) => void;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
 };
-export const ChatMessages = forwardRef<HTMLButtonElement, Props>(function ChatMessages(
-  {
-    messages,
-    highlightedMessageId,
-    profileImage,
-    mentorName,
-    sessionId,
-    mentorId,
-    tenantKey,
-    handleHighlightMessage,
-    handleSubmit,
-    onReply,
-    onOpenCanvas,
-    streamingArtifactId,
-  },
-  ref,
-) {
-  const [previewImage, setPreviewImage] = React.useState<string | null>(null);
+export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
+  function ChatMessages(
+    {
+      messages,
+      highlightedMessageId,
+      profileImage,
+      mentorName,
+      sessionId,
+      mentorId,
+      tenantKey,
+      handleHighlightMessage,
+      handleSubmit,
+      onReply,
+      onOpenCanvas,
+      streamingArtifactId,
+    },
+    ref,
+  ) {
+    const [previewImage, setPreviewImage] = React.useState<string | null>(null);
 
-  // Find the index of the last AI message for focus management
-  const visibleMessages = messages.filter((message) => message.visible === true);
-  const lastAIMessageIndex = visibleMessages.reduce((lastIndex, message, index) => {
-    return message.role === 'assistant' ? index : lastIndex;
-  }, -1);
+    // Find the index of the last AI message for focus management
+    const visibleMessages = messages.filter(
+      (message) => message.visible === true,
+    );
+    const lastAIMessageIndex = visibleMessages.reduce(
+      (lastIndex, message, index) => {
+        return message.role === 'assistant' ? index : lastIndex;
+      },
+      -1,
+    );
 
-  // Filter out invisible messages before rendering to prevent flash
-  return (
-    <>
-      {visibleMessages.map((message, i) =>
-        message.role === 'user' ? (
-          <UserMessageBubble
-            key={`message-${message.id}-${i}`}
-            message={message}
-            isHighlighted={highlightedMessageId === i}
-            profileImage={profileImage}
-            mentorName={mentorName}
-            messages={messages}
-            onHighlightMessage={handleHighlightMessage}
-            onPreviewImage={setPreviewImage}
-          />
-        ) : (
-          <div
-            key={i}
-            className={`transition-all duration-300 ${highlightedMessageId === i ? 'bg-blue-100 rounded-lg' : ''}`}
-          >
-            <AIMessageBubble
-              ref={i === lastAIMessageIndex ? ref : undefined}
-              content={message.content}
+    // Filter out invisible messages before rendering to prevent flash
+    return (
+      <>
+        {visibleMessages.map((message, i) =>
+          message.role === 'user' ? (
+            <UserMessageBubble
+              key={`message-${message.id}-${i}`}
               message={message}
+              isHighlighted={highlightedMessageId === i}
               profileImage={profileImage}
               mentorName={mentorName}
-              timestamp={formatRelativeDate(message.timestamp)}
-              sessionId={sessionId}
-              onSpeak={() => {
-                // const utterance = new SpeechSynthesisUtterance(message.content);
-                // window.speechSynthesis.speak(utterance);
-              }}
-              onReply={() => onReply?.(message)}
-              onRetry={handleSubmit}
               messages={messages}
-              mentorId={mentorId}
-              tenantKey={tenantKey}
-              onOpenCanvas={onOpenCanvas}
-              streamingArtifactId={streamingArtifactId}
+              onHighlightMessage={handleHighlightMessage}
+              onPreviewImage={setPreviewImage}
             />
-          </div>
-        ),
-      )}
+          ) : (
+            <div
+              key={i}
+              className={`transition-all duration-300 ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
+            >
+              <AIMessageBubble
+                ref={i === lastAIMessageIndex ? ref : undefined}
+                content={message.content}
+                message={message}
+                profileImage={profileImage}
+                mentorName={mentorName}
+                timestamp={formatRelativeDate(message.timestamp)}
+                sessionId={sessionId}
+                onSpeak={() => {
+                  // const utterance = new SpeechSynthesisUtterance(message.content);
+                  // window.speechSynthesis.speak(utterance);
+                }}
+                onReply={() => onReply?.(message)}
+                onRetry={handleSubmit}
+                messages={messages}
+                mentorId={mentorId}
+                tenantKey={tenantKey}
+                onOpenCanvas={onOpenCanvas}
+                streamingArtifactId={streamingArtifactId}
+              />
+            </div>
+          ),
+        )}
 
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <ImagePreviewModal url={previewImage} onClose={() => setPreviewImage(null)} />
-      )}
-    </>
-  );
-});
+        {/* Image Preview Modal */}
+        {previewImage && (
+          <ImagePreviewModal
+            url={previewImage}
+            onClose={() => setPreviewImage(null)}
+          />
+        )}
+      </>
+    );
+  },
+);

@@ -70,17 +70,30 @@ vi.mock('@/components/modals/modal-container', () => ({
   ModalContainer: () => <div data-testid="modal-container">ModalContainer</div>,
 }));
 
-vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper', () => ({
-  SubscriptionWrapper: () => <div data-testid="subscription-wrapper">SubscriptionWrapper</div>,
-}));
+vi.mock(
+  '@/app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper',
+  () => ({
+    SubscriptionWrapper: () => (
+      <div data-testid="subscription-wrapper">SubscriptionWrapper</div>
+    ),
+  }),
+);
 
-vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/hot-keys-wrapper', () => ({
-  HotKeysWrapper: () => <div data-testid="hot-keys-wrapper">HotKeysWrapper</div>,
-}));
+vi.mock(
+  '@/app/platform/[tenantKey]/[mentorId]/_components/hot-keys-wrapper',
+  () => ({
+    HotKeysWrapper: () => (
+      <div data-testid="hot-keys-wrapper">HotKeysWrapper</div>
+    ),
+  }),
+);
 
-vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/app-sidebar', () => ({
-  AppSidebar: () => <div data-testid="app-sidebar">AppSidebar</div>,
-}));
+vi.mock(
+  '@/app/platform/[tenantKey]/[mentorId]/_components/app-sidebar',
+  () => ({
+    AppSidebar: () => <div data-testid="app-sidebar">AppSidebar</div>,
+  }),
+);
 
 vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/nav-bar', () => ({
   NavBar: () => <div data-testid="nav-bar">NavBar</div>,
@@ -92,9 +105,14 @@ vi.mock('@/contexts/accessibility-contexts', () => ({
   ),
 }));
 
-vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab', () => ({
-  AccessibilityFab: () => <div data-testid="accessibility-fab">AccessibilityFab</div>,
-}));
+vi.mock(
+  '@/app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab',
+  () => ({
+    AccessibilityFab: () => (
+      <div data-testid="accessibility-fab">AccessibilityFab</div>
+    ),
+  }),
+);
 
 // Reset mocks before each test
 beforeEach(() => {
@@ -175,13 +193,20 @@ describe('AppLayout', () => {
       const mainContent = screen.getByRole('main');
       expect(mainContent).toBeInTheDocument();
       expect(mainContent).toHaveAttribute('id', 'main-content-container');
-      expect(mainContent).toHaveClass('h-dvh', 'flex', 'flex-col', 'overflow-hidden');
+      expect(mainContent).toHaveClass(
+        'h-dvh',
+        'flex',
+        'flex-col',
+        'overflow-hidden',
+      );
 
       expect(screen.getByTestId('children')).toBeInTheDocument();
 
       // Should NOT render full layout components
       expect(screen.queryByTestId('sidebar-provider')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('subscription-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('subscription-wrapper'),
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId('nav-bar')).not.toBeInTheDocument();
       expect(screen.queryByTestId('app-sidebar')).not.toBeInTheDocument();
     });
@@ -234,7 +259,9 @@ describe('AppLayout', () => {
         </AppLayout>,
       );
 
-      expect(screen.queryByTestId('subscription-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('subscription-wrapper'),
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId('sidebar-provider')).toBeInTheDocument();
     });
 
@@ -247,7 +274,9 @@ describe('AppLayout', () => {
         </AppLayout>,
       );
 
-      expect(screen.queryByTestId('subscription-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('subscription-wrapper'),
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId('sidebar-provider')).toBeInTheDocument();
     });
 
@@ -316,7 +345,12 @@ describe('AppLayout', () => {
       );
 
       const sidebarInset = screen.getByTestId('sidebar-inset');
-      expect(sidebarInset).toHaveClass('h-dvh', 'flex', 'flex-col', 'overflow-hidden');
+      expect(sidebarInset).toHaveClass(
+        'h-dvh',
+        'flex',
+        'flex-col',
+        'overflow-hidden',
+      );
     });
   });
 
@@ -363,7 +397,9 @@ describe('AppLayout', () => {
         </AppLayout>,
       );
 
-      expect(screen.queryByTestId('subscription-wrapper')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('subscription-wrapper'),
+      ).not.toBeInTheDocument();
       expect(screen.getByTestId('sidebar-provider')).toBeInTheDocument();
       expect(screen.getByTestId('children')).toBeInTheDocument();
     });

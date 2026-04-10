@@ -3,7 +3,12 @@ import type React from 'react';
 import { Info } from 'lucide-react';
 
 import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
 import { Switch } from '@/components/ui/switch';
@@ -31,15 +36,16 @@ export function ToolsTab() {
     },
   );
 
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } = useGetMentorSettingsQuery(
-    {
-      mentor: activeMentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-    },
-    { skip: !username || !activeMentorId || !tenantKey },
-  );
+  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
+    useGetMentorSettingsQuery(
+      {
+        mentor: activeMentorId,
+        org: tenantKey,
+        // @ts-ignore
+        userId: username ?? '',
+      },
+      { skip: !username || !activeMentorId || !tenantKey },
+    );
 
   const { toggleTools, isLoading: isToggleToolsLoading } = useToggleTools({
     tools: mentorSettings?.mentor_tools?.map((tool) => tool.slug) ?? [],
@@ -48,14 +54,17 @@ export function ToolsTab() {
     username: username ?? '',
   });
 
-  const isDisabled = isMentorSettingsLoading || isToggleToolsLoading || isToolsLoading;
+  const isDisabled =
+    isMentorSettingsLoading || isToggleToolsLoading || isToolsLoading;
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Tools</h3>
-          <p className="text-gray-700 text-xs">Configure tools and integrations for your mentor.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Tools</h3>
+          <p className="text-xs text-gray-700">
+            Configure tools and integrations for your mentor.
+          </p>
         </div>
       </div>
       <div
@@ -88,7 +97,9 @@ export function ToolsTab() {
                       </span>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label={`More info about ${tool?.display_name}`}>
+                          <TooltipTrigger
+                            aria-label={`More info about ${tool?.display_name}`}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">

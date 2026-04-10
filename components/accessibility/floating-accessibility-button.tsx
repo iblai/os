@@ -11,7 +11,7 @@ export function FloatingAccessibilityButton() {
   return (
     <Button
       onClick={() => setIsToolbarOpen(!isToolbarOpen)}
-      className="h-14 w-14 rounded-full bg-[#38A1E5] hover:bg-[#2E8BC7] shadow-lg transition-all duration-200 hover:scale-105"
+      className="h-14 w-14 rounded-full bg-[#38A1E5] shadow-lg transition-all duration-200 hover:scale-105 hover:bg-[#2E8BC7]"
       size="icon"
       aria-label="Open Accessibility Menu"
     >

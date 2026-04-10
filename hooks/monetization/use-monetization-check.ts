@@ -1,14 +1,14 @@
-import { useCallback } from "react";
-import { useAppDispatch } from "@/lib/hooks";
+import { useCallback } from 'react';
+import { useAppDispatch } from '@/lib/hooks';
 import {
   useLazyCheckAccessQuery,
   type AccessCheckResponse,
-} from "@iblai/iblai-js/data-layer";
+} from '@iblai/iblai-js/data-layer';
 import {
   showMonetizationCheckoutModal,
   setDisplayMonetizationCheckoutModal,
-} from "@iblai/iblai-js/web-utils";
-import { isLoggedIn } from "@/lib/utils";
+} from '@iblai/iblai-js/web-utils';
+import { isLoggedIn } from '@/lib/utils';
 
 export function useMonetizationCheck() {
   const dispatch = useAppDispatch();
@@ -22,12 +22,12 @@ export function useMonetizationCheck() {
         const result = await checkAccess(
           {
             platform_key: platformKey,
-            item_type: "mentor",
+            item_type: 'mentor',
             item_id: mentorId,
           },
           false,
         );
-        console.log("[MONETIZATION] checkMentorAccess status: ", {
+        console.log('[MONETIZATION] checkMentorAccess status: ', {
           error: result.isError,
           success: result.isSuccess,
         });

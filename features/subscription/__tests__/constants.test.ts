@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { SUBSCRIPTION_TRIGGERS, SUBSCRIPTION_USER_CAPABILITIES } from '../constants';
+import {
+  SUBSCRIPTION_TRIGGERS,
+  SUBSCRIPTION_USER_CAPABILITIES,
+} from '../constants';
 
 describe('subscription/constants', () => {
   describe('SUBSCRIPTION_TRIGGERS', () => {
@@ -8,7 +11,9 @@ describe('subscription/constants', () => {
     });
 
     it('should have SUBSCRIBE_USER trigger', () => {
-      expect(SUBSCRIPTION_TRIGGERS.SUBSCRIBE_USER).toBe('TRIGGER_SUBSCRIBE_USER');
+      expect(SUBSCRIPTION_TRIGGERS.SUBSCRIBE_USER).toBe(
+        'TRIGGER_SUBSCRIBE_USER',
+      );
     });
 
     it('should have exactly 2 triggers defined', () => {
@@ -40,7 +45,9 @@ describe('subscription/constants', () => {
     });
 
     it('should have STARTER_PACKAGE capability', () => {
-      expect(SUBSCRIPTION_USER_CAPABILITIES.STARTER_PACKAGE).toBe('STARTER_PACKAGE');
+      expect(SUBSCRIPTION_USER_CAPABILITIES.STARTER_PACKAGE).toBe(
+        'STARTER_PACKAGE',
+      );
     });
 
     it('should have exactly 6 capabilities defined', () => {

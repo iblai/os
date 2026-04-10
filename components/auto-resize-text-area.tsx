@@ -1,9 +1,17 @@
-import React, { useRef, useEffect, useState, TextareaHTMLAttributes } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  TextareaHTMLAttributes,
+} from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectNumberOfActiveChatMessages } from '@iblai/iblai-js/web-utils';
 
 interface AutoResizeTextareaProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'onSubmit'> {
+  extends Omit<
+    TextareaHTMLAttributes<HTMLTextAreaElement>,
+    'onChange' | 'onSubmit'
+  > {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onSubmit: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -84,7 +92,9 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     adjustHeight();
   }, [value]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+  ): void => {
     onChange(e);
     if (!isResizing) {
       adjustHeight();
@@ -127,7 +137,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
       }
       placeholder={placeholder}
       style={combinedStyle}
-      className={`flex border-gray-200 py-2 ring-offset-white focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 w-full bg-transparent px-4 text-base focus:outline-none rounded-2xl border-0 resize-none placeholder:text-gray-400 min-h-[36px] max-h-32 pt-2 pb-1 ${className}`}
+      className={`flex max-h-32 min-h-[36px] w-full resize-none rounded-2xl border-0 border-gray-200 bg-transparent px-4 py-2 pt-2 pb-1 text-base ring-offset-white placeholder:text-gray-400 focus:outline-none focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 ${className}`}
       {...props}
     />
   );

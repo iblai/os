@@ -16,7 +16,8 @@ export const resourceTypes: ResourceType[] = [
     bgColor: 'bg-blue-100',
     isActive: true,
     type: 'local',
-    accept: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    accept:
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     icon: (
       <svg
         width="24"
@@ -127,7 +128,10 @@ export const resourceTypes: ResourceType[] = [
         <path d="M6 6.75L12 2.25L18 6.75L12 11.25L6 6.75Z" fill="#0061FF" />
         <path d="M18 6.75L12 11.25L18 15.75L24 11.25L18 6.75Z" fill="#0061FF" />
         <path d="M0 11.25L6 6.75L12 11.25L6 15.75L0 11.25Z" fill="#0061FF" />
-        <path d="M12 21.75L6 17.25L12 12.75L18 17.25L12 21.75Z" fill="#0061FF" />
+        <path
+          d="M12 21.75L6 17.25L12 12.75L18 17.25L12 21.75Z"
+          fill="#0061FF"
+        />
       </svg>
     ),
   },
@@ -205,7 +209,8 @@ export const resourceTypes: ResourceType[] = [
     bgColor: 'bg-blue-100',
     isActive: true,
     type: 'local',
-    accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    accept:
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     icon: (
       <svg
         width="24"
@@ -243,6 +248,33 @@ export const resourceTypes: ResourceType[] = [
         <path d="M7 13H17V15H7V13Z" fill="white" />
         <path d="M7 16H17V18H7V16Z" fill="white" />
         <path d="M11 7V18H13V7H11Z" fill="white" opacity="0.6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'csv',
+    name: 'CSV',
+    bgColor: 'bg-blue-100',
+    isActive: true,
+    type: 'local',
+    accept: 'text/csv,.csv',
+    icon: (
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect x="2" y="2" width="20" height="20" rx="2" fill="#217346" />
+        <path d="M7 7H11V9H7V7Z" fill="white" />
+        <path d="M13 7H17V9H13V7Z" fill="white" />
+        <path d="M7 10H11V12H7V10Z" fill="white" />
+        <path d="M13 10H17V12H13V10Z" fill="white" />
+        <path d="M7 13H11V15H7V13Z" fill="white" />
+        <path d="M13 13H17V15H13V13Z" fill="white" />
+        <path d="M7 16H11V18H7V16Z" fill="white" />
+        <path d="M13 16H17V18H13V16Z" fill="white" />
       </svg>
     ),
   },
@@ -379,7 +411,9 @@ export const resourceTypes: ResourceType[] = [
     isActive: true,
     type: 'webcrawler',
     accept: 'url',
-    icon: <img src="/la-toile.png" alt="Website Crawler" width={24} height={24} />,
+    icon: (
+      <img src="/la-toile.png" alt="Website Crawler" width={24} height={24} />
+    ),
   },
   {
     id: 'zip',

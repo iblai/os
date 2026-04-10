@@ -14,7 +14,10 @@ import { useUserIsStudent } from '@/hooks/use-user';
 import { isLoggedIn } from '@/lib/utils';
 
 const MyMentorsModal = dynamic(
-  () => import('@/components/modals/my-mentors-modal').then((mod) => mod.MyMentorsModal),
+  () =>
+    import('@/components/modals/my-mentors-modal').then(
+      (mod) => mod.MyMentorsModal,
+    ),
   { ssr: false },
 );
 
@@ -27,7 +30,10 @@ const ProjectInstructionsModal = dynamic(
 );
 
 const ProjectFilesModal = dynamic(
-  () => import('@/components/projects/project-files-modal').then((mod) => mod.ProjectFilesModal),
+  () =>
+    import('@/components/projects/project-files-modal').then(
+      (mod) => mod.ProjectFilesModal,
+    ),
   { ssr: false },
 );
 
@@ -111,15 +117,17 @@ export function ProjectLandingPage({
 
   return (
     <>
-      <div className="flex flex-col h-full max-w-4xl w-full mx-auto">
+      <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
         {/* Project Header */}
-        <div className="flex items-center justify-center gap-3 px-6 py-6 border-b border-gray-200">
+        <div className="flex items-center justify-center gap-3 border-b border-gray-200 px-6 py-6">
           <OpenFolderIcon className="h-7 w-7" />
-          <h1 className="text-2xl font-semibold text-gray-900 line-clamp-1">{project.name}</h1>
+          <h1 className="line-clamp-1 text-2xl font-semibold text-gray-900">
+            {project.name}
+          </h1>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto py-6 space-y-8">
+        <div className="flex-1 space-y-8 overflow-y-auto py-6">
           {/* Chat Input Form */}
           <div className="w-full max-w-4xl">
             <ChatInputForm
@@ -152,7 +160,7 @@ export function ProjectLandingPage({
           </div>
 
           {/* Background Section for Action Buttons and Recent Files */}
-          <div className="bg-[#FBFBFB] rounded-lg p-6 space-y-8">
+          <div className="space-y-8 rounded-lg bg-[#FBFBFB] p-6">
             {/* Action Buttons - Combined Card with transparent background */}
             {shouldHideFileAndInstructionSection && (
               <ProjectActionButtons
@@ -196,7 +204,10 @@ export function ProjectLandingPage({
       )}
 
       {isFilesModalOpen && (
-        <ProjectFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} />
+        <ProjectFilesModal
+          isOpen={isFilesModalOpen}
+          onClose={() => setIsFilesModalOpen(false)}
+        />
       )}
 
       {isAddMentorModalOpen && (

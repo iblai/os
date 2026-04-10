@@ -14,11 +14,11 @@ export function ProjectActionButtons({
   const { datasets: projectFiles } = useDatasetsWithPagination();
 
   return (
-    <div className="border border-gray-200 rounded-lg transition-shadow">
-      <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+    <div className="rounded-lg border border-gray-200 transition-shadow">
+      <div className="grid h-full grid-cols-1 md:grid-cols-2">
         {/* Add Files Section */}
         <div
-          className="p-6 h-full flex flex-col justify-between cursor-pointer hover:bg-[#F0F1F0] transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-inset"
+          className="flex h-full cursor-pointer flex-col justify-between p-6 transition-colors hover:bg-[#F0F1F0] focus:ring-2 focus:ring-gray-300 focus:outline-none focus:ring-inset"
           onClick={onFilesClick}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -36,7 +36,7 @@ export function ProjectActionButtons({
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-1">
+              <h3 className="mb-1 font-semibold text-gray-900">
                 {projectFiles?.results && projectFiles?.results?.length > 0
                   ? 'Project files'
                   : 'Add files'}
@@ -47,13 +47,15 @@ export function ProjectActionButtons({
                   : `${projectFiles?.results?.length ?? 0} file${projectFiles?.results?.length === 1 ? '' : 's'} added`}
               </p>
             </div>
-            <div className="ml-4 flex items-center">{/* {renderFileIcons()} */}</div>
+            <div className="ml-4 flex items-center">
+              {/* {renderFileIcons()} */}
+            </div>
           </div>
         </div>
 
         {/* Add Instructions Section */}
         <div
-          className="p-6 h-full flex flex-col justify-between border-t md:border-t-0 md:border-l border-gray-200 cursor-pointer hover:bg-[#F0F1F0] transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-inset"
+          className="flex h-full cursor-pointer flex-col justify-between border-t border-gray-200 p-6 transition-colors hover:bg-[#F0F1F0] focus:ring-2 focus:ring-gray-300 focus:outline-none focus:ring-inset md:border-t-0 md:border-l"
           onClick={onInstructionsClick}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -63,15 +65,23 @@ export function ProjectActionButtons({
           }}
           tabIndex={0}
           role="button"
-          aria-label={instructions ? 'Edit project instructions' : 'Add project instructions'}
+          aria-label={
+            instructions
+              ? 'Edit project instructions'
+              : 'Add project instructions'
+          }
         >
           <div className="flex items-start gap-4">
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-1">
-                {instructions ? 'Project Instructions' : 'Add project instructions'}
+              <h3 className="mb-1 font-semibold text-gray-900">
+                {instructions
+                  ? 'Project Instructions'
+                  : 'Add project instructions'}
               </h3>
-              <p className="text-sm text-gray-600 line-clamp-2">
-                {instructions ? instructions : 'Tailor the way the mentor responds in this project'}
+              <p className="line-clamp-2 text-sm text-gray-600">
+                {instructions
+                  ? instructions
+                  : 'Tailor the way the mentor responds in this project'}
               </p>
             </div>
           </div>

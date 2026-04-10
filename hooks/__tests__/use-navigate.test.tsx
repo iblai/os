@@ -1,6 +1,12 @@
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -95,16 +101,29 @@ function createTestStore(preloadedStack: ModalInfo[] = []) {
 }
 
 // Small component to expose hook actions via buttons
-function HookHarness({ onReady }: { onReady?: (api: ReturnType<typeof useNavigate>) => void }) {
+function HookHarness({
+  onReady,
+}: {
+  onReady?: (api: ReturnType<typeof useNavigate>) => void;
+}) {
   const api = useNavigate();
   useEffect(() => {
     onReady?.(api);
   }, [api, onReady]);
   return (
     <div>
-      <button aria-label="open-create-mentor" onClick={() => api.openCreateMentorModal()} />
-      <button aria-label="close-modal" onClick={() => api.closeCreateMentorModal()} />
-      <button aria-label="change-tab" onClick={() => api.changeModalTab('prompts')} />
+      <button
+        aria-label="open-create-mentor"
+        onClick={() => api.openCreateMentorModal()}
+      />
+      <button
+        aria-label="close-modal"
+        onClick={() => api.closeCreateMentorModal()}
+      />
+      <button
+        aria-label="change-tab"
+        onClick={() => api.changeModalTab('prompts')}
+      />
       <button aria-label="go-home" onClick={() => api.navigateToHome()} />
     </div>
   );
@@ -190,7 +209,9 @@ describe('useNavigate', () => {
   });
 
   it('changeModalTab updates the top modal tab in the URL', async () => {
-    const initialStack: ModalInfo[] = [{ name: 'edit_mentor', tab: 'settings' }];
+    const initialStack: ModalInfo[] = [
+      { name: 'edit_mentor', tab: 'settings' },
+    ];
     mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(initialStack))}`;
     const store = createTestStore(initialStack);
 
@@ -203,7 +224,9 @@ describe('useNavigate', () => {
     fireEvent.click(screen.getByRole('button', { name: 'change-tab' }));
     const arg = pushMock.mock.calls.at(-1)?.[0] as string;
     const modalParam = getModalParamFromPushArg(arg);
-    expect(modalParam).toEqual(JSON.stringify([{ name: 'edit_mentor', tab: 'prompts' }]));
+    expect(modalParam).toEqual(
+      JSON.stringify([{ name: 'edit_mentor', tab: 'prompts' }]),
+    );
   });
 
   it('navigateToHome routes to mentor home using params', async () => {

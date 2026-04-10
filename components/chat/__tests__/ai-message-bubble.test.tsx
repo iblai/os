@@ -7,14 +7,19 @@ import type { Message } from '@iblai/iblai-js/web-utils';
 
 // Mock dependencies
 let mockShowingSharedChat = false;
+const tenantMetadataReturnValue: { metadata: Record<string, unknown> } = {
+  metadata: {},
+};
 
-vi.mock('@iblai/iblai-js/web-utils', async () => {
-  const actual = await vi.importActual('@iblai/iblai-js/web-utils');
-  return {
-    ...actual,
-    selectShowingSharedChat: () => mockShowingSharedChat,
-  };
-});
+vi.mock('@iblai/iblai-js/web-utils', () => ({
+  selectShowingSharedChat: () => mockShowingSharedChat,
+  useTenantMetadata: () => ({
+    ...tenantMetadataReturnValue,
+    platformName: 'Test Platform',
+    isLoading: false,
+    isError: false,
+  }),
+}));
 
 vi.mock('@/lib/hooks', async () => {
   const actual = await vi.importActual('@/lib/hooks');
@@ -36,7 +41,13 @@ vi.mock('@/components/chat/ai-message-copy', () => ({
 }));
 
 vi.mock('@/components/chat/ai-message-share', () => ({
-  AIMessageShare: ({ sessionId, tenantKey }: { sessionId: string; tenantKey: string }) => (
+  AIMessageShare: ({
+    sessionId,
+    tenantKey,
+  }: {
+    sessionId: string;
+    tenantKey: string;
+  }) => (
     <button data-testid="ai-message-share">
       Share: {sessionId} ({tenantKey})
     </button>
@@ -47,8 +58,28 @@ vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
 
+const mockReportInappropriateContent = vi.fn();
+vi.mock('@/components/chat/ai-message-report-inappropriate-content', () => ({
+  AIMessageReportInappropriateContent: (props: {
+    mentorName: string;
+    messages: unknown[];
+    supportEmail?: string;
+  }) => {
+    mockReportInappropriateContent(props);
+    return (
+      <div data-testid="ai-message-report-inappropriate-content">Report</div>
+    );
+  },
+}));
+
 vi.mock('@/components/chat/chat-messages/message-preview', () => ({
-  MessagePreview: ({ content, onOpenCanvas }: { content: string; onOpenCanvas?: () => void }) => (
+  MessagePreview: ({
+    content,
+    onOpenCanvas,
+  }: {
+    content: string;
+    onOpenCanvas?: () => void;
+  }) => (
     <div data-testid="message-preview" onClick={onOpenCanvas}>
       {content}
     </div>
@@ -59,7 +90,8 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
-    cn: (...args: (string | undefined | boolean)[]) => args.filter(Boolean).join(' '),
+    cn: (...args: (string | undefined | boolean)[]) =>
+      args.filter(Boolean).join(' '),
     isLoggedIn: vi.fn(() => true),
     redirectToAuthSpaJoinTenant: vi.fn(),
   };
@@ -113,12 +145,23 @@ describe('AIMessageBubble', () => {
     onOpenCanvas: mockOnOpenCanvas,
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    mockShowingSharedChat = false;
+    tenantMetadataReturnValue.metadata = {};
+    const { isLoggedIn } = await import('@/lib/utils');
+    vi.mocked(isLoggedIn).mockReturnValue(true);
   });
 
-  const renderWithRedux = (component: React.ReactElement, showingSharedChat = false) => {
-    return render(<Provider store={createMockStore(showingSharedChat)}>{component}</Provider>);
+  const renderWithRedux = (
+    component: React.ReactElement,
+    showingSharedChat = false,
+  ) => {
+    return render(
+      <Provider store={createMockStore(showingSharedChat)}>
+        {component}
+      </Provider>,
+    );
   };
 
   describe('rendering', () => {
@@ -139,11 +182,15 @@ describe('AIMessageBubble', () => {
 
     it('should display the message content', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
-      expect(screen.getByText('This is an AI response message.')).toBeInTheDocument();
+      expect(
+        screen.getByText('This is an AI response message.'),
+      ).toBeInTheDocument();
     });
 
     it('should render avatar with profile image', () => {
-      const { container } = renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <AIMessageBubble {...defaultProps} />,
+      );
       // Avatar component may render img within nested structure
       const avatarImg = container.querySelector('img');
       if (avatarImg) {
@@ -192,6 +239,62 @@ describe('AIMessageBubble', () => {
     });
   });
 
+  describe('report inappropriate content', () => {
+    it('should render report button by default (feature enabled when metadata key is absent)', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.getByTestId('ai-message-report-inappropriate-content'),
+      ).toBeInTheDocument();
+    });
+
+    it('should render report button when mentor_report_inappropriate_content is true', () => {
+      tenantMetadataReturnValue.metadata = {
+        mentor_report_inappropriate_content: true,
+      };
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.getByTestId('ai-message-report-inappropriate-content'),
+      ).toBeInTheDocument();
+    });
+
+    it('should not render report button when mentor_report_inappropriate_content is false', () => {
+      tenantMetadataReturnValue.metadata = {
+        mentor_report_inappropriate_content: false,
+      };
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('ai-message-report-inappropriate-content'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render report button when in shared chat', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(
+        screen.queryByTestId('ai-message-report-inappropriate-content'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render report button when user is not logged in', async () => {
+      const { isLoggedIn } = await import('@/lib/utils');
+      vi.mocked(isLoggedIn).mockReturnValue(false);
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('ai-message-report-inappropriate-content'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should pass tenant support email to report component', () => {
+      tenantMetadataReturnValue.metadata = {
+        support_email: 'help@custom-tenant.com',
+      };
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(mockReportInappropriateContent).toHaveBeenCalledWith(
+        expect.objectContaining({ supportEmail: 'help@custom-tenant.com' }),
+      );
+    });
+  });
+
   describe('retry functionality', () => {
     it('should call onRetry with last user message when retry is clicked', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
@@ -213,7 +316,9 @@ describe('AIMessageBubble', () => {
         },
       ];
 
-      renderWithRedux(<AIMessageBubble {...defaultProps} messages={messagesWithNoUser} />);
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} messages={messagesWithNoUser} />,
+      );
 
       const retryButton = screen.getByRole('button', { name: /retry/i });
       fireEvent.click(retryButton);
@@ -279,7 +384,9 @@ describe('AIMessageBubble', () => {
         ],
       };
 
-      renderWithRedux(<AIMessageBubble {...defaultProps} message={messageWithActions} />);
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} message={messageWithActions} />,
+      );
 
       expect(screen.getByText('Join Now')).toBeInTheDocument();
     });
@@ -301,7 +408,9 @@ describe('AIMessageBubble', () => {
         ],
       };
 
-      renderWithRedux(<AIMessageBubble {...defaultProps} message={messageWithActions} />);
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} message={messageWithActions} />,
+      );
 
       const actionButton = screen.getByText('Join Now');
       fireEvent.click(actionButton);
@@ -338,7 +447,9 @@ describe('AIMessageBubble', () => {
         artifactVersions: [],
       };
 
-      renderWithRedux(<AIMessageBubble {...defaultProps} message={messageWithArtifacts} />);
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} message={messageWithArtifacts} />,
+      );
 
       expect(screen.getByTestId('message-preview')).toBeInTheDocument();
     });
@@ -354,7 +465,9 @@ describe('AIMessageBubble', () => {
 
   describe('streaming artifact', () => {
     it('should pass streamingArtifactId to MessagePreview', () => {
-      renderWithRedux(<AIMessageBubble {...defaultProps} streamingArtifactId={456} />);
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} streamingArtifactId={456} />,
+      );
 
       expect(screen.getByTestId('message-preview')).toBeInTheDocument();
     });

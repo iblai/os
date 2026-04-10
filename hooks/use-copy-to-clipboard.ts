@@ -11,7 +11,9 @@ type UseCopyToClipboardReturn = {
   status: CopyStatus;
 };
 
-export function useCopyToClipboard(timeout: number = 500): UseCopyToClipboardReturn {
+export function useCopyToClipboard(
+  timeout: number = 500,
+): UseCopyToClipboardReturn {
   const [status, setStatus] = useState<CopyStatus>('idle');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
 

@@ -62,7 +62,10 @@ describe('navigation slice', () => {
 
   describe('setModalStack', () => {
     it('should set modal stack', () => {
-      const modals: ModalInfo[] = [{ name: 'settings' }, { name: 'profile', tab: 'general' }];
+      const modals: ModalInfo[] = [
+        { name: 'settings' },
+        { name: 'profile', tab: 'general' },
+      ];
 
       const state = modalReducer(initialState, setModalStack(modals));
       expect(state.modalStack).toEqual(modals);
@@ -114,7 +117,10 @@ describe('navigation slice', () => {
     });
 
     it('should push modal with mentorId', () => {
-      const modal: ModalInfo = { name: 'mentor-details', mentorId: 'mentor-123' };
+      const modal: ModalInfo = {
+        name: 'mentor-details',
+        mentorId: 'mentor-123',
+      };
       const state = modalReducer(initialState, pushModal(modal));
       expect(state.modalStack[0].mentorId).toBe('mentor-123');
     });
@@ -144,14 +150,20 @@ describe('navigation slice', () => {
 
   describe('updateCurrentModalTab', () => {
     it('should update tab of current modal', () => {
-      let state = modalReducer(initialState, pushModal({ name: 'settings', tab: 'general' }));
+      let state = modalReducer(
+        initialState,
+        pushModal({ name: 'settings', tab: 'general' }),
+      );
       state = modalReducer(state, updateCurrentModalTab('advanced'));
 
       expect(state.modalStack[0].tab).toBe('advanced');
     });
 
     it('should update only the last modal', () => {
-      let state = modalReducer(initialState, pushModal({ name: 'settings', tab: 'general' }));
+      let state = modalReducer(
+        initialState,
+        pushModal({ name: 'settings', tab: 'general' }),
+      );
       state = modalReducer(state, pushModal({ name: 'profile', tab: 'info' }));
       state = modalReducer(state, updateCurrentModalTab('preferences'));
 
@@ -160,7 +172,10 @@ describe('navigation slice', () => {
     });
 
     it('should handle empty stack', () => {
-      const state = modalReducer(initialState, updateCurrentModalTab('advanced'));
+      const state = modalReducer(
+        initialState,
+        updateCurrentModalTab('advanced'),
+      );
       expect(state.modalStack).toEqual([]);
     });
 
@@ -174,7 +189,11 @@ describe('navigation slice', () => {
 
   describe('clearModals', () => {
     it('should clear all modals', () => {
-      const modals: ModalInfo[] = [{ name: 'settings' }, { name: 'profile' }, { name: 'help' }];
+      const modals: ModalInfo[] = [
+        { name: 'settings' },
+        { name: 'profile' },
+        { name: 'help' },
+      ];
 
       let state = modalReducer(initialState, setModalStack(modals));
       state = modalReducer(state, clearModals(undefined));
@@ -235,7 +254,9 @@ describe('navigation slice', () => {
 
     describe('selectModalStack', () => {
       it('should select modal stack', () => {
-        expect(selectModalStack(mockState)).toEqual(mockState.modals.modalStack);
+        expect(selectModalStack(mockState)).toEqual(
+          mockState.modals.modalStack,
+        );
       });
     });
 
@@ -308,7 +329,9 @@ describe('navigation slice', () => {
       });
 
       it('should return false when shortcuts modal is closed', () => {
-        const closedState = { modals: { ...mockState.modals, shortcutsModal: false } };
+        const closedState = {
+          modals: { ...mockState.modals, shortcutsModal: false },
+        };
         expect(selectShortcutsModal(closedState)).toBe(false);
       });
     });
@@ -319,7 +342,10 @@ describe('navigation slice', () => {
       let state = modalReducer(initialState, pushModal({ name: 'home' }));
       expect(state.modalStack).toHaveLength(1);
 
-      state = modalReducer(state, pushModal({ name: 'settings', tab: 'general' }));
+      state = modalReducer(
+        state,
+        pushModal({ name: 'settings', tab: 'general' }),
+      );
       expect(state.modalStack).toHaveLength(2);
 
       state = modalReducer(state, updateCurrentModalTab('advanced'));

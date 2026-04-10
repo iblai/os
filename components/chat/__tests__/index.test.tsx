@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { Chat } from '../index';
@@ -33,7 +39,10 @@ vi.mock('next/dynamic', () => ({
       };
       Component.displayName = 'CanvasView';
       return Component;
-    } else if (loaderStr.includes('disclaimer-modal') || loaderStr.includes('DisclaimerModal')) {
+    } else if (
+      loaderStr.includes('disclaimer-modal') ||
+      loaderStr.includes('DisclaimerModal')
+    ) {
       // DisclaimerModal component
       const Component = (props: {
         isOpen?: boolean;
@@ -45,7 +54,11 @@ vi.mock('next/dynamic', () => ({
         return (
           <div data-testid="disclaimer-modal">
             <span data-testid="disclaimer-content">{props.content}</span>
-            <button data-testid="agree-btn" onClick={props.onAgree} disabled={props.isAgreeing}>
+            <button
+              data-testid="agree-btn"
+              onClick={props.onAgree}
+              disabled={props.isAgreeing}
+            >
               Agree
             </button>
           </div>
@@ -93,9 +106,18 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     ...actual,
     ANONYMOUS_USERNAME: 'anonymous',
     chatActions: {
-      updateSessionIds: vi.fn((id) => ({ type: 'chat/updateSessionIds', payload: id })),
-      setShowingSharedChat: vi.fn((val) => ({ type: 'chat/setShowingSharedChat', payload: val })),
-      addUserMessage: vi.fn((payload) => ({ type: 'chat/addUserMessage', payload })),
+      updateSessionIds: vi.fn((id) => ({
+        type: 'chat/updateSessionIds',
+        payload: id,
+      })),
+      setShowingSharedChat: vi.fn((val) => ({
+        type: 'chat/setShowingSharedChat',
+        payload: val,
+      })),
+      addUserMessage: vi.fn((payload) => ({
+        type: 'chat/addUserMessage',
+        payload,
+      })),
     },
     selectToken: () => null,
     selectTokenEnabled: () => false,
@@ -155,7 +177,10 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       DEEP_RESEARCH: 'deep_research',
     },
     clearFiles: vi.fn(() => ({ type: 'files/clearFiles' })),
-    removeFile: vi.fn((id: string) => ({ type: 'files/removeFile', payload: id })),
+    removeFile: vi.fn((id: string) => ({
+      type: 'files/removeFile',
+      payload: id,
+    })),
   };
 });
 
@@ -163,7 +188,8 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
-    cn: (...args: (string | boolean | undefined)[]) => args.filter(Boolean).join(' '),
+    cn: (...args: (string | boolean | undefined)[]) =>
+      args.filter(Boolean).join(' '),
     isLoggedIn: vi.fn(() => true),
     getAuthSpaJoinUrl: vi.fn(() => 'http://auth.test/join'),
     isInIframe: vi.fn(() => false),
@@ -243,7 +269,9 @@ vi.mock('@/hooks/use-user-agreement', () => ({
     userAgreement: null,
     hasUserAgreement: false,
     handleDisclaimerAgree: vi.fn(),
-    checkAgreementAndExecute: vi.fn((content: string, fn: (c: string) => void) => fn(content)),
+    checkAgreementAndExecute: vi.fn(
+      (content: string, fn: (c: string) => void) => fn(content),
+    ),
     executePendingSubmit: vi.fn(),
   })),
 }));
@@ -282,7 +310,9 @@ vi.mock('@/features/chat/chatSlice', () => ({
 }));
 
 vi.mock('@/components/guided-suggested-prompts', () => ({
-  GuidedSuggestedPrompts: () => <div data-testid="guided-prompts">Guided Prompts</div>,
+  GuidedSuggestedPrompts: () => (
+    <div data-testid="guided-prompts">Guided Prompts</div>
+  ),
 }));
 
 vi.mock('@/hooks/use-file-drag-drop', () => ({
@@ -313,11 +343,16 @@ vi.mock('@/components/chat-input-form', () => ({
     <div data-testid="chat-input-form">
       <span data-testid="session-id">{sessionId}</span>
       <span data-testid="is-streaming">{String(isStreaming)}</span>
-      <span data-testid="screen-sharing-modal-open">{String(isScreenSharingModalOpen)}</span>
+      <span data-testid="screen-sharing-modal-open">
+        {String(isScreenSharingModalOpen)}
+      </span>
       <button data-testid="submit-btn" onClick={() => onSubmit('Test message')}>
         Submit
       </button>
-      <button data-testid="input-screen-sharing-btn" onClick={onScreenSharingClick}>
+      <button
+        data-testid="input-screen-sharing-btn"
+        onClick={onScreenSharingClick}
+      >
         Screen Share
       </button>
       <button data-testid="input-phone-call-btn" onClick={onPhoneCallClick}>
@@ -398,7 +433,10 @@ vi.mock('@/components/chat/chat-messages', () => ({
       >
         Reply
       </button>
-      <button data-testid="highlight-btn" onClick={() => handleHighlightMessage?.(0)}>
+      <button
+        data-testid="highlight-btn"
+        onClick={() => handleHighlightMessage?.(0)}
+      >
         Highlight
       </button>
       <button
@@ -421,7 +459,13 @@ vi.mock('@/components/chat/chat-messages', () => ({
 }));
 
 vi.mock('@/components/live-kit-voice-chat', () => ({
-  LiveKitChat: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  LiveKitChat: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="live-kit-chat">
         <button onClick={onClose}>Close</button>
@@ -430,7 +474,13 @@ vi.mock('@/components/live-kit-voice-chat', () => ({
 }));
 
 vi.mock('@/components/live-kit-screen-sharing', () => ({
-  LiveKitScreenSharing: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  LiveKitScreenSharing: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
       <div data-testid="live-kit-screen-sharing">
         <button onClick={onClose}>Close</button>
@@ -476,11 +526,15 @@ vi.mock('@/components/error-boundary', () => ({
 }));
 
 vi.mock('@/components/advanced-chat/advanced-chat-header', () => ({
-  AdvancedChatHeader: () => <div data-testid="advanced-chat-header">Header</div>,
+  AdvancedChatHeader: () => (
+    <div data-testid="advanced-chat-header">Header</div>
+  ),
 }));
 
 vi.mock('@/components/advanced-chat/advanced-chat-builder', () => ({
-  AdvancedStaticChatBuilder: () => <div data-testid="advanced-chat-builder">Builder</div>,
+  AdvancedStaticChatBuilder: () => (
+    <div data-testid="advanced-chat-builder">Builder</div>
+  ),
 }));
 
 vi.mock('@/components/chat/loading-message', () => ({
@@ -488,7 +542,13 @@ vi.mock('@/components/chat/loading-message', () => ({
 }));
 
 vi.mock('@/components/chat/canvas-view', () => ({
-  CanvasView: ({ onClose, canvasTitle }: { onClose: () => void; canvasTitle: string }) => (
+  CanvasView: ({
+    onClose,
+    canvasTitle,
+  }: {
+    onClose: () => void;
+    canvasTitle: string;
+  }) => (
     <div data-testid="canvas-view">
       <span data-testid="canvas-title">{canvasTitle}</span>
       <button data-testid="close-canvas-btn" onClick={onClose}>
@@ -579,12 +639,18 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipTrigger: ({ children }: { children: React.ReactNode; asChild?: boolean }) => (
-    <>{children}</>
-  ),
-  TooltipContent: ({ children }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="tooltip-content">{children}</div>
-  ),
+  TooltipTrigger: ({
+    children,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>,
+  TooltipContent: ({
+    children,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <div data-testid="tooltip-content">{children}</div>,
 }));
 
 const defaultChatSliceState = {
@@ -649,8 +715,13 @@ describe('Chat', () => {
     vi.restoreAllMocks();
   });
 
-  const renderWithRedux = (component: React.ReactElement, preloadedState = {}) => {
-    return render(<Provider store={createMockStore(preloadedState)}>{component}</Provider>);
+  const renderWithRedux = (
+    component: React.ReactElement,
+    preloadedState = {},
+  ) => {
+    return render(
+      <Provider store={createMockStore(preloadedState)}>{component}</Provider>,
+    );
   };
 
   describe('rendering', () => {
@@ -667,7 +738,9 @@ describe('Chat', () => {
 
     it('should render mentor name from useAdvancedChat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
-      expect(screen.getByTestId('mentor-name')).toHaveTextContent('Test Mentor');
+      expect(screen.getByTestId('mentor-name')).toHaveTextContent(
+        'Test Mentor',
+      );
     });
 
     it('should render chat input form when messages exist', async () => {
@@ -734,7 +807,9 @@ describe('Chat', () => {
 
   describe('border styling', () => {
     it('should apply border by default', () => {
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
       const chatContainer = container.firstChild as HTMLElement;
       expect(chatContainer).toHaveClass('border');
     });
@@ -989,13 +1064,17 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.getByTestId('session-id')).toHaveTextContent('my-session-456');
+      expect(screen.getByTestId('session-id')).toHaveTextContent(
+        'my-session-456',
+      );
     });
   });
 
   describe('isInCanvasView prop', () => {
     it('should handle isInCanvasView prop', () => {
-      renderWithRedux(<Chat mode="default" isPreviewMode={false} isInCanvasView={true} />);
+      renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} isInCanvasView={true} />,
+      );
       // Should render without errors
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
     });
@@ -1392,7 +1471,9 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.getByTestId('mentor-name')).toHaveTextContent('Different Mentor');
+      expect(screen.getByTestId('mentor-name')).toHaveTextContent(
+        'Different Mentor',
+      );
     });
   });
 
@@ -1524,7 +1605,9 @@ describe('Chat', () => {
       const { isLoggedIn } = await import('@/lib/utils');
       (isLoggedIn as any).mockReturnValue(false);
 
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -1563,7 +1646,9 @@ describe('Chat', () => {
         userTenants: [{ key: 'different-tenant' }],
       });
 
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           allowAnonymous: false,
@@ -1571,7 +1656,9 @@ describe('Chat', () => {
         },
       });
 
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -1796,7 +1883,10 @@ describe('Chat', () => {
       // The component logic uses a ref `isNewSession` which defaults to true unless
       // cachedSessionId is found. We need to mock local storage to have a cached session.
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
-      (useLocalStorage as any).mockReturnValue([{ 'mentor-123': 'cached-session' }, vi.fn()]);
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session' },
+        vi.fn(),
+      ]);
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -2051,7 +2141,9 @@ describe('Chat', () => {
 
   describe('service worker status', () => {
     it('should handle offline status', async () => {
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: false },
       });
@@ -2086,7 +2178,9 @@ describe('Chat', () => {
   describe('visiting tenant', () => {
     it('should handle visiting tenant scenario', async () => {
       const { useVisitingTenant } = await import('@/hooks/use-user');
-      (useVisitingTenant as any).mockReturnValue({ visitingTenant: 'visiting-tenant' });
+      (useVisitingTenant as any).mockReturnValue({
+        visitingTenant: 'visiting-tenant',
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -2156,7 +2250,9 @@ describe('Chat', () => {
 
   describe('mentor settings', () => {
     it('should handle allowAnonymous mentor setting', async () => {
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           allowAnonymous: true,
@@ -2194,7 +2290,10 @@ describe('Chat', () => {
   describe('local storage cached session', () => {
     it('should use cached session id from local storage', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
-      (useLocalStorage as any).mockReturnValue([{ 'mentor-123': 'cached-session-456' }, vi.fn()]);
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session-456' },
+        vi.fn(),
+      ]);
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -2225,8 +2324,12 @@ describe('Chat', () => {
 
   describe('free trial dialog', () => {
     it('should show free trial dialog when modal is open', async () => {
-      const { useShowFreeTrialDialog } = await import('@/hooks/user-user-actions');
-      const MockFreeTrialDialog = () => <div data-testid="free-trial-dialog">Free Trial</div>;
+      const { useShowFreeTrialDialog } = await import(
+        '@/hooks/user-user-actions'
+      );
+      const MockFreeTrialDialog = () => (
+        <div data-testid="free-trial-dialog">Free Trial</div>
+      );
       (useShowFreeTrialDialog as any).mockReturnValue({
         FreeTrialDialog: MockFreeTrialDialog,
         closeModal: vi.fn(),
@@ -2270,7 +2373,9 @@ describe('Chat', () => {
         userAgreement: { content: 'Please agree to terms' },
         hasUserAgreement: true,
         handleDisclaimerAgree: vi.fn(),
-        checkAgreementAndExecute: vi.fn((content: string, fn: (c: string) => void) => fn(content)),
+        checkAgreementAndExecute: vi.fn(
+          (content: string, fn: (c: string) => void) => fn(content),
+        ),
         executePendingSubmit: vi.fn(),
       });
 
@@ -2373,7 +2478,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -2405,14 +2512,18 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Click again to toggle (close it)
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('live-kit-screen-sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('live-kit-screen-sharing'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -2521,7 +2632,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('input-screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -2566,7 +2679,9 @@ describe('Chat', () => {
     });
 
     it('should handle phone call click in iframe mode with popup actions', async () => {
-      const { isInIframe, sendMessageToParentWebsite } = await import('@/lib/utils');
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
       (isInIframe as any).mockReturnValue(true);
       mockSelectEnableChatActionsPopup.mockReturnValue(true);
 
@@ -2615,7 +2730,9 @@ describe('Chat', () => {
     });
 
     it('should handle screen share click in iframe mode with popup actions', async () => {
-      const { isInIframe, sendMessageToParentWebsite } = await import('@/lib/utils');
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
       (isInIframe as any).mockReturnValue(true);
       mockSelectEnableChatActionsPopup.mockReturnValue(true);
 
@@ -2733,14 +2850,18 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Close via button
       fireEvent.click(screen.getByText('Close'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('live-kit-screen-sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('live-kit-screen-sharing'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -2813,7 +2934,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Close via button - should call window.close
@@ -2855,7 +2978,9 @@ describe('Chat', () => {
     it('should show voice call dialog when chat-action=voice-call', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -2890,7 +3015,9 @@ describe('Chat', () => {
     it('should show screen share dialog when chat-action=screen-share', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -2925,7 +3052,9 @@ describe('Chat', () => {
     it('should confirm voice call and open modal when confirm button clicked', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -2968,7 +3097,9 @@ describe('Chat', () => {
     it('should cancel voice call dialog when cancel button clicked', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3004,14 +3135,18 @@ describe('Chat', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Voice Call')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Voice Call'),
+        ).not.toBeInTheDocument();
       });
     });
 
     it('should confirm screen share and open modal when confirm button clicked', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3047,14 +3182,18 @@ describe('Chat', () => {
 
       // Screen sharing modal should open
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
     });
 
     it('should cancel screen share dialog when cancel button clicked', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3090,7 +3229,9 @@ describe('Chat', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -3099,7 +3240,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3180,7 +3323,9 @@ describe('Chat', () => {
       });
 
       // Session ID should be cached
-      expect(mockSaveCachedSessionId).toHaveBeenCalledWith({ 'mentor-123': 'popup-session-abc' });
+      expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
+        'mentor-123': 'popup-session-abc',
+      });
     });
 
     it('should cache session ID when chat-action=screen-share with session-id param', async () => {
@@ -3226,7 +3371,9 @@ describe('Chat', () => {
       });
 
       // Session ID should be cached
-      expect(mockSaveCachedSessionId).toHaveBeenCalledWith({ 'mentor-123': 'popup-session-xyz' });
+      expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
+        'mentor-123': 'popup-session-xyz',
+      });
     });
 
     it('should show blocking overlay when confirming voice call with window.opener', async () => {
@@ -3234,7 +3381,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3281,7 +3430,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3328,7 +3479,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3364,20 +3517,29 @@ describe('Chat', () => {
 
       // Screen sharing modal should open
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Blocking overlay should NOT appear since window.opener is null
-      expect(screen.queryByText('Screen Sharing Active')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Screen Sharing Active'),
+      ).not.toBeInTheDocument();
     });
 
     it('should notify opener and close window when stopping screen share from blocking overlay', async () => {
       const mockOpener = { postMessage: vi.fn(), closed: false };
-      Object.defineProperty(window, 'opener', { value: mockOpener, writable: true });
+      Object.defineProperty(window, 'opener', {
+        value: mockOpener,
+        writable: true,
+      });
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3437,12 +3599,19 @@ describe('Chat', () => {
         }),
         closed: false,
       };
-      Object.defineProperty(window, 'opener', { value: mockOpener, writable: true });
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      Object.defineProperty(window, 'opener', {
+        value: mockOpener,
+        writable: true,
+      });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -3791,7 +3960,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { unmount } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { unmount } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       unmount();
 
@@ -3801,7 +3972,9 @@ describe('Chat', () => {
 
   describe('402 error handling', () => {
     it('should set up 402 error handler', async () => {
-      const { use402ErrorCheck } = await import('@/hooks/subscription/use-402-error-check');
+      const { use402ErrorCheck } = await import(
+        '@/hooks/subscription/use-402-error-check'
+      );
       const mockHandle402Error = vi.fn();
       (use402ErrorCheck as any).mockReturnValue({
         handle402Error: mockHandle402Error,
@@ -3935,7 +4108,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      renderWithRedux(<Chat mode="default" isPreviewMode={false} isInCanvasView={true} />);
+      renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} isInCanvasView={true} />,
+      );
 
       // When isInCanvasView is true, the split layout should not render
       expect(screen.queryByTestId('canvas-view')).not.toBeInTheDocument();
@@ -4154,7 +4329,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -4195,7 +4372,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -4230,7 +4409,9 @@ describe('Chat', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Voice Call')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Voice Call'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -4241,7 +4422,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -4282,7 +4465,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -4317,7 +4502,9 @@ describe('Chat', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -4359,14 +4546,18 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('input-screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Click again to toggle off
       fireEvent.click(screen.getByTestId('input-screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('live-kit-screen-sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('live-kit-screen-sharing'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -4516,7 +4707,9 @@ describe('Chat', () => {
 
   describe('welcome screen popup actions', () => {
     it('should send screen share message to parent from welcome screen when popup actions enabled', async () => {
-      const { isInIframe, sendMessageToParentWebsite } = await import('@/lib/utils');
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
       (isInIframe as any).mockReturnValue(true);
       mockSelectEnableChatActionsPopup.mockReturnValue(true);
 
@@ -4557,7 +4750,9 @@ describe('Chat', () => {
     });
 
     it('should send phone call message to parent from welcome screen when popup actions enabled', async () => {
-      const { isInIframe, sendMessageToParentWebsite } = await import('@/lib/utils');
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
       (isInIframe as any).mockReturnValue(true);
       mockSelectEnableChatActionsPopup.mockReturnValue(true);
 
@@ -4630,14 +4825,18 @@ describe('Chat', () => {
 
       // Screen sharing modal should open
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Click again to close
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.queryByTestId('live-kit-screen-sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('live-kit-screen-sharing'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -4686,7 +4885,9 @@ describe('Chat', () => {
         userTenants: [{ key: 'different-tenant' }], // User is in different tenant
       });
 
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           allowAnonymous: false,
@@ -4797,7 +4998,10 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Trigger resize event
-      Object.defineProperty(window, 'innerWidth', { value: 1200, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1200,
+        writable: true,
+      });
       window.dispatchEvent(new Event('resize'));
 
       // Component should still render
@@ -5084,14 +5288,25 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find chat container and simulate scroll
       const chatContainer = container.querySelector('.overflow-y-auto');
       if (chatContainer) {
-        Object.defineProperty(chatContainer, 'scrollTop', { value: 0, writable: true });
-        Object.defineProperty(chatContainer, 'scrollHeight', { value: 1000, writable: true });
-        Object.defineProperty(chatContainer, 'clientHeight', { value: 500, writable: true });
+        Object.defineProperty(chatContainer, 'scrollTop', {
+          value: 0,
+          writable: true,
+        });
+        Object.defineProperty(chatContainer, 'scrollHeight', {
+          value: 1000,
+          writable: true,
+        });
+        Object.defineProperty(chatContainer, 'clientHeight', {
+          value: 500,
+          writable: true,
+        });
 
         fireEvent.scroll(chatContainer);
       }
@@ -5631,7 +5846,10 @@ describe('Chat', () => {
 
   describe('mobile responsive behavior', () => {
     it('should handle mobile screen size', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 375, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 375,
+        writable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -5671,7 +5889,10 @@ describe('Chat', () => {
       expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
 
       // Reset window width
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1024,
+        writable: true,
+      });
     });
   });
 
@@ -5882,7 +6103,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { unmount } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { unmount } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Verify event listeners were registered
       expect(eventBus.default.on).toHaveBeenCalled();
@@ -6360,7 +6583,9 @@ describe('Chat', () => {
 
   describe('disclaimer agree with pending submit', () => {
     it('should handle disclaimer agree with pending submit', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -6617,15 +6842,26 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the chat container and simulate scroll
       const chatContainer = container.querySelector('.overflow-y-auto');
       if (chatContainer) {
         // Mock scrollHeight, scrollTop, clientHeight to simulate scrolled up state
-        Object.defineProperty(chatContainer, 'scrollHeight', { value: 1000, configurable: true });
-        Object.defineProperty(chatContainer, 'scrollTop', { value: 0, configurable: true });
-        Object.defineProperty(chatContainer, 'clientHeight', { value: 300, configurable: true });
+        Object.defineProperty(chatContainer, 'scrollHeight', {
+          value: 1000,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'scrollTop', {
+          value: 0,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'clientHeight', {
+          value: 300,
+          configurable: true,
+        });
 
         // Trigger scroll event
         fireEvent.scroll(chatContainer);
@@ -6665,14 +6901,25 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the chat container and simulate scroll at bottom
       const chatContainer = container.querySelector('.overflow-y-auto');
       if (chatContainer) {
-        Object.defineProperty(chatContainer, 'scrollHeight', { value: 500, configurable: true });
-        Object.defineProperty(chatContainer, 'scrollTop', { value: 450, configurable: true });
-        Object.defineProperty(chatContainer, 'clientHeight', { value: 500, configurable: true });
+        Object.defineProperty(chatContainer, 'scrollHeight', {
+          value: 500,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'scrollTop', {
+          value: 450,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'clientHeight', {
+          value: 500,
+          configurable: true,
+        });
 
         fireEvent.scroll(chatContainer);
       }
@@ -6684,7 +6931,10 @@ describe('Chat', () => {
   describe('Tauri and offline mode handling', () => {
     it('should handle Tauri app environment', async () => {
       // Simulate Tauri environment
-      Object.defineProperty(window, '__TAURI__', { value: {}, configurable: true });
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        configurable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -6716,7 +6966,10 @@ describe('Chat', () => {
     });
 
     it('should handle offline mode with local storage', async () => {
-      Object.defineProperty(window, '__TAURI__', { value: {}, configurable: true });
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        configurable: true,
+      });
       localStorage.setItem('tauri_offline_mode', 'true');
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -6752,7 +7005,10 @@ describe('Chat', () => {
     it('should handle navigator.onLine being false', async () => {
       // Mock navigator.onLine
       const originalOnLine = navigator.onLine;
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -6780,7 +7036,10 @@ describe('Chat', () => {
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
 
       // Restore
-      Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true });
+      Object.defineProperty(navigator, 'onLine', {
+        value: originalOnLine,
+        configurable: true,
+      });
     });
 
     it('should handle offline server origin check', async () => {
@@ -6814,16 +7073,22 @@ describe('Chat', () => {
 
   describe('error handler in useAdvancedChat', () => {
     it('should handle errors through errorHandler callback', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const mockToastError = vi.fn();
       const { toast } = await import('sonner');
       (toast.error as any) = mockToastError;
 
-      let capturedErrorHandler: ((message: string, error?: unknown) => void) | undefined;
+      let capturedErrorHandler:
+        | ((message: string, error?: unknown) => void)
+        | undefined;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation(
-        (options: { errorHandler?: (message: string, error?: unknown) => void }) => {
+        (options: {
+          errorHandler?: (message: string, error?: unknown) => void;
+        }) => {
           capturedErrorHandler = options.errorHandler;
           return {
             changeTab: vi.fn(),
@@ -6851,7 +7116,10 @@ describe('Chat', () => {
 
       // Call the error handler
       if (capturedErrorHandler) {
-        await capturedErrorHandler('Test error message', new Error('Test error'));
+        await capturedErrorHandler(
+          'Test error message',
+          new Error('Test error'),
+        );
       }
 
       consoleSpy.mockRestore();
@@ -6859,14 +7127,24 @@ describe('Chat', () => {
 
     it('should suppress errors in Tauri offline mode', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      Object.defineProperty(window, '__TAURI__', { value: {}, configurable: true });
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      Object.defineProperty(window, '__TAURI__', {
+        value: {},
+        configurable: true,
+      });
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+      });
 
-      let capturedErrorHandler: ((message: string, error?: unknown) => Promise<void>) | undefined;
+      let capturedErrorHandler:
+        | ((message: string, error?: unknown) => Promise<void>)
+        | undefined;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation(
-        (options: { errorHandler?: (message: string, error?: unknown) => Promise<void> }) => {
+        (options: {
+          errorHandler?: (message: string, error?: unknown) => Promise<void>;
+        }) => {
           capturedErrorHandler = options.errorHandler;
           return {
             changeTab: vi.fn(),
@@ -6899,7 +7177,10 @@ describe('Chat', () => {
 
       // Clean up
       delete (window as unknown as Record<string, unknown>).__TAURI__;
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+      Object.defineProperty(navigator, 'onLine', {
+        value: true,
+        configurable: true,
+      });
       consoleSpy.mockRestore();
     });
   });
@@ -6966,7 +7247,9 @@ describe('Chat', () => {
         userTenants: [{ key: 'different-tenant-key' }],
       });
 
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           allowAnonymous: false,
@@ -6974,7 +7257,9 @@ describe('Chat', () => {
         },
       });
 
-      const { useAdvancedChat, chatActions, useTenantContext } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions, useTenantContext } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useTenantContext as any).mockReturnValue({
         metadata: { support_email: 'test@example.com' },
       });
@@ -7013,10 +7298,12 @@ describe('Chat', () => {
     it('should handle user agreement state', async () => {
       const mockHandleDisclaimerAgree = vi.fn().mockResolvedValue(undefined);
       const mockExecutePendingSubmit = vi.fn();
-      const mockCheckAgreementAndExecute = vi.fn((content: string, fn: (c: string) => void) => {
-        // This simulates calling executePendingSubmit when disclaimer is agreed
-        fn(content);
-      });
+      const mockCheckAgreementAndExecute = vi.fn(
+        (content: string, fn: (c: string) => void) => {
+          // This simulates calling executePendingSubmit when disclaimer is agreed
+          fn(content);
+        },
+      );
 
       const { useUserAgreement } = await import('@/hooks/use-user-agreement');
       (useUserAgreement as any).mockReturnValue({
@@ -7102,7 +7389,9 @@ describe('Chat', () => {
 
   describe('resize handlers in canvas view', () => {
     it('should handle resize start event', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -7191,13 +7480,19 @@ describe('Chat', () => {
 
   describe('mentor tools error handler', () => {
     it('should handle errors from useMentorTools', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
-      let capturedMentorToolsErrorHandler: ((message: string, error?: unknown) => void) | undefined;
+      let capturedMentorToolsErrorHandler:
+        | ((message: string, error?: unknown) => void)
+        | undefined;
 
       const { useMentorTools } = await import('@iblai/iblai-js/web-utils');
       (useMentorTools as any).mockImplementation(
-        (options: { errorHandler?: (message: string, error?: unknown) => void }) => {
+        (options: {
+          errorHandler?: (message: string, error?: unknown) => void;
+        }) => {
           capturedMentorToolsErrorHandler = options.errorHandler;
           return {
             enableWebBrowsing: true,
@@ -7241,7 +7536,10 @@ describe('Chat', () => {
 
       // Call the error handler
       if (capturedMentorToolsErrorHandler) {
-        await capturedMentorToolsErrorHandler('Tool error', new Error('Test tool error'));
+        await capturedMentorToolsErrorHandler(
+          'Tool error',
+          new Error('Test tool error'),
+        );
       }
 
       consoleSpy.mockRestore();
@@ -7284,7 +7582,11 @@ describe('Chat', () => {
       // Dispatch canvas-active event
       window.dispatchEvent(
         new CustomEvent('canvas-active', {
-          detail: { artifactId: 789, title: 'Active Canvas', file_extension: 'md' },
+          detail: {
+            artifactId: 789,
+            title: 'Active Canvas',
+            file_extension: 'md',
+          },
         }),
       );
 
@@ -7530,7 +7832,9 @@ describe('Chat', () => {
     it('should handle session ID changes', async () => {
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
 
-      const { useMentorTools, useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { useMentorTools, useAdvancedChat } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useMentorTools as any).mockReturnValue({
         enableWebBrowsing: true,
         updateSessionTools: mockUpdateSessionTools,
@@ -7585,7 +7889,9 @@ describe('Chat', () => {
     it('should update session IDs when starting new chat', async () => {
       let capturedOnStartNewChat: ((sessionId: string) => void) | undefined;
 
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockImplementation(
         (options: { onStartNewChat?: (sessionId: string) => void }) => {
           capturedOnStartNewChat = options.onStartNewChat;
@@ -7618,14 +7924,18 @@ describe('Chat', () => {
         capturedOnStartNewChat('new-session-id-789');
       }
 
-      expect(chatActions.updateSessionIds).toHaveBeenCalledWith('new-session-id-789');
+      expect(chatActions.updateSessionIds).toHaveBeenCalledWith(
+        'new-session-id-789',
+      );
     });
   });
 
   describe('executeSubmit with canvas open', () => {
     it('should include artifact payload when canvas is open', async () => {
       const mockSendMessage = vi.fn();
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -7698,7 +8008,9 @@ describe('Chat', () => {
 
   describe('canvas empty messages state', () => {
     it('should show empty state message in canvas view when no messages', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -7853,7 +8165,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Now clear messages
       (useAdvancedChat as any).mockReturnValue({
@@ -7942,7 +8256,10 @@ describe('Chat', () => {
     it('should handle first canvas open when page is scrolled', async () => {
       // Set window scroll position
       Object.defineProperty(window, 'scrollY', { value: 500, writable: true });
-      Object.defineProperty(window, 'pageYOffset', { value: 500, writable: true });
+      Object.defineProperty(window, 'pageYOffset', {
+        value: 500,
+        writable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -7984,7 +8301,10 @@ describe('Chat', () => {
 
       // Reset
       Object.defineProperty(window, 'scrollY', { value: 0, writable: true });
-      Object.defineProperty(window, 'pageYOffset', { value: 0, writable: true });
+      Object.defineProperty(window, 'pageYOffset', {
+        value: 0,
+        writable: true,
+      });
     });
   });
 
@@ -8151,7 +8471,9 @@ describe('Chat', () => {
 
   describe('canvas width clamping', () => {
     it('should handle canvas resize bounds', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -8381,7 +8703,9 @@ describe('Chat', () => {
 
   describe('canvas split view resize', () => {
     it('should handle resize drag in canvas view', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -8425,7 +8749,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Open canvas
       fireEvent.click(screen.getByTestId('open-canvas-btn'));
@@ -8464,7 +8790,9 @@ describe('Chat', () => {
 
   describe('close canvas resets state', () => {
     it('should reset canvas state when closed', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -8587,7 +8915,9 @@ describe('Chat', () => {
     it('should handle voice-call chat action with dialog confirmation', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -8629,7 +8959,9 @@ describe('Chat', () => {
     it('should handle cancel in voice call confirmation dialog', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -8663,7 +8995,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByText('Cancel'));
 
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Voice Call')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Voice Call'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -8672,7 +9006,9 @@ describe('Chat', () => {
     it('should handle screen share confirmation dialog', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -8706,14 +9042,18 @@ describe('Chat', () => {
       fireEvent.click(screen.getByText('Confirm'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
     });
 
     it('should handle cancel in screen share confirmation dialog', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -8747,7 +9087,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByText('Cancel'));
 
       await waitFor(() => {
-        expect(screen.queryByText('Confirm Screen Sharing')).not.toBeInTheDocument();
+        expect(
+          screen.queryByText('Confirm Screen Sharing'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -8778,15 +9120,28 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Get the scrollable container
-      const scrollContainer = container.querySelector('[data-testid="chat-container"]');
+      const scrollContainer = container.querySelector(
+        '[data-testid="chat-container"]',
+      );
       if (scrollContainer) {
         // Simulate scroll up
-        Object.defineProperty(scrollContainer, 'scrollTop', { value: 0, writable: true });
-        Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1000, writable: true });
-        Object.defineProperty(scrollContainer, 'clientHeight', { value: 500, writable: true });
+        Object.defineProperty(scrollContainer, 'scrollTop', {
+          value: 0,
+          writable: true,
+        });
+        Object.defineProperty(scrollContainer, 'scrollHeight', {
+          value: 1000,
+          writable: true,
+        });
+        Object.defineProperty(scrollContainer, 'clientHeight', {
+          value: 500,
+          writable: true,
+        });
 
         // Trigger scroll event to set isScrolledUp to true
         fireEvent.scroll(scrollContainer, {
@@ -8821,10 +9176,14 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={true} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={true} />,
+      );
 
       // In preview mode, scroll button should not show even if scrolled up
-      const scrollButton = container.querySelector('button[aria-label*="scroll"]');
+      const scrollButton = container.querySelector(
+        'button[aria-label*="scroll"]',
+      );
       expect(scrollButton).not.toBeInTheDocument();
     });
 
@@ -8850,10 +9209,14 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // With no messages, scroll button should not show
-      const scrollButton = container.querySelector('button[aria-label*="scroll"]');
+      const scrollButton = container.querySelector(
+        'button[aria-label*="scroll"]',
+      );
       expect(scrollButton).not.toBeInTheDocument();
     });
   });
@@ -8886,7 +9249,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Component should render with messages - onReply is passed to MessageList
       expect(container).toBeInTheDocument();
@@ -8896,10 +9261,14 @@ describe('Chat', () => {
   describe('useAdvancedChat errorHandler callback', () => {
     it('should suppress errors when in Tauri offline mode', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       // Store the errorHandler callback
-      let capturedErrorHandler: ((message: string, error?: Error) => Promise<void>) | null = null;
+      let capturedErrorHandler:
+        | ((message: string, error?: Error) => Promise<void>)
+        | null = null;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation((options: any) => {
@@ -8925,7 +9294,9 @@ describe('Chat', () => {
         };
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: false },
       });
@@ -8940,12 +9311,16 @@ describe('Chat', () => {
     });
 
     it('should show toast error when not in offline mode', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const { toast } = await import('sonner');
       const mockToastError = vi.mocked(toast.error);
       mockToastError.mockClear();
 
-      let capturedErrorHandler: ((message: string, error?: Error) => Promise<void>) | null = null;
+      let capturedErrorHandler:
+        | ((message: string, error?: Error) => Promise<void>)
+        | null = null;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation((options: any) => {
@@ -8971,7 +9346,9 @@ describe('Chat', () => {
         };
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: true },
       });
@@ -8982,10 +9359,9 @@ describe('Chat', () => {
 
       // Call the error handler - it should call toast.error
       if (capturedErrorHandler) {
-        await (capturedErrorHandler as (msg: string, err?: Error) => Promise<void>)(
-          'Test error message',
-          new Error('test'),
-        );
+        await (
+          capturedErrorHandler as (msg: string, err?: Error) => Promise<void>
+        )('Test error message', new Error('test'));
       }
 
       // Verify console.error was called with the error
@@ -8998,12 +9374,16 @@ describe('Chat', () => {
     });
 
     it('should handle error handler without error object', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const { toast } = await import('sonner');
       const mockToastError = vi.mocked(toast.error);
       mockToastError.mockClear();
 
-      let capturedErrorHandler: ((message: string, error?: Error) => Promise<void>) | null = null;
+      let capturedErrorHandler:
+        | ((message: string, error?: Error) => Promise<void>)
+        | null = null;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation((options: any) => {
@@ -9029,7 +9409,9 @@ describe('Chat', () => {
         };
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: true },
       });
@@ -9040,9 +9422,9 @@ describe('Chat', () => {
 
       // Call the error handler without an error object
       if (capturedErrorHandler) {
-        await (capturedErrorHandler as (msg: string, err?: Error) => Promise<void>)(
-          'Test error message without error object',
-        );
+        await (
+          capturedErrorHandler as (msg: string, err?: Error) => Promise<void>
+        )('Test error message without error object');
       }
 
       // Verify console.error was NOT called (no error object)
@@ -9057,7 +9439,9 @@ describe('Chat', () => {
 
   describe('useMentorTools errorHandler callback', () => {
     it('should show toast error and log to console', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       let capturedMentorToolsErrorHandler:
         | ((message: string, error?: Error) => Promise<void>)
@@ -9087,10 +9471,12 @@ describe('Chat', () => {
       expect(capturedMentorToolsErrorHandler).toBeDefined();
 
       if (capturedMentorToolsErrorHandler) {
-        await (capturedMentorToolsErrorHandler as (msg: string, err?: Error) => Promise<void>)(
-          'Mentor tools error',
-          new Error('tool error'),
-        );
+        await (
+          capturedMentorToolsErrorHandler as (
+            msg: string,
+            err?: Error,
+          ) => Promise<void>
+        )('Mentor tools error', new Error('tool error'));
       }
 
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -9098,7 +9484,9 @@ describe('Chat', () => {
     });
 
     it('should handle error without error object', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       let capturedMentorToolsErrorHandler:
         | ((message: string, error?: Error) => Promise<void>)
@@ -9129,9 +9517,12 @@ describe('Chat', () => {
 
       if (capturedMentorToolsErrorHandler) {
         // Call without error object
-        await (capturedMentorToolsErrorHandler as (msg: string, err?: Error) => Promise<void>)(
-          'Mentor tools error without details',
-        );
+        await (
+          capturedMentorToolsErrorHandler as (
+            msg: string,
+            err?: Error,
+          ) => Promise<void>
+        )('Mentor tools error without details');
       }
 
       // console.error should NOT be called when there's no error object
@@ -9178,7 +9569,9 @@ describe('Chat', () => {
 
       // Call the callback
       if (capturedOnStartNewChat) {
-        (capturedOnStartNewChat as (sessionId: string) => void)('new-session-456');
+        (capturedOnStartNewChat as (sessionId: string) => void)(
+          'new-session-456',
+        );
       }
 
       // Verify saveCachedSessionId was called with the new session
@@ -9249,7 +9642,9 @@ describe('Chat', () => {
         };
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: false },
       });
@@ -9285,7 +9680,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Component should render when isStreaming is true
       expect(container).toBeInTheDocument();
@@ -9321,7 +9718,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Component should render - loading indicator is suppressed when last message has artifactVersions
       expect(container).toBeInTheDocument();
@@ -9349,7 +9748,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Component should render when isPending is true
       expect(container).toBeInTheDocument();
@@ -9386,7 +9787,10 @@ describe('Chat', () => {
 
       // Verify eventBus.on was called for newChat
       await waitFor(() => {
-        expect(eventBusMock.default.on).toHaveBeenCalledWith('newChat', expect.any(Function));
+        expect(eventBusMock.default.on).toHaveBeenCalledWith(
+          'newChat',
+          expect.any(Function),
+        );
       });
     });
 
@@ -9503,7 +9907,10 @@ describe('Chat', () => {
 
       // Get the stopChatGenerating handler that was registered
       await waitFor(() => {
-        expect(mockOn).toHaveBeenCalledWith('stopChatGenerating', expect.any(Function));
+        expect(mockOn).toHaveBeenCalledWith(
+          'stopChatGenerating',
+          expect.any(Function),
+        );
       });
 
       const stopHandler = (mockOn.mock.calls as [string, () => void][]).find(
@@ -9543,19 +9950,30 @@ describe('Chat', () => {
       });
 
       // Start with desktop width
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1024,
+        writable: true,
+      });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Resize to mobile
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 500,
+        writable: true,
+      });
       fireEvent(window, new Event('resize'));
 
       // The component should still render
       expect(container).toBeInTheDocument();
 
       // Resize back to desktop
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1024,
+        writable: true,
+      });
       fireEvent(window, new Event('resize'));
 
       expect(container).toBeInTheDocument();
@@ -9627,7 +10045,9 @@ describe('Chat', () => {
       // The accessibility message should contain the assistant's response
       await waitFor(() => {
         const srOnlyElements = screen.getAllByRole('status');
-        const accessibilityStatus = srOnlyElements.find((el) => el.textContent?.includes('says:'));
+        const accessibilityStatus = srOnlyElements.find((el) =>
+          el.textContent?.includes('says:'),
+        );
         expect(accessibilityStatus).toBeInTheDocument();
       });
     });
@@ -9636,7 +10056,9 @@ describe('Chat', () => {
   describe('handleCloseCanvas', () => {
     it('should provide handleCloseCanvas callback to component', async () => {
       // This test verifies the component renders with canvas capabilities
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -9672,7 +10094,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="advanced" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
 
       // The component should render correctly with canvas capabilities
       expect(container).toBeInTheDocument();
@@ -9758,7 +10182,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -9771,8 +10197,14 @@ describe('Chat', () => {
 
     it('should handle navigator offline state', async () => {
       // Mock navigator.onLine to be false
-      const originalOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      const originalOnLine = Object.getOwnPropertyDescriptor(
+        Navigator.prototype,
+        'onLine',
+      );
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+      });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -9795,7 +10227,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -9832,15 +10266,23 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { unmount } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { unmount } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Check that resize listener was added
-      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function),
+      );
 
       // Unmount and check cleanup
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function),
+      );
 
       addEventListenerSpy.mockRestore();
       removeEventListenerSpy.mockRestore();
@@ -9851,7 +10293,9 @@ describe('Chat', () => {
     it('should add canvas event listeners', async () => {
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
 
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -9910,7 +10354,10 @@ describe('Chat', () => {
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
-        currentStreamingMessage: { role: 'assistant', content: 'Streaming response...' },
+        currentStreamingMessage: {
+          role: 'assistant',
+          content: 'Streaming response...',
+        },
         enabledGuidedPrompts: [],
         isStreaming: true,
         mentorName: 'Test Mentor',
@@ -9927,7 +10374,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Component should render with streaming content
       expect(container).toBeInTheDocument();
@@ -9957,7 +10406,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="advanced" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
 
       // Should render with builder header
       expect(container).toBeInTheDocument();
@@ -9968,9 +10419,13 @@ describe('Chat', () => {
   describe('mentorSettings behavior', () => {
     it('should handle preview mode with visiting tenant', async () => {
       const { useVisitingTenant } = await import('@/hooks/use-user');
-      (useVisitingTenant as any).mockReturnValue({ visitingTenant: 'other-tenant' });
+      (useVisitingTenant as any).mockReturnValue({
+        visitingTenant: 'other-tenant',
+      });
 
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       (useMentorSettings as any).mockReturnValue({
         data: {
           allowAnonymous: false,
@@ -9999,7 +10454,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10016,7 +10473,9 @@ describe('Chat', () => {
 
   describe('artifact streaming events', () => {
     it('should handle artifact-stream-start event', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10066,7 +10525,9 @@ describe('Chat', () => {
     });
 
     it('should handle artifact-stream-end event', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10127,7 +10588,9 @@ describe('Chat', () => {
         userAgreement: { content: 'Test agreement' },
         hasUserAgreement: true,
         handleDisclaimerAgree: mockHandleDisclaimerAgree,
-        checkAgreementAndExecute: vi.fn((content: string, fn: (c: string) => void) => fn(content)),
+        checkAgreementAndExecute: vi.fn(
+          (content: string, fn: (c: string) => void) => fn(content),
+        ),
         executePendingSubmit: vi.fn(),
       });
 
@@ -10152,7 +10615,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10163,7 +10628,9 @@ describe('Chat', () => {
         userAgreement: null,
         hasUserAgreement: false,
         handleDisclaimerAgree: vi.fn(),
-        checkAgreementAndExecute: vi.fn((content: string, fn: (c: string) => void) => fn(content)),
+        checkAgreementAndExecute: vi.fn(
+          (content: string, fn: (c: string) => void) => fn(content),
+        ),
         executePendingSubmit: vi.fn(),
       });
     });
@@ -10172,7 +10639,10 @@ describe('Chat', () => {
   describe('cached session ID handling', () => {
     it('should use cached session ID when available', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
-      (useLocalStorage as any).mockReturnValue([{ 'mentor-123': 'cached-session-456' }, vi.fn()]);
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session-456' },
+        vi.fn(),
+      ]);
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -10195,7 +10665,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10235,7 +10707,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10248,7 +10722,9 @@ describe('Chat', () => {
 
   describe('artifact stream with isUpdate', () => {
     it('should handle artifact stream start with isUpdate true', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10297,7 +10773,9 @@ describe('Chat', () => {
     });
 
     it('should handle artifact stream end with isUpdate true', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10353,7 +10831,9 @@ describe('Chat', () => {
 
   describe('artifact stream with artifactId', () => {
     it('should handle artifact stream start with new artifact (no isUpdate)', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10390,7 +10870,10 @@ describe('Chat', () => {
       });
 
       // Set desktop width for canvas to show
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1024,
+        writable: true,
+      });
 
       renderWithRedux(<Chat mode="advanced" isPreviewMode={false} />);
 
@@ -10442,7 +10925,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10478,7 +10963,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Rerender with no messages
       (useAdvancedChat as any).mockReturnValue({
@@ -10614,7 +11101,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10656,18 +11145,23 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: false },
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
       // Clean up
       delete (window as unknown as Record<string, unknown>).__TAURI__;
-      delete (window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__;
+      delete (window as unknown as Record<string, unknown>)
+        .__TAURI_OFFLINE_MODE__;
     });
 
     it('should handle Tauri offline mode via localStorage', async () => {
@@ -10700,7 +11194,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       expect(container).toBeInTheDocument();
 
@@ -10722,10 +11218,18 @@ describe('Chat', () => {
       });
 
       // Mock navigator.onLine to be false
-      const originalOnLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
-      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+      const originalOnLine = Object.getOwnPropertyDescriptor(
+        Navigator.prototype,
+        'onLine',
+      );
+      Object.defineProperty(navigator, 'onLine', {
+        value: false,
+        configurable: true,
+      });
 
-      let capturedErrorHandler: ((message: string, error?: Error) => Promise<void>) | null = null;
+      let capturedErrorHandler:
+        | ((message: string, error?: Error) => Promise<void>)
+        | null = null;
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockImplementation((options: any) => {
@@ -10751,7 +11255,9 @@ describe('Chat', () => {
         };
       });
 
-      const { useServiceWorker } = await import('@/components/service-worker-provider');
+      const { useServiceWorker } = await import(
+        '@/components/service-worker-provider'
+      );
       (useServiceWorker as any).mockReturnValue({
         status: { isOnline: false },
       });
@@ -10762,9 +11268,9 @@ describe('Chat', () => {
 
       // Call the error handler
       if (capturedErrorHandler) {
-        await (capturedErrorHandler as (msg: string, err?: Error) => Promise<void>)(
-          'Test error in offline Tauri',
-        );
+        await (
+          capturedErrorHandler as (msg: string, err?: Error) => Promise<void>
+        )('Test error in offline Tauri');
       }
 
       // Verify console.log was called with suppression message
@@ -10785,7 +11291,9 @@ describe('Chat', () => {
 
   describe('canvas with file extensions', () => {
     it('should handle artifact with code file extension', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -10842,9 +11350,13 @@ describe('Chat', () => {
 
   describe('requireUserToJoinTenantOnChat', () => {
     it('should show join tenant message when logged in user is not in tenant and allowAnonymous is false', async () => {
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       // User is logged in
@@ -10895,9 +11407,13 @@ describe('Chat', () => {
     });
 
     it('should show join tenant message with platform name when available', async () => {
-      const { useAdvancedChat, chatActions, useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions, useTenantMetadata } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(true);
@@ -10951,8 +11467,12 @@ describe('Chat', () => {
 
   describe('handleSubmit with anonymous user', () => {
     it('should show login prompt when user is not logged in and anonymous is not allowed', async () => {
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       // User is NOT logged in
@@ -10999,7 +11519,9 @@ describe('Chat', () => {
     it('should allow submission when user is logged in and in tenant', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       const mockSendMessage = vi.fn();
@@ -11050,7 +11572,9 @@ describe('Chat', () => {
     it('should allow submission when allowAnonymous is true even if user not in tenant', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       const mockSendMessage = vi.fn();
@@ -11115,7 +11639,9 @@ describe('Chat', () => {
         userAgreement: { content: 'Test disclaimer content' },
         hasUserAgreement: true,
         handleDisclaimerAgree: mockHandleDisclaimerAgree,
-        checkAgreementAndExecute: vi.fn((content: string, fn: (c: string) => void) => fn(content)),
+        checkAgreementAndExecute: vi.fn(
+          (content: string, fn: (c: string) => void) => fn(content),
+        ),
         executePendingSubmit: mockExecutePendingSubmit,
       });
 
@@ -11165,7 +11691,9 @@ describe('Chat', () => {
 
   describe('onReply callback in canvas split view', () => {
     it('should set replying message and focus textarea when reply is clicked in canvas view', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11269,16 +11797,27 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the chat container and simulate scroll
       const scrollContainer = container.querySelector('.overflow-y-auto');
 
       if (scrollContainer) {
         // Mock scroll properties
-        Object.defineProperty(scrollContainer, 'scrollTop', { value: 0, writable: true });
-        Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1000, writable: true });
-        Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, writable: true });
+        Object.defineProperty(scrollContainer, 'scrollTop', {
+          value: 0,
+          writable: true,
+        });
+        Object.defineProperty(scrollContainer, 'scrollHeight', {
+          value: 1000,
+          writable: true,
+        });
+        Object.defineProperty(scrollContainer, 'clientHeight', {
+          value: 400,
+          writable: true,
+        });
 
         // Fire scroll event
         fireEvent.scroll(scrollContainer);
@@ -11326,7 +11865,9 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Try to find the scroll button (it only shows when scrolled up)
-      const scrollBtn = screen.queryByRole('button', { name: /scroll to bottom/i });
+      const scrollBtn = screen.queryByRole('button', {
+        name: /scroll to bottom/i,
+      });
       if (scrollBtn) {
         fireEvent.click(scrollBtn);
       }
@@ -11335,7 +11876,9 @@ describe('Chat', () => {
 
   describe('normal chat layout ChatMessages onReply', () => {
     it('should handle reply callback in normal chat layout', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11400,7 +11943,9 @@ describe('Chat', () => {
 
   describe('canvas resize functionality', () => {
     it('should handle mouse resize interactions in canvas split view', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11476,7 +12021,9 @@ describe('Chat', () => {
     });
 
     it('should handle resize with parent element', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11534,7 +12081,9 @@ describe('Chat', () => {
 
   describe('artifact stream end with matching streamingArtifactId', () => {
     it('should clear streaming artifact ID when stream ends', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11652,20 +12201,33 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       const scrollContainer = container.querySelector('.overflow-y-auto');
 
       if (scrollContainer) {
         // Mock being scrolled up (not at bottom)
-        Object.defineProperty(scrollContainer, 'scrollTop', { value: 0, configurable: true });
-        Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
-        Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+        Object.defineProperty(scrollContainer, 'scrollTop', {
+          value: 0,
+          configurable: true,
+        });
+        Object.defineProperty(scrollContainer, 'scrollHeight', {
+          value: 2000,
+          configurable: true,
+        });
+        Object.defineProperty(scrollContainer, 'clientHeight', {
+          value: 400,
+          configurable: true,
+        });
 
         fireEvent.scroll(scrollContainer);
 
         await waitFor(() => {
-          const scrollBtn = screen.queryByRole('button', { name: /scroll to bottom/i });
+          const scrollBtn = screen.queryByRole('button', {
+            name: /scroll to bottom/i,
+          });
           if (scrollBtn) {
             fireEvent.click(scrollBtn);
           }
@@ -11676,7 +12238,9 @@ describe('Chat', () => {
 
   describe('onReply in canvas view with promptTextareaRef', () => {
     it('should attempt to focus prompt textarea when reply is clicked', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11752,7 +12316,10 @@ describe('Chat', () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
 
       // Mock cached session to make isNewSession.current = false
-      (useLocalStorage as any).mockReturnValue([{ 'mentor-123': 'cached-session-id' }, vi.fn()]);
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session-id' },
+        vi.fn(),
+      ]);
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -11836,10 +12403,14 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the scrollable container
-      const scrollContainer = container.querySelector('.flex-1.overflow-y-auto');
+      const scrollContainer = container.querySelector(
+        '.flex-1.overflow-y-auto',
+      );
       expect(scrollContainer).toBeInTheDocument();
 
       if (scrollContainer) {
@@ -11875,7 +12446,9 @@ describe('Chat', () => {
       // Wait for state update and button to appear
       await waitFor(
         () => {
-          const scrollButton = screen.queryByRole('button', { name: /scroll to bottom/i });
+          const scrollButton = screen.queryByRole('button', {
+            name: /scroll to bottom/i,
+          });
           if (scrollButton) {
             // Click the button which should call event.stopPropagation and scrollToBottom
             fireEvent.click(scrollButton);
@@ -11977,7 +12550,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Verify normal chat layout is rendered
       expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
@@ -11987,7 +12562,9 @@ describe('Chat', () => {
       expect(chatContainer).toBeInTheDocument();
 
       // Verify accessibility region exists
-      const accessibilityRegion = container.querySelector('[aria-live="polite"]');
+      const accessibilityRegion = container.querySelector(
+        '[aria-live="polite"]',
+      );
       expect(accessibilityRegion).toBeInTheDocument();
     });
 
@@ -12156,7 +12733,9 @@ describe('Chat', () => {
 
   describe('artifact-title-updated event', () => {
     it('should update canvas state title when artifact-title-updated event is received for matching artifact', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12242,7 +12821,9 @@ describe('Chat', () => {
     });
 
     it('should update currentCanvasArtifact when artifact-title-updated event matches', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12362,7 +12943,9 @@ describe('Chat', () => {
 
   describe('artifact stream end clears streaming artifact ID', () => {
     it('should clear streamingArtifactId when artifact-stream-end matches the streaming artifact', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12441,7 +13024,9 @@ describe('Chat', () => {
 
   describe('onReply in canvas split view with messages', () => {
     it('should handle onReply callback in canvas split view with existing messages', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12569,7 +13154,9 @@ describe('Chat', () => {
 
   describe('streaming artifact ID clearing on stream end', () => {
     it('should clear streamingArtifactId when artifact-stream-end matches the streaming artifact', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12606,7 +13193,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       const artifactId = 12345;
 
@@ -12700,7 +13289,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the chat container with onScroll handler
       const chatContainer = container.querySelector('.flex-1.overflow-y-auto');
@@ -12773,7 +13364,9 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Get the chat container
       const chatContainer = container.querySelector('.flex-1.overflow-y-auto');
@@ -12812,7 +13405,9 @@ describe('Chat', () => {
         // Wait and check for scroll button
         await waitFor(
           () => {
-            const scrollButton = screen.queryByRole('button', { name: /scroll to bottom/i });
+            const scrollButton = screen.queryByRole('button', {
+              name: /scroll to bottom/i,
+            });
             if (scrollButton) {
               // Click the button - this should call stopPropagation and scrollToBottom
               fireEvent.click(scrollButton);
@@ -12828,7 +13423,9 @@ describe('Chat', () => {
 
   describe('session change handling', () => {
     it('should close canvas when sessionId changes while canvas is open', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
 
       let sessionId = 'session-1';
@@ -12884,7 +13481,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Open canvas
       fireEvent.click(screen.getByTestId('open-canvas-btn'));
@@ -12910,7 +13509,9 @@ describe('Chat', () => {
 
   describe('scroll restoration in canvas view', () => {
     it('should restore scroll position when canvas is opened with scroll state', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12962,7 +13563,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Get chat container and mock scrollTo method
       const chatContainer = container.querySelector('.overflow-y-auto');
@@ -12985,7 +13588,9 @@ describe('Chat', () => {
     });
 
     it('should handle scroll bounds when target exceeds maxScroll', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13030,7 +13635,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Get chat container and mock scrollTo method
       const chatContainer = container.querySelector('.overflow-y-auto');
@@ -13056,7 +13663,9 @@ describe('Chat', () => {
     it('should disable canvas tool when session changes and artifacts are enabled', async () => {
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
 
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Create a mock that returns changing sessionId
       let currentSessionId = 'session-1';
@@ -13105,7 +13714,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Change sessionId and trigger re-render
       currentSessionId = 'session-2';
@@ -13134,10 +13745,16 @@ describe('Chat', () => {
 
   describe('updateSessionTools error handling', () => {
     it('should handle error when updateSessionTools fails on session change', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const mockUpdateSessionTools = vi.fn().mockRejectedValue(new Error('Failed to update tools'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const mockUpdateSessionTools = vi
+        .fn()
+        .mockRejectedValue(new Error('Failed to update tools'));
 
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       let currentSessionId = 'session-1';
       const mockAdvancedChatFn = vi.fn(() => ({
@@ -13185,7 +13802,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Change sessionId
       currentSessionId = 'session-2';
@@ -13224,7 +13843,9 @@ describe('Chat', () => {
 
   describe('scroll restoration inner branches', () => {
     it('should call scrollTo with targetChat when within bounds', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13276,7 +13897,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find the chat container
       const chatContainer = container.querySelector('.overflow-y-auto');
@@ -13309,8 +13932,16 @@ describe('Chat', () => {
       // Make parent scrollTop writable
       let el: Element | null = chatContainer?.parentElement ?? null;
       while (el && el !== document.documentElement) {
-        Object.defineProperty(el, 'scrollTop', { value: 0, configurable: true, writable: true });
-        Object.defineProperty(el, 'scrollLeft', { value: 0, configurable: true, writable: true });
+        Object.defineProperty(el, 'scrollTop', {
+          value: 0,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(el, 'scrollLeft', {
+          value: 0,
+          configurable: true,
+          writable: true,
+        });
         el = el.parentElement;
       }
 
@@ -13323,7 +13954,9 @@ describe('Chat', () => {
     });
 
     it('should handle body scroll reset when body has non-zero scroll', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13390,7 +14023,9 @@ describe('Chat', () => {
         writable: true,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       const chatContainer = container.querySelector('.overflow-y-auto');
       if (chatContainer) {
@@ -13415,8 +14050,16 @@ describe('Chat', () => {
       // Make parent scrollTop writable with non-zero values
       let el: Element | null = chatContainer?.parentElement ?? null;
       while (el && el !== document.documentElement) {
-        Object.defineProperty(el, 'scrollTop', { value: 50, configurable: true, writable: true });
-        Object.defineProperty(el, 'scrollLeft', { value: 25, configurable: true, writable: true });
+        Object.defineProperty(el, 'scrollTop', {
+          value: 50,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(el, 'scrollLeft', {
+          value: 25,
+          configurable: true,
+          writable: true,
+        });
         el = el.parentElement;
       }
 
@@ -13431,7 +14074,9 @@ describe('Chat', () => {
 
   describe('onReply with promptTextareaRef focus', () => {
     it('should attempt to call focus on promptTextareaRef in canvas split view', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13504,10 +14149,16 @@ describe('Chat', () => {
 
   describe('updateSessionTools error handling', () => {
     it('should handle updateSessionTools rejection when session changes with artifacts enabled', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const mockRejectedUpdateSessionTools = vi.fn().mockRejectedValue(new Error('Update failed'));
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const mockRejectedUpdateSessionTools = vi
+        .fn()
+        .mockRejectedValue(new Error('Update failed'));
 
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // We need to simulate a session change scenario
       // First render with session-1, then session changes to session-2
@@ -13556,7 +14207,9 @@ describe('Chat', () => {
         artifactsEnabled: true,
       });
 
-      const { rerender } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Change session ID
       sessionIdRef = 'session-2';
@@ -13599,7 +14252,9 @@ describe('Chat', () => {
 
   describe('scroll restoration branch coverage', () => {
     it('should handle scroll restoration when maxScroll is greater than 0 and targetChat is within bounds', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13656,7 +14311,9 @@ describe('Chat', () => {
       document.documentElement.scrollTo = vi.fn();
       window.scrollTo = vi.fn();
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Get the chat container and mock scroll properties
       const chatContainer = container.querySelector('.flex-1.overflow-y-auto');
@@ -13676,7 +14333,9 @@ describe('Chat', () => {
   describe('canvas sendMessage callback', () => {
     it('should call sendMessage with activeTab when canvas sends message', async () => {
       const mockSendMessage = vi.fn();
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -13745,7 +14404,9 @@ describe('Chat', () => {
 
   describe('chatAreaMaxWidth calculation', () => {
     it('should use tenant metadata chat_area_size when within valid bounds', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { useTenantMetadata, useAdvancedChat } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Set metadata to a value that is WITHIN valid bounds (600 <= 700 <= 1200)
       (useTenantMetadata as any).mockReturnValue({
@@ -13788,7 +14449,9 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue (MIN boundary) when exactly at MIN', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { useTenantMetadata, useAdvancedChat } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Test with value exactly at MIN boundary - should return sizeValue, not DEFAULT
       (useTenantMetadata as any).mockReturnValue({
@@ -13822,7 +14485,9 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue (MAX boundary) when exactly at MAX', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { useTenantMetadata, useAdvancedChat } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Test with value exactly at MAX boundary - should return sizeValue
       (useTenantMetadata as any).mockReturnValue({
@@ -13856,7 +14521,9 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue within valid mid-range', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const { useTenantMetadata, useAdvancedChat } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Test with a value in the middle of valid range (e.g., 900)
       (useTenantMetadata as any).mockReturnValue({
@@ -14110,7 +14777,9 @@ describe('Chat', () => {
     });
 
     it('should clean up user-select style when resize ends', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
         activeTab: 'chat',
@@ -14157,7 +14826,9 @@ describe('Chat', () => {
       // Store original userSelect value
       const originalUserSelect = document.body.style.userSelect;
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Open canvas to show split view with resize handle
       fireEvent.click(screen.getByTestId('open-canvas-btn'));
@@ -14233,7 +14904,10 @@ describe('Chat', () => {
 
       // Mock window scroll position
       Object.defineProperty(window, 'scrollY', { value: 200, writable: true });
-      Object.defineProperty(window, 'pageYOffset', { value: 200, writable: true });
+      Object.defineProperty(window, 'pageYOffset', {
+        value: 200,
+        writable: true,
+      });
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
@@ -14489,14 +15163,24 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find chat container and mock its scroll properties
-      const chatContainer = container.querySelector('[data-testid="chat-container"]');
+      const chatContainer = container.querySelector(
+        '[data-testid="chat-container"]',
+      );
       if (chatContainer) {
         // Mock scrollable content
-        Object.defineProperty(chatContainer, 'scrollHeight', { value: 2000, configurable: true });
-        Object.defineProperty(chatContainer, 'clientHeight', { value: 500, configurable: true });
+        Object.defineProperty(chatContainer, 'scrollHeight', {
+          value: 2000,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'clientHeight', {
+          value: 500,
+          configurable: true,
+        });
         Object.defineProperty(chatContainer, 'scrollTop', {
           value: 300,
           writable: true,
@@ -14549,14 +15233,24 @@ describe('Chat', () => {
         isLoadingChats: false,
       });
 
-      const { container } = renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
 
       // Find chat container and set up a scenario where saved scroll exceeds max
-      const chatContainer = container.querySelector('[data-testid="chat-container"]');
+      const chatContainer = container.querySelector(
+        '[data-testid="chat-container"]',
+      );
       if (chatContainer) {
         // Mock scrollable content where maxScroll is smaller than saved position
-        Object.defineProperty(chatContainer, 'scrollHeight', { value: 600, configurable: true });
-        Object.defineProperty(chatContainer, 'clientHeight', { value: 500, configurable: true });
+        Object.defineProperty(chatContainer, 'scrollHeight', {
+          value: 600,
+          configurable: true,
+        });
+        Object.defineProperty(chatContainer, 'clientHeight', {
+          value: 500,
+          configurable: true,
+        });
         // maxScroll = 600 - 500 = 100, but saved scroll position might be higher
         Object.defineProperty(chatContainer, 'scrollTop', {
           value: 500,
@@ -14837,7 +15531,9 @@ describe('Chat', () => {
   describe('Strategy 3: getMentorId returns null', () => {
     it('should fall back to mentorIdParam when getMentorId returns null', async () => {
       const { useNavigate } = await import('@/hooks/user-navigate');
-      vi.mocked(useNavigate).mockReturnValue({ getMentorId: vi.fn(() => null) } as any);
+      vi.mocked(useNavigate).mockReturnValue({
+        getMentorId: vi.fn(() => null),
+      } as any);
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -14899,7 +15595,9 @@ describe('Chat', () => {
     it('should show screen share confirmation when chat-action=screen-share in search params', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((key: string) => (key === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((key: string) =>
+          key === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -15156,9 +15854,13 @@ describe('Chat', () => {
 
   describe('Strategy 9: handleSubmit not logged in with null platformName', () => {
     it('should show join tenant message with tenantKey.toUpperCase() when platformName is null', async () => {
-      const { useAdvancedChat, chatActions, useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions, useTenantMetadata } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(true);
@@ -15210,8 +15912,12 @@ describe('Chat', () => {
     });
 
     it('should show login prompt and not call executeSubmit when not logged in, not anonymous, no token', async () => {
-      const { useAdvancedChat, chatActions } = await import('@iblai/iblai-js/web-utils');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useAdvancedChat, chatActions } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(false);
@@ -15262,7 +15968,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'voice-call' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'voice-call' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -15303,7 +16011,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -15408,7 +16118,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
 
       // Close the LiveKitScreenSharing - should call window.close since window.opener is set
@@ -15421,7 +16133,9 @@ describe('Chat', () => {
   describe('Strategy 12: artifactsEnabled on session change', () => {
     it('should call updateSessionTools when session changes and artifactsEnabled is true', async () => {
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useMentorTools as any).mockReturnValue({
         enableWebBrowsing: true,
@@ -15828,7 +16542,9 @@ describe('Chat', () => {
       fireEvent.click(screen.getByTestId('screen-sharing-btn'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('live-kit-screen-sharing')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -15873,7 +16589,9 @@ describe('Chat', () => {
 
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((param: string) => (param === 'chat-action' ? 'screen-share' : null)),
+        get: vi.fn((param: string) =>
+          param === 'chat-action' ? 'screen-share' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -16008,9 +16726,13 @@ describe('Chat', () => {
 
   describe('requireUserToJoinTenantOnChat with null support_email', () => {
     it('should use config.supportEmail() when metadata.support_email is null in join tenant message', async () => {
-      const { useAdvancedChat, chatActions, useTenantContext } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, chatActions, useTenantContext } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const { useUserTenants } = await import('@/hooks/use-user');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(true);
@@ -16062,7 +16784,9 @@ describe('Chat', () => {
   describe('handleSubmit when not logged in but allowAnonymous is true', () => {
     it('should not show login prompt when allowAnonymous is true and user is not logged in', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(false);
@@ -16571,7 +17295,9 @@ describe('Chat', () => {
     it('should not open any dialog when chatAction is an unknown value', async () => {
       const { useSearchParams } = await import('next/navigation');
       (useSearchParams as any).mockReturnValue({
-        get: vi.fn((key: string) => (key === 'chat-action' ? 'unknown-action' : null)),
+        get: vi.fn((key: string) =>
+          key === 'chat-action' ? 'unknown-action' : null,
+        ),
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -16599,7 +17325,9 @@ describe('Chat', () => {
 
       // Neither voice call nor screen share dialog should appear
       expect(screen.queryByText('Confirm Voice Call')).not.toBeInTheDocument();
-      expect(screen.queryByText('Confirm Screen Sharing')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Confirm Screen Sharing'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -16691,7 +17419,9 @@ describe('Chat', () => {
   describe('not logged in with tokenEnabled true (alternative path)', () => {
     it('should not show login prompt when not logged in but token and tokenEnabled are set', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
-      const { useMentorSettings } = await import('@/hooks/use-mentors/use-mentor-settings');
+      const { useMentorSettings } = await import(
+        '@/hooks/use-mentors/use-mentor-settings'
+      );
       const { isLoggedIn } = await import('@/lib/utils');
 
       (isLoggedIn as any).mockReturnValue(false);
@@ -17022,7 +17752,9 @@ describe('Chat', () => {
   describe('onStartNewChat with null mentorId', () => {
     it('should not save cached sessionId when mentorId is null', async () => {
       const { useNavigate } = await import('@/hooks/user-navigate');
-      vi.mocked(useNavigate).mockReturnValue({ getMentorId: vi.fn(() => null) } as any);
+      vi.mocked(useNavigate).mockReturnValue({
+        getMentorId: vi.fn(() => null),
+      } as any);
 
       // Also set mentorIdParam to undefined by adjusting useParams
       const { useParams } = await import('next/navigation');
@@ -17190,7 +17922,9 @@ describe('Chat', () => {
   describe('session change with artifactsEnabled false', () => {
     it('should not call updateSessionTools when session changes and artifactsEnabled is false', async () => {
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useMentorTools as any).mockReturnValue({
         enableWebBrowsing: true,
@@ -17731,7 +18465,9 @@ describe('Chat', () => {
 
   describe('artifact-title-updated past guard (Branch 77)', () => {
     it('should pass through title update guard when artifactId and title are both present', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       (useMentorTools as any).mockReturnValue({
         enableWebBrowsing: true,
@@ -17804,7 +18540,9 @@ describe('Chat', () => {
 
   describe('executeSubmit with canvas open but empty title (Branch 112)', () => {
     it('should use Untitled Artifact fallback when effectiveTitle is empty', async () => {
-      const { useAdvancedChat, useMentorTools } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
       const mockSendMessage = vi.fn();
 
       (useMentorTools as any).mockReturnValue({
@@ -17986,7 +18724,9 @@ describe('Chat', () => {
 
   describe('support_email fallback in errorHandler (Branch 15, 20)', () => {
     it('should use config.supportEmail() fallback when metadata has no support_email', async () => {
-      const { useAdvancedChat, useTenantContext } = await import('@iblai/iblai-js/web-utils');
+      const { useAdvancedChat, useTenantContext } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
 
       // Set up metadata without support_email
       (useTenantContext as any).mockReturnValue({
@@ -18033,6 +18773,142 @@ describe('Chat', () => {
 
       // Component should render without errors in compact mode
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+    });
+  });
+
+  describe('voice call and screen share in canvas view', () => {
+    const setupCanvasView = async () => {
+      const { useAdvancedChat, useMentorTools } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+      });
+      (useMentorTools as any).mockReturnValue({
+        tools: [],
+        updateTools: vi.fn(),
+        errorHandler: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // Open the canvas
+      fireEvent.click(screen.getByTestId('open-canvas-btn'));
+      await waitFor(() => {
+        expect(screen.getByTestId('canvas-view')).toBeInTheDocument();
+      });
+    };
+
+    it('should open phone call modal when voice call is clicked in canvas view', async () => {
+      await setupCanvasView();
+
+      // Two ChatInputForm instances render in canvas view (desktop + mobile md:hidden).
+      // Click the first one (desktop canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-phone-call-btn')[0]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-kit-chat')).toBeInTheDocument();
+      });
+    });
+
+    it('should open screen sharing modal when screen share is clicked in canvas view', async () => {
+      await setupCanvasView();
+
+      // Two ChatInputForm instances render in canvas view (desktop + mobile md:hidden).
+      // Click the first one (desktop canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-screen-sharing-btn')[0]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should open phone call modal when voice call is clicked in mobile canvas view', async () => {
+      await setupCanvasView();
+
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-phone-call-btn')[1]);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-kit-chat')).toBeInTheDocument();
+      });
+    });
+
+    it('should open screen sharing modal when screen share is clicked in mobile canvas view', async () => {
+      await setupCanvasView();
+
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-screen-sharing-btn')[1]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('live-kit-screen-sharing'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should send message to parent in iframe mode when voice call is clicked in canvas view', async () => {
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
+      (isInIframe as any).mockReturnValue(true);
+      mockSelectEnableChatActionsPopup.mockReturnValue(true);
+
+      await setupCanvasView();
+
+      fireEvent.click(screen.getAllByTestId('input-phone-call-btn')[0]);
+
+      expect(sendMessageToParentWebsite).toHaveBeenCalledWith({
+        type: 'MENTOR:CHAT_ACTION_VOICECALL',
+        sessionId: 'session-123',
+      });
+
+      mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    });
+
+    it('should send message to parent in iframe mode when screen share is clicked in canvas view', async () => {
+      const { isInIframe, sendMessageToParentWebsite } = await import(
+        '@/lib/utils'
+      );
+      (isInIframe as any).mockReturnValue(true);
+      mockSelectEnableChatActionsPopup.mockReturnValue(true);
+
+      await setupCanvasView();
+
+      fireEvent.click(screen.getAllByTestId('input-screen-sharing-btn')[0]);
+
+      expect(sendMessageToParentWebsite).toHaveBeenCalledWith({
+        type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+        sessionId: 'session-123',
+      });
+
+      mockSelectEnableChatActionsPopup.mockReturnValue(false);
     });
   });
 });

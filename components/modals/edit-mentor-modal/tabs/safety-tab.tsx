@@ -2,7 +2,10 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
-import { useEditMentorMutation, useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useEditMentorMutation,
+  useGetMentorSettingsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { Edit, Info, AlertTriangle } from 'lucide-react';
 
 const FlaggedPromptsModal = dynamic(
@@ -15,7 +18,12 @@ const FlaggedPromptsModal = dynamic(
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import {
@@ -39,23 +47,31 @@ export function SafetyTab() {
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() || mentorId;
 
-  const [selectedPrompt, setSelectedPrompt] = React.useState<SelectedPrompt | null>(null);
-  const [isFlaggedPromptsModalOpen, setIsFlaggedPromptsModalOpen] = React.useState(false);
+  const [selectedPrompt, setSelectedPrompt] =
+    React.useState<SelectedPrompt | null>(null);
+  const [isFlaggedPromptsModalOpen, setIsFlaggedPromptsModalOpen] =
+    React.useState(false);
 
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } = useGetMentorSettingsQuery(
-    {
-      mentor: activeMentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-    },
-    { skip: !username || !activeMentorId || !tenantKey },
-  );
-  const [editMentor, { isLoading: isEditMentorLoading }] = useEditMentorMutation();
+  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
+    useGetMentorSettingsQuery(
+      {
+        mentor: activeMentorId,
+        org: tenantKey,
+        // @ts-ignore
+        userId: username ?? '',
+      },
+      { skip: !username || !activeMentorId || !tenantKey },
+    );
+  const [editMentor, { isLoading: isEditMentorLoading }] =
+    useEditMentorMutation();
 
   const isDisabled = isMentorSettingsLoading || isEditMentorLoading;
 
-  async function toggleToolSettings(tool: string, value: boolean, callback?: () => void) {
+  async function toggleToolSettings(
+    tool: string,
+    value: boolean,
+    callback?: () => void,
+  ) {
     try {
       await executeWithTrialCheck(async () => {
         await editMentor({
@@ -75,7 +91,10 @@ export function SafetyTab() {
     }
   }
 
-  async function editPrompt(selectedPrompt: SelectedPrompt, value: EditFormValues) {
+  async function editPrompt(
+    selectedPrompt: SelectedPrompt,
+    value: EditFormValues,
+  ) {
     try {
       await editMentor({
         mentor: activeMentorId,
@@ -94,14 +113,16 @@ export function SafetyTab() {
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Safety</h3>
-          <p className="text-gray-700 text-xs">Configure safety and moderation settings.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Safety</h3>
+          <p className="text-xs text-gray-700">
+            Configure safety and moderation settings.
+          </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -117,9 +138,9 @@ export function SafetyTab() {
                 <div className="flex justify-end">
                   <Button
                     onClick={() => setIsFlaggedPromptsModalOpen(true)}
-                    className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90 text-white"
+                    className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                   >
-                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <AlertTriangle className="mr-2 h-4 w-4" />
                     View Flagged Prompts
                   </Button>
                 </div>
@@ -138,7 +159,9 @@ export function SafetyTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Moderation Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Moderation Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about moderation prompt">
@@ -158,12 +181,17 @@ export function SafetyTab() {
                       {({ disabled }) => (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-600">
-                            {mentorSettings?.enable_moderation ? 'Active' : 'Inactive'}
+                            {mentorSettings?.enable_moderation
+                              ? 'Active'
+                              : 'Inactive'}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_moderation}
                             onCheckedChange={async (checked) => {
-                              await toggleToolSettings('enable_moderation', checked);
+                              await toggleToolSettings(
+                                'enable_moderation',
+                                checked,
+                              );
                             }}
                             disabled={isDisabled || disabled}
                             aria-label={`Moderation prompt ${mentorSettings?.enable_moderation ? 'enabled' : 'disabled'}`}
@@ -201,8 +229,9 @@ export function SafetyTab() {
                           label: 'Moderation Prompt',
                           isSystem: true,
                           name: 'moderation_system_prompt',
-                          // @ts-expect-error moderation_system_prompt not in type of mentorSettings
-                          prompt: mentorSettings?.moderation_system_prompt ?? '',
+                          prompt:
+                            // @ts-expect-error moderation_system_prompt not in type of mentorSettings
+                            mentorSettings?.moderation_system_prompt ?? '',
                         })
                       }
                       disabled={isDisabled || disabled}
@@ -230,7 +259,9 @@ export function SafetyTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Safety Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Safety Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about safety prompt">
@@ -250,12 +281,17 @@ export function SafetyTab() {
                       {({ disabled }) => (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-600">
-                            {mentorSettings?.enable_safety_system ? 'Active' : 'Inactive'}
+                            {mentorSettings?.enable_safety_system
+                              ? 'Active'
+                              : 'Inactive'}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_safety_system}
                             onCheckedChange={async (checked) => {
-                              await toggleToolSettings('enable_safety_system', checked);
+                              await toggleToolSettings(
+                                'enable_safety_system',
+                                checked,
+                              );
                             }}
                             disabled={isDisabled || disabled}
                             aria-label={`Safety prompt ${mentorSettings?.enable_safety_system ? 'enabled' : 'disabled'}`}
@@ -275,8 +311,10 @@ export function SafetyTab() {
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
-                          {/* @ts-expect-error safety_system_prompt not in type of mentorSettings */}
-                          {parsePrompt(mentorSettings?.safety_system_prompt ?? '')}
+                          {parsePrompt(
+                            // @ts-expect-error safety_system_prompt not in type of mentorSettings
+                            mentorSettings?.safety_system_prompt ?? '',
+                          )}
                         </Markdown>
                       </div>
                     </div>
@@ -320,7 +358,9 @@ export function SafetyTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Moderation Response</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Moderation Response
+                      </h3>
                     </div>
                   </div>
                   <div className="flex items-start gap-2 p-4">
@@ -334,8 +374,10 @@ export function SafetyTab() {
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
-                          {/* @ts-expect-error moderation_system_prompt not in type of mentorSettings */}
-                          {parsePrompt(mentorSettings?.moderation_response ?? '')}
+                          {parsePrompt(
+                            //  @ts-expect-error moderation_response not in type of mentorSettings
+                            mentorSettings?.moderation_response ?? '',
+                          )}
                         </Markdown>
                       </div>
                     </div>
@@ -379,7 +421,9 @@ export function SafetyTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Safety Response</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Safety Response
+                      </h3>
                     </div>
                   </div>
                   <div className="flex items-start gap-2 p-4">

@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { DisclaimersTab } from './index';
@@ -35,8 +41,14 @@ vi.mock('@/hooks/user-navigate', () => ({
 // Mock data-layer
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
-  useCreateDisclaimerMutation: () => [mockCreateDisclaimer, { isLoading: false }],
-  useUpdateDisclaimerMutation: () => [mockUpdateDisclaimer, { isLoading: false }],
+  useCreateDisclaimerMutation: () => [
+    mockCreateDisclaimer,
+    { isLoading: false },
+  ],
+  useUpdateDisclaimerMutation: () => [
+    mockUpdateDisclaimer,
+    { isLoading: false },
+  ],
   useGetMentorSettingsQuery: () => mockGetMentorSettingsQuery(),
   useGetDisclaimersQuery: () => mockGetDisclaimersQuery(),
 }));
@@ -69,11 +81,19 @@ vi.mock('next/dynamic', () => ({
         // This is EditUserAgreementModal
         return props.open ? (
           <div data-testid="edit-user-agreement-modal">
-            <button onClick={() => props.onSave('Updated user agreement')}>Save</button>
-            <button onClick={() => props.onSave(null)} data-testid="save-null-content">
+            <button onClick={() => props.onSave('Updated user agreement')}>
+              Save
+            </button>
+            <button
+              onClick={() => props.onSave(null)}
+              data-testid="save-null-content"
+            >
               Save Null
             </button>
-            <button onClick={props.onCancel} data-testid="cancel-user-agreement">
+            <button
+              onClick={props.onCancel}
+              data-testid="cancel-user-agreement"
+            >
               Cancel
             </button>
           </div>
@@ -82,7 +102,9 @@ vi.mock('next/dynamic', () => ({
         // This is EditDisclaimerModal
         return props.open ? (
           <div data-testid="edit-disclaimer-modal">
-            <button onClick={() => props.onSave('Updated advisory')}>Save</button>
+            <button onClick={() => props.onSave('Updated advisory')}>
+              Save
+            </button>
             <button onClick={props.onCancel} data-testid="cancel-disclaimer">
               Cancel
             </button>
@@ -131,9 +153,12 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button', () => ({
-  CopyButton: () => <button>Copy</button>,
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button',
+  () => ({
+    CopyButton: () => <button>Copy</button>,
+  }),
+);
 
 vi.mock('@/hoc/withPermissions', () => ({
   default: ({ children }: any) => children({ disabled: false }),
@@ -158,12 +183,19 @@ describe('DisclaimersTab', () => {
     mockGetDisclaimersQuery.mockReset();
     mockGetMentorSettingsQuery.mockReset();
     mockUsername = 'testuser';
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
     mockGetMentorId.mockReturnValue(null);
 
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockCreateDisclaimer.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockUpdateDisclaimer.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+    mockCreateDisclaimer.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockUpdateDisclaimer.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
 
     // Default query returns
     mockGetMentorSettingsQuery.mockReturnValue({
@@ -280,7 +312,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(userAgreementEditButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -295,7 +329,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(advisoryEditButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -313,7 +349,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -352,7 +390,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -393,14 +433,18 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update user agreement');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update user agreement',
+        );
       });
     });
   });
@@ -413,7 +457,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[1]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -440,7 +486,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[1]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -488,7 +536,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[1]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -625,7 +675,9 @@ describe('DisclaimersTab', () => {
 
   describe('toggleUserAgreement error handling', () => {
     it('handles error when updating existing disclaimer fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const mockError = new Error('Toggle failed');
       mockUpdateDisclaimer.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(mockError),
@@ -650,14 +702,18 @@ describe('DisclaimersTab', () => {
       fireEvent.click(toggle);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update user agreement');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update user agreement',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('handles error when creating new disclaimer fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const mockError = new Error('Create failed');
       mockCreateDisclaimer.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(mockError),
@@ -674,7 +730,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(toggle);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update user agreement');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update user agreement',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -689,14 +747,18 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[1]); // Advisory edit button
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
 
       const cancelButton = screen.getByTestId('cancel-disclaimer');
       fireEvent.click(cancelButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -707,14 +769,18 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]); // User agreement edit button
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const cancelButton = screen.getByTestId('cancel-user-agreement');
       fireEvent.click(cancelButton);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -740,7 +806,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(toggle);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('User agreement enabled successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'User agreement enabled successfully',
+        );
       });
     });
 
@@ -764,7 +832,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(toggle);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('User agreement disabled successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'User agreement disabled successfully',
+        );
       });
     });
   });
@@ -790,18 +860,24 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('User agreement updated successfully');
+        expect(toast.success).toHaveBeenCalledWith(
+          'User agreement updated successfully',
+        );
       });
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -912,7 +988,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       // This tests the content ?? DEFAULT_DISCLAIMER_CONTENT branch
@@ -982,7 +1060,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -1066,7 +1146,9 @@ describe('DisclaimersTab', () => {
 
       render(<DisclaimersTab />);
 
-      expect(screen.getByLabelText('User agreement enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('User agreement enabled'),
+      ).toBeInTheDocument();
     });
 
     it('shows disabled aria-label when inactive', () => {
@@ -1085,7 +1167,9 @@ describe('DisclaimersTab', () => {
 
       render(<DisclaimersTab />);
 
-      expect(screen.getByLabelText('User agreement disabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('User agreement disabled'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -1106,7 +1190,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[1]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-disclaimer-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-disclaimer-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -1131,7 +1217,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -1168,7 +1256,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       const saveButton = screen.getByText('Save');
@@ -1279,7 +1369,9 @@ describe('DisclaimersTab', () => {
       fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('edit-user-agreement-modal')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('edit-user-agreement-modal'),
+        ).toBeInTheDocument();
       });
 
       // Click the "Save Null" button which passes null content

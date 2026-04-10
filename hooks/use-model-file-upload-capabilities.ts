@@ -70,7 +70,13 @@ export function useModelFileUploadCapabilities(): FileUploadCapabilities {
       supportsFileUpload: true,
       supportsImages: true,
       supportsDocuments: true,
-      supportedImageTypes: ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      supportedImageTypes: [
+        'image/jpg',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ],
       supportedDocumentTypes: ['text/plain', 'application/pdf'],
       allSupportedTypes: [
         'image/jpg',
@@ -95,11 +101,19 @@ export function useModelFileUploadCapabilities(): FileUploadCapabilities {
       const provider = llmProvider.toLowerCase();
       if (provider === 'openai' || provider === 'google') {
         // If llm_config exists and has multimodal_capabilities, use those
-        if (llmConfig?.is_multimodal && llmConfig.multimodal_capabilities?.supports_file_uploads) {
+        if (
+          llmConfig?.is_multimodal &&
+          llmConfig.multimodal_capabilities?.supports_file_uploads
+        ) {
           const capabilities = llmConfig.multimodal_capabilities;
-          const supportedImageTypes = capabilities.supported_file_types?.images || [];
-          const supportedDocumentTypes = capabilities.supported_file_types?.documents || [];
-          const allSupportedTypes = [...supportedImageTypes, ...supportedDocumentTypes];
+          const supportedImageTypes =
+            capabilities.supported_file_types?.images || [];
+          const supportedDocumentTypes =
+            capabilities.supported_file_types?.documents || [];
+          const allSupportedTypes = [
+            ...supportedImageTypes,
+            ...supportedDocumentTypes,
+          ];
 
           return {
             supportsFileUpload: true,
@@ -138,8 +152,12 @@ export function useModelFileUploadCapabilities(): FileUploadCapabilities {
 
     // Extract supported file types
     const supportedImageTypes = capabilities.supported_file_types?.images || [];
-    const supportedDocumentTypes = capabilities.supported_file_types?.documents || [];
-    const allSupportedTypes = [...supportedImageTypes, ...supportedDocumentTypes];
+    const supportedDocumentTypes =
+      capabilities.supported_file_types?.documents || [];
+    const allSupportedTypes = [
+      ...supportedImageTypes,
+      ...supportedDocumentTypes,
+    ];
 
     return {
       supportsFileUpload: true,

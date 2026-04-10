@@ -43,7 +43,9 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
     types: null,
     is_featured: null,
   });
-  const [togglingMentorId, setTogglingMentorId] = React.useState<string | null>(null);
+  const [togglingMentorId, setTogglingMentorId] = React.useState<string | null>(
+    null,
+  );
 
   const username = useUsername();
   const { navigateToMentor } = useNavigate();
@@ -51,11 +53,12 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   const { metadata } = useTenantMetadata({ org: tenantKey });
 
   // createdBy starts as null - when community mentors is enabled, null means "show all"
-  const [createdBy, setCreatedBy] = React.useState<'me' | 'my-organization' | 'community' | null>(
-    null,
-  );
+  const [createdBy, setCreatedBy] = React.useState<
+    'me' | 'my-organization' | 'community' | null
+  >(null);
 
-  const communityMentorsEnabled = metadata?.mentor_include_community_mentors !== false;
+  const communityMentorsEnabled =
+    metadata?.mentor_include_community_mentors !== false;
 
   // Determine effective tenant key based on createdBy
   // - createdBy null: current tenant key (with include_main_public_mentors=true if community enabled)
@@ -74,10 +77,13 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   // Check if user is actively searching
   const isSearching = debouncedSearch.length > 0;
 
-  const [starredMentorsLoading, setStarredMentorsLoading] = React.useState(false);
+  const [starredMentorsLoading, setStarredMentorsLoading] =
+    React.useState(false);
   const [customMentorsLoading, setCustomMentorsLoading] = React.useState(false);
-  const [featuredMentorsLoading, setFeaturedMentorsLoading] = React.useState(false);
-  const [defaultMentorsLoading, setDefaultMentorsLoading] = React.useState(false);
+  const [featuredMentorsLoading, setFeaturedMentorsLoading] =
+    React.useState(false);
+  const [defaultMentorsLoading, setDefaultMentorsLoading] =
+    React.useState(false);
 
   // Determine include_main_public_mentors based on createdBy and metadata
   // - createdBy null + community enabled: true (show all including community)
@@ -125,7 +131,8 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   );
 
   const hasCustomMentors =
-    Array.isArray(customMentorsData?.results) && customMentorsData.results.length > 0;
+    Array.isArray(customMentorsData?.results) &&
+    customMentorsData.results.length > 0;
 
   // Star/Unstar mutations
   const [starMentor] = useStarMentorMutation();
@@ -183,9 +190,12 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
     [navigateToMentor],
   );
 
-  const handleFiltersChange = React.useCallback((newFilters: ExplorePageFilters) => {
-    setFilters(newFilters);
-  }, []);
+  const handleFiltersChange = React.useCallback(
+    (newFilters: ExplorePageFilters) => {
+      setFilters(newFilters);
+    },
+    [],
+  );
 
   const handleCreatedByChange = React.useCallback(
     (newCreatedBy: 'me' | 'my-organization' | 'community' | null) => {
@@ -220,27 +230,27 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
       <div className="flex h-full overflow-hidden">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
         >
           Skip to main content
         </a>
         <div
-          className="flex-1 overflow-y-auto scrollbar-hide"
+          className="scrollbar-hide flex-1 overflow-y-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           id="main-content"
           aria-label="Mentor exploration page"
         >
-          <div className="px-3 md:px-6 py-6 md:py-8 max-w-[920px] mx-auto">
-            <div className="text-center mb-6">
-              <div className="w-full mx-auto">
-                <h1 className="text-lg md:text-xl font-medium mb-6 leading-relaxed text-gray-600">
+          <div className="mx-auto max-w-[920px] px-3 py-6 md:px-6 md:py-8">
+            <div className="mb-6 text-center">
+              <div className="mx-auto w-full">
+                <h1 className="mb-6 text-lg leading-relaxed font-medium text-gray-600 md:text-xl">
                   Discover and create academic mentors that combine{' '}
                   <br className="hidden md:block" />
                   subject expertise, educational resources, and teaching skills
                 </h1>
               </div>
 
-              <div className="w-full mb-6">
+              <div className="mb-6 w-full">
                 <div className="relative">
                   <label htmlFor="mentor-search" className="sr-only">
                     Search mentors
@@ -251,12 +261,12 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
                     featuredMentorsLoading ||
                     defaultMentorsLoading) ? (
                     <Loader2
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#38A1E5] w-5 h-5 animate-spin"
+                      className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform animate-spin text-[#38A1E5]"
                       aria-hidden="true"
                     />
                   ) : (
                     <Search
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
+                      className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400"
                       aria-hidden="true"
                     />
                   )}
@@ -265,43 +275,45 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
                     placeholder="Search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 text-base border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full rounded-lg border-gray-300 py-3 pr-4 pl-12 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                     aria-label="Search mentors"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="max-w-6xl mx-auto">
-              <div className="flex justify-start mb-6 sticky top-0 bg-white z-10 py-2">
+            <div className="mx-auto max-w-6xl">
+              <div className="sticky top-0 z-10 mb-6 flex justify-start bg-white py-2">
                 <MentorCategories
                   facets={facets}
-                  showCreatedByFilter={metadata?.mentor_include_community_mentors !== false}
+                  showCreatedByFilter={
+                    metadata?.mentor_include_community_mentors !== false
+                  }
                   onFiltersChange={handleFiltersChange}
                   onCreatedByChange={handleCreatedByChange}
                   includeMeToCreatedByFilter={hasCustomMentors}
                 />
               </div>
-              <div className="border-b border-gray-200 mb-6"></div>
+              <div className="mb-6 border-b border-gray-200"></div>
             </div>
 
             {showOnlyCustomMentors ? (
-              <div className="max-w-[920px] mx-auto pb-32">
+              <div className="mx-auto max-w-[920px] pb-32">
                 <CustomMentorsSection />
               </div>
             ) : isSearching ? (
-              <div className="max-w-[920px] mx-auto pb-32">
+              <div className="mx-auto max-w-[920px] pb-32">
                 <DefaultMentorsSection />
               </div>
             ) : (
               <>
-                <div className="max-w-[920px] mx-auto mb-8 space-y-8">
+                <div className="mx-auto mb-8 max-w-[920px] space-y-8">
                   <StarredMentorsSection />
                   <FeaturedMentorsSection />
                   <CustomMentorsSection />
                 </div>
 
-                <div className="max-w-[920px] mx-auto pb-32">
+                <div className="mx-auto max-w-[920px] pb-32">
                   <DefaultMentorsSection />
                 </div>
               </>

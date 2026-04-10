@@ -35,7 +35,9 @@ export function useChatFileUpload({
 }: UseChatFileUploadProps) {
   const dispatch = useAppDispatch();
   const sessionId = useAppSelector(selectSessionId);
-  const attachedFiles = useAppSelector((state: RootState) => state.files.attachedFiles);
+  const attachedFiles = useAppSelector(
+    (state: RootState) => state.files.attachedFiles,
+  );
   const filesMapRef = useRef<Map<string, File>>(new Map());
 
   const [getFileUploadUrl] = useGetFileUploadUrlMutation();
@@ -126,15 +128,17 @@ export function useChatFileUpload({
 
     dispatch(
       addFiles(
-        filesWithIds.map(({ id, file, uploadProgress, uploadStatus, uploadUrl }) => ({
-          id,
-          fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size,
-          uploadProgress,
-          uploadStatus,
-          uploadUrl,
-        })),
+        filesWithIds.map(
+          ({ id, file, uploadProgress, uploadStatus, uploadUrl }) => ({
+            id,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            uploadProgress,
+            uploadStatus,
+            uploadUrl,
+          }),
+        ),
       ),
     );
 
@@ -183,10 +187,15 @@ export function useChatFileUpload({
           dispatch(updateFileStatus({ id: fileId, status: 'uploading' }));
 
           // Step 4: Upload to S3 with progress tracking
-          await uploadToS3(response!.upload_url, file, file.type, (progress) => {
-            // Step 5: Update progress in Redux state
-            dispatch(updateFileProgress({ id: fileId, progress }));
-          });
+          await uploadToS3(
+            response!.upload_url,
+            file,
+            file.type,
+            (progress) => {
+              // Step 5: Update progress in Redux state
+              dispatch(updateFileProgress({ id: fileId, progress }));
+            },
+          );
 
           // Update status to 'success' when upload completes
           dispatch(updateFileStatus({ id: fileId, status: 'success' }));
@@ -256,7 +265,15 @@ export function useChatFileUpload({
         errorHandler?.(`Failed to retry upload for ${file.name}`);
       }
     },
-    [attachedFiles, dispatch, errorHandler, getFileUploadUrl, org, sessionId, userId],
+    [
+      attachedFiles,
+      dispatch,
+      errorHandler,
+      getFileUploadUrl,
+      org,
+      sessionId,
+      userId,
+    ],
   );
 
   return { uploadFiles, retryUpload };

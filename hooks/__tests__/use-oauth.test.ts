@@ -45,9 +45,9 @@ describe('useOAuth', () => {
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    await expect(result.current.authenticate('https://oauth.example.com')).rejects.toThrow(
-      'OAuth is only supported in Tauri mobile apps',
-    );
+    await expect(
+      result.current.authenticate('https://oauth.example.com'),
+    ).rejects.toThrow('OAuth is only supported in Tauri mobile apps');
   });
 
   it('should start OAuth flow and poll for result', async () => {
@@ -60,7 +60,9 @@ describe('useOAuth', () => {
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com');
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+    );
 
     // Fast-forward through polling intervals
     await act(async () => {
@@ -71,7 +73,9 @@ describe('useOAuth', () => {
 
     const oauthResult = await authenticatePromise;
 
-    expect(invoke).toHaveBeenCalledWith('oauth_start', { url: 'https://oauth.example.com' });
+    expect(invoke).toHaveBeenCalledWith('oauth_start', {
+      url: 'https://oauth.example.com',
+    });
     expect(invoke).toHaveBeenCalledWith('oauth_get_result');
     expect(oauthResult).toEqual({
       url: 'https://callback.example.com?code=abc123',
@@ -87,7 +91,9 @@ describe('useOAuth', () => {
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com');
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(500);
@@ -104,12 +110,16 @@ describe('useOAuth', () => {
   it('should parse access token from hash fragment', async () => {
     invoke
       .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce('https://callback.example.com#access_token=test-token-456');
+      .mockResolvedValueOnce(
+        'https://callback.example.com#access_token=test-token-456',
+      );
 
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com');
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(500);
@@ -126,12 +136,16 @@ describe('useOAuth', () => {
   it('should parse token from query param', async () => {
     invoke
       .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce('https://callback.example.com?token=query-token-789');
+      .mockResolvedValueOnce(
+        'https://callback.example.com?token=query-token-789',
+      );
 
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com');
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(500);
@@ -148,12 +162,16 @@ describe('useOAuth', () => {
   it('should parse error from callback URL', async () => {
     invoke
       .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce('https://callback.example.com?error=access_denied');
+      .mockResolvedValueOnce(
+        'https://callback.example.com?error=access_denied',
+      );
 
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com');
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(500);
@@ -173,7 +191,10 @@ describe('useOAuth', () => {
     const { useOAuth } = await import('../use-oauth');
     const { result } = renderHook(() => useOAuth());
 
-    const authenticatePromise = result.current.authenticate('https://oauth.example.com', 2000);
+    const authenticatePromise = result.current.authenticate(
+      'https://oauth.example.com',
+      2000,
+    );
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2500);
@@ -198,7 +219,9 @@ describe('useOAuth', () => {
     let authenticatePromise: Promise<any>;
 
     await act(async () => {
-      authenticatePromise = result.current.authenticate('https://oauth.example.com');
+      authenticatePromise = result.current.authenticate(
+        'https://oauth.example.com',
+      );
     });
 
     // Should be authenticating now
@@ -269,7 +292,9 @@ describe('useOAuth', () => {
     let authenticatePromise: Promise<any>;
 
     await act(async () => {
-      authenticatePromise = result.current.authenticate('https://oauth.example.com');
+      authenticatePromise = result.current.authenticate(
+        'https://oauth.example.com',
+      );
     });
 
     // Fast-forward just under 60 seconds

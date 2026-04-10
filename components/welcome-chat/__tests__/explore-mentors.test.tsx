@@ -41,8 +41,10 @@ const mockUseGetAiSearchMentorsQuery = vi.fn();
 const mockUseGetPublicMentorsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetAiSearchMentorsQuery: (...args: unknown[]) => mockUseGetAiSearchMentorsQuery(...args),
-  useGetPublicMentorsQuery: (...args: unknown[]) => mockUseGetPublicMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
+  useGetPublicMentorsQuery: (...args: unknown[]) =>
+    mockUseGetPublicMentorsQuery(...args),
 }));
 
 // Mock date-fns
@@ -114,7 +116,9 @@ describe('ExploreMentors', () => {
     it('renders mentor descriptions', () => {
       render(<ExploreMentors />);
 
-      expect(screen.getByText('A helpful AI mentor for testing')).toBeInTheDocument();
+      expect(
+        screen.getByText('A helpful AI mentor for testing'),
+      ).toBeInTheDocument();
       expect(screen.getByText('Another great mentor')).toBeInTheDocument();
     });
 
@@ -461,7 +465,9 @@ describe('ExploreMentors', () => {
 
       render(<ExploreMentors />);
 
-      expect(screen.getAllByText('No description available').length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByText('No description available').length,
+      ).toBeGreaterThan(0);
     });
   });
 

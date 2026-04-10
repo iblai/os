@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentSidebar } from '@/components/document-sidebar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useGetVectorDocumentsQuery } from '@iblai/iblai-js/data-layer';
 import { useParams } from 'next/navigation';
 import { isLoggedIn } from '@/lib/utils';

@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -11,14 +16,31 @@ import {
   selectModalMentorId,
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
-import { ANONYMOUS_USERNAME, LOCAL_STORAGE_KEYS, MODALS, UserType } from '@/lib/constants';
+import {
+  ANONYMOUS_USERNAME,
+  LOCAL_STORAGE_KEYS,
+  MODALS,
+  UserType,
+} from '@/lib/constants';
 import { AppDispatch } from '@/store';
-import { ChartLine, Globe2, Mail, PenSquare, CirclePlus, Settings, LucideMail } from 'lucide-react';
+import {
+  ChartLine,
+  Globe2,
+  Mail,
+  PenSquare,
+  CirclePlus,
+  Settings,
+  LucideMail,
+  Workflow,
+} from 'lucide-react';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { config } from '@/lib/config';
 import { useUsername } from './use-user';
-import { useGetMentorPublicSettingsQuery, useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetMentorPublicSettingsQuery,
+  useGetMentorSettingsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { useShowFreeTrialDialog } from './user-user-actions';
 import { clearFiles } from '@iblai/iblai-js/web-utils';
@@ -26,7 +48,10 @@ import { useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useLocalStorage } from './use-local-storage';
 
 // Helper to deeply compare modal stacks
-const areModalStacksEqual = (stackA: ModalInfo[], stackB: ModalInfo[]): boolean => {
+const areModalStacksEqual = (
+  stackA: ModalInfo[],
+  stackB: ModalInfo[],
+): boolean => {
   if (stackA.length !== stackB.length) return false;
   // Simple stringify comparison. For more complex scenarios, a more robust deep equal function might be needed.
   return JSON.stringify(stackA) === JSON.stringify(stackB);
@@ -35,7 +60,9 @@ export function useNavigate() {
   const router = useRouter();
   const pathname = usePathname();
   const { setDetermineUserPath } = useTenantContext();
-  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<Record<string, string>>(
+  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
+    Record<string, string>
+  >(
     LOCAL_STORAGE_KEYS.SESSION_ID,
     {},
     { deserializer: (value) => JSON.parse(value) },
@@ -44,7 +71,11 @@ export function useNavigate() {
   const username = useUsername();
   const searchParams = useSearchParams();
   const isAccessingPublicRoute = !!searchParams.get('token');
-  const params = useParams<{ tenantKey?: string; mentorId?: string; projectId?: string }>(); // Make params potentially undefined
+  const params = useParams<{
+    tenantKey?: string;
+    mentorId?: string;
+    projectId?: string;
+  }>(); // Make params potentially undefined
   const tenantKey = params?.tenantKey;
   const projectId = params?.projectId;
   const mentorIdFromParams = params?.mentorId;
@@ -57,7 +88,11 @@ export function useNavigate() {
       userId: username ?? '',
     },
     {
-      skip: !mentorIdFromParams || !tenantKey || !username || isAccessingPublicRoute,
+      skip:
+        !mentorIdFromParams ||
+        !tenantKey ||
+        !username ||
+        isAccessingPublicRoute,
     },
   );
   const dispatch = useDispatch<AppDispatch>();
@@ -73,7 +108,9 @@ export function useNavigate() {
       // Ensure it's an array of objects with at least a 'name' property
       if (
         Array.isArray(parsed) &&
-        parsed.every((item) => typeof item === 'object' && item !== null && 'name' in item)
+        parsed.every(
+          (item) => typeof item === 'object' && item !== null && 'name' in item,
+        )
       ) {
         return parsed;
       }
@@ -89,7 +126,10 @@ export function useNavigate() {
         // Single object not in array
         return [parsed as ModalInfo];
       }
-      console.warn('Invalid modal stack format in URL, defaulting to empty.', modalParam);
+      console.warn(
+        'Invalid modal stack format in URL, defaulting to empty.',
+        modalParam,
+      );
       return [];
     } catch (error) {
       console.error('Error parsing modal stack from URL:', error);
@@ -143,7 +183,9 @@ export function useNavigate() {
     (paramsToUpdate: Record<string, string | null>) => {
       const newSearchParams = createSearchParams(paramsToUpdate);
       const searchString = newSearchParams.toString();
-      const targetPath = searchString ? `${pathname}?${searchString}` : pathname;
+      const targetPath = searchString
+        ? `${pathname}?${searchString}`
+        : pathname;
       router.push(targetPath);
     },
     [pathname, router, createSearchParams],
@@ -206,14 +248,18 @@ export function useNavigate() {
     (modalName: string): boolean => {
       // This function is called by the boolean flags below.
       // It subscribes to Redux state.
-      return currentModalStackFromRedux.some((modal) => modal.name === modalName);
+      return currentModalStackFromRedux.some(
+        (modal) => modal.name === modalName,
+      );
     },
     [currentModalStackFromRedux], // Depends on the current stack from Redux
   );
 
   const getModalTab = useCallback(
     (modalName: string): string | undefined => {
-      const modal = currentModalStackFromRedux.find((m) => m.name === modalName);
+      const modal = currentModalStackFromRedux.find(
+        (m) => m.name === modalName,
+      );
       return modal?.tab;
     },
     [currentModalStackFromRedux], // Depends on the current stack from Redux
@@ -236,7 +282,9 @@ export function useNavigate() {
       } else if (tenantKey) {
         router.push(`/platform/${tenantKey}`);
       } else {
-        console.warn('Cannot navigate to home: tenantKey or mentorId missing from URL params.');
+        console.warn(
+          'Cannot navigate to home: tenantKey or mentorId missing from URL params.',
+        );
         // router.push('/'); // Fallback to a generic home if needed
       }
     },
@@ -248,7 +296,9 @@ export function useNavigate() {
       } else if (tenantKey) {
         router.push(`/platform/${tenantKey}/explore`);
       } else {
-        console.warn('Cannot navigate to explore: tenantKey or mentorId missing from URL params.');
+        console.warn(
+          'Cannot navigate to explore: tenantKey or mentorId missing from URL params.',
+        );
       }
     },
     navigateToAnalytics: () => {
@@ -262,7 +312,11 @@ export function useNavigate() {
         );
       }
     },
-    navigateToMentor: (newMentorId: string, prependStackParam?: string, newTenantKey?: string) => {
+    navigateToMentor: (
+      newMentorId: string,
+      prependStackParam?: string,
+      newTenantKey?: string,
+    ) => {
       const tenantKeyToUse = newTenantKey || tenantKey;
       if (tenantKeyToUse) {
         const newCachedSessionId = { ...cachedSessionId };
@@ -277,22 +331,31 @@ export function useNavigate() {
             : '';
         router.push(`/platform/${tenantKeyToUse}/${newMentorId}${queryString}`);
       } else {
-        console.warn('Cannot navigate to mentor: tenantKey missing from URL params.');
+        console.warn(
+          'Cannot navigate to mentor: tenantKey missing from URL params.',
+        );
       }
     },
-    navigateToMentorInProject: (newMentorId: string, providedProjectId?: string) => {
+    navigateToMentorInProject: (
+      newMentorId: string,
+      providedProjectId?: string,
+    ) => {
       if (tenantKey) {
         const newCachedSessionId = { ...cachedSessionId };
         delete newCachedSessionId[newMentorId];
         saveCachedSessionId(newCachedSessionId);
         setDetermineUserPath(false);
-        const queryString = shouldAddSwitchingParam(newMentorId) ? '?switching-mentor=true' : '';
+        const queryString = shouldAddSwitchingParam(newMentorId)
+          ? '?switching-mentor=true'
+          : '';
         const projectIdToUse = providedProjectId ?? projectId;
         router.push(
           `/platform/${tenantKey}/projects/${projectIdToUse}/${newMentorId}${queryString}`,
         );
       } else {
-        console.warn('Cannot navigate to mentor: tenantKey missing from URL params.');
+        console.warn(
+          'Cannot navigate to mentor: tenantKey missing from URL params.',
+        );
       }
     },
     navigateToProject: (newProjectId: string, newMentorId: string) => {
@@ -301,10 +364,16 @@ export function useNavigate() {
         delete newCachedSessionId[newMentorId];
         saveCachedSessionId(newCachedSessionId);
         setDetermineUserPath(false);
-        const queryString = shouldAddSwitchingParam(newMentorId) ? '?switching-mentor=true' : '';
-        router.push(`/platform/${tenantKey}/projects/${newProjectId}/${newMentorId}${queryString}`);
+        const queryString = shouldAddSwitchingParam(newMentorId)
+          ? '?switching-mentor=true'
+          : '';
+        router.push(
+          `/platform/${tenantKey}/projects/${newProjectId}/${newMentorId}${queryString}`,
+        );
       } else {
-        console.warn('Cannot navigate to mentor: tenantKey missing from URL params.');
+        console.warn(
+          'Cannot navigate to mentor: tenantKey missing from URL params.',
+        );
       }
     },
     navigateToNotifications: (notificationId?: string) => {
@@ -313,28 +382,45 @@ export function useNavigate() {
           `/platform/${tenantKey}/${mentorIdFromParams}/notifications/${notificationId ?? ''}`,
         );
       } else if (tenantKey) {
-        router.push(`/platform/${tenantKey}/notifications/${notificationId ?? ''}`);
+        router.push(
+          `/platform/${tenantKey}/notifications/${notificationId ?? ''}`,
+        );
       } else {
         console.warn(
           'Cannot navigate to notifications: tenantKey or mentorId missing from URL params.',
         );
       }
     },
+    navigateToWorkflows: () => {
+      if (tenantKey && mentorIdFromParams) {
+        router.push(`/platform/${tenantKey}/workflows/${mentorIdFromParams}`);
+      } else if (tenantKey) {
+        router.push(`/platform/${tenantKey}/workflows`);
+      } else {
+        console.warn(
+          'Cannot navigate to workflows: tenantKey missing from URL params.',
+        );
+      }
+    },
 
     // Enhanced modal functions
-    openCreateMentorModal: (tab?: string) => openModal(MODALS.CREATE_MENTOR.name, tab),
+    openCreateMentorModal: (tab?: string) =>
+      openModal(MODALS.CREATE_MENTOR.name, tab),
     closeCreateMentorModal: closeModal,
 
-    openInviteUserModal: (tab?: string) => openModal(MODALS.INVITE_USER.name, tab),
+    openInviteUserModal: (tab?: string) =>
+      openModal(MODALS.INVITE_USER.name, tab),
     closeInviteUserModal: closeModal,
 
     openSettingsModal: (tab?: string) => openModal(MODALS.SETTINGS.name, tab),
     closeSettingsModal: closeModal,
 
-    openMyMentorsModal: (tab?: string) => openModal(MODALS.MY_MENTORS.name, tab),
+    openMyMentorsModal: (tab?: string) =>
+      openModal(MODALS.MY_MENTORS.name, tab),
     closeMyMentorsModal: closeModal,
 
-    openLLMProvidersModal: (tab?: string) => openModal(MODALS.LLM_PROVIDERS.name, tab),
+    openLLMProvidersModal: (tab?: string) =>
+      openModal(MODALS.LLM_PROVIDERS.name, tab),
     closeLLMProvidersModal: closeModal,
 
     openEditMentorModal: (tab?: string, mentorId?: string) => {
@@ -343,13 +429,16 @@ export function useNavigate() {
     },
     closeEditMentorModal: closeModal,
 
-    openAddPromptModal: (tab?: string) => openModal(MODALS.ADD_PROMPT.name, tab),
+    openAddPromptModal: (tab?: string) =>
+      openModal(MODALS.ADD_PROMPT.name, tab),
     closeAddPromptModal: closeModal,
 
-    openAddResourceModal: (tab?: string) => openModal(MODALS.ADD_RESOURCE.name, tab),
+    openAddResourceModal: (tab?: string) =>
+      openModal(MODALS.ADD_RESOURCE.name, tab),
     closeAddResourceModal: closeModal,
 
-    openNoMentorSelectedModal: (tab?: string) => openModal(MODALS.NO_MENTOR_SELECTED.name, tab),
+    openNoMentorSelectedModal: (tab?: string) =>
+      openModal(MODALS.NO_MENTOR_SELECTED.name, tab),
     closeNoMentorSelectedModal: closeModal,
 
     // General modal management functions
@@ -369,7 +458,8 @@ export function useNavigate() {
     showEditMentorModal:
       isModalOpen(MODALS.EDIT_MENTOR.name) &&
       !(
-        mentorSettings?.mentor_visibility === MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
+        mentorSettings?.mentor_visibility ===
+          MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
         // @ts-ignore
         mentorSettings?.platform_key === config.mainTenantKey() &&
         tenantKey !== config.mainTenantKey()
@@ -405,18 +495,26 @@ export function useSidebarNavigation() {
     openSettingsModal,
     openNoMentorSelectedModal,
     navigateToNotifications,
+    navigateToWorkflows,
   } = useNavigate();
   const pathname = usePathname();
   const isChatPage =
-    (pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname)) || pathname.includes('/projects/');
+    (pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname)) ||
+    pathname.includes('/projects/');
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const { executeWithTrialCheck, isNewlyUserOnPreFreeOrAdvertisingMode } = useShowFreeTrialDialog();
-  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery({
-    mentor: mentorId,
-    org: tenantKey,
-    // @ts-ignore
-    userId: ANONYMOUS_USERNAME,
-  });
+  const { executeWithTrialCheck, isNewlyUserOnPreFreeOrAdvertisingMode } =
+    useShowFreeTrialDialog();
+  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
+    {
+      mentor: mentorId,
+      org: tenantKey,
+      // @ts-ignore
+      userId: ANONYMOUS_USERNAME,
+    },
+    {
+      skip: !mentorId || !tenantKey,
+    },
+  );
 
   const contentItems = [
     {
@@ -426,7 +524,6 @@ export function useSidebarNavigation() {
         dispatch(clearFiles(undefined));
         if (!mentorId) {
           openNoMentorSelectedModal();
-          dispatch(chatActions.setShouldStartNewChat(true));
         } else if (isChatPage) {
           eventBus.emit(RemoteEvents.newChat);
           dispatch(chatActions.setShouldStartNewChat(true));
@@ -435,8 +532,15 @@ export function useSidebarNavigation() {
           dispatch(chatActions.setShouldStartNewChat(true));
         }
       },
-      userTypes: [UserType.STUDENT, UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
-      rbacResource: (_: number) => `/mentors/${mentorPublicSettings?.mentor_id}/#chat`,
+      userTypes: [
+        UserType.STUDENT,
+        UserType.FREE_TRIAL,
+        UserType.ADMIN,
+        UserType.ANONYMOUS,
+      ],
+      rbacResource: mentorId
+        ? (_: number) => `/mentors/${mentorPublicSettings?.mentor_id}/#chat`
+        : undefined,
       isAnAdminAction: false,
       hasBorder: true,
     },
@@ -474,6 +578,19 @@ export function useSidebarNavigation() {
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
       isAnAdminAction: true,
     },
+    {
+      label: 'Workflows',
+      icon: Workflow,
+      onClick: () => {
+        if (!mentorId) {
+          openNoMentorSelectedModal();
+          return;
+        }
+        executeWithTrialCheck(navigateToWorkflows);
+      },
+      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
+      isAnAdminAction: true,
+    },
   ];
 
   const footerItems = [
@@ -492,7 +609,8 @@ export function useSidebarNavigation() {
       },
       rbacResource: isNewlyUserOnPreFreeOrAdvertisingMode(true)
         ? undefined
-        : (_: number) => `/mentors/${mentorPublicSettings?.mentor_id}/#view_analytics`,
+        : (_: number) =>
+            `/mentors/${mentorPublicSettings?.mentor_id}/#view_analytics`,
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
       isAnAdminAction: true,
     },
@@ -505,7 +623,10 @@ export function useSidebarNavigation() {
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
       isAnAdminAction: false,
     },
-  ].filter((item) => !(config.hideAnalytics() === 'true' && item.label === 'Analytics'));
+  ].filter(
+    (item) =>
+      !(config.hideAnalytics() === 'true' && item.label === 'Analytics'),
+  );
 
   return { contentItems, footerItems };
 }

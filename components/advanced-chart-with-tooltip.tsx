@@ -1,6 +1,13 @@
 'use client';
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 // @ts-expect-error - detailed-chart-tooltip module does not exist yet, placeholder import
 import { DetailedChartTooltip } from './detailed-chart-tooltip';
@@ -29,16 +36,35 @@ export default function AdvancedChartWithTooltip() {
         className="h-[300px]"
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+          <AreaChart
+            data={data}
+            margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+          >
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(215, 100%, 60%)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="hsl(215, 100%, 60%)" stopOpacity={0.1} />
+                <stop
+                  offset="5%"
+                  stopColor="hsl(215, 100%, 60%)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="hsl(215, 100%, 60%)"
+                  stopOpacity={0.1}
+                />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#f0f0f0"
+            />
             <XAxis dataKey="month" axisLine={false} tickLine={false} />
-            <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `$${value}`} />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value) => `$${value}`}
+            />
             {/* Using our custom tooltip */}
             <ChartTooltip
               content={<DetailedChartTooltip />}

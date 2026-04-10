@@ -27,8 +27,12 @@ function useGithubRepoDetails(url: string) {
     setIsLoading(true);
     setError(null);
     try {
-      const repoPath = repoUrl.replace('https://github.com/', '').replace('.git', '');
-      const response = await fetch(`https://api.github.com/repos/${repoPath}/branches`);
+      const repoPath = repoUrl
+        .replace('https://github.com/', '')
+        .replace('.git', '');
+      const response = await fetch(
+        `https://api.github.com/repos/${repoPath}/branches`,
+      );
 
       if (!response.ok) {
         throw new Error('Failed to fetch branches');
@@ -93,16 +97,21 @@ export function GithubFileUploadModal() {
       toast.success('Document has been queued for training');
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Error adding training document');
+      const errorMessage = extractErrorMessage(
+        error,
+        'Error adding training document',
+      );
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
 
-  const { branches, error, isLoading } = useGithubRepoDetails(debouncedGithubUrl);
+  const { branches, error, isLoading } =
+    useGithubRepoDetails(debouncedGithubUrl);
 
-  const isLoadingDisabled = !githubUrl || isLoading || isAddTrainingDocumentLoading;
+  const isLoadingDisabled =
+    !githubUrl || isLoading || isAddTrainingDocumentLoading;
   const isDisabled = isLoadingDisabled || !branch;
 
   return (

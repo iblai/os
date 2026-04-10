@@ -8,45 +8,11 @@ import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
 import { config } from '@/lib/config';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { WelcomeChat } from './welcome-chat';
-import useWelcome from '@/hooks/use-welcome-message';
+import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { ProjectPageParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { ProjectLandingPage } from './projects/project-landing-page';
-import Markdown from '@/components/markdown';
-
-const WelcomeMessage = ({
-  aiWelcomeMessage,
-  sessionId,
-  username,
-  tenantKey,
-  mentorUniqueId,
-  token,
-  isNewSession,
-}: {
-  aiWelcomeMessage: string;
-  sessionId: string;
-  username: string;
-  tenantKey: string;
-  mentorUniqueId: string;
-  token: string;
-  isNewSession: boolean;
-}) => {
-  const { welcomeMessage } = useWelcome({
-    sessionId,
-    username,
-    tenantKey,
-    mentorUniqueId,
-    token,
-    wsUrl: `${config.baseWsUrl()}/ws/langflow/`,
-    isNewSession,
-  });
-  return (
-    <Markdown className="text-gray-600 text-lg max-w-3xl">
-      {welcomeMessage || aiWelcomeMessage || ''}
-    </Markdown>
-  );
-};
 
 type Props = {
   mentorName: string;
@@ -138,7 +104,7 @@ export function WelcomeChatNew({
 
   if (embedMode) {
     return (
-      <div className="flex-1 h-full">
+      <div className="h-full flex-1">
         <WelcomeChat
           onPromptSelect={onSubmit}
           mentorName={mentorName}
@@ -196,21 +162,20 @@ export function WelcomeChatNew({
 
   return (
     <div className="overflow-y-auto">
-      <div className="py-6 w-full">
+      <div className="w-full py-6">
         {/* GitHub Sync Banner */}
-        {tenantKey === config.mainTenantKey() && config.showAppBanner() === 'true' && (
-          <AppSyncBanner />
-        )}
+        {tenantKey === config.mainTenantKey() &&
+          config.showAppBanner() === 'true' && <AppSyncBanner />}
 
         {/* mentorAI Logo and Branding */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <h1 className="text-center bg-gradient-to-r from-[#38A1E5] to-[#7284FF] text-transparent bg-clip-text font-bold text-3xl">
+        <div className="mb-8 flex flex-col items-center">
+          <div className="mb-6 flex items-center gap-3">
+            <h1 className="bg-gradient-to-r from-[#38A1E5] to-[#7284FF] bg-clip-text text-center text-3xl font-bold text-transparent">
               {mentorName}
             </h1>
           </div>
 
-          <div className="text-center mb-6">
+          <div className="mb-6 text-center">
             <WelcomeMessage
               aiWelcomeMessage={aiWelcomeMessage}
               sessionId={sessionId}

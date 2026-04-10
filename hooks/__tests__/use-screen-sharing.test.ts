@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 // Mock livekit-client - must be hoisted
 const mockRoomConnect = vi.fn();
@@ -42,6 +42,8 @@ vi.mock('livekit-client', () => ({
     Reconnected: 'reconnected',
     LocalTrackPublished: 'localTrackPublished',
     LocalTrackUnpublished: 'localTrackUnpublished',
+    TrackMuted: 'trackMuted',
+    TrackUnmuted: 'trackUnmuted',
   },
   ConnectionState: {
     Connected: 'connected',
@@ -53,6 +55,7 @@ vi.mock('livekit-client', () => ({
     Source: {
       ScreenShare: 'screen_share',
       ScreenShareAudio: 'screen_share_audio',
+      Microphone: 'microphone',
     },
   },
 }));
@@ -102,7 +105,9 @@ describe('useScreenSharing', () => {
       configurable: true,
     });
     // Clear captured room event handlers
-    Object.keys(roomEventHandlers).forEach((key) => delete roomEventHandlers[key]);
+    Object.keys(roomEventHandlers).forEach(
+      (key) => delete roomEventHandlers[key],
+    );
   });
 
   afterEach(() => {
@@ -146,7 +151,10 @@ describe('useScreenSharing', () => {
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(mockRoomConnect).toHaveBeenCalledWith('wss://test-url', 'test-token');
+        expect(mockRoomConnect).toHaveBeenCalledWith(
+          'wss://test-url',
+          'test-token',
+        );
       });
     });
 
@@ -169,9 +177,12 @@ describe('useScreenSharing', () => {
 
   describe('initiateCall error handling', () => {
     it('should show toast error when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
-        unwrap: () => Promise.reject({ error: { error: 'Custom error message' } }),
+        unwrap: () =>
+          Promise.reject({ error: { error: 'Custom error message' } }),
       });
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -184,7 +195,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should show default error message when error has no message', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -192,14 +205,18 @@ describe('useScreenSharing', () => {
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to initiate call. Please try again.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to initiate call. Please try again.',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('should call onError when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
@@ -220,7 +237,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not call room.connect when initiateCall fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -239,20 +258,26 @@ describe('useScreenSharing', () => {
 
   describe('room connection error handling', () => {
     it('should show toast error when room.connect fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
       renderHook(() => useScreenSharing(defaultProps));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to connect to room. Please try again.');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to connect to room. Please try again.',
+        );
       });
 
       consoleSpy.mockRestore();
     });
 
     it('should call onError when room.connect fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
@@ -271,7 +296,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not enable microphone when connection fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockRoomConnect.mockRejectedValue(new Error('Connection failed'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -288,7 +315,9 @@ describe('useScreenSharing', () => {
 
   describe('microphone error handling', () => {
     it('should show toast error when microphone enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -303,7 +332,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should call onError when microphone enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
@@ -322,7 +353,9 @@ describe('useScreenSharing', () => {
     });
 
     it('should not attempt screen share when microphone fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockSetMicrophoneEnabled.mockRejectedValue(new Error('Microphone error'));
 
       renderHook(() => useScreenSharing(defaultProps));
@@ -339,8 +372,12 @@ describe('useScreenSharing', () => {
 
   describe('screen share error handling', () => {
     it('should show toast error when screen share enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockSetScreenShareEnabled.mockRejectedValue(new Error('Screen share denied'));
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockSetScreenShareEnabled.mockRejectedValue(
+        new Error('Screen share denied'),
+      );
 
       renderHook(() => useScreenSharing(defaultProps));
 
@@ -354,9 +391,13 @@ describe('useScreenSharing', () => {
     });
 
     it('should call onError when screen share enable fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const onError = vi.fn();
-      mockSetScreenShareEnabled.mockRejectedValue(new Error('Screen share denied'));
+      mockSetScreenShareEnabled.mockRejectedValue(
+        new Error('Screen share denied'),
+      );
 
       renderHook(() =>
         useScreenSharing({
@@ -449,7 +490,9 @@ describe('useScreenSharing', () => {
 
   describe('optional onError callback', () => {
     it('should work without onError callback on initiateCall error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockInitiateCall.mockReturnValue({
         unwrap: () => Promise.reject({}),
       });
@@ -473,7 +516,9 @@ describe('useScreenSharing', () => {
   describe('room event handlers', () => {
     it('should handle ConnectionStateChanged to Connected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -489,7 +534,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Disconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -505,7 +552,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Connecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -521,7 +570,9 @@ describe('useScreenSharing', () => {
 
     it('should handle ConnectionStateChanged to Reconnecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -537,7 +588,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to disconnected on RoomEvent.Disconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -555,7 +608,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to reconnecting on RoomEvent.Reconnecting', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -572,7 +627,9 @@ describe('useScreenSharing', () => {
 
     it('should update connection state to connected on RoomEvent.Reconnected', async () => {
       const onConnectionStateChange = vi.fn();
-      renderHook(() => useScreenSharing({ ...defaultProps, onConnectionStateChange }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onConnectionStateChange }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -591,7 +648,9 @@ describe('useScreenSharing', () => {
       const onScreenShareStopped = vi.fn();
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -610,7 +669,9 @@ describe('useScreenSharing', () => {
       const onScreenShareStopped = vi.fn();
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -627,7 +688,9 @@ describe('useScreenSharing', () => {
     it('should not call onScreenShareStopped for non-screen-share tracks', async () => {
       const onScreenShareStopped = vi.fn();
 
-      renderHook(() => useScreenSharing({ ...defaultProps, onScreenShareStopped }));
+      renderHook(() =>
+        useScreenSharing({ ...defaultProps, onScreenShareStopped }),
+      );
 
       await waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();
@@ -638,6 +701,220 @@ describe('useScreenSharing', () => {
       });
 
       expect(onScreenShareStopped).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('remote audio mute/unmute (TrackMuted/TrackUnmuted)', () => {
+    it('should set isMentorAudioEnabled to false when remote audio track is muted', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      // Initial remote mentor audio should be enabled
+      expect(result.current.isMentorAudioEnabled).toBe(true);
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(false);
+      });
+    });
+
+    it('should set isMentorAudioEnabled to true when remote audio track is unmuted', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(false);
+      });
+
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(true);
+      });
+    });
+
+    it('should ignore non-audio remote track mute events', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'video', source: 'camera' },
+          { isLocal: false },
+        );
+      });
+
+      // Remote audio state should remain true
+      expect(result.current.isMentorAudioEnabled).toBe(true);
+    });
+
+    it('should sync isMicrophoneEnabled to false when local microphone is muted externally', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+    });
+
+    it('should sync isMicrophoneEnabled to true when local microphone is unmuted externally', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+    });
+
+    it('should ignore local track unmute when source is not microphone', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      // Externally mute to make state false
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+
+      // Unmute a non-microphone local source — should NOT flip mic state
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'video', source: 'camera' },
+          { isLocal: true },
+        );
+      });
+
+      expect(result.current.isMicrophoneEnabled).toBe(false);
+    });
+  });
+
+  describe('toggleMicrophone', () => {
+    it('should toggle microphone off when currently enabled', async () => {
+      mockIsMicrophoneEnabled = true;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockClear();
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(false);
+      expect(result.current.isMicrophoneEnabled).toBe(false);
+    });
+
+    it('should toggle microphone on when currently disabled', async () => {
+      mockIsMicrophoneEnabled = false;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockClear();
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(true);
+      expect(result.current.isMicrophoneEnabled).toBe(true);
+    });
+
+    it('should log error when toggleMicrophone fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockIsMicrophoneEnabled = true;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockRejectedValueOnce(new Error('toggle fail'));
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to toggle microphone:',
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });

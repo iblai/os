@@ -49,7 +49,9 @@ export function useTenantProvider({
       const tenant = tenants.find((tenant) => tenant.key === tenantKey);
 
       if (!tenant) {
-        console.log("[auth-redirect] Tenant not found in user's tenants", { tenantKey });
+        console.log("[auth-redirect] Tenant not found in user's tenants", {
+          tenantKey,
+        });
         redirectToAuthSpa();
         return;
       }
@@ -63,7 +65,8 @@ export function useTenantProvider({
 
       // check if the tenant is active
       if (tenantMetadata?.metadata?.spa_domains?.mentor?.active) {
-        window.location.href = tenantMetadata?.metadata?.spa_domains?.mentor?.domain;
+        window.location.href =
+          tenantMetadata?.metadata?.spa_domains?.mentor?.domain;
         onAuthSuccess?.();
         return;
       }
@@ -74,10 +77,13 @@ export function useTenantProvider({
         org: tenant.org,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
       onAuthFailure?.(`Unexpected error: ${errorMessage}`);
-      console.log('[auth-redirect] Unexpected error in tenant redirect', { error: errorMessage });
+      console.log('[auth-redirect] Unexpected error in tenant redirect', {
+        error: errorMessage,
+      });
       redirectToAuthSpa();
     } finally {
       setIsLoading(false);

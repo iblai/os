@@ -13,6 +13,7 @@ import { Spinner } from '@/components/spinner';
 import ConsoleSetup from '@/lib/logger';
 import { IblDataHandler } from '@/components/ibl-data-handler';
 import { ServiceWorkerProvider } from '@/components/service-worker-provider';
+import { ChunkErrorRecovery } from '@/components/chunk-error-recovery';
 
 const openSans = Open_Sans({
   subsets: ['latin'],
@@ -88,6 +89,7 @@ export default function RootLayout({
         <ConsoleSetup />
         <Script src="/env.js" strategy="afterInteractive" />
         <StoreProvider>
+          <ChunkErrorRecovery />
           <ServiceWorkerProvider>
             <Suspense
               fallback={

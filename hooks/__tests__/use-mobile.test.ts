@@ -102,7 +102,10 @@ describe('use-mobile', () => {
 
       renderHook(() => useIsMobile());
 
-      expect(mockAddEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function),
+      );
     });
 
     it('should remove event listener on unmount', () => {
@@ -117,16 +120,21 @@ describe('use-mobile', () => {
       const { unmount } = renderHook(() => useIsMobile());
       unmount();
 
-      expect(mockRemoveEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+      expect(mockRemoveEventListener).toHaveBeenCalledWith(
+        'change',
+        expect.any(Function),
+      );
     });
 
     it('should update when media query change event fires', async () => {
       let changeHandler: (() => void) | undefined;
-      const mockAddEventListener = vi.fn((event: string, handler: () => void) => {
-        if (event === 'change') {
-          changeHandler = handler;
-        }
-      });
+      const mockAddEventListener = vi.fn(
+        (event: string, handler: () => void) => {
+          if (event === 'change') {
+            changeHandler = handler;
+          }
+        },
+      );
 
       Object.defineProperty(window, 'innerWidth', {
         writable: true,

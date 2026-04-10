@@ -23,7 +23,10 @@ export interface ApiError {
   };
 }
 
-export const extractErrorMessage = (error: unknown, fallback: string): string => {
+export const extractErrorMessage = (
+  error: unknown,
+  fallback: string,
+): string => {
   const apiError = error as ApiError;
   return apiError?.data?.error || apiError?.error?.error || fallback;
 };

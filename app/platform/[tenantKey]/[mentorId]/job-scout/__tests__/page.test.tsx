@@ -38,12 +38,16 @@ describe('job-scout page', () => {
 
   it('should render initial state', () => {
     render(<JobScoutPage />);
-    expect(screen.getByRole('heading', { name: /AI Job Scout Assistant/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /AI Job Scout Assistant/i }),
+    ).toBeInTheDocument();
   });
 
   it('should render suggestion cards', () => {
     render(<JobScoutPage />);
-    expect(screen.getByText(/improve my presentation skills/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/improve my presentation skills/i),
+    ).toBeInTheDocument();
   });
 
   it('should handle prompt click', async () => {
@@ -55,6 +59,8 @@ describe('job-scout page', () => {
       vi.advanceTimersByTime(1500);
     });
 
-    expect(screen.getByText(/Improving presentation skills/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Improving presentation skills/i),
+    ).toBeInTheDocument();
   });
 });

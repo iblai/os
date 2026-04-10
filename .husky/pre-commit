@@ -1,1 +1,10 @@
-pnpm dlx lint-staged --verbose
+# Format entire codebase with prettier
+pnpm prettier --write .
+
+# Stage any formatting changes
+git add -u
+
+# Ensure all dependency versions are pinned (no ^ or ~)
+if git diff --cached --name-only | grep -q 'package.json'; then
+  ./scripts/check-pinned-versions.sh
+fi

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   AlertDialog,
@@ -9,8 +9,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useCustomAlertDialog } from "@/hooks/use-custom-alert-dialog";
+} from '@/components/ui/alert-dialog';
+import { useCustomAlertDialog } from '@/hooks/use-custom-alert-dialog';
 
 interface CustomAlertDialogProps {
   message: string;
@@ -23,8 +23,8 @@ interface CustomAlertDialogProps {
 export function CustomAlertDialog({
   message,
   validateTrigger,
-  cancelTrigger = "",
-  title = "Are you sure?",
+  cancelTrigger = '',
+  title = 'Are you sure?',
   isOpen,
 }: CustomAlertDialogProps) {
   const { triggerHandler } = useCustomAlertDialog();

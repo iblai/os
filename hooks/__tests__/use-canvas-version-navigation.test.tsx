@@ -72,7 +72,9 @@ describe('useCanvasVersionNavigation', () => {
 
   describe('initial state', () => {
     it('should return initial state values', () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       expect(result.current.currentVersion).toBeNull();
       expect(result.current.activeVersionId).toBeNull();
@@ -83,7 +85,9 @@ describe('useCanvasVersionNavigation', () => {
     });
 
     it('should return navigation state', () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       expect(result.current.canGoPrevious).toBe(false);
       expect(result.current.canGoNext).toBe(false);
@@ -91,21 +95,29 @@ describe('useCanvasVersionNavigation', () => {
     });
 
     it('should provide action functions', () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       expect(typeof result.current.viewVersion).toBe('function');
       expect(typeof result.current.handlePreviousVersion).toBe('function');
       expect(typeof result.current.handleNextVersion).toBe('function');
       expect(typeof result.current.handleBackToLatest).toBe('function');
       expect(typeof result.current.handleRestoreVersion).toBe('function');
-      expect(typeof result.current.updateVersionAfterStreaming).toBe('function');
+      expect(typeof result.current.updateVersionAfterStreaming).toBe(
+        'function',
+      );
       expect(typeof result.current.resetVersionNavigation).toBe('function');
-      expect(typeof result.current.markWasOnCurrentVersionBeforeSave).toBe('function');
+      expect(typeof result.current.markWasOnCurrentVersionBeforeSave).toBe(
+        'function',
+      );
       expect(typeof result.current.silentlyGoToLatest).toBe('function');
     });
 
     it('should provide refs', () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       expect(result.current.suppressNextOnChangeRef).toBeDefined();
       expect(result.current.hasUserNavigatedVersionRef).toBeDefined();
@@ -139,7 +151,9 @@ describe('useCanvasVersionNavigation', () => {
     });
 
     it('should populate version history from API data', async () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -150,7 +164,9 @@ describe('useCanvasVersionNavigation', () => {
     });
 
     it('should set current version from API data', async () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.currentVersion).toBe('v2');
@@ -158,7 +174,9 @@ describe('useCanvasVersionNavigation', () => {
     });
 
     it('should enable navigation when viewing non-latest version', async () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -181,7 +199,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
         result.current.updateVersionAfterStreaming(2, 'new content');
@@ -198,10 +218,18 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
-        result.current.updateVersionAfterStreaming(2, 'replacement', 5, 10, 'Hello World Here');
+        result.current.updateVersionAfterStreaming(
+          2,
+          'replacement',
+          5,
+          10,
+          'Hello World Here',
+        );
       });
 
       expect(result.current.activeVersionId).toBe('v2');
@@ -215,7 +243,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set some state first
       act(() => {
@@ -294,14 +324,22 @@ describe('useCanvasVersionNavigation', () => {
             is_current: false,
             date_created: '2024-01-01',
           },
-          { id: 2, version_number: 2, content: 'v2', is_current: true, date_created: '2024-01-02' },
+          {
+            id: 2,
+            version_number: 2,
+            content: 'v2',
+            is_current: true,
+            date_created: '2024-01-02',
+          },
         ],
         refetch: mockRefetchVersions,
       } as any);
     });
 
     it('should go to latest version without API call', async () => {
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -329,12 +367,20 @@ describe('useCanvasVersionNavigation', () => {
     it('should mark the ref correctly', async () => {
       vi.mocked(useListArtifactVersionsQuery).mockReturnValue({
         data: [
-          { id: 1, version_number: 1, content: 'v1', is_current: true, date_created: '2024-01-01' },
+          {
+            id: 1,
+            version_number: 1,
+            content: 'v1',
+            is_current: true,
+            date_created: '2024-01-01',
+          },
         ],
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.isViewingCurrentVersion).toBe(true);
@@ -345,7 +391,9 @@ describe('useCanvasVersionNavigation', () => {
       });
 
       // Function should execute without error
-      expect(typeof result.current.markWasOnCurrentVersionBeforeSave).toBe('function');
+      expect(typeof result.current.markWasOnCurrentVersionBeforeSave).toBe(
+        'function',
+      );
     });
   });
 
@@ -382,7 +430,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -398,12 +448,20 @@ describe('useCanvasVersionNavigation', () => {
     it('should handle viewVersion when version not found', async () => {
       vi.mocked(useListArtifactVersionsQuery).mockReturnValue({
         data: [
-          { id: 1, version_number: 1, content: 'v1', is_current: true, date_created: '2024-01-01' },
+          {
+            id: 1,
+            version_number: 1,
+            content: 'v1',
+            is_current: true,
+            date_created: '2024-01-01',
+          },
         ],
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(1);
@@ -451,7 +509,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -504,7 +564,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -558,7 +620,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -603,7 +667,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      mockSetCurrentVersionMutation.mockResolvedValue({ unwrap: () => Promise.resolve({}) });
+      mockSetCurrentVersionMutation.mockResolvedValue({
+        unwrap: () => Promise.resolve({}),
+      });
       mockFetchArtifactVersion.mockResolvedValue({
         unwrap: () =>
           Promise.resolve({
@@ -613,7 +679,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -639,7 +707,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleRestoreVersion();
@@ -673,7 +743,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -718,7 +790,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -757,7 +831,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -798,7 +874,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.latestVersionId).toBe('v2');
@@ -813,11 +891,19 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
         result.current.setVersionHistory([
-          { id: 'v1', label: 'v1', content: 'test', timestamp: '2024-01-01', isCurrent: true },
+          {
+            id: 'v1',
+            label: 'v1',
+            content: 'test',
+            timestamp: '2024-01-01',
+            isCurrent: true,
+          },
         ]);
       });
 
@@ -832,7 +918,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
         result.current.setCurrentVersion('v5');
@@ -868,7 +956,9 @@ describe('useCanvasVersionNavigation', () => {
 
       mockFetchArtifactVersion.mockRejectedValue(new Error('API Error'));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -895,12 +985,20 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history without versionId
       act(() => {
         result.current.setVersionHistory([
-          { id: 'v1', label: 'v1', content: 'test', timestamp: '2024-01-01', isCurrent: true },
+          {
+            id: 'v1',
+            label: 'v1',
+            content: 'test',
+            timestamp: '2024-01-01',
+            isCurrent: true,
+          },
         ]);
       });
 
@@ -971,12 +1069,15 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook((props) => useCanvasVersionNavigation(props), {
-        initialProps: {
-          ...defaultProps,
-          metadataVersionNumber: 1,
+      const { result, rerender } = renderHook(
+        (props) => useCanvasVersionNavigation(props),
+        {
+          initialProps: {
+            ...defaultProps,
+            metadataVersionNumber: 1,
+          },
         },
-      });
+      );
 
       await waitFor(() => {
         expect(result.current.activeVersionId).toBe('v1');
@@ -1018,9 +1119,13 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      mockSetCurrentVersionMutation.mockRejectedValue(new Error('Restore failed'));
+      mockSetCurrentVersionMutation.mockRejectedValue(
+        new Error('Restore failed'),
+      );
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1048,12 +1153,20 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history without versionId
       act(() => {
         result.current.setVersionHistory([
-          { id: 'v1', label: 'v1', content: 'test', timestamp: '2024-01-01', isCurrent: false },
+          {
+            id: 'v1',
+            label: 'v1',
+            content: 'test',
+            timestamp: '2024-01-01',
+            isCurrent: false,
+          },
         ]);
         result.current.setActiveVersionId('v1');
       });
@@ -1124,7 +1237,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1169,7 +1284,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1197,7 +1314,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         await result.current.handleBackToLatest();
@@ -1214,7 +1333,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       expect(result.current.currentVersionIndex).toBe(-1);
     });
@@ -1242,7 +1363,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1266,7 +1389,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set initial version history
       act(() => {
@@ -1298,9 +1423,9 @@ describe('useCanvasVersionNavigation', () => {
       });
 
       expect(result.current.activeVersionId).toBe('v2');
-      expect(result.current.versionHistory.find((v) => v.id === 'v2')?.content).toBe(
-        'updated content',
-      );
+      expect(
+        result.current.versionHistory.find((v) => v.id === 'v2')?.content,
+      ).toBe('updated content');
     });
   });
 
@@ -1311,7 +1436,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Initial state
       expect(result.current.activeVersionId).toBeNull();
@@ -1411,7 +1538,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1457,7 +1586,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       });
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1524,7 +1655,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Call updateVersionAfterStreaming
       act(() => {
@@ -1566,7 +1699,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Wait for version history to populate
       await act(async () => {
@@ -1622,7 +1757,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Wait for version history to populate
       await act(async () => {
@@ -1678,7 +1815,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Wait for version history to populate
       await act(async () => {
@@ -1777,7 +1916,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1825,7 +1966,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1881,7 +2024,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -1910,7 +2055,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history
       act(() => {
@@ -2055,7 +2202,8 @@ describe('useCanvasVersionNavigation', () => {
 
     it('should exhaust all retries for retriable errors', async () => {
       mockFetchVersionsList.mockImplementation(() => ({
-        unwrap: () => Promise.reject({ status: 404, data: 'Version not found yet' }),
+        unwrap: () =>
+          Promise.reject({ status: 404, data: 'Version not found yet' }),
       }));
 
       renderHook(() => useCanvasVersionNavigation(defaultProps));
@@ -2161,7 +2309,9 @@ describe('useCanvasVersionNavigation', () => {
         },
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(2);
@@ -2194,10 +2344,13 @@ describe('useCanvasVersionNavigation', () => {
       } as any);
 
       mockFetchArtifactVersion.mockImplementation(() => ({
-        unwrap: () => Promise.reject({ status: 404, data: 'Version not found' }),
+        unwrap: () =>
+          Promise.reject({ status: 404, data: 'Version not found' }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(1);
@@ -2240,7 +2393,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(1);
@@ -2390,7 +2545,9 @@ describe('useCanvasVersionNavigation', () => {
 
     it('should handle editor with selection restoration', async () => {
       const mockSetTextSelection = vi.fn(() => ({ run: vi.fn() }));
-      const mockFocus = vi.fn(() => ({ setTextSelection: mockSetTextSelection }));
+      const mockFocus = vi.fn(() => ({
+        setTextSelection: mockSetTextSelection,
+      }));
       const mockChain = vi.fn(() => ({ focus: mockFocus }));
 
       const mockEditorWithSelection = {
@@ -2479,7 +2636,9 @@ describe('useCanvasVersionNavigation', () => {
         vi.runAllTimers();
       });
 
-      expect(mockEditorWithSelection.current.commands.setContent).toHaveBeenCalled();
+      expect(
+        mockEditorWithSelection.current.commands.setContent,
+      ).toHaveBeenCalled();
     });
 
     it('should handle editor without focus', async () => {
@@ -2560,7 +2719,9 @@ describe('useCanvasVersionNavigation', () => {
 
     it('should handle destroyed editor during selection restoration', async () => {
       const mockSetTextSelection = vi.fn(() => ({ run: vi.fn() }));
-      const mockFocus = vi.fn(() => ({ setTextSelection: mockSetTextSelection }));
+      const mockFocus = vi.fn(() => ({
+        setTextSelection: mockSetTextSelection,
+      }));
       const mockChain = vi.fn(() => ({ focus: mockFocus }));
 
       const mockEditorDestroyable = {
@@ -2652,7 +2813,9 @@ describe('useCanvasVersionNavigation', () => {
 
     it('should clamp selection range to document size', async () => {
       const mockSetTextSelection = vi.fn(() => ({ run: vi.fn() }));
-      const mockFocus = vi.fn(() => ({ setTextSelection: mockSetTextSelection }));
+      const mockFocus = vi.fn(() => ({
+        setTextSelection: mockSetTextSelection,
+      }));
       const mockChain = vi.fn(() => ({ focus: mockFocus }));
 
       const mockEditorSmallDoc = {
@@ -2734,7 +2897,9 @@ describe('useCanvasVersionNavigation', () => {
       // setTextSelection should have been called with clamped values
       if (mockSetTextSelection.mock.calls.length > 0) {
         const callArg = (
-          mockSetTextSelection.mock.calls as unknown as Array<[{ from: number; to: number }]>
+          mockSetTextSelection.mock.calls as unknown as Array<
+            [{ from: number; to: number }]
+          >
         )[0][0];
         expect(callArg.from).toBeLessThanOrEqual(50);
         expect(callArg.to).toBeLessThanOrEqual(50);
@@ -2835,16 +3000,21 @@ describe('useCanvasVersionNavigation', () => {
         unwrap: () => Promise.resolve([]),
       }));
 
-      const { rerender } = renderHook((props) => useCanvasVersionNavigation(props), {
-        initialProps: defaultProps,
-      });
+      const { rerender } = renderHook(
+        (props) => useCanvasVersionNavigation(props),
+        {
+          initialProps: defaultProps,
+        },
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
       });
 
       // First artifact should have triggered fetch
-      expect(mockFetchVersionsList).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+      expect(mockFetchVersionsList).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+      );
 
       // Clear mock to track new calls
       mockFetchVersionsList.mockClear();
@@ -2860,7 +3030,9 @@ describe('useCanvasVersionNavigation', () => {
       });
 
       // Second artifact should trigger new fetch
-      expect(mockFetchVersionsList).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+      expect(mockFetchVersionsList).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 2 }),
+      );
 
       vi.useRealTimers();
     });
@@ -2902,7 +3074,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3038,7 +3212,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3083,7 +3259,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Trigger streaming update
       act(() => {
@@ -3153,7 +3331,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Manually set version history without versionNumber
       act(() => {
@@ -3224,7 +3404,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3259,7 +3441,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history without any current version
       act(() => {
@@ -3298,7 +3482,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set initial version history
       act(() => {
@@ -3340,12 +3526,15 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook((props) => useCanvasVersionNavigation(props), {
-        initialProps: {
-          ...defaultProps,
-          metadataVersionNumber: 1,
+      const { result, rerender } = renderHook(
+        (props) => useCanvasVersionNavigation(props),
+        {
+          initialProps: {
+            ...defaultProps,
+            metadataVersionNumber: 1,
+          },
         },
-      });
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3390,12 +3579,15 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook((props) => useCanvasVersionNavigation(props), {
-        initialProps: {
-          ...defaultProps,
-          metadataVersionNumber: 2,
+      const { result, rerender } = renderHook(
+        (props) => useCanvasVersionNavigation(props),
+        {
+          initialProps: {
+            ...defaultProps,
+            metadataVersionNumber: 2,
+          },
         },
-      });
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3471,7 +3663,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3500,7 +3694,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set up with streaming (sets versionIndexOverride)
       act(() => {
@@ -3534,7 +3730,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set active version but no history
       act(() => {
@@ -3589,7 +3787,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history and active to non-existent but mark as current
       act(() => {
@@ -3635,7 +3835,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3707,7 +3909,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3728,7 +3932,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history without versionId
       act(() => {
@@ -3759,7 +3965,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Empty version history, no latestVersionId
       await act(async () => {
@@ -3793,7 +4001,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3838,7 +4048,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3867,7 +4079,9 @@ describe('useCanvasVersionNavigation', () => {
         unwrap: () => Promise.resolve([]),
       }));
 
-      const { rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -3960,7 +4174,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(1);
@@ -4003,7 +4219,9 @@ describe('useCanvasVersionNavigation', () => {
           }),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await waitFor(() => {
         expect(result.current.versionHistory.length).toBe(1);
@@ -4024,7 +4242,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
         result.current.setActiveVersionId('v1');
@@ -4055,7 +4275,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -4178,7 +4400,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Empty version history
       act(() => {
@@ -4265,7 +4489,9 @@ describe('useCanvasVersionNavigation', () => {
       });
 
       // Should not crash
-      expect(mockEditorNoSelection.current.commands.setContent).toHaveBeenCalled();
+      expect(
+        mockEditorNoSelection.current.commands.setContent,
+      ).toHaveBeenCalled();
     });
 
     it('should handle updateVersionAfterStreaming with startIndex and endIndex', async () => {
@@ -4274,7 +4500,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set initial version history
       act(() => {
@@ -4292,7 +4520,13 @@ describe('useCanvasVersionNavigation', () => {
 
       // Update with partial indices
       act(() => {
-        result.current.updateVersionAfterStreaming(2, 'REPLACED', 0, 5, 'hello world');
+        result.current.updateVersionAfterStreaming(
+          2,
+          'REPLACED',
+          0,
+          5,
+          'hello world',
+        );
       });
 
       // Should have updated version with replaced content
@@ -4348,7 +4582,9 @@ describe('useCanvasVersionNavigation', () => {
       });
 
       // Should have applied content to editor
-      expect(mockEditorWithSetContent.current.commands.setContent).toHaveBeenCalled();
+      expect(
+        mockEditorWithSetContent.current.commands.setContent,
+      ).toHaveBeenCalled();
       expect(result.current.activeVersionId).toBe('v1');
     });
 
@@ -4358,7 +4594,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set active version first
       act(() => {
@@ -4408,7 +4646,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -4457,7 +4697,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -4487,7 +4729,9 @@ describe('useCanvasVersionNavigation', () => {
         unwrap: () => Promise.reject(new Error('Failed to restore')),
       }));
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -4570,7 +4814,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set state manually
       act(() => {
@@ -4589,7 +4835,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set history without current version
       act(() => {
@@ -4640,7 +4888,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(0);
@@ -4658,7 +4908,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // First set history with a version
       act(() => {
@@ -4697,7 +4949,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set initial history
       act(() => {
@@ -4730,7 +4984,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set version history and active version
       act(() => {
@@ -4757,7 +5013,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Empty state, currentVersionIndex should be -1
       expect(result.current.currentVersionIndex).toBe(-1);
@@ -4770,7 +5028,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result, rerender } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result, rerender } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Set up initial state with version history
       act(() => {
@@ -4811,7 +5071,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       // Keep both activeVersionId and currentVersion null
       // Set non-empty version history
@@ -4839,7 +5101,9 @@ describe('useCanvasVersionNavigation', () => {
         refetch: mockRefetchVersions,
       } as any);
 
-      const { result } = renderHook(() => useCanvasVersionNavigation(defaultProps));
+      const { result } = renderHook(() =>
+        useCanvasVersionNavigation(defaultProps),
+      );
 
       act(() => {
         result.current.setActiveVersionId('v1');

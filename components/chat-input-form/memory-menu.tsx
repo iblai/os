@@ -148,8 +148,8 @@ export const MemoryMenu = ({
               content: editMemoryData.content,
               category: editMemoryData.category,
             }
-          : m
-      )
+          : m,
+      ),
     );
     setEditingMemory(null);
     setEditMemoryData({ title: '', content: '', category: '' });
@@ -159,13 +159,13 @@ export const MemoryMenu = ({
     (memory) =>
       memory.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       memory.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      memory.category.toLowerCase().includes(searchQuery.toLowerCase())
+      memory.category.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
     <>
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
+      <div className="border-b border-gray-100 p-4">
+        <div className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Your Memory</h3>
           <div className="flex items-center gap-2">
             <Button
@@ -189,24 +189,24 @@ export const MemoryMenu = ({
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           <Input
             placeholder="Search memories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-8 text-sm border border-gray-300 rounded-md"
+            className="h-8 rounded-md border border-gray-300 pl-10 text-sm"
           />
         </div>
 
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="mt-2 text-sm text-gray-500">
           Select memories to include in your conversation
         </p>
       </div>
 
       {/* Add Memory Form */}
       {isAddingMemory && (
-        <div className="p-4 border-b border-gray-100 bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-3">Add New Memory</h4>
+        <div className="border-b border-gray-100 bg-gray-50 p-4">
+          <h4 className="mb-3 font-medium text-gray-900">Add New Memory</h4>
           <div className="space-y-3">
             <Input
               placeholder="Memory title..."
@@ -214,7 +214,7 @@ export const MemoryMenu = ({
               onChange={(e) =>
                 setNewMemory({ ...newMemory, title: e.target.value })
               }
-              className="h-8 text-sm border border-gray-300 rounded-md"
+              className="h-8 rounded-md border border-gray-300 text-sm"
             />
             <Textarea
               placeholder="Memory content..."
@@ -222,14 +222,14 @@ export const MemoryMenu = ({
               onChange={(e) =>
                 setNewMemory({ ...newMemory, content: e.target.value })
               }
-              className="min-h-[60px] text-sm resize-none border border-gray-300 rounded-md"
+              className="min-h-[60px] resize-none rounded-md border border-gray-300 text-sm"
             />
             <select
               value={newMemory.category}
               onChange={(e) =>
                 setNewMemory({ ...newMemory, category: e.target.value })
               }
-              className="w-full h-8 text-sm border border-gray-300 rounded-md px-2 bg-white"
+              className="h-8 w-full rounded-md border border-gray-300 bg-white px-2 text-sm"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -241,7 +241,7 @@ export const MemoryMenu = ({
               <Button
                 size="sm"
                 onClick={handleAddMemory}
-                className="bg-[#38A1E5] hover:bg-[#2891D5] text-white"
+                className="bg-[#38A1E5] text-white hover:bg-[#2891D5]"
               >
                 Save
               </Button>
@@ -269,7 +269,7 @@ export const MemoryMenu = ({
             return (
               <div
                 key={memory.id}
-                className={`p-3 border-b border-gray-50 last:border-b-0 transition-colors ${
+                className={`border-b border-gray-50 p-3 transition-colors last:border-b-0 ${
                   isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
                 }`}
               >
@@ -283,7 +283,7 @@ export const MemoryMenu = ({
                           title: e.target.value,
                         })
                       }
-                      className="h-8 text-sm font-medium border border-gray-300 rounded-md"
+                      className="h-8 rounded-md border border-gray-300 text-sm font-medium"
                       placeholder="Memory title..."
                     />
                     <Textarea
@@ -294,7 +294,7 @@ export const MemoryMenu = ({
                           content: e.target.value,
                         })
                       }
-                      className="min-h-[60px] text-sm resize-none border border-gray-300 rounded-md"
+                      className="min-h-[60px] resize-none rounded-md border border-gray-300 text-sm"
                       placeholder="Memory content..."
                     />
                     <select
@@ -305,7 +305,7 @@ export const MemoryMenu = ({
                           category: e.target.value,
                         })
                       }
-                      className="w-full h-8 text-sm border border-gray-300 rounded-md px-2 bg-white"
+                      className="h-8 w-full rounded-md border border-gray-300 bg-white px-2 text-sm"
                     >
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
@@ -317,7 +317,7 @@ export const MemoryMenu = ({
                       <Button
                         size="sm"
                         onClick={() => handleSaveEdit(memory.id)}
-                        className="bg-[#38A1E5] hover:bg-[#2891D5] text-white"
+                        className="bg-[#38A1E5] text-white hover:bg-[#2891D5]"
                       >
                         Save
                       </Button>
@@ -339,12 +339,12 @@ export const MemoryMenu = ({
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4
-                            className={`font-medium text-sm ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}
+                            className={`text-sm font-medium ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}
                           >
                             {memory.title}
                           </h4>
                           <span
-                            className={`px-2 py-0.5 text-xs rounded-full ${
+                            className={`rounded-full px-2 py-0.5 text-xs ${
                               isSelected
                                 ? 'bg-blue-200 text-blue-800'
                                 : 'bg-blue-100 text-blue-700'
@@ -354,17 +354,17 @@ export const MemoryMenu = ({
                           </span>
                         </div>
                         <p
-                          className={`text-xs mt-1 line-clamp-2 ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}
+                          className={`mt-1 line-clamp-2 text-xs ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}
                         >
                           {memory.content}
                         </p>
                         <p
-                          className={`text-xs mt-1 ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}
+                          className={`mt-1 text-xs ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}
                         >
                           {memory.timestamp}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="ml-2 flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -395,7 +395,7 @@ export const MemoryMenu = ({
           })}
 
         {filteredMemories.length === 0 && (
-          <div className="p-4 text-center text-gray-500 text-sm">
+          <div className="p-4 text-center text-sm text-gray-500">
             {searchQuery
               ? 'No memories found matching your search.'
               : 'No memories yet.'}
@@ -403,11 +403,11 @@ export const MemoryMenu = ({
         )}
       </div>
 
-      <div className="p-3 border-t border-gray-100">
+      <div className="border-t border-gray-100 p-3">
         <Button
           variant="outline"
           size="sm"
-          className="w-full text-xs bg-transparent"
+          className="w-full bg-transparent text-xs"
           onClick={() => setShowAllMemories(!showAllMemories)}
         >
           {showAllMemories ? 'Show Less' : 'View All Memories'}

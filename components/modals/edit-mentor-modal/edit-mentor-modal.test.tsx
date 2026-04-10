@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  waitFor,
+  fireEvent,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -19,8 +25,11 @@ let mockSearchParamsRaw = '';
 let mockIsAdmin = true;
 let mockGetEditMentorTab: string | undefined = MODALS.EDIT_MENTOR.tabs.settings;
 let mockGetMentorId: string | null = 'mentor456';
-let mockIsUserTypeAllowed: (item: { userTypes: string[] }) => boolean = (item) =>
-  item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL);
+let mockIsUserTypeAllowed: (item: { userTypes: string[] }) => boolean = (
+  item,
+) =>
+  item.userTypes.includes(UserType.ADMIN) ||
+  item.userTypes.includes(UserType.FREE_TRIAL);
 let mockEnableRBAC = false;
 let mockCheckRbacPermissionResult = true;
 let mockMentorSettings: any = null;
@@ -75,7 +84,8 @@ vi.mock('@/hooks/use-user', () => ({
 
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
-    isUserTypeAllowed: (item: { userTypes: string[] }) => mockIsUserTypeAllowed(item),
+    isUserTypeAllowed: (item: { userTypes: string[] }) =>
+      mockIsUserTypeAllowed(item),
   }),
 }));
 
@@ -88,13 +98,17 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
     useGetMentorSettingsQuery: () => ({
       data: mockMentorSettings,
       isLoading: false,
       isSuccess: mockIsSuccess,
+    }),
+    useGetMemsearchConfigQuery: () => ({
+      data: { enable_memsearch: true },
     }),
   };
 });
@@ -160,7 +174,9 @@ vi.mock('./tabs/memory-tab', () => ({
 }));
 
 vi.mock('./tabs/disclaimers-tab', () => ({
-  DisclaimersTab: () => <div data-testid="disclaimers-tab">Disclaimers Tab</div>,
+  DisclaimersTab: () => (
+    <div data-testid="disclaimers-tab">Disclaimers Tab</div>
+  ),
 }));
 
 vi.mock('@/hoc/utils', () => ({
@@ -184,7 +200,8 @@ function createTestStore(ps: ModalInfo[] = [], rp: object = {}) {
       rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
-    middleware: (g) => g({ serializableCheck: false }).concat(mentorApiSlice.middleware),
+    middleware: (g) =>
+      g({ serializableCheck: false }).concat(mentorApiSlice.middleware),
     preloadedState: {
       modals: {
         modalStack: ps,
@@ -225,7 +242,8 @@ describe('EditMentorModal', () => {
     mockCheckRbacPermissionResult = true;
     mockIsSuccess = true;
     mockIsUserTypeAllowed = (item) =>
-      item.userTypes.includes(UserType.ADMIN) || item.userTypes.includes(UserType.FREE_TRIAL);
+      item.userTypes.includes(UserType.ADMIN) ||
+      item.userTypes.includes(UserType.FREE_TRIAL);
     mockMentorSettings = dms();
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -246,12 +264,12 @@ describe('EditMentorModal', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('shows mentor name in title', async () => {
+    it('shows Edit Mentor title', async () => {
       renderM();
       await waitFor(() => {
         const h = screen
           .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Test Mentor'));
+          .find((el) => el.textContent?.includes('Edit Mentor'));
         expect(h).toBeTruthy();
       });
     });
@@ -270,14 +288,18 @@ describe('EditMentorModal', () => {
     it('sr-only description', async () => {
       renderM();
       await waitFor(() => {
-        const d = screen.getByText(/Edit Mentor settings, prompts, tools, safety/i);
+        const d = screen.getByText(
+          /Edit Mentor settings, prompts, tools, safety/i,
+        );
         expect(d).toHaveClass('sr-only');
       });
     });
 
     it('default settings tab', async () => {
       renderM();
-      await waitFor(() => expect(screen.getByTestId('settings-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
+      );
     });
   });
 
@@ -285,13 +307,17 @@ describe('EditMentorModal', () => {
     it('uses getEditMentorTab', async () => {
       mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.llm;
       renderM();
-      await waitFor(() => expect(screen.getByTestId('llm-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId('llm-tab')).toBeInTheDocument(),
+      );
     });
 
     it('defaults to settings', async () => {
       mockGetEditMentorTab = undefined;
       renderM();
-      await waitFor(() => expect(screen.getByTestId('settings-tab')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
+      );
     });
   });
 
@@ -299,7 +325,9 @@ describe('EditMentorModal', () => {
     it('LLM tab trigger is clickable and has correct role', async () => {
       renderM();
       await waitFor(() => {
-        const llmTab = document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.llm}`);
+        const llmTab = document.getElementById(
+          `desktop-tab-${MODALS.EDIT_MENTOR.tabs.llm}`,
+        );
         expect(llmTab).toBeTruthy();
         expect(llmTab?.getAttribute('role')).toBe('tab');
         expect(llmTab?.getAttribute('type')).toBe('button');
@@ -337,7 +365,9 @@ describe('EditMentorModal', () => {
         expect(
           screen
             .getAllByRole('tablist')
-            .find((t) => t.getAttribute('aria-label') === 'Mentor settings tabs'),
+            .find(
+              (t) => t.getAttribute('aria-label') === 'Mentor settings tabs',
+            ),
         ).toBeTruthy();
       });
     });
@@ -346,7 +376,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -365,9 +397,13 @@ describe('EditMentorModal', () => {
     it('panel aria-labelledby', async () => {
       renderM();
       await waitFor(() => {
-        const p = document.getElementById(`panel-${MODALS.EDIT_MENTOR.tabs.settings}`);
+        const p = document.getElementById(
+          `panel-${MODALS.EDIT_MENTOR.tabs.settings}`,
+        );
         expect(p).toBeInTheDocument();
-        expect(p?.getAttribute('aria-labelledby')).toBe(`tab-${MODALS.EDIT_MENTOR.tabs.settings}`);
+        expect(p?.getAttribute('aria-labelledby')).toBe(
+          `tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+        );
       });
     });
   });
@@ -375,11 +411,16 @@ describe('EditMentorModal', () => {
   describe('Mobile Tabs', () => {
     it('multiple tablists', async () => {
       renderM();
-      await waitFor(() => expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2));
+      await waitFor(() =>
+        expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2),
+      );
     });
 
     it('narrow screen tabs', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 500,
+        writable: true,
+      });
       renderM();
       await waitFor(() =>
         expect(
@@ -389,15 +430,25 @@ describe('EditMentorModal', () => {
     });
 
     it('tablet tabs', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 1024,
+        writable: true,
+      });
       renderM();
-      await waitFor(() => expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2));
+      await waitFor(() =>
+        expect(screen.getAllByRole('tablist').length).toBeGreaterThanOrEqual(2),
+      );
     });
 
     it('overflow dropdown', async () => {
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+      Object.defineProperty(window, 'innerWidth', {
+        value: 500,
+        writable: true,
+      });
       renderM();
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).toBeInTheDocument(),
+      );
     });
   });
 
@@ -406,10 +457,14 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() => {
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument();
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).toBeInTheDocument();
       });
     });
@@ -419,7 +474,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -434,7 +491,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -448,7 +507,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -463,7 +524,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -473,7 +536,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -483,7 +548,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -495,7 +562,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -507,7 +576,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -517,7 +588,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -527,7 +600,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -537,7 +612,9 @@ describe('EditMentorModal', () => {
     it('uses truthy getMentorId', async () => {
       mockGetMentorId = 'x';
       renderM();
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).toBeInTheDocument(),
+      );
     });
 
     it('fallback on null', async () => {
@@ -545,7 +622,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          screen.getAllByRole('heading').find((h) => h.textContent?.includes('Edit Mentor')),
+          screen
+            .getAllByRole('heading')
+            .find((h) => h.textContent?.includes('Edit Mentor')),
         ).toBeTruthy(),
       );
     });
@@ -555,7 +634,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          screen.getAllByRole('heading').find((h) => h.textContent?.includes('Edit Mentor')),
+          screen
+            .getAllByRole('heading')
+            .find((h) => h.textContent?.includes('Edit Mentor')),
         ).toBeTruthy(),
       );
     });
@@ -565,7 +646,9 @@ describe('EditMentorModal', () => {
     it('calls onClose', async () => {
       const fn = vi.fn();
       renderM(true, fn);
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.getByRole('dialog')).toBeInTheDocument(),
+      );
       const b = screen.getByRole('button', { name: /close/i });
       if (b) {
         fireEvent.click(b);
@@ -609,10 +692,14 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() => {
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+          ),
         ).not.toBeInTheDocument();
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument();
       });
     });
@@ -634,7 +721,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -642,11 +731,16 @@ describe('EditMentorModal', () => {
     it('AND: RBAC ok field fail', async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
-      mockMentorSettings = { ...dms(), permissions: { field: { x: { read: true, write: true } } } };
+      mockMentorSettings = {
+        ...dms(),
+        permissions: { field: { x: { read: true, write: true } } },
+      };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -654,11 +748,16 @@ describe('EditMentorModal', () => {
     it('AND: both fail', async () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = false;
-      mockMentorSettings = { ...dms(), permissions: { field: { x: { read: true, write: true } } } };
+      mockMentorSettings = {
+        ...dms(),
+        permissions: { field: { x: { read: true, write: true } } },
+      };
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -673,7 +772,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -698,7 +799,10 @@ describe('EditMentorModal', () => {
         MODALS.EDIT_MENTOR.tabs.embed,
       ];
       await waitFor(() => {
-        for (const v of ts) expect(document.getElementById(`desktop-tab-${v}`)).toBeInTheDocument();
+        for (const v of ts)
+          expect(
+            document.getElementById(`desktop-tab-${v}`),
+          ).toBeInTheDocument();
       });
     });
   });
@@ -708,7 +812,9 @@ describe('EditMentorModal', () => {
       const { rerender } = renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
       mockMentorSettings = null;
@@ -726,7 +832,9 @@ describe('EditMentorModal', () => {
       const { rerender } = renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
       mockIsSuccess = true;
@@ -738,7 +846,9 @@ describe('EditMentorModal', () => {
       );
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -754,7 +864,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -771,7 +883,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });
@@ -799,7 +913,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).not.toBeInTheDocument(),
       );
     });
@@ -811,7 +927,9 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() =>
         expect(
-          document.getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`),
+          document.getElementById(
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+          ),
         ).toBeInTheDocument(),
       );
     });

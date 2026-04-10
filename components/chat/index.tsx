@@ -1,31 +1,31 @@
-"use client";
+'use client';
 
-import React, { useLayoutEffect } from "react";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import dynamic from "next/dynamic";
+import React, { useLayoutEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 
 import {
   addMessage,
   selectEnableChatActionsPopup,
-} from "@/features/chat/chatSlice";
-import { clearFiles } from "@iblai/iblai-js/web-utils";
-import ErrorBoundary from "@/components/error-boundary";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { RootState } from "@/store";
-import { ChatInputForm } from "@/components/chat-input-form";
+} from '@/features/chat/chatSlice';
+import { clearFiles } from '@iblai/iblai-js/web-utils';
+import ErrorBoundary from '@/components/error-boundary';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { RootState } from '@/store';
+import { ChatInputForm } from '@/components/chat-input-form';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   GripVertical,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { LoadingMessage } from "@/components/chat/loading-message";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { LoadingMessage } from '@/components/chat/loading-message';
 import {
   ANONYMOUS_USERNAME,
   Message as BaseMessage,
@@ -40,7 +40,7 @@ import {
   CHAT_AREA_SIZE,
   FileReference,
   TOOLS,
-} from "@iblai/iblai-js/web-utils";
+} from '@iblai/iblai-js/web-utils';
 import {
   cn,
   getAuthSpaJoinUrl,
@@ -48,13 +48,13 @@ import {
   isLoggedIn,
   redirectToAuthSpa,
   sendMessageToParentWebsite,
-} from "@/lib/utils";
-import { toast } from "sonner";
-import { config } from "@/lib/config";
-import { AdvancedChatHeader } from "@/components/advanced-chat/advanced-chat-header";
-import { advancedTabs } from "@iblai/iblai-js/web-utils";
-import { LiveKitChat } from "../live-kit-voice-chat";
-import { GuidedSuggestedPrompts } from "../guided-suggested-prompts";
+} from '@/lib/utils';
+import { toast } from 'sonner';
+import { config } from '@/lib/config';
+import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
+import { advancedTabs } from '@iblai/iblai-js/web-utils';
+import { LiveKitChat } from '../live-kit-voice-chat';
+import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
 import {
   Dialog,
   DialogContent,
@@ -62,41 +62,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useAdvancedChat } from "@iblai/iblai-js/web-utils";
+} from '@/components/ui/dialog';
+import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
 import {
   useUsername,
   useUserTenants,
   useVisitingTenant,
-} from "@/hooks/use-user";
-import { useAxdToken } from "@/hooks/use-tokens";
-import { useParams, useSearchParams } from "next/navigation";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { ChatMessages } from "./chat-messages";
-import type { CanvasOpenPayload } from "./chat-messages/types";
-import { useNavigate } from "@/hooks/user-navigate";
-import { AdvancedStaticChatBuilder } from "../advanced-chat/advanced-chat-builder";
-import eventBus, { RemoteEvents } from "@/lib/eventBus";
-import { useDebouncedCallback } from "use-debounce";
-import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
-import { useUserAgreement } from "@/hooks/use-user-agreement";
-import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from "@/lib/constants";
-import { LiveKitScreenSharing } from "../live-kit-screen-sharing";
-import { WelcomeChatNew } from "../welcome-chat-new";
-import { useEmbedMode } from "@/hooks/use-embed-mode";
-import { ChatActionBlockingOverlay } from "../modals/chat-action-blocking-overlay";
-import { use402ErrorCheck } from "@/hooks/subscription/use-402-error-check";
-import { ToastErrorMessage } from "./toast-error-message";
-import { useMentorSettings } from "@/hooks/use-mentors/use-mentor-settings";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useServiceWorker } from "@/components/service-worker-provider";
-import { FileText } from "lucide-react";
-import { useFileDragDrop } from "@/hooks/use-file-drag-drop";
-import { useAccessingPublicRoute } from "@/hooks/use-anonymous-mentor";
+} from '@/hooks/use-user';
+import { useAxdToken } from '@/hooks/use-tokens';
+import { useParams, useSearchParams } from 'next/navigation';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { ChatMessages } from './chat-messages';
+import type { CanvasOpenPayload } from './chat-messages/types';
+import { useNavigate } from '@/hooks/user-navigate';
+import { AdvancedStaticChatBuilder } from '../advanced-chat/advanced-chat-builder';
+import eventBus, { RemoteEvents } from '@/lib/eventBus';
+import { useDebouncedCallback } from 'use-debounce';
+import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import { useUserAgreement } from '@/hooks/use-user-agreement';
+import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
+import { WelcomeChatNew } from '../welcome-chat-new';
+import { useEmbedMode } from '@/hooks/use-embed-mode';
+import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
+import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
+import { ToastErrorMessage } from './toast-error-message';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useServiceWorker } from '@/components/service-worker-provider';
+import { FileText } from 'lucide-react';
+import { useFileDragDrop } from '@/hooks/use-file-drag-drop';
+import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 
 /* istanbul ignore next -- @preserve dynamic import */
 const CanvasView = dynamic(
-  () => import("@/components/canvas/canvas-view").then((mod) => mod.CanvasView),
+  () => import('@/components/canvas/canvas-view').then((mod) => mod.CanvasView),
   {
     ssr: false,
   },
@@ -105,7 +105,7 @@ const CanvasView = dynamic(
 /* istanbul ignore next -- @preserve dynamic import */
 const DisclaimerModal = dynamic(
   () =>
-    import("@/components/modals/disclaimer-modal").then(
+    import('@/components/modals/disclaimer-modal').then(
       (mod) => mod.DisclaimerModal,
     ),
   {
@@ -122,7 +122,7 @@ interface Message extends BaseMessage {
  * Check if running in Tauri desktop app
  */
 function isTauriApp(): boolean {
-  return typeof window !== "undefined" && "__TAURI__" in window;
+  return typeof window !== 'undefined' && '__TAURI__' in window;
 }
 
 /**
@@ -130,10 +130,10 @@ function isTauriApp(): boolean {
  */
 /* istanbul ignore next -- @preserve Tauri-specific function */
 function isOfflineServerOrigin(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === 'undefined') return false;
   const origin = window.location.origin;
   return (
-    origin === "http://127.0.0.1:3456" || origin === "http://localhost:3456"
+    origin === 'http://127.0.0.1:3456' || origin === 'http://localhost:3456'
   );
 }
 
@@ -142,7 +142,7 @@ function isOfflineServerOrigin(): boolean {
  */
 /* istanbul ignore next -- @preserve Tauri-specific function */
 function isTauriOfflineMode(): boolean {
-  if (typeof window === "undefined") return false;
+  if (typeof window === 'undefined') return false;
   // Check offline server origin first (works before Tauri scripts run)
   if (isOfflineServerOrigin()) return true;
   if (!isTauriApp()) return false;
@@ -153,8 +153,8 @@ function isTauriOfflineMode(): boolean {
   )
     return true;
   // Fallback to localStorage
-  if (typeof localStorage?.getItem !== "function") return false;
-  return localStorage.getItem("tauri_offline_mode") === "true";
+  if (typeof localStorage?.getItem !== 'function') return false;
+  return localStorage.getItem('tauri_offline_mode') === 'true';
 }
 
 /**
@@ -174,7 +174,7 @@ function isLikelyOffline(): boolean {
 }
 
 type Props = {
-  mode?: "advanced" | "default";
+  mode?: 'advanced' | 'default';
   isPreviewMode: boolean;
   hasBorder?: boolean;
   isInCanvasView?: boolean;
@@ -183,7 +183,7 @@ type Props = {
 type CanvasState = {
   title: string;
   content: string;
-  type: "document" | "code";
+  type: 'document' | 'code';
   artifactId?: number;
   org?: string;
   userId?: string;
@@ -192,40 +192,40 @@ type CanvasState = {
 };
 
 const createEmptyCanvasState = (): CanvasState => ({
-  title: "",
-  content: "",
-  type: "document",
+  title: '',
+  content: '',
+  type: 'document',
 });
 
 const CODE_FILE_EXTENSIONS = new Set([
-  "py",
-  "js",
-  "ts",
-  "tsx",
-  "jsx",
-  "c",
-  "cpp",
-  "cs",
-  "java",
-  "rb",
-  "go",
-  "rs",
-  "php",
-  "swift",
-  "kt",
-  "scala",
-  "sql",
-  "json",
-  "yml",
-  "yaml",
-  "xml",
-  "html",
-  "css",
-  "sh",
+  'py',
+  'js',
+  'ts',
+  'tsx',
+  'jsx',
+  'c',
+  'cpp',
+  'cs',
+  'java',
+  'rb',
+  'go',
+  'rs',
+  'php',
+  'swift',
+  'kt',
+  'scala',
+  'sql',
+  'json',
+  'yml',
+  'yaml',
+  'xml',
+  'html',
+  'css',
+  'sh',
 ]);
 
 export function Chat({
-  mode = "default",
+  mode = 'default',
   isPreviewMode = false,
   hasBorder = true,
   isInCanvasView = false,
@@ -252,7 +252,7 @@ export function Chat({
   const chatAreaMaxWidth = (() => {
     const sizeValue = tenantMetadata?.chat_area_size as number | undefined;
     if (
-      typeof sizeValue === "number" &&
+      typeof sizeValue === 'number' &&
       sizeValue >= CHAT_AREA_SIZE.MIN &&
       sizeValue <= CHAT_AREA_SIZE.MAX
     ) {
@@ -262,7 +262,7 @@ export function Chat({
   })();
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
-  const isCompactMode = searchParams.get("compact") === "true";
+  const isCompactMode = searchParams.get('compact') === 'true';
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
@@ -301,7 +301,7 @@ export function Chat({
 
   // Handler for when user is offline without local LLM enabled
   const handleOfflineWithoutLocalLLM = useCallback(() => {
-    toast.error("You are offline", {
+    toast.error('You are offline', {
       description:
         'Chat is unavailable in offline mode. Enable "Download Local LLMs" in Settings to use chat offline.',
       duration: 10000,
@@ -358,7 +358,7 @@ export function Chat({
         (isOfflineInTauri || !navigator.onLine || isLikelyOffline());
       if (shouldSuppressError) {
         console.log(
-          "[offline] Error suppressed in Tauri offline mode:",
+          '[offline] Error suppressed in Tauri offline mode:',
           message,
           {
             isOfflineInTauri,
@@ -386,8 +386,8 @@ export function Chat({
       (!!visitingTenant &&
         isLoggedIn() &&
         !mentorSettings.allowAnonymous &&
-        !searchParams.get("token")),
-    mentorShareableToken: searchParams.get("token"),
+        !searchParams.get('token')),
+    mentorShareableToken: searchParams.get('token'),
     on402Error: handle402Error,
     cachedSessionId,
     onStartNewChat: (sessionId: string) => {
@@ -398,7 +398,7 @@ export function Chat({
     },
     // OAuth callbacks for per_user MCP servers
     onOAuthRequired: (data) => {
-      window.open(data.authUrl, "_blank");
+      window.open(data.authUrl, '_blank');
       toast.info(
         `Authentication required for ${data.serverName}. Please complete the login in the opened window.`,
         {
@@ -451,7 +451,7 @@ export function Chat({
     },
   });
   const [mentorAccessibilityMessage, setMentorAccessibilityMessage] =
-    useState<string>("");
+    useState<string>('');
 
   // File drag-and-drop for the entire chat area
   const {
@@ -459,7 +459,7 @@ export function Chat({
     handleDragOver: handleChatDragOver,
     handleDragLeave: handleChatDragLeave,
     handleDrop: handleChatDrop,
-  } = useFileDragDrop({ org: tenantKey, userId: username ?? "" });
+  } = useFileDragDrop({ org: tenantKey, userId: username ?? '' });
 
   useEffect(() => {
     if (isStreaming) {
@@ -470,7 +470,7 @@ export function Chat({
     if (
       !isStreaming &&
       messages.length > 0 &&
-      messages[messages.length - 1]?.role === "assistant"
+      messages[messages.length - 1]?.role === 'assistant'
     ) {
       setMentorAccessibilityMessage(
         `${mentorName} says: ${messages[messages.length - 1]?.content}`,
@@ -505,11 +505,11 @@ export function Chat({
     eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
   }, [showingSharedChat]);
 
-  const isAdvancedMode = mode === "advanced";
+  const isAdvancedMode = mode === 'advanced';
   const [isPhoneCallModalOpen, setIsPhoneCallModalOpen] = useState(false);
   const [isScreenSharingModalOpen, setIsScreenSharingModalOpen] =
     useState(false);
-  const [, setInputValue] = useState("");
+  const [, setInputValue] = useState('');
   const [showVoiceCallConfirmation, setShowVoiceCallConfirmation] =
     useState(false);
   const [showScreenShareConfirmation, setShowScreenShareConfirmation] =
@@ -520,19 +520,19 @@ export function Chat({
 
   // Track if we're in a popup window for chat action (voice call or screen share)
   const [chatActionType, setChatActionType] = useState<
-    "voice-call" | "screen-share" | null
+    'voice-call' | 'screen-share' | null
   >(null);
   const [showBlockingOverlay, setShowBlockingOverlay] = useState(false);
 
   // Listen for MENTOR:SCREENSHARING_STOPPED messages from popup/parent to refetch chats
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "MENTOR:SCREENSHARING_STOPPED") {
+      if (event.data?.type === 'MENTOR:SCREENSHARING_STOPPED') {
         refetchChats();
       }
     };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, [refetchChats]);
 
   const [highlightedMessageId, setHighlightedMessageId] = useState<
@@ -552,14 +552,14 @@ export function Chat({
   const wasStreamingActiveRef = useRef(false);
 
   const [isMdUp, setIsMdUp] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === 'undefined') return true;
     return window.innerWidth >= 768;
   });
   useEffect(() => {
     const handleResize = () => setIsMdUp(window.innerWidth >= 768);
     handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Track current artifact from canvas-active events (for when artifact is loaded from API)
@@ -672,20 +672,20 @@ export function Chat({
 
   // Check for voice-call query parameter
   useEffect(() => {
-    const chatAction = searchParams.get("chat-action");
-    const sessionId = searchParams.get("session-id");
+    const chatAction = searchParams.get('chat-action');
+    const sessionId = searchParams.get('session-id');
     if (chatAction) {
-      if (chatAction === "voice-call") {
+      if (chatAction === 'voice-call') {
         setShowVoiceCallConfirmation(true);
-        setChatActionType("voice-call");
+        setChatActionType('voice-call');
         if (sessionId) {
           saveCachedSessionId({ [mentorId]: sessionId });
         } else {
           saveCachedSessionId({});
         }
-      } else if (chatAction === "screen-share") {
+      } else if (chatAction === 'screen-share') {
         setShowScreenShareConfirmation(true);
-        setChatActionType("screen-share");
+        setChatActionType('screen-share');
         if (sessionId) {
           saveCachedSessionId({ [mentorId]: sessionId });
         } else {
@@ -701,7 +701,7 @@ export function Chat({
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth",
+        behavior: 'smooth',
       });
     }
   }, SCROLLING_DEBOUNCE_TIME);
@@ -718,17 +718,17 @@ export function Chat({
 
   const resolveCanvasType = (
     payload: CanvasOpenPayload,
-  ): "document" | "code" => {
-    if (payload.toolType === "code") {
-      return "code";
+  ): 'document' | 'code' => {
+    if (payload.toolType === 'code') {
+      return 'code';
     }
     if (
       payload.fileExtension &&
       CODE_FILE_EXTENSIONS.has(payload.fileExtension.toLowerCase())
     ) {
-      return "code";
+      return 'code';
     }
-    return "document";
+    return 'document';
   };
 
   // Handler to open canvas with content
@@ -748,9 +748,9 @@ export function Chat({
 
       // Temporarily fix body to prevent scroll jump
       const originalBodyStyle = document.body.style.cssText;
-      document.body.style.position = "fixed";
+      document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = "100%";
+      document.body.style.width = '100%';
 
       // Reset scroll immediately
       window.scrollTo(0, 0);
@@ -767,7 +767,7 @@ export function Chat({
       });
     } else {
       // For subsequent opens, just reset scroll normally
-      window.scrollTo({ top: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, behavior: 'auto' });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
     }
@@ -775,7 +775,7 @@ export function Chat({
     /* istanbul ignore next -- @preserve nullish coalescing branches */
     const resolvedTitle = payload.title?.trim()
       ? payload.title.trim()
-      : "Untitled Artifact";
+      : 'Untitled Artifact';
     /* istanbul ignore next */
     const resolvedOrg = payload.org ?? tenantKey ?? undefined;
     /* istanbul ignore next */
@@ -783,7 +783,7 @@ export function Chat({
 
     const newCanvasState = {
       title: resolvedTitle,
-      content: payload.content ?? "",
+      content: payload.content ?? '',
       type: resolveCanvasType(payload),
       artifactId: payload.artifactId,
       org: resolvedOrg,
@@ -808,7 +808,7 @@ export function Chat({
       setCurrentCanvasArtifact({
         artifactId: payload.artifactId,
         title: resolvedTitle,
-        file_extension: payload.fileExtension || "txt",
+        file_extension: payload.fileExtension || 'txt',
       });
     }
 
@@ -840,12 +840,12 @@ export function Chat({
       setIsResizing(false);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [clampChatWidth, isResizing]);
 
@@ -853,7 +853,7 @@ export function Chat({
   useEffect(() => {
     if (isResizing) {
       const previousUserSelect = document.body.style.userSelect;
-      document.body.style.userSelect = "none";
+      document.body.style.userSelect = 'none';
       return () => {
         document.body.style.userSelect = previousUserSelect;
       };
@@ -878,10 +878,10 @@ export function Chat({
     };
 
     enforceResponsiveBounds();
-    window.addEventListener("resize", enforceResponsiveBounds);
+    window.addEventListener('resize', enforceResponsiveBounds);
 
     return () => {
-      window.removeEventListener("resize", enforceResponsiveBounds);
+      window.removeEventListener('resize', enforceResponsiveBounds);
     };
   }, [clampChatWidth]);
 
@@ -893,7 +893,7 @@ export function Chat({
     // This must happen BEFORE React applies the layout change to prevent blank space
     const resetScroll = () => {
       // Reset window scroll
-      window.scrollTo({ top: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, behavior: 'auto' });
       window.scrollTo(0, 0); // Force immediate scroll
 
       // Reset document scroll
@@ -959,7 +959,7 @@ export function Chat({
 
       // Ensure window scroll is still at top
       if (window.scrollY !== 0 || window.pageYOffset !== 0) {
-        window.scrollTo({ top: 0, behavior: "auto" });
+        window.scrollTo({ top: 0, behavior: 'auto' });
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
       }
@@ -974,10 +974,10 @@ export function Chat({
         /* istanbul ignore next -- @preserve RAF callbacks not executed in JSDOM */
         if (maxScroll > 0) {
           if (targetChat >= 0 && targetChat <= maxScroll) {
-            container.scrollTo({ top: targetChat, behavior: "auto" });
+            container.scrollTo({ top: targetChat, behavior: 'auto' });
           } else if (targetChat > maxScroll) {
             // If saved position exceeds bounds, scroll to bottom
-            container.scrollTo({ top: maxScroll, behavior: "auto" });
+            container.scrollTo({ top: maxScroll, behavior: 'auto' });
           }
         }
         // If maxScroll <= 0, content fits in container, no scroll needed
@@ -1036,12 +1036,12 @@ export function Chat({
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
-      chatContainer.addEventListener("scroll", handleScroll);
+      chatContainer.addEventListener('scroll', handleScroll);
     }
 
     return () => {
       if (chatContainer) {
-        chatContainer.removeEventListener("scroll", handleScroll);
+        chatContainer.removeEventListener('scroll', handleScroll);
       }
     };
   }, []);
@@ -1061,14 +1061,14 @@ export function Chat({
       if (artifactId) {
         setCurrentCanvasArtifact({
           artifactId:
-            typeof artifactId === "number"
+            typeof artifactId === 'number'
               ? artifactId
               : parseInt(String(artifactId), 10),
-          title: title || "Untitled Artifact",
-          file_extension: file_extension || "txt",
+          title: title || 'Untitled Artifact',
+          file_extension: file_extension || 'txt',
         });
         console.log(
-          "[Chat] Received canvas-active event with artifact:",
+          '[Chat] Received canvas-active event with artifact:',
           artifactId,
         );
       }
@@ -1077,22 +1077,22 @@ export function Chat({
     /* istanbul ignore next -- @preserve CustomEvent handler */
     const handleCanvasInactive = () => {
       setCurrentCanvasArtifact(null);
-      console.log("[Chat] Received canvas-inactive event");
+      console.log('[Chat] Received canvas-inactive event');
     };
 
-    window.addEventListener("canvas-active" as any, handleCanvasActive as any);
+    window.addEventListener('canvas-active' as any, handleCanvasActive as any);
     window.addEventListener(
-      "canvas-inactive" as any,
+      'canvas-inactive' as any,
       handleCanvasInactive as any,
     );
 
     return () => {
       window.removeEventListener(
-        "canvas-active" as any,
+        'canvas-active' as any,
         handleCanvasActive as any,
       );
       window.removeEventListener(
-        "canvas-inactive" as any,
+        'canvas-inactive' as any,
         handleCanvasInactive as any,
       );
     };
@@ -1109,7 +1109,7 @@ export function Chat({
       // If canvas is open and sessionId changes, close the canvas
       // This ensures canvas doesn't persist when switching between chats
       if (isCanvasOpen) {
-        console.log("[Chat] Session changed, closing canvas", {
+        console.log('[Chat] Session changed, closing canvas', {
           previousSessionId: prevSessionIdRef.current,
           newSessionId: sessionId,
         });
@@ -1119,13 +1119,13 @@ export function Chat({
       // Disable canvas tool if it's enabled when session changes
       // This ensures canvas status is reset when switching chats or starting new chat
       if (artifactsEnabled) {
-        console.log("[Chat] Session changed, disabling canvas tool", {
+        console.log('[Chat] Session changed, disabling canvas tool', {
           previousSessionId: prevSessionIdRef.current,
           newSessionId: sessionId,
         });
         updateSessionTools(TOOLS.CANVAS).catch((error) => {
           console.error(
-            "[Chat] Failed to disable canvas on session change:",
+            '[Chat] Failed to disable canvas on session change:',
             error,
           );
         });
@@ -1161,7 +1161,7 @@ export function Chat({
         Number(updatedArtifactId) === canvasState.artifactId
       ) {
         console.log(
-          "[Chat] Artifact update received (legacy), refreshing canvas:",
+          '[Chat] Artifact update received (legacy), refreshing canvas:',
           updatedArtifactId,
         );
         setCanvasRefreshTrigger((prev) => prev + 1);
@@ -1178,12 +1178,12 @@ export function Chat({
     };
 
     window.addEventListener(
-      "artifact-update",
+      'artifact-update',
       handleArtifactUpdate as EventListener,
     );
     return () => {
       window.removeEventListener(
-        "artifact-update",
+        'artifact-update',
         handleArtifactUpdate as EventListener,
       );
     };
@@ -1212,12 +1212,12 @@ export function Chat({
     };
 
     window.addEventListener(
-      "artifact-title-updated" as any,
+      'artifact-title-updated' as any,
       handleTitleUpdate as any,
     );
     return () => {
       window.removeEventListener(
-        "artifact-title-updated" as any,
+        'artifact-title-updated' as any,
         handleTitleUpdate as any,
       );
     };
@@ -1235,7 +1235,7 @@ export function Chat({
         isUpdate,
       } = event.detail;
 
-      console.log("[Chat] Artifact stream start received:", {
+      console.log('[Chat] Artifact stream start received:', {
         artifactId,
         title,
         isUpdate,
@@ -1249,11 +1249,11 @@ export function Chat({
         setStreamingArtifactId(artifactIdNum); // Track streaming artifact
 
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || "Untitled Artifact",
-          content: "", // Start with empty content, will be streamed
-          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || "")
-            ? "code"
-            : "canvas",
+          title: title || 'Untitled Artifact',
+          content: '', // Start with empty content, will be streamed
+          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
+            ? 'code'
+            : 'canvas',
           artifactId: artifactIdNum,
           org: tenantKey,
           userId: username ?? undefined,
@@ -1281,7 +1281,7 @@ export function Chat({
         versionNumber,
       } = event.detail;
 
-      console.log("[Chat] Artifact stream end received:", {
+      console.log('[Chat] Artifact stream end received:', {
         artifactId,
         isUpdate,
         isPartial,
@@ -1298,11 +1298,11 @@ export function Chat({
       // If canvas is not open yet (fallback case), open it now with the final content
       if (!isUpdate && artifactId && !isCanvasOpen) {
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || "Untitled Artifact",
-          content: content || "",
-          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || "")
-            ? "code"
-            : "canvas",
+          title: title || 'Untitled Artifact',
+          content: content || '',
+          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
+            ? 'code'
+            : 'canvas',
           artifactId: Number(artifactId),
           org: tenantKey,
           userId: username ?? undefined,
@@ -1319,20 +1319,20 @@ export function Chat({
     };
 
     window.addEventListener(
-      "artifact-stream-start" as any,
+      'artifact-stream-start' as any,
       handleArtifactStreamStart as any,
     );
     window.addEventListener(
-      "artifact-stream-end" as any,
+      'artifact-stream-end' as any,
       handleArtifactStreamEnd as any,
     );
     return () => {
       window.removeEventListener(
-        "artifact-stream-start" as any,
+        'artifact-stream-start' as any,
         handleArtifactStreamStart as any,
       );
       window.removeEventListener(
-        "artifact-stream-end" as any,
+        'artifact-stream-end' as any,
         handleArtifactStreamEnd as any,
       );
     };
@@ -1357,7 +1357,7 @@ export function Chat({
       // Add user message with file attachments if present
       dispatch(
         addMessage({
-          role: "user",
+          role: 'user',
           content,
           replyTo: replyingToMessage,
         }),
@@ -1365,7 +1365,7 @@ export function Chat({
 
       // Transform attached files to file references for WebSocket
       const uploadedFiles = attachedFiles.filter(
-        (f) => f.uploadStatus === "success" && f.fileKey && f.fileId,
+        (f) => f.uploadStatus === 'success' && f.fileKey && f.fileId,
       );
 
       const fileReferences: FileReference[] = uploadedFiles.map((f) => ({
@@ -1396,24 +1396,24 @@ export function Chat({
         | undefined;
       if (isCanvasOpen && effectiveArtifactId) {
         artifactPayload = {
-          title: effectiveTitle || "Untitled Artifact",
-          file_extension: effectiveFileExtension || "txt",
+          title: effectiveTitle || 'Untitled Artifact',
+          file_extension: effectiveFileExtension || 'txt',
           id: String(effectiveArtifactId),
           is_partial: false, // Full artifact reference when canvas is open
         };
         console.log(
-          "[Chat] Sending message with artifact reference:",
+          '[Chat] Sending message with artifact reference:',
           artifactPayload,
           {
             source: currentCanvasArtifact
-              ? "canvas-active-event"
-              : "canvasState",
+              ? 'canvas-active-event'
+              : 'canvasState',
             isCanvasOpen,
             effectiveArtifactId,
           },
         );
       } else {
-        console.log("[Chat] Canvas state:", {
+        console.log('[Chat] Canvas state:', {
           isCanvasOpen,
           canvasStateArtifactId: canvasState.artifactId,
           currentCanvasArtifactId: currentCanvasArtifact?.artifactId,
@@ -1437,14 +1437,14 @@ export function Chat({
       setReplyingToMessage(null);
 
       // Reset input value
-      setInputValue("");
+      setInputValue('');
     }, false);
   };
 
   const requireUserToJoinTenantOnChat = (content: string) => {
     const userMessage: Message = {
       id: `user-${Date.now()}`,
-      role: "user",
+      role: 'user',
       content,
       timestamp: new Date().toISOString(),
       visible: true,
@@ -1452,7 +1452,7 @@ export function Chat({
     const email = metadata?.support_email || config.supportEmail();
     const aiMessage: Message = {
       id: `user-${Date.now()}`,
-      role: "assistant",
+      role: 'assistant',
       content: `Whoops! Looks like access to me is restricted to users of <b>${tenantPlatformName ?? tenantKey.toUpperCase()}</b>. If you’d like to join then please reach out to our <a target="_self" href="mailto:${email}">support team</a>`,
       timestamp: new Date().toISOString(),
       visible: true,
@@ -1477,7 +1477,7 @@ export function Chat({
       if (!mentorSettings.allowAnonymous && (!token || !tokenEnabled)) {
         const userMessage: Message = {
           id: `user-${Date.now()}`,
-          role: "user",
+          role: 'user',
           content: content,
           timestamp: new Date().toISOString(),
           visible: true,
@@ -1485,7 +1485,7 @@ export function Chat({
 
         const aiMessage: Message = {
           id: `user-${Date.now()}`,
-          role: "assistant",
+          role: 'assistant',
           content: `It looks like you need to be logged in to chat with me. Please <a target="_self" href="${getAuthSpaJoinUrl(tenantKey)}">log in or sign up for free</a> to get started!`,
           timestamp: new Date().toISOString(),
           visible: true,
@@ -1540,7 +1540,7 @@ export function Chat({
         enabledGuidedPrompts={enabledGuidedPrompts}
         tenantKey={tenantKey}
         sessionId={sessionId}
-        username={username ?? ""}
+        username={username ?? ''}
         isStreaming={isStreaming}
         isPending={isPending}
         onPromptSelect={handleSubmit}
@@ -1552,11 +1552,11 @@ export function Chat({
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col bg-white rounded-t-lg w-full px-2",
-        hasBorder && "border border-gray-200",
+        'relative flex h-full w-full flex-col rounded-t-lg bg-white px-2',
+        hasBorder && 'border border-gray-200',
         CSS_CLASS_NAMES.APP_LAYOUT.MAIN_CONTENT_AREA,
         // In compact mode, prevent external scrolling - only internal chat should scroll
-        isCompactMode && "overflow-hidden",
+        isCompactMode && 'overflow-hidden',
       )}
       onDragOver={handleChatDragOver}
       onDragLeave={handleChatDragLeave}
@@ -1573,17 +1573,22 @@ export function Chat({
       )}
       <div
         className={cn({
-          "flex-1 h-full": messages.length === 0 && !isCanvasOpen,
+          // Fill available space when the messages section won't render
+          // (no messages, or only a single assistant greeting/proactive prompt)
+          'h-full flex-1':
+            !isCanvasOpen &&
+            (messages.length === 0 ||
+              (messages.length === 1 && messages[0]?.role === 'assistant')),
           // In compact mode, don't add overflow-y-auto here - only the messages container should scroll
-          "overflow-y-auto scrollbar-none":
+          'scrollbar-none overflow-y-auto':
             !isAdvancedMode && !isCanvasOpen && !isCompactMode,
-          "min-h-0": isCompactMode, // Allow flex shrinking in compact mode
+          'min-h-0': isCompactMode, // Allow flex shrinking in compact mode
         })}
-        style={isCanvasOpen ? { display: "none" } : undefined}
+        style={isCanvasOpen ? { display: 'none' } : undefined}
       >
         {isAdvancedMode && (
           <div
-            className="w-full mx-auto bg-white rounded-lg overflow-hidden flex flex-col h-full"
+            className="mx-auto flex h-full w-full flex-col overflow-hidden rounded-lg bg-white"
             style={{ maxWidth: `${chatAreaMaxWidth}px` }}
           >
             {/* Advanced mode chat header */}
@@ -1604,7 +1609,7 @@ export function Chat({
                 sendMessage={sendMessage}
                 activeTab={activeTab}
                 tenantKey={tenantKey}
-                username={username ?? ""}
+                username={username ?? ''}
                 sessionId={cachedSessionId?.[mentorId] ?? sessionId}
                 mentorUniqueId={uniqueMentorId}
                 // messages={messages}
@@ -1622,7 +1627,7 @@ export function Chat({
         {(messages.length === 0 ||
           (!isNewSession.current &&
             messages.length === 1 &&
-            messages[0]?.role === "assistant")) &&
+            messages[0]?.role === 'assistant')) &&
           !isAdvancedMode && (
             <WelcomeChatNew
               mentorName={mentorName}
@@ -1632,16 +1637,16 @@ export function Chat({
                 (messages.length === 0 && !isLoadingChats)
               }
               aiWelcomeMessage={
-                messages.length === 1 && messages[0]?.role === "assistant"
+                messages.length === 1 && messages[0]?.role === 'assistant'
                   ? messages[0]?.content
-                  : ""
+                  : ''
               }
               enabledGuidedPrompts={enabledGuidedPrompts}
               onSubmit={handleSubmit}
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: "MENTOR:CHAT_ACTION_SCREENSHARE",
+                    type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1656,7 +1661,7 @@ export function Chat({
               onPhoneCallClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: "MENTOR:CHAT_ACTION_VOICECALL",
+                    type: 'MENTOR:CHAT_ACTION_VOICECALL',
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -1665,7 +1670,7 @@ export function Chat({
               }}
               stopGenerating={stopGenerating}
               tenantKey={tenantKey}
-              username={username ?? ""}
+              username={username ?? ''}
               enableWebBrowsing={enableWebBrowsing}
               setMessage={setMessage}
               isStreaming={isStreaming}
@@ -1696,14 +1701,14 @@ export function Chat({
       {isCanvasOpen && !isInCanvasView ? (
         /* Split layout when canvas is open */
         <div
-          className="flex-1 flex overflow-hidden relative"
+          className="relative flex flex-1 overflow-hidden"
           ref={resizeRef}
-          style={{ minHeight: 0, maxHeight: "100%", height: "100%" }}
+          style={{ minHeight: 0, maxHeight: '100%', height: '100%' }}
         >
           {/* Chat section on left - hidden on mobile */}
           <div
-            className="border-r border-gray-200 flex-col overflow-hidden hidden md:flex flex-shrink-0"
-            style={{ width: `${chatWidth}%`, minHeight: 0, maxHeight: "100%" }}
+            className="hidden flex-shrink-0 flex-col overflow-hidden border-r border-gray-200 md:flex"
+            style={{ width: `${chatWidth}%`, minHeight: 0, maxHeight: '100%' }}
           >
             {/* Chat messages */}
             <div
@@ -1711,7 +1716,7 @@ export function Chat({
               onScroll={handleScroll}
               className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
             >
-              <div className="py-4 px-3">
+              <div className="px-3 py-4">
                 <ErrorBoundary>
                   {messages.length > 0 ? (
                     <ChatMessages
@@ -1736,10 +1741,10 @@ export function Chat({
                       streamingArtifactId={streamingArtifactId}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                    <div className="flex h-full items-center justify-center text-sm text-gray-500">
                       <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-3 bg-gray-200 rounded-full flex items-center justify-center">
-                          <span className="text-gray-600 font-medium">
+                        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-200">
+                          <span className="font-medium text-gray-600">
                             {mentorName.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -1757,7 +1762,7 @@ export function Chat({
                     !currentStreamingMessage?.content &&
                     !(
                       messages.length > 0 &&
-                      messages[messages.length - 1]?.role === "assistant" &&
+                      messages[messages.length - 1]?.role === 'assistant' &&
                       messages[messages.length - 1]?.artifactVersions &&
                       (messages[messages.length - 1]?.artifactVersions
                         ?.length ?? 0) > 0
@@ -1775,16 +1780,38 @@ export function Chat({
             </div>
 
             {/* Chat input form */}
-            <div className="border-t border-gray-200 bg-white p-3 flex-shrink-0 overflow-y-auto [scrollbar-gutter:stable]">
+            <div className="flex-shrink-0 overflow-y-auto border-t border-gray-200 bg-white p-3 [scrollbar-gutter:stable]">
               <ChatInputForm
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
                 stopGenerating={stopGenerating}
-                onScreenSharingClick={/* istanbul ignore next */ () => {}} // Disabled in canvas view
-                isScreenSharingModalOpen={false}
-                onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas view
+                onScreenSharingClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  if (isScreenSharingModalOpen) {
+                    setIsScreenSharingModalOpen(false);
+                  } else {
+                    setIsScreenSharingModalOpen(true);
+                  }
+                }}
+                isScreenSharingModalOpen={isScreenSharingModalOpen}
+                onPhoneCallClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  setIsPhoneCallModalOpen(true);
+                }}
                 tenantKey={tenantKey}
-                username={username ?? ""}
+                username={username ?? ''}
                 setMessage={setMessage}
                 enableSafetyDisclaimer={enableSafetyDisclaimer}
                 isPreviewMode={isPreviewMode}
@@ -1811,11 +1838,11 @@ export function Chat({
 
           {/* Resize handle */}
           <div
-            className="hidden md:flex w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-colors duration-200 relative group flex-shrink-0 z-10"
+            className="group relative z-10 hidden w-1 flex-shrink-0 cursor-col-resize bg-gray-300 transition-colors duration-200 hover:bg-blue-500 md:flex"
             onMouseDown={handleResizeStart}
           >
-            <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-8 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="absolute inset-y-0 left-1/2 flex w-8 -translate-x-1/2 transform items-center justify-center">
+              <div className="pointer-events-none flex flex-col items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                 <ChevronLeft className="h-3 w-3 text-blue-600" />
                 <GripVertical className="h-4 w-4 text-blue-600" />
                 <ChevronRight className="h-3 w-3 text-blue-600" />
@@ -1825,16 +1852,16 @@ export function Chat({
 
           {/* Canvas section on right - full width on mobile */}
           <div
-            className="flex-1 bg-white overflow-hidden flex flex-col"
+            className="flex flex-1 flex-col overflow-hidden bg-white"
             style={{
-              width: isMdUp ? `${100 - chatWidth}%` : "100%",
+              width: isMdUp ? `${100 - chatWidth}%` : '100%',
               minHeight: 0,
-              maxHeight: "100%",
-              height: "100%",
+              maxHeight: '100%',
+              height: '100%',
             }}
           >
             <CanvasView
-              key={`${canvasState.artifactId ?? "canvas"}-${canvasRefreshTrigger}`}
+              key={`${canvasState.artifactId ?? 'canvas'}-${canvasRefreshTrigger}`}
               canvasTitle={canvasState.title}
               canvasContent={canvasState.content}
               canvasType={canvasState.type}
@@ -1853,16 +1880,38 @@ export function Chat({
             />
 
             {/* Mobile prompt box - only show on mobile */}
-            <div className="md:hidden border-t border-gray-200 bg-white p-3 flex-shrink-0">
+            <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3 md:hidden">
               <ChatInputForm
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
                 stopGenerating={stopGenerating}
-                onScreenSharingClick={/* istanbul ignore next */ () => {}} // Disabled in canvas mobile view
-                isScreenSharingModalOpen={false}
-                onPhoneCallClick={/* istanbul ignore next */ () => {}} // Disabled in canvas mobile view
+                onScreenSharingClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  if (isScreenSharingModalOpen) {
+                    setIsScreenSharingModalOpen(false);
+                  } else {
+                    setIsScreenSharingModalOpen(true);
+                  }
+                }}
+                isScreenSharingModalOpen={isScreenSharingModalOpen}
+                onPhoneCallClick={() => {
+                  if (enableChatPopupActions && isInIframe()) {
+                    sendMessageToParentWebsite({
+                      type: 'MENTOR:CHAT_ACTION_VOICECALL',
+                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    });
+                    return;
+                  }
+                  setIsPhoneCallModalOpen(true);
+                }}
                 tenantKey={tenantKey}
-                username={username ?? ""}
+                username={username ?? ''}
                 setMessage={setMessage}
                 enableSafetyDisclaimer={enableSafetyDisclaimer}
                 isPreviewMode={isPreviewMode}
@@ -1890,15 +1939,15 @@ export function Chat({
       ) : (
         /* Normal chat layout when canvas is closed */
         messages.length > 0 &&
-        (messages[0].role === "assistant" ? messages.slice(1) : messages)
+        (messages[0].role === 'assistant' ? messages.slice(1) : messages)
           .length > 0 && (
           <div
             ref={chatContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto min-h-0"
+            className="min-h-0 flex-1 overflow-y-auto"
           >
             <div
-              className="py-6 w-full mx-auto"
+              className="mx-auto w-full py-6"
               style={{ maxWidth: `${chatAreaMaxWidth}px` }}
             >
               <ErrorBoundary>
@@ -1906,7 +1955,7 @@ export function Chat({
                 <ChatMessages
                   ref={lastAIMessageCopyButtonRef}
                   messages={
-                    messages[0].role === "assistant"
+                    messages[0].role === 'assistant'
                       ? messages.slice(1)
                       : messages
                   }
@@ -1937,7 +1986,7 @@ export function Chat({
                   !currentStreamingMessage?.content &&
                   !(
                     messages.length > 0 &&
-                    messages[messages.length - 1]?.role === "assistant" &&
+                    messages[messages.length - 1]?.role === 'assistant' &&
                     messages[messages.length - 1]?.artifactVersions &&
                     (messages[messages.length - 1]?.artifactVersions?.length ??
                       0) > 0
@@ -1961,7 +2010,7 @@ export function Chat({
         !isPreviewMode &&
         messages.length > 0 &&
         !isCanvasOpen && (
-          <div className="sticky bottom-4 w-full flex justify-center z-10 pointer-events-none bg-transparent h-0">
+          <div className="pointer-events-none sticky bottom-4 z-10 flex h-0 w-full justify-center bg-transparent">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1969,7 +2018,7 @@ export function Chat({
                     event.stopPropagation();
                     scrollToBottom();
                   }}
-                  className="rounded-md h-10 w-10 bg-white shadow-md border border-gray-200 hover:bg-gray-100 pointer-events-auto absolute bottom-4"
+                  className="pointer-events-auto absolute bottom-4 h-10 w-10 rounded-md border border-gray-200 bg-white shadow-md hover:bg-gray-100"
                 >
                   <ChevronDown className="h-5 w-5 text-gray-600" />
                   <span className="sr-only">Scroll to bottom</span>
@@ -1988,9 +2037,9 @@ export function Chat({
         (isAdvancedMode ||
           isEmbeddedMode ||
           (messages.length > 0 &&
-            (messages[0].role === "assistant" ? messages.slice(1) : messages)
+            (messages[0].role === 'assistant' ? messages.slice(1) : messages)
               .length > 0)) && (
-          <div className="flex-shrink-0 pb-3.5 overflow-y-auto [scrollbar-gutter:stable]">
+          <div className="flex-shrink-0 overflow-y-auto pb-3.5 [scrollbar-gutter:stable]">
             <ChatInputForm
               sessionId={cachedSessionId?.[mentorId] ?? sessionId}
               onSubmit={handleSubmit}
@@ -1998,7 +2047,7 @@ export function Chat({
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: "MENTOR:CHAT_ACTION_SCREENSHARE",
+                    type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -2013,7 +2062,7 @@ export function Chat({
               onPhoneCallClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
-                    type: "MENTOR:CHAT_ACTION_VOICECALL",
+                    type: 'MENTOR:CHAT_ACTION_VOICECALL',
                     sessionId: cachedSessionId?.[mentorId] ?? sessionId,
                   });
                   return;
@@ -2021,7 +2070,7 @@ export function Chat({
                 setIsPhoneCallModalOpen(true);
               }}
               tenantKey={tenantKey}
-              username={username ?? ""}
+              username={username ?? ''}
               setMessage={setMessage}
               enableSafetyDisclaimer={enableSafetyDisclaimer}
               isPreviewMode={isPreviewMode}
@@ -2051,7 +2100,7 @@ export function Chat({
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
-          username={username ?? ""}
+          username={username ?? ''}
           isOpen={isPhoneCallModalOpen}
           onClose={() => {
             if (window.opener) {
@@ -2068,7 +2117,7 @@ export function Chat({
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
-          username={username ?? ""}
+          username={username ?? ''}
           isOpen={isScreenSharingModalOpen}
           mentorName={mentorName}
           onClose={() => {
@@ -2137,7 +2186,7 @@ export function Chat({
                 setIsPhoneCallModalOpen(true);
                 setShowVoiceCallConfirmation(false);
                 // Show blocking overlay if opened from another window
-                if (window.opener && chatActionType === "voice-call") {
+                if (window.opener && chatActionType === 'voice-call') {
                   setShowBlockingOverlay(true);
                 }
               }}
@@ -2186,7 +2235,7 @@ export function Chat({
                 setIsScreenSharingModalOpen(true);
                 setShowScreenShareConfirmation(false);
                 // Show blocking overlay if opened from another window
-                if (window.opener && chatActionType === "screen-share") {
+                if (window.opener && chatActionType === 'screen-share') {
                   setShowBlockingOverlay(true);
                 }
               }}
@@ -2207,12 +2256,12 @@ export function Chat({
             if (window.opener && !window.opener.closed) {
               try {
                 window.opener.postMessage(
-                  { type: "MENTOR:SCREENSHARING_STOPPED" },
-                  "*",
+                  { type: 'MENTOR:SCREENSHARING_STOPPED' },
+                  '*',
                 );
               } catch (error) {
                 console.error(
-                  "Failed to post screen sharing stopped to opener:",
+                  'Failed to post screen sharing stopped to opener:',
                   error,
                 );
               }

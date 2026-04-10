@@ -12,15 +12,18 @@ interface FlaggedPromptDetailProps {
   onDeleteSuccess?: () => void;
 }
 
-export function FlaggedPromptDetail({ prompt, onDeleteSuccess }: FlaggedPromptDetailProps) {
+export function FlaggedPromptDetail({
+  prompt,
+  onDeleteSuccess,
+}: FlaggedPromptDetailProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <div className="hidden md:flex border rounded-lg p-6 bg-white shadow-sm flex-col max-h-[500px] overflow-y-auto scrollbar-hide">
+    <div className="scrollbar-hide hidden max-h-[500px] flex-col overflow-y-auto rounded-lg border bg-white p-6 shadow-sm md:flex">
       {prompt ? (
         <>
           <div className="mb-4">
-            <h3 className="text-base font-semibold text-gray-700 mb-1">
+            <h3 className="mb-1 text-base font-semibold text-gray-700">
               Flagged by {prompt.type} System
             </h3>
             <span className="text-sm text-gray-500">{prompt.fullDate}</span>
@@ -37,31 +40,37 @@ export function FlaggedPromptDetail({ prompt, onDeleteSuccess }: FlaggedPromptDe
                 </span>
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-700">{prompt.userEmail}</div>
-                <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{prompt.prompt}</p>
+                <div className="font-medium text-gray-700">
+                  {prompt.userEmail}
+                </div>
+                <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
+                  {prompt.prompt}
+                </p>
               </div>
             </div>
 
             {/* System Response */}
-            <div className="flex items-start gap-3 pt-4 border-t border-gray-200">
+            <div className="flex items-start gap-3 border-t border-gray-200 pt-4">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
                 <span className="text-sm font-medium text-gray-600">
                   {prompt.type.charAt(0).toUpperCase()}S
                 </span>
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-700">{prompt.type} System</div>
-                <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">
+                <div className="font-medium text-gray-700">
+                  {prompt.type} System
+                </div>
+                <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                   {prompt.systemResponse}
                 </p>
               </div>
             </div>
 
             {/* Delete Button */}
-            <div className="pt-4 border-t border-gray-200">
+            <div className="border-t border-gray-200 pt-4">
               <Button
                 onClick={() => setShowDeleteModal(true)}
-                className="ibl-button-primary w-full flex items-center justify-center gap-2"
+                className="ibl-button-primary flex w-full items-center justify-center gap-2"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -77,7 +86,7 @@ export function FlaggedPromptDetail({ prompt, onDeleteSuccess }: FlaggedPromptDe
           />
         </>
       ) : (
-        <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="flex h-full items-center justify-center text-gray-500">
           Select a flagged prompt to view details.
         </div>
       )}

@@ -24,7 +24,9 @@ export function DefaultMentorsSection() {
     setDefaultMentorsLoading,
   } = useExplorePageContext();
 
-  const [numberOfMentors, setNumberOfMentors] = React.useState(DEFAULT_MENTORS_LIMIT);
+  const [numberOfMentors, setNumberOfMentors] = React.useState(
+    DEFAULT_MENTORS_LIMIT,
+  );
   const { openCreateMentorModal } = useNavigate();
 
   // Reset pagination when filters or search change
@@ -112,9 +114,13 @@ export function DefaultMentorsSection() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium text-gray-900" role="heading" aria-level={2}>
+          <h2
+            className="text-lg font-medium text-gray-900"
+            role="heading"
+            aria-level={2}
+          >
             {title}
           </h2>
           <p className="text-sm text-gray-600">{subtext}</p>
@@ -125,7 +131,7 @@ export function DefaultMentorsSection() {
             <>
               {hasPermission && (
                 <Button
-                  className="text-white px-6 py-2 rounded-lg bg-gradient-to-r from-[#38A1E5] to-[#7284FF] hover:from-[#2E8BD1] hover:to-[#5F6FE8]"
+                  className="rounded-lg bg-gradient-to-r from-[#38A1E5] to-[#7284FF] px-6 py-2 text-white hover:from-[#2E8BD1] hover:to-[#5F6FE8]"
                   onClick={handleCreateMentor}
                   aria-label="Create new mentor"
                 >
@@ -140,22 +146,28 @@ export function DefaultMentorsSection() {
       {allMentorsToShow && allMentorsToShow.length > 0 ? (
         <>
           <div
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="all-mentors-card-list"
             role="list"
             aria-label="All mentors"
           >
             {allMentorsToShow.map((mentor) => (
-              <div key={mentor.id} role="listitem" aria-label={`Explore mentor: ${mentor.name}`}>
+              <div
+                key={mentor.id}
+                role="listitem"
+                aria-label={`Explore mentor: ${mentor.name}`}
+              >
                 <MentorCardWithStar mentor={mentor} />
               </div>
             ))}
           </div>
           {mentors?.next && (
-            <div className="flex justify-center mt-6">
+            <div className="mt-6 flex justify-center">
               <Button
                 variant="outline"
-                onClick={() => setNumberOfMentors(numberOfMentors + DEFAULT_MENTORS_LIMIT)}
+                onClick={() =>
+                  setNumberOfMentors(numberOfMentors + DEFAULT_MENTORS_LIMIT)
+                }
                 disabled={mentorsFetching}
                 aria-label="Load more mentors"
                 role="button"

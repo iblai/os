@@ -31,8 +31,9 @@ export function FeaturedMentorsSection() {
     setFeaturedMentorsLoading,
   } = useExplorePageContext();
 
-  const [numberOfFeaturedMentors, setNumberOfFeaturedMentors] =
-    React.useState(FEATURED_MENTORS_LIMIT);
+  const [numberOfFeaturedMentors, setNumberOfFeaturedMentors] = React.useState(
+    FEATURED_MENTORS_LIMIT,
+  );
 
   // Reset pagination when filters or search change
   React.useEffect(() => {
@@ -73,22 +74,28 @@ export function FeaturedMentorsSection() {
 
   return (
     <div>
-      <h2 className="text-lg font-medium text-gray-900 mb-4" role="heading" aria-level={2}>
+      <h2
+        className="mb-4 text-lg font-medium text-gray-900"
+        role="heading"
+        aria-level={2}
+      >
         Featured
       </h2>
       {featuredMentors.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {featuredMentors.map((mentor) => (
               <MentorCardWithStar key={mentor.id} mentor={mentor} />
             ))}
           </div>
           {featuredMentorsData?.next && (
-            <div className="flex justify-center mt-6">
+            <div className="mt-6 flex justify-center">
               <Button
                 variant="outline"
                 onClick={() =>
-                  setNumberOfFeaturedMentors(numberOfFeaturedMentors + FEATURED_MENTORS_LIMIT)
+                  setNumberOfFeaturedMentors(
+                    numberOfFeaturedMentors + FEATURED_MENTORS_LIMIT,
+                  )
                 }
                 disabled={featuredMentorsFetching}
                 aria-label="Load more featured mentors"
@@ -106,19 +113,23 @@ export function FeaturedMentorsSection() {
           )}
         </>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border border-[#D0E0FF] rounded-lg bg-[#F5F8FF] md:col-span-2 lg:col-span-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="rounded-lg border border-[#D0E0FF] bg-[#F5F8FF] md:col-span-2 lg:col-span-3">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center w-12 h-12 bg-[#D0E0FF] rounded-lg flex-shrink-0">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
                   <Award className="h-6 w-6 text-[#38A1E5]" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium mb-2 text-sm text-gray-900">Featured Mentors</h3>
-                  <p className="text-sm mb-3 leading-relaxed text-gray-600">
+                <div className="min-w-0 flex-1">
+                  <h3 className="mb-2 text-sm font-medium text-gray-900">
+                    Featured Mentors
+                  </h3>
+                  <p className="mb-3 text-sm leading-relaxed text-gray-600">
                     Discover handpicked mentors recommended by our community
                   </p>
-                  <p className="text-xs text-gray-500">No featured mentors available</p>
+                  <p className="text-xs text-gray-500">
+                    No featured mentors available
+                  </p>
                 </div>
               </div>
             </CardContent>

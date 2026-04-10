@@ -22,7 +22,10 @@ const mocked = vi.hoisted(() => ({
   setModalStack: vi.fn((payload) => ({ type: 'setModalStack', payload })),
 
   // Chat actions
-  setShouldStartNewChat: vi.fn((payload) => ({ type: 'setShouldStartNewChat', payload })),
+  setShouldStartNewChat: vi.fn((payload) => ({
+    type: 'setShouldStartNewChat',
+    payload,
+  })),
   clearFiles: vi.fn(() => ({ type: 'clearFiles' })),
 
   // Hooks
@@ -163,6 +166,7 @@ vi.mock('lucide-react', () => ({
   CirclePlus: () => null,
   Settings: () => null,
   LucideMail: () => null,
+  Workflow: () => null,
 }));
 
 describe('user-navigate', () => {
@@ -194,7 +198,10 @@ describe('user-navigate', () => {
       });
 
       it('should parse valid JSON modal stack', () => {
-        const modalStack = [{ name: 'settings' }, { name: 'profile', tab: 'general' }];
+        const modalStack = [
+          { name: 'settings' },
+          { name: 'profile', tab: 'general' },
+        ];
         mocked.useSearchParams.mockReturnValue(
           new URLSearchParams({ modal: JSON.stringify(modalStack) }),
         );
@@ -216,20 +223,28 @@ describe('user-navigate', () => {
       });
 
       it('should handle backward compatibility with string modal name', () => {
-        mocked.useSearchParams.mockReturnValue(new URLSearchParams({ modal: 'settings' }));
+        mocked.useSearchParams.mockReturnValue(
+          new URLSearchParams({ modal: 'settings' }),
+        );
 
         renderHook(() => useNavigate());
 
-        expect(mocked.setModalStack).toHaveBeenCalledWith([{ name: 'settings' }]);
+        expect(mocked.setModalStack).toHaveBeenCalledWith([
+          { name: 'settings' },
+        ]);
       });
 
       it('should return empty array for invalid JSON', () => {
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
 
         // Set initial Redux stack to be non-empty so dispatch will happen
         mocked.selectModalStack.mockReturnValue([{ name: 'someModal' }]);
 
-        mocked.useSearchParams.mockReturnValue(new URLSearchParams({ modal: '{invalid json}' }));
+        mocked.useSearchParams.mockReturnValue(
+          new URLSearchParams({ modal: '{invalid json}' }),
+        );
 
         renderHook(() => useNavigate());
 
@@ -239,10 +254,14 @@ describe('user-navigate', () => {
       });
 
       it('should warn for invalid modal stack format', () => {
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
 
         mocked.useSearchParams.mockReturnValue(
-          new URLSearchParams({ modal: JSON.stringify([{ invalid: 'object' }]) }),
+          new URLSearchParams({
+            modal: JSON.stringify([{ invalid: 'object' }]),
+          }),
         );
 
         renderHook(() => useNavigate());
@@ -261,7 +280,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToHome();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('navigateToHome - should navigate to home with only tenantKey', () => {
@@ -274,7 +295,9 @@ describe('user-navigate', () => {
       });
 
       it('navigateToHome - should warn when tenantKey is missing', () => {
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         mocked.useParams.mockReturnValue({});
         const { result } = renderHook(() => useNavigate());
 
@@ -291,7 +314,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToExplore();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123/explore');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123/explore',
+        );
       });
 
       it('navigateToExplore - should navigate to explore without mentorId when requested', () => {
@@ -299,7 +324,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToExplore(true);
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/explore');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/explore',
+        );
       });
 
       it('navigateToExplore - should navigate with only tenantKey', () => {
@@ -308,7 +335,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToExplore();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/explore');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/explore',
+        );
       });
 
       it('navigateToAnalytics - should navigate to analytics with mentorId', () => {
@@ -316,7 +345,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToAnalytics();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123/analytics');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123/analytics',
+        );
       });
 
       it('navigateToAnalytics - should navigate to analytics without mentorId', () => {
@@ -325,7 +356,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToAnalytics();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/analytics');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/analytics',
+        );
       });
 
       it('navigateToMentor - should navigate to new mentor and clear session cache', () => {
@@ -350,7 +383,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToMentor('mentor-123');
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('navigateToMentor - should navigate with prependStackParam', () => {
@@ -413,7 +448,9 @@ describe('user-navigate', () => {
 
         result.current.navigateToNotifications();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123/notifications/');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123/notifications/',
+        );
       });
 
       it('navigateToNotifications - should navigate to specific notification', () => {
@@ -432,11 +469,15 @@ describe('user-navigate', () => {
 
         result.current.navigateToNotifications();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/notifications/');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/notifications/',
+        );
       });
 
       it('navigateToMentorInProject - should warn when tenantKey is missing', () => {
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         mocked.useParams.mockReturnValue({});
         const { result } = renderHook(() => useNavigate());
 
@@ -449,7 +490,9 @@ describe('user-navigate', () => {
       });
 
       it('navigateToProject - should warn when tenantKey is missing', () => {
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         mocked.useParams.mockReturnValue({});
         const { result } = renderHook(() => useNavigate());
 
@@ -462,7 +505,9 @@ describe('user-navigate', () => {
       });
 
       it('navigateToNotifications - should warn when tenantKey is missing', () => {
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         mocked.useParams.mockReturnValue({});
         const { result } = renderHook(() => useNavigate());
 
@@ -470,6 +515,42 @@ describe('user-navigate', () => {
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Cannot navigate to notifications'),
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('navigateToWorkflows - should navigate to workflows with mentorId', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/workflows/mentor-123',
+        );
+      });
+
+      it('navigateToWorkflows - should navigate to workflows without mentorId when mentorId is missing', () => {
+        mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/workflows',
+        );
+      });
+
+      it('navigateToWorkflows - should warn when tenantKey is missing', () => {
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
+        mocked.useParams.mockReturnValue({});
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToWorkflows();
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot navigate to workflows'),
         );
         consoleWarnSpy.mockRestore();
       });
@@ -484,7 +565,8 @@ describe('user-navigate', () => {
 
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
-            'modal=' + encodeURIComponent(JSON.stringify([{ name: 'settings' }])),
+            'modal=' +
+              encodeURIComponent(JSON.stringify([{ name: 'settings' }])),
           ),
         );
       });
@@ -496,7 +578,10 @@ describe('user-navigate', () => {
 
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
-            'modal=' + encodeURIComponent(JSON.stringify([{ name: 'settings', tab: 'general' }])),
+            'modal=' +
+              encodeURIComponent(
+                JSON.stringify([{ name: 'settings', tab: 'general' }]),
+              ),
           ),
         );
       });
@@ -510,7 +595,13 @@ describe('user-navigate', () => {
           expect.stringContaining(
             'modal=' +
               encodeURIComponent(
-                JSON.stringify([{ name: 'edit_mentor', tab: 'settings', mentorId: 'mentor-456' }]),
+                JSON.stringify([
+                  {
+                    name: 'edit_mentor',
+                    tab: 'settings',
+                    mentorId: 'mentor-456',
+                  },
+                ]),
               ),
           ),
         );
@@ -525,7 +616,9 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
             'modal=' +
-              encodeURIComponent(JSON.stringify([{ name: 'settings' }, { name: 'profile' }])),
+              encodeURIComponent(
+                JSON.stringify([{ name: 'settings' }, { name: 'profile' }]),
+              ),
           ),
         );
       });
@@ -536,18 +629,24 @@ describe('user-navigate', () => {
 
         result.current.closeModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeModal - should pop from stack when multiple modals', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'settings' }, { name: 'profile' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'settings' },
+          { name: 'profile' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         result.current.closeModal();
 
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
-            'modal=' + encodeURIComponent(JSON.stringify([{ name: 'settings' }])),
+            'modal=' +
+              encodeURIComponent(JSON.stringify([{ name: 'settings' }])),
           ),
         );
       });
@@ -562,14 +661,19 @@ describe('user-navigate', () => {
       });
 
       it('changeModalTab - should update current modal tab', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'settings', tab: 'general' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'settings', tab: 'general' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         result.current.changeModalTab('advanced');
 
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
-            'modal=' + encodeURIComponent(JSON.stringify([{ name: 'settings', tab: 'advanced' }])),
+            'modal=' +
+              encodeURIComponent(
+                JSON.stringify([{ name: 'settings', tab: 'advanced' }]),
+              ),
           ),
         );
       });
@@ -623,7 +727,9 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
             'modal=' +
-              encodeURIComponent(JSON.stringify([{ name: 'create_mentor', tab: 'advanced' }])),
+              encodeURIComponent(
+                JSON.stringify([{ name: 'create_mentor', tab: 'advanced' }]),
+              ),
           ),
         );
       });
@@ -668,7 +774,9 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
             'modal=' +
-              encodeURIComponent(JSON.stringify([{ name: 'edit_mentor', tab: 'settings' }])),
+              encodeURIComponent(
+                JSON.stringify([{ name: 'edit_mentor', tab: 'settings' }]),
+              ),
           ),
         );
       });
@@ -680,7 +788,10 @@ describe('user-navigate', () => {
 
         expect(mocked.push).toHaveBeenCalledWith(
           expect.stringContaining(
-            'modal=' + encodeURIComponent(JSON.stringify([{ name: 'edit_mentor', tab: 'llm' }])),
+            'modal=' +
+              encodeURIComponent(
+                JSON.stringify([{ name: 'edit_mentor', tab: 'llm' }]),
+              ),
           ),
         );
       });
@@ -694,7 +805,13 @@ describe('user-navigate', () => {
           expect.stringContaining(
             'modal=' +
               encodeURIComponent(
-                JSON.stringify([{ name: 'edit_mentor', tab: 'prompts', mentorId: 'mentor-456' }]),
+                JSON.stringify([
+                  {
+                    name: 'edit_mentor',
+                    tab: 'prompts',
+                    mentorId: 'mentor-456',
+                  },
+                ]),
               ),
           ),
         );
@@ -730,7 +847,9 @@ describe('user-navigate', () => {
 
         result.current.closeCreateMentorModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeInviteUserModal - should close modal', () => {
@@ -739,7 +858,9 @@ describe('user-navigate', () => {
 
         result.current.closeInviteUserModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeSettingsModal - should close modal', () => {
@@ -748,7 +869,9 @@ describe('user-navigate', () => {
 
         result.current.closeSettingsModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeMyMentorsModal - should close modal', () => {
@@ -757,7 +880,9 @@ describe('user-navigate', () => {
 
         result.current.closeMyMentorsModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeLLMProvidersModal - should close modal', () => {
@@ -766,7 +891,9 @@ describe('user-navigate', () => {
 
         result.current.closeLLMProvidersModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeEditMentorModal - should close modal', () => {
@@ -775,7 +902,9 @@ describe('user-navigate', () => {
 
         result.current.closeEditMentorModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeAddPromptModal - should close modal', () => {
@@ -784,7 +913,9 @@ describe('user-navigate', () => {
 
         result.current.closeAddPromptModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeAddResourceModal - should close modal', () => {
@@ -793,16 +924,22 @@ describe('user-navigate', () => {
 
         result.current.closeAddResourceModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
 
       it('closeNoMentorSelectedModal - should close modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'no_mentor_selected' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'no_mentor_selected' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         result.current.closeNoMentorSelectedModal();
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
     });
 
@@ -889,7 +1026,9 @@ describe('user-navigate', () => {
       });
 
       it('showNoMentorSelectedModal - should return correct state', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'no_mentor_selected' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'no_mentor_selected' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.showNoMentorSelectedModal).toBe(true);
@@ -898,42 +1037,54 @@ describe('user-navigate', () => {
 
     describe('modal tab getters', () => {
       it('getCreateMentorTab - should return tab for create mentor modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'create_mentor', tab: 'advanced' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'create_mentor', tab: 'advanced' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getCreateMentorTab()).toBe('advanced');
       });
 
       it('getInviteUserTab - should return tab for invite user modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'invite_user', tab: 'bulk' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'invite_user', tab: 'bulk' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getInviteUserTab()).toBe('bulk');
       });
 
       it('getSettingsTab - should return tab for settings modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'settings', tab: 'profile' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'settings', tab: 'profile' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getSettingsTab()).toBe('profile');
       });
 
       it('getMyMentorsTab - should return tab for my mentors modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'my_mentors', tab: 'favorites' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'my_mentors', tab: 'favorites' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getMyMentorsTab()).toBe('favorites');
       });
 
       it('getLLMProvidersTab - should return tab for LLM providers modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'llm_providers', tab: 'openai' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'llm_providers', tab: 'openai' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getLLMProvidersTab()).toBe('openai');
       });
 
       it('getEditMentorTab - should return tab for edit mentor modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'edit_mentor', tab: 'prompts' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'edit_mentor', tab: 'prompts' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getEditMentorTab()).toBe('prompts');
@@ -947,7 +1098,9 @@ describe('user-navigate', () => {
       });
 
       it('getAddResourceTab - should return tab for add resource modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'add_resource', tab: 'url' }]);
+        mocked.selectModalStack.mockReturnValue([
+          { name: 'add_resource', tab: 'url' },
+        ]);
         const { result } = renderHook(() => useNavigate());
 
         expect(result.current.getAddResourceTab()).toBe('url');
@@ -981,7 +1134,10 @@ describe('user-navigate', () => {
       it('should navigate with search params', () => {
         const { result } = renderHook(() => useNavigate());
 
-        result.current.navigateWithSearchParams({ tab: 'settings', filter: 'active' });
+        result.current.navigateWithSearchParams({
+          tab: 'settings',
+          filter: 'active',
+        });
 
         expect(mocked.push).toHaveBeenCalledWith(
           '/platform/test-tenant/mentor-123?tab=settings&filter=active',
@@ -996,16 +1152,22 @@ describe('user-navigate', () => {
 
         result.current.navigateWithSearchParams({ filter: null });
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123?tab=settings');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123?tab=settings',
+        );
       });
 
       it('should navigate without search string when all params removed', () => {
-        mocked.useSearchParams.mockReturnValue(new URLSearchParams({ tab: 'settings' }));
+        mocked.useSearchParams.mockReturnValue(
+          new URLSearchParams({ tab: 'settings' }),
+        );
         const { result } = renderHook(() => useNavigate());
 
         result.current.navigateWithSearchParams({ tab: null });
 
-        expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/mentor-123',
+        );
       });
     });
 
@@ -1014,9 +1176,15 @@ describe('user-navigate', () => {
         mocked.selectModalStack.mockReturnValue([{ name: 'settings' }]);
         const { result } = renderHook(() => useNavigate());
 
-        const updatedStack = result.current.getUpdatedModalStack('profile', 'info');
+        const updatedStack = result.current.getUpdatedModalStack(
+          'profile',
+          'info',
+        );
 
-        expect(updatedStack).toEqual([{ name: 'settings' }, { name: 'profile', tab: 'info' }]);
+        expect(updatedStack).toEqual([
+          { name: 'settings' },
+          { name: 'profile', tab: 'info' },
+        ]);
       });
 
       it('should return modal stack with mentorId', () => {
@@ -1037,14 +1205,24 @@ describe('user-navigate', () => {
     describe('edge cases', () => {
       it('should handle multiple search params correctly', () => {
         mocked.useSearchParams.mockReturnValue(
-          new URLSearchParams({ tab: 'settings', sort: 'name', filter: 'active' }),
+          new URLSearchParams({
+            tab: 'settings',
+            sort: 'name',
+            filter: 'active',
+          }),
         );
         const { result } = renderHook(() => useNavigate());
 
-        result.current.navigateWithSearchParams({ modal: JSON.stringify([{ name: 'settings' }]) });
+        result.current.navigateWithSearchParams({
+          modal: JSON.stringify([{ name: 'settings' }]),
+        });
 
-        expect(mocked.push).toHaveBeenCalledWith(expect.stringContaining('tab=settings'));
-        expect(mocked.push).toHaveBeenCalledWith(expect.stringContaining('sort=name'));
+        expect(mocked.push).toHaveBeenCalledWith(
+          expect.stringContaining('tab=settings'),
+        );
+        expect(mocked.push).toHaveBeenCalledWith(
+          expect.stringContaining('sort=name'),
+        );
       });
 
       it('should handle switching between mentors multiple times', () => {
@@ -1054,7 +1232,10 @@ describe('user-navigate', () => {
           'mentor-2': 'session-2',
           'mentor-3': 'session-3',
         };
-        mocked.useLocalStorage.mockReturnValue([cachedSessions, saveCachedSessionId]);
+        mocked.useLocalStorage.mockReturnValue([
+          cachedSessions,
+          saveCachedSessionId,
+        ]);
 
         const { result } = renderHook(() => useNavigate());
 
@@ -1103,21 +1284,27 @@ describe('user-navigate', () => {
     it('should have New Chat in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       expect(newChatItem).toBeDefined();
     });
 
     it('should have Mentors in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const mentorsItem = result.current.contentItems.find((item) => item.label === 'Mentors');
+      const mentorsItem = result.current.contentItems.find(
+        (item) => item.label === 'Mentors',
+      );
       expect(mentorsItem).toBeDefined();
     });
 
     it('should have New Mentor in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newMentorItem = result.current.contentItems.find((item) => item.label === 'New Mentor');
+      const newMentorItem = result.current.contentItems.find(
+        (item) => item.label === 'New Mentor',
+      );
       expect(newMentorItem).toBeDefined();
     });
 
@@ -1133,14 +1320,18 @@ describe('user-navigate', () => {
     it('should have Settings in footer items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const settingsItem = result.current.footerItems.find((item) => item.label === 'Settings');
+      const settingsItem = result.current.footerItems.find(
+        (item) => item.label === 'Settings',
+      );
       expect(settingsItem).toBeDefined();
     });
 
     it('should have Analytics in footer items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
+      const analyticsItem = result.current.footerItems.find(
+        (item) => item.label === 'Analytics',
+      );
       expect(analyticsItem).toBeDefined();
     });
 
@@ -1156,7 +1347,9 @@ describe('user-navigate', () => {
     it('New Chat onClick - should clear files when mentorId exists and on chat page', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       newChatItem?.onClick();
 
       expect(mocked.dispatch).toHaveBeenCalledWith(mocked.clearFiles());
@@ -1168,13 +1361,23 @@ describe('user-navigate', () => {
 
     it('New Chat onClick - should open no mentor selected modal when no mentorId', () => {
       mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      // Reset push so we can assert the modal-open navigation specifically
+      mocked.push.mockClear();
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       newChatItem?.onClick();
 
+      // The no-mentorId branch dispatches clearFiles, opens the
+      // "no mentor selected" modal, and returns early — it does NOT
+      // dispatch setShouldStartNewChat (see useSidebarNavigation in
+      // hooks/user-navigate.ts). Opening the modal pushes a new URL via
+      // the navigation router, so we assert on router.push instead.
       expect(mocked.dispatch).toHaveBeenCalledWith(mocked.clearFiles());
-      expect(mocked.dispatch).toHaveBeenCalledWith(
+      expect(mocked.push).toHaveBeenCalled();
+      expect(mocked.dispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({ type: 'setShouldStartNewChat' }),
       );
     });
@@ -1183,19 +1386,27 @@ describe('user-navigate', () => {
       mocked.pathname = '/platform/test-tenant/mentor-123/analytics';
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       newChatItem?.onClick();
 
-      expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+      expect(mocked.push).toHaveBeenCalledWith(
+        '/platform/test-tenant/mentor-123',
+      );
     });
 
     it('Mentors onClick - should navigate to explore', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const mentorsItem = result.current.contentItems.find((item) => item.label === 'Mentors');
+      const mentorsItem = result.current.contentItems.find(
+        (item) => item.label === 'Mentors',
+      );
       mentorsItem?.onClick();
 
-      expect(mocked.push).toHaveBeenCalledWith('/platform/test-tenant/mentor-123/explore');
+      expect(mocked.push).toHaveBeenCalledWith(
+        '/platform/test-tenant/mentor-123/explore',
+      );
     });
 
     it('New Mentor onClick - should execute with trial check', () => {
@@ -1207,7 +1418,9 @@ describe('user-navigate', () => {
 
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newMentorItem = result.current.contentItems.find((item) => item.label === 'New Mentor');
+      const newMentorItem = result.current.contentItems.find(
+        (item) => item.label === 'New Mentor',
+      );
       newMentorItem?.onClick();
 
       expect(executeWithTrialCheck).toHaveBeenCalled();
@@ -1239,7 +1452,9 @@ describe('user-navigate', () => {
 
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
+      const analyticsItem = result.current.footerItems.find(
+        (item) => item.label === 'Analytics',
+      );
       analyticsItem?.onClick();
 
       expect(executeWithTrialCheck).toHaveBeenCalled();
@@ -1254,7 +1469,9 @@ describe('user-navigate', () => {
 
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const settingsItem = result.current.footerItems.find((item) => item.label === 'Settings');
+      const settingsItem = result.current.footerItems.find(
+        (item) => item.label === 'Settings',
+      );
       settingsItem?.onClick();
 
       expect(executeWithTrialCheck).toHaveBeenCalled();
@@ -1275,7 +1492,9 @@ describe('user-navigate', () => {
       mocked.hideAnalytics.mockReturnValue('true');
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
+      const analyticsItem = result.current.footerItems.find(
+        (item) => item.label === 'Analytics',
+      );
       expect(analyticsItem).toBeUndefined();
     });
 
@@ -1283,7 +1502,9 @@ describe('user-navigate', () => {
       mocked.hideAnalytics.mockReturnValue('false');
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
+      const analyticsItem = result.current.footerItems.find(
+        (item) => item.label === 'Analytics',
+      );
       expect(analyticsItem).toBeDefined();
     });
 
@@ -1291,7 +1512,9 @@ describe('user-navigate', () => {
       mocked.pathname = '/platform/test-tenant/mentor-123';
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       newChatItem?.onClick();
 
       expect(mocked.emit).toHaveBeenCalledWith('MENTOR:NEW_CHAT');
@@ -1301,7 +1524,9 @@ describe('user-navigate', () => {
       mocked.pathname = '/platform/test-tenant/projects/project-1/mentor-123';
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       newChatItem?.onClick();
 
       expect(mocked.emit).toHaveBeenCalledWith('MENTOR:NEW_CHAT');
@@ -1310,7 +1535,9 @@ describe('user-navigate', () => {
     it('should have correct user types for New Chat', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       expect(newChatItem?.userTypes).toContain('student');
       expect(newChatItem?.userTypes).toContain('free_trial');
       expect(newChatItem?.userTypes).toContain('admin');
@@ -1320,7 +1547,9 @@ describe('user-navigate', () => {
     it('should have correct user types for Mentors', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const mentorsItem = result.current.contentItems.find((item) => item.label === 'Mentors');
+      const mentorsItem = result.current.contentItems.find(
+        (item) => item.label === 'Mentors',
+      );
       expect(mentorsItem?.userTypes).toContain('student');
       expect(mentorsItem?.userTypes).toContain('visiting');
     });
@@ -1328,7 +1557,9 @@ describe('user-navigate', () => {
     it('should have correct user types for admin actions', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newMentorItem = result.current.contentItems.find((item) => item.label === 'New Mentor');
+      const newMentorItem = result.current.contentItems.find(
+        (item) => item.label === 'New Mentor',
+      );
       expect(newMentorItem?.userTypes).toContain('admin');
       expect(newMentorItem?.isAnAdminAction).toBe(true);
 
@@ -1342,7 +1573,9 @@ describe('user-navigate', () => {
     it('should have rbacResource for New Mentor', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newMentorItem = result.current.contentItems.find((item) => item.label === 'New Mentor');
+      const newMentorItem = result.current.contentItems.find(
+        (item) => item.label === 'New Mentor',
+      );
       expect(newMentorItem?.rbacResource).toBeDefined();
       expect(newMentorItem?.rbacResource?.(1)).toBe('/mentors/#create');
     });
@@ -1354,15 +1587,41 @@ describe('user-navigate', () => {
 
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const analyticsItem = result.current.footerItems.find((item) => item.label === 'Analytics');
+      const analyticsItem = result.current.footerItems.find(
+        (item) => item.label === 'Analytics',
+      );
       expect(analyticsItem?.rbacResource).toBeDefined();
       expect(analyticsItem?.rbacResource?.(1)).toContain('mentor-123');
+    });
+
+    it('should have Workflows in content items', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find(
+        (item) => item.label === 'Workflows',
+      );
+      expect(workflowsItem).toBeDefined();
+    });
+
+    it('Workflows onClick - should navigate to workflows', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find(
+        (item) => item.label === 'Workflows',
+      );
+      workflowsItem?.onClick();
+
+      expect(mocked.push).toHaveBeenCalledWith(
+        '/platform/test-tenant/workflows/mentor-123',
+      );
     });
 
     it('should have hasBorder flag for New Chat', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
-      const newChatItem = result.current.contentItems.find((item) => item.label === 'New Chat');
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
       expect(newChatItem?.hasBorder).toBe(true);
     });
   });

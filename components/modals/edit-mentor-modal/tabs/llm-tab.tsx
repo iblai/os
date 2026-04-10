@@ -13,7 +13,10 @@ import {
 
 import { Input } from '@/components/ui/input';
 import { useUsername } from '@/hooks/use-user';
-import { LLMProvider, LLMProviderModal } from '@/components/modals/llm-provider-modal';
+import {
+  LLMProvider,
+  LLMProviderModal,
+} from '@/components/modals/llm-provider-modal';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { cn, getLLMProviderDetails, Provider } from '@/lib/utils';
@@ -33,33 +36,37 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
   const activeMentorId = getMentorId() || mentorId;
 
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedLLMProvider, setSelectedLLMProvider] = React.useState<LLMProvider | null>(null);
+  const [selectedLLMProvider, setSelectedLLMProvider] =
+    React.useState<LLMProvider | null>(null);
 
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } = useGetMentorSettingsQuery(
-    {
-      mentor: activeMentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-    },
-    { skip: !username || !activeMentorId || !tenantKey },
-  );
+  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
+    useGetMentorSettingsQuery(
+      {
+        mentor: activeMentorId,
+        org: tenantKey,
+        // @ts-ignore
+        userId: username ?? '',
+      },
+      { skip: !username || !activeMentorId || !tenantKey },
+    );
 
-  const { data: llmProviders, isLoading: isLoadingLLMProviders } = useGetLlmsQuery(
-    {
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-      mentorId: activeMentorId,
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
+  const { data: llmProviders, isLoading: isLoadingLLMProviders } =
+    useGetLlmsQuery(
+      {
+        org: tenantKey,
+        // @ts-ignore
+        userId: username ?? '',
+        mentorId: activeMentorId,
+      },
+      {
+        skip: !tenantKey || !username,
+      },
+    );
 
   const [editMentor, { isLoading: isEditingMentor }] = useEditMentorMutation();
 
-  const isDisabled = isMentorSettingsLoading || isLoadingLLMProviders || isEditingMentor;
+  const isDisabled =
+    isMentorSettingsLoading || isLoadingLLMProviders || isEditingMentor;
 
   const isLoading = isMentorSettingsLoading || isLoadingLLMProviders;
 
@@ -87,10 +94,12 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
   return (
     <>
       {showConfigurationHeader && (
-        <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+        <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
           <div>
-            <h3 className="text-base font-medium text-gray-900 mb-1">LLM Configuration</h3>
-            <p className="text-gray-700 text-xs">
+            <h3 className="mb-1 text-base font-medium text-gray-900">
+              LLM Configuration
+            </h3>
+            <p className="text-xs text-gray-700">
               Configure the language model settings for your mentor.
             </p>
           </div>
@@ -132,7 +141,9 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {llmProviders
                     ?.filter((model) =>
-                      model.name.toLowerCase().includes(searchQuery.toLowerCase()),
+                      model.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
                     )
                     .map((model) => {
                       const providerDetails = getLLMProviderDetails(model.name);
@@ -143,7 +154,8 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                           className={cn(
                             'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                             {
-                              'border-blue-500': mentorSettings?.llm_provider === model.name,
+                              'border-blue-500':
+                                mentorSettings?.llm_provider === model.name,
                             },
                           )}
                           onClick={() => {

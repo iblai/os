@@ -1,4 +1,4 @@
-import { SERVICES } from "@/features/constants";
+import { SERVICES } from '@/features/constants';
 
 export const MENTORS_ENDPOINTS = {
   GET_MENTORS: {
@@ -29,10 +29,10 @@ export const MENTORS_ENDPOINTS = {
 };
 
 export const MENTORS_QUERY_KEYS = {
-  GET_MENTORS: () => ["MENTORS"],
-  GET_MENTOR: () => ["MENTOR"],
-  CREATE_MENTOR_WITH_SETTINGS: () => ["CREATE_MENTOR_WITH_SETTINGS"],
-  UPDATE_MENTOR: () => ["UPDATE_MENTOR"],
+  GET_MENTORS: () => ['MENTORS'],
+  GET_MENTOR: () => ['MENTOR'],
+  CREATE_MENTOR_WITH_SETTINGS: () => ['CREATE_MENTOR_WITH_SETTINGS'],
+  UPDATE_MENTOR: () => ['UPDATE_MENTOR'],
 };
 
-export const MENTORS_REDUCER_PATH = "mentorsApiSliceLocal";
+export const MENTORS_REDUCER_PATH = 'mentorsApiSliceLocal';

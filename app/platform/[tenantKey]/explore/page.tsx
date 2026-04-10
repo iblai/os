@@ -11,9 +11,11 @@ export const dynamicConfig = 'force-dynamic';
 // Lazy load component only on client side to avoid SSR issues
 const ExplorePageContent = dynamic(
   () =>
-    import('../[mentorId]/explore/_components/explore-page-content').then((mod) => ({
-      default: mod.ExplorePageContent,
-    })),
+    import('../[mentorId]/explore/_components/explore-page-content').then(
+      (mod) => ({
+        default: mod.ExplorePageContent,
+      }),
+    ),
   { ssr: false },
 );
 

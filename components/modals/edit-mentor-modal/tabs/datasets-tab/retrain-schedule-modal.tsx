@@ -52,7 +52,10 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
 
   // Update state when data is fetched
   useEffect(() => {
-    if (data?.retrain_interval_days !== undefined && data.retrain_interval_days !== null) {
+    if (
+      data?.retrain_interval_days !== undefined &&
+      data.retrain_interval_days !== null
+    ) {
       setRetrainIntervalDays(data.retrain_interval_days);
     }
   }, [data]);
@@ -84,32 +87,40 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[540px] max-w-[95vw] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-x-hidden overflow-y-auto sm:max-w-[540px]">
         <DialogHeader>
-          <DialogTitle className="ibl-dialog-title">Schedule Retraining</DialogTitle>
+          <DialogTitle className="ibl-dialog-title">
+            Schedule Retraining
+          </DialogTitle>
           <DialogDescription className="mt-4 text-left">
             Configure automatic retraining schedule for <br />{' '}
-            <span className="font-medium break-all">{dataset.document_name || dataset.url}</span>
+            <span className="font-medium break-all">
+              {dataset.document_name || dataset.url}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           {/* Retrain Interval */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium flex items-center gap-2">
+            <Label className="flex items-center gap-2 text-sm font-medium">
               <Repeat className="h-4 w-4" />
               Retrain Interval
             </Label>
 
             {/* Preset Buttons */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={isDisabled}
                 onClick={() => setRetrainIntervalDays(1)}
-                className={retrainIntervalDays === 1 ? activeButtonClass : inactiveButtonClass}
+                className={
+                  retrainIntervalDays === 1
+                    ? activeButtonClass
+                    : inactiveButtonClass
+                }
               >
                 Daily (1 day)
               </Button>
@@ -119,7 +130,11 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                 size="sm"
                 disabled={isDisabled}
                 onClick={() => setRetrainIntervalDays(7)}
-                className={retrainIntervalDays === 7 ? activeButtonClass : inactiveButtonClass}
+                className={
+                  retrainIntervalDays === 7
+                    ? activeButtonClass
+                    : inactiveButtonClass
+                }
               >
                 Weekly (7 days)
               </Button>
@@ -129,7 +144,11 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                 size="sm"
                 disabled={isDisabled}
                 onClick={() => setRetrainIntervalDays(30)}
-                className={retrainIntervalDays === 30 ? activeButtonClass : inactiveButtonClass}
+                className={
+                  retrainIntervalDays === 30
+                    ? activeButtonClass
+                    : inactiveButtonClass
+                }
               >
                 Monthly (30 days)
               </Button>
@@ -146,11 +165,13 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                 min="0"
                 disabled={isDisabled}
                 value={retrainIntervalDays}
-                onChange={(e) => setRetrainIntervalDays(Number.parseInt(e.target.value) || 0)}
+                onChange={(e) =>
+                  setRetrainIntervalDays(Number.parseInt(e.target.value) || 0)
+                }
                 className="h-10"
                 placeholder="Enter days"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Dataset will retrain every {retrainIntervalDays}{' '}
                 {retrainIntervalDays === 1 ? 'day' : 'days'}
               </p>
@@ -161,7 +182,11 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
             <Button type="button" variant="outline" onClick={() => onClose()}>
               Cancel
             </Button>
-            <Button type="submit" className="ibl-button-primary" disabled={isDisabled}>
+            <Button
+              type="submit"
+              className="ibl-button-primary"
+              disabled={isDisabled}
+            >
               Schedule Retraining
             </Button>
           </DialogFooter>

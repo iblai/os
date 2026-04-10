@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { TENANTS_ENDPOINTS, TENANTS_QUERY_KEYS, TENANTS_REDUCER_KEY } from '../constants';
+import {
+  TENANTS_ENDPOINTS,
+  TENANTS_QUERY_KEYS,
+  TENANTS_REDUCER_KEY,
+} from '../constants';
 import { SERVICES } from '../../constants';
 
 describe('tenants/constants', () => {
@@ -17,7 +21,9 @@ describe('tenants/constants', () => {
 
     it('should have GET_PLATFORM_METADATA endpoint configuration', () => {
       expect(TENANTS_ENDPOINTS.GET_PLATFORM_METADATA).toBeDefined();
-      expect(TENANTS_ENDPOINTS.GET_PLATFORM_METADATA.service).toBe(SERVICES.AXD);
+      expect(TENANTS_ENDPOINTS.GET_PLATFORM_METADATA.service).toBe(
+        SERVICES.AXD,
+      );
     });
 
     it('should generate correct path for GET_PLATFORM_METADATA', () => {

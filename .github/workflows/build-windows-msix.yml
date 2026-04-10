@@ -1,10 +1,24 @@
-name: Build MSIX (x64 + arm64)
+name: Build Windows Packages (MSIX + EXE)
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
+        description: 'Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version'
+        required: false
+        type: string
+      build_exe:
+        description: 'Also produce NSIS .exe installers'
+        required: false
+        type: boolean
+        default: false
+      sign:
+        description: 'Sign the MSIX bundle (requires MSIX_CERT_PFX and MSIX_CERT_PASSWORD secrets)'
+        required: false
+        type: boolean
+        default: false
+      sign_publisher:
+        description: 'Publisher CN for signing (must match certificate subject, e.g. CN=iblai-sideload)'
         required: false
         type: string
 
@@ -49,31 +63,38 @@ jobs:
           targets: ${{ matrix.rust_target }}
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target/${{ matrix.rust_target }}
-          key: rust-msix-${{ matrix.rust_target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            rust-msix-${{ matrix.rust_target }}-
+          workspaces: src-tauri
+          cache-targets: true
+          cache-all-crates: true
+          prefix-key: rust-msix-${{ matrix.rust_target }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Install Tauri CLI
         run: |
-          cargo install cargo-binstall --locked
-          try {
-            cargo binstall tauri-cli --no-confirm
-          } catch {
-            Write-Host "cargo-binstall tauri-cli failed; falling back to cargo install tauri-cli..."
-            cargo install tauri-cli --locked
+          $url = "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-pc-windows-msvc.zip"
+          if ("${{ matrix.rust_target }}" -eq "aarch64-pc-windows-msvc") {
+            $url = "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-aarch64-pc-windows-msvc.zip"
           }
+          Invoke-WebRequest -Uri $url -OutFile binstall.zip
+          Expand-Archive -Path binstall.zip -DestinationPath "$env:USERPROFILE\.cargo\bin" -Force
+          Remove-Item binstall.zip
+          cargo binstall tauri-cli --no-confirm --force
 
       - name: Build Tauri app (${{ matrix.rust_target }})
         run: cargo tauri build --target ${{ matrix.rust_target }}
+
+      - name: Override Publisher in AppxManifest for signing
+        if: inputs.sign && inputs.sign_publisher != ''
+        working-directory: src-tauri
+        run: |
+          $manifest = Get-Content AppxManifest.xml -Raw
+          $manifest = $manifest -replace 'Publisher="[^"]*"', 'Publisher="${{ inputs.sign_publisher }}"'
+          Set-Content -Path AppxManifest.xml -Value $manifest
+          Write-Host "Patched Publisher to: ${{ inputs.sign_publisher }}"
 
       - name: Override version in AppxManifest
         if: inputs.version != ''
@@ -94,6 +115,37 @@ jobs:
         with:
           name: ibl-ai-os-msix-${{ matrix.arch }}
           path: src-tauri/msix-output/*.msix
+          if-no-files-found: error
+
+      - name: Find NSIS installer
+        if: inputs.build_exe
+        id: nsis
+        run: |
+          $searchPaths = @(
+            "src-tauri\target\${{ matrix.rust_target }}\release\bundle\nsis",
+            "target\${{ matrix.rust_target }}\release\bundle\nsis"
+          )
+          foreach ($dir in $searchPaths) {
+            if (Test-Path $dir) {
+              $exe = Get-ChildItem -Path $dir -Filter "*.exe" | Select-Object -First 1
+              if ($exe) {
+                Write-Host "Found NSIS installer: $($exe.FullName)" -ForegroundColor Green
+                echo "NSIS_DIR=$dir" >> $env:GITHUB_OUTPUT
+                break
+              }
+            }
+          }
+          if (-not $env:GITHUB_OUTPUT -or -not (Select-String -Path $env:GITHUB_OUTPUT -Pattern "NSIS_DIR" -Quiet)) {
+            Write-Error "NSIS installer not found in:`n  $($searchPaths -join "`n  ")"
+            exit 1
+          }
+
+      - name: Upload EXE installer (${{ matrix.arch }})
+        if: inputs.build_exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-os-exe-${{ matrix.arch }}
+          path: ${{ steps.nsis.outputs.NSIS_DIR }}/*.exe
           if-no-files-found: error
 
   bundle-msix:
@@ -120,7 +172,7 @@ jobs:
       - name: List downloaded packages
         run: Get-ChildItem -Path msix-packages -Recurse
 
-      - name: Locate MakeAppx.exe
+      - name: Locate SDK tools
         id: sdk
         run: |
           $SdkRoot = "C:\Program Files (x86)\Windows Kits\10\bin"
@@ -131,13 +183,19 @@ jobs:
             Write-Error "Windows 10 SDK not found"
             exit 1
           }
-          $MakeAppx = Join-Path $SdkVersions[0].FullName "x64\makeappx.exe"
+          $SdkBin = Join-Path $SdkVersions[0].FullName "x64"
+          $MakeAppx = Join-Path $SdkBin "makeappx.exe"
+          $SignTool = Join-Path $SdkBin "signtool.exe"
           if (-not (Test-Path $MakeAppx)) {
             Write-Error "makeappx.exe not found at $MakeAppx"
             exit 1
           }
-          Write-Host "Found: $MakeAppx"
+          Write-Host "Found MakeAppx: $MakeAppx"
           echo "MAKEAPPX=$MakeAppx" >> $env:GITHUB_OUTPUT
+          if (Test-Path $SignTool) {
+            Write-Host "Found SignTool: $SignTool"
+            echo "SIGNTOOL=$SignTool" >> $env:GITHUB_OUTPUT
+          }
 
       - name: Rename .msix to .appx for bundle compatibility
         run: |
@@ -178,9 +236,101 @@ jobs:
 
           Write-Host "Bundle created: $bundlePath" -ForegroundColor Green
 
+      - name: Import signing certificate
+        if: inputs.sign
+        id: cert
+        env:
+          MSIX_CERT_PFX: ${{ secrets.MSIX_CERT_PFX }}
+          MSIX_CERT_PASSWORD: ${{ secrets.MSIX_CERT_PASSWORD }}
+        run: |
+          if (-not $env:MSIX_CERT_PFX) {
+            Write-Error "Signing requested but MSIX_CERT_PFX secret is not set"
+            exit 1
+          }
+
+          $pfxBytes = [Convert]::FromBase64String($env:MSIX_CERT_PFX)
+          $pfxPath = Join-Path $env:RUNNER_TEMP "msix-signing-cert.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+          $securePassword = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePassword
+
+          Write-Host "Certificate imported: $($cert.Subject)"
+          Write-Host "Thumbprint: $($cert.Thumbprint)"
+          echo "CERT_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+          Remove-Item $pfxPath -Force
+
+      - name: Export public certificate for sideload distribution
+        if: inputs.sign
+        run: |
+          $thumbprint = "${{ steps.cert.outputs.CERT_THUMBPRINT }}"
+          $cert = Get-ChildItem "Cert:\CurrentUser\My\$thumbprint"
+          $cerPath = "bundle-output\ibl-ai-os-signing-cert.cer"
+          Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          Write-Host "Exported public certificate to $cerPath"
+
+      - name: Create sideload install script
+        if: inputs.sign
+        run: |
+          $script = @'
+          #Requires -RunAsAdministrator
+          <#
+          .SYNOPSIS
+            Installs the ibl.ai OS MSIX bundle with its signing certificate.
+          .DESCRIPTION
+            This script imports the self-signed certificate into the Trusted People
+            store so Windows will accept the MSIX package, then installs the app.
+            Must be run as Administrator.
+          #>
+
+          $ErrorActionPreference = "Stop"
+          $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+          # Find the certificate and bundle in the same folder
+          $cert = Get-ChildItem $scriptDir -Filter "*.cer" | Select-Object -First 1
+          $bundle = Get-ChildItem $scriptDir -Filter "*.msixbundle" | Select-Object -First 1
+
+          if (-not $cert) { Write-Error "No .cer certificate file found in $scriptDir"; exit 1 }
+          if (-not $bundle) { Write-Error "No .msixbundle file found in $scriptDir"; exit 1 }
+
+          Write-Host "Importing certificate: $($cert.Name)" -ForegroundColor Yellow
+          Import-Certificate -FilePath $cert.FullName -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
+          Write-Host "Certificate imported successfully." -ForegroundColor Green
+
+          Write-Host "Installing: $($bundle.Name)" -ForegroundColor Yellow
+          Add-AppxPackage -Path $bundle.FullName
+          Write-Host "Installation complete!" -ForegroundColor Green
+          '@
+          Set-Content -Path "bundle-output\Install-IblAiOS.ps1" -Value $script
+          Write-Host "Created sideload install script"
+
+      - name: Sign MSIX Bundle
+        if: inputs.sign
+        run: |
+          $bundle = (Get-ChildItem -Path bundle-output -Filter "*.msixbundle")[0]
+          Write-Host "Signing: $($bundle.Name)" -ForegroundColor Yellow
+
+          & "${{ steps.sdk.outputs.SIGNTOOL }}" sign `
+            /fd SHA256 `
+            /sha1 "${{ steps.cert.outputs.CERT_THUMBPRINT }}" `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            $bundle.FullName
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "signtool sign failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+          Write-Host "Bundle signed successfully." -ForegroundColor Green
+
       - name: Upload MSIX Bundle
         uses: actions/upload-artifact@v4
         with:
           name: ibl-ai-os-msixbundle
-          path: bundle-output/*.msixbundle
+          path: |
+            bundle-output/*.msixbundle
+            bundle-output/*.cer
+            bundle-output/*.ps1
           if-no-files-found: error

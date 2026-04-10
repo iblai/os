@@ -13,9 +13,15 @@ vi.mock('@/components/copy-button-icon', () => ({
 
 // Mock MarkdownImageComponent
 vi.mock('../markdown-image-component', () => ({
-  MarkdownImageComponent: ({ src, alt, title }: { src?: string; alt?: string; title?: string }) => (
-    <img data-testid="markdown-image" src={src} alt={alt} title={title} />
-  ),
+  MarkdownImageComponent: ({
+    src,
+    alt,
+    title,
+  }: {
+    src?: string;
+    alt?: string;
+    title?: string;
+  }) => <img data-testid="markdown-image" src={src} alt={alt} title={title} />,
 }));
 
 describe('Markdown Components', () => {
@@ -197,7 +203,9 @@ describe('Markdown Components', () => {
     const Blockquote = components.blockquote!;
 
     it('should render blockquote with styling', () => {
-      const { container } = render(<Blockquote node={{} as any}>Quote text</Blockquote>);
+      const { container } = render(
+        <Blockquote node={{} as any}>Quote text</Blockquote>,
+      );
       const blockquote = container.querySelector('blockquote');
       expect(blockquote).toBeTruthy();
       expect(blockquote?.className).toContain('border-l-2');
@@ -344,7 +352,9 @@ describe('Markdown Components', () => {
     });
 
     it('should render inline code when no language is specified', () => {
-      const { container } = render(<Code node={{} as any}>{'inline code'}</Code>);
+      const { container } = render(
+        <Code node={{} as any}>{'inline code'}</Code>,
+      );
       const code = container.querySelector('code');
       expect(code).toBeTruthy();
       expect(code?.className).toContain('font-mono');
@@ -378,7 +388,9 @@ describe('Markdown Components', () => {
     const Pre = components.pre!;
 
     it('should render pre with styling', () => {
-      const { container } = render(<Pre node={{} as any}>{'preformatted text'}</Pre>);
+      const { container } = render(
+        <Pre node={{} as any}>{'preformatted text'}</Pre>,
+      );
       const pre = container.querySelector('pre');
       expect(pre).toBeTruthy();
       expect(pre?.className).toContain('bg-gray-200');
@@ -402,7 +414,12 @@ describe('Markdown Components', () => {
 
     it('should render MarkdownImageComponent with props', () => {
       const { container } = render(
-        <Img node={{} as any} src="image.jpg" alt="Alt text" title="Image title" />,
+        <Img
+          node={{} as any}
+          src="image.jpg"
+          alt="Alt text"
+          title="Image title"
+        />,
       );
       const img = container.querySelector('[data-testid="markdown-image"]');
       expect(img).toBeTruthy();
@@ -416,7 +433,9 @@ describe('Markdown Components', () => {
     const Textarea = components.textarea!;
 
     it('should render textarea with children as defaultValue', () => {
-      const { container } = render(<Textarea node={{} as any}>{'Textarea content'}</Textarea>);
+      const { container } = render(
+        <Textarea node={{} as any}>{'Textarea content'}</Textarea>,
+      );
       const textarea = container.querySelector('textarea');
       expect(textarea).toBeTruthy();
       expect(textarea?.defaultValue).toBe('Textarea content');

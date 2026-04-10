@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { CheckCircle } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { CheckCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useCreateCheckoutMutation } from "@iblai/iblai-js/data-layer";
-import type { PaywallPrice } from "@iblai/iblai-js/data-layer";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useCreateCheckoutMutation } from '@iblai/iblai-js/data-layer';
+import type { PaywallPrice } from '@iblai/iblai-js/data-layer';
+import { cn } from '@/lib/utils';
 
 interface PaywallModalProps {
   pricing: {
@@ -26,8 +26,8 @@ interface PaywallModalProps {
 }
 
 function formatPrice(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
@@ -35,7 +35,7 @@ function formatPrice(amount: number, currency: string) {
 }
 
 function formatInterval(interval: string) {
-  if (interval === "one_time") return "";
+  if (interval === 'one_time') return '';
   return `/${interval}`;
 }
 
@@ -47,7 +47,7 @@ export function PaywallModal({
   onClose,
 }: PaywallModalProps) {
   useEffect(() => {
-    console.log("[MONETIZATION] Paywall modal pricing ", { pricing });
+    console.log('[MONETIZATION] Paywall modal pricing ', { pricing });
   }, [pricing]);
   const [createCheckout, { isLoading: isCheckoutLoading }] =
     useCreateCheckoutMutation();
@@ -60,7 +60,7 @@ export function PaywallModal({
     try {
       const result = await createCheckout({
         platform_key: platformKey,
-        item_type: "mentor",
+        item_type: 'mentor',
         item_id: mentorId,
         price_id: price.id,
         success_url: window.location.href,
@@ -82,37 +82,37 @@ export function PaywallModal({
         if (!isOpen) onClose();
       }}
     >
-      <DialogContent className="max-w-5xl gap-0 overflow-y-auto max-h-[90vh] p-8">
-        <DialogHeader className="text-center sm:text-center mb-8">
+      <DialogContent className="max-h-[90vh] max-w-5xl gap-0 overflow-y-auto p-8">
+        <DialogHeader className="mb-8 text-center sm:text-center">
           <DialogTitle className="text-3xl font-bold tracking-tight">
             Choose your plan
           </DialogTitle>
-          <DialogDescription className="text-base text-muted-foreground mt-2">
+          <DialogDescription className="text-muted-foreground mt-2 text-base">
             Subscribe to get access to {pricing.item_name}
           </DialogDescription>
         </DialogHeader>
 
         <div
           className={cn(
-            "grid gap-5",
-            activePrices.length === 1 && "grid-cols-1 max-w-sm mx-auto",
+            'grid gap-5',
+            activePrices.length === 1 && 'mx-auto max-w-sm grid-cols-1',
             activePrices.length === 2 &&
-              "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto",
+              'mx-auto max-w-2xl grid-cols-1 sm:grid-cols-2',
             activePrices.length === 3 &&
-              "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
             activePrices.length >= 4 &&
-              "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+              'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
           )}
         >
           {activePrices.map((price) => (
             <div
               key={price.id}
-              className="rounded-xl bg-muted/50 p-6 flex flex-col gap-5"
+              className="bg-muted/50 flex flex-col gap-5 rounded-xl p-6"
             >
               <div>
                 <h3 className="text-xl font-bold">{price.name}</h3>
                 {price.description && (
-                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                     {price.description}
                   </p>
                 )}
@@ -122,8 +122,8 @@ export function PaywallModal({
                 <span className="text-4xl font-bold tracking-tight">
                   {formatPrice(price.amount, price.currency)}
                 </span>
-                {price.interval !== "one_time" && (
-                  <span className="text-sm text-muted-foreground">
+                {price.interval !== 'one_time' && (
+                  <span className="text-muted-foreground text-sm">
                     {formatInterval(price.interval)}
                   </span>
                 )}
@@ -132,23 +132,23 @@ export function PaywallModal({
               <Button
                 onClick={() => handleCheckout(price)}
                 disabled={isCheckoutLoading}
-                className="w-full h-11 text-sm font-medium"
+                className="h-11 w-full text-sm font-medium"
               >
                 {isCheckoutLoading && selectedPriceId === price.id
-                  ? "Redirecting..."
-                  : "Pay"}
+                  ? 'Redirecting...'
+                  : 'Pay'}
               </Button>
 
               {price.features.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-3">This includes:</p>
+                  <p className="mb-3 text-sm font-medium">This includes:</p>
                   <ul className="space-y-3">
                     {price.features.map((feature, idx) => (
                       <li
                         key={idx}
                         className="flex items-start gap-2.5 text-sm"
                       >
-                        <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <CheckCircle className="text-primary mt-0.5 h-4 w-4 shrink-0" />
                         <span className="leading-snug">{feature}</span>
                       </li>
                     ))}

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const userDataSchema = z.object({
   user_display_name: z.string(),

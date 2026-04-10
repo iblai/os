@@ -11,11 +11,11 @@ export function HotKeysWrapper() {
   useHotkeys(shortcuts.toggleSidebar.keys, shortcuts.toggleSidebar.callback);
   useHotkeys(
     shortcuts.openMyMentorsModal.keys,
-    shortcuts.openMyMentorsModal.callback
+    shortcuts.openMyMentorsModal.callback,
   );
   useHotkeys(
     shortcuts.openShortcutsModal.keys,
-    shortcuts.openShortcutsModal.callback
+    shortcuts.openShortcutsModal.callback,
   );
 
   return null;

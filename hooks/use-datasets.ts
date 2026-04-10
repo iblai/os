@@ -42,7 +42,7 @@ export function useDatasetsWithPagination(itemsPerPage = 5) {
     {
       skip: !activeMentorId,
       pollingInterval: isTraining ? 2000 : 0,
-    }
+    },
   );
 
   React.useEffect(() => {

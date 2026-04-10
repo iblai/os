@@ -31,7 +31,9 @@ const roomEventHandlers: Record<string, (...args: any[]) => void> = {};
 const participantEventHandlers: Record<string, (...args: any[]) => void> = {};
 
 const mockTrackStop = vi.fn();
-const mockAudioTrackPublications = new Map([['track1', { track: { stop: mockTrackStop } }]]);
+const mockAudioTrackPublications = new Map([
+  ['track1', { track: { stop: mockTrackStop } }],
+]);
 
 const mockLocalParticipant = {
   setMicrophoneEnabled: mockSetMicrophoneEnabled,
@@ -208,7 +210,10 @@ describe('LiveKitChat', () => {
     it('should connect to the LiveKit room', async () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        expect(mockRoomConnect).toHaveBeenCalledWith('wss://test.livekit.cloud', 'test-token');
+        expect(mockRoomConnect).toHaveBeenCalledWith(
+          'wss://test.livekit.cloud',
+          'test-token',
+        );
       });
     });
 
@@ -222,7 +227,10 @@ describe('LiveKitChat', () => {
     it('should pass isMuted=false to modal after successful connection', async () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.isMuted).toBe(false);
       });
     });
@@ -230,7 +238,10 @@ describe('LiveKitChat', () => {
     it('should pass connectionState=connected after successful connection', async () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connected');
       });
     });
@@ -239,15 +250,27 @@ describe('LiveKitChat', () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
         expect(mockPostMessage).toHaveBeenCalledWith(
-          { type: 'MENTOR:ROOM_STATUS', action: 'voice-call', status: 'requesting-permission' },
+          {
+            type: 'MENTOR:ROOM_STATUS',
+            action: 'voice-call',
+            status: 'requesting-permission',
+          },
           '*',
         );
         expect(mockPostMessage).toHaveBeenCalledWith(
-          { type: 'MENTOR:ROOM_STATUS', action: 'voice-call', status: 'connecting' },
+          {
+            type: 'MENTOR:ROOM_STATUS',
+            action: 'voice-call',
+            status: 'connecting',
+          },
           '*',
         );
         expect(mockPostMessage).toHaveBeenCalledWith(
-          { type: 'MENTOR:ROOM_STATUS', action: 'voice-call', status: 'connected' },
+          {
+            type: 'MENTOR:ROOM_STATUS',
+            action: 'voice-call',
+            status: 'connected',
+          },
           '*',
         );
       });
@@ -259,7 +282,10 @@ describe('LiveKitChat', () => {
       mockGetUserMedia.mockRejectedValueOnce(new Error('Permission denied'));
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('error');
       });
     });
@@ -300,7 +326,10 @@ describe('LiveKitChat', () => {
       mockUnwrap.mockRejectedValueOnce(new Error('API error'));
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('error');
       });
     });
@@ -333,7 +362,9 @@ describe('LiveKitChat', () => {
       mockUnwrap.mockRejectedValueOnce(42);
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith('Failed to initiate call. Please try again.');
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Failed to initiate call. Please try again.',
+        );
       });
     });
 
@@ -351,7 +382,10 @@ describe('LiveKitChat', () => {
       mockRoomConnect.mockRejectedValueOnce(new Error('Connection failed'));
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('error');
       });
     });
@@ -360,7 +394,9 @@ describe('LiveKitChat', () => {
       mockRoomConnect.mockRejectedValueOnce(new Error('Connection failed'));
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith('Failed to connect to room. Please try again.');
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Failed to connect to room. Please try again.',
+        );
       });
     });
 
@@ -378,7 +414,10 @@ describe('LiveKitChat', () => {
       mockSetMicrophoneEnabled.mockRejectedValueOnce(new Error('Mic error'));
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('error');
       });
     });
@@ -418,19 +457,27 @@ describe('LiveKitChat', () => {
       render(<LiveKitChat {...defaultProps} />);
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.isMuted).toBe(false);
       });
 
       // Get the toggleMute function and call it
-      const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+      const lastCall =
+        mockVoiceChatModal.mock.calls[
+          mockVoiceChatModal.mock.calls.length - 1
+        ][0];
       act(() => {
         (lastCall.toggleMute as () => void)();
       });
 
       await vi.waitFor(() => {
         const updatedCall =
-          mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(updatedCall.isMuted).toBe(true);
       });
       expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(false);
@@ -482,7 +529,11 @@ describe('LiveKitChat', () => {
       unmount();
 
       expect(mockPostMessage).toHaveBeenCalledWith(
-        { type: 'MENTOR:ROOM_STATUS', action: 'voice-call', status: 'disconnected' },
+        {
+          type: 'MENTOR:ROOM_STATUS',
+          action: 'voice-call',
+          status: 'disconnected',
+        },
         '*',
       );
     });
@@ -500,7 +551,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connected');
       });
     });
@@ -516,7 +570,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('disconnected');
       });
     });
@@ -532,7 +589,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connecting');
       });
     });
@@ -548,7 +608,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('reconnecting');
       });
     });
@@ -582,7 +645,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('disconnected');
       });
     });
@@ -598,7 +664,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('reconnecting');
       });
     });
@@ -614,7 +683,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connected');
       });
     });
@@ -625,7 +697,10 @@ describe('LiveKitChat', () => {
       render(<LiveKitChat {...defaultProps} />);
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connected');
       });
 
@@ -634,7 +709,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.isSpeaking).toBe(true);
       });
     });
@@ -643,7 +721,10 @@ describe('LiveKitChat', () => {
       render(<LiveKitChat {...defaultProps} />);
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.connectionState).toBe('connected');
       });
 
@@ -652,7 +733,10 @@ describe('LiveKitChat', () => {
       });
 
       await vi.waitFor(() => {
-        const lastCall = mockVoiceChatModal.mock.calls[mockVoiceChatModal.mock.calls.length - 1][0];
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
         expect(lastCall.isSpeaking).toBe(false);
       });
     });
@@ -715,7 +799,12 @@ describe('LiveKitChat', () => {
 
       act(() => {
         roomEventHandlers['trackPublished']?.(
-          { trackSid: 't1', trackName: 'audio', source: 'microphone', kind: 'audio' },
+          {
+            trackSid: 't1',
+            trackName: 'audio',
+            source: 'microphone',
+            kind: 'audio',
+          },
           { identity: 'remote-user' },
         );
       });
@@ -818,7 +907,9 @@ describe('LiveKitChat', () => {
       });
 
       act(() => {
-        roomEventHandlers['activeSpeakersChanged']?.([{ identity: 'user1', sid: 's1' }]);
+        roomEventHandlers['activeSpeakersChanged']?.([
+          { identity: 'user1', sid: 's1' },
+        ]);
       });
 
       expect(consoleLogSpy).toHaveBeenCalledWith(
@@ -829,7 +920,9 @@ describe('LiveKitChat', () => {
     });
 
     it('should handle MediaDevicesError event', async () => {
-      const consoleErrorSpy2 = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy2 = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
         expect(mockRoomConnect).toHaveBeenCalled();

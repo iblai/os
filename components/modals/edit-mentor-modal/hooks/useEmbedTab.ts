@@ -113,8 +113,10 @@ const useEmbedTab = () => {
     // @ts-ignore
     userId: username ?? ANONYMOUS_USERNAME,
   });
-  const [createRedirectToken, { isLoading: isCreateTokenLoading, data: redirectTokenData }] =
-    useCreateRedirectTokenMutation();
+  const [
+    createRedirectToken,
+    { isLoading: isCreateTokenLoading, data: redirectTokenData },
+  ] = useCreateRedirectTokenMutation();
   const [updateMentorSettings] = useEditMentorMutation();
   const [customFloatingBubbleConfig, setCustomFloatingBubbleConfig] =
     useState<CustomFloatingBubbleConfig>({
@@ -141,7 +143,10 @@ const useEmbedTab = () => {
       strokeWidth: 0,
     });
 
-  const updateConfig = (key: keyof typeof customFloatingBubbleConfig, value: any) => {
+  const updateConfig = (
+    key: keyof typeof customFloatingBubbleConfig,
+    value: any,
+  ) => {
     let additionalConfig = {};
     if (key === 'size') {
       additionalConfig = {
@@ -167,13 +172,17 @@ const useEmbedTab = () => {
     });
   };
 
-  const syncEmbedSettings = async (): Promise<{ success: boolean; redirectToken?: string }> => {
+  const syncEmbedSettings = async (): Promise<{
+    success: boolean;
+    redirectToken?: string;
+  }> => {
     const value = form.state.values;
 
     // Validate website URL if not anonymous
     if (
       !value.allow_anonymous &&
-      (!value.website_url || !z.string().url().safeParse(value.website_url).success)
+      (!value.website_url ||
+        !z.string().url().safeParse(value.website_url).success)
     ) {
       setCreateTokenError('Please specify a valid Website URL');
       return { success: false };
@@ -199,7 +208,8 @@ const useEmbedTab = () => {
         });
         if (response.error) {
           const errorObj = response.error as any;
-          const errorMessage = errorObj?.error?.url?.[0] ?? 'Unknown error occurred';
+          const errorMessage =
+            errorObj?.error?.url?.[0] ?? 'Unknown error occurred';
           throw new Error(errorMessage);
         }
         redirectTokenResponse = response;
@@ -218,7 +228,9 @@ const useEmbedTab = () => {
 
     // Update mentor settings
     const valid_values = Object.fromEntries(
-      Object.entries(formValues).filter(([key, value]) => value !== '' || key === 'custom_css'),
+      Object.entries(formValues).filter(
+        ([key, value]) => value !== '' || key === 'custom_css',
+      ),
     );
     const response = await updateMentorSettings({
       mentor: mentorId,
@@ -236,7 +248,8 @@ const useEmbedTab = () => {
         response.error,
       );
       const errorMessage =
-        (response.error as any)?.error?.error ?? 'An Unknown error occurred. Please try again';
+        (response.error as any)?.error?.error ??
+        'An Unknown error occurred. Please try again';
       setCreateTokenError(errorMessage);
       toast.error(errorMessage);
       return { success: false };
@@ -253,9 +266,12 @@ const useEmbedTab = () => {
       allow_anonymous: mentorPublicSettings?.allow_anonymous ?? false,
       mentor_visibility: mentorPublicSettings?.mentor_visibility ?? '',
       custom_css: mentorPublicSettings?.custom_css ?? '',
-      embed_show_attachment: mentorPublicSettings?.embed_show_attachment ?? true,
-      embed_show_voice_call: mentorPublicSettings?.embed_show_voice_call ?? true,
-      embed_show_voice_record: mentorPublicSettings?.embed_show_voice_record ?? true,
+      embed_show_attachment:
+        mentorPublicSettings?.embed_show_attachment ?? true,
+      embed_show_voice_call:
+        mentorPublicSettings?.embed_show_voice_call ?? true,
+      embed_show_voice_record:
+        mentorPublicSettings?.embed_show_voice_record ?? true,
       starter_prompts:
         mentorPublicSettings?.starter_prompts === 'suggested_prompt'
           ? 'suggested_prompt'
@@ -278,11 +294,13 @@ const useEmbedTab = () => {
       setEmbedCode(embed);
     },
   });
-  const { data: integratedSsoProviders, isError: isIntegratedSsoProvidersError = true } =
-    useGetIntegratedSsoProvidersQuery({
-      platform_key: params.tenantKey,
-      username: getUserName(),
-    });
+  const {
+    data: integratedSsoProviders,
+    isError: isIntegratedSsoProvidersError = true,
+  } = useGetIntegratedSsoProvidersQuery({
+    platform_key: params.tenantKey,
+    username: getUserName(),
+  });
 
   const [createTokenError, setCreateTokenError] = useState('');
   const createTokenHandler = async () => {
@@ -303,7 +321,9 @@ const useEmbedTab = () => {
           `Failed to create redirect token for website (${websiteUrl}) in org (${params.tenantKey})`,
           errorObj,
         );
-        setCreateTokenError(errorObj?.error?.url?.[0] ?? 'Unknown error occurred');
+        setCreateTokenError(
+          errorObj?.error?.url?.[0] ?? 'Unknown error occurred',
+        );
       }
     } catch (error) {
       console.error(
@@ -317,7 +337,8 @@ const useEmbedTab = () => {
     }
   };
 
-  const [focusEditCustomFloatingBubble, setFocusEditCustomFloatingBubble] = useState(false);
+  const [focusEditCustomFloatingBubble, setFocusEditCustomFloatingBubble] =
+    useState(false);
 
   return {
     createTokenHandler,

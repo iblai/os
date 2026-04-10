@@ -68,12 +68,16 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Mentor</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this mentor? This action cannot be undone and will
-            permanently remove all associated data.
+            Are you sure you want to delete this mentor? This action cannot be
+            undone and will permanently remove all associated data.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose} disabled={isLoading} className="ibl-button-primary">
+          <AlertDialogCancel
+            onClick={onClose}
+            disabled={isLoading}
+            className="ibl-button-primary"
+          >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
@@ -82,7 +86,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
               await handleDelete();
             }}
             disabled={isLoading}
-            className="border border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+            className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
             {isLoading ? 'Deleting...' : 'Delete'}
           </AlertDialogAction>

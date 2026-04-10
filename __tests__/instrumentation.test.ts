@@ -44,7 +44,10 @@ describe('instrumentation', () => {
 
       await register();
 
-      expect(mockProcessOn).toHaveBeenCalledWith('unhandledRejection', expect.any(Function));
+      expect(mockProcessOn).toHaveBeenCalledWith(
+        'unhandledRejection',
+        expect.any(Function),
+      );
     });
 
     it('should suppress HTMLElement errors during route pre-warming', async () => {

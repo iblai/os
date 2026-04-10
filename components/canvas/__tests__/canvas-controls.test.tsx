@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CanvasControls } from '../canvas-controls';
@@ -27,7 +33,9 @@ describe('CanvasControls', () => {
 
   describe('Rendering', () => {
     it('renders the main pencil button', () => {
-      render(<CanvasControls sendFullArtifactUpdate={mockSendFullArtifactUpdate} />);
+      render(
+        <CanvasControls sendFullArtifactUpdate={mockSendFullArtifactUpdate} />,
+      );
 
       // Look for the main button (pencil icon button)
       const buttons = screen.getAllByRole('button');
@@ -111,7 +119,9 @@ describe('CanvasControls', () => {
       // Should collapse
       await waitFor(() => {
         // Either has opacity-0 or pointer-events-none
-        const collapsed = container.querySelector('.opacity-0, .pointer-events-none');
+        const collapsed = container.querySelector(
+          '.opacity-0, .pointer-events-none',
+        );
         expect(collapsed).toBeInTheDocument();
       });
     });
@@ -135,7 +145,9 @@ describe('CanvasControls', () => {
       const buttons = screen.getAllByRole('button');
       const lengthButton = buttons.find(
         (btn) =>
-          btn.querySelector('svg')?.classList.contains('lucide-arrow-up-down') ||
+          btn
+            .querySelector('svg')
+            ?.classList.contains('lucide-arrow-up-down') ||
           btn.getAttribute('aria-label')?.includes('length'),
       );
 
@@ -358,7 +370,9 @@ describe('CanvasControls', () => {
 
         // Find the draggable dot
         await waitFor(() => {
-          const draggableDot = container.querySelector('.cursor-grab, .cursor-pointer');
+          const draggableDot = container.querySelector(
+            '.cursor-grab, .cursor-pointer',
+          );
           expect(draggableDot).toBeInTheDocument();
         });
       }
@@ -642,7 +656,9 @@ describe('CanvasControls', () => {
         <CanvasControls sendFullArtifactUpdate={mockSendFullArtifactUpdate} />,
       );
 
-      const mainButton = container.querySelector('button[type="button"]') as HTMLButtonElement;
+      const mainButton = container.querySelector(
+        'button[type="button"]',
+      ) as HTMLButtonElement;
       if (mainButton) {
         mainButton.focus();
         fireEvent.keyDown(mainButton, { key: 'Enter' });
@@ -736,7 +752,9 @@ describe('CanvasControls', () => {
         await userEvent.click(lengthButton);
 
         await waitFor(() => {
-          const slideIn = container.querySelector('.slide-in-from-right, .animate-in');
+          const slideIn = container.querySelector(
+            '.slide-in-from-right, .animate-in',
+          );
           expect(slideIn).toBeInTheDocument();
         });
       }
@@ -780,7 +798,9 @@ describe('CanvasControls', () => {
         });
 
         // Get the draggable dot
-        const draggableDot = container.querySelector('.cursor-grab, .cursor-pointer');
+        const draggableDot = container.querySelector(
+          '.cursor-grab, .cursor-pointer',
+        );
         if (draggableDot) {
           // Simulate mousedown
           fireEvent.mouseDown(draggableDot, { clientY: 100 });
@@ -826,7 +846,9 @@ describe('CanvasControls', () => {
         });
 
         // Get the draggable dot
-        const draggableDot = container.querySelector('.cursor-grab, .cursor-pointer');
+        const draggableDot = container.querySelector(
+          '.cursor-grab, .cursor-pointer',
+        );
         if (draggableDot) {
           // Simulate drag
           fireEvent.mouseDown(draggableDot, { clientY: 100 });
@@ -866,7 +888,9 @@ describe('CanvasControls', () => {
           expect(draggableDot).toBeInTheDocument();
         });
 
-        const draggableDot = container.querySelector('.cursor-grab, .cursor-pointer');
+        const draggableDot = container.querySelector(
+          '.cursor-grab, .cursor-pointer',
+        );
         if (draggableDot) {
           // Drag to a different position
           fireEvent.mouseDown(draggableDot, { clientY: 100 });

@@ -50,7 +50,10 @@ export const useUserType = (mentorSettings?: any) => {
       resource.userTypes.includes(determineUserType()) ||
       (config.enableRBAC() &&
         ((!!resource.rbacResource &&
-          checkRbacPermission(rbacPermissions, resource.rbacResource(mentorSettings?.mentor_id))) ||
+          checkRbacPermission(
+            rbacPermissions,
+            resource.rbacResource(mentorSettings?.mentor_id),
+          )) ||
           (!!mentorSettings &&
             resource.permissionFieldsCheck?.length > 0 &&
             rbacPermissionToDisplay(

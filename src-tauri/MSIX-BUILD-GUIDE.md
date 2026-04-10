@@ -12,13 +12,13 @@ Tauri v2 does not produce MSIX natively (only NSIS and MSI). The MSIX is created
 
 Install the following on your Windows machine:
 
-| Tool | Purpose | Install |
-|------|---------|---------|
-| **Rust** | Compiles the Tauri backend | https://rustup.rs |
-| **Tauri CLI** | `cargo install tauri-cli` | Builds the app |
+| Tool               | Purpose                                    | Install                                                           |
+| ------------------ | ------------------------------------------ | ----------------------------------------------------------------- |
+| **Rust**           | Compiles the Tauri backend                 | https://rustup.rs                                                 |
+| **Tauri CLI**      | `cargo install tauri-cli`                  | Builds the app                                                    |
 | **Windows 10 SDK** | Provides `makeappx.exe` and `signtool.exe` | Visual Studio Installer > "Desktop development with C++" workload |
-| **Node.js + pnpm** | Frontend dependencies (if needed) | https://nodejs.org |
-| **Git** | Clone the repo | https://git-scm.com |
+| **Node.js + pnpm** | Frontend dependencies (if needed)          | https://nodejs.org                                                |
+| **Git**            | Clone the repo                             | https://git-scm.com                                               |
 
 ---
 
@@ -74,6 +74,7 @@ $store.Close()
 ```
 
 Flags:
+
 - `-SkipTauriBuild` - skip the Tauri compile step (if you already built in step 2)
 - `-CertThumbprint` - thumbprint from step 3
 
@@ -119,18 +120,18 @@ Or do it all in one step (includes Tauri build):
 
 ### Modified Files
 
-| File | Changes |
-|------|---------|
-| `tauri.conf.json` | Identifier changed from `ai.ibl.mentorai.macos` to `ai.ibl.mentorai` (platform-neutral). Added NSIS bundle target, WebView2 `downloadBootstrapper` config, timestamp URL (`digicert`), WiX language config. |
-| `entitlements.mac.plist` | Updated `com.apple.application-identifier` to match new identifier. |
-| `.gitignore` | Added `msix-staging/` and `msix-output/` exclusions. |
+| File                     | Changes                                                                                                                                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tauri.conf.json`        | Identifier changed from `ai.ibl.mentorai.macos` to `ai.ibl.mentorai` (platform-neutral). Added NSIS bundle target, WebView2 `downloadBootstrapper` config, timestamp URL (`digicert`), WiX language config. |
+| `entitlements.mac.plist` | Updated `com.apple.application-identifier` to match new identifier.                                                                                                                                         |
+| `.gitignore`             | Added `msix-staging/` and `msix-output/` exclusions.                                                                                                                                                        |
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
-| `AppxManifest.xml` | MSIX package manifest defining app identity, capabilities, visual elements, and deep link protocols. |
-| `build-msix.ps1` | PowerShell script that stages files, runs `makeappx.exe pack`, and optionally signs with `signtool.exe`. |
+| File                  | Purpose                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `AppxManifest.xml`    | MSIX package manifest defining app identity, capabilities, visual elements, and deep link protocols.           |
+| `build-msix.ps1`      | PowerShell script that stages files, runs `makeappx.exe pack`, and optionally signs with `signtool.exe`.       |
 | `setup-test-cert.ps1` | Creates a self-signed certificate (`CN=iblai-test`) for local testing and installs it to Trusted People store. |
 
 ---
@@ -170,6 +171,7 @@ Or do it all in one step (includes Tauri build):
 ### 3. Code Signing Certificate
 
 For Store submission, you have two options:
+
 - **Let the Store sign it** - Upload an unsigned MSIX to Partner Center and Microsoft re-signs during ingestion (simplest)
 - **Sign with a trusted cert** - Purchase a code signing certificate from a CA (DigiCert, Sectigo, etc.) for sideloading outside the Store
 

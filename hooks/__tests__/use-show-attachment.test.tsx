@@ -10,7 +10,10 @@ vi.mock('../use-model-file-upload-capabilities');
 vi.mock('../use-embed-mode');
 
 describe('useShowAttachment', () => {
-  const mockUseMentorSettings = vi.spyOn(useMentorSettingsModule, 'useMentorSettings');
+  const mockUseMentorSettings = vi.spyOn(
+    useMentorSettingsModule,
+    'useMentorSettings',
+  );
   const mockUseModelFileUploadCapabilities = vi.spyOn(
     useModelFileUploadCapabilitiesModule,
     'useModelFileUploadCapabilities',
@@ -25,7 +28,13 @@ describe('useShowAttachment', () => {
       supportsDocuments: true,
       supportedImageTypes: ['image/jpg', 'image/jpeg', 'image/png'],
       supportedDocumentTypes: ['text/plain', 'application/pdf'],
-      allSupportedTypes: ['image/jpg', 'image/jpeg', 'image/png', 'text/plain', 'application/pdf'],
+      allSupportedTypes: [
+        'image/jpg',
+        'image/jpeg',
+        'image/png',
+        'text/plain',
+        'application/pdf',
+      ],
       maxFileSizeMB: 20,
       maxFilesPerMessage: 10,
       supportsFileUrls: true,

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
-import { UserProfile } from "../user-profile";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, waitFor } from '@testing-library/react';
+import { UserProfile } from '../user-profile';
 
 const { mockSaveCurrentTenant, mockSaveUserTenants, mockDispatch } = vi.hoisted(
   () => ({
@@ -10,8 +10,8 @@ const { mockSaveCurrentTenant, mockSaveUserTenants, mockDispatch } = vi.hoisted(
   }),
 );
 
-vi.mock("next/navigation", () => ({
-  useParams: () => ({ tenantKey: "new-tenant", mentorId: "mentor-1" }),
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'new-tenant', mentorId: 'mentor-1' }),
   useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
@@ -22,28 +22,28 @@ vi.mock("next/navigation", () => ({
   }),
   useSearchParams: () => ({
     get: vi.fn().mockReturnValue(null),
-    toString: vi.fn().mockReturnValue(""),
+    toString: vi.fn().mockReturnValue(''),
   }),
-  usePathname: () => "/platform/new-tenant/mentor-1",
+  usePathname: () => '/platform/new-tenant/mentor-1',
 }));
 
-vi.mock("@/hooks/use-user", () => ({
-  useUsername: () => "testuser",
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'testuser',
   useIsAdmin: () => false,
   useIsVisiting: () => false,
   useUserIsStudent: () => false,
   useCurrentTenant: () => ({
-    currentTenant: { key: "other-tenant", is_admin: false, org: "other-org" },
+    currentTenant: { key: 'other-tenant', is_admin: false, org: 'other-org' },
     saveCurrentTenant: mockSaveCurrentTenant,
   }),
   useUserTenants: () => ({
-    userTenants: [{ key: "other-tenant", is_admin: false, org: "other-org" }],
+    userTenants: [{ key: 'other-tenant', is_admin: false, org: 'other-org' }],
     saveUserTenants: mockSaveUserTenants,
   }),
   useVisitingTenant: () => ({ visitingTenant: null }),
 }));
 
-vi.mock("@/lib/hooks", () => ({
+vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => mockDispatch,
   useAppSelector: (selector: any) => {
     const mockState = {
@@ -54,90 +54,90 @@ vi.mock("@/lib/hooks", () => ({
   },
 }));
 
-vi.mock("@/lib/config", () => ({
+vi.mock('@/lib/config', () => ({
   config: {
-    iblPlatform: () => "mentor",
-    mainTenantKey: () => "main",
-    mentorUrl: () => "https://mentor.example.com",
-    helpCenterUrl: () => "https://help.example.com",
-    enableGravatarOnProfilePic: () => "true",
-    authUrl: () => "https://auth.example.com",
-    platformBaseDomain: () => "example.com",
+    iblPlatform: () => 'mentor',
+    mainTenantKey: () => 'main',
+    mentorUrl: () => 'https://mentor.example.com',
+    helpCenterUrl: () => 'https://help.example.com',
+    enableGravatarOnProfilePic: () => 'true',
+    authUrl: () => 'https://auth.example.com',
+    platformBaseDomain: () => 'example.com',
     enableRBAC: () => false,
-    iblTemplateMentor: () => "default-mentor",
+    iblTemplateMentor: () => 'default-mentor',
   },
 }));
 
-vi.mock("@/features/utils", () => ({
-  getUserEmail: () => "test@example.com",
-  getUserName: () => "testuser",
+vi.mock('@/features/utils', () => ({
+  getUserEmail: () => 'test@example.com',
+  getUserName: () => 'testuser',
 }));
 
-vi.mock("@/lib/utils", () => ({
+vi.mock('@/lib/utils', () => ({
   handleLogout: vi.fn(),
   handleTenantSwitch: vi.fn(),
   isStripeActivated: vi.fn().mockReturnValue(false),
   onAccountDeleted: vi.fn(),
 }));
 
-vi.mock("@/hooks/subscription/subscription-flow-v2", () => ({
+vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
-vi.mock("@iblai/iblai-js/web-utils", () => ({
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({
     metadata: {},
     metadataLoaded: true,
   }),
   Tenant: {},
   useSubscriptionHandlerV2: () => ({
-    getBillingURL: vi.fn().mockResolvedValue(""),
-    getTopUpURL: vi.fn().mockResolvedValue(""),
+    getBillingURL: vi.fn().mockResolvedValue(''),
+    getTopUpURL: vi.fn().mockResolvedValue(''),
     getUserSubscriptionPackage: vi.fn().mockResolvedValue(null),
     getUserActiveAppLegacy: vi.fn().mockResolvedValue(null),
     bannerButtonTriggerCallback: vi.fn().mockReturnValue(vi.fn()),
   }),
   SUBSCRIPTION_V2_TRIGGERS: {
-    PRICING_MODAL: "TRIGGER_PRICING_MODAL",
-    TOP_UP_CREDIT: "TRIGGER_TOP_UP_CREDIT",
-    CONTACT_ADMIN: "TRIGGER_CONTACT_ADMIN",
-    BILLING_PAGE: "TRIGGER_BILLING_PAGE",
+    PRICING_MODAL: 'TRIGGER_PRICING_MODAL',
+    TOP_UP_CREDIT: 'TRIGGER_TOP_UP_CREDIT',
+    CONTACT_ADMIN: 'TRIGGER_CONTACT_ADMIN',
+    BILLING_PAGE: 'TRIGGER_BILLING_PAGE',
   },
 }));
 
-vi.mock("@iblai/iblai-api", () => ({
+vi.mock('@iblai/iblai-api', () => ({
   MentorVisibilityEnum: {
-    VIEWABLE_BY_ANYONE: "VIEWABLE_BY_ANYONE",
+    VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE',
   },
   UserApp: {},
 }));
 
 // Mentor is NOT anonymous - allow_anonymous is false
-vi.mock("@iblai/iblai-js/data-layer", () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: () => ({
     data: {
       allow_anonymous: false,
-      mentor_visibility: "VIEWABLE_BY_ANYONE",
+      mentor_visibility: 'VIEWABLE_BY_ANYONE',
     },
   }),
 }));
 
-vi.mock("@/features/tenants/api-slice", () => ({
+vi.mock('@/features/tenants/api-slice', () => ({
   useLazyGetTenantMetadataQuery: () => [vi.fn()],
 }));
 
-vi.mock("@/features/rbac/rbac-slice", () => ({
+vi.mock('@/features/rbac/rbac-slice', () => ({
   selectRbacPermissions: () => ({}),
   updateRbacPermissions: vi.fn((permissions) => ({
-    type: "updateRbacPermissions",
+    type: 'updateRbacPermissions',
     payload: permissions,
   })),
 }));
 
-vi.mock("@/hooks/use-model-download", () => ({
+vi.mock('@/hooks/use-model-download', () => ({
   useModelDownload: () => ({
     isAvailable: false,
-    state: { status: "idle" },
+    state: { status: 'idle' },
     ollamaStatus: null,
     startDownload: vi.fn(),
     cancelDownload: vi.fn(),
@@ -153,11 +153,11 @@ vi.mock("@/hooks/use-model-download", () => ({
   }),
 }));
 
-vi.mock("./learner-mode-switch", () => ({
+vi.mock('./learner-mode-switch', () => ({
   LearnerModeSwitch: () => <div data-testid="learner-mode-switch">Switch</div>,
 }));
 
-vi.mock("@iblai/iblai-js/web-containers/next", () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => (
     <div data-testid="user-profile-dropdown">
       <span data-testid="tenant">{props.tenantKey}</span>
@@ -165,12 +165,12 @@ vi.mock("@iblai/iblai-js/web-containers/next", () => ({
   ),
 }));
 
-describe("UserProfile - Non-Anonymous Mentor", () => {
+describe('UserProfile - Non-Anonymous Mentor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should not fetch tenant metadata when mentor does not allow anonymous chat", async () => {
+  it('should not fetch tenant metadata when mentor does not allow anonymous chat', async () => {
     render(<UserProfile />);
 
     // Wait a tick to ensure the useEffect has run
@@ -180,8 +180,8 @@ describe("UserProfile - Non-Anonymous Mentor", () => {
     });
   });
 
-  it("should render without errors even when mentor is not anonymous", () => {
+  it('should render without errors even when mentor is not anonymous', () => {
     const { getByTestId } = render(<UserProfile />);
-    expect(getByTestId("user-profile-dropdown")).toBeInTheDocument();
+    expect(getByTestId('user-profile-dropdown')).toBeInTheDocument();
   });
 });

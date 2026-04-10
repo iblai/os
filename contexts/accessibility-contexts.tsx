@@ -21,7 +21,10 @@ interface AccessibilitySettings {
 
 interface AccessibilityContextType {
   settings: AccessibilitySettings;
-  updateSetting: (key: keyof AccessibilitySettings, value: string | boolean) => void;
+  updateSetting: (
+    key: keyof AccessibilitySettings,
+    value: string | boolean,
+  ) => void;
   resetSettings: () => void;
   isToolbarOpen: boolean;
   setIsToolbarOpen: (open: boolean) => void;
@@ -43,10 +46,17 @@ const defaultSettings: AccessibilitySettings = {
   contrastMode: 'normal',
 };
 
-const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
+const AccessibilityContext = createContext<
+  AccessibilityContextType | undefined
+>(undefined);
 
-export function AccessibilityProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<AccessibilitySettings>(defaultSettings);
+export function AccessibilityProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [settings, setSettings] =
+    useState<AccessibilitySettings>(defaultSettings);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
 
   useEffect(() => {
@@ -70,8 +80,14 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
       large: '1.2',
       larger: '1.4',
     };
-    root.style.setProperty('--accessibility-font-size', fontSizeMap[settings.textSize]);
-    document.body.classList.toggle('accessibility-text-size', settings.textSize !== 'normal');
+    root.style.setProperty(
+      '--accessibility-font-size',
+      fontSizeMap[settings.textSize],
+    );
+    document.body.classList.toggle(
+      'accessibility-text-size',
+      settings.textSize !== 'normal',
+    );
 
     const spacingMap = {
       none: { letter: 'normal', word: 'normal' },
@@ -82,7 +98,10 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     const spacing = spacingMap[settings.textSpacing];
     root.style.setProperty('--accessibility-letter-spacing', spacing.letter);
     root.style.setProperty('--accessibility-word-spacing', spacing.word);
-    document.body.classList.toggle('accessibility-text-spacing', settings.textSpacing !== 'none');
+    document.body.classList.toggle(
+      'accessibility-text-spacing',
+      settings.textSpacing !== 'none',
+    );
 
     if (settings.pauseAnimations) {
       document.body.classList.add('accessibility-pause-animations');
@@ -103,17 +122,38 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
       high: 'saturate(1.8)',
       low: 'saturate(0.3)',
     };
-    root.style.setProperty('--accessibility-saturation', saturationMap[settings.saturation]);
-    document.body.classList.toggle('accessibility-saturation', settings.saturation !== 'normal');
+    root.style.setProperty(
+      '--accessibility-saturation',
+      saturationMap[settings.saturation],
+    );
+    document.body.classList.toggle(
+      'accessibility-saturation',
+      settings.saturation !== 'normal',
+    );
 
-    document.body.classList.toggle('accessibility-custom-cursor', settings.customCursor);
+    document.body.classList.toggle(
+      'accessibility-custom-cursor',
+      settings.customCursor,
+    );
 
     const body = document.body;
-    body.classList.toggle('accessibility-highlight-links', settings.highlightLinks);
+    body.classList.toggle(
+      'accessibility-highlight-links',
+      settings.highlightLinks,
+    );
     body.classList.toggle('accessibility-hide-images', settings.hideImages);
-    body.classList.toggle('accessibility-dyslexia-friendly', settings.dyslexiaFont === 'dyslexia');
-    body.classList.toggle('accessibility-legible-font', settings.dyslexiaFont === 'legible');
-    body.classList.toggle('accessibility-pause-animations', settings.pauseAnimations);
+    body.classList.toggle(
+      'accessibility-dyslexia-friendly',
+      settings.dyslexiaFont === 'dyslexia',
+    );
+    body.classList.toggle(
+      'accessibility-legible-font',
+      settings.dyslexiaFont === 'legible',
+    );
+    body.classList.toggle(
+      'accessibility-pause-animations',
+      settings.pauseAnimations,
+    );
     body.classList.toggle('accessibility-tooltips', settings.tooltips);
 
     body.classList.remove(
@@ -138,7 +178,10 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
   }, [settings]);
 
-  const updateSetting = (key: keyof AccessibilitySettings, value: string | boolean) => {
+  const updateSetting = (
+    key: keyof AccessibilitySettings,
+    value: string | boolean,
+  ) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     localStorage.setItem('accessibility-settings', JSON.stringify(newSettings));
@@ -167,7 +210,9 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
 export function useAccessibility() {
   const context = useContext(AccessibilityContext);
   if (context === undefined) {
-    throw new Error('useAccessibility must be used within an AccessibilityProvider');
+    throw new Error(
+      'useAccessibility must be used within an AccessibilityProvider',
+    );
   }
   return context;
 }

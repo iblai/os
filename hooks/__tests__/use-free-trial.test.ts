@@ -73,7 +73,10 @@ describe('useFreeTrial', () => {
           is_admin: false,
         },
       });
-      mockUseGetAllTenants.mockReturnValue([{ key: 'main-tenant' }, { key: 'other-tenant' }]);
+      mockUseGetAllTenants.mockReturnValue([
+        { key: 'main-tenant' },
+        { key: 'other-tenant' },
+      ]);
 
       const { result } = renderHook(() => useFreeTrial());
 

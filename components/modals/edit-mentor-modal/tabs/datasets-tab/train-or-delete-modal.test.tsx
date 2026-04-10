@@ -13,11 +13,16 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ open, children }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  Dialog: ({ open, children }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children, ...props }: any) => <h2 {...props}>{children}</h2>,
-  DialogFooter: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  DialogFooter: ({ children, ...props }: any) => (
+    <div {...props}>{children}</div>
+  ),
 }));
 
 describe('TrainOrDeleteModal', () => {
@@ -37,13 +42,17 @@ describe('TrainOrDeleteModal', () => {
     render(<TrainOrDeleteModal {...defaultProps} />);
 
     expect(screen.getByText('What would you like to do?')).toBeInTheDocument();
-    expect(screen.getByText(/This dataset is currently untrained/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/This dataset is currently untrained/),
+    ).toBeInTheDocument();
   });
 
   it('does not render when closed', () => {
     render(<TrainOrDeleteModal {...defaultProps} isOpen={false} />);
 
-    expect(screen.queryByText('What would you like to do?')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('What would you like to do?'),
+    ).not.toBeInTheDocument();
   });
 
   it('calls onDelete when Delete button is clicked', () => {

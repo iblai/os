@@ -47,7 +47,7 @@ export function CategorySection({
     },
     {
       skip: !tenantKey || !username || !uniqueMentorId || !category,
-    }
+    },
   );
 
   // Handle accumulating results and checking for more data
@@ -84,7 +84,7 @@ export function CategorySection({
   // Show loading only on initial load
   if (getPromptsSearchQuery?.isLoading)
     return (
-      <div className="h-full w-full flex items-center justify-center">
+      <div className="flex h-full w-full items-center justify-center">
         <Spinner />
       </div>
     );
@@ -101,7 +101,9 @@ export function CategorySection({
   return (
     <div className="mb-8 space-y-4">
       {activeCategory !== 'All' && (
-        <h2 className="text-sm font-medium text-gray-700 capitalize">{title}</h2>
+        <h2 className="text-sm font-medium text-gray-700 capitalize">
+          {title}
+        </h2>
       )}
       <div className="grid w-full gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {allResults.map((prompt) => (
@@ -123,7 +125,7 @@ export function CategorySection({
         ))}
       </div>
       {hasMore && (
-        <div className="flex justify-end mt-4">
+        <div className="mt-4 flex justify-end">
           <Button
             variant="outline"
             size="sm"

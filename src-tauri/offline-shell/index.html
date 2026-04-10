@@ -1,198 +1,243 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ibl.ai OS</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-    }
-    .container { text-align: center; padding: 2rem; max-width: 400px; }
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid rgba(255,255,255,0.2);
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1.5rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: 500; }
-    p { color: rgba(255,255,255,0.7); font-size: 0.875rem; line-height: 1.5; }
-    .status { margin-top: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.5); }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="spinner"></div>
-    <h1>ibl.ai OS</h1>
-    <p>Starting application...</p>
-    <p class="status" id="status">Initializing...</p>
-  </div>
-
-  <script>
-    var APP_URL = 'https://mentorai.iblai.app';
-    var OFFLINE_SERVER_URL = 'http://127.0.0.1:3457';
-    var LAST_MENTOR_ROUTE_KEY = 'tauri_last_mentor_route';
-    var OFFLINE_MODE_KEY = 'tauri_offline_mode';
-    var statusEl = document.getElementById('status');
-
-    function setStatus(msg) {
-      statusEl.textContent = msg;
-      console.log('[Shell]', msg);
-    }
-
-    async function waitForTauri(maxWait) {
-      maxWait = maxWait || 3000;
-      var start = Date.now();
-      while (!window.__TAURI__ && (Date.now() - start) < maxWait) {
-        await new Promise(function(r) { setTimeout(r, 50); });
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ibl.ai OS</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-      return !!window.__TAURI__;
-    }
-
-    async function checkNetwork() {
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        try {
-          var invoke = window.__TAURI__.core.invoke;
-          return await invoke('check_network_status');
-        } catch (e) {
-          console.log('[Shell] Tauri network check failed:', e);
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+          sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+      }
+      .container {
+        text-align: center;
+        padding: 2rem;
+        max-width: 400px;
+      }
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
       }
-      // Fallback to navigator.onLine
-      return navigator.onLine;
-    }
-
-    async function isOfflineServerReady() {
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        try {
-          var invoke = window.__TAURI__.core.invoke;
-          return await invoke('is_offline_server_ready');
-        } catch (e) {
-          console.log('[Shell] Failed to check offline server:', e);
-        }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
       }
-      return false;
-    }
-
-    async function waitForOfflineServer(maxAttempts) {
-      maxAttempts = maxAttempts || 10;
-      for (var i = 0; i < maxAttempts; i++) {
-        console.log('[Shell] Checking offline server (attempt ' + (i + 1) + '/' + maxAttempts + ')');
-        if (await isOfflineServerReady()) {
-          return true;
-        }
-        await new Promise(function(r) { setTimeout(r, 500); });
+      p {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        line-height: 1.5;
       }
-      return false;
-    }
+      .status {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="spinner"></div>
+      <h1>ibl.ai OS</h1>
+      <p>Starting application...</p>
+      <p class="status" id="status">Initializing...</p>
+    </div>
 
-    async function getLastMentorRoute() {
-      // First try Tauri command (persisted across origins)
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        try {
-          var invoke = window.__TAURI__.core.invoke;
-          var route = await invoke('get_last_mentor_route');
-          if (route) {
-            console.log('[Shell] Got last route from Tauri:', route);
-            return route;
+    <script>
+      var APP_URL = 'https://mentorai.iblai.app';
+      var OFFLINE_SERVER_URL = 'http://127.0.0.1:3457';
+      var LAST_MENTOR_ROUTE_KEY = 'tauri_last_mentor_route';
+      var OFFLINE_MODE_KEY = 'tauri_offline_mode';
+      var statusEl = document.getElementById('status');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+        console.log('[Shell]', msg);
+      }
+
+      async function waitForTauri(maxWait) {
+        maxWait = maxWait || 3000;
+        var start = Date.now();
+        while (!window.__TAURI__ && Date.now() - start < maxWait) {
+          await new Promise(function (r) {
+            setTimeout(r, 50);
+          });
+        }
+        return !!window.__TAURI__;
+      }
+
+      async function checkNetwork() {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            var invoke = window.__TAURI__.core.invoke;
+            return await invoke('check_network_status');
+          } catch (e) {
+            console.log('[Shell] Tauri network check failed:', e);
           }
-        } catch (e) {
-          console.log('[Shell] Failed to get route from Tauri:', e);
         }
-      }
-      // Fallback to localStorage (same origin only)
-      return localStorage.getItem(LAST_MENTOR_ROUTE_KEY);
-    }
-
-    async function init() {
-      console.log('[Shell] Initializing...');
-      setStatus('Starting...');
-
-      // Wait for Tauri to be available
-      var hasTauri = await waitForTauri(3000);
-      console.log('[Shell] Tauri available:', hasTauri);
-
-      setStatus('Checking connection...');
-
-      var isOnline = await checkNetwork();
-      var lastRoute = await getLastMentorRoute();
-
-      console.log('[Shell] Status:', { isOnline: isOnline, lastRoute: lastRoute, hasTauri: hasTauri });
-
-      // Set offline mode flag for the app to read
-      localStorage.setItem(OFFLINE_MODE_KEY, isOnline ? 'false' : 'true');
-
-      // Update Tauri cache status
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        try {
-          var invoke = window.__TAURI__.core.invoke;
-          await invoke('set_cache_online_status', { isOnline: isOnline });
-        } catch (e) {
-          console.log('[Shell] Failed to set cache status:', e);
-        }
+        // Fallback to navigator.onLine
+        return navigator.onLine;
       }
 
-      if (isOnline) {
-        // Online - go to remote app
-        setStatus('Connecting...');
-        console.log('[Shell] Redirecting to:', APP_URL);
+      async function isOfflineServerReady() {
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            var invoke = window.__TAURI__.core.invoke;
+            return await invoke('is_offline_server_ready');
+          } catch (e) {
+            console.log('[Shell] Failed to check offline server:', e);
+          }
+        }
+        return false;
+      }
 
-        // CRITICAL: Request Tauri API chunk to ensure it's cached for offline use
-        // This chunk is lazy-loaded by ServiceWorkerProvider and won't load until needed
-        // We need to warm up the cache while online so it's available when offline
-        var chunkUrl = APP_URL + '/_next/static/chunks/7427.981946ebe06116e9.js';
-        console.log('[Shell] Warming up Tauri chunk cache:', chunkUrl);
-        fetch(chunkUrl, { mode: 'no-cors' }).catch(function(e) {
-          console.log('[Shell] Chunk warmup failed (non-critical):', e);
+      async function waitForOfflineServer(maxAttempts) {
+        maxAttempts = maxAttempts || 10;
+        for (var i = 0; i < maxAttempts; i++) {
+          console.log(
+            '[Shell] Checking offline server (attempt ' +
+              (i + 1) +
+              '/' +
+              maxAttempts +
+              ')',
+          );
+          if (await isOfflineServerReady()) {
+            return true;
+          }
+          await new Promise(function (r) {
+            setTimeout(r, 500);
+          });
+        }
+        return false;
+      }
+
+      async function getLastMentorRoute() {
+        // First try Tauri command (persisted across origins)
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            var invoke = window.__TAURI__.core.invoke;
+            var route = await invoke('get_last_mentor_route');
+            if (route) {
+              console.log('[Shell] Got last route from Tauri:', route);
+              return route;
+            }
+          } catch (e) {
+            console.log('[Shell] Failed to get route from Tauri:', e);
+          }
+        }
+        // Fallback to localStorage (same origin only)
+        return localStorage.getItem(LAST_MENTOR_ROUTE_KEY);
+      }
+
+      async function init() {
+        console.log('[Shell] Initializing...');
+        setStatus('Starting...');
+
+        // Wait for Tauri to be available
+        var hasTauri = await waitForTauri(3000);
+        console.log('[Shell] Tauri available:', hasTauri);
+
+        setStatus('Checking connection...');
+
+        var isOnline = await checkNetwork();
+        var lastRoute = await getLastMentorRoute();
+
+        console.log('[Shell] Status:', {
+          isOnline: isOnline,
+          lastRoute: lastRoute,
+          hasTauri: hasTauri,
         });
 
-        window.location.replace(APP_URL);
-      } else {
-        // Offline - redirect to offline server
-        // The server will inject all necessary webpack configuration and URL rewriting
-        setStatus('Loading offline mode...');
+        // Set offline mode flag for the app to read
+        localStorage.setItem(OFFLINE_MODE_KEY, isOnline ? 'false' : 'true');
 
-        console.log('[Shell] Waiting for offline server to be ready...');
-        var serverReady = await waitForOfflineServer(10);
-        console.log('[Shell] Offline server ready:', serverReady);
+        // Update Tauri cache status
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            var invoke = window.__TAURI__.core.invoke;
+            await invoke('set_cache_online_status', { isOnline: isOnline });
+          } catch (e) {
+            console.log('[Shell] Failed to set cache status:', e);
+          }
+        }
 
-        if (serverReady) {
-          var targetPath = lastRoute || '/';
-          var targetUrl = OFFLINE_SERVER_URL + targetPath;
+        if (isOnline) {
+          // Online - go to remote app
+          setStatus('Connecting...');
+          console.log('[Shell] Redirecting to:', APP_URL);
 
-          console.log('[Shell] Redirecting to offline server:', targetUrl);
-          setStatus('Loading from cache...');
+          // CRITICAL: Request Tauri API chunk to ensure it's cached for offline use
+          // This chunk is lazy-loaded by ServiceWorkerProvider and won't load until needed
+          // We need to warm up the cache while online so it's available when offline
+          var chunkUrl =
+            APP_URL + '/_next/static/chunks/7427.981946ebe06116e9.js';
+          console.log('[Shell] Warming up Tauri chunk cache:', chunkUrl);
+          fetch(chunkUrl, { mode: 'no-cors' }).catch(function (e) {
+            console.log('[Shell] Chunk warmup failed (non-critical):', e);
+          });
 
-          // Simply redirect to the offline server
-          // The server will handle all URL rewriting and webpack configuration
-          window.location.replace(targetUrl);
+          window.location.replace(APP_URL);
         } else {
-          // Server not ready, show error
-          setStatus('Offline server not available');
-          document.querySelector('p:not(.status)').textContent =
-            'Unable to load offline. Please connect to the internet first to cache the app.';
-          document.querySelector('.spinner').style.display = 'none';
+          // Offline - redirect to offline server
+          // The server will inject all necessary webpack configuration and URL rewriting
+          setStatus('Loading offline mode...');
+
+          console.log('[Shell] Waiting for offline server to be ready...');
+          var serverReady = await waitForOfflineServer(10);
+          console.log('[Shell] Offline server ready:', serverReady);
+
+          if (serverReady) {
+            var targetPath = lastRoute || '/';
+            var targetUrl = OFFLINE_SERVER_URL + targetPath;
+
+            console.log('[Shell] Redirecting to offline server:', targetUrl);
+            setStatus('Loading from cache...');
+
+            // Simply redirect to the offline server
+            // The server will handle all URL rewriting and webpack configuration
+            window.location.replace(targetUrl);
+          } else {
+            // Server not ready, show error
+            setStatus('Offline server not available');
+            document.querySelector('p:not(.status)').textContent =
+              'Unable to load offline. Please connect to the internet first to cache the app.';
+            document.querySelector('.spinner').style.display = 'none';
+          }
         }
       }
-    }
 
-    // Run init when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-  </script>
-</body>
+      // Run init when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    </script>
+  </body>
 </html>

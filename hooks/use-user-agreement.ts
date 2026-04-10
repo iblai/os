@@ -1,13 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 import {
   useGetDisclaimersQuery,
   useAgreeToDisclaimerMutation,
-} from "@iblai/iblai-js/data-layer";
-import { useUsername } from "./use-user";
-import { useParams } from "next/navigation";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { toast } from "sonner";
-import { DEFAULT_DISCLAIMER_CONTENT } from "@/constants/disclaimer";
+} from '@iblai/iblai-js/data-layer';
+import { useUsername } from './use-user';
+import { useParams } from 'next/navigation';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { toast } from 'sonner';
+import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
 
 export function useUserAgreement() {
   const username = useUsername();
@@ -15,17 +15,17 @@ export function useUserAgreement() {
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
   const [userHasAgreedToDisclaimer, setUserHasAgreedToDisclaimer] =
     useState(false);
-  const [pendingSubmitContent, setPendingSubmitContent] = useState<string>("");
+  const [pendingSubmitContent, setPendingSubmitContent] = useState<string>('');
   const [isAgreeing, setIsAgreeing] = useState(false);
 
   const { data: disclaimers, isLoading: isDisclaimersLoading } =
     useGetDisclaimersQuery(
       {
         org: tenantKey,
-        userId: username ?? "",
+        userId: username ?? '',
         params: {
           mentor_id: mentorId,
-          scope: "mentor",
+          scope: 'mentor',
         },
       },
       {
@@ -53,7 +53,7 @@ export function useUserAgreement() {
 
   const handleDisclaimerAgree = useCallback(async () => {
     if (!userAgreementRecord?.id) {
-      console.error("No user agreement ID available");
+      console.error('No user agreement ID available');
       return;
     }
 
@@ -62,7 +62,7 @@ export function useUserAgreement() {
 
       await agreeToDisclaimer({
         org: tenantKey,
-        userId: username ?? "",
+        userId: username ?? '',
         formData: {
           disclaimer: userAgreementRecord.id,
         },
@@ -70,10 +70,10 @@ export function useUserAgreement() {
 
       setUserHasAgreedToDisclaimer(true);
       setShowDisclaimerModal(false);
-      toast.success("User Agreement accepted");
+      toast.success('User Agreement accepted');
     } catch (error) {
-      console.error("Failed to agree to user agreement:", error);
-      toast.error("Failed to update user agreement status");
+      console.error('Failed to agree to user agreement:', error);
+      toast.error('Failed to update user agreement status');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     } finally {
       setIsAgreeing(false);
@@ -105,7 +105,7 @@ export function useUserAgreement() {
     (executeCallback: (content: string) => void) => {
       const content = pendingSubmitContent;
       if (content.length > 0) {
-        setPendingSubmitContent("");
+        setPendingSubmitContent('');
         executeCallback(content);
       }
     },

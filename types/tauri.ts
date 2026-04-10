@@ -43,7 +43,13 @@ export interface DiskSpaceError {
  * Model download state for persistence across app restarts
  */
 export interface ModelDownloadState {
-  status: 'idle' | 'checking' | 'downloading' | 'completed' | 'error' | 'cancelled';
+  status:
+    | 'idle'
+    | 'checking'
+    | 'downloading'
+    | 'completed'
+    | 'error'
+    | 'cancelled';
   progress: number;
   message: string;
   logs: InstallationLog[];

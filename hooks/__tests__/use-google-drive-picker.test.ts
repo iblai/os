@@ -38,9 +38,12 @@ vi.mock('../use-user', () => ({
   useUsername: mocked.useUsername,
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: mocked.extractErrorMessage,
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: mocked.extractErrorMessage,
+  }),
+);
 
 describe('useGoogleDrivePicker', () => {
   let mockGetCredentials: ReturnType<typeof vi.fn>;
@@ -64,7 +67,9 @@ describe('useGoogleDrivePicker', () => {
     });
 
     mocked.useLazyGetCredentialsQuery.mockReturnValue([mockGetCredentials]);
-    mocked.useAddTrainingDocumentMutation.mockReturnValue([mockAddTrainingDocument]);
+    mocked.useAddTrainingDocumentMutation.mockReturnValue([
+      mockAddTrainingDocument,
+    ]);
     mocked.useUsername.mockReturnValue('test-user');
     mocked.useParams.mockReturnValue({
       tenantKey: 'test-tenant',
@@ -72,7 +77,9 @@ describe('useGoogleDrivePicker', () => {
     });
 
     mocked.GoogleDrivePicker.mockReturnValue([vi.fn(), null]);
-    mocked.extractErrorMessage.mockReturnValue('Error adding training document');
+    mocked.extractErrorMessage.mockReturnValue(
+      'Error adding training document',
+    );
 
     // Mock window.gapi to immediately call callback
     global.window.gapi = {

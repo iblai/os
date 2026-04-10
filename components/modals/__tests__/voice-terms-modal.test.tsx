@@ -20,25 +20,35 @@ describe('VoiceTermsModal', () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByText('Voice Terms and Conditions')).toBeInTheDocument();
     expect(
-      screen.getByText('Review and accept the terms for using voice-powered mentorAI'),
+      screen.getByText(
+        'Review and accept the terms for using voice-powered mentorAI',
+      ),
     ).toBeInTheDocument();
   });
 
   it('renders the visual heading', () => {
     render(<VoiceTermsModal {...defaultProps} />);
 
-    expect(screen.getByText('Creating a mentorAI powered with voice')).toBeInTheDocument();
+    expect(
+      screen.getByText('Creating a mentorAI powered with voice'),
+    ).toBeInTheDocument();
   });
 
   it('renders all three rules', () => {
     render(<VoiceTermsModal {...defaultProps} />);
 
     expect(
-      screen.getByText("Don't record third parties voice without their consent"),
+      screen.getByText(
+        "Don't record third parties voice without their consent",
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Don't use copyrighted voices")).toBeInTheDocument();
     expect(
-      screen.getByText("Don't use voices in deepfakes, bullying, frauds, or scams"),
+      screen.getByText("Don't use copyrighted voices"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Don't use voices in deepfakes, bullying, frauds, or scams",
+      ),
     ).toBeInTheDocument();
   });
 

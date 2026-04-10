@@ -1,9 +1,9 @@
-import { useDispatch } from "react-redux";
-import { initCustomAlertDialog } from "@/features/navigation/slice";
-import { userSliceActions } from "@/features/users/slice";
-import { RootState } from "@/store";
-import { useAppSelector } from "@/lib/hooks";
-import { useNavigate } from "@/hooks/user-navigate";
+import { useDispatch } from 'react-redux';
+import { initCustomAlertDialog } from '@/features/navigation/slice';
+import { userSliceActions } from '@/features/users/slice';
+import { RootState } from '@/store';
+import { useAppSelector } from '@/lib/hooks';
+import { useNavigate } from '@/hooks/user-navigate';
 export function useCustomAlertDialog() {
   const dispatch = useDispatch();
   const { navigateToHome } = useNavigate();
@@ -31,10 +31,10 @@ export function useCustomAlertDialog() {
   const closeCustomAlertDialog = () => {
     dispatch(
       initCustomAlertDialog({
-        message: "",
-        validateTrigger: "",
-        cancelTrigger: "",
-        title: "",
+        message: '',
+        validateTrigger: '',
+        cancelTrigger: '',
+        title: '',
         isOpen: false,
       }),
     );
@@ -42,7 +42,7 @@ export function useCustomAlertDialog() {
 
   const triggerHandler = (trigger: string) => {
     switch (trigger) {
-      case "SWITCH_TO_LEARNER":
+      case 'SWITCH_TO_LEARNER':
         dispatch(userSliceActions.setIsInstructorMode(!isInstructorMode));
         closeCustomAlertDialog();
         navigateToHome();

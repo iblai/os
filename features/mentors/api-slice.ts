@@ -1,4 +1,4 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
+import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type {
   MentorsFetchResponse,
@@ -8,13 +8,13 @@ import type {
   Mentor,
   GetMentorArgs,
   CreateMentorWithSettingsArgs,
-} from "@/features/mentors/types";
+} from '@/features/mentors/types';
 import {
   MENTORS_ENDPOINTS,
   MENTORS_QUERY_KEYS,
   MENTORS_REDUCER_PATH,
-} from "@/features/mentors/constants";
-import { iblFetchBaseQuery } from "@/features/utils";
+} from '@/features/mentors/constants';
+import { iblFetchBaseQuery } from '@/features/utils';
 
 export const mentorsApiSlice = createApi({
   reducerPath: MENTORS_REDUCER_PATH,
@@ -39,7 +39,10 @@ export const mentorsApiSlice = createApi({
       query: (args) => {
         console.log('[mentorsApiSlice.getMentors] Query args:', args);
         return {
-          url: MENTORS_ENDPOINTS.GET_MENTORS.path(args.tenantKey, args.username),
+          url: MENTORS_ENDPOINTS.GET_MENTORS.path(
+            args.tenantKey,
+            args.username,
+          ),
           params: args.params,
           service: MENTORS_ENDPOINTS.GET_MENTORS.service,
         };

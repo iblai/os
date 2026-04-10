@@ -16,7 +16,10 @@ vi.mock('./delete-moderation-log-modal', () => ({
     capturedDeleteModalProps = props;
     return props.isOpen ? (
       <div data-testid="delete-modal">
-        <button onClick={() => props.onDeleteSuccess?.()} data-testid="confirm-delete">
+        <button
+          onClick={() => props.onDeleteSuccess?.()}
+          data-testid="confirm-delete"
+        >
           Confirm Delete
         </button>
         <button onClick={props.onClose} data-testid="cancel-delete">
@@ -28,22 +31,36 @@ vi.mock('./delete-moderation-log-modal', () => ({
 }));
 
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open }: any) => (open ? <div data-testid="dialog">{children}</div> : null),
-  DialogContent: ({ children, className }: any) => <div className={className}>{children}</div>,
-  DialogHeader: ({ children, className }: any) => <div className={className}>{children}</div>,
-  DialogTitle: ({ children, className }: any) => <h2 className={className}>{children}</h2>,
+  Dialog: ({ children, open }: any) =>
+    open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  DialogHeader: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
+  DialogTitle: ({ children, className }: any) => (
+    <h2 className={className}>{children}</h2>
+  ),
 }));
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
 }));
 
 vi.mock('lucide-react', () => ({
-  Trash2: ({ className }: any) => <span data-testid="trash-icon" className={className} />,
+  Trash2: ({ className }: any) => (
+    <span data-testid="trash-icon" className={className} />
+  ),
 }));
 
 // ============================================================================
@@ -116,13 +133,17 @@ describe('FlaggedPromptMobileDetail', () => {
 
   it('shows "A" for anonymous users with no email', () => {
     const noEmailPrompt = { ...mockPrompt, userEmail: '' };
-    render(<FlaggedPromptMobileDetail {...defaultProps} prompt={noEmailPrompt} />);
+    render(
+      <FlaggedPromptMobileDetail {...defaultProps} prompt={noEmailPrompt} />,
+    );
     expect(screen.getByText('A')).toBeInTheDocument();
   });
 
   it('shows system response with type label', () => {
     render(<FlaggedPromptMobileDetail {...defaultProps} />);
-    expect(screen.getByText('Response was blocked for safety')).toBeInTheDocument();
+    expect(
+      screen.getByText('Response was blocked for safety'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Safety System')).toBeInTheDocument();
     expect(screen.getByText('SS')).toBeInTheDocument();
   });
@@ -130,7 +151,9 @@ describe('FlaggedPromptMobileDetail', () => {
   it('shows Moderation system type correctly', () => {
     const modPrompt = { ...mockPrompt, type: 'Moderation' as const };
     render(<FlaggedPromptMobileDetail {...defaultProps} prompt={modPrompt} />);
-    expect(screen.getByText('Flagged by Moderation System')).toBeInTheDocument();
+    expect(
+      screen.getByText('Flagged by Moderation System'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Moderation System')).toBeInTheDocument();
     expect(screen.getByText('MS')).toBeInTheDocument();
   });

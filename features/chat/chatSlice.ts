@@ -31,8 +31,10 @@ export const chatSlice: Slice<ChatState> = createSlice({
   },
 });
 
-export const { addMessage, clearMessages, enableChatActionsPopup } = chatSlice.actions;
+export const { addMessage, clearMessages, enableChatActionsPopup } =
+  chatSlice.actions;
 
 export const chatReducer = chatSlice.reducer;
 
-export const selectEnableChatActionsPopup = (state) => state.chat.enableChatActionsPopup;
+export const selectEnableChatActionsPopup = (state) =>
+  state.chat.enableChatActionsPopup;

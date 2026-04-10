@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { useLazyGetCredentialsQuery, useAddTrainingDocumentMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useLazyGetCredentialsQuery,
+  useAddTrainingDocumentMutation,
+} from '@iblai/iblai-js/data-layer';
 import GoogleDrivePicker from 'google-drive-picker';
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -42,7 +45,12 @@ const useGoogleDrivePicker = () => {
     if (!credentialLoaded) {
       fetchCredentials();
     }
-  }, [credentialLoaded, credentials.client_id, credentials.developer_key, getCredentials]);
+  }, [
+    credentialLoaded,
+    credentials.client_id,
+    credentials.developer_key,
+    getCredentials,
+  ]);
 
   // Load Google API script if not already loaded
   useEffect(() => {
@@ -84,7 +92,9 @@ const useGoogleDrivePicker = () => {
               'https://www.googleapis.com/auth/drive.readonly',
             ],
             token_type: authToken?.token_type,
-            expiry_date: new Date(Date.now() + (authToken?.expires_in || 0) * 1000).toISOString(),
+            expiry_date: new Date(
+              Date.now() + (authToken?.expires_in || 0) * 1000,
+            ).toISOString(),
           },
           data: driveFiles.map((file) => ({
             path: file.url,
@@ -102,7 +112,10 @@ const useGoogleDrivePicker = () => {
         }).unwrap();
       } catch (error: unknown) {
         console.error(JSON.stringify(error));
-        const errorMessage = extractErrorMessage(error, 'Error adding training document');
+        const errorMessage = extractErrorMessage(
+          error,
+          'Error adding training document',
+        );
 
         toast.error(errorMessage);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -157,7 +170,13 @@ const useGoogleDrivePicker = () => {
     } else {
       openPickerInternal();
     }
-  }, [authToken, credentials, handlePickerFileSelected, openPicker, isPickerLoaded]);
+  }, [
+    authToken,
+    credentials,
+    handlePickerFileSelected,
+    openPicker,
+    isPickerLoaded,
+  ]);
 
   // Handle auth response
   useEffect(() => {

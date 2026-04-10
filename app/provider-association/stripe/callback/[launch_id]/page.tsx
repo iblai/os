@@ -16,7 +16,9 @@ interface PageProps {
   }>;
 }
 
-export default function ProviderAssociationStripeCallback({ params }: PageProps) {
+export default function ProviderAssociationStripeCallback({
+  params,
+}: PageProps) {
   const resolvedParams = React.use(params);
   const { launch_id } = resolvedParams;
   const searchParams = useSearchParams();
@@ -60,7 +62,7 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
   };
 
   const Logo = () => (
-    <div className="w-full flex justify-center mb-8 mt-6 relative z-50">
+    <div className="relative z-50 mt-6 mb-8 flex w-full justify-center">
       <Image
         src="/logo.gif"
         alt="Logo"
@@ -75,9 +77,9 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
     return (
       <div>
         <Logo />
-        <div className="flex justify-center items-center min-h-[70vh]">
+        <div className="flex min-h-[70vh] items-center justify-center">
           <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin" />
             <p className="text-lg font-medium">Association in progress...</p>
           </div>
         </div>
@@ -89,10 +91,10 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
     return (
       <div>
         <Logo />
-        <div className="flex justify-center items-center min-h-[70vh]">
+        <div className="flex min-h-[70vh] items-center justify-center">
           <div className="text-center">
             <div className="mb-6">
-              <div className="w-[72px] h-[72px] bg-destructive rounded-full flex items-center justify-center mx-auto">
+              <div className="bg-destructive mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full">
                 <svg
                   width="32"
                   height="32"
@@ -107,7 +109,7 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
                 </svg>
               </div>
             </div>
-            <h2 className="text-2xl font-semibold mb-2">Association failed</h2>
+            <h2 className="mb-2 text-2xl font-semibold">Association failed</h2>
             <p className="text-muted-foreground mb-6">
               An error occurred while associating your account.
             </p>
@@ -123,10 +125,10 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
   return (
     <div>
       <Logo />
-      <div className="flex justify-center items-center min-h-[70vh]">
+      <div className="flex min-h-[70vh] items-center justify-center">
         <div className="text-center">
           <div className="mb-6">
-            <div className="w-[72px] h-[72px] bg-green-500 rounded-full flex items-center justify-center mx-auto">
+            <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-full bg-green-500">
               <svg
                 width="32"
                 height="32"
@@ -141,7 +143,9 @@ export default function ProviderAssociationStripeCallback({ params }: PageProps)
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-semibold mb-2">Association successful!</h2>
+          <h2 className="mb-2 text-2xl font-semibold">
+            Association successful!
+          </h2>
           <p className="text-muted-foreground mb-4">
             You&apos;ll be redirected to the app in a few seconds.
           </p>

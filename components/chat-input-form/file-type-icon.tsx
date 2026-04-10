@@ -29,9 +29,17 @@ export function FileTypeIcon({ fileName, fileType }: FileTypeIconProps) {
     return <FileAudio className="h-5 w-5 text-blue-500" />;
   } else if (type.includes('video')) {
     return <FileVideo className="h-5 w-5 text-blue-500" />;
-  } else if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+  } else if (
+    type.includes('spreadsheet') ||
+    type.includes('excel') ||
+    type.includes('csv')
+  ) {
     return <FileSpreadsheet className="h-5 w-5 text-blue-500" />;
-  } else if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+  } else if (
+    type.includes('zip') ||
+    type.includes('compressed') ||
+    type.includes('archive')
+  ) {
     return <FileArchive className="h-5 w-5 text-blue-500" />;
   } else if (
     type.includes('javascript') ||
@@ -59,7 +67,19 @@ export function FileTypeIcon({ fileName, fileType }: FileTypeIconProps) {
   } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
     return <FileArchive className="h-5 w-5 text-blue-500" />;
   } else if (
-    ['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp'].includes(extension)
+    [
+      'js',
+      'ts',
+      'jsx',
+      'tsx',
+      'html',
+      'css',
+      'json',
+      'py',
+      'java',
+      'c',
+      'cpp',
+    ].includes(extension)
   ) {
     return <FileCode className="h-5 w-5 text-blue-500" />;
   }

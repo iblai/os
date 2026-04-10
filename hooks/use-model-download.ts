@@ -41,15 +41,18 @@ export function useModelDownload() {
   );
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
   const [osType, setOsType] = useState<OsType | null>(null);
-  const [isFirstLaunchDismissed, setIsFirstLaunchDismissed] = useLocalStorage<boolean>(
-    FIRST_LAUNCH_DISMISSED_KEY,
-    false,
-  );
+  const [isFirstLaunchDismissed, setIsFirstLaunchDismissed] =
+    useLocalStorage<boolean>(FIRST_LAUNCH_DISMISSED_KEY, false);
   const [isUsingFoundry, setIsUsingFoundry] = useState<boolean>(false);
   const [foundryModels, setFoundryModels] = useState<FoundryModel[]>([]);
-  const [selectedFoundryModel, setSelectedFoundryModel] = useState<string | null>(null);
-  const [foundryStatus, setFoundryStatus] = useState<FoundryStatus | null>(null);
-  const [foundryStatusLoaded, setFoundryStatusLoaded] = useState<boolean>(false);
+  const [selectedFoundryModel, setSelectedFoundryModel] = useState<
+    string | null
+  >(null);
+  const [foundryStatus, setFoundryStatus] = useState<FoundryStatus | null>(
+    null,
+  );
+  const [foundryStatusLoaded, setFoundryStatusLoaded] =
+    useState<boolean>(false);
   const unlistenRefs = useRef<Array<() => void>>([]);
   const hasCheckedStatus = useRef(false);
 
@@ -90,7 +93,10 @@ export function useModelDownload() {
         const unlistenProgress = await listen<DownloadProgress>(
           TAURI_EVENTS.DOWNLOAD_PROGRESS,
           (payload) => {
-            console.log('[useModelDownload] Received progress event:', JSON.stringify(payload));
+            console.log(
+              '[useModelDownload] Received progress event:',
+              JSON.stringify(payload),
+            );
 
             const newStatus: ModelDownloadState['status'] =
               payload.status === 'completed'
@@ -109,7 +115,10 @@ export function useModelDownload() {
             );
 
             setState((prev) => {
-              console.log('[useModelDownload] setState callback - prev:', JSON.stringify(prev));
+              console.log(
+                '[useModelDownload] setState callback - prev:',
+                JSON.stringify(prev),
+              );
               const newState: ModelDownloadState = {
                 ...prev,
                 status: newStatus,
@@ -132,7 +141,10 @@ export function useModelDownload() {
         unlistenRefs.current.push(unlistenProgress);
 
         // Installation logs
-        const unlistenLogs = await listen<InstallationLog>(TAURI_EVENTS.INSTALLATION_LOG, addLog);
+        const unlistenLogs = await listen<InstallationLog>(
+          TAURI_EVENTS.INSTALLATION_LOG,
+          addLog,
+        );
         unlistenRefs.current.push(unlistenLogs);
 
         // Disk space errors
@@ -186,14 +198,20 @@ export function useModelDownload() {
 
     if (!isAvailable) {
       // If not in Tauri, mark as loaded immediately
-      console.log('[useModelDownload] Not in Tauri, setting foundryStatusLoaded to true');
+      console.log(
+        '[useModelDownload] Not in Tauri, setting foundryStatusLoaded to true',
+      );
       setFoundryStatusLoaded(true);
       return;
     }
 
     // Reset hasCheckedStatus if foundryStatus is null/undefined AND not loaded yet
     // This handles hot reload scenarios where the ref persists but state resets
-    if (!foundryStatusLoaded && foundryStatus === null && hasCheckedStatus.current) {
+    if (
+      !foundryStatusLoaded &&
+      foundryStatus === null &&
+      hasCheckedStatus.current
+    ) {
       console.log(
         '[useModelDownload] Resetting hasCheckedStatus due to missing foundryStatus after hot reload',
       );
@@ -202,7 +220,9 @@ export function useModelDownload() {
 
     // Only check once on mount (or after reset)
     if (!hasCheckedStatus.current) {
-      console.log('[useModelDownload] First mount (or after reset) - calling checkStatus');
+      console.log(
+        '[useModelDownload] First mount (or after reset) - calling checkStatus',
+      );
       hasCheckedStatus.current = true;
       checkStatus();
 
@@ -223,9 +243,14 @@ export function useModelDownload() {
    * Check Ollama installation and model status
    */
   const checkStatus = useCallback(async () => {
-    console.log('[useModelDownload] checkStatus called - isAvailable:', isAvailable);
+    console.log(
+      '[useModelDownload] checkStatus called - isAvailable:',
+      isAvailable,
+    );
     if (!isAvailable) {
-      console.log('[useModelDownload] checkStatus early return - isAvailable is false');
+      console.log(
+        '[useModelDownload] checkStatus early return - isAvailable is false',
+      );
       return;
     }
 
@@ -236,14 +261,24 @@ export function useModelDownload() {
       // First check if Foundry Local has models available (PREFERRED option)
       // Foundry is prioritized over Ollama due to better performance and efficiency
       // Note: We check has_models regardless of service running status
-      console.log('[useModelDownload] Invoking CHECK_FOUNDRY_STATUS command...');
-      const foundryStatusResult = await invoke<any>(TAURI_COMMANDS.CHECK_FOUNDRY_STATUS);
+      console.log(
+        '[useModelDownload] Invoking CHECK_FOUNDRY_STATUS command...',
+      );
+      const foundryStatusResult = await invoke<any>(
+        TAURI_COMMANDS.CHECK_FOUNDRY_STATUS,
+      );
       console.log(
         '[useModelDownload] ✓ Foundry status received:',
         JSON.stringify(foundryStatusResult),
       );
-      console.log('[useModelDownload]   - is_supported:', foundryStatusResult?.is_supported);
-      console.log('[useModelDownload]   - has_models:', foundryStatusResult?.has_models);
+      console.log(
+        '[useModelDownload]   - is_supported:',
+        foundryStatusResult?.is_supported,
+      );
+      console.log(
+        '[useModelDownload]   - has_models:',
+        foundryStatusResult?.has_models,
+      );
       console.log('[useModelDownload] About to setFoundryStatus...');
       setFoundryStatus(foundryStatusResult);
       setFoundryStatusLoaded(true);
@@ -266,11 +301,16 @@ export function useModelDownload() {
 
         // Load selected model from backend or default to first model
         try {
-          const selected = await invoke<string | null>(TAURI_COMMANDS.GET_SELECTED_FOUNDRY_MODEL);
+          const selected = await invoke<string | null>(
+            TAURI_COMMANDS.GET_SELECTED_FOUNDRY_MODEL,
+          );
           let modelToLoad: string | null = null;
 
           if (selected) {
-            console.log('[useModelDownload] Found saved model selection:', selected);
+            console.log(
+              '[useModelDownload] Found saved model selection:',
+              selected,
+            );
             // Verify the saved model exists in current model list
             const savedModel = foundryStatusResult.models.find(
               (m: FoundryModel) => m.id === selected,
@@ -283,14 +323,22 @@ export function useModelDownload() {
                 '[useModelDownload] Saved model not found in current list, using first available',
               );
               // Saved model doesn't exist anymore, use first available
-              if (foundryStatusResult.models && foundryStatusResult.models.length > 0) {
+              if (
+                foundryStatusResult.models &&
+                foundryStatusResult.models.length > 0
+              ) {
                 const firstModel = foundryStatusResult.models[0].id;
                 setSelectedFoundryModel(firstModel);
-                await invoke(TAURI_COMMANDS.SET_SELECTED_FOUNDRY_MODEL, { modelId: firstModel });
+                await invoke(TAURI_COMMANDS.SET_SELECTED_FOUNDRY_MODEL, {
+                  modelId: firstModel,
+                });
                 modelToLoad = firstModel;
               }
             }
-          } else if (foundryStatusResult.models && foundryStatusResult.models.length > 0) {
+          } else if (
+            foundryStatusResult.models &&
+            foundryStatusResult.models.length > 0
+          ) {
             // Default to first model and save it
             const firstModel = foundryStatusResult.models[0].id;
             console.log(
@@ -298,7 +346,9 @@ export function useModelDownload() {
               firstModel,
             );
             setSelectedFoundryModel(firstModel);
-            await invoke(TAURI_COMMANDS.SET_SELECTED_FOUNDRY_MODEL, { modelId: firstModel });
+            await invoke(TAURI_COMMANDS.SET_SELECTED_FOUNDRY_MODEL, {
+              modelId: firstModel,
+            });
             modelToLoad = firstModel;
           }
 
@@ -327,13 +377,22 @@ export function useModelDownload() {
                 );
               }
             } else {
-              console.error('[useModelDownload] Could not find model object for ID:', modelToLoad);
+              console.error(
+                '[useModelDownload] Could not find model object for ID:',
+                modelToLoad,
+              );
             }
           }
         } catch (error) {
-          console.error('[useModelDownload] Failed to load selected model:', error);
+          console.error(
+            '[useModelDownload] Failed to load selected model:',
+            error,
+          );
           // Default to first model
-          if (foundryStatusResult.models && foundryStatusResult.models.length > 0) {
+          if (
+            foundryStatusResult.models &&
+            foundryStatusResult.models.length > 0
+          ) {
             setSelectedFoundryModel(foundryStatusResult.models[0].id);
           }
         }
@@ -346,7 +405,9 @@ export function useModelDownload() {
           message: 'Local LLM available via Foundry Local (preferred)',
         }));
         // Still set ollama status from backend (which will return "ready" when Foundry is available)
-        const status = await invoke<OllamaStatus>(TAURI_COMMANDS.CHECK_OLLAMA_STATUS);
+        const status = await invoke<OllamaStatus>(
+          TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
+        );
         setOllamaStatus(status);
         return;
       }
@@ -364,7 +425,9 @@ export function useModelDownload() {
 
       // Fallback to Ollama (alternative option)
       console.log('[useModelDownload] Using Ollama as fallback option');
-      const status = await invoke<OllamaStatus>(TAURI_COMMANDS.CHECK_OLLAMA_STATUS);
+      const status = await invoke<OllamaStatus>(
+        TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
+      );
       setOllamaStatus(status);
 
       if (status.model_installed) {
@@ -417,7 +480,8 @@ export function useModelDownload() {
       // Start the download
       await invoke(TAURI_COMMANDS.DOWNLOAD_MODEL);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       setState((prev) => ({
         ...prev,
         status: 'error',
@@ -465,7 +529,10 @@ export function useModelDownload() {
       // Add timeout to prevent indefinite waiting
       const installPromise = invoke<string>(TAURI_COMMANDS.INSTALL_OLLAMA);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Installation timeout after 5 minutes')), 5 * 60 * 1000);
+        setTimeout(
+          () => reject(new Error('Installation timeout after 5 minutes')),
+          5 * 60 * 1000,
+        );
       });
 
       const result = await Promise.race([installPromise, timeoutPromise]);
@@ -480,7 +547,8 @@ export function useModelDownload() {
       setState((prev) => ({ ...prev, status: 'idle' }));
       await checkStatus();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       // Always reset state on error to allow retry
       setState((prev) => ({
@@ -541,7 +609,10 @@ export function useModelDownload() {
 
         // Check if model is downloaded
         if (!model.is_downloaded) {
-          console.log('[useModelDownload] Model not downloaded, starting download:', modelId);
+          console.log(
+            '[useModelDownload] Model not downloaded, starting download:',
+            modelId,
+          );
           setSelectedFoundryModel(modelId);
 
           // Update state to show downloading progress
@@ -565,8 +636,13 @@ export function useModelDownload() {
 
           // Download the model (use foundry_id)
           try {
-            await invoke(TAURI_COMMANDS.DOWNLOAD_FOUNDRY_MODEL, { modelId: model.foundry_id });
-            console.log('[useModelDownload] ✓ Model downloaded successfully:', model.foundry_id);
+            await invoke(TAURI_COMMANDS.DOWNLOAD_FOUNDRY_MODEL, {
+              modelId: model.foundry_id,
+            });
+            console.log(
+              '[useModelDownload] ✓ Model downloaded successfully:',
+              model.foundry_id,
+            );
 
             setState((prev) => ({
               ...prev,
@@ -576,8 +652,13 @@ export function useModelDownload() {
             }));
 
             // Now load the model into Foundry Local (use foundry_id)
-            await invoke(TAURI_COMMANDS.LOAD_FOUNDRY_MODEL, { modelId: model.foundry_id });
-            console.log('[useModelDownload] ✓ Model loaded into Foundry Local:', model.foundry_id);
+            await invoke(TAURI_COMMANDS.LOAD_FOUNDRY_MODEL, {
+              modelId: model.foundry_id,
+            });
+            console.log(
+              '[useModelDownload] ✓ Model loaded into Foundry Local:',
+              model.foundry_id,
+            );
 
             setState((prev) => ({
               ...prev,
@@ -592,14 +673,21 @@ export function useModelDownload() {
               message: `Model ready: ${model.name || modelId}`,
             });
 
-            toast.success(`Model downloaded and loaded: ${model.name || modelId}`);
+            toast.success(
+              `Model downloaded and loaded: ${model.name || modelId}`,
+            );
 
             // Refresh status to update the downloaded flag
             await checkStatus();
           } catch (downloadError) {
             const errorMessage =
-              downloadError instanceof Error ? downloadError.message : String(downloadError);
-            console.error('[useModelDownload] Failed to download model:', errorMessage);
+              downloadError instanceof Error
+                ? downloadError.message
+                : String(downloadError);
+            console.error(
+              '[useModelDownload] Failed to download model:',
+              errorMessage,
+            );
 
             setState((prev) => ({
               ...prev,
@@ -618,7 +706,10 @@ export function useModelDownload() {
           }
         } else {
           // Model already downloaded, just load it
-          console.log('[useModelDownload] Model already downloaded, loading:', modelId);
+          console.log(
+            '[useModelDownload] Model already downloaded, loading:',
+            modelId,
+          );
           setSelectedFoundryModel(modelId);
 
           setState((prev) => ({
@@ -633,8 +724,13 @@ export function useModelDownload() {
           console.log('[useModelDownload] ✓ Saved selected model to storage');
 
           // Load the model into Foundry Local (use foundry_id)
-          await invoke(TAURI_COMMANDS.LOAD_FOUNDRY_MODEL, { modelId: model.foundry_id });
-          console.log('[useModelDownload] ✓ Model loaded into Foundry Local:', model.foundry_id);
+          await invoke(TAURI_COMMANDS.LOAD_FOUNDRY_MODEL, {
+            modelId: model.foundry_id,
+          });
+          console.log(
+            '[useModelDownload] ✓ Model loaded into Foundry Local:',
+            model.foundry_id,
+          );
 
           setState((prev) => ({
             ...prev,
@@ -646,8 +742,12 @@ export function useModelDownload() {
           toast.success(`Loaded model: ${model.name || modelId}`);
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('[useModelDownload] Failed to handle model selection:', errorMessage);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error(
+          '[useModelDownload] Failed to handle model selection:',
+          errorMessage,
+        );
         toast.error(`Failed to load model: ${errorMessage}`);
 
         setState((prev) => ({
@@ -702,7 +802,9 @@ export function useModelDownload() {
         message: 'Downloading default model: qwen2.5-0.5b',
       });
 
-      await invoke(TAURI_COMMANDS.DOWNLOAD_FOUNDRY_MODEL, { modelId: 'qwen2.5-0.5b' });
+      await invoke(TAURI_COMMANDS.DOWNLOAD_FOUNDRY_MODEL, {
+        modelId: 'qwen2.5-0.5b',
+      });
 
       setState((prev) => ({
         ...prev,
@@ -721,7 +823,8 @@ export function useModelDownload() {
       await checkStatus();
     } catch (error) {
       console.error('[useModelDownload] Foundry installation failed:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
       setState((prev) => ({
         ...prev,
@@ -752,7 +855,11 @@ export function useModelDownload() {
   const isInOfflineMode = (() => {
     if (typeof window === 'undefined') return false;
     // Check global variable (set by Tauri initialization script)
-    if ((window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__ === true) return true;
+    if (
+      (window as unknown as Record<string, unknown>).__TAURI_OFFLINE_MODE__ ===
+      true
+    )
+      return true;
     // Fallback to localStorage
     if (typeof localStorage?.getItem !== 'function') return false;
     return localStorage.getItem('tauri_offline_mode') === 'true';

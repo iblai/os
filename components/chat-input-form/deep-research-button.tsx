@@ -10,7 +10,11 @@ type Props = {
   updateSessionTools: (tool: string) => Promise<void>;
 };
 
-export function DeepResearchButton({ isActive, updateSessionTools, activeTools }: Props) {
+export function DeepResearchButton({
+  isActive,
+  updateSessionTools,
+  activeTools,
+}: Props) {
   const isActiveTool = activeTools.includes(TOOLS.DEEP_RESEARCH);
 
   if (!isActive) {
@@ -23,10 +27,10 @@ export function DeepResearchButton({ isActive, updateSessionTools, activeTools }
         variant="ghost"
         size="sm"
         type="button"
-        className={`h-8 px-2 text-sm rounded-lg flex items-center gap-1.5 transition-all duration-200 ${
+        className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 ${
           isActiveTool
-            ? 'text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]'
-            : 'text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF]'
+            ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+            : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
         }`}
         onClick={() => {
           updateSessionTools(TOOLS.DEEP_RESEARCH);
@@ -44,7 +48,7 @@ export function DeepResearchButton({ isActive, updateSessionTools, activeTools }
               updateSessionTools(TOOLS.DEEP_RESEARCH);
             }}
           >
-            <X className="h-3 w-3 ml-1 cursor-pointer" />
+            <X className="ml-1 h-3 w-3 cursor-pointer" />
           </span>
         )}
       </Button>

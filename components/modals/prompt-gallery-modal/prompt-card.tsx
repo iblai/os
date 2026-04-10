@@ -1,4 +1,12 @@
-import { Edit, MessageSquare, Play, Copy, Trash2, Check, Loader2 } from 'lucide-react';
+import {
+  Edit,
+  MessageSquare,
+  Play,
+  Copy,
+  Trash2,
+  Check,
+  Loader2,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,8 +61,8 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
   return (
     <>
       <Card className="overflow-hidden border-0 bg-[#F8F8F8] transition-shadow hover:shadow-md">
-        <CardContent className="p-4 h-full">
-          <div className="flex-1 mb-5 flex items-start gap-2">
+        <CardContent className="h-full p-4">
+          <div className="mb-5 flex flex-1 items-start gap-2">
             <MessageSquare className="mt-1 h-4 w-4 flex-shrink-0 text-gray-400" />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-gray-600">{title}</h3>
@@ -111,7 +119,9 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
                 onClick={() => executeWithTrialCheck(handleDelete)}
                 disabled={isDeleting}
               >
-                <DeleteIcon className={cn('mr-1.5 h-3 w-3', isDeleting && 'animate-spin')} />
+                <DeleteIcon
+                  className={cn('mr-1.5 h-3 w-3', isDeleting && 'animate-spin')}
+                />
                 Delete
               </Button>
             )}

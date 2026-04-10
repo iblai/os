@@ -25,7 +25,11 @@ describe('useTenantKey', () => {
 
   describe('tenant value', () => {
     it('should return tenant from localStorage', () => {
-      mockUseLocalStorage.mockReturnValue(['test-tenant', mockSaveTenant, vi.fn()]);
+      mockUseLocalStorage.mockReturnValue([
+        'test-tenant',
+        mockSaveTenant,
+        vi.fn(),
+      ]);
 
       const { result } = renderHook(() => useTenantKey());
 
@@ -65,7 +69,11 @@ describe('useTenantKey', () => {
     });
 
     it('should allow saving a new tenant', () => {
-      mockUseLocalStorage.mockReturnValue(['old-tenant', mockSaveTenant, vi.fn()]);
+      mockUseLocalStorage.mockReturnValue([
+        'old-tenant',
+        mockSaveTenant,
+        vi.fn(),
+      ]);
 
       const { result } = renderHook(() => useTenantKey());
 

@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { ModalContainer } from "@/components/modals/modal-container";
-import { SubscriptionWrapper } from "../[tenantKey]/[mentorId]/_components/subscription-wrapper";
-import { MonetizationWrapper } from "../[tenantKey]/[mentorId]/_components/monetization-wrapper";
-import { HotKeysWrapper } from "../[tenantKey]/[mentorId]/_components/hot-keys-wrapper";
-import { AppSidebar } from "../[tenantKey]/[mentorId]/_components/app-sidebar";
-import { NavBar } from "../[tenantKey]/[mentorId]/_components/nav-bar";
-import { AccessibilityProvider } from "@/contexts/accessibility-contexts";
-import { AccessibilityFab } from "../[tenantKey]/[mentorId]/_components/accessibility-fab";
-import { useMentorSettings } from "@/hooks/use-mentors/use-mentor-settings";
-import { useParams, useSearchParams } from "next/navigation";
-import { TenantKeyMentorIdParams } from "@/lib/types";
-import { isTauriApp } from "@/types/tauri";
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { ModalContainer } from '@/components/modals/modal-container';
+import { SubscriptionWrapper } from '../[tenantKey]/[mentorId]/_components/subscription-wrapper';
+import { MonetizationWrapper } from '../[tenantKey]/[mentorId]/_components/monetization-wrapper';
+import { HotKeysWrapper } from '../[tenantKey]/[mentorId]/_components/hot-keys-wrapper';
+import { AppSidebar } from '../[tenantKey]/[mentorId]/_components/app-sidebar';
+import { NavBar } from '../[tenantKey]/[mentorId]/_components/nav-bar';
+import { AccessibilityProvider } from '@/contexts/accessibility-contexts';
+import { AccessibilityFab } from '../[tenantKey]/[mentorId]/_components/accessibility-fab';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { useParams, useSearchParams } from 'next/navigation';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+import { isTauriApp } from '@/types/tauri';
 import {
   isTauriOfflineMode,
   isOfflineServerOrigin,
-} from "@/hooks/use-tauri-offline";
+} from '@/hooks/use-tauri-offline';
 
-import "../../accessibility.css";
+import '../../accessibility.css';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -31,7 +31,7 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
   const searchParams = useSearchParams();
 
   // Check if we're in compact mode (e.g., PIP window or embedded view)
-  const isCompactMode = searchParams.get("compact") === "true";
+  const isCompactMode = searchParams.get('compact') === 'true';
 
   // Check if we're in Tauri offline mode - hide sidebar and navbar
   const isTauriOffline =
@@ -55,7 +55,7 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
     return (
       <main
         id="main-content-container"
-        className="h-dvh flex flex-col overflow-hidden"
+        className="flex h-dvh flex-col overflow-hidden"
       >
         {children}
       </main>
@@ -70,12 +70,12 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
       <SidebarProvider defaultOpen={defaultOpen}>
         <HotKeysWrapper />
         <AppSidebar />
-        <SidebarInset asChild className="h-dvh flex flex-col overflow-hidden">
+        <SidebarInset asChild className="flex h-dvh flex-col overflow-hidden">
           <div>
             <NavBar />
             <main
               id="main-content-container"
-              className="flex-1 flex flex-col min-h-0"
+              className="flex min-h-0 flex-1 flex-col"
             >
               {children}
             </main>

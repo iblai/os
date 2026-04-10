@@ -1,7 +1,11 @@
 import { CircleStop, Loader2, Mic } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useShowVoiceRecorder } from '@/hooks/use-show-voice-recorder';
 
 type IconProps = {
@@ -11,10 +15,10 @@ type IconProps = {
 
 function Icon({ processing, recording }: IconProps) {
   if (processing) {
-    return <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />;
+    return <Loader2 className="h-6 w-6 animate-spin text-gray-400" />;
   }
   if (recording) {
-    return <CircleStop className="h-6 w-" />;
+    return <CircleStop className="w- h-6" />;
   }
   return <Mic className="h-6 w-6 text-gray-400" />;
 }
@@ -55,7 +59,9 @@ export function VoiceChatButton({
           </Button>
         </div>
       </TooltipTrigger>
-      <TooltipContent className="ibl-tooltip-content capitalize">Voice Record</TooltipContent>
+      <TooltipContent className="ibl-tooltip-content capitalize">
+        Voice Record
+      </TooltipContent>
     </Tooltip>
   );
 }

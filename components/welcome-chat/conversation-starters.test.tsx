@@ -41,12 +41,21 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetGuidedPromptsQuery: (...args: unknown[]) => mockUseGetGuidedPromptsQuery(...args),
+  useGetGuidedPromptsQuery: (...args: unknown[]) =>
+    mockUseGetGuidedPromptsQuery(...args),
 }));
 
 // Mock the UI components
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, onClick, onKeyDown, tabIndex, role, className, ...props }: any) => (
+  Card: ({
+    children,
+    onClick,
+    onKeyDown,
+    tabIndex,
+    role,
+    className,
+    ...props
+  }: any) => (
     <div
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -58,7 +67,9 @@ vi.mock('@/components/ui/card', () => ({
       {children}
     </div>
   ),
-  CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
+  CardContent: ({ children, className }: any) => (
+    <div className={className}>{children}</div>
+  ),
 }));
 
 // Mock lucide-react
@@ -100,7 +111,10 @@ const mockRbacPermissions = { '/mentors/mentor-db-123/': { chat: true } };
 
 const defaultMocks = () => {
   mockUseUsername.mockReturnValue('testuser');
-  mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'test-mentor' });
+  mockUseParams.mockReturnValue({
+    tenantKey: 'test-tenant',
+    mentorId: 'test-mentor',
+  });
   mockUseAppSelector.mockReturnValue(mockRbacPermissions);
   mockUseMentorSettings.mockReturnValue({
     data: { mentorDbId: 'mentor-db-123' },
@@ -137,7 +151,9 @@ describe('ConversationStarters', () => {
         />,
       );
 
-      expect(screen.getByRole('heading', { name: /Conversation Starters/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /Conversation Starters/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders all guided prompts', () => {
@@ -289,7 +305,9 @@ describe('ConversationStarters', () => {
       const firstCard = screen.getAllByRole('button')[0];
       await user.click(firstCard);
 
-      expect(mockOnTemplateSelect).toHaveBeenCalledWith('What is machine learning?');
+      expect(mockOnTemplateSelect).toHaveBeenCalledWith(
+        'What is machine learning?',
+      );
     });
 
     it('calls onTemplateSelect when pressing Enter', () => {
@@ -304,7 +322,9 @@ describe('ConversationStarters', () => {
       const firstCard = screen.getAllByRole('button')[0];
       fireEvent.keyDown(firstCard, { key: 'Enter' });
 
-      expect(mockOnTemplateSelect).toHaveBeenCalledWith('What is machine learning?');
+      expect(mockOnTemplateSelect).toHaveBeenCalledWith(
+        'What is machine learning?',
+      );
     });
 
     it('calls onTemplateSelect when pressing Space', () => {
@@ -319,7 +339,9 @@ describe('ConversationStarters', () => {
       const firstCard = screen.getAllByRole('button')[0];
       fireEvent.keyDown(firstCard, { key: ' ' });
 
-      expect(mockOnTemplateSelect).toHaveBeenCalledWith('What is machine learning?');
+      expect(mockOnTemplateSelect).toHaveBeenCalledWith(
+        'What is machine learning?',
+      );
     });
 
     it('does not call onTemplateSelect when pressing other keys', () => {
@@ -516,9 +538,12 @@ describe('ConversationStarters', () => {
         />,
       );
 
-      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(expect.anything(), {
-        skip: true,
-      });
+      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          skip: true,
+        },
+      );
     });
 
     it('skips query when tenantKey is empty', () => {
@@ -532,9 +557,12 @@ describe('ConversationStarters', () => {
         />,
       );
 
-      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(expect.anything(), {
-        skip: true,
-      });
+      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          skip: true,
+        },
+      );
     });
 
     it('skips query when sessionId is empty', () => {
@@ -546,9 +574,12 @@ describe('ConversationStarters', () => {
         />,
       );
 
-      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(expect.anything(), {
-        skip: true,
-      });
+      expect(mockUseGetGuidedPromptsQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          skip: true,
+        },
+      );
     });
 
     it('uses "anonymous" as username when useUsername returns null', () => {
@@ -634,7 +665,9 @@ describe('ConversationStarters', () => {
     it('handles prompts with special characters', () => {
       mockUseGetGuidedPromptsQuery.mockReturnValue({
         data: {
-          results: [{ prompt: 'What is <script>alert("xss")</script>?', icon: null }],
+          results: [
+            { prompt: 'What is <script>alert("xss")</script>?', icon: null },
+          ],
         },
       });
 
@@ -646,7 +679,9 @@ describe('ConversationStarters', () => {
         />,
       );
 
-      expect(screen.getByText('What is <script>alert("xss")</script>?')).toBeInTheDocument();
+      expect(
+        screen.getByText('What is <script>alert("xss")</script>?'),
+      ).toBeInTheDocument();
     });
 
     it('handles prompts with very long text', () => {

@@ -31,6 +31,7 @@ Whether you're a university deploying course assistants, a company building inte
 ## Features
 
 ### Chat & Conversation
+
 - **Real-time streaming** — token-by-token message streaming with stop/regenerate controls
 - **Voice calls** — built-in WebRTC voice chat powered by LiveKit
 - **Screen sharing** — share your screen directly inside a chat session
@@ -44,6 +45,7 @@ Whether you're a university deploying course assistants, a company building inte
 - **Message rating** — thumbs up/down feedback on AI responses
 
 ### Mentor Management
+
 - **Create & customize mentors** — name, avatar, system prompt, LLM provider, tools, safety filters
 - **Explore page** — discover public, featured, starred, and custom mentors
 - **Mentor categories** — organize mentors by subject and type
@@ -54,6 +56,7 @@ Whether you're a university deploying course assistants, a company building inte
 - **MCP server connections** — extend mentor capabilities with Model Context Protocol tool servers
 
 ### Analytics
+
 - **Overview dashboard** — usage stats, session counts, and average ratings
 - **User analytics** — per-user activity, engagement heatmaps, and cohort trends
 - **Topic analysis** — most discussed topics and keyword breakdowns
@@ -62,6 +65,7 @@ Whether you're a university deploying course assistants, a company building inte
 - **Custom reports** — generate and download data reports
 
 ### Enterprise & Platform
+
 - **Multi-tenancy** — full tenant isolation with per-org configuration, branding, and user management
 - **Role-based access control (RBAC)** — granular permissions with roles, policies, and group-based access
 - **SSO authentication** — Single Sign-On with configurable identity providers
@@ -74,11 +78,13 @@ Whether you're a university deploying course assistants, a company building inte
 - **Memory system** — per-learner and conversation-level memory for personalized experiences
 
 ### Projects
+
 - **Collaborative workspaces** — group mentors into project-based collections
 - **Project instructions** — set project-wide context and goals
 - **Mentor assignment** — add/remove mentors from projects dynamically
 
 ### Cross-Platform
+
 - **Web** — responsive SPA that works on desktop and mobile browsers
 - **Desktop** — native desktop app via Tauri (macOS, Windows, Linux)
 - **Electron** — alternative desktop build with Electron
@@ -89,19 +95,19 @@ Whether you're a university deploying course assistants, a company building inte
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 15, React 19, TypeScript |
-| Styling | Tailwind CSS 4, Radix UI, shadcn/ui |
-| State | Redux Toolkit, React-Redux |
-| Forms | React Hook Form, Zod |
-| Editor | Tiptap (rich text), Markdown (react-markdown, remark, rehype) |
-| Voice/Video | LiveKit (WebRTC) |
-| Charts | Recharts |
-| Desktop | Tauri, Electron |
-| Testing | Vitest, Testing Library, Playwright |
-| Monitoring | Sentry |
-| SDK | [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) — unified data layer, components, and utilities |
+| Layer       | Technology                                                                                                       |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| Framework   | Next.js 15, React 19, TypeScript                                                                                 |
+| Styling     | Tailwind CSS 4, Radix UI, shadcn/ui                                                                              |
+| State       | Redux Toolkit, React-Redux                                                                                       |
+| Forms       | React Hook Form, Zod                                                                                             |
+| Editor      | Tiptap (rich text), Markdown (react-markdown, remark, rehype)                                                    |
+| Voice/Video | LiveKit (WebRTC)                                                                                                 |
+| Charts      | Recharts                                                                                                         |
+| Desktop     | Tauri, Electron                                                                                                  |
+| Testing     | Vitest, Testing Library, Playwright                                                                              |
+| Monitoring  | Sentry                                                                                                           |
+| SDK         | [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) — unified data layer, components, and utilities |
 
 ---
 
@@ -186,11 +192,11 @@ The Dockerfile uses a multi-stage build that produces a minimal standalone image
 
 #### Build Arguments
 
-| Argument | Description |
-|----------|------------|
-| `NEXT_IMAGE_PATTERNS` | Comma-separated allowed image hostnames |
+| Argument                | Description                                  |
+| ----------------------- | -------------------------------------------- |
+| `NEXT_IMAGE_PATTERNS`   | Comma-separated allowed image hostnames      |
 | `NEXT_PUBLIC_BASE_PATH` | URL base path (for subdirectory deployments) |
-| `SENTRY_AUTH_TOKEN` | Sentry auth token for source map uploads |
+| `SENTRY_AUTH_TOKEN`     | Sentry auth token for source map uploads     |
 
 ### Standalone (No Docker)
 
@@ -294,25 +300,25 @@ The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)*
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_AUTH_URL` | Yes | Authentication service URL |
-| `NEXT_PUBLIC_LMS_URL` | Yes | LMS platform URL |
-| `NEXT_PUBLIC_DM_URL` | Yes | Platform manager URL |
-| `NEXT_PUBLIC_AXD_URL` | Yes | API data service URL |
-| `NEXT_PUBLIC_MAIN_TENANT_KEY` | Yes | Primary tenant identifier |
-| `NEXT_PUBLIC_BASE_WS_URL` | Yes | WebSocket server URL |
-| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL` | Yes | LiveKit voice server URL |
-| `NEXT_PUBLIC_MENTOR_URL` | Yes | This app's public URL |
-| `NEXT_PUBLIC_IBL_PLATFORM` | Yes | Platform type (`mentor`) |
-| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR` | Yes | Default mentor template slug |
-| `NEXT_PUBLIC_STRIPE_ENABLED` | No | Enable Stripe billing (`true`/`false`) |
-| `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER` | No | Show free trial banner |
-| `NEXT_PUBLIC_ENABLE_ADVERTISING` | No | Enable advertising features |
-| `NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL` | No | External pricing page URL |
-| `NEXT_PUBLIC_BASE_PATH` | No | URL base path for subdirectory deployments |
-| `NEXT_IMAGE_PATTERNS` | No | Comma-separated allowed image hosts |
-| `SENTRY_AUTH_TOKEN` | No | Sentry auth token (build-time only) |
+| Variable                                  | Required | Description                                |
+| ----------------------------------------- | -------- | ------------------------------------------ |
+| `NEXT_PUBLIC_AUTH_URL`                    | Yes      | Authentication service URL                 |
+| `NEXT_PUBLIC_LMS_URL`                     | Yes      | LMS platform URL                           |
+| `NEXT_PUBLIC_DM_URL`                      | Yes      | Platform manager URL                       |
+| `NEXT_PUBLIC_AXD_URL`                     | Yes      | API data service URL                       |
+| `NEXT_PUBLIC_MAIN_TENANT_KEY`             | Yes      | Primary tenant identifier                  |
+| `NEXT_PUBLIC_BASE_WS_URL`                 | Yes      | WebSocket server URL                       |
+| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`     | Yes      | LiveKit voice server URL                   |
+| `NEXT_PUBLIC_MENTOR_URL`                  | Yes      | This app's public URL                      |
+| `NEXT_PUBLIC_IBL_PLATFORM`                | Yes      | Platform type (`mentor`)                   |
+| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`         | Yes      | Default mentor template slug               |
+| `NEXT_PUBLIC_STRIPE_ENABLED`              | No       | Enable Stripe billing (`true`/`false`)     |
+| `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER` | No       | Show free trial banner                     |
+| `NEXT_PUBLIC_ENABLE_ADVERTISING`          | No       | Enable advertising features                |
+| `NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL`   | No       | External pricing page URL                  |
+| `NEXT_PUBLIC_BASE_PATH`                   | No       | URL base path for subdirectory deployments |
+| `NEXT_IMAGE_PATTERNS`                     | No       | Comma-separated allowed image hosts        |
+| `SENTRY_AUTH_TOKEN`                       | No       | Sentry auth token (build-time only)        |
 
 ### Feature Flags
 
@@ -327,21 +333,21 @@ Feature flags are set via environment variables prefixed with `NEXT_PUBLIC_`. Th
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start development server (port 3000) |
-| `pnpm build` | Production build (standalone output) |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint with auto-fix |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm format` | Format code with Prettier |
-| `pnpm test` | Run unit tests (Vitest) |
-| `pnpm test:watch` | Run tests in watch mode |
-| `pnpm test:coverage` | Generate test coverage report |
-| `pnpm tauri:dev` | Start Tauri desktop dev mode |
-| `pnpm tauri:build` | Build Tauri desktop app |
-| `pnpm desktop:dev` | Start Electron desktop dev mode |
-| `pnpm desktop:build` | Build Electron desktop app |
+| Script               | Description                          |
+| -------------------- | ------------------------------------ |
+| `pnpm dev`           | Start development server (port 3000) |
+| `pnpm build`         | Production build (standalone output) |
+| `pnpm start`         | Start production server              |
+| `pnpm lint`          | Run ESLint with auto-fix             |
+| `pnpm typecheck`     | TypeScript type checking             |
+| `pnpm format`        | Format code with Prettier            |
+| `pnpm test`          | Run unit tests (Vitest)              |
+| `pnpm test:watch`    | Run tests in watch mode              |
+| `pnpm test:coverage` | Generate test coverage report        |
+| `pnpm tauri:dev`     | Start Tauri desktop dev mode         |
+| `pnpm tauri:build`   | Build Tauri desktop app              |
+| `pnpm desktop:dev`   | Start Electron desktop dev mode      |
+| `pnpm desktop:build` | Build Electron desktop app           |
 
 ---
 

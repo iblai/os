@@ -109,7 +109,9 @@ describe('Markdown Component', () => {
      * Verifies that inline code is wrapped in <code> tags
      */
     it('should render inline code', () => {
-      const { container } = render(<Markdown>Use `const` for variables.</Markdown>);
+      const { container } = render(
+        <Markdown>Use `const` for variables.</Markdown>,
+      );
       const code = container.querySelector('code');
       expect(code).toBeTruthy();
       expect(code?.textContent).toBe('const');
@@ -120,7 +122,9 @@ describe('Markdown Component', () => {
      * Verifies that markdown links are converted to <a> tags with proper attributes
      */
     it('should render links', () => {
-      const { container } = render(<Markdown>[Google](https://google.com)</Markdown>);
+      const { container } = render(
+        <Markdown>[Google](https://google.com)</Markdown>,
+      );
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
       expect(link?.getAttribute('href')).toBe('https://google.com');
@@ -133,7 +137,9 @@ describe('Markdown Component', () => {
      * Verifies that mailto: links are allowed
      */
     it('should render mailto links', () => {
-      const { container } = render(<Markdown>[Email](mailto:test@example.com)</Markdown>);
+      const { container } = render(
+        <Markdown>[Email](mailto:test@example.com)</Markdown>,
+      );
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
       expect(link?.getAttribute('href')).toBe('mailto:test@example.com');
@@ -144,7 +150,9 @@ describe('Markdown Component', () => {
      * Verifies that tel: links are allowed
      */
     it('should render tel links', () => {
-      const { container } = render(<Markdown>[Call](tel:+1234567890)</Markdown>);
+      const { container } = render(
+        <Markdown>[Call](tel:+1234567890)</Markdown>,
+      );
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
       expect(link?.getAttribute('href')).toBe('tel:+1234567890');
@@ -155,7 +163,9 @@ describe('Markdown Component', () => {
      * Verifies that javascript: and other disallowed protocols are filtered out
      */
     it('should filter out disallowed URL protocols', () => {
-      const { container } = render(<Markdown>[Click](javascript:alert('xss'))</Markdown>);
+      const { container } = render(
+        <Markdown>[Click](javascript:alert('xss'))</Markdown>,
+      );
       const link = container.querySelector('a');
       expect(link).toBeTruthy();
       // The href should be empty since javascript: is not allowed
@@ -207,7 +217,9 @@ describe('Markdown Component', () => {
      * Verifies that inline equations are converted to $ $ for KaTeX
      */
     it('should render inline LaTeX with \\( \\) delimiters', () => {
-      const { container } = render(<Markdown>The equation \\(E = mc^2\\) is famous.</Markdown>);
+      const { container } = render(
+        <Markdown>The equation \\(E = mc^2\\) is famous.</Markdown>,
+      );
       // The preprocessLaTeX function should convert \( \) to $ $
       expect(container.textContent).toContain('E = mc^2');
     });
@@ -219,7 +231,9 @@ describe('Markdown Component', () => {
     it('should render block LaTeX with \\[ \\] delimiters', () => {
       const { container } = render(
         <Markdown>
-          {'The quadratic formula is:\\n\\[x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\]'}
+          {
+            'The quadratic formula is:\\n\\[x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\]'
+          }
         </Markdown>,
       );
       expect(container.textContent).toContain('x =');
@@ -240,7 +254,9 @@ describe('Markdown Component', () => {
      */
     it('should render block LaTeX with $$ $$ delimiters', () => {
       const { container } = render(
-        <Markdown>{'The integral is:\\n$$\\int_0^\\infty e^{-x} dx = 1$$'}</Markdown>,
+        <Markdown>
+          {'The integral is:\\n$$\\int_0^\\infty e^{-x} dx = 1$$'}
+        </Markdown>,
       );
       expect(container.textContent).toContain('∫');
     });
@@ -250,7 +266,9 @@ describe('Markdown Component', () => {
      * Verifies that dollar signs before digits are escaped and rendered as literal $
      */
     it('should escape currency dollar signs', () => {
-      const { container } = render(<Markdown>The price is $100 for the product.</Markdown>);
+      const { container } = render(
+        <Markdown>The price is $100 for the product.</Markdown>,
+      );
       expect(container.textContent).toContain('$100');
     });
 
@@ -259,7 +277,9 @@ describe('Markdown Component', () => {
      * Verifies that mathematical $ and currency $ are handled correctly
      */
     it('should handle both LaTeX and currency in the same content', () => {
-      const { container } = render(<Markdown>The equation $x = 5$ costs $10 to compute.</Markdown>);
+      const { container } = render(
+        <Markdown>The equation $x = 5$ costs $10 to compute.</Markdown>,
+      );
       expect(container.textContent).toContain('x = 5');
       expect(container.textContent).toContain('$10');
     });
@@ -464,7 +484,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      * Verifies that \textbf{text} is converted to **text** (markdown bold)
      */
     it('should convert \\textbf{} to bold text', () => {
-      const { container } = render(<Markdown>{'This is \\textbf{bold} text.'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'This is \\textbf{bold} text.'}</Markdown>,
+      );
       const strong = container.querySelector('strong');
       expect(strong).toBeTruthy();
       expect(strong?.textContent).toBe('bold');
@@ -475,7 +497,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      * Verifies that \textit{text} is converted to *text* (markdown italic)
      */
     it('should convert \\textit{} to italic text', () => {
-      const { container } = render(<Markdown>{'This is \\textit{italic} text.'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'This is \\textit{italic} text.'}</Markdown>,
+      );
       const em = container.querySelector('em');
       expect(em).toBeTruthy();
       expect(em?.textContent).toBe('italic');
@@ -486,7 +510,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      * Verifies that \emph{text} is converted to *text* (markdown italic)
      */
     it('should convert \\emph{} to emphasized text', () => {
-      const { container } = render(<Markdown>{'This is \\emph{emphasized} text.'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'This is \\emph{emphasized} text.'}</Markdown>,
+      );
       const em = container.querySelector('em');
       expect(em).toBeTruthy();
       expect(em?.textContent).toBe('emphasized');
@@ -497,7 +523,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      * Verifies that \texttt{text} is converted to `text` (inline code)
      */
     it('should convert \\texttt{} to monospace text', () => {
-      const { container } = render(<Markdown>{'Use \\texttt{const} for constants.'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'Use \\texttt{const} for constants.'}</Markdown>,
+      );
       const code = container.querySelector('code');
       expect(code).toBeTruthy();
       expect(code?.textContent).toBe('const');
@@ -508,7 +536,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      * Verifies that \underline{text} is converted to <u>text</u>
      */
     it('should convert \\underline{} to underlined text', () => {
-      const { container } = render(<Markdown>{'This is \\underline{underlined} text.'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'This is \\underline{underlined} text.'}</Markdown>,
+      );
       const u = container.querySelector('u');
       expect(u).toBeTruthy();
       expect(u?.textContent).toBe('underlined');
@@ -520,7 +550,9 @@ Thus, the correct calculation of \\( \\sqrt{i} \\) is:
      */
     it('should handle multiple LaTeX formatting commands', () => {
       const { container } = render(
-        <Markdown>{'Text with \\textbf{bold}, \\textit{italic}, and \\texttt{code}.'}</Markdown>,
+        <Markdown>
+          {'Text with \\textbf{bold}, \\textit{italic}, and \\texttt{code}.'}
+        </Markdown>,
       );
       expect(container.querySelector('strong')).toBeTruthy();
       expect(container.querySelector('em')).toBeTruthy();
@@ -604,7 +636,9 @@ Centered text
      * Verifies that \section{text} is converted to ## text (heading 2)
      */
     it('should convert \\section{} to heading 2', () => {
-      const { container } = render(<Markdown>{'\\section{Introduction}'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'\\section{Introduction}'}</Markdown>,
+      );
       const h2 = container.querySelector('h2');
       expect(h2).toBeTruthy();
       expect(h2?.textContent).toBe('Introduction');
@@ -615,7 +649,9 @@ Centered text
      * Verifies that \subsection{text} is converted to ### text (heading 3)
      */
     it('should convert \\subsection{} to heading 3', () => {
-      const { container } = render(<Markdown>{'\\subsection{Background}'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'\\subsection{Background}'}</Markdown>,
+      );
       const h3 = container.querySelector('h3');
       expect(h3).toBeTruthy();
       expect(h3?.textContent).toBe('Background');
@@ -626,7 +662,9 @@ Centered text
      * Verifies that \subsubsection{text} is converted to #### text (heading 4)
      */
     it('should convert \\subsubsection{} to heading 4', () => {
-      const { container } = render(<Markdown>{'\\subsubsection{Details}'}</Markdown>);
+      const { container } = render(
+        <Markdown>{'\\subsubsection{Details}'}</Markdown>,
+      );
       const h4 = container.querySelector('h4');
       expect(h4).toBeTruthy();
       expect(h4?.textContent).toBe('Details');
@@ -789,7 +827,9 @@ Inline math: $x = 5$ and \\(y = 10\\)
      */
     it('should handle LaTeX formatting with multiple commands', () => {
       const { container } = render(
-        <Markdown>{'\\textbf{Bold text} and \\textit{italic text} together'}</Markdown>,
+        <Markdown>
+          {'\\textbf{Bold text} and \\textit{italic text} together'}
+        </Markdown>,
       );
       const strong = container.querySelector('strong');
       expect(strong).toBeTruthy();
@@ -803,7 +843,9 @@ Inline math: $x = 5$ and \\(y = 10\\)
      */
     it('should handle LaTeX with special characters', () => {
       const { container } = render(
-        <Markdown>{'Cost is \\$100, success rate is 95\\%, tags: \\#ai \\& \\#ml'}</Markdown>,
+        <Markdown>
+          {'Cost is \\$100, success rate is 95\\%, tags: \\#ai \\& \\#ml'}
+        </Markdown>,
       );
       expect(container.textContent).toContain('$100');
       expect(container.textContent).toContain('95%');
@@ -816,7 +858,9 @@ Inline math: $x = 5$ and \\(y = 10\\)
      * Verifies that the component can handle large amounts of content
      */
     it('should handle very long content', () => {
-      const longContent = Array(100).fill('\\textbf{Bold text} with some content.').join(' ');
+      const longContent = Array(100)
+        .fill('\\textbf{Bold text} with some content.')
+        .join(' ');
       const { container } = render(<Markdown>{longContent}</Markdown>);
       expect(container.querySelectorAll('strong').length).toBe(100);
     });
@@ -840,7 +884,8 @@ Second paragraph with gap`;
      * Verifies that malformed LaTeX doesn't break rendering
      */
     it('should handle malformed LaTeX gracefully', () => {
-      const malformed = '\\textbf{unclosed brace or \\begin{itemize} without end';
+      const malformed =
+        '\\textbf{unclosed brace or \\begin{itemize} without end';
       const { container } = render(<Markdown>{malformed}</Markdown>);
       // Should still render something even if not perfectly formatted
       expect(container).toBeTruthy();
@@ -986,7 +1031,9 @@ describe('preprocessLaTeX Utility Function', () => {
     it('should convert \\begin{center} to centered div', () => {
       const input = '\\begin{center}Centered\\end{center}';
       const output = preprocessLaTeX(input);
-      expect(output).toContain('<div style="text-align: center;">Centered</div>');
+      expect(output).toContain(
+        '<div style="text-align: center;">Centered</div>',
+      );
     });
   });
 
@@ -1106,7 +1153,8 @@ describe('preprocessLaTeX Utility Function', () => {
      * Test multiple transformations in sequence
      */
     it('should handle multiple transformations correctly', () => {
-      const input = '\\section{Title} with \\textbf{bold} and \\textit{italic} and \\(x = 5\\)';
+      const input =
+        '\\section{Title} with \\textbf{bold} and \\textit{italic} and \\(x = 5\\)';
       const output = preprocessLaTeX(input);
 
       expect(output).toContain('## Title');

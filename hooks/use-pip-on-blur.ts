@@ -2,7 +2,12 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { Room, LocalTrackPublication, LocalTrack, RemoteParticipant } from 'livekit-client';
+import type {
+  Room,
+  LocalTrackPublication,
+  LocalTrack,
+  RemoteParticipant,
+} from 'livekit-client';
 import { RoomEvent, Track, ParticipantEvent } from 'livekit-client';
 import { PipChat } from '@/components/pip-chat';
 
@@ -294,7 +299,10 @@ const createAudioStatusBar = (
   mentorMuteButton.innerHTML = speakerOnSvg;
 
   // ── Mic mute button (microphone icon – controls user's mic) ──
-  const micMuteButton = createIconButton('Click to mute/unmute', 'Toggle microphone');
+  const micMuteButton = createIconButton(
+    'Click to mute/unmute',
+    'Toggle microphone',
+  );
 
   // Microphone icon SVG (unmuted state)
   const micOnSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93C5FD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -327,7 +335,8 @@ const createAudioStatusBar = (
       // Mentor speaking - bright green with strong glow
       mentorSpeakingIndicator.style.background = '#22c55e';
       mentorSpeakingIndicator.style.borderColor = '#22c55e';
-      mentorSpeakingIndicator.style.boxShadow = '0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.6)';
+      mentorSpeakingIndicator.style.boxShadow =
+        '0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.6)';
       mentorSpeakingIndicator.style.transform = 'scale(1.2)';
       mentorSpeakingLabel.style.color = '#22c55e';
       mentorSpeakingLabel.textContent = 'Mentor speaking';
@@ -356,7 +365,8 @@ const createAudioStatusBar = (
       // User speaking - bright green with strong glow
       micSpeakingIndicator.style.background = '#22c55e';
       micSpeakingIndicator.style.borderColor = '#22c55e';
-      micSpeakingIndicator.style.boxShadow = '0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.6)';
+      micSpeakingIndicator.style.boxShadow =
+        '0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.6)';
       micSpeakingIndicator.style.transform = 'scale(1.2)';
       micSpeakingLabel.style.color = '#22c55e';
       micSpeakingLabel.textContent = 'Speaking';
@@ -414,7 +424,9 @@ const createAudioStatusBar = (
         participant.setVolume(isMentorMuted ? 0 : 1);
       });
       updateMentorMuteButton(isMentorMuted);
-      postStatusToOpener('MENTOR:SCREENSHARING_MENTOR_MUTED', { muted: isMentorMuted });
+      postStatusToOpener('MENTOR:SCREENSHARING_MENTOR_MUTED', {
+        muted: isMentorMuted,
+      });
       onMentorAudioToggled?.(!isMentorMuted);
     } catch (error) {
       console.error('Failed to toggle mentor audio:', error);
@@ -529,7 +541,9 @@ const createAudioStatusBar = (
   }
 
   // Initialize speaking indicators
-  const initialRemoteParticipant = Array.from(room.remoteParticipants.values())[0];
+  const initialRemoteParticipant = Array.from(
+    room.remoteParticipants.values(),
+  )[0];
   updateMentorSpeakingIndicator(initialRemoteParticipant?.isSpeaking ?? false);
   updateMicSpeakingIndicator(room.localParticipant.isSpeaking);
 
@@ -563,16 +577,25 @@ const createAudioStatusBar = (
     if (isMentorMuted) {
       participant.setVolume(0);
     }
-    participant.on(ParticipantEvent.IsSpeakingChanged, handleRemoteSpeakingChanged);
+    participant.on(
+      ParticipantEvent.IsSpeakingChanged,
+      handleRemoteSpeakingChanged,
+    );
   };
 
   const handleParticipantDisconnected = (participant: RemoteParticipant) => {
-    participant.off(ParticipantEvent.IsSpeakingChanged, handleRemoteSpeakingChanged);
+    participant.off(
+      ParticipantEvent.IsSpeakingChanged,
+      handleRemoteSpeakingChanged,
+    );
   };
 
   // Subscribe to existing remote participants' speaking events
   room.remoteParticipants.forEach((participant) => {
-    participant.on(ParticipantEvent.IsSpeakingChanged, handleRemoteSpeakingChanged);
+    participant.on(
+      ParticipantEvent.IsSpeakingChanged,
+      handleRemoteSpeakingChanged,
+    );
   });
 
   // Listen for new remote participants
@@ -597,7 +620,10 @@ const createAudioStatusBar = (
   };
 
   // Subscribe to local participant events
-  room.localParticipant.on(ParticipantEvent.IsSpeakingChanged, handleLocalSpeakingChanged);
+  room.localParticipant.on(
+    ParticipantEvent.IsSpeakingChanged,
+    handleLocalSpeakingChanged,
+  );
   room.localParticipant.on(ParticipantEvent.TrackMuted, handleTrackMuted);
   room.localParticipant.on(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
 
@@ -627,13 +653,22 @@ const createAudioStatusBar = (
     window.removeEventListener('message', handleMentorMuteMessage);
     window.removeEventListener('message', handleMicMuteMessage);
     room.remoteParticipants.forEach((participant) => {
-      participant.off(ParticipantEvent.IsSpeakingChanged, handleRemoteSpeakingChanged);
+      participant.off(
+        ParticipantEvent.IsSpeakingChanged,
+        handleRemoteSpeakingChanged,
+      );
     });
     room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
     room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
-    room.localParticipant.off(ParticipantEvent.IsSpeakingChanged, handleLocalSpeakingChanged);
+    room.localParticipant.off(
+      ParticipantEvent.IsSpeakingChanged,
+      handleLocalSpeakingChanged,
+    );
     room.localParticipant.off(ParticipantEvent.TrackMuted, handleTrackMuted);
-    room.localParticipant.off(ParticipantEvent.TrackUnmuted, handleTrackUnmuted);
+    room.localParticipant.off(
+      ParticipantEvent.TrackUnmuted,
+      handleTrackUnmuted,
+    );
   };
 
   return { element: statusBar, cleanup };
@@ -644,7 +679,9 @@ const createAudioStatusBar = (
  */
 const getScreenShareTrack = (room: Room): LocalTrackPublication | undefined => {
   // Try multiple ways to find the screen share track
-  const publications = Array.from(room.localParticipant.trackPublications.values());
+  const publications = Array.from(
+    room.localParticipant.trackPublications.values(),
+  );
 
   const screenSharePub = publications.find((pub) => {
     // Check various ways the source might be identified
@@ -822,11 +859,17 @@ export function usePipOnBlur({
             }
           };
 
-          room.localParticipant.on(RoomEvent.LocalTrackPublished as any, handleTrackPublished);
+          room.localParticipant.on(
+            RoomEvent.LocalTrackPublished as any,
+            handleTrackPublished,
+          );
 
           // Cleanup listener when PIP closes
           pipWindow.addEventListener('pagehide', () => {
-            room.localParticipant.off(RoomEvent.LocalTrackPublished as any, handleTrackPublished);
+            room.localParticipant.off(
+              RoomEvent.LocalTrackPublished as any,
+              handleTrackPublished,
+            );
           });
         }
 
@@ -849,7 +892,9 @@ export function usePipOnBlur({
       }
 
       // Add instruction banner for popup windows (when opened from another window)
-      const instructionBanner = createPopupInstructionBanner(pipWindow.document);
+      const instructionBanner = createPopupInstructionBanner(
+        pipWindow.document,
+      );
       if (instructionBanner) {
         container.appendChild(instructionBanner);
       }
@@ -915,7 +960,15 @@ export function usePipOnBlur({
     } finally {
       isOpeningRef.current = false;
     }
-  }, [width, height, room, screenSharePreviewHeight, onOpen, onClose, mentorName]);
+  }, [
+    width,
+    height,
+    room,
+    screenSharePreviewHeight,
+    onOpen,
+    onClose,
+    mentorName,
+  ]);
 
   const closePip = useCallback(() => {
     if (pipWindowRef.current) {

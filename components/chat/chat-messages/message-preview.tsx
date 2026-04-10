@@ -103,7 +103,9 @@ export function MessagePreview({
     [artifactVersions],
   );
   const fallbackVersion =
-    artifactVersions && artifactVersions.length > 0 ? artifactVersions[0] : null;
+    artifactVersions && artifactVersions.length > 0
+      ? artifactVersions[0]
+      : null;
 
   const selectedVersion = currentArtifact ?? fallbackVersion;
 
@@ -112,12 +114,16 @@ export function MessagePreview({
 
   useEffect(() => {
     const nextTitle =
-      selectedVersion?.title || selectedVersion?.artifact?.title || 'Untitled Artifact';
+      selectedVersion?.title ||
+      selectedVersion?.artifact?.title ||
+      'Untitled Artifact';
     setDisplayTitle(nextTitle);
   }, [selectedVersion?.title, selectedVersion?.artifact?.title]);
 
   useEffect(() => {
-    const handler = (event: CustomEvent<{ artifactId: number; title: string }>) => {
+    const handler = (
+      event: CustomEvent<{ artifactId: number; title: string }>,
+    ) => {
       if (!artifactId) return;
       if (Number(event.detail?.artifactId) === artifactId) {
         setDisplayTitle(event.detail.title);
@@ -125,7 +131,10 @@ export function MessagePreview({
     };
     window.addEventListener('artifact-title-updated' as any, handler as any);
     return () => {
-      window.removeEventListener('artifact-title-updated' as any, handler as any);
+      window.removeEventListener(
+        'artifact-title-updated' as any,
+        handler as any,
+      );
     };
   }, [artifactId]);
 
@@ -159,7 +168,8 @@ export function MessagePreview({
 
   const renderArtifactPreview = () => {
     if (selectedVersion.is_current) {
-      const isStreaming = streamingArtifactId !== undefined && artifactId === streamingArtifactId;
+      const isStreaming =
+        streamingArtifactId !== undefined && artifactId === streamingArtifactId;
       return (
         <CanvasMessagePreview
           title={displayTitle || 'Untitled Artifact'}
@@ -174,17 +184,19 @@ export function MessagePreview({
 
     return (
       <button
-        className="w-full flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left hover:border-gray-300 cursor-pointer"
+        className="flex w-full cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left hover:border-gray-300"
         onClick={() => onOpenCanvas?.(payload)}
       >
         <div className="mt-1">
           <FileText className="h-5 w-5 text-gray-500" />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-gray-900 truncate">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-gray-900">
             {displayTitle || 'Untitled Artifact'}
           </div>
-          <div className="text-xs text-gray-600">Version {selectedVersion.version_number}</div>
+          <div className="text-xs text-gray-600">
+            Version {selectedVersion.version_number}
+          </div>
         </div>
       </button>
     );

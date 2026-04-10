@@ -28,7 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import useEmbedTab from '../hooks/useEmbedTab';
 import { CopyCodeBlock } from '@/components/copy-code-block';
 import {
@@ -87,7 +92,9 @@ function validateCss(css: string): CssValidationResult {
   const openBraces = (css.match(/\{/g) || []).length;
   const closeBraces = (css.match(/\}/g) || []).length;
   if (openBraces !== closeBraces) {
-    errors.push(`Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`);
+    errors.push(
+      `Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`,
+    );
   }
 
   // Check for balanced parentheses
@@ -124,21 +131,27 @@ function validateJavaScript(js: string): JsValidationResult {
   // Check for smart/curly quotes (common when copying from Word, websites, etc.)
   const hasSmartQuotes = /[\u2018\u2019\u201C\u201D]/.test(js);
   if (hasSmartQuotes) {
-    errors.push('Smart quotes detected (" " \' \'). Replace with straight quotes (" \')');
+    errors.push(
+      'Smart quotes detected (" " \' \'). Replace with straight quotes (" \')',
+    );
   }
 
   // Check for balanced braces
   const openBraces = (js.match(/\{/g) || []).length;
   const closeBraces = (js.match(/\}/g) || []).length;
   if (openBraces !== closeBraces) {
-    errors.push(`Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`);
+    errors.push(
+      `Missing ${openBraces > closeBraces ? 'closing' : 'opening'} brace(s)`,
+    );
   }
 
   // Check for balanced brackets
   const openBrackets = (js.match(/\[/g) || []).length;
   const closeBrackets = (js.match(/\]/g) || []).length;
   if (openBrackets !== closeBrackets) {
-    errors.push(`Missing ${openBrackets > closeBrackets ? 'closing' : 'opening'} bracket(s)`);
+    errors.push(
+      `Missing ${openBrackets > closeBrackets ? 'closing' : 'opening'} bracket(s)`,
+    );
   }
 
   // Check for balanced parentheses
@@ -150,7 +163,9 @@ function validateJavaScript(js: string): JsValidationResult {
 
   // Check for unclosed strings across the entire code (not per-line, to handle wrapped/multiline content)
   // Use negative lookbehind to avoid stripping URLs (e.g., https://) as comments
-  const jsWithoutComments = js.replace(/(?<!:)\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const jsWithoutComments = js
+    .replace(/(?<!:)\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
   const singleQuotes = (jsWithoutComments.match(/(?<!\\)'/g) || []).length;
   const doubleQuotes = (jsWithoutComments.match(/(?<!\\)"/g) || []).length;
   const templateLiterals = (jsWithoutComments.match(/(?<!\\)`/g) || []).length;
@@ -189,7 +204,8 @@ export function EmbedTab() {
     import('@iblai/iblai-web-mentor');
   }, []);
 
-  const { tenantKey, mentorId: paramsMentorId } = useParams<TenantKeyMentorIdParams>();
+  const { tenantKey, mentorId: paramsMentorId } =
+    useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
   const mentorId = getMentorId() ?? paramsMentorId;
@@ -200,7 +216,8 @@ export function EmbedTab() {
     // @ts-expect-error - userId parameter may not exist in API but is passed from legacy code
     userId: username,
   });
-  const [createShareableLink, { data: createShareableLinkData }] = useCreateShareableLinkMutation();
+  const [createShareableLink, { data: createShareableLinkData }] =
+    useCreateShareableLinkMutation();
   const [isLoadingShareableLink, setIsLoadingShareableLink] = useState(false);
   const [updateShareableLink] = useUpdateShareableLinkMutation();
   useEffect(() => {
@@ -226,11 +243,12 @@ export function EmbedTab() {
     syncEmbedSettings,
   } = useEmbedTab();
   const toast = useToast();
-  const { data: mentorSettings, isLoading: isLoadingSettings } = useGetMentorSettingsQuery(
-    // @ts-expect-error userId is not part of useGetMentorSettingsQuery Query definition
-    { mentor: mentorId, org: tenantKey, userId: username ?? '' },
-    { skip: !username || !mentorId || !tenantKey },
-  );
+  const { data: mentorSettings, isLoading: isLoadingSettings } =
+    useGetMentorSettingsQuery(
+      // @ts-expect-error userId is not part of useGetMentorSettingsQuery Query definition
+      { mentor: mentorId, org: tenantKey, userId: username ?? '' },
+      { skip: !username || !mentorId || !tenantKey },
+    );
 
   const [editMentor, { isLoading: isSavingAdvanced }] = useEditMentorMutation();
 
@@ -239,8 +257,8 @@ export function EmbedTab() {
 
   // TODO: Uncomment when enable_custom_javascript is supported by API
   const isCustomJsEnabled =
-    (mentorSettings as any as { enable_custom_javascript: boolean })?.enable_custom_javascript ===
-    true;
+    (mentorSettings as any as { enable_custom_javascript: boolean })
+      ?.enable_custom_javascript === true;
   //const isCustomJsEnabled = true;
 
   // Advanced CSS state
@@ -290,10 +308,17 @@ export function EmbedTab() {
     setJsValidation(result);
   }, [jsValue]);
 
-  const hasCssChanges = useMemo(() => cssValue !== originalCssValue, [cssValue, originalCssValue]);
-  const canSaveCss = hasCssChanges && cssValidation.isValid && !isSavingAdvanced;
+  const hasCssChanges = useMemo(
+    () => cssValue !== originalCssValue,
+    [cssValue, originalCssValue],
+  );
+  const canSaveCss =
+    hasCssChanges && cssValidation.isValid && !isSavingAdvanced;
 
-  const hasJsChanges = useMemo(() => jsValue !== originalJsValue, [jsValue, originalJsValue]);
+  const hasJsChanges = useMemo(
+    () => jsValue !== originalJsValue,
+    [jsValue, originalJsValue],
+  );
   const canSaveJs = hasJsChanges && jsValidation.isValid && !isSavingAdvanced;
 
   const handleSaveCss = useCallback(async () => {
@@ -410,7 +435,10 @@ export function EmbedTab() {
             description: 'Sucessfully enabled shareable link',
           });
         } catch (error) {
-          console.error('handleShareableTokenToggle (revoke token) error: ', error);
+          console.error(
+            'handleShareableTokenToggle (revoke token) error: ',
+            error,
+          );
           setIsLoadingShareableLink(false);
           toast.toast({
             description: 'Failed to enable shareable link',
@@ -435,7 +463,10 @@ export function EmbedTab() {
             description: 'Successfull created shareable link',
           });
         } catch (error) {
-          console.error('handleShareableTokenToggle (revoke token) error: ', error);
+          console.error(
+            'handleShareableTokenToggle (revoke token) error: ',
+            error,
+          );
           setIsLoadingShareableLink(false);
           toast.toast({
             description: 'Failed to create shareable link',
@@ -465,7 +496,10 @@ export function EmbedTab() {
           description: 'Successfully disabled shareable link',
         });
       } catch (error) {
-        console.error('handleShareableTokenToggle (disable token) error: ', error);
+        console.error(
+          'handleShareableTokenToggle (disable token) error: ',
+          error,
+        );
         setIsLoadingShareableLink(false);
         toast.toast({
           description: 'Failed to disable shareable link',
@@ -477,15 +511,17 @@ export function EmbedTab() {
 
   return (
     <>
-      <div className="hidden lg:flex flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] items-center">
+      <div className="hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:flex">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Embed</h3>
-          <p className="text-gray-600 text-xs">Configure embedding options for your mentor.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Embed</h3>
+          <p className="text-xs text-gray-600">
+            Configure embedding options for your mentor.
+          </p>
         </div>
       </div>
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <div
-          className="flex-1 px-3 pt-3 space-y-4"
+          className="flex-1 space-y-4 px-3 pt-3"
           style={{
             overflowY: 'auto',
             overflowX: 'hidden',
@@ -502,17 +538,23 @@ export function EmbedTab() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1fr]">
               <div className="space-y-6">
                 {/* Advanced CSS Card */}
-                <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setIsCssExpanded(!isCssExpanded)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                    className="flex w-full items-center justify-between p-4 transition-colors hover:bg-gray-50"
                     aria-expanded={isCssExpanded}
-                    aria-label={isCssExpanded ? 'Collapse Advanced CSS' : 'Expand Advanced CSS'}
+                    aria-label={
+                      isCssExpanded
+                        ? 'Collapse Advanced CSS'
+                        : 'Expand Advanced CSS'
+                    }
                   >
                     <div className="flex items-center gap-3">
                       <Palette className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Advanced CSS</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Advanced CSS
+                      </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
@@ -524,8 +566,9 @@ export function EmbedTab() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p>
-                              Add custom CSS to style your mentor chat interface. Styles will be
-                              applied to the embedded chat widget.
+                              Add custom CSS to style your mentor chat
+                              interface. Styles will be applied to the embedded
+                              chat widget.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -533,7 +576,7 @@ export function EmbedTab() {
                     </div>
                     <div className="flex items-center gap-2">
                       {hasCssChanges && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                           Unsaved changes
                         </span>
                       )}
@@ -553,7 +596,7 @@ export function EmbedTab() {
                         permissions={mentorSettings?.permissions?.field}
                       >
                         {({ disabled }) => (
-                          <div className="p-4 space-y-4">
+                          <div className="space-y-4 p-4">
                             <div className="relative">
                               <Textarea
                                 value={cssValue}
@@ -569,23 +612,27 @@ export function EmbedTab() {
   background: #6366f1 !important;
 }`}
                                 className={cn(
-                                  'font-mono text-sm min-h-[200px] resize-y',
-                                  'bg-gray-50 border-gray-200',
-                                  'focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500',
+                                  'min-h-[200px] resize-y font-mono text-sm',
+                                  'border-gray-200 bg-gray-50',
+                                  'focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20',
                                   !cssValidation.isValid &&
                                     'border-red-300 focus:border-red-500 focus:ring-red-500/20',
                                 )}
                                 disabled={isAdvancedDisabled || disabled}
                                 aria-label="Custom CSS input"
                                 aria-invalid={!cssValidation.isValid}
-                                aria-describedby={!cssValidation.isValid ? 'css-errors' : undefined}
+                                aria-describedby={
+                                  !cssValidation.isValid
+                                    ? 'css-errors'
+                                    : undefined
+                                }
                               />
 
                               <div className="absolute top-3 right-3">
                                 {cssValue.trim() && (
                                   <div
                                     className={cn(
-                                      'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+                                      'flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium',
                                       cssValidation.isValid
                                         ? 'bg-green-50 text-green-700'
                                         : 'bg-red-50 text-red-700',
@@ -610,13 +657,13 @@ export function EmbedTab() {
                             {!cssValidation.isValid && (
                               <div
                                 id="css-errors"
-                                className="p-3 rounded-lg bg-red-50 border border-red-100"
+                                className="rounded-lg border border-red-100 bg-red-50 p-3"
                                 role="alert"
                               >
-                                <p className="text-sm font-medium text-red-800 mb-1">
+                                <p className="mb-1 text-sm font-medium text-red-800">
                                   CSS validation errors:
                                 </p>
-                                <ul className="list-disc list-inside text-sm text-red-700 space-y-0.5">
+                                <ul className="list-inside list-disc space-y-0.5 text-sm text-red-700">
                                   {cssValidation.errors.map((error, index) => (
                                     <li key={index}>{error}</li>
                                   ))}
@@ -626,7 +673,8 @@ export function EmbedTab() {
 
                             <div className="flex items-center justify-between pt-2">
                               <p className="text-xs text-gray-500">
-                                Changes will apply to the embedded chat widget after saving.
+                                Changes will apply to the embedded chat widget
+                                after saving.
                               </p>
                               <div className="flex items-center gap-2">
                                 {hasCssChanges && (
@@ -661,19 +709,23 @@ export function EmbedTab() {
                 </div>
 
                 {/* Advanced JS Card */}
-                <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setIsJsExpanded(!isJsExpanded)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                    className="flex w-full items-center justify-between p-4 transition-colors hover:bg-gray-50"
                     aria-expanded={isJsExpanded}
                     aria-label={
-                      isJsExpanded ? 'Collapse Advanced JavaScript' : 'Expand Advanced JavaScript'
+                      isJsExpanded
+                        ? 'Collapse Advanced JavaScript'
+                        : 'Expand Advanced JavaScript'
                     }
                   >
                     <div className="flex items-center gap-3">
                       <Code2 className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Advanced JavaScript</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Advanced JavaScript
+                      </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
@@ -685,8 +737,9 @@ export function EmbedTab() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p>
-                              Add custom JavaScript to enhance your mentor chat interface. Scripts
-                              will be executed when the embedded chat widget loads.
+                              Add custom JavaScript to enhance your mentor chat
+                              interface. Scripts will be executed when the
+                              embedded chat widget loads.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -694,7 +747,7 @@ export function EmbedTab() {
                     </div>
                     <div className="flex items-center gap-2">
                       {hasJsChanges && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                           Unsaved changes
                         </span>
                       )}
@@ -710,40 +763,47 @@ export function EmbedTab() {
                     <div className="border-t border-gray-100">
                       {/* Feature Disabled Notice */}
                       {!isLoadingSettings && !isCustomJsEnabled ? (
-                        <div className="flex flex-col items-center justify-center py-12 px-6">
-                          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-4">
-                            <ShieldAlert className="h-7 w-7 text-gray-400" aria-hidden="true" />
+                        <div className="flex flex-col items-center justify-center px-6 py-12">
+                          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                            <ShieldAlert
+                              className="h-7 w-7 text-gray-400"
+                              aria-hidden="true"
+                            />
                           </div>
-                          <h4 className="text-base font-semibold text-gray-900 mb-2 text-center">
+                          <h4 className="mb-2 text-center text-base font-semibold text-gray-900">
                             Custom JavaScript is Disabled
                           </h4>
-                          <p className="text-xs text-gray-600 text-center max-w-sm mb-4">
-                            For security reasons, the ability to add custom JavaScript to your
-                            mentor is restricted. This feature requires explicit approval from your
+                          <p className="mb-4 max-w-sm text-center text-xs text-gray-600">
+                            For security reasons, the ability to add custom
+                            JavaScript to your mentor is restricted. This
+                            feature requires explicit approval from your
                             organization's administrator.
                           </p>
                           <div className="flex flex-col items-center gap-2">
-                            <p className="text-xs text-gray-500 text-center">
+                            <p className="text-center text-xs text-gray-500">
                               To request access, please contact support
                             </p>
                             <a
                               href={`mailto:${supportEmail}?subject=Request%20to%20Enable%20Custom%20JavaScript&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Custom%20JavaScript%20feature%20for%20my%20mentor.%0A%0AMentor%20ID%3A%20${mentorId}%0ATenant%3A%20${tenantKey}%0A%0AThank%20you.`}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                             >
                               <Mail className="h-3.5 w-3.5" />
                               Contact Support
                             </a>
-                            <span className="text-xs text-gray-400">{supportEmail}</span>
+                            <span className="text-xs text-gray-400">
+                              {supportEmail}
+                            </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-4 space-y-4">
+                        <div className="space-y-4 p-4">
                           {/* Security Notice */}
-                          <div className="flex items-start gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50">
-                            <AlertTriangle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
                             <p className="text-xs text-blue-700">
-                              Custom JavaScript runs in the context of your mentor. Ensure your code
-                              is secure and doesn't expose sensitive information.
+                              Custom JavaScript runs in the context of your
+                              mentor. Ensure your code is secure and doesn't
+                              expose sensitive information.
                             </p>
                           </div>
 
@@ -764,9 +824,9 @@ export function EmbedTab() {
   });
 })();`}
                               className={cn(
-                                'font-mono text-sm min-h-[200px] resize-y',
-                                'bg-gray-50 border-gray-200',
-                                'focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
+                                'min-h-[200px] resize-y font-mono text-sm',
+                                'border-gray-200 bg-gray-50',
+                                'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
                                 !jsValidation.isValid &&
                                   'border-red-300 focus:border-red-500 focus:ring-red-500/20',
                               )}
@@ -786,7 +846,7 @@ export function EmbedTab() {
                               {jsValue.trim() && (
                                 <div
                                   className={cn(
-                                    'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+                                    'flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium',
                                     jsValidation.isValid
                                       ? jsValidation.warnings.length > 0
                                         ? 'bg-blue-50 text-blue-700'
@@ -820,13 +880,13 @@ export function EmbedTab() {
                           {!jsValidation.isValid && (
                             <div
                               id="js-errors"
-                              className="p-3 rounded-lg bg-red-50 border border-red-100"
+                              className="rounded-lg border border-red-100 bg-red-50 p-3"
                               role="alert"
                             >
-                              <p className="text-sm font-medium text-red-800 mb-1">
+                              <p className="mb-1 text-sm font-medium text-red-800">
                                 JavaScript validation errors:
                               </p>
-                              <ul className="list-disc list-inside text-sm text-red-700 space-y-0.5">
+                              <ul className="list-inside list-disc space-y-0.5 text-sm text-red-700">
                                 {jsValidation.errors.map((error, index) => (
                                   <li key={index}>{error}</li>
                                 ))}
@@ -834,24 +894,30 @@ export function EmbedTab() {
                             </div>
                           )}
 
-                          {jsValidation.isValid && jsValidation.warnings.length > 0 && (
-                            <div
-                              id="js-warnings"
-                              className="p-3 rounded-lg bg-blue-50 border border-blue-100"
-                              role="status"
-                            >
-                              <p className="text-sm font-medium text-blue-800 mb-1">Warnings:</p>
-                              <ul className="list-disc list-inside text-sm text-blue-700 space-y-0.5">
-                                {jsValidation.warnings.map((warning, index) => (
-                                  <li key={index}>{warning}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          {jsValidation.isValid &&
+                            jsValidation.warnings.length > 0 && (
+                              <div
+                                id="js-warnings"
+                                className="rounded-lg border border-blue-100 bg-blue-50 p-3"
+                                role="status"
+                              >
+                                <p className="mb-1 text-sm font-medium text-blue-800">
+                                  Warnings:
+                                </p>
+                                <ul className="list-inside list-disc space-y-0.5 text-sm text-blue-700">
+                                  {jsValidation.warnings.map(
+                                    (warning, index) => (
+                                      <li key={index}>{warning}</li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between pt-2">
                             <p className="text-xs text-gray-500">
-                              Scripts will execute when the embedded chat widget loads.
+                              Scripts will execute when the embedded chat widget
+                              loads.
                             </p>
                             <div className="flex items-center gap-2">
                               {hasJsChanges && (
@@ -885,29 +951,44 @@ export function EmbedTab() {
                 </div>
 
                 {/* CUSTOM FLOATING BUBBLE */}
-                <form.Subscribe selector={(formState) => [formState.values.icon_selection]}>
+                <form.Subscribe
+                  selector={(formState) => [formState.values.icon_selection]}
+                >
                   {([iconSelection]) => (
                     <>
                       <form.Field name="icon_selection">
                         {(field) => (
                           <div className="space-y-2">
-                            <h3 className="text-sm font-medium text-[#646464]">Icon Selection</h3>
+                            <h3 className="text-sm font-medium text-[#646464]">
+                              Icon Selection
+                            </h3>
                             <Select
                               defaultValue={field.state.value}
-                              onValueChange={(value) => field.handleChange(value)}
+                              onValueChange={(value) =>
+                                field.handleChange(value)
+                              }
                               disabled={form.state.isSubmitting}
                             >
                               <SelectTrigger
                                 className="text-[#646464]"
                                 aria-label="Select an embed mode"
                               >
-                                <SelectValue placeholder="Select mode" className="text-[#646464]" />
+                                <SelectValue
+                                  placeholder="Select mode"
+                                  className="text-[#646464]"
+                                />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="default" className="text-[#646464]">
+                                <SelectItem
+                                  value="default"
+                                  className="text-[#646464]"
+                                >
                                   Default
                                 </SelectItem>
-                                <SelectItem value="custom" className="text-[#646464]">
+                                <SelectItem
+                                  value="custom"
+                                  className="text-[#646464]"
+                                >
                                   Custom
                                 </SelectItem>
                               </SelectContent>
@@ -916,26 +997,32 @@ export function EmbedTab() {
                         )}
                       </form.Field>
                       {iconSelection === 'custom' && (
-                        <div className="w-full flex items-center gap-4 flex-col">
+                        <div className="flex w-full flex-col items-center gap-4">
                           <Button
                             type="button"
                             variant="outline"
                             className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100"
-                            onClick={() => setFocusEditCustomFloatingBubble(true)}
+                            onClick={() =>
+                              setFocusEditCustomFloatingBubble(true)
+                            }
                             //disabled={form.state.isSubmitting}
                           >
                             Icon Editor
                           </Button>
                           <Card>
-                            <CardHeader className="mb-0 pb-0 pt-4">
+                            <CardHeader className="mb-0 pt-4 pb-0">
                               <CardTitle className="text-sm font-medium text-[#646464]">
                                 Live Preview
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="mt-0">
                               <InteractiveBubbleConfigDisplay
-                                customFloatingBubbleConfig={customFloatingBubbleConfig}
-                                handleFloatingBubbleImageError={handleFloatingBubbleImageError}
+                                customFloatingBubbleConfig={
+                                  customFloatingBubbleConfig
+                                }
+                                handleFloatingBubbleImageError={
+                                  handleFloatingBubbleImageError
+                                }
                               />
                             </CardContent>
                           </Card>
@@ -948,20 +1035,36 @@ export function EmbedTab() {
                 <form.Field name="mode">
                   {(field) => (
                     <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-[#646464]">Mode Selection</h3>
+                      <h3 className="text-sm font-medium text-[#646464]">
+                        Mode Selection
+                      </h3>
                       <Select
                         defaultValue={field.state.value}
-                        onValueChange={(value) => field.handleChange(value as ChatMode)}
+                        onValueChange={(value) =>
+                          field.handleChange(value as ChatMode)
+                        }
                         disabled={form.state.isSubmitting}
                       >
-                        <SelectTrigger className="text-[#646464]" aria-label="Select an embed mode">
-                          <SelectValue placeholder="Select mode" className="text-[#646464]" />
+                        <SelectTrigger
+                          className="text-[#646464]"
+                          aria-label="Select an embed mode"
+                        >
+                          <SelectValue
+                            placeholder="Select mode"
+                            className="text-[#646464]"
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="default" className="text-[#646464]">
+                          <SelectItem
+                            value="default"
+                            className="text-[#646464]"
+                          >
                             Default
                           </SelectItem>
-                          <SelectItem value="advanced" className="text-[#646464]">
+                          <SelectItem
+                            value="advanced"
+                            className="text-[#646464]"
+                          >
                             Advanced
                           </SelectItem>
                         </SelectContent>
@@ -974,14 +1077,18 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-[#646464]">Starter Prompts</h3>
+                        <h3 className="text-sm font-medium text-[#646464]">
+                          Starter Prompts
+                        </h3>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about starter prompts">
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Choose the type of starter prompts to display.</p>
+                              <p>
+                                Choose the type of starter prompts to display.
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -989,7 +1096,9 @@ export function EmbedTab() {
                       <Select
                         value={field.state.value}
                         onValueChange={(value) =>
-                          field.handleChange(value as 'guided_prompt' | 'suggested_prompt')
+                          field.handleChange(
+                            value as 'guided_prompt' | 'suggested_prompt',
+                          )
                         }
                         disabled={form.state.isSubmitting}
                       >
@@ -1003,10 +1112,16 @@ export function EmbedTab() {
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="guided_prompt" className="text-[#646464]">
+                          <SelectItem
+                            value="guided_prompt"
+                            className="text-[#646464]"
+                          >
                             Guided Prompts
                           </SelectItem>
-                          <SelectItem value="suggested_prompt" className="text-[#646464]">
+                          <SelectItem
+                            value="suggested_prompt"
+                            className="text-[#646464]"
+                          >
                             Suggested Prompts
                           </SelectItem>
                         </SelectContent>
@@ -1040,7 +1155,11 @@ export function EmbedTab() {
                             </TooltipProvider>
                           </div>
                           <Select
-                            value={typeof field.state.value === 'string' ? field.state.value : ''}
+                            value={
+                              typeof field.state.value === 'string'
+                                ? field.state.value
+                                : ''
+                            }
                             onValueChange={(value) => field.handleChange(value)}
                             disabled={form.state.isSubmitting || disabled}
                           >
@@ -1097,7 +1216,9 @@ export function EmbedTab() {
                           </div>
                           <Select
                             value={field.state.value ? 'true' : 'false'}
-                            onValueChange={(value) => field.handleChange(value === 'true')}
+                            onValueChange={(value) =>
+                              field.handleChange(value === 'true')
+                            }
                             disabled={form.state.isSubmitting || disabled}
                           >
                             <SelectTrigger
@@ -1110,10 +1231,16 @@ export function EmbedTab() {
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="true" className="text-[#646464]">
+                              <SelectItem
+                                value="true"
+                                className="text-[#646464]"
+                              >
                                 Anyone
                               </SelectItem>
-                              <SelectItem value="false" className="text-[#646464]">
+                              <SelectItem
+                                value="false"
+                                className="text-[#646464]"
+                              >
                                 Authenticated Users
                               </SelectItem>
                             </SelectContent>
@@ -1124,14 +1251,18 @@ export function EmbedTab() {
                   )}
                 </WithFormPermissions>
 
-                <form.Subscribe selector={(formState) => [formState.values.allow_anonymous]}>
+                <form.Subscribe
+                  selector={(formState) => [formState.values.allow_anonymous]}
+                >
                   {([allowAnonymous]) =>
                     !allowAnonymous && (
                       <>
                         <form.Field name="website_url">
                           {(field) => (
                             <div className="space-y-2">
-                              <h3 className="text-sm font-medium text-[#646464]">Website URL</h3>
+                              <h3 className="text-sm font-medium text-[#646464]">
+                                Website URL
+                              </h3>
                               <Input
                                 placeholder="https://ibl.ai"
                                 type="url"
@@ -1142,7 +1273,9 @@ export function EmbedTab() {
                                 }}
                                 disabled={form.state.isSubmitting}
                               />
-                              <p className="text-sm text-red-500">{createTokenError}</p>
+                              <p className="text-sm text-red-500">
+                                {createTokenError}
+                              </p>
                             </div>
                           )}
                         </form.Field>
@@ -1156,7 +1289,9 @@ export function EmbedTab() {
                           onClick={createTokenHandler}
                           disabled={form.state.isSubmitting}
                         >
-                          {isCreateTokenLoading ? 'Generating Token...' : 'Get Token'}
+                          {isCreateTokenLoading
+                            ? 'Generating Token...'
+                            : 'Get Token'}
                         </Button>
                       </>
                     )
@@ -1167,7 +1302,9 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">Context Aware</span>
+                        <span className="text-sm font-medium text-[#646464]">
+                          Context Aware
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about context awareness">
@@ -1181,7 +1318,9 @@ export function EmbedTab() {
                       </div>
                       <Switch
                         checked={field.state.value}
-                        onCheckedChange={(checked) => field.handleChange(checked)}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
                         disabled={form.state.isSubmitting}
                         aria-label={`Context awareness ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
@@ -1222,7 +1361,9 @@ export function EmbedTab() {
                     {(field) => (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#646464]">Single Sign On</span>
+                          <span className="text-sm font-medium text-[#646464]">
+                            Single Sign On
+                          </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
@@ -1236,7 +1377,9 @@ export function EmbedTab() {
                         </div>
                         <Switch
                           checked={field.state.value}
-                          onCheckedChange={(checked) => field.handleChange(checked)}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
                           disabled={form.state.isSubmitting}
                         />
                       </div>
@@ -1258,22 +1401,29 @@ export function EmbedTab() {
                           <div className="space-y-2">
                             <Select
                               defaultValue={field.state.value}
-                              onValueChange={(value) => field.handleChange(value)}
+                              onValueChange={(value) =>
+                                field.handleChange(value)
+                              }
                               disabled={form.state.isSubmitting}
                             >
                               <SelectTrigger className="text-[#646464]">
-                                <SelectValue placeholder="Select one" className="text-[#646464]" />
+                                <SelectValue
+                                  placeholder="Select one"
+                                  className="text-[#646464]"
+                                />
                               </SelectTrigger>
                               <SelectContent>
-                                {integratedSsoProviders?.providers.map((provider) => (
-                                  <SelectItem
-                                    key={provider.backend_uri}
-                                    value={provider.backend_uri}
-                                    className="text-[#646464]"
-                                  >
-                                    {provider.slug}
-                                  </SelectItem>
-                                ))}
+                                {integratedSsoProviders?.providers.map(
+                                  (provider) => (
+                                    <SelectItem
+                                      key={provider.backend_uri}
+                                      value={provider.backend_uri}
+                                      className="text-[#646464]"
+                                    >
+                                      {provider.slug}
+                                    </SelectItem>
+                                  ),
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1286,7 +1436,9 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">Open By Default</span>
+                        <span className="text-sm font-medium text-[#646464]">
+                          Open By Default
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about open by default">
@@ -1300,7 +1452,9 @@ export function EmbedTab() {
                       </div>
                       <Switch
                         checked={field.state.value}
-                        onCheckedChange={(checked) => field.handleChange(checked)}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
                         disabled={form.state.isSubmitting}
                         aria-label={`Open by default ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
@@ -1312,7 +1466,9 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">Show Attachment</span>
+                        <span className="text-sm font-medium text-[#646464]">
+                          Show Attachment
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about show attachment">
@@ -1326,7 +1482,9 @@ export function EmbedTab() {
                       </div>
                       <Switch
                         checked={field.state.value}
-                        onCheckedChange={(checked) => field.handleChange(checked)}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
                         disabled={form.state.isSubmitting}
                         aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
@@ -1338,7 +1496,9 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">Show Voice Call</span>
+                        <span className="text-sm font-medium text-[#646464]">
+                          Show Voice Call
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about show voice call">
@@ -1352,7 +1512,9 @@ export function EmbedTab() {
                       </div>
                       <Switch
                         checked={field.state.value}
-                        onCheckedChange={(checked) => field.handleChange(checked)}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
                         disabled={form.state.isSubmitting}
                         aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
@@ -1373,14 +1535,18 @@ export function EmbedTab() {
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Show Voice Recording Options in Chat Interface</p>
+                              <p>
+                                Show Voice Recording Options in Chat Interface
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
                       <Switch
                         checked={field.state.value}
-                        onCheckedChange={(checked) => field.handleChange(checked)}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
                         disabled={form.state.isSubmitting}
                         aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
@@ -1392,7 +1558,9 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">Shareable Link</span>
+                        <span className="text-sm font-medium text-[#646464]">
+                          Shareable Link
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger aria-label="More info about generate shareable link">
@@ -1400,7 +1568,8 @@ export function EmbedTab() {
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
                               <p>
-                                Generate a link users can use to chat with this mentor anonymously
+                                Generate a link users can use to chat with this
+                                mentor anonymously
                               </p>
                             </TooltipContent>
                           </Tooltip>
@@ -1412,11 +1581,13 @@ export function EmbedTab() {
                         <div className="flex">
                           <RefreshCw
                             onClick={handleRegenerateToken}
-                            className="cursor-pointer mr-2 text-[#646464]"
+                            className="mr-2 cursor-pointer text-[#646464]"
                           ></RefreshCw>
                           <Switch
                             checked={shareableToken && shareableToken.enabled}
-                            onCheckedChange={(checked) => handleShareableTokenToggle(checked)}
+                            onCheckedChange={(checked) =>
+                              handleShareableTokenToggle(checked)
+                            }
                             aria-label={`Generate / Revoke shareable link ${field.state.value ? 'enabled' : 'disabled'}`}
                           />
                         </div>
@@ -1426,7 +1597,7 @@ export function EmbedTab() {
                 </form.Field>
                 <div>
                   {shareableToken && (
-                    <div className="w-full lg:w-[500px] mb-4">
+                    <div className="mb-4 w-full lg:w-[500px]">
                       <CopyCodeBlock
                         code={`${window.location.origin}/platform/${tenantKey}/${mentorId}?token=${shareableToken.token}`}
                       ></CopyCodeBlock>
@@ -1435,8 +1606,10 @@ export function EmbedTab() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-lg border bg-gray-50 h-[75vh]">
-                <form.Subscribe selector={(formState) => [formState.values.mode]}>
+              <div className="h-[75vh] overflow-hidden rounded-lg border bg-gray-50">
+                <form.Subscribe
+                  selector={(formState) => [formState.values.mode]}
+                >
                   {([mode]) => (
                     <iframe
                       id="embed-mentor-preview"
@@ -1460,25 +1633,36 @@ export function EmbedTab() {
                 open={focusEditCustomFloatingBubble}
                 onOpenChange={(open) => setFocusEditCustomFloatingBubble(open)}
               >
-                <DialogContent className="max-w-[600px] max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-h-[80vh] max-w-[600px] overflow-y-auto">
                   <DialogHeader className="mb-1">
-                    <DialogTitle className="ibl-dialog-title">Icon Editor</DialogTitle>
-                    <p className="text-gray-600 text-xs">
+                    <DialogTitle className="ibl-dialog-title">
+                      Icon Editor
+                    </DialogTitle>
+                    <p className="text-xs text-gray-600">
                       Customize your floating embed icon appearance
                     </p>
                   </DialogHeader>
                   <Tabs defaultValue="appearance" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-4 h-10">
-                      <TabsTrigger value="appearance" className="flex items-center gap-2">
-                        <Palette className="w-4 h-4" />
+                    <TabsList className="mb-4 grid h-10 w-full grid-cols-3">
+                      <TabsTrigger
+                        value="appearance"
+                        className="flex items-center gap-2"
+                      >
+                        <Palette className="h-4 w-4" />
                         Appearance
                       </TabsTrigger>
-                      <TabsTrigger value="position" className="flex items-center gap-2">
-                        <Settings className="w-4 h-4" />
+                      <TabsTrigger
+                        value="position"
+                        className="flex items-center gap-2"
+                      >
+                        <Settings className="h-4 w-4" />
                         Position
                       </TabsTrigger>
-                      <TabsTrigger value="content" className="flex items-center gap-2">
-                        <MessageCircle className="w-4 h-4" />
+                      <TabsTrigger
+                        value="content"
+                        className="flex items-center gap-2"
+                      >
+                        <MessageCircle className="h-4 w-4" />
                         Content
                       </TabsTrigger>
                       {/* <TabsTrigger
@@ -1492,28 +1676,45 @@ export function EmbedTab() {
 
                     <TabsContent value="appearance" className="space-y-6">
                       <Card>
-                        <CardHeader className="px-4 py-3 mb-0">
+                        <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
                             Visual Styling
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-2">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div className="space-y-2">
-                              <Label htmlFor="backgroundColor" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="backgroundColor"
+                                className="text-sm text-gray-600"
+                              >
                                 Background Color
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="backgroundColor"
                                   type="color"
-                                  value={customFloatingBubbleConfig.backgroundColor}
-                                  onChange={(e) => updateConfig('backgroundColor', e.target.value)}
-                                  className="w-16 h-10 p-1 border rounded"
+                                  value={
+                                    customFloatingBubbleConfig.backgroundColor
+                                  }
+                                  onChange={(e) =>
+                                    updateConfig(
+                                      'backgroundColor',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="h-10 w-16 rounded border p-1"
                                 />
                                 <Input
-                                  value={customFloatingBubbleConfig.backgroundColor}
-                                  onChange={(e) => updateConfig('backgroundColor', e.target.value)}
+                                  value={
+                                    customFloatingBubbleConfig.backgroundColor
+                                  }
+                                  onChange={(e) =>
+                                    updateConfig(
+                                      'backgroundColor',
+                                      e.target.value,
+                                    )
+                                  }
                                   placeholder="#3b82f6"
                                   className="flex-1"
                                 />
@@ -1521,20 +1722,27 @@ export function EmbedTab() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="textColor" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="textColor"
+                                className="text-sm text-gray-600"
+                              >
                                 Title Text Color
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="textColor"
                                   type="color"
                                   value={customFloatingBubbleConfig.textColor}
-                                  onChange={(e) => updateConfig('textColor', e.target.value)}
-                                  className="w-16 h-10 p-1 border rounded"
+                                  onChange={(e) =>
+                                    updateConfig('textColor', e.target.value)
+                                  }
+                                  className="h-10 w-16 rounded border p-1"
                                 />
                                 <Input
                                   value={customFloatingBubbleConfig.textColor}
-                                  onChange={(e) => updateConfig('textColor', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('textColor', e.target.value)
+                                  }
                                   placeholder="#ffffff"
                                   className="flex-1"
                                 />
@@ -1542,23 +1750,36 @@ export function EmbedTab() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="subtitleTextColor" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="subtitleTextColor"
+                                className="text-sm text-gray-600"
+                              >
                                 Subtitle Text Color
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="subtitleTextColor"
                                   type="color"
-                                  value={customFloatingBubbleConfig.subtitleTextColor}
-                                  onChange={(e) =>
-                                    updateConfig('subtitleTextColor', e.target.value)
+                                  value={
+                                    customFloatingBubbleConfig.subtitleTextColor
                                   }
-                                  className="w-16 h-10 p-1 border rounded"
+                                  onChange={(e) =>
+                                    updateConfig(
+                                      'subtitleTextColor',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="h-10 w-16 rounded border p-1"
                                 />
                                 <Input
-                                  value={customFloatingBubbleConfig.subtitleTextColor}
+                                  value={
+                                    customFloatingBubbleConfig.subtitleTextColor
+                                  }
                                   onChange={(e) =>
-                                    updateConfig('subtitleTextColor', e.target.value)
+                                    updateConfig(
+                                      'subtitleTextColor',
+                                      e.target.value,
+                                    )
                                   }
                                   placeholder="#e5e7eb"
                                   className="flex-1"
@@ -1567,13 +1788,20 @@ export function EmbedTab() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="borderRadius" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="borderRadius"
+                                className="text-sm text-gray-600"
+                              >
                                 Border Radius
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
-                                  value={customFloatingBubbleConfig.borderRadius}
-                                  onChange={(e) => updateConfig('borderRadius', e.target.value)}
+                                  value={
+                                    customFloatingBubbleConfig.borderRadius
+                                  }
+                                  onChange={(e) =>
+                                    updateConfig('borderRadius', e.target.value)
+                                  }
                                   placeholder="16"
                                   type="range"
                                   min={0}
@@ -1586,13 +1814,18 @@ export function EmbedTab() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="imageSize" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="imageSize"
+                                className="text-sm text-gray-600"
+                              >
                                 Image size
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   value={customFloatingBubbleConfig.imageSize}
-                                  onChange={(e) => updateConfig('imageSize', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('imageSize', e.target.value)
+                                  }
                                   placeholder="16"
                                   type="range"
                                   min={0}
@@ -1604,14 +1837,19 @@ export function EmbedTab() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="fontSize" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="fontSize"
+                                className="text-sm text-gray-600"
+                              >
                                 Title Font Size
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="fontSize"
                                   value={customFloatingBubbleConfig.fontSize}
-                                  onChange={(e) => updateConfig('fontSize', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('fontSize', e.target.value)
+                                  }
                                   placeholder="16"
                                   type="range"
                                   min={10}
@@ -1619,21 +1857,31 @@ export function EmbedTab() {
                                   step={1}
                                   className="flex-1"
                                 />
-                                <span className="text-xs text-gray-500 min-w-[30px] flex items-center">
+                                <span className="flex min-w-[30px] items-center text-xs text-gray-500">
                                   {customFloatingBubbleConfig.fontSize}px
                                 </span>
                               </div>
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="subtitleFontSize" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="subtitleFontSize"
+                                className="text-sm text-gray-600"
+                              >
                                 Subtitle Font Size
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="subtitleFontSize"
-                                  value={customFloatingBubbleConfig.subtitleFontSize}
-                                  onChange={(e) => updateConfig('subtitleFontSize', e.target.value)}
+                                  value={
+                                    customFloatingBubbleConfig.subtitleFontSize
+                                  }
+                                  onChange={(e) =>
+                                    updateConfig(
+                                      'subtitleFontSize',
+                                      e.target.value,
+                                    )
+                                  }
                                   placeholder="12"
                                   type="range"
                                   min={8}
@@ -1641,19 +1889,27 @@ export function EmbedTab() {
                                   step={1}
                                   className="flex-1"
                                 />
-                                <span className="text-xs text-gray-500 min-w-[30px] flex items-center">
-                                  {customFloatingBubbleConfig.subtitleFontSize}px
+                                <span className="flex min-w-[30px] items-center text-xs text-gray-500">
+                                  {customFloatingBubbleConfig.subtitleFontSize}
+                                  px
                                 </span>
                               </div>
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="shadow" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="shadow"
+                                className="text-sm text-gray-600"
+                              >
                                 Use Shadow
                               </Label>
                               <div className="mt-2">
                                 <Select
-                                  value={customFloatingBubbleConfig.shadow ? '1' : '0'}
+                                  value={
+                                    customFloatingBubbleConfig.shadow
+                                      ? '1'
+                                      : '0'
+                                  }
                                   onValueChange={(value: string) =>
                                     updateConfig('shadow', value === '1')
                                   }
@@ -1669,13 +1925,18 @@ export function EmbedTab() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="padding" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="padding"
+                                className="text-sm text-gray-600"
+                              >
                                 Padding
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   value={customFloatingBubbleConfig.padding}
-                                  onChange={(e) => updateConfig('padding', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('padding', e.target.value)
+                                  }
                                   placeholder="1"
                                   type="range"
                                   min={0}
@@ -1686,13 +1947,18 @@ export function EmbedTab() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="strokeWidth" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="strokeWidth"
+                                className="text-sm text-gray-600"
+                              >
                                 Stroke Thickness
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   value={customFloatingBubbleConfig.strokeWidth}
-                                  onChange={(e) => updateConfig('strokeWidth', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('strokeWidth', e.target.value)
+                                  }
                                   placeholder="1"
                                   type="range"
                                   min={0}
@@ -1703,20 +1969,27 @@ export function EmbedTab() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="strokeColor" className="text-sm text-gray-600">
+                              <Label
+                                htmlFor="strokeColor"
+                                className="text-sm text-gray-600"
+                              >
                                 Stroke Color
                               </Label>
-                              <div className="flex gap-2 mt-2">
+                              <div className="mt-2 flex gap-2">
                                 <Input
                                   id="strokeColor"
                                   type="color"
                                   value={customFloatingBubbleConfig.strokeColor}
-                                  onChange={(e) => updateConfig('strokeColor', e.target.value)}
-                                  className="w-16 h-10 p-1 border rounded"
+                                  onChange={(e) =>
+                                    updateConfig('strokeColor', e.target.value)
+                                  }
+                                  className="h-10 w-16 rounded border p-1"
                                 />
                                 <Input
                                   value={customFloatingBubbleConfig.strokeColor}
-                                  onChange={(e) => updateConfig('strokeColor', e.target.value)}
+                                  onChange={(e) =>
+                                    updateConfig('strokeColor', e.target.value)
+                                  }
                                   placeholder="#3b82f6"
                                   className="flex-1"
                                 />
@@ -1729,29 +2002,42 @@ export function EmbedTab() {
 
                     <TabsContent value="position" className="space-y-6">
                       <Card>
-                        <CardHeader className="px-4 py-3 mb-0">
+                        <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
                             Position & Layout
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-0">
                           <div className="space-y-2">
-                            <Label htmlFor="position" className="text-sm text-gray-600">
+                            <Label
+                              htmlFor="position"
+                              className="text-sm text-gray-600"
+                            >
                               Screen Position
                             </Label>
                             <div className="mt-2">
                               <Select
                                 value={customFloatingBubbleConfig.position}
-                                onValueChange={(value: any) => updateConfig('position', value)}
+                                onValueChange={(value: any) =>
+                                  updateConfig('position', value)
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                                  <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                                  <SelectItem value="top-right">Top Right</SelectItem>
-                                  <SelectItem value="top-left">Top Left</SelectItem>
+                                  <SelectItem value="bottom-right">
+                                    Bottom Right
+                                  </SelectItem>
+                                  <SelectItem value="bottom-left">
+                                    Bottom Left
+                                  </SelectItem>
+                                  <SelectItem value="top-right">
+                                    Top Right
+                                  </SelectItem>
+                                  <SelectItem value="top-left">
+                                    Top Left
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1762,42 +2048,55 @@ export function EmbedTab() {
 
                     <TabsContent value="content" className="space-y-6">
                       <Card>
-                        <CardHeader className="px-4 py-3 mb-0">
+                        <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
                             Text Content
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-0">
                           <div className="space-y-2">
-                            <Label htmlFor="title" className="text-sm text-gray-600">
+                            <Label
+                              htmlFor="title"
+                              className="text-sm text-gray-600"
+                            >
                               Title
                             </Label>
                             <Input
                               id="title"
                               value={customFloatingBubbleConfig.title}
-                              onChange={(e) => updateConfig('title', e.target.value)}
+                              onChange={(e) =>
+                                updateConfig('title', e.target.value)
+                              }
                               placeholder="AI-powered assistant"
                               className="mt-2"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="subtitle" className="text-sm text-gray-600">
+                            <Label
+                              htmlFor="subtitle"
+                              className="text-sm text-gray-600"
+                            >
                               Subtitle Text
                             </Label>
                             <Input
                               id="subtitle"
                               value={customFloatingBubbleConfig.subtitle}
-                              onChange={(e) => updateConfig('subtitle', e.target.value)}
+                              onChange={(e) =>
+                                updateConfig('subtitle', e.target.value)
+                              }
                               placeholder="Created with mentorAI"
                               className="mt-2"
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="iconImage" className="text-sm text-gray-600">
+                            <Label
+                              htmlFor="iconImage"
+                              className="text-sm text-gray-600"
+                            >
                               Icon Image
                             </Label>
-                            <div className="space-y-1 mt-2">
+                            <div className="mt-2 space-y-1">
                               <Input
                                 id="iconImage"
                                 type="file"
@@ -1815,14 +2114,17 @@ export function EmbedTab() {
                                     reader.readAsDataURL(file);
                                   }
                                 }}
-                                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 h-[45px]"
+                                className="h-[45px] file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
                               />
                               {customFloatingBubbleConfig.image && (
-                                <div className="flex items-center gap-3 my-3">
+                                <div className="my-3 flex items-center gap-3">
                                   <img
-                                    src={customFloatingBubbleConfig.image || '/placeholder.svg'}
+                                    src={
+                                      customFloatingBubbleConfig.image ||
+                                      '/placeholder.svg'
+                                    }
                                     alt="Chat icon preview"
-                                    className="w-12 h-12 rounded-lg object-cover border bg-gray-100 p-1"
+                                    className="h-12 w-12 rounded-lg border bg-gray-100 object-cover p-1"
                                   />
                                   <Button
                                     type="button"
@@ -1937,7 +2239,7 @@ export function EmbedTab() {
 
                   {/* Preview Section */}
                   <Card>
-                    <CardHeader className="mb-0 pb-0 pt-4">
+                    <CardHeader className="mb-0 pt-4 pb-0">
                       <CardTitle className="text-sm font-medium text-gray-600">
                         Live Preview
                       </CardTitle>
@@ -1945,7 +2247,9 @@ export function EmbedTab() {
                     <CardContent>
                       <InteractiveBubbleConfigDisplay
                         customFloatingBubbleConfig={customFloatingBubbleConfig}
-                        handleFloatingBubbleImageError={handleFloatingBubbleImageError}
+                        handleFloatingBubbleImageError={
+                          handleFloatingBubbleImageError
+                        }
                       />
                     </CardContent>
                   </Card>
@@ -1954,7 +2258,7 @@ export function EmbedTab() {
             )}
           </form>
         </div>
-        <div className="flex-shrink-0 flex justify-end bg-white border-t border-gray-200 px-3 py-4">
+        <div className="flex flex-shrink-0 justify-end border-t border-gray-200 bg-white px-3 py-4">
           <Button
             onClick={() => form.handleSubmit()}
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
@@ -1974,9 +2278,13 @@ export function EmbedTab() {
           }}
         >
           <DialogContent className="max-w-[425px] md:max-w-[85%]">
-            <DialogDescription className="sr-only">Generated embed code</DialogDescription>
+            <DialogDescription className="sr-only">
+              Generated embed code
+            </DialogDescription>
             <DialogHeader>
-              <DialogTitle className="ibl-dialog-title">Embedded Code</DialogTitle>
+              <DialogTitle className="ibl-dialog-title">
+                Embedded Code
+              </DialogTitle>
             </DialogHeader>
             <CopyCodeBlock code={embedCode} />
           </DialogContent>
@@ -1994,11 +2302,11 @@ const InteractiveBubbleConfigDisplay = ({
   handleFloatingBubbleImageError: () => void;
 }) => {
   return (
-    <div className="relative bg-gray-100 rounded-lg p-8 min-h-[200px] overflow-hidden">
+    <div className="relative min-h-[200px] overflow-hidden rounded-lg bg-gray-100 p-8">
       <div
         className={`absolute ${
           customFloatingBubbleConfig.position === 'bottom-right'
-            ? 'bottom-4 right-4'
+            ? 'right-4 bottom-4'
             : customFloatingBubbleConfig.position === 'bottom-left'
               ? 'bottom-4 left-4'
               : customFloatingBubbleConfig.position === 'top-right'
@@ -2006,17 +2314,16 @@ const InteractiveBubbleConfigDisplay = ({
                 : 'top-4 left-4'
         }`}
         style={{
-          [customFloatingBubbleConfig.position.includes('right') ? 'right' : 'left']:
-            `${customFloatingBubbleConfig.offsetX}px`,
-          [customFloatingBubbleConfig.position.includes('bottom') ? 'bottom' : 'top']:
-            `${customFloatingBubbleConfig.offsetY}px`,
+          [customFloatingBubbleConfig.position.includes('right')
+            ? 'right'
+            : 'left']: `${customFloatingBubbleConfig.offsetX}px`,
+          [customFloatingBubbleConfig.position.includes('bottom')
+            ? 'bottom'
+            : 'top']: `${customFloatingBubbleConfig.offsetY}px`,
         }}
       >
         <div
-          className={`
-                  rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 w-auto gap-2
-                  ${customFloatingBubbleConfig.shadow ? 'shadow-lg' : ''}
-                `}
+          className={`flex w-auto cursor-pointer items-center justify-center gap-2 rounded-full transition-all duration-300 ${customFloatingBubbleConfig.shadow ? 'shadow-lg' : ''} `}
           style={{
             backgroundColor: customFloatingBubbleConfig.backgroundColor,
             borderRadius: `${customFloatingBubbleConfig.borderRadius}px`,
@@ -2034,7 +2341,8 @@ const InteractiveBubbleConfigDisplay = ({
             height={customFloatingBubbleConfig.imageSize}
             onError={handleFloatingBubbleImageError}
           />
-          {(customFloatingBubbleConfig.title || customFloatingBubbleConfig.subtitle) && (
+          {(customFloatingBubbleConfig.title ||
+            customFloatingBubbleConfig.subtitle) && (
             <div className="flex flex-col items-center text-center">
               {customFloatingBubbleConfig.title && (
                 <span
@@ -2061,9 +2369,10 @@ const InteractiveBubbleConfigDisplay = ({
           )}
         </div>
       </div>
-      <div className="text-center text-sm text-gray-500 mt-8">
+      <div className="mt-8 text-center text-sm text-gray-500">
         <p>
-          Icon will appear on the {customFloatingBubbleConfig.position.replace('-', ' ')} corner
+          Icon will appear on the{' '}
+          {customFloatingBubbleConfig.position.replace('-', ' ')} corner
         </p>
       </div>
     </div>
