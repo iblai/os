@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.45.17](https://github.com/iblai/mentorai/compare/v0.45.16...v0.45.17) (2026-04-10)
+
+### Bug Fixes
+
+* failing chat history export test fixed ([3acfb44](https://github.com/iblai/mentorai/commit/3acfb44bf152939bc3a9b6b0b1ccaddadedadb1c))
+* multi aria-labels in workflow detail ([7abf327](https://github.com/iblai/mentorai/commit/7abf327e8badb08da27f8ed233ad743a13303c57))
+
 ## [0.45.16](https://github.com/iblai/mentorai/compare/v0.45.15...v0.45.16) (2026-04-09)
 
 ### Bug Fixes
