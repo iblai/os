@@ -152,7 +152,7 @@ export async function deleteCurrentWorkflow(page: Page): Promise<void> {
   await expect(deleteItem).toBeVisible({ timeout: 5_000 });
   await deleteItem.click();
 
-  const deleteModal = page.getByRole('dialog');
+  const deleteModal = page.getByRole('alertdialog');
   await expect(deleteModal).toBeVisible({ timeout: 10_000 });
 
   const confirmButton = deleteModal.getByRole('button', { name: /delete/i });
@@ -172,9 +172,7 @@ export async function editWorkflowName(
   page: Page,
   newName: string,
 ): Promise<void> {
-  const nameButton = page
-    .locator('button')
-    .filter({ has: page.locator('svg.lucide-pencil') });
+  const nameButton = page.getByRole('button', { name: 'Edit workflow name' });
   await expect(nameButton).toBeVisible({ timeout: 10_000 });
   await nameButton.click();
 

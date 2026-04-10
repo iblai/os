@@ -206,20 +206,22 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
   });
 
-  test('admin goes to workflow editor and opens more options menu with Activate and Delete', async ({
+  test('admin goes to workflow editor and opens more options menu with Deactivate and Delete', async ({
     page,
   }) => {
     await navigateToWorkflowsPage(page);
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    const moreButton = page
-      .locator('button')
-      .filter({ has: page.locator('svg.lucide-more-horizontal') });
+    const moreButton = page.getByRole('button', {
+      name: 'More workflow options',
+    });
     await expect(moreButton).toBeVisible({ timeout: 10_000 });
     await moreButton.click();
 
-    await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeVisible({
+    await expect(
+      page.getByRole('menuitem', { name: 'Deactivate' }),
+    ).toBeVisible({
       timeout: 5_000,
     });
     await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible({
@@ -331,16 +333,22 @@ test.describe('Journey 34: Workflows', () => {
       return;
     }
 
-    const moreButton = page
-      .locator('button')
-      .filter({ has: page.locator('svg.lucide-more-horizontal') });
+    const moreButton = page.getByRole('button', {
+      name: 'More workflow options',
+    });
     await moreButton.click();
 
     const deactivateItem = page.getByRole('menuitem', { name: 'Deactivate' });
     await expect(deactivateItem).toBeVisible({ timeout: 5_000 });
-    await deactivateItem.click();
-
-    await page.waitForTimeout(2_000);
+    const [deactivateResponse] = await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          resp.url().includes('/workflows') &&
+          resp.request().method() === 'POST',
+      ),
+      deactivateItem.click(),
+    ]);
+    expect(deactivateResponse.ok()).toBeTruthy();
 
     const newStatus = await getWorkflowStatus(page);
     expect(newStatus).toBe('Draft');

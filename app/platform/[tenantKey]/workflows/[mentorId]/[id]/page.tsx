@@ -626,6 +626,7 @@ export default function WorkflowDetailPage() {
                   <button
                     onClick={() => setIsEditingName(true)}
                     className="text-foreground hover:text-foreground/80 flex items-center gap-1 font-medium"
+                    aria-label="Edit workflow name"
                   >
                     {workflowName}
                     <Pencil className="h-3 w-3 opacity-50" />
