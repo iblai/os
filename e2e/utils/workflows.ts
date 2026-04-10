@@ -176,7 +176,7 @@ export async function editWorkflowName(
   await expect(nameButton).toBeVisible({ timeout: 10_000 });
   await nameButton.click();
 
-  const nameInput = page.locator('input[autofocus]');
+  const nameInput = page.getByRole('textbox', { name: 'Enter workflow name' });
   await expect(nameInput).toBeVisible({ timeout: 5_000 });
   await nameInput.fill(newName);
   await nameInput.press('Enter');

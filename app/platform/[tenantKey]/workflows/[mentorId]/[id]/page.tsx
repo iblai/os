@@ -621,6 +621,7 @@ export default function WorkflowDetailPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
                     className="text-foreground h-8 w-[200px] font-medium"
                     autoFocus
+                    aria-label="Enter workflow name"
                   />
                 ) : (
                   <button

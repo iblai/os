@@ -4,7 +4,7 @@
 
 ### Features
 
-* pass metadata from CONTEXT_UPDATE iframe message and bump @iblai/iblai-js to 1.3.10 ([abda55a](https://github.com/iblai/mentorai/commit/abda55a1eb9961638144655acdd48d4f101e644e))
+- pass metadata from CONTEXT_UPDATE iframe message and bump @iblai/iblai-js to 1.3.10 ([abda55a](https://github.com/iblai/mentorai/commit/abda55a1eb9961638144655acdd48d4f101e644e))
 
 ## [0.45.17](https://github.com/iblai/mentorai/compare/v0.45.16...v0.45.17) (2026-04-10)
 
