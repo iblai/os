@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.46.2](https://github.com/iblai/mentorai/compare/v0.46.1...v0.46.2) (2026-04-10)
+
+### Bug Fixes
+
+* **e2e:** use accessible locator for workflow name input ([82fffc4](https://github.com/iblai/mentorai/commit/82fffc4b7d2fab3e714b87cca70b7db40ef11517))
+
 ## [0.46.1](https://github.com/iblai/mentorai/compare/v0.46.0...v0.46.1) (2026-04-10)
 
 ### Bug Fixes
