@@ -86,25 +86,46 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
-  // FIXME: The flow seems to have changes here, the user expects a notification to be sent by e-mail for larger downloads
-  test.fixme(
-    'admin goes to history tab and clicks Export to trigger a file download',
-    async ({ page, editMentorPage }) => {
-      const exportBtn = editMentorPage.history.exportButton;
-      const visible = await exportBtn
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
-      if (!visible) {
-        await editMentorPage.close();
-        return;
-      }
-      await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
-      const [download] = await Promise.all([
-        page.waitForEvent('download', { timeout: 120_000 }),
-        exportBtn.click(),
-      ]);
-      expect(download.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
+  test('admin goes to history tab and clicks on Export to trigger a file download', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const exportBtn = editMentorPage.history.exportButton;
+    const visible = await exportBtn
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
+    if (!visible) {
       await editMentorPage.close();
-    },
-  );
+      return;
+    }
+    await expect(exportBtn).toBeEnabled({ timeout: 5_000 });
+    const downloadPromise = page
+      .waitForEvent('download', { timeout: 30_000 })
+      .catch(() => null);
+    await exportBtn.click();
+    const pendingToast = page.getByText(
+      /You will be notified once the report is available\./i,
+    );
+    const result = await Promise.race([
+      downloadPromise.then((d) =>
+        d ? { kind: 'download' as const, d } : null,
+      ),
+      pendingToast
+        .waitFor({ state: 'visible', timeout: 33_000 })
+        .then(() => ({ kind: 'toast' as const }))
+        .catch(() => null),
+    ]);
+    const finalResult =
+      result ??
+      (await downloadPromise.then((d) =>
+        d ? { kind: 'download' as const, d } : null,
+      ));
+    expect(finalResult).not.toBeNull();
+    if (finalResult?.kind === 'download') {
+      expect(finalResult.d.suggestedFilename()).toMatch(/\.(csv|json|xlsx?)$/i);
+    } else {
+      await expect(pendingToast).toBeVisible();
+    }
+    await editMentorPage.close();
+  });
 });
