@@ -2,20 +2,20 @@
   "version": "v1",
   "packages": {
     "@iblai/iblai-js": {
-      "signature": "cb6fd87490764b66ca886931b8b949cf",
+      "signature": "aee11319f52ecfa64d7f7ecd58d03bfe",
       "file": true,
-      "replaced": "1.0.37"
+      "replaced": "1.3.10"
     },
     "@iblai/data-layer": {
-      "signature": "7eab6c387dff19f8a78860ed74e4559d",
+      "signature": "0f43b871eff9308a58b0b7740d6123f5",
       "file": true
     },
     "@iblai/web-utils": {
-      "signature": "ca19a1575e5cde6dd7fe2656c5a3e9e8",
+      "signature": "82c53e6eb9976c9fec8c818d353fe90d",
       "file": true
     },
     "@iblai/web-containers": {
-      "signature": "e99015c6c1facf404cc7b5f2f9e0648e",
+      "signature": "c761a85beff703d22f140fa7bad17cd7",
       "file": true
     }
   }
