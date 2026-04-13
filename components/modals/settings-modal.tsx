@@ -196,8 +196,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             </TableCell>
                             <TableCell className="px-3 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {/* @ts-expect-error - llm_provider property may not exist on mentor type */}
                                 {
+                                  // @ts-expect-error llm_provider property may not exist on mentor type
                                   getLLMProviderDetails(mentor?.llm_provider)
                                     .name
                                 }

@@ -299,9 +299,9 @@ export function DisclaimersTab() {
           </WithPermissions>
 
           {/* Advisory */}
-          {/* @ts-ignore disclaimer not in type of MentorSettingsPublic */}
           <WithFormPermissions
             name="disclaimer"
+            // @ts-ignore permissions not in type of MentorSettingsPublic
             permissions={mentorSettings?.permissions?.field}
           >
             {({ disabled }) => (

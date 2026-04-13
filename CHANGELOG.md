@@ -1,5 +1,140 @@
 # Changelog
 
+## [0.46.2](https://github.com/iblai/mentorai/compare/v0.46.1...v0.46.2) (2026-04-10)
+
+### Bug Fixes
+
+- **e2e:** use accessible locator for workflow name input ([82fffc4](https://github.com/iblai/mentorai/commit/82fffc4b7d2fab3e714b87cca70b7db40ef11517))
+
+## [0.46.1](https://github.com/iblai/mentorai/compare/v0.46.0...v0.46.1) (2026-04-10)
+
+### Bug Fixes
+
+- **e2e:** replace arbitrary timeout with waitForResponse and fix workflow locators ([23443e3](https://github.com/iblai/mentorai/commit/23443e3f21156257d6fbed3520cb637d39ed1d0f))
+
+## [0.46.0](https://github.com/iblai/mentorai/compare/v0.45.17...v0.46.0) (2026-04-10)
+
+### Features
+
+- pass metadata from CONTEXT_UPDATE iframe message and bump @iblai/iblai-js to 1.3.10 ([abda55a](https://github.com/iblai/mentorai/commit/abda55a1eb9961638144655acdd48d4f101e644e))
+
+## [0.45.17](https://github.com/iblai/mentorai/compare/v0.45.16...v0.45.17) (2026-04-10)
+
+### Bug Fixes
+
+- failing chat history export test fixed ([3acfb44](https://github.com/iblai/mentorai/commit/3acfb44bf152939bc3a9b6b0b1ccaddadedadb1c))
+- multi aria-labels in workflow detail ([7abf327](https://github.com/iblai/mentorai/commit/7abf327e8badb08da27f8ed233ad743a13303c57))
+
+## [0.45.16](https://github.com/iblai/mentorai/compare/v0.45.15...v0.45.16) (2026-04-09)
+
+### Bug Fixes
+
+- resolve strict mode violation for "More options" button and allow CI bot tools ([d35161b](https://github.com/iblai/mentorai/commit/d35161b34452dcfe53aa8138fd4296a01228e0e8)), closes [#main-content-container](https://github.com/iblai/mentorai/issues/main-content-container)
+
+## [0.45.15](https://github.com/iblai/mentorai/compare/v0.45.14...v0.45.15) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** instruct coverage bot to actually execute gh pr review command ([d8df598](https://github.com/iblai/mentorai/commit/d8df598a452c069c78adeb7eaeff3c16978db1eb))
+
+## [0.45.14](https://github.com/iblai/mentorai/compare/v0.45.13...v0.45.14) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** skip e2e coverage bot for Dependabot PRs ([c4ec729](https://github.com/iblai/mentorai/commit/c4ec72925a35389c267cdbbfd4993f36a2bdcc60))
+
+## [0.45.13](https://github.com/iblai/mentorai/compare/v0.45.12...v0.45.13) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** remove claude-review-coverage job references from spa-pr-validation ([d3156df](https://github.com/iblai/mentorai/commit/d3156df4b631db7fa266a27f80d2ae3d6280a501))
+
+## [0.45.12](https://github.com/iblai/mentorai/compare/v0.45.11...v0.45.12) (2026-04-09)
+
+### Bug Fixes
+
+- **e2e:** fix workflow bot if condition and improve workflow test utils ([a4b2154](https://github.com/iblai/mentorai/commit/a4b215432b44f5f14042a8aeb316bb3fb97cee5d))
+
+## [0.45.11](https://github.com/iblai/mentorai/compare/v0.45.10...v0.45.11) (2026-04-08)
+
+### Bug Fixes
+
+- register new ALB target before deregistering old ([54bff2f](https://github.com/iblai/mentorai/commit/54bff2f94f93ff2e76a0f19f265c7b5bf6a6fc71))
+
+## [0.45.10](https://github.com/iblai/mentorai/compare/v0.45.9...v0.45.10) (2026-04-08)
+
+### Chores
+
+- add mamigot as code owner for entire repo ([613f0ea](https://github.com/iblai/mentorai/commit/613f0ea8cb476f433fe9343a9aab62d064037bbc))
+
+## [0.45.9](https://github.com/iblai/mentorai/compare/v0.45.8...v0.45.9) (2026-04-08)
+
+## [0.45.8](https://github.com/iblai/mentorai/compare/v0.45.7...v0.45.8) (2026-04-08)
+
+### Tests
+
+- full pipeline — launch → OCI playwright tests → terminate ([5d89faa](https://github.com/iblai/mentorai/commit/5d89faa6fdf48e5279a3c1a5fe2ee10d79d90516))
+
+## [0.45.7](https://github.com/iblai/mentorai/compare/v0.45.6...v0.45.7) (2026-04-08)
+
+### Chores
+
+- remove test workflows ([c382836](https://github.com/iblai/mentorai/commit/c3828360e80cd5f12acb968804815d39cc85ef3d))
+
+## [0.45.6](https://github.com/iblai/mentorai/compare/v0.45.5...v0.45.6) (2026-04-08)
+
+### Bug Fixes
+
+- **e2e:** fix auth setup redirect loop and add e2e coverage bot ([9c278a7](https://github.com/iblai/mentorai/commit/9c278a74dc79711940caca5092c083e59861aa42))
+
+## [0.45.5](https://github.com/iblai/mentorai/compare/v0.45.4...v0.45.5) (2026-04-08)
+
+### Tests
+
+- add focused launch flow test workflow ([4e5b639](https://github.com/iblai/mentorai/commit/4e5b63919d815968a8d38811e302fbd61d98b382))
+
+## [0.45.4](https://github.com/iblai/mentorai/compare/v0.45.3...v0.45.4) (2026-04-08)
+
+### Bug Fixes
+
+- handle workflow_dispatch — skip PR-specific jobs, fallback pr-number ([5559f13](https://github.com/iblai/mentorai/commit/5559f130b0bcd3bd84f61a4644715c9f9c6de7f8))
+
+### Tests
+
+- add minimal workflow to debug startup_failure ([fcabf61](https://github.com/iblai/mentorai/commit/fcabf6144136076e55feec144e07c5301efa326d))
+
+## [0.45.3](https://github.com/iblai/mentorai/compare/v0.45.2...v0.45.3) (2026-04-08)
+
+### Bug Fixes
+
+- address TypeScript ignore comments in prompts and safety tabs for better type handling ([a6d6739](https://github.com/iblai/mentorai/commit/a6d67396469d84b6fbf0abed826162390dcb6fde))
+- mark tests in mentor history and memory tabs as FIXME due to flow changes ([d5deb78](https://github.com/iblai/mentorai/commit/d5deb78bf63de35b97761899681d6be78af1ec05))
+- **tests:** update button mock implementation and enhance accessibility in command items ([9bfae2c](https://github.com/iblai/mentorai/commit/9bfae2c0eec45565c8f5d7fb0631e048d75e1e4b))
+- update unit tests ([187d35c](https://github.com/iblai/mentorai/commit/187d35cd24162833f31419748e39a599fa32ea37))
+
+### Chores
+
+- fixed typecheck issues ([e352b3e](https://github.com/iblai/mentorai/commit/e352b3ea048b9e0e473010c1da9aa1baeabb4c19))
+- **tests:** update unit tests coverage for use screen sharing hook ([727a883](https://github.com/iblai/mentorai/commit/727a883cc286f0e3426728cb2bc8ed914c414f21))
+
+## [0.45.2](https://github.com/iblai/mentorai/compare/v0.45.1...v0.45.2) (2026-04-08)
+
+### Bug Fixes
+
+- simplify run-name expression ([e3d14bd](https://github.com/iblai/mentorai/commit/e3d14bdbe48a13efcdb410721c37e0eef92f1d13))
+
+## [0.45.1](https://github.com/iblai/mentorai/compare/v0.45.0...v0.45.1) (2026-04-08)
+
+### Bug Fixes
+
+- handle workflow_dispatch in run-name and concurrency group ([a9faeb8](https://github.com/iblai/mentorai/commit/a9faeb8418bef2c9be8bc0155e6ce3d2f2685255))
+
+## [0.45.0](https://github.com/iblai/mentorai/compare/v0.44.8...v0.45.0) (2026-04-08)
+
+### Features
+
+- add spa-pr-validation-new.yml to main for testing ([9cf949f](https://github.com/iblai/mentorai/commit/9cf949fa58da0407cfe5eb07b1f918c53f7b8f55))
+
 ## [0.44.8](https://github.com/iblai/mentorai/compare/v0.44.7...v0.44.8) (2026-04-07)
 
 ### Bug Fixes
