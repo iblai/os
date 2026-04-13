@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
-import {
-  useMentorSegments,
-  MENTOR_SEGMENTS,
-} from '../use-mentor-segments';
+import { useMentorSegments, MENTOR_SEGMENTS } from '../use-mentor-segments';
 import { MODALS, UserType } from '@/lib/constants';
 import { EDIT_MENTOR_TAB_COMPONENTS } from '@/components/modals/edit-mentor-modal';
 
