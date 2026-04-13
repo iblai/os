@@ -60,15 +60,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 // UI primitive stubs so we can drive the form without Radix portals.
-vi.mock('@/components/ui/button', () => ({
-  Button: React.forwardRef(
+vi.mock('@/components/ui/button', () => {
+  const Button = React.forwardRef(
     ({ children, onClick, disabled, ...rest }: any, ref: any) => (
       <button ref={ref} onClick={onClick} disabled={disabled} {...rest}>
         {children}
       </button>
     ),
-  ),
-}));
+  );
+  Button.displayName = 'Button';
+  return { Button };
+});
 
 vi.mock('@/components/ui/input', () => ({
   Input: (props: any) => <input {...props} />,
