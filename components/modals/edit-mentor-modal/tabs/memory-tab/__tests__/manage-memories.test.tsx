@@ -40,6 +40,14 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockCreateMentorMemory,
     { isLoading: mockCreateMentorMemoryLoading() },
   ],
+  // Category mutation hooks used by ManageCategoriesModal. The modal itself
+  // is stubbed below via `vi.mock('../manage-categories-modal', ...)`, but
+  // these stubs guard against any transitive resolution of the module.
+  useCreateMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  useDeleteMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  // Pulled in transitively via use-mentor-settings on some import chains.
+  useGetMemsearchConfigQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 vi.mock('sonner', () => ({
@@ -155,6 +163,11 @@ vi.mock('../edit-memory-modal', () => ({
         </button>
       </div>
     ) : null,
+}));
+
+vi.mock('../manage-categories-modal', () => ({
+  ManageCategoriesModal: ({ open }: any) =>
+    open ? <div data-testid="manage-categories-modal" /> : null,
 }));
 
 vi.mock('../add-memory-modal', () => ({

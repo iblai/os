@@ -22,6 +22,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetMentorSettingsQuery(...args),
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
+  useGetMemsearchConfigQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 const mockGetCachedApiResponse = vi.fn();
