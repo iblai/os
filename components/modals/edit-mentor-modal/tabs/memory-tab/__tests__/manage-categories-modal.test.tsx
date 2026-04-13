@@ -41,9 +41,21 @@ vi.mock('sonner', () => ({
 }));
 
 // Dialog ⇒ render children when open; skip Radix portals/animations.
+// The hidden `dialog-dismiss` button exposes the component's onOpenChange
+// wrapper so tests can exercise the reset-on-close code path.
 vi.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ open, children }: any) =>
-    open ? <div role="dialog">{children}</div> : null,
+  Dialog: ({ open, onOpenChange, children }: any) =>
+    open ? (
+      <div role="dialog">
+        <button
+          data-testid="dialog-dismiss"
+          onClick={() => onOpenChange?.(false)}
+        >
+          dismiss
+        </button>
+        {children}
+      </div>
+    ) : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
@@ -258,5 +270,114 @@ describe('ManageCategoriesModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('creates a category when Enter is pressed inside the new-name input', async () => {
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    const input = screen.getByPlaceholderText('New category name');
+    fireEvent.change(input, { target: { value: 'Quick Add' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(mockCreateCategory).toHaveBeenCalledWith({
+        org: 'org-1',
+        mentorId: 'mentor-1',
+        data: { name: 'Quick Add', slug: 'quick_add' },
+      });
+    });
+  });
+
+  it('does not submit on Enter when the new-name input is empty', () => {
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    const input = screen.getByPlaceholderText('New category name');
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(mockCreateCategory).not.toHaveBeenCalled();
+  });
+
+  it('saves an edit when Enter is pressed inside the edit input', async () => {
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Work' }));
+    const editInput = (
+      screen.getAllByRole('textbox') as HTMLInputElement[]
+    )[1]!;
+    fireEvent.change(editInput, { target: { value: 'Work Renamed' } });
+    fireEvent.keyDown(editInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(mockUpdateCategory).toHaveBeenCalledWith({
+        org: 'org-1',
+        mentorId: 'mentor-1',
+        categoryId: 2,
+        data: { name: 'Work Renamed' },
+      });
+    });
+  });
+
+  it('cancels an edit when Escape is pressed inside the edit input', () => {
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Work' }));
+    const editInput = (
+      screen.getAllByRole('textbox') as HTMLInputElement[]
+    )[1]!;
+    fireEvent.change(editInput, { target: { value: 'Scrap' } });
+    fireEvent.keyDown(editInput, { key: 'Escape' });
+
+    expect(mockUpdateCategory).not.toHaveBeenCalled();
+    expect(screen.getByText('Work')).toBeTruthy();
+  });
+
+  it('does not call update when the trimmed edit name is empty', () => {
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Work' }));
+    const editInput = (
+      screen.getAllByRole('textbox') as HTMLInputElement[]
+    )[1]!;
+    fireEvent.change(editInput, { target: { value: '   ' } });
+    fireEvent.keyDown(editInput, { key: 'Enter' });
+
+    expect(mockUpdateCategory).not.toHaveBeenCalled();
+  });
+
+  it('resets transient state when the dialog dispatches onOpenChange(false)', () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ManageCategoriesModal {...defaultProps} onOpenChange={onOpenChange} />,
+    );
+
+    // Populate new-name, start an edit, and stage a delete confirm so
+    // that every reset branch inside the wrapper has work to do.
+    fireEvent.change(screen.getByPlaceholderText('New category name'), {
+      target: { value: 'Draft' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Work' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Work' }));
+
+    // Dispatch the close from the Dialog mock → component wrapper runs
+    // cancelEdit/setConfirmDeleteId(null)/setNewName('') before forwarding.
+    fireEvent.click(screen.getByTestId('dialog-dismiss'));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('toasts an error when an update fails', async () => {
+    makeRejectingUnwrap(mockUpdateCategory, new Error('update boom'));
+    render(<ManageCategoriesModal {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Work' }));
+    const editInput = (
+      screen.getAllByRole('textbox') as HTMLInputElement[]
+    )[1]!;
+    fireEvent.change(editInput, { target: { value: 'Workflow' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save category' }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to update category');
+    });
   });
 });
