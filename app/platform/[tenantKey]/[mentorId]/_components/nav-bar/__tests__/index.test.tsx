@@ -180,7 +180,7 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: true,
     }),
-    useGetMemsearchConfigQuery: () => ({
+    useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: false },
       isLoading: false,
       isSuccess: true,

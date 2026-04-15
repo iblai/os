@@ -36,7 +36,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     data: mockMentorSettings(),
     isSuccess: mockMentorSettings() !== undefined,
   }),
-  useGetMemsearchConfigQuery: () => ({
+  useGetMemsearchStatusQuery: () => ({
     data: { enable_memsearch: mockMemsearchEnabled() },
   }),
 }));

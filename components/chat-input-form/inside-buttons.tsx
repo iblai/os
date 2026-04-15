@@ -46,6 +46,8 @@ export const InsideButtons = ({
   tenantKey,
   username,
 }: InsideButtonsProps) => {
+  console.log('memory==> isAnonymousMentor', isAnonymousMentor);
+  console.log('memory==> memoryEnabled', memoryEnabled);
   const allInsideButtons = [
     {
       name: 'Canvas',

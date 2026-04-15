@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   useGetMentorPublicSettingsQuery,
   useGetMentorSettingsQuery,
-  useGetMemsearchConfigQuery,
+  useGetMemsearchStatusQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { useUsername } from '@/providers/use-user';
@@ -104,13 +104,15 @@ export function useMentorSettings({
     },
   );
 
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+  const { data: memsearchConfig } = useGetMemsearchStatusQuery(
     {
       org: tenantKey ?? '',
       userId: username ?? '',
     },
     {
       skip: !tenantKey || !username || isOffline,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
     },
   );
 

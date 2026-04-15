@@ -21,7 +21,7 @@ import {
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import {
   useGetMentorSettingsQuery,
-  useGetMemsearchConfigQuery,
+  useGetMemsearchStatusQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { MODALS, UserType } from '@/lib/constants';
@@ -352,13 +352,15 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
     },
   );
 
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+  const { data: memsearchConfig } = useGetMemsearchStatusQuery(
     {
       org: tenantKey,
       userId: username ?? '',
     },
     {
       skip: !tenantKey || !username,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
     },
   );
 

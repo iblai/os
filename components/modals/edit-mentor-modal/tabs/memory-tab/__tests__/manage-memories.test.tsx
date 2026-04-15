@@ -47,7 +47,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useUpdateMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
   useDeleteMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
   // Pulled in transitively via use-mentor-settings on some import chains.
-  useGetMemsearchConfigQuery: () => ({ data: undefined, isLoading: false }),
+  useGetMemsearchStatusQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 vi.mock('sonner', () => ({
