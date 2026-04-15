@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.46.3](https://github.com/iblai/mentorai/compare/v0.46.2...v0.46.3) (2026-04-15)
+
+### Bug Fixes
+
+* **mentor:** adding fixes for unit tests in memory ([7d7f2dd](https://github.com/iblai/mentorai/commit/7d7f2ddb712e3b1f363e10ab7723d8f80084b751))
+* **mentor:** lint check fixes ([93c5b77](https://github.com/iblai/mentorai/commit/93c5b7798034d59e95a875e5f18378272b924abc))
+
+### Chores
+
+* **e2e:** update coverage for memory category management and tenant memory toggle [skip ci] ([7852d66](https://github.com/iblai/mentorai/commit/7852d66f110d19a9fad246bb7d0085217a86f8f6))
+* **mentor:** adding memory categories and students memory ([48744c4](https://github.com/iblai/mentorai/commit/48744c4ae3f4405b268d5ac0632e3963894e302c))
+* **mentor:** fixes for the mem search status ([0cd1578](https://github.com/iblai/mentorai/commit/0cd1578d5c871fc19c31df958a2ce4ffb60dcbb5))
+* **mentor:** version bump for iblai-js ([ab7e0af](https://github.com/iblai/mentorai/commit/ab7e0af8ecc6c5c0ca8c194933f90688985f3f85))
+
+### Tests
+
+* **mentor:** 95% coverage for unit tests ([27794f0](https://github.com/iblai/mentorai/commit/27794f0c0fedc663e1f6a34e35e5b6cb86a6d007))
+
 ## [0.46.2](https://github.com/iblai/mentorai/compare/v0.46.1...v0.46.2) (2026-04-10)
 
 ### Bug Fixes
