@@ -24,6 +24,10 @@ interface InsideButtonsProps {
   onOpenPromptGallery?: () => void;
   embedMode?: boolean;
   promptsIsEnabled?: boolean;
+  memoryEnabled?: boolean;
+  isAnonymousMentor?: boolean;
+  tenantKey?: string;
+  username?: string;
 }
 
 export const InsideButtons = ({
@@ -37,7 +41,13 @@ export const InsideButtons = ({
   onOpenPromptGallery,
   embedMode = false,
   promptsIsEnabled = false,
+  memoryEnabled = false,
+  isAnonymousMentor = false,
+  tenantKey,
+  username,
 }: InsideButtonsProps) => {
+  console.log('memory==> isAnonymousMentor', isAnonymousMentor);
+  console.log('memory==> memoryEnabled', memoryEnabled);
   const allInsideButtons = [
     {
       name: 'Canvas',
@@ -71,9 +81,8 @@ export const InsideButtons = ({
       name: 'Memory',
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
-      // Memory actions are disabled for now.
-      action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
-      isEnabled: false,
+      action: () => onOptionClick(TOOLS.MEMORY),
+      isEnabled: memoryEnabled && !embedMode && !isAnonymousMentor,
     },
   ].filter((item) => item.isEnabled);
 
@@ -115,9 +124,14 @@ export const InsideButtons = ({
     <div className="relative flex items-center gap-1.5">
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
-        // Memory buttons are disabled for now.
-        /* istanbul ignore next */ if (button.name === 'Memory') {
-          return <MemoryButton key={button.name} />;
+        if (button.name === 'Memory') {
+          return (
+            <MemoryButton
+              key={button.name}
+              tenantKey={tenantKey}
+              username={username}
+            />
+          );
         }
 
         return (
