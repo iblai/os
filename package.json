@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.46.3",
+  "version": "0.46.4",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.46.4](https://github.com/iblai/mentorai/compare/v0.46.3...v0.46.4) (2026-04-16)
+
+### Bug Fixes
+
+* **e2e:** re-enable analytics tab tests and fixme financial/CSV editor tests ([e3e3b9f](https://github.com/iblai/mentorai/commit/e3e3b9f3c2a268af1228f91d0c098573266e5f99))
+
 ## [0.46.3](https://github.com/iblai/mentorai/compare/v0.46.2...v0.46.3) (2026-04-15)
 
 ### Bug Fixes
