@@ -20,6 +20,46 @@ setup('authenticate non-admin', async ({ page }, testInfo) => {
   );
   fs.mkdirSync(path.dirname(authFile), { recursive: true });
 
+  // ── Step 0: Intercept request-jwt ────────────────────────────────────────
+  // web-utils 1.2.5 calls POST /ibl-auth/request-jwt/ synchronously on mount.
+  // If the Open edX session cookie is absent, it 401s and AuthProvider
+  // immediately redirects away from the app — before we can save storage state.
+  // Strategy: pass through if the real request succeeds; otherwise return a
+  // stub JWT with no user_id so validateJwtToken skips the mismatch guard.
+  await page.route('**/ibl-auth/request-jwt/**', async (route) => {
+    if (route.request().method() !== 'POST') {
+      return route.continue();
+    }
+    try {
+      const response = await route.fetch();
+      if (response.ok()) {
+        console.log(
+          `[auth-nonadmin.setup] [${browserKey}] request-jwt: real token received`,
+        );
+        return route.fulfill({ response });
+      }
+      console.log(
+        `[auth-nonadmin.setup] [${browserKey}] request-jwt: status ${response.status()} → returning stub JWT`,
+      );
+    } catch {
+      console.log(
+        `[auth-nonadmin.setup] [${browserKey}] request-jwt: fetch error → returning stub JWT`,
+      );
+    }
+    const header = Buffer.from(
+      JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+    ).toString('base64url');
+    const stubPayload = Buffer.from(
+      JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+    ).toString('base64url');
+    const stubJwt = `${header}.${stubPayload}.stub`;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: stubJwt }),
+    });
+  });
+
   // ── Step 1: Navigate to the app ──────────────────────────────────────────
   console.log(
     `[auth-nonadmin.setup] [${browserKey}] Step 1: Navigating to ${HOST}`,
@@ -107,6 +147,22 @@ setup('authenticate non-admin', async ({ page }, testInfo) => {
     `[auth-nonadmin.setup] [${browserKey}] axd_token: ${axdToken ? 'present' : 'NULL'}`,
   );
   expect(dmToken).not.toBeNull();
+
+  // ── Step 7b: Wait for edx_jwt_token (set async by AuthProvider) ───────────
+  console.log(
+    `[auth-nonadmin.setup] [${browserKey}] Step 7b: Waiting up to 30s for edx_jwt_token…`,
+  );
+  try {
+    await page.waitForFunction(
+      () => localStorage.getItem('edx_jwt_token') !== null,
+      { timeout: 30_000 },
+    );
+    console.log(`[auth-nonadmin.setup] [${browserKey}] edx_jwt_token: present`);
+  } catch {
+    console.warn(
+      `[auth-nonadmin.setup] [${browserKey}] edx_jwt_token: NULL — timed out`,
+    );
+  }
 
   // ── Step 8: Save storage state ────────────────────────────────────────────
   await page.context().storageState({ path: authFile });

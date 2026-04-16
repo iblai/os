@@ -1,5 +1,6 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -24,30 +25,7 @@ import {
   AuditLogTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
-import { MODALS, UserType } from '@/lib/constants';
-import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
-import { useGetMemsearchConfigQuery } from '@iblai/iblai-js/data-layer';
-import { useParams } from 'next/navigation';
-import { useIsAdmin, useUsername } from '@/hooks/use-user';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import { rbacPermissionToDisplay } from '@/hoc/utils';
-import {
-  Settings,
-  Brain,
-  Terminal,
-  Plug,
-  Wrench,
-  Shield,
-  Clock,
-  Grid,
-  Key,
-  MonitorSmartphone,
-  FileWarning,
-  UserCog,
-  Archive,
-  ScrollText,
-} from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { MODALS } from '@/lib/constants';
 import {
   Select,
   SelectContent,
@@ -57,352 +35,44 @@ import {
 } from '@/components/ui/select';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
-import { checkRbacPermission } from '@/hoc/withPermissions';
-import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
-import { useAppSelector } from '@/lib/hooks';
-import { useUserType } from '@/hooks/use-user-type';
-import { MentorVisibilityEnum } from '@iblai/iblai-api';
-import { config } from '@/lib/config';
+import { useMentorSegments } from '@/hooks/use-mentor-segments';
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-const editMentorTabs = [
-  {
-    label: 'Settings',
-    value: MODALS.EDIT_MENTOR.tabs.settings,
-    component: <SettingsTab />,
-    icon: Settings,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#show_settings`,
-    permissionFieldsCheck: [
-      'mentor_name',
-      'mentor_description',
-      'profile_image',
-      'mentor_visibility',
-      'metadata',
-      'allow_anonymous',
-      'is_lti_accessible',
-      'show_attachment',
-      'show_voice_call',
-      'show_voice_record',
-    ],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Access',
-    value: MODALS.EDIT_MENTOR.tabs.access,
-    component: <AccessTab />,
-    userTypes: [UserType.ADMIN],
-    icon: UserCog,
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#read_shared_mentor`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-  },
-  {
-    label: 'LLM',
-    value: MODALS.EDIT_MENTOR.tabs.llm,
-    component: <LLMTab />,
-    icon: Brain,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) => `/mentors/${_mentorDbId}/llms/#list`,
-    permissionFieldsCheck: ['llm_provider'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Prompts',
-    value: MODALS.EDIT_MENTOR.tabs.prompts,
-    component: <PromptsTab />,
-    icon: Terminal,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/prompts/#list&/mentors/${_mentorDbId}/#view_prompts_menu`,
-    permissionFieldsCheck: [
-      'system_prompt',
-      'proactive_prompt',
-      'guided_prompt_instructions',
-    ],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Safety',
-    value: MODALS.EDIT_MENTOR.tabs.safety,
-    component: <SafetyTab />,
-    icon: Shield,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#view_moderation_logs`,
-    permissionFieldsCheck: [
-      'moderation_system_prompt',
-      'safety_system_prompt',
-      'moderation_response',
-      'safety_response',
-    ],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Disclaimers',
-    value: MODALS.EDIT_MENTOR.tabs.disclaimer,
-    component: <DisclaimersTab />,
-    icon: FileWarning,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#view_disclaimers&/mentors/${_mentorDbId}/#view_disclaimers_menu`,
-    permissionFieldsCheck: ['disclaimer'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Tools',
-    value: MODALS.EDIT_MENTOR.tabs.tools,
-    component: <ToolsTab />,
-    icon: Wrench,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/tools/#list&/mentors/${_mentorDbId}/#view_tools_menu`,
-    permissionFieldsCheck: ['mentor_tools'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'MCP',
-    value: MODALS.EDIT_MENTOR.tabs.mcp,
-    component: <McpTab />,
-    icon: Plug,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/mcpservers/#list`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Memory',
-    value: MODALS.EDIT_MENTOR.tabs.memory,
-    component: <MemoryTab />,
-    icon: Archive,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/memory/#list`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  // {
-  //   label: "Flow",
-  //   value: MODALS.EDIT_MENTOR.tabs.flow,
-  //   component: <FlowTab />,
-  // },
-  {
-    label: 'History',
-    value: MODALS.EDIT_MENTOR.tabs.history,
-    component: <HistoryTab />,
-    icon: Clock,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#view_chat_history`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Audit',
-    value: MODALS.EDIT_MENTOR.tabs.audit_log,
-    component: <AuditLogTab />,
-    icon: ScrollText,
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-  },
-  {
-    label: 'Datasets',
-    value: MODALS.EDIT_MENTOR.tabs.datasets,
-    component: <DatasetsTab />,
-    icon: Grid,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/documents/#list`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'API',
-    value: MODALS.EDIT_MENTOR.tabs.api,
-    component: <ApiTab />,
-    icon: Key,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: () => '/apitokens/#list',
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    label: 'Embed',
-    value: MODALS.EDIT_MENTOR.tabs.embed,
-    component: <EmbedTab />,
-    icon: MonitorSmartphone,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (_mentorDbId: number) =>
-      `/mentors/${_mentorDbId}/#can_use_embed`,
-    permissionFieldsCheck: ['custom_css', 'allow_anonymous'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-];
+/**
+ * Maps a mentor segment value to the React component rendered inside its
+ * tab panel. The keys MUST stay in sync with `MENTOR_SEGMENTS` in
+ * `hooks/use-mentor-segments.ts`. The covering test in
+ * `hooks/__tests__/use-mentor-segments.test.tsx` enforces this.
+ */
+export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
+  [MODALS.EDIT_MENTOR.tabs.settings]: <SettingsTab />,
+  [MODALS.EDIT_MENTOR.tabs.access]: <AccessTab />,
+  [MODALS.EDIT_MENTOR.tabs.llm]: <LLMTab />,
+  [MODALS.EDIT_MENTOR.tabs.prompts]: <PromptsTab />,
+  [MODALS.EDIT_MENTOR.tabs.safety]: <SafetyTab />,
+  [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
+  [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
+  [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
+  [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
+  [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
+  [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
+  [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
+};
 
 export function EditMentorModal({ isOpen, onClose }: Props) {
   const { changeModalTab, getEditMentorTab } = useNavigate();
-  const { getMentorId } = useNavigate();
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  const username = useUsername();
-  const [filteredTabs, setFilteredTabs] = useState<typeof editMentorTabs>([]);
-
-  const { data: mentorSettings, isSuccess } = useGetMentorSettingsQuery(
-    {
-      mentor: getMentorId() || mentorId,
-      org: tenantKey,
-      // @ts-expect-error userId is no part of the useGetMentorSettingsQuery Query definition
-      userId: username ?? '',
-    },
-    {
-      skip: !(getMentorId() || mentorId) || !tenantKey || !username,
-    },
-  );
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
-    {
-      org: tenantKey,
-      userId: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
-  const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-  const { isUserTypeAllowed } = useUserType(mentorSettings);
-  const isAdmin = useIsAdmin();
-  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const { filteredSegments } = useMentorSegments({ preferModalMentorId: true });
   const activeTab = getEditMentorTab() || MODALS.EDIT_MENTOR.tabs.settings;
 
   const handleTabChange = (tabValue: string) => {
     changeModalTab(tabValue);
   };
-
-  useEffect(() => {
-    if (mentorSettings) {
-      console.log('[EditMentorModal] mentorSettings:', mentorSettings);
-      console.log('[EditMentorModal] Filter context:', {
-        isAdmin,
-        tenantKey,
-        mainTenantKey: config.mainTenantKey(),
-        mentorPlatformKey: mentorSettings?.platform_key,
-        mentorVisibility: mentorSettings?.mentor_visibility,
-      });
-
-      const filteredTabs = editMentorTabs
-        .filter((item) => {
-          // Hide Memory tab when memsearch is not enabled
-          if (
-            item.value === MODALS.EDIT_MENTOR.tabs.memory &&
-            !isMemsearchEnabled
-          ) {
-            return false;
-          }
-          return true;
-        })
-        .filter(isUserTypeAllowed)
-        .filter((item) => {
-          const isAdminOnMainTenant =
-            isAdmin && tenantKey === config.mainTenantKey();
-          const mentorNotOnMainTenant =
-            mentorSettings?.platform_key !== config.mainTenantKey();
-          const visibilityMatches = item.mentorVisibility.includes(
-            mentorSettings?.mentor_visibility as MentorVisibilityEnum,
-          );
-          const isNonAdminOnMainTenant =
-            !isAdmin && tenantKey === config.mainTenantKey();
-          const visibilityAllowed =
-            visibilityMatches && !isNonAdminOnMainTenant;
-
-          const passesFilter =
-            isAdminOnMainTenant || mentorNotOnMainTenant || visibilityAllowed;
-
-          console.log(`[EditMentorModal] Tab "${item.label}" filter:`, {
-            tabMentorVisibility: item.mentorVisibility,
-            isAdminOnMainTenant,
-            mentorNotOnMainTenant,
-            visibilityMatches,
-            isNonAdminOnMainTenant,
-            visibilityAllowed,
-            passesFilter,
-            reason: isAdminOnMainTenant
-              ? 'Admin on main tenant - all tabs allowed'
-              : mentorNotOnMainTenant
-                ? 'Mentor not on main tenant - tab allowed'
-                : visibilityAllowed
-                  ? 'Visibility matches and user is admin or not on main tenant'
-                  : 'Filtered out - visibility check failed or non-admin on main tenant',
-          });
-
-          if (passesFilter) {
-            return true;
-          }
-          return false;
-        })
-        .filter((item) => {
-          // Include item only if both permission checks pass (AND logic)
-          const hasFieldPermission = rbacPermissionToDisplay(
-            item.permissionFieldsCheck,
-            // @ts-expect-error - permissions.field property may not exist on mentorSettings type
-            mentorSettings?.permissions?.field,
-          );
-          const hasRbacPermission =
-            !item.rbacResource ||
-            checkRbacPermission(
-              rbacPermissions,
-              item.rbacResource?.(mentorSettings!.mentor_id),
-            );
-          return hasFieldPermission && hasRbacPermission;
-        });
-
-      console.log(
-        '[EditMentorModal] Final filtered tabs:',
-        filteredTabs.map((t) => t.label),
-      );
-      setFilteredTabs(filteredTabs);
-    }
-  }, [isSuccess, mentorSettings, rbacPermissions, isMemsearchEnabled]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -444,7 +114,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                   className="h-auto w-full flex-col space-y-1 bg-transparent p-2"
                   aria-label="Mentor settings tabs"
                 >
-                  {filteredTabs.map((tab) => (
+                  {filteredSegments.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
@@ -470,7 +140,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                 aria-label="Mentor settings tabs"
               >
                 {/* Show first 4 tabs on mobile, first 8 tabs on tablet */}
-                {filteredTabs
+                {filteredSegments
                   .slice(0, window.innerWidth >= 768 ? 8 : 3)
                   .map((tab) => (
                     <TabsTrigger
@@ -489,7 +159,8 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     </TabsTrigger>
                   ))}
                 {/* Show dropdown for remaining tabs */}
-                {filteredTabs.length > (window.innerWidth >= 768 ? 8 : 3) && (
+                {filteredSegments.length >
+                  (window.innerWidth >= 768 ? 8 : 3) && (
                   <>
                     <TabsTrigger
                       key={activeTab}
@@ -506,7 +177,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                           <SelectValue placeholder="More..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {filteredTabs
+                          {filteredSegments
                             .slice(window.innerWidth >= 768 ? 8 : 3)
                             .map((tab) => (
                               <SelectItem key={tab.value} value={tab.value}>
@@ -531,7 +202,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               className="flex flex-1 flex-col overflow-hidden"
               style={{ height: '100%' }}
             >
-              {filteredTabs.map((tab) => (
+              {filteredSegments.map((tab) => (
                 <TabsContent
                   key={tab.value}
                   value={tab.value}
@@ -540,7 +211,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                   id={`panel-${tab.value}`}
                   aria-labelledby={`tab-${tab.value}`}
                 >
-                  {tab.component}
+                  {EDIT_MENTOR_TAB_COMPONENTS[tab.value]}
                 </TabsContent>
               ))}
             </div>

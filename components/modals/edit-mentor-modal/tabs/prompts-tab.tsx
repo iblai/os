@@ -484,8 +484,8 @@ export function PromptsTab() {
                           label: 'Guided Prompt',
                           isSystem: true,
                           name: 'guided_prompt_instructions',
-                          // @ts-ignore
                           prompt:
+                            // @ts-ignore guided_prompt_instructions not in type of MentorSettingsPublic
                             mentorSettings?.guided_prompt_instructions ?? '',
                         })
                       }

@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # reusable-domain-lock.yml (manage-lock job) requires write
   pull-requests: write
   statuses: write
   id-token: write
@@ -193,50 +193,9 @@ jobs:
       - name: Check journey coverage (no regression)
         run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
 
-  claude-review-coverage:
-    name: 'Claude E2E Coverage Review'
-    needs: [gate, acquire-domain]
-    if: always() && needs.acquire-domain.result == 'success'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get changed files
-        id: changes
-        run: |
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- app/ components/ hooks/ lib/ providers/ | head -100)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "count=$(echo "$CHANGED" | grep -c . || echo 0)" >> $GITHUB_OUTPUT
-
-      - name: Claude coverage analysis
-        if: steps.changes.outputs.count != '0'
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are an E2E coverage analyst. Analyze the changed files in this PR and determine if e2e/coverage.json and e2e/COVERAGE.md are properly updated.
-
-            Changed files:
-            ${{ steps.changes.outputs.files }}
-
-            Tasks:
-            1. Read e2e/coverage.json and e2e/COVERAGE.md
-            2. For each changed file in app/ or components/:
-               - Check if it's listed in a journey's sourceFiles in coverage.json
-               - If it's a new page.tsx route, verify a journey covers it
-               - If it adds new user-visible behavior, check for corresponding checkpoints
-            3. Compare checkpoint counts: current branch vs base branch
-            4. Post a summary comment on the PR with:
-               - Files covered by existing journeys
-               - Files missing coverage (if any)
-               - Checkpoint count change (regression warning if decreased)
-               - Recommended actions (new journeys or checkpoints to add)
-
-            If all changes are covered, approve. If there are gaps, request changes with specific instructions.
+  # Coverage review is now handled by the dedicated e2e-coverage-bot.yml workflow,
+  # which uses Claude + the bot account to analyze, auto-update coverage files,
+  # and post APPROVE / REQUEST_CHANGES reviews as a required reviewer.
 
   claude-review-quality:
     needs: [gate, acquire-domain]
@@ -812,7 +771,6 @@ jobs:
         typecheck,
         coverage,
         e2e-coverage-check,
-        claude-review-coverage,
         claude-review-quality,
         claude-review-uiux,
         check-prod-versions,
@@ -858,7 +816,6 @@ jobs:
         typecheck,
         coverage,
         e2e-coverage-check,
-        claude-review-coverage,
         claude-review-quality,
         claude-review-uiux,
         check-prod-versions,
@@ -964,14 +921,7 @@ jobs:
             echo "| UI/UX | :x: Failed |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          COV_REVIEW_RESULT="${{ needs.claude-review-coverage.result }}"
-          if [[ "$COV_REVIEW_RESULT" == "success" ]]; then
-            echo "| E2E Coverage | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
-          elif [[ "$COV_REVIEW_RESULT" == "skipped" ]]; then
-            echo "| E2E Coverage | :fast_forward: Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| E2E Coverage | :x: Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
+          # E2E coverage review is handled by the dedicated e2e-coverage-bot.yml workflow
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Browser test results

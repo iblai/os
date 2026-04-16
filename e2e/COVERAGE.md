@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-03-31 | 270 checkpoints | 36 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -343,7 +343,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 24: Mentor Memory Tab (7 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
 
@@ -354,6 +354,7 @@ When adding a new page or modifying an existing user flow:
 - [x] CP-24.5: Admin can edit a memory entry via action menu
 - [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
 - [x] CP-24.7: User filter and date range filter are visible in manage memories
+- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting
 
 ---
 
@@ -539,6 +540,14 @@ When adding a new page or modifying an existing user flow:
 - [x] Mentor copied with training data has datasets on the copy
 - [x] Mentor copied without training data has no datasets on the copy
 - [x] Mentor can be copied to a different tenant _(env-gated: requires user with multiple admin tenants)_
+
+---
+
+## Journey 38: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
+
+**Source files:** `components/modals/settings-modal.tsx`
+
+- [x] TMS-38.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
 
 ---
 

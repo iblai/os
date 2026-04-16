@@ -11,7 +11,7 @@ import { ToolsTab } from '../tools-tab';
 
 // ---- Mocks ----
 const mockGetToolsQuery = vi.fn();
-const mockGetMemsearchConfigQuery = vi.fn();
+const mockGetMemsearchStatusQuery = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockToggleTools = vi.fn();
 
@@ -31,8 +31,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetToolsQuery: (...args: any[]) => mockGetToolsQuery(...args),
-  useGetMemsearchConfigQuery: (...args: any[]) =>
-    mockGetMemsearchConfigQuery(...args),
+  useGetMemsearchStatusQuery: (...args: any[]) =>
+    mockGetMemsearchStatusQuery(...args),
   useGetMentorSettingsQuery: (...args: any[]) =>
     mockGetMentorSettingsQuery(...args),
 }));
@@ -114,7 +114,7 @@ describe('ToolsTab', () => {
   beforeEach(() => {
     cleanup();
     mockGetToolsQuery.mockReset();
-    mockGetMemsearchConfigQuery.mockReset();
+    mockGetMemsearchStatusQuery.mockReset();
     mockGetMentorSettingsQuery.mockReset();
     mockToggleTools.mockReset();
     mockToggleTools.mockResolvedValue(undefined);
@@ -124,7 +124,7 @@ describe('ToolsTab', () => {
       isLoading: false,
     });
 
-    mockGetMemsearchConfigQuery.mockReturnValue({
+    mockGetMemsearchStatusQuery.mockReturnValue({
       data: { enable_memsearch: true },
     });
 
@@ -207,31 +207,44 @@ describe('ToolsTab', () => {
     });
   });
 
-  describe('Memory Tools Filtering', () => {
-    it('hides memory tools when memsearch is disabled', () => {
-      mockGetMemsearchConfigQuery.mockReturnValue({
-        data: { enable_memsearch: false },
+  // Historical note: earlier tests here asserted that the Memory tool was
+  // hidden when the `enable_memsearch` config flag was false. `tools-tab.tsx`
+  // currently has no memsearch gating — it renders every tool returned by
+  // `useGetToolsQuery` regardless of `useGetMemsearchStatusQuery`, which the
+  // source does not even import. The tests below instead pin the actual
+  // current invariant: memory-tool visibility is decoupled from the memsearch
+  // config flag. If gating is later re-introduced into this component, these
+  // tests will fail and the new gating tests should replace them.
+  describe('Memory Tools Rendering (memsearch-independent)', () => {
+    it('renders the Memory tool when enable_memsearch is true', () => {
+      mockGetMemsearchStatusQuery.mockReturnValue({
+        data: { enable_memsearch: true },
       });
 
       render(<ToolsTab />);
-      expect(screen.queryByText('Memory Tool')).not.toBeInTheDocument();
+      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
       expect(screen.getByText('Web Search')).toBeInTheDocument();
       expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
     });
 
-    it('shows memory tools when memsearch is enabled', () => {
+    it('still renders the Memory tool when enable_memsearch is false (no gating in this component)', () => {
+      mockGetMemsearchStatusQuery.mockReturnValue({
+        data: { enable_memsearch: false },
+      });
+
       render(<ToolsTab />);
       expect(screen.getByText('Memory Tool')).toBeInTheDocument();
+      expect(screen.getByText('Web Search')).toBeInTheDocument();
+      expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
     });
 
-    it('shows all tools when memsearch config is undefined', () => {
-      mockGetMemsearchConfigQuery.mockReturnValue({
+    it('still renders the Memory tool when the memsearch config is undefined', () => {
+      mockGetMemsearchStatusQuery.mockReturnValue({
         data: undefined,
       });
 
       render(<ToolsTab />);
-      // enable_memsearch defaults to false, so memory tools hidden
-      expect(screen.queryByText('Memory Tool')).not.toBeInTheDocument();
+      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
     });
   });
 

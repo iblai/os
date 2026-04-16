@@ -621,11 +621,13 @@ export default function WorkflowDetailPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
                     className="text-foreground h-8 w-[200px] font-medium"
                     autoFocus
+                    aria-label="Enter workflow name"
                   />
                 ) : (
                   <button
                     onClick={() => setIsEditingName(true)}
                     className="text-foreground hover:text-foreground/80 flex items-center gap-1 font-medium"
+                    aria-label="Edit workflow name"
                   >
                     {workflowName}
                     <Pencil className="h-3 w-3 opacity-50" />
@@ -686,6 +688,7 @@ export default function WorkflowDetailPage() {
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground hover:text-foreground"
+                    aria-label="More workflow options"
                   >
                     <MoreHorizontal className="h-5 w-5" />
                   </Button>
