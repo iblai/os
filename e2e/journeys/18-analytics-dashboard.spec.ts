@@ -51,11 +51,11 @@ test.describe('Journey 18: Analytics Dashboard', () => {
     },
   );
 
-  test('admin goes to analytics page and views the financial tab with cost cards', async ({
+  test('admin goes to analytics page and views the costs tab with cost cards', async ({
     analyticsPage,
     page,
   }) => {
-    await analyticsPage.navigateToTab('financial');
+    await analyticsPage.navigateToTab('costs');
     await expect(page).toHaveURL(/financial/, { timeout: 15_000 });
   });
 });

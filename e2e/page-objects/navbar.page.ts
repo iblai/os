@@ -24,7 +24,10 @@ export class NavbarPage {
       exact: true,
     });
 
-    this.profileDropdown = page.getByRole('button', { name: 'More options' });
+    this.profileDropdown = page.getByRole('button', {
+      name: 'More options',
+      exact: true,
+    });
     this.notificationBell = page.getByRole('button', { name: /notification/i });
     this.newChatItem = page
       .getByRole('menuitem', { name: /new chat/i })
