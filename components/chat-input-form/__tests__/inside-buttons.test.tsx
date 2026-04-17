@@ -109,39 +109,42 @@ describe('InsideButtons', () => {
       expect(screen.getByText('Deep Research')).toBeInTheDocument();
     });
 
-    it('should render MemoryButton when the filtered list includes Memory', () => {
-      const originalFilter = Array.prototype.filter;
-      let bypassed = false;
-      const filterSpy = vi
-        .spyOn(Array.prototype, 'filter')
-        .mockImplementation(function (
-          this: any[],
-          ...args: Parameters<typeof Array.prototype.filter>
-        ) {
-          if (!bypassed) {
-            bypassed = true;
-            return this;
-          }
-          return originalFilter.apply(
-            this,
-            args as [
-              predicate: (value: any, index: number, array: any[]) => unknown,
-              thisArg?: any,
-            ],
-          );
-        });
-
+    it('should render MemoryButton when memoryEnabled is true', () => {
       render(
         <InsideButtons
           {...defaultProps}
-          artifactsEnabled={true}
-          deepResearch={true}
+          memoryEnabled={true}
           containerWidth={1000}
         />,
       );
 
       expect(screen.getByTestId('memory-button')).toBeInTheDocument();
-      filterSpy.mockRestore();
+    });
+
+    it('should not render MemoryButton for an anonymous mentor', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          isAnonymousMentor={true}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.queryByTestId('memory-button')).not.toBeInTheDocument();
+    });
+
+    it('should not render MemoryButton in embed mode', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          embedMode={true}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.queryByTestId('memory-button')).not.toBeInTheDocument();
     });
   });
 

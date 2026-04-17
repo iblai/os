@@ -2,10 +2,10 @@
   "version": 2,
   "lastUpdated": "2026-03-31",
   "summary": {
-    "totalCheckpoints": 270,
-    "coveredCheckpoints": 270,
+    "totalCheckpoints": 276,
+    "coveredCheckpoints": 276,
     "percent": 100,
-    "totalJourneys": 36
+    "totalJourneys": 37
   },
   "journeys": [
     {
@@ -1150,6 +1150,31 @@
           "id": "mem-03",
           "description": "User memories list shows entries or empty state and entry can be deleted",
           "status": "covered"
+        },
+        {
+          "id": "mem-04",
+          "description": "Admin creates a new memory from the memory tab",
+          "status": "covered"
+        },
+        {
+          "id": "mem-05",
+          "description": "Admin edits the first memory entry from the memory tab",
+          "status": "covered"
+        },
+        {
+          "id": "mem-06",
+          "description": "Admin manages memory categories (create, rename, delete)",
+          "status": "covered"
+        },
+        {
+          "id": "mem-07",
+          "description": "Admin creates then deletes a memory to verify full CRUD cycle",
+          "status": "covered"
+        },
+        {
+          "id": "mem-08",
+          "description": "Memory button visibility in chat input reflects mentor memory setting",
+          "status": "covered"
         }
       ]
     },
@@ -1830,6 +1855,21 @@
         {
           "id": "vsc-09",
           "description": "Admin creates mentor, enables tools, opens canvas, screen share does not submit form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-memory-system-toggle",
+      "name": "Tenant Memory System Toggle",
+      "spec": "38-tenant-memory-system-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tms-01",
+          "description": "Admin toggles Memory System in Advanced tab and the chat Memory button reflects it",
           "status": "covered"
         }
       ]

@@ -35,7 +35,6 @@ const RETRY_BASE_DELAY_MS = 1000;
 function patchWebpackChunkLoading(): () => void {
   if (typeof window === 'undefined') return () => {};
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g = window as any;
   const cleanups: Array<() => void> = [];
 

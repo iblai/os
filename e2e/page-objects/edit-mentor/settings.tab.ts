@@ -146,12 +146,17 @@ export class SettingsTab {
   async deleteMentor(): Promise<void> {
     await expect(this.deleteButton).toBeVisible({ timeout: 10_000 });
     await this.deleteButton.click();
-    const confirmButton = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /delete/i })
-      .getByRole('button', { name: /delete|confirm/i })
-      .last();
-    await expect(confirmButton).toBeVisible({ timeout: 5_000 });
-    await confirmButton.click();
+    const confirmDialog = this.page.getByRole('alertdialog', {
+      name: /delete mentor/i,
+    });
+    await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+    const confirmButton = confirmDialog.getByRole('button', {
+      name: /^delete$|confirm/i,
+    });
+    await expect(confirmButton).toBeEnabled({ timeout: 5_000 });
+    // Stacked Radix dialogs leave overlapping overlays that intercept
+    // pointer events; activate via keyboard instead of click.
+    await confirmButton.focus();
+    await confirmButton.press('Enter');
   }
 }

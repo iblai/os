@@ -11,7 +11,13 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
-import { NavBar, getFilteredMenuItems } from '../index';
+import { NavBar, ANALYTICS_NAV_ITEM } from '../index';
+import {
+  filterMentorSegments,
+  MENTOR_SEGMENTS,
+  type MentorSegment,
+  type MentorSegmentFilterContext,
+} from '@/hooks/use-mentor-segments';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import rbacReducer from '@/features/rbac/rbac-slice';
@@ -171,6 +177,11 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     ...actual,
     useGetMentorSettingsQuery: () => ({
       data: mockMentorSettings,
+      isLoading: false,
+      isSuccess: true,
+    }),
+    useGetMemsearchStatusQuery: () => ({
+      data: { enable_memsearch: false },
       isLoading: false,
       isSuccess: true,
     }),
@@ -793,17 +804,42 @@ describe('NavBar', () => {
 
 // ============================================================================
 // PURE FUNCTION TESTS FOR MENU FILTERING LOGIC
-// These tests call the real exported getFilteredMenuItems from index.tsx
-// so that Istanbul records coverage on the actual source lines.
+//
+// These tests exercise `filterMentorSegments` from `hooks/use-mentor-segments`
+// — the same pure pipeline used by both EditMentorModal and NavBar — and the
+// nav-only `ANALYTICS_NAV_ITEM` exported above. This is what previously lived
+// inside the in-file `getFilteredMenuItems` helper.
+//
+// "New Chat" is no longer part of any filterable list (NavBar prepends it
+// unconditionally), so its presence is verified structurally rather than via
+// the filter pipeline.
 // ============================================================================
 
 // Import the mocked modules so we can override their implementations per-test
 import { rbacPermissionToDisplay } from '@/hoc/utils';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 
-describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
-  const mockConfig = { mainTenantKey: () => 'main' };
+const buildContext = (
+  overrides: Partial<MentorSegmentFilterContext> & {
+    userType: UserType;
+  },
+): MentorSegmentFilterContext => ({
+  isAdmin: false,
+  tenantKey: undefined,
+  mentorSettings: undefined,
+  rbacPermissions: {},
+  flags: { isMemsearchEnabled: true },
+  isUserTypeAllowed: (segment: MentorSegment) =>
+    segment.userTypes.includes(overrides.userType),
+  ...overrides,
+});
 
+const filterAll = (ctx: MentorSegmentFilterContext) => [
+  ...filterMentorSegments(MENTOR_SEGMENTS, ctx),
+  ...filterMentorSegments([ANALYTICS_NAV_ITEM], ctx),
+];
+
+describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
   afterEach(() => {
     // Restore default mock implementations after tests that override them
     vi.mocked(rbacPermissionToDisplay).mockImplementation(
@@ -840,17 +876,16 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'main',
+          mentorSettings,
+        }),
       );
 
-      const labels = result.map((i: any) => i.label);
-      expect(labels).toContain('New Chat');
+      const labels = result.map((i) => i.label);
       expect(labels).toContain('Settings');
       expect(labels).toContain('Access');
       expect(labels).toContain('Analytics');
@@ -861,7 +896,7 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
   });
 
   describe('Non-admin on main tenant', () => {
-    it('filters out admin items but always includes New Chat', () => {
+    it('filters out admin items', () => {
       const mentorSettings = {
         platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
@@ -873,19 +908,17 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.STUDENT),
-        false,
-        'main',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.STUDENT,
+          isAdmin: false,
+          tenantKey: 'main',
+          mentorSettings,
+        }),
       );
 
-      // New Chat is always first
-      expect(result[0].label).toBe('New Chat');
       // Non-admin on main tenant should not see admin-only items
-      const labels = result.map((i: any) => i.label);
+      const labels = result.map((i) => i.label);
       expect(labels).not.toContain('Access');
       expect(labels).not.toContain('Settings');
     });
@@ -904,17 +937,16 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
       );
 
-      const labels = result.map((i: any) => i.label);
-      expect(labels).toContain('New Chat');
+      const labels = result.map((i) => i.label);
       expect(labels).toContain('Settings');
     });
   });
@@ -944,16 +976,16 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       );
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
       );
 
-      const labels = result.map((i: any) => i.label);
+      const labels = result.map((i) => i.label);
       // Settings should be filtered out because no field permissions
       expect(labels).not.toContain('Settings');
       // Access and Analytics have empty permissionFieldsCheck, so they pass
@@ -981,16 +1013,16 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         },
       );
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
       );
 
-      const labels = result.map((i: any) => i.label);
+      const labels = result.map((i) => i.label);
       expect(labels).not.toContain('Analytics');
       expect(labels).toContain('Settings');
     });
@@ -1004,56 +1036,104 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         mentor_id: 123,
       };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.FREE_TRIAL),
-        false,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.FREE_TRIAL,
+          isAdmin: false,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
       );
 
-      const labels = result.map((i: any) => i.label);
+      const labels = result.map((i) => i.label);
       // Access requires UserType.ADMIN only
       expect(labels).not.toContain('Access');
       // Settings allows FREE_TRIAL
       expect(labels).toContain('Settings');
     });
+  });
 
-    it('always includes New Chat for all user types', () => {
-      const mentorSettings = {
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-        mentor_id: 123,
-      };
+  describe('Config gating (enabledThroughConfig)', () => {
+    const mentorSettings = {
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 123,
+      permissions: { field: {} },
+    };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ANONYMOUS),
-        false,
-        'custom-tenant',
-        mentorSettings,
-        mockConfig,
-        {},
+    it('hides the Memory tab when memsearch is disabled', () => {
+      const result = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: { isMemsearchEnabled: false },
+        }),
       );
 
-      expect(result[0].label).toBe('New Chat');
+      expect(result.map((i) => i.label)).not.toContain('Memory');
+    });
+
+    it('shows the Memory tab when memsearch is enabled', () => {
+      const result = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: { isMemsearchEnabled: true },
+        }),
+      );
+
+      expect(result.map((i) => i.label)).toContain('Memory');
+    });
+
+    it('does not affect any other segment when memsearch is disabled', () => {
+      const enabled = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: { isMemsearchEnabled: true },
+        }),
+      );
+      const disabled = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: { isMemsearchEnabled: false },
+        }),
+      );
+
+      expect(disabled.map((i) => i.label)).toEqual(
+        enabled.map((i) => i.label).filter((l) => l !== 'Memory'),
+      );
     });
   });
 
   describe('Edge cases', () => {
     it('handles undefined mentor settings gracefully', () => {
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        'tenant123',
-        undefined,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'tenant123',
+          mentorSettings: undefined,
+        }),
       );
 
-      // Should at least return New Chat
-      expect(result.length).toBeGreaterThanOrEqual(1);
-      expect(result[0].label).toBe('New Chat');
+      // With no mentorSettings, the RBAC resource check fails for every
+      // segment that needs one — which is all of them. Pipeline should
+      // tolerate this without throwing.
+      expect(Array.isArray(result)).toBe(true);
     });
 
     it('handles undefined tenant key', () => {
@@ -1063,15 +1143,17 @@ describe('NavBar - Menu Filtering Logic (getFilteredMenuItems)', () => {
         mentor_id: 123,
       };
 
-      const result = getFilteredMenuItems(
-        (item: any) => item.userTypes.includes(UserType.ADMIN),
-        true,
-        undefined,
-        mentorSettings,
-        mockConfig,
-        {},
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: undefined,
+          mentorSettings,
+        }),
       );
 
+      // mentorNotOnMainTenant is true (custom-tenant !== 'main'), so the
+      // visibility filter passes.
       expect(result.length).toBeGreaterThanOrEqual(1);
     });
   });
