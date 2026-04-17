@@ -1290,7 +1290,8 @@
       "spec": "28-app-overview-and-navigation-ui.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/header.tsx"
       ],
       "checkpoints": [
         {
@@ -1870,7 +1871,8 @@
       "spec": "39-audit-log.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
-        "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx"
+        "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts"
       ],
       "checkpoints": [
         {
