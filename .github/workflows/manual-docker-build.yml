@@ -1,0 +1,27 @@
+name: Manual Docker Build
+run-name: 'Rebuild mentor ${{ inputs.source_ref }} -> ${{ inputs.version }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Source tag / branch / SHA to build from'
+        required: true
+        default: v0.46.2
+        type: string
+      version:
+        description: 'Image tag to push (e.g. v0.46.2-updated)'
+        required: true
+        default: v0.46.2-updated
+        type: string
+
+jobs:
+  build:
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-docker-build.yml@main
+    with:
+      app_name: mentor
+      source_repo: ${{ github.repository }}
+      source_ref: ${{ inputs.source_ref }}
+      version: ${{ inputs.version }}
+      next_image_patterns: ${{ vars.NEXT_IMAGE_PATTERNS }}
+    secrets: inherit
