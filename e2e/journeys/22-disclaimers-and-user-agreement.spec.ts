@@ -46,18 +46,6 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
       timeout: 10_000,
     });
 
-    // Toast: "User agreement enabled successfully"
-    const toast = page.getByText(/user agreement enabled/i);
-    let toastVisible = false;
-    try {
-      await toast.waitFor({ state: 'visible', timeout: 8_000 });
-      toastVisible = true;
-    } catch {
-      toastVisible = false;
-    }
-    // Toast is transient — acceptable if it appeared and disappeared quickly
-    expect(toastVisible || true).toBe(true);
-
     await editMentorPage.close();
   });
 
@@ -85,16 +73,6 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
       exact: true,
     });
     await expect(inactiveText.first()).toBeVisible({ timeout: 5_000 });
-
-    const toast = page.getByText(/user agreement disabled/i);
-    let toastVisible = false;
-    try {
-      await toast.waitFor({ state: 'visible', timeout: 8_000 });
-      toastVisible = true;
-    } catch {
-      toastVisible = false;
-    }
-    expect(toastVisible || true).toBe(true);
 
     await editMentorPage.close();
   });
