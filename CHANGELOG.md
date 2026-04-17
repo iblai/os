@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.46.5](https://github.com/iblai/mentorai/compare/v0.46.4...v0.46.5) (2026-04-16)
+
+### Bug Fixes
+
+* expand the chat widgets to 100% ([cc37c1f](https://github.com/iblai/mentorai/commit/cc37c1fcb83f2d7e42a6600d9446d44f7b18b805))
+* **tests:** fixed playwright tests ([236460f](https://github.com/iblai/mentorai/commit/236460f102a46b2c2416c7591e0384a6858df25d))
+
+## [0.46.4](https://github.com/iblai/mentorai/compare/v0.46.3...v0.46.4) (2026-04-16)
+
+### Bug Fixes
+
+* **e2e:** re-enable analytics tab tests and fixme financial/CSV editor tests ([e3e3b9f](https://github.com/iblai/mentorai/commit/e3e3b9f3c2a268af1228f91d0c098573266e5f99))
+
 ## [0.46.3](https://github.com/iblai/mentorai/compare/v0.46.2...v0.46.3) (2026-04-15)
 
 ### Bug Fixes
