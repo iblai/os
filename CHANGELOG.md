@@ -1,26 +1,227 @@
 # Changelog
 
+## [0.46.5](https://github.com/iblai/mentorai/compare/v0.46.4...v0.46.5) (2026-04-16)
+
+### Bug Fixes
+
+* expand the chat widgets to 100% ([cc37c1f](https://github.com/iblai/mentorai/commit/cc37c1fcb83f2d7e42a6600d9446d44f7b18b805))
+* **tests:** fixed playwright tests ([236460f](https://github.com/iblai/mentorai/commit/236460f102a46b2c2416c7591e0384a6858df25d))
+
+## [0.46.4](https://github.com/iblai/mentorai/compare/v0.46.3...v0.46.4) (2026-04-16)
+
+### Bug Fixes
+
+* **e2e:** re-enable analytics tab tests and fixme financial/CSV editor tests ([e3e3b9f](https://github.com/iblai/mentorai/commit/e3e3b9f3c2a268af1228f91d0c098573266e5f99))
+
+## [0.46.3](https://github.com/iblai/mentorai/compare/v0.46.2...v0.46.3) (2026-04-15)
+
+### Bug Fixes
+
+* **mentor:** adding fixes for unit tests in memory ([7d7f2dd](https://github.com/iblai/mentorai/commit/7d7f2ddb712e3b1f363e10ab7723d8f80084b751))
+* **mentor:** lint check fixes ([93c5b77](https://github.com/iblai/mentorai/commit/93c5b7798034d59e95a875e5f18378272b924abc))
+
+### Chores
+
+* **e2e:** update coverage for memory category management and tenant memory toggle [skip ci] ([7852d66](https://github.com/iblai/mentorai/commit/7852d66f110d19a9fad246bb7d0085217a86f8f6))
+* **mentor:** adding memory categories and students memory ([48744c4](https://github.com/iblai/mentorai/commit/48744c4ae3f4405b268d5ac0632e3963894e302c))
+* **mentor:** fixes for the mem search status ([0cd1578](https://github.com/iblai/mentorai/commit/0cd1578d5c871fc19c31df958a2ce4ffb60dcbb5))
+* **mentor:** version bump for iblai-js ([ab7e0af](https://github.com/iblai/mentorai/commit/ab7e0af8ecc6c5c0ca8c194933f90688985f3f85))
+
+### Tests
+
+* **mentor:** 95% coverage for unit tests ([27794f0](https://github.com/iblai/mentorai/commit/27794f0c0fedc663e1f6a34e35e5b6cb86a6d007))
+
+## [0.46.2](https://github.com/iblai/mentorai/compare/v0.46.1...v0.46.2) (2026-04-10)
+
+### Bug Fixes
+
+- **e2e:** use accessible locator for workflow name input ([82fffc4](https://github.com/iblai/mentorai/commit/82fffc4b7d2fab3e714b87cca70b7db40ef11517))
+
+## [0.46.1](https://github.com/iblai/mentorai/compare/v0.46.0...v0.46.1) (2026-04-10)
+
+### Bug Fixes
+
+- **e2e:** replace arbitrary timeout with waitForResponse and fix workflow locators ([23443e3](https://github.com/iblai/mentorai/commit/23443e3f21156257d6fbed3520cb637d39ed1d0f))
+
+## [0.46.0](https://github.com/iblai/mentorai/compare/v0.45.17...v0.46.0) (2026-04-10)
+
+### Features
+
+- pass metadata from CONTEXT_UPDATE iframe message and bump @iblai/iblai-js to 1.3.10 ([abda55a](https://github.com/iblai/mentorai/commit/abda55a1eb9961638144655acdd48d4f101e644e))
+
+## [0.45.17](https://github.com/iblai/mentorai/compare/v0.45.16...v0.45.17) (2026-04-10)
+
+### Bug Fixes
+
+- failing chat history export test fixed ([3acfb44](https://github.com/iblai/mentorai/commit/3acfb44bf152939bc3a9b6b0b1ccaddadedadb1c))
+- multi aria-labels in workflow detail ([7abf327](https://github.com/iblai/mentorai/commit/7abf327e8badb08da27f8ed233ad743a13303c57))
+
+## [0.45.16](https://github.com/iblai/mentorai/compare/v0.45.15...v0.45.16) (2026-04-09)
+
+### Bug Fixes
+
+- resolve strict mode violation for "More options" button and allow CI bot tools ([d35161b](https://github.com/iblai/mentorai/commit/d35161b34452dcfe53aa8138fd4296a01228e0e8)), closes [#main-content-container](https://github.com/iblai/mentorai/issues/main-content-container)
+
+## [0.45.15](https://github.com/iblai/mentorai/compare/v0.45.14...v0.45.15) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** instruct coverage bot to actually execute gh pr review command ([d8df598](https://github.com/iblai/mentorai/commit/d8df598a452c069c78adeb7eaeff3c16978db1eb))
+
+## [0.45.14](https://github.com/iblai/mentorai/compare/v0.45.13...v0.45.14) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** skip e2e coverage bot for Dependabot PRs ([c4ec729](https://github.com/iblai/mentorai/commit/c4ec72925a35389c267cdbbfd4993f36a2bdcc60))
+
+## [0.45.13](https://github.com/iblai/mentorai/compare/v0.45.12...v0.45.13) (2026-04-09)
+
+### Bug Fixes
+
+- **ci:** remove claude-review-coverage job references from spa-pr-validation ([d3156df](https://github.com/iblai/mentorai/commit/d3156df4b631db7fa266a27f80d2ae3d6280a501))
+
+## [0.45.12](https://github.com/iblai/mentorai/compare/v0.45.11...v0.45.12) (2026-04-09)
+
+### Bug Fixes
+
+- **e2e:** fix workflow bot if condition and improve workflow test utils ([a4b2154](https://github.com/iblai/mentorai/commit/a4b215432b44f5f14042a8aeb316bb3fb97cee5d))
+
+## [0.45.11](https://github.com/iblai/mentorai/compare/v0.45.10...v0.45.11) (2026-04-08)
+
+### Bug Fixes
+
+- register new ALB target before deregistering old ([54bff2f](https://github.com/iblai/mentorai/commit/54bff2f94f93ff2e76a0f19f265c7b5bf6a6fc71))
+
+## [0.45.10](https://github.com/iblai/mentorai/compare/v0.45.9...v0.45.10) (2026-04-08)
+
+### Chores
+
+- add mamigot as code owner for entire repo ([613f0ea](https://github.com/iblai/mentorai/commit/613f0ea8cb476f433fe9343a9aab62d064037bbc))
+
+## [0.45.9](https://github.com/iblai/mentorai/compare/v0.45.8...v0.45.9) (2026-04-08)
+
+## [0.45.8](https://github.com/iblai/mentorai/compare/v0.45.7...v0.45.8) (2026-04-08)
+
+### Tests
+
+- full pipeline — launch → OCI playwright tests → terminate ([5d89faa](https://github.com/iblai/mentorai/commit/5d89faa6fdf48e5279a3c1a5fe2ee10d79d90516))
+
+## [0.45.7](https://github.com/iblai/mentorai/compare/v0.45.6...v0.45.7) (2026-04-08)
+
+### Chores
+
+- remove test workflows ([c382836](https://github.com/iblai/mentorai/commit/c3828360e80cd5f12acb968804815d39cc85ef3d))
+
+## [0.45.6](https://github.com/iblai/mentorai/compare/v0.45.5...v0.45.6) (2026-04-08)
+
+### Bug Fixes
+
+- **e2e:** fix auth setup redirect loop and add e2e coverage bot ([9c278a7](https://github.com/iblai/mentorai/commit/9c278a74dc79711940caca5092c083e59861aa42))
+
+## [0.45.5](https://github.com/iblai/mentorai/compare/v0.45.4...v0.45.5) (2026-04-08)
+
+### Tests
+
+- add focused launch flow test workflow ([4e5b639](https://github.com/iblai/mentorai/commit/4e5b63919d815968a8d38811e302fbd61d98b382))
+
+## [0.45.4](https://github.com/iblai/mentorai/compare/v0.45.3...v0.45.4) (2026-04-08)
+
+### Bug Fixes
+
+- handle workflow_dispatch — skip PR-specific jobs, fallback pr-number ([5559f13](https://github.com/iblai/mentorai/commit/5559f130b0bcd3bd84f61a4644715c9f9c6de7f8))
+
+### Tests
+
+- add minimal workflow to debug startup_failure ([fcabf61](https://github.com/iblai/mentorai/commit/fcabf6144136076e55feec144e07c5301efa326d))
+
+## [0.45.3](https://github.com/iblai/mentorai/compare/v0.45.2...v0.45.3) (2026-04-08)
+
+### Bug Fixes
+
+- address TypeScript ignore comments in prompts and safety tabs for better type handling ([a6d6739](https://github.com/iblai/mentorai/commit/a6d67396469d84b6fbf0abed826162390dcb6fde))
+- mark tests in mentor history and memory tabs as FIXME due to flow changes ([d5deb78](https://github.com/iblai/mentorai/commit/d5deb78bf63de35b97761899681d6be78af1ec05))
+- **tests:** update button mock implementation and enhance accessibility in command items ([9bfae2c](https://github.com/iblai/mentorai/commit/9bfae2c0eec45565c8f5d7fb0631e048d75e1e4b))
+- update unit tests ([187d35c](https://github.com/iblai/mentorai/commit/187d35cd24162833f31419748e39a599fa32ea37))
+
+### Chores
+
+- fixed typecheck issues ([e352b3e](https://github.com/iblai/mentorai/commit/e352b3ea048b9e0e473010c1da9aa1baeabb4c19))
+- **tests:** update unit tests coverage for use screen sharing hook ([727a883](https://github.com/iblai/mentorai/commit/727a883cc286f0e3426728cb2bc8ed914c414f21))
+
+## [0.45.2](https://github.com/iblai/mentorai/compare/v0.45.1...v0.45.2) (2026-04-08)
+
+### Bug Fixes
+
+- simplify run-name expression ([e3d14bd](https://github.com/iblai/mentorai/commit/e3d14bdbe48a13efcdb410721c37e0eef92f1d13))
+
+## [0.45.1](https://github.com/iblai/mentorai/compare/v0.45.0...v0.45.1) (2026-04-08)
+
+### Bug Fixes
+
+- handle workflow_dispatch in run-name and concurrency group ([a9faeb8](https://github.com/iblai/mentorai/commit/a9faeb8418bef2c9be8bc0155e6ce3d2f2685255))
+
+## [0.45.0](https://github.com/iblai/mentorai/compare/v0.44.8...v0.45.0) (2026-04-08)
+
+### Features
+
+- add spa-pr-validation-new.yml to main for testing ([9cf949f](https://github.com/iblai/mentorai/commit/9cf949fa58da0407cfe5eb07b1f918c53f7b8f55))
+
+## [0.44.8](https://github.com/iblai/mentorai/compare/v0.44.7...v0.44.8) (2026-04-07)
+
+### Bug Fixes
+
+- add check for Schedule Retrain button enabled state in dataset management journey ([bb3b1e2](https://github.com/iblai/mentorai/commit/bb3b1e2dd8e37d4ddc2244c8bc7b25d75b15dcd5))
+- **chore:** comment out a use effect that determines the save current tenant flow and not in the tenant provider ([f2d3d2d](https://github.com/iblai/mentorai/commit/f2d3d2de96d83de1569185ee9be63e63f15cca07))
+- increase download event timeout in HistoryTab to improve export reliability ([eaee906](https://github.com/iblai/mentorai/commit/eaee90625c48052307325882be991ba8a85b1118))
+- increase download event timeout in mentor history tab to enhance export reliability ([6ad3606](https://github.com/iblai/mentorai/commit/6ad360652d2796796f29c75a87277e612db3e4d8))
+- update deleteMentor method to use alertdialog for confirmation ([cc5ffa0](https://github.com/iblai/mentorai/commit/cc5ffa0b75109cfd4abacef89932d1cea2328147))
+- update sidebar navigation to conditionally set rbacResource based on mentorId ([cd9fd16](https://github.com/iblai/mentorai/commit/cd9fd167f8e4ade215a37408bec9aef46ac9c8f5))
+
+### Refactors
+
+- streamline nav-bar and edit-mentor-modal components to utilize mentor segments ([efc2402](https://github.com/iblai/mentorai/commit/efc2402ba4cda8c328e3f815072dd7acc09fc380))
+- update memory management components to use new mentor memory API ([0a93e4f](https://github.com/iblai/mentorai/commit/0a93e4f9429031b31bd260dd1e0f6df31aae2997))
+
+## [0.44.7](https://github.com/iblai/mentorai/compare/v0.44.6...v0.44.7) (2026-04-07)
+
+### Bug Fixes
+
+- close billing modal tab on upgrade button click ([4333887](https://github.com/iblai/mentorai/commit/43338879939e130afd972470d501d3eb82e01ce4))
+- close billing modal tab on upgrade button click > test coverage ([de21e58](https://github.com/iblai/mentorai/commit/de21e5803afba839536ff0ed2dccd6afe7268806))
+
+## [0.44.6](https://github.com/iblai/mentorai/compare/v0.44.5...v0.44.6) (2026-04-06)
+
+### Bug Fixes
+
+- memoize middleware map to stabilize AuthProvider cookie sync interval ([3eb1e86](https://github.com/iblai/mentorai/commit/3eb1e8604aafa33058ad45b0976e02e4be662919))
+
+## [0.44.5](https://github.com/iblai/mentorai/compare/v0.44.4...v0.44.5) (2026-04-06)
+
+### Chores
+
+- bump iblai-js to 1.3.5 and set e2e workers to 1 ([e75dff8](https://github.com/iblai/mentorai/commit/e75dff87e81cddd8526b78f1bfd0c50dc80c581d))
+
 ## [0.44.4](https://github.com/iblai/mentorai/compare/v0.44.3...v0.44.4) (2026-04-02)
 
 ### Styles
 
-* format entire codebase with prettier and update pre-commit hook ([3cd6f15](https://github.com/iblai/mentorai/commit/3cd6f15b2cfa734b7250a395fc08eee3e88fe4c3))
+- format entire codebase with prettier and update pre-commit hook ([3cd6f15](https://github.com/iblai/mentorai/commit/3cd6f15b2cfa734b7250a395fc08eee3e88fe4c3))
 
 ## [0.44.3](https://github.com/iblai/mentorai/compare/v0.44.2...v0.44.3) (2026-04-02)
 
 ### Bug Fixes
 
-* **mentor:** adding test coverage ([eaf4842](https://github.com/iblai/mentorai/commit/eaf4842e798f0390b19146a2b05ac9f9fc9dfb11))
-* **mentor:** fixes for memory and tests ([4de9071](https://github.com/iblai/mentorai/commit/4de90715ac921a82e6a9d36a8d52803aaf7fe8fa))
-* **mentor:** fixes for memory, unit tests ([b3f974c](https://github.com/iblai/mentorai/commit/b3f974c42b1a0343510ed2b724220299320ea972))
-* **mentor:** merge conflicts fixes ([8938a07](https://github.com/iblai/mentorai/commit/8938a07b077ad82de81b2bf0ae67598251612824))
-* **mentor:** prop for the enable memory in profile dropdown ([9dbbd1f](https://github.com/iblai/mentorai/commit/9dbbd1f9d943fb72652df90031d0711482dd6b21))
+- **mentor:** adding test coverage ([eaf4842](https://github.com/iblai/mentorai/commit/eaf4842e798f0390b19146a2b05ac9f9fc9dfb11))
+- **mentor:** fixes for memory and tests ([4de9071](https://github.com/iblai/mentorai/commit/4de90715ac921a82e6a9d36a8d52803aaf7fe8fa))
+- **mentor:** fixes for memory, unit tests ([b3f974c](https://github.com/iblai/mentorai/commit/b3f974c42b1a0343510ed2b724220299320ea972))
+- **mentor:** merge conflicts fixes ([8938a07](https://github.com/iblai/mentorai/commit/8938a07b077ad82de81b2bf0ae67598251612824))
+- **mentor:** prop for the enable memory in profile dropdown ([9dbbd1f](https://github.com/iblai/mentorai/commit/9dbbd1f9d943fb72652df90031d0711482dd6b21))
 
 ## [0.44.2](https://github.com/iblai/mentorai/compare/v0.44.1...v0.44.2) (2026-04-02)
 
 ### Chores
 
-* bump iblai-js to 1.3.4, track .npmrc, update .gitignore ([acc8bbb](https://github.com/iblai/mentorai/commit/acc8bbbadf2aaabdbad008d0daeac110009270d4))
+- bump iblai-js to 1.3.4, track .npmrc, update .gitignore ([acc8bbb](https://github.com/iblai/mentorai/commit/acc8bbbadf2aaabdbad008d0daeac110009270d4))
 
 ## [0.44.1](https://github.com/iblai/mentorai/compare/v0.44.0...v0.44.1) (2026-04-02)
 

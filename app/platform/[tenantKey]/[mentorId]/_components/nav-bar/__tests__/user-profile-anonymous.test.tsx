@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { UserProfile } from '../user-profile';
 
 // Declare mock functions using vi.hoisted()
@@ -205,8 +205,31 @@ describe('UserProfile - Anonymous Mentor Handling', () => {
     mockBannerButtonTriggerCallback.mockReturnValue(vi.fn());
   });
 
-  describe('anonymous mentor useEffect', () => {
-    it('should fetch tenant metadata when tenant is not in userTenants', async () => {
+  // Historical note: earlier revisions of this file tested an anonymous-mentor
+  // `useEffect` in `user-profile.tsx` that fetched tenant metadata and called
+  // `saveCurrentTenant` / `saveUserTenants`. Commit f2d3d2d intentionally
+  // commented that `useEffect` out because the tenant provider now owns the
+  // flow — see the `// TODO: The tenant provider already handles...` block in
+  // `user-profile.tsx`. The tests below now verify the opposite invariant:
+  // `UserProfile` must NOT touch tenants itself while the commented-out block
+  // is dormant. If it ever regresses to calling those spies, these assertions
+  // will catch it.
+  describe('anonymous mentor tenant sync is owned by the tenant provider', () => {
+    it('does not call fetchTenantMetadata on mount when tenant is not in userTenants', async () => {
+      mockFetchTenantMetadata.mockReturnValue({
+        unwrap: () => Promise.resolve({ platform_name: 'New Platform' }),
+      });
+
+      render(<UserProfile />);
+
+      // Give React a flush tick so any rogue useEffect has a chance to run
+      await waitFor(() => {
+        expect(screen.getByTestId('user-profile-dropdown')).toBeInTheDocument();
+      });
+      expect(mockFetchTenantMetadata).not.toHaveBeenCalled();
+    });
+
+    it('does not call saveUserTenants or saveCurrentTenant on mount', async () => {
       mockFetchTenantMetadata.mockReturnValue({
         unwrap: () => Promise.resolve({ platform_name: 'New Platform' }),
       });
@@ -214,26 +237,13 @@ describe('UserProfile - Anonymous Mentor Handling', () => {
       render(<UserProfile />);
 
       await waitFor(() => {
-        expect(mockFetchTenantMetadata).toHaveBeenCalledWith({
-          tenantKey: 'new-tenant',
-        });
+        expect(screen.getByTestId('user-profile-dropdown')).toBeInTheDocument();
       });
+      expect(mockSaveUserTenants).not.toHaveBeenCalled();
+      expect(mockSaveCurrentTenant).not.toHaveBeenCalled();
     });
 
-    it('should save new tenant after fetching metadata', async () => {
-      mockFetchTenantMetadata.mockReturnValue({
-        unwrap: () => Promise.resolve({ platform_name: 'New Platform' }),
-      });
-
-      render(<UserProfile />);
-
-      await waitFor(() => {
-        expect(mockSaveUserTenants).toHaveBeenCalled();
-        expect(mockSaveCurrentTenant).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle metadata fetch error gracefully', async () => {
+    it('does not log "Failed to fetch tenant metadata" on mount (the fetch is never attempted)', async () => {
       const consoleErrorSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
@@ -244,31 +254,26 @@ describe('UserProfile - Anonymous Mentor Handling', () => {
       render(<UserProfile />);
 
       await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Failed to fetch tenant metadata',
-          expect.any(Error),
-        );
+        expect(screen.getByTestId('user-profile-dropdown')).toBeInTheDocument();
       });
+      expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+        'Failed to fetch tenant metadata',
+        expect.any(Error),
+      );
 
       consoleErrorSpy.mockRestore();
     });
 
-    it('should use tenantKey as fallback when platform_name is missing', async () => {
-      mockFetchTenantMetadata.mockReturnValue({
-        unwrap: () => Promise.resolve({}),
-      });
-
+    it('renders the current tenant from useCurrentTenant without mutating it', async () => {
       render(<UserProfile />);
 
+      // The mocked useCurrentTenant returns `{ key: 'new-tenant' }` in this
+      // suite's setup — the component should render that verbatim without
+      // the old useEffect ever replacing it with a "freshly-fetched" tenant.
       await waitFor(() => {
-        expect(mockSaveCurrentTenant).toHaveBeenCalledWith(
-          expect.objectContaining({
-            key: 'new-tenant',
-            platform_name: 'new-tenant',
-            name: 'new-tenant',
-          }),
-        );
+        expect(screen.getByTestId('tenant')).toHaveTextContent('new-tenant');
       });
+      expect(mockSaveCurrentTenant).not.toHaveBeenCalled();
     });
   });
 });

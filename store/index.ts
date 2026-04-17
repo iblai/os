@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 
 import {
   mentorReducer,
@@ -6,6 +6,8 @@ import {
   mentorMiddleware,
   mcpApiSlice,
   workflowsApiSlice,
+  memoryApiSlice,
+  MEMORY_QUERY_KEYS,
 } from '@iblai/iblai-js/data-layer';
 import { userReducer } from '@/features/users/slice';
 import { authApiSlice } from '@/features/auth/api-slice';
@@ -25,6 +27,30 @@ import { chatSliceReducerShared } from '@iblai/iblai-js/web-utils';
 import { analyticsReducer } from '@/features/analytics/slice';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
+
+// Bridge: the data layer's `updateMemsearchConfig` mutation only invalidates
+// the MEMSEARCH_PLATFORM_CONFIG tag, but our app reads memsearch state via
+// `getMemsearchStatus` (which provides MEMSEARCH_STATUS). Invalidate the
+// status tag whenever the config mutation succeeds so the UI updates without
+// a page reload when the toggle in the Profile dialog flips.
+const memsearchStatusBridge = createListenerMiddleware();
+memsearchStatusBridge.startListening({
+  predicate: (action) => {
+    const a = action as {
+      type?: string;
+      meta?: { arg?: { endpointName?: string } };
+    };
+    return (
+      a.type === `${memoryApiSlice.reducerPath}/executeMutation/fulfilled` &&
+      a.meta?.arg?.endpointName === 'updateMemsearchConfig'
+    );
+  },
+  effect: (_action, listenerApi) => {
+    listenerApi.dispatch(
+      memoryApiSlice.util.invalidateTags(MEMORY_QUERY_KEYS.MEMSEARCH_STATUS()),
+    );
+  },
+});
 
 export const store = configureStore({
   reducer: {
@@ -66,6 +92,7 @@ export const store = configureStore({
       workflowsApiSlice.middleware,
       providerAssociationApiSlice.middleware,
       ...mentorMiddleware,
+      memsearchStatusBridge.middleware,
     ),
 });
 

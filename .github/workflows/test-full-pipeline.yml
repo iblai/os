@@ -1,0 +1,215 @@
+name: Full Pipeline Test (Launch → OCI Tests → Terminate)
+
+on:
+  workflow_dispatch:
+    inputs:
+      stg-slot:
+        description: 'Stg slot (1-4)'
+        required: false
+        default: '1'
+      browsers:
+        description: 'Browsers to test'
+        required: false
+        default: 'chrome'
+
+run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})'
+
+jobs:
+  # ============================================================
+  # BUILD PLAYWRIGHT IMAGE (from main branch)
+  # ============================================================
+  build-playwright-image:
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: e2e/Dockerfile
+      build-context: .
+      image-name: ibl-mentor-playwright
+      registry-type: ocir
+      image-tag: main-${{ github.sha }}
+      event-name: workflow_dispatch
+      pr-number: '0'
+
+  # ============================================================
+  # LAUNCH INFRASTRUCTURE
+  # ============================================================
+  launch-infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      instance-id: ${{ steps.launch.outputs.instance-id }}
+      instance-ip: ${{ steps.launch.outputs.instance-ip }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Resolve stg config
+        id: config
+        run: |
+          SLOT="${{ inputs.stg-slot }}"
+          declare -A AMIS SUBNETS SGS TGS KEYS
+          AMIS[1]="${{ vars.STG1_AMI_ID }}"; AMIS[2]="${{ vars.STG2_AMI_ID }}"; AMIS[3]="${{ vars.STG3_AMI_ID }}"; AMIS[4]="${{ vars.STG4_AMI_ID }}"
+          SUBNETS[1]="${{ vars.STG1_SUBNET_ID }}"; SUBNETS[2]="${{ vars.STG2_SUBNET_ID }}"; SUBNETS[3]="${{ vars.STG3_SUBNET_ID }}"; SUBNETS[4]="${{ vars.STG4_SUBNET_ID }}"
+          SGS[1]="${{ vars.STG1_SG_ID }}"; SGS[2]="${{ vars.STG2_SG_ID }}"; SGS[3]="${{ vars.STG3_SG_ID }}"; SGS[4]="${{ vars.STG4_SG_ID }}"
+          TGS[1]="${{ vars.STG1_TG_ARN }}"; TGS[2]="${{ vars.STG2_TG_ARN }}"; TGS[3]="${{ vars.STG3_TG_ARN }}"; TGS[4]="${{ vars.STG4_TG_ARN }}"
+          KEYS[1]="${{ vars.STG1_KEY_PAIR }}"; KEYS[2]="${{ vars.STG2_KEY_PAIR }}"; KEYS[3]="${{ vars.STG3_KEY_PAIR }}"; KEYS[4]="${{ vars.STG4_KEY_PAIR }}"
+          echo "ami-id=${AMIS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "subnet-id=${SUBNETS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "security-group-id=${SGS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "target-group-arn=${TGS[$SLOT]}" >> $GITHUB_OUTPUT
+          echo "key-pair-name=${KEYS[$SLOT]}" >> $GITHUB_OUTPUT
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          case "${{ inputs.stg-slot }}" in
+            1) echo "${{ secrets.STG1_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            2) echo "${{ secrets.STG2_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            3) echo "${{ secrets.STG3_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+            4) echo "${{ secrets.STG4_SSH_KEY }}" > ~/.ssh/deploy-key ;;
+          esac
+          chmod 600 ~/.ssh/deploy-key
+
+      - name: Open SSH for runner
+        id: runner-ip
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+          aws ec2 authorize-security-group-ingress --group-id ${{ steps.config.outputs.security-group-id }} --protocol tcp --port 22 --cidr ${RUNNER_IP}/32 2>&1 || true
+
+      - name: Launch EC2
+        id: launch
+        run: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ${{ steps.config.outputs.ami-id }} \
+            --instance-type t3.2xlarge \
+            --key-name ${{ steps.config.outputs.key-pair-name }} \
+            --subnet-id ${{ steps.config.outputs.subnet-id }} \
+            --security-group-ids ${{ steps.config.outputs.security-group-id }} \
+            --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":200,"VolumeType":"gp3","Encrypted":true}}]' \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=pipeline-test-stg${{ inputs.stg-slot }}}]' \
+            --query 'Instances[0].InstanceId' --output text)
+          echo "instance-id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "Instance: $INSTANCE_ID"
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+          echo "instance-ip=$IP" >> $GITHUB_OUTPUT
+          echo "IP: $IP"
+
+      - name: Wait for SSH
+        run: |
+          for i in $(seq 1 15); do
+            if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} "echo ok" 2>/dev/null; then
+              echo "SSH ready on attempt $i"; break
+            fi
+            echo "Attempt $i..."; sleep 15
+          done
+
+      - name: Checkout infra CLI
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/iblai-infra-cli
+          token: ${{ secrets.GIT_TOKEN }}
+          path: .infra
+
+      - name: Run service update
+        env:
+          PYTHONUNBUFFERED: '1'
+          TERM: dumb
+        run: |
+          pip install ./.infra ansible-core
+          iblai infra service-update \
+            --host ${{ steps.launch.outputs.instance-ip }} \
+            --ssh-key ~/.ssh/deploy-key \
+            --git-token ${{ secrets.GIT_TOKEN }}
+
+      - name: Register new target then deregister old
+        run: |
+          TG_ARN="${{ steps.config.outputs.target-group-arn }}"
+          NEW_ID="${{ steps.launch.outputs.instance-id }}"
+          # Register new FIRST — prevents empty TG (ALB 503) if pipeline fails mid-step
+          aws elbv2 register-targets --target-group-arn "$TG_ARN" --targets Id=$NEW_ID,Port=80
+          echo "Registered $NEW_ID"
+          # Then deregister old targets to prevent split-brain routing
+          OLD_TARGETS=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" --query "TargetHealthDescriptions[?Target.Id!='$NEW_ID'].Target.Id" --output text 2>/dev/null)
+          for OLD_ID in $OLD_TARGETS; do
+            echo "Deregistering: $OLD_ID"
+            aws elbv2 deregister-targets --target-group-arn "$TG_ARN" --targets Id=$OLD_ID 2>/dev/null || true
+          done
+
+      - name: Health check
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} '
+            echo "DM: $(curl -s -o /dev/null -w %{http_code} http://localhost:8400/)"
+            echo "LMS: $(curl -s -o /dev/null -w %{http_code} http://localhost:8600/heartbeat)"
+            echo "Auth: $(curl -s -o /dev/null -w %{http_code} http://localhost:5000/)"
+            echo "Mentor: $(curl -s -o /dev/null -w %{http_code} http://localhost:5001/)"
+            echo "Skills: $(curl -s -o /dev/null -w %{http_code} http://localhost:5002/)"
+          '
+
+      - name: Revoke SSH
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ steps.config.outputs.security-group-id }} --protocol tcp --port 22 --cidr ${{ steps.runner-ip.outputs.ip }}/32 2>&1 || true
+
+  # ============================================================
+  # RUN PLAYWRIGHT TESTS ON OCI
+  # ============================================================
+  run-tests:
+    needs: [build-playwright-image, launch-infra]
+    if: needs.launch-infra.result == 'success' && needs.build-playwright-image.result == 'success'
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: ${{ inputs.stg-slot }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      max-wait: 5400
+      total-shards: 1
+      run-type: main
+      browsers: ${{ inputs.browsers }}
+      workers: '3'
+
+  # ============================================================
+  # TERMINATE INFRASTRUCTURE
+  # ============================================================
+  terminate:
+    needs: [launch-infra, run-tests]
+    if: always() && needs.launch-infra.result != 'skipped'
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SERVICE_UPDATE_SECRET_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Terminate EC2 instance
+        run: |
+          ID="${{ needs.launch-infra.outputs.instance-id }}"
+          if [ -n "$ID" ]; then
+            aws ec2 terminate-instances --instance-ids $ID
+            echo "Terminated $ID"
+          else
+            echo "No instance to terminate"
+          fi
+
+  # ============================================================
+  # SUMMARY
+  # ============================================================
+  summary:
+    needs: [build-playwright-image, launch-infra, run-tests, terminate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Results
+        run: |
+          echo "# Full Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Launch Infra | ${{ needs.launch-infra.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run Tests (${{ inputs.browsers }}) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terminate | ${{ needs.terminate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Instance: ${{ needs.launch-infra.outputs.instance-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "Test result: ${{ needs.run-tests.outputs.result }}" >> $GITHUB_STEP_SUMMARY

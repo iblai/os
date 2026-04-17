@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 // Mock livekit-client - must be hoisted
 const mockRoomConnect = vi.fn();
@@ -42,6 +42,8 @@ vi.mock('livekit-client', () => ({
     Reconnected: 'reconnected',
     LocalTrackPublished: 'localTrackPublished',
     LocalTrackUnpublished: 'localTrackUnpublished',
+    TrackMuted: 'trackMuted',
+    TrackUnmuted: 'trackUnmuted',
   },
   ConnectionState: {
     Connected: 'connected',
@@ -53,6 +55,7 @@ vi.mock('livekit-client', () => ({
     Source: {
       ScreenShare: 'screen_share',
       ScreenShareAudio: 'screen_share_audio',
+      Microphone: 'microphone',
     },
   },
 }));
@@ -698,6 +701,220 @@ describe('useScreenSharing', () => {
       });
 
       expect(onScreenShareStopped).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('remote audio mute/unmute (TrackMuted/TrackUnmuted)', () => {
+    it('should set isMentorAudioEnabled to false when remote audio track is muted', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      // Initial remote mentor audio should be enabled
+      expect(result.current.isMentorAudioEnabled).toBe(true);
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(false);
+      });
+    });
+
+    it('should set isMentorAudioEnabled to true when remote audio track is unmuted', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(false);
+      });
+
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'audio', source: 'unknown' },
+          { isLocal: false },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMentorAudioEnabled).toBe(true);
+      });
+    });
+
+    it('should ignore non-audio remote track mute events', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'video', source: 'camera' },
+          { isLocal: false },
+        );
+      });
+
+      // Remote audio state should remain true
+      expect(result.current.isMentorAudioEnabled).toBe(true);
+    });
+
+    it('should sync isMicrophoneEnabled to false when local microphone is muted externally', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+    });
+
+    it('should sync isMicrophoneEnabled to true when local microphone is unmuted externally', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+    });
+
+    it('should ignore local track unmute when source is not microphone', async () => {
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(true);
+      });
+
+      // Externally mute to make state false
+      act(() => {
+        roomEventHandlers['trackMuted']?.(
+          { kind: 'audio', source: 'microphone' },
+          { isLocal: true },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.isMicrophoneEnabled).toBe(false);
+      });
+
+      // Unmute a non-microphone local source — should NOT flip mic state
+      act(() => {
+        roomEventHandlers['trackUnmuted']?.(
+          { kind: 'video', source: 'camera' },
+          { isLocal: true },
+        );
+      });
+
+      expect(result.current.isMicrophoneEnabled).toBe(false);
+    });
+  });
+
+  describe('toggleMicrophone', () => {
+    it('should toggle microphone off when currently enabled', async () => {
+      mockIsMicrophoneEnabled = true;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockClear();
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(false);
+      expect(result.current.isMicrophoneEnabled).toBe(false);
+    });
+
+    it('should toggle microphone on when currently disabled', async () => {
+      mockIsMicrophoneEnabled = false;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockClear();
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(true);
+      expect(result.current.isMicrophoneEnabled).toBe(true);
+    });
+
+    it('should log error when toggleMicrophone fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockIsMicrophoneEnabled = true;
+      const { result } = renderHook(() => useScreenSharing(defaultProps));
+
+      await waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      mockSetMicrophoneEnabled.mockRejectedValueOnce(new Error('toggle fail'));
+
+      await act(async () => {
+        await result.current.toggleMicrophone();
+      });
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to toggle microphone:',
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });

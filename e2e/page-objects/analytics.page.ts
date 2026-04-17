@@ -8,7 +8,7 @@ export class AnalyticsPage {
   readonly usersTab: Locator;
   readonly topicsTab: Locator;
   readonly transcriptsTab: Locator;
-  readonly financialTab: Locator;
+  readonly costsTab: Locator;
   readonly reportsTab: Locator;
   readonly analyticsButton: Locator;
 
@@ -22,7 +22,7 @@ export class AnalyticsPage {
     this.usersTab = page.getByRole('tab', { name: /users/i });
     this.topicsTab = page.getByRole('tab', { name: /topics/i });
     this.transcriptsTab = page.getByRole('tab', { name: /transcripts/i });
-    this.financialTab = page.getByRole('tab', { name: /financial/i });
+    this.costsTab = page.getByRole('tab', { name: /costs/i });
     this.reportsTab = page.getByRole('tab', { name: /reports|data reports/i });
   }
 
@@ -35,20 +35,14 @@ export class AnalyticsPage {
   }
 
   async navigateToTab(
-    tab:
-      | 'overview'
-      | 'users'
-      | 'topics'
-      | 'transcripts'
-      | 'financial'
-      | 'reports',
+    tab: 'overview' | 'users' | 'topics' | 'transcripts' | 'costs' | 'reports',
   ): Promise<void> {
     const tabLocators = {
       overview: this.overviewTab,
       users: this.usersTab,
       topics: this.topicsTab,
       transcripts: this.transcriptsTab,
-      financial: this.financialTab,
+      costs: this.costsTab,
       reports: this.reportsTab,
     };
     const locator = tabLocators[tab];

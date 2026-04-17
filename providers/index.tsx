@@ -32,7 +32,7 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { hasNonExpiredAuthToken, redirectToAuthSpa } from '@/lib/utils';
 import AppProvider from './app-provider';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -266,6 +266,118 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     dispatch(updateRbacPermissions(rbacPermissions ?? {}));
   }
 
+  const middleware = useMemo(() => {
+    const map = new Map();
+
+    // allow user to go to version page without auth
+    map.set(new RegExp('^\/version'), async () => false);
+
+    map.set(
+      new RegExp('^\/provider-association\/stripe\/callback\/([a-zA-Z0-9_-]+)'),
+      () => {
+        return false;
+      },
+    );
+
+    // allow user to view an anonymous mentor
+    map.set(
+      new RegExp('^\/platform\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)'),
+      async () => {
+        // Re-check Tauri offline mode at middleware execution time
+        // This is important because the script may have set the flag after React rendered
+        const isOfflineNow = isTauriApp() && isTauriOfflineMode();
+
+        // In Tauri offline mode, skip the API call and allow access
+        // The cached data will be used by the page components
+        if (isOfflineNow) {
+          console.log(
+            '[Providers] Tauri offline mode - skipping getMentorPublicSettings middleware',
+          );
+          return false;
+        }
+
+        // Don't make API call if params aren't ready yet
+        if (!mentorId || !tenantKeyParams) {
+          console.log(
+            '[Providers] Params not ready, skipping getMentorPublicSettings',
+            {
+              mentorId,
+              tenantKeyParams,
+              isOfflineNow,
+            },
+          );
+          return false;
+        }
+
+        console.log(
+          'calling getMentorPublicSettings',
+          JSON.stringify({
+            mentorId,
+            tenantKeyParams,
+            username,
+            isOfflineNow,
+          }),
+        );
+
+        try {
+          const response = await getMentorPublicSettings(
+            {
+              mentor: mentorId,
+              org: tenantKeyParams,
+              // @ts-ignore
+              userId: username ?? ANONYMOUS_USERNAME,
+            },
+            true, // preferCacheValue - use cached data if available
+          ).unwrap();
+          if (isInIframe()) {
+            setExternalCSS(response.custom_css ?? '');
+            setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
+            setExternalJS(response?.custom_javascript ?? '');
+            console.log('getMentorPublicSettings response', {
+              allow_anonymous: response?.allow_anonymous,
+            });
+          }
+
+          if (
+            response?.allow_anonymous ||
+            response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
+          ) {
+            return false;
+          } else {
+            return true;
+          }
+        } catch (error) {
+          console.error(JSON.stringify(error));
+          return false;
+        }
+      },
+    );
+
+    // allow user to go to sso-login page without auth
+    map.set(new RegExp('^\/sso-login'), async () => {
+      return false;
+    });
+
+    // allow user to go to error page without auth
+    map.set(new RegExp('^\/error\/([0-9]+)'), async () => false);
+
+    // allow user to share a chat link without auth
+    map.set(new RegExp('^\/share\/chat\/([a-zA-Z0-9_-]+)'), async () => {
+      return false;
+    });
+
+    // allow user to go to oauth page without auth
+    map.set(new RegExp('^\/uploads\/?'), async () => false);
+
+    // allow user to go to oauth page without auth
+    map.set(new RegExp('^/\\?oauth=.*'), async () => false);
+
+    // allow user to go to google oauth callback page without auth
+    map.set(new RegExp('^\/google-oauth-callback\/?'), async () => false);
+
+    return map;
+  }, [mentorId, tenantKeyParams, username]);
+
   if (!ready) return null;
 
   // In Tauri offline mode, bypass all provider chains and render directly
@@ -310,114 +422,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       </>
     );
   }
-
-  const middleware = new Map();
-
-  // allow user to go to version page without auth
-  middleware.set(new RegExp('^\/version'), async () => false);
-
-  middleware.set(
-    new RegExp('^\/provider-association\/stripe\/callback\/([a-zA-Z0-9_-]+)'),
-    () => {
-      return false;
-    },
-  );
-
-  // allow user to view an anonymous mentor
-  middleware.set(
-    new RegExp('^\/platform\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)'),
-    async () => {
-      // Re-check Tauri offline mode at middleware execution time
-      // This is important because the script may have set the flag after React rendered
-      const isOfflineNow = isTauriApp() && isTauriOfflineMode();
-
-      // In Tauri offline mode, skip the API call and allow access
-      // The cached data will be used by the page components
-      if (isOfflineNow) {
-        console.log(
-          '[Providers] Tauri offline mode - skipping getMentorPublicSettings middleware',
-        );
-        return false;
-      }
-
-      // Don't make API call if params aren't ready yet
-      if (!mentorId || !tenantKeyParams) {
-        console.log(
-          '[Providers] Params not ready, skipping getMentorPublicSettings',
-          {
-            mentorId,
-            tenantKeyParams,
-            isOfflineNow,
-          },
-        );
-        return false;
-      }
-
-      console.log(
-        'calling getMentorPublicSettings',
-        JSON.stringify({
-          mentorId,
-          tenantKeyParams,
-          username,
-          isOfflineNow,
-        }),
-      );
-
-      try {
-        const response = await getMentorPublicSettings(
-          {
-            mentor: mentorId,
-            org: tenantKeyParams,
-            // @ts-ignore
-            userId: username ?? ANONYMOUS_USERNAME,
-          },
-          true, // preferCacheValue - use cached data if available
-        ).unwrap();
-        if (isInIframe()) {
-          setExternalCSS(response.custom_css ?? '');
-          setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
-          setExternalJS(response?.custom_javascript ?? '');
-          console.log('getMentorPublicSettings response', {
-            allow_anonymous: response?.allow_anonymous,
-          });
-        }
-
-        if (
-          response?.allow_anonymous ||
-          response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
-        ) {
-          return false;
-        } else {
-          return true;
-        }
-      } catch (error) {
-        console.error(JSON.stringify(error));
-        return false;
-      }
-    },
-  );
-
-  // allow user to go to sso-login page without auth
-  middleware.set(new RegExp('^\/sso-login'), async () => {
-    return false;
-  });
-
-  // allow user to go to error page without auth
-  middleware.set(new RegExp('^\/error\/([0-9]+)'), async () => false);
-
-  // allow user to share a chat link without auth
-  middleware.set(new RegExp('^\/share\/chat\/([a-zA-Z0-9_-]+)'), async () => {
-    return false;
-  });
-
-  // allow user to go to oauth page without auth
-  middleware.set(new RegExp('^\/uploads\/?'), async () => false);
-
-  // allow user to go to oauth page without auth
-  middleware.set(new RegExp('^/\\?oauth=.*'), async () => false);
-
-  // allow user to go to google oauth callback page without auth
-  middleware.set(new RegExp('^\/google-oauth-callback\/?'), async () => false);
 
   return (
     <>

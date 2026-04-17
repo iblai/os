@@ -33,8 +33,8 @@ export function UserMessageBubble({
 }: Props) {
   return (
     <div
-      className={`message-container mb-4 flex flex-col items-end pl-4 transition-all duration-300 ${
-        isHighlighted ? 'rounded-lg bg-blue-100' : ''
+      className={`message-container mb-4 flex flex-col items-end transition-all duration-300 ${
+        isHighlighted ? 'rounded-2xl bg-blue-100' : ''
       }`}
     >
       {/* Render file attachments if present (new structure) */}
@@ -86,7 +86,7 @@ export function UserMessageBubble({
       {/* If this is a reply to another message, show the reply context */}
       {message.replyTo && (
         <div
-          className="mb-2 w-full max-w-[80%] cursor-pointer overflow-hidden rounded-lg border border-gray-100 shadow-sm"
+          className="mb-2 max-w-full cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm"
           onClick={() => {
             // Find the index of the original message
             const originalMessageIndex = messages.findIndex(
@@ -109,7 +109,7 @@ export function UserMessageBubble({
           }}
         >
           {/* Quoted message with white background */}
-          <div className="rounded-t-lg bg-white p-1.5">
+          <div className="rounded-t-2xl bg-white p-1.5">
             <div className="mb-0.5 flex items-center gap-1">
               <span className="text-sm text-gray-500">"</span>
               <div className="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-gray-500">
@@ -127,7 +127,7 @@ export function UserMessageBubble({
           </div>
 
           {/* Reply message with light blue background */}
-          <div className="rounded-b-lg bg-blue-50 px-4 py-2 text-sm whitespace-pre-wrap text-gray-800">
+          <div className="rounded-b-2xl bg-blue-50 px-4 py-2 text-sm whitespace-pre-wrap text-gray-800">
             {message.content}
           </div>
         </div>
@@ -137,7 +137,7 @@ export function UserMessageBubble({
       {!message.replyTo && message.content && (
         <div
           className={cn(
-            'max-w-[80%] rounded-lg bg-blue-50 px-4 py-2 text-sm wrap-anywhere whitespace-pre-wrap text-gray-800',
+            'max-w-full rounded-2xl bg-blue-50 px-4 py-2 text-sm wrap-anywhere whitespace-pre-wrap text-gray-800',
             CSS_CLASS_NAMES.CHAT.USER_MESSAGE_QUERY,
           )}
         >
