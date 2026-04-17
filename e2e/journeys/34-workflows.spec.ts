@@ -284,7 +284,6 @@ test.describe('Journey 34: Workflows', () => {
 
     await publishWorkflow(page);
 
-    const status = await getWorkflowStatus(page);
     const hasValidationErrors = await page
       .getByText(/error/)
       .first()
@@ -292,7 +291,9 @@ test.describe('Journey 34: Workflows', () => {
       .catch(() => false);
 
     if (!hasValidationErrors) {
-      expect(status).toBe('Active');
+      await expect
+        .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
+        .toBe('Active');
     }
 
     await deleteCurrentWorkflow(page);
@@ -326,8 +327,11 @@ test.describe('Journey 34: Workflows', () => {
 
     await publishWorkflow(page);
 
-    const status = await getWorkflowStatus(page);
-    if (status !== 'Active') {
+    try {
+      await expect
+        .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
+        .toBe('Active');
+    } catch {
       await deleteCurrentWorkflow(page);
       test.skip(true, 'Workflow did not become active after publish');
       return;
@@ -350,8 +354,9 @@ test.describe('Journey 34: Workflows', () => {
     ]);
     expect(deactivateResponse.ok()).toBeTruthy();
 
-    const newStatus = await getWorkflowStatus(page);
-    expect(newStatus).toBe('Draft');
+    await expect
+      .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
+      .toBe('Draft');
 
     await deleteCurrentWorkflow(page);
   });
