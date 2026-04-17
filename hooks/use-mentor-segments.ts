@@ -16,6 +16,7 @@ import {
   FileWarning,
   UserCog,
   Archive,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -209,6 +210,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.audit_log,
+    label: 'Audit',
+    icon: ScrollText,
+    userTypes: [UserType.ADMIN],
+    // rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_log`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.datasets,

@@ -2,10 +2,10 @@
   "version": 2,
   "lastUpdated": "2026-03-31",
   "summary": {
-    "totalCheckpoints": 276,
-    "coveredCheckpoints": 276,
+    "totalCheckpoints": 283,
+    "coveredCheckpoints": 283,
     "percent": 100,
-    "totalJourneys": 37
+    "totalJourneys": 38
   },
   "journeys": [
     {
@@ -1290,7 +1290,8 @@
       "spec": "28-app-overview-and-navigation-ui.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/header.tsx"
       ],
       "checkpoints": [
         {
@@ -1855,13 +1856,58 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": [
-        "components/modals/settings-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
       "checkpoints": [
         {
           "id": "tms-01",
           "description": "Admin toggles Memory System in Advanced tab and the chat Memory button reflects it",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "audit-log",
+      "name": "Audit Log",
+      "spec": "39-audit-log.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
+        "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "al-01",
+          "description": "Admin opens Analytics and navigates to Audit tab, sees audit content or empty state",
+          "status": "covered"
+        },
+        {
+          "id": "al-02",
+          "description": "Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state",
+          "status": "covered"
+        },
+        {
+          "id": "al-03",
+          "description": "Admin opens Audit Log tab from navbar mentor dropdown",
+          "status": "covered"
+        },
+        {
+          "id": "al-04",
+          "description": "Audit tab header shows correct title and description in Edit Mentor",
+          "status": "covered"
+        },
+        {
+          "id": "al-05",
+          "description": "Admin can navigate between Audit and other tabs in Edit Mentor",
+          "status": "covered"
+        },
+        {
+          "id": "al-06",
+          "description": "Audit Log analytics page is accessible via direct URL navigation",
+          "status": "covered"
+        },
+        {
+          "id": "al-07",
+          "description": "Non-admin user does not see Audit tab in the mentor dropdown",
           "status": "covered"
         }
       ]

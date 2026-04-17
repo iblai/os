@@ -115,7 +115,7 @@ describe('useMentorSegments', () => {
   it('returns the canonical 13 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(13);
+    expect(MENTOR_SEGMENTS).toHaveLength(14);
   });
 
   it('returns the filtered segment list for an admin on a non-main tenant', () => {
