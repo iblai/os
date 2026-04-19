@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.47.5](https://github.com/iblai/mentorai/compare/v0.47.4...v0.47.5) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** fix misspelled lodash/lodash-es overrides ([bc615f2](https://github.com/iblai/mentorai/commit/bc615f2042e2885be3598b587d9f9c3d36d4af84))
+* **deps:** remove bogus npm overrides and update Cargo.lock ([b95371a](https://github.com/iblai/mentorai/commit/b95371ae481015e969768f731ca99f016637537e))
+
 ## [0.47.4](https://github.com/iblai/mentorai/compare/v0.47.3...v0.47.4) (2026-04-19)
 
 ### Bug Fixes
