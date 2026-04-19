@@ -187,7 +187,9 @@
   },
   "pnpm": {
     "overrides": {
-      "vite": ">=7.3.2"
+      "vite": ">=7.3.2",
+      "basic-ftp": ">=5.2.1",
+      "follow-redirects": ">=1.16.0"
     }
   },
   "lint-staged": {
