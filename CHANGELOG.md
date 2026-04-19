@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.7](https://github.com/iblai/mentorai/compare/v0.47.6...v0.47.7) (2026-04-19)
+
+### Chores
+
+* **deps:** cargo update all Tauri dependencies ([d1b0bbc](https://github.com/iblai/mentorai/commit/d1b0bbcb5a6f9da2b09724caad84090ea529b3da))
+
 ## [0.47.6](https://github.com/iblai/mentorai/compare/v0.47.5...v0.47.6) (2026-04-19)
 
 ### Bug Fixes
