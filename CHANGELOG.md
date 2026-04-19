@@ -1,5 +1,8 @@
 # Changelog
 
+* fix(deps): add security overrides and bump next to 15.5.15 (ebdf831)
+* fix(deps): override basic-ftp and follow-redirects for security patches (22e5b4d)
+
 ## [0.47.3](https://github.com/iblai/mentorai/compare/v0.47.2...v0.47.3) (2026-04-19)
 
 ### Chores
