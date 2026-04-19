@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.47.4](https://github.com/iblai/mentorai/compare/v0.47.3...v0.47.4) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** add more security overrides for transitive vulnerabilities ([a0c6632](https://github.com/iblai/mentorai/commit/a0c663287807762c535b9b7cd11c47a4519299ee))
+* **deps:** add security overrides and bump next to 15.5.15 ([ebdf831](https://github.com/iblai/mentorai/commit/ebdf831a546d1cca34654dd4efa25cc3465ee91c))
+* **deps:** override basic-ftp and follow-redirects for security patches ([22e5b4d](https://github.com/iblai/mentorai/commit/22e5b4d68244fcb2a41e20322da9aef61957a555)), closes [#143](https://github.com/iblai/mentorai/issues/143)
+
+### Chores
+
+* **release:** v0.47.3 ([438c209](https://github.com/iblai/mentorai/commit/438c2097e154f718ee94c099dfc1d191865243df))
+
 * fix(deps): add security overrides and bump next to 15.5.15 (ebdf831)
 * fix(deps): override basic-ftp and follow-redirects for security patches (22e5b4d)
 
