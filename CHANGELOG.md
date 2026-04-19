@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.8](https://github.com/iblai/mentorai/compare/v0.47.7...v0.47.8) (2026-04-19)
+
+### Bug Fixes
+
+* **security:** add SSRF protection to WebCache fetch_from_network ([ed5999b](https://github.com/iblai/mentorai/commit/ed5999bb45f7ace1dac1d8054ac0e44c997f333e))
+
 ## [0.47.7](https://github.com/iblai/mentorai/compare/v0.47.6...v0.47.7) (2026-04-19)
 
 ### Chores
