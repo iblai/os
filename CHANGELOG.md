@@ -4,28 +4,28 @@
 
 ### Chores
 
-* remove electron and electron-builder ([517028e](https://github.com/iblai/mentorai/commit/517028efd1ba5f483ad618850c575c2ae99bbe25)), closes [#54](https://github.com/iblai/mentorai/issues/54)
+- remove electron and electron-builder ([517028e](https://github.com/iblai/mentorai/commit/517028efd1ba5f483ad618850c575c2ae99bbe25)), closes [#54](https://github.com/iblai/mentorai/issues/54)
 
 ## [0.47.0](https://github.com/iblai/mentorai/compare/v0.46.5...v0.47.0) (2026-04-17)
 
 ### Features
 
-* **mentor:** adding audit logs for analytics and edit mentor ([7bf80fa](https://github.com/iblai/mentorai/commit/7bf80fa828b4e7bd655f387211ca27dea986fb26))
+- **mentor:** adding audit logs for analytics and edit mentor ([7bf80fa](https://github.com/iblai/mentorai/commit/7bf80fa828b4e7bd655f387211ca27dea986fb26))
 
 ### Bug Fixes
 
-* **e2e:** adding coverage json fixes for the test mapping ([9bcc469](https://github.com/iblai/mentorai/commit/9bcc4690e87b4780e205016c2cb3f669f05a64e1))
-* **e2e:** adding e2e coverage changelogs ([b202b18](https://github.com/iblai/mentorai/commit/b202b18e3aefb9444e2f0e92a0c1602a0b474216))
-* **e2e:** adding fix for workflow tests ([aed038b](https://github.com/iblai/mentorai/commit/aed038bc896ef5419907a6ea9eb867b9b203fcbc))
-* **mentor:** pre push hook debug fixes ([260c1f4](https://github.com/iblai/mentorai/commit/260c1f46dbcd15b9188eaeb1d1b7021587acc337))
-* **mentor:** pre push hook debug fixes ([93192ad](https://github.com/iblai/mentorai/commit/93192adf2bbcbb568c8941e828ce0e45bda75c16))
-* **mentor:** test coverage for header component ([e3a7a84](https://github.com/iblai/mentorai/commit/e3a7a84750949dd4b87bebe1ec0c3841e62e011e))
-* replace yalc @iblai/iblai-js with registry version 1.1.9 ([bf26f7a](https://github.com/iblai/mentorai/commit/bf26f7adf69082351cd927e6206900332f4ce67f))
+- **e2e:** adding coverage json fixes for the test mapping ([9bcc469](https://github.com/iblai/mentorai/commit/9bcc4690e87b4780e205016c2cb3f669f05a64e1))
+- **e2e:** adding e2e coverage changelogs ([b202b18](https://github.com/iblai/mentorai/commit/b202b18e3aefb9444e2f0e92a0c1602a0b474216))
+- **e2e:** adding fix for workflow tests ([aed038b](https://github.com/iblai/mentorai/commit/aed038bc896ef5419907a6ea9eb867b9b203fcbc))
+- **mentor:** pre push hook debug fixes ([260c1f4](https://github.com/iblai/mentorai/commit/260c1f46dbcd15b9188eaeb1d1b7021587acc337))
+- **mentor:** pre push hook debug fixes ([93192ad](https://github.com/iblai/mentorai/commit/93192adf2bbcbb568c8941e828ce0e45bda75c16))
+- **mentor:** test coverage for header component ([e3a7a84](https://github.com/iblai/mentorai/commit/e3a7a84750949dd4b87bebe1ec0c3841e62e011e))
+- replace yalc @iblai/iblai-js with registry version 1.1.9 ([bf26f7a](https://github.com/iblai/mentorai/commit/bf26f7adf69082351cd927e6206900332f4ce67f))
 
 ### Chores
 
-* **mentor:** adding playwright tests and hooks changes ([a8f9380](https://github.com/iblai/mentorai/commit/a8f9380dc497895047e2d299a501c858fb9a96bc))
-* **mentor:** removing yalc ([c7a29fb](https://github.com/iblai/mentorai/commit/c7a29fb9058857a3e42ee43f6cab17e457744453))
+- **mentor:** adding playwright tests and hooks changes ([a8f9380](https://github.com/iblai/mentorai/commit/a8f9380dc497895047e2d299a501c858fb9a96bc))
+- **mentor:** removing yalc ([c7a29fb](https://github.com/iblai/mentorai/commit/c7a29fb9058857a3e42ee43f6cab17e457744453))
 
 ## [0.46.5](https://github.com/iblai/mentorai/compare/v0.46.4...v0.46.5) (2026-04-16)
 
