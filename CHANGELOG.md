@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.1](https://github.com/iblai/mentorai/compare/v0.47.0...v0.47.1) (2026-04-19)
+
+### Chores
+
+* remove electron and electron-builder ([517028e](https://github.com/iblai/mentorai/commit/517028efd1ba5f483ad618850c575c2ae99bbe25)), closes [#54](https://github.com/iblai/mentorai/issues/54)
+
 ## [0.47.0](https://github.com/iblai/mentorai/compare/v0.46.5...v0.47.0) (2026-04-17)
 
 ### Features
