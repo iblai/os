@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.47.3",
+  "version": "0.47.2",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -106,7 +106,7 @@
     "marked-highlight": "2.2.3",
     "marked-katex-extension": "5.1.7",
     "mitt": "3.0.1",
-    "next": "15.5.5",
+    "next": "15.5.15",
     "next-themes": "0.4.6",
     "next-transpile-modules": "10.0.1",
     "react": "19.1.0",
@@ -189,7 +189,14 @@
     "overrides": {
       "vite": ">=7.3.2",
       "basic-ftp": ">=5.2.1",
-      "follow-redirects": ">=1.16.0"
+      "follow-redirects": ">=1.16.0",
+      "defu": ">=6.1.5",
+      "loadash-es": ">=4.18.0",
+      "undici": ">=6.24.0",
+      "glib": ">=0.20.0",
+      "time": ">=0.3.47",
+      "hono": ">=4.12.14",
+      "axios": ">=1.15.0"
     }
   },
   "lint-staged": {
