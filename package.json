@@ -196,7 +196,13 @@
       "glib": ">=0.20.0",
       "time": ">=0.3.47",
       "hono": ">=4.12.14",
-      "axios": ">=1.15.0"
+      "axios": ">=1.15.0",
+      "rand": ">=0.9.3",
+      "rustls-webpki": ">=0.103.12",
+      "prismjs": ">=1.30.0",
+      "dompurify": ">=3.4.0",
+      "@hono/node-server": ">=1.19.13",
+      "bytes": ">=1.11.1"
     }
   },
   "lint-staged": {
