@@ -35,6 +35,7 @@ vi.mock('@/lib/constants', () => ({
         datasets: 'datasets',
         api: 'api',
         embed: 'embed',
+        audit_log: 'audit_log',
       },
     },
   },
@@ -160,6 +161,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
 }));
 
 // Mock child components
+const capturedSettingsOnClose = { current: null as (() => void) | null };
 vi.mock('@/components/modals/settings-modal', () => ({
   SettingsModal: ({
     isOpen,
@@ -167,12 +169,14 @@ vi.mock('@/components/modals/settings-modal', () => ({
   }: {
     isOpen: boolean;
     onClose: () => void;
-  }) =>
-    isOpen ? (
+  }) => {
+    capturedSettingsOnClose.current = onClose;
+    return isOpen ? (
       <div data-testid="settings-modal">
         <button onClick={onClose}>Close Settings</button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 vi.mock('@/components/modals/llm-provider-selection-modal', () => ({
@@ -190,6 +194,10 @@ vi.mock('@/components/modals/llm-provider-selection-modal', () => ({
     ) : null,
 }));
 
+const capturedMentorListOnClose = { current: null as (() => void) | null };
+const capturedMentorListOnSelect = {
+  current: null as ((mentor: unknown) => void) | null,
+};
 vi.mock('@/components/modals/mentor-list-modal', () => ({
   MentorListModal: ({
     isOpen,
@@ -199,8 +207,10 @@ vi.mock('@/components/modals/mentor-list-modal', () => ({
     isOpen: boolean;
     onClose: () => void;
     onSelect: (mentor: unknown) => void;
-  }) =>
-    isOpen ? (
+  }) => {
+    capturedMentorListOnClose.current = onClose;
+    capturedMentorListOnSelect.current = onSelect;
+    return isOpen ? (
       <div data-testid="mentor-list-modal">
         <button onClick={onClose}>Close Mentor List</button>
         <button
@@ -210,7 +220,8 @@ vi.mock('@/components/modals/mentor-list-modal', () => ({
           Select Mentor
         </button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
@@ -228,13 +239,22 @@ vi.mock('@/components/modals/edit-mentor-modal', () => ({
     ) : null,
 }));
 
+const capturedHelpOnClose = { current: null as (() => void) | null };
 vi.mock('@/components/modals/help-modal', () => ({
-  HelpModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
-    isOpen ? (
+  HelpModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) => {
+    capturedHelpOnClose.current = onClose;
+    return isOpen ? (
       <div data-testid="help-modal">
         <button onClick={onClose}>Close Help</button>
       </div>
-    ) : null,
+    ) : null;
+  },
 }));
 
 vi.mock('@/components/modals/create-mentor-modal', () => ({
@@ -285,6 +305,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 
 vi.mock('../header/profile-button', () => ({
   ProfileButton: ({
+    onClick,
     onProfileClick,
     isInstructor,
     setIsInstructor,
@@ -298,6 +319,9 @@ vi.mock('../header/profile-button', () => ({
     isMobile: boolean;
   }) => (
     <div data-testid="profile-button">
+      <button onClick={onClick} data-testid="profile-button-click">
+        Click
+      </button>
       <button onClick={onProfileClick} data-testid="profile-click">
         Profile
       </button>
@@ -558,6 +582,32 @@ describe('Header component', () => {
       });
       expect(toggleButton).toBeInTheDocument();
     });
+
+    it('should show "Close sidebar" label when drawer is open in tablet view', () => {
+      render(
+        <Header
+          isMobileOrTablet={true}
+          isDrawerOpen={true}
+          toggleDrawer={vi.fn()}
+        />,
+      );
+
+      const toggleButton = screen.getByRole('button', {
+        name: /close sidebar/i,
+      });
+      expect(toggleButton).toBeInTheDocument();
+    });
+
+    it('should use default toggleDrawer when not provided in tablet view', () => {
+      render(<Header isMobileOrTablet={true} />);
+
+      const toggleButton = screen.getByRole('button', {
+        name: /open sidebar/i,
+      });
+      // Clicking should not throw — uses the default no-op
+      fireEvent.click(toggleButton);
+      expect(toggleButton).toBeInTheDocument();
+    });
   });
 
   describe('desktop view', () => {
@@ -568,6 +618,15 @@ describe('Header component', () => {
         name: /sidebar/i,
       });
       expect(toggleButtons).toHaveLength(0);
+    });
+
+    it('should handle ProfileButton onClick no-op in desktop view', () => {
+      render(<Header />);
+
+      const clickButton = screen.getByTestId('profile-button-click');
+      // Should not throw — onClick is a no-op
+      fireEvent.click(clickButton);
+      expect(clickButton).toBeInTheDocument();
     });
 
     it('should render My Mentors text on desktop', () => {
@@ -992,6 +1051,59 @@ describe('Header component', () => {
       fireEvent.click(newChatItem);
 
       expect(mockNavigateToHome).toHaveBeenCalled();
+    });
+
+    it('should call openEditMentorModal with audit_log tab when Audit is clicked in mobile', () => {
+      render(<Header />);
+
+      const auditItem = screen.getByText('Audit');
+      fireEvent.click(auditItem);
+
+      expect(mockOpenEditMentorModal).toHaveBeenCalledWith('audit_log');
+    });
+
+    it('should handle ProfileButton onClick no-op in mobile view', () => {
+      render(<Header />);
+
+      const clickButton = screen.getByTestId('profile-button-click');
+      fireEvent.click(clickButton);
+      expect(clickButton).toBeInTheDocument();
+    });
+
+    it('should invoke MentorListModal onSelect (handleMentorSelect) in mobile view', () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      render(<Header />);
+
+      // The mock captures onSelect even when the modal is not open
+      expect(capturedMentorListOnSelect.current).not.toBeNull();
+      capturedMentorListOnSelect.current!({ id: 'test-mentor' });
+
+      expect(consoleSpy).toHaveBeenCalledWith('Selected mentor:', {
+        id: 'test-mentor',
+      });
+      consoleSpy.mockRestore();
+    });
+
+    it('should invoke MentorListModal onClose in mobile view', () => {
+      render(<Header />);
+
+      expect(capturedMentorListOnClose.current).not.toBeNull();
+      // Should not throw
+      capturedMentorListOnClose.current!();
+    });
+
+    it('should invoke SettingsModal onClose in mobile view', () => {
+      render(<Header />);
+
+      expect(capturedSettingsOnClose.current).not.toBeNull();
+      capturedSettingsOnClose.current!();
+    });
+
+    it('should invoke HelpModal onClose in mobile view', () => {
+      render(<Header />);
+
+      expect(capturedHelpOnClose.current).not.toBeNull();
+      capturedHelpOnClose.current!();
     });
   });
 
