@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.3](https://github.com/iblai/mentorai/compare/v0.47.2...v0.47.3) (2026-04-19)
+
+### Chores
+
+* bump nextjs version ([1a650f0](https://github.com/iblai/mentorai/commit/1a650f01e1eed67700a0d7b08b965b69e3e566c0))
+
 ## [0.47.2](https://github.com/iblai/mentorai/compare/v0.47.1...v0.47.2) (2026-04-19)
 
 ### Chores
