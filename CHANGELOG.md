@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.6](https://github.com/iblai/mentorai/compare/v0.47.5...v0.47.6) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** update bytes 1.11.0 -> 1.11.1 in Cargo.lock ([68915ec](https://github.com/iblai/mentorai/commit/68915ecf851a1f12834ba036bf6099a7131ddf92)), closes [#46](https://github.com/iblai/mentorai/issues/46)
+
 ## [0.47.5](https://github.com/iblai/mentorai/compare/v0.47.4...v0.47.5) (2026-04-19)
 
 ### Bug Fixes
