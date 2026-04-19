@@ -5,10 +5,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
+use url::Url;
 
 const CACHE_DIR: &str = "web_cache";
 const CACHE_INDEX_FILE: &str = "index.json";
@@ -211,8 +213,61 @@ impl WebCache {
         ))
     }
 
+    /// Validate that a URL is safe to fetch (prevents SSRF attacks).
+    /// Only allows HTTP(S) schemes and blocks requests to private/internal networks.
+    fn validate_url(url: &str) -> Result<(), String> {
+        let parsed = Url::parse(url).map_err(|e| format!("Invalid URL: {}", e))?;
+
+        // Only allow http and https schemes
+        match parsed.scheme() {
+            "http" | "https" => {}
+            scheme => return Err(format!("Blocked scheme: {}", scheme)),
+        }
+
+        let host = parsed
+            .host_str()
+            .ok_or_else(|| "URL has no host".to_string())?;
+
+        // Allow localhost only for development
+        if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+            #[cfg(not(debug_assertions))]
+            return Err("Blocked request to localhost in release mode".to_string());
+
+            #[cfg(debug_assertions)]
+            return Ok(());
+        }
+
+        // Block private/internal IP ranges
+        if let Ok(ip) = host.parse::<IpAddr>() {
+            let is_private = match ip {
+                IpAddr::V4(v4) => {
+                    v4.is_private()          // 10.x, 172.16-31.x, 192.168.x
+                    || v4.is_loopback()      // 127.x
+                    || v4.is_link_local()    // 169.254.x
+                    || v4.is_unspecified()   // 0.0.0.0
+                    || v4.is_broadcast()     // 255.255.255.255
+                    || v4.octets()[0] == 100 && (v4.octets()[1] & 0xC0) == 64 // 100.64-127.x (CGNAT)
+                }
+                IpAddr::V6(v6) => {
+                    v6.is_loopback()
+                    || v6.is_unspecified()
+                    // ULA (fc00::/7) and link-local (fe80::/10)
+                    || (v6.segments()[0] & 0xfe00) == 0xfc00
+                    || (v6.segments()[0] & 0xffc0) == 0xfe80
+                }
+            };
+            if is_private {
+                return Err(format!("Blocked request to private IP: {}", ip));
+            }
+        }
+
+        Ok(())
+    }
+
     async fn fetch_from_network(&self, url: &str) -> Result<CacheResponse, String> {
         println!("[WebCache] Fetching from network: {}", url);
+
+        Self::validate_url(url)?;
 
         let response = self
             .client
