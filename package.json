@@ -23,38 +23,12 @@
     "test:ui": "vitest --ui",
     "release": "release-it",
     "check-types": "tsc --noEmit",
-    "desktop:dev": "concurrently \"pnpm dev\" \"pnpm electron-dev\"",
-    "electron-dev": "wait-on http://localhost:3000 && electron .",
-    "desktop:build": "pnpm build && electron-builder",
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build",
     "tauri:build:debug": "pnpm build && cargo tauri build --debug",
     "test:e2e": "mkdir -p playwright/.auth && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-chrome.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-edge.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-safari.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-firefox.json && playwright test --config e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
-  },
-  "build": {
-    "appId": "ai.iblai.mentorai",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "electron.js",
-      "preload.js",
-      ".next/",
-      "public/",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": ".next/standalone"
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "public/icon.ico"
-    }
   },
   "dependencies": {
     "@iblai/iblai-api": "4.166.0-ai",
@@ -121,7 +95,7 @@
     "html2canvas": "1.4.1",
     "import-in-the-middle": "1.15.0",
     "input-otp": "1.4.1",
-    "jspdf": "2.5.2",
+    "jspdf": ">=4.2.1",
     "jwt-decode": "4.0.0",
     "katex": "0.16.44",
     "livekit-client": "2.9.9",
@@ -189,11 +163,8 @@
     "@vitest/coverage-istanbul": "3.2.4",
     "@vitest/ui": "3.2.4",
     "autoprefixer": "10.4.27",
-    "concurrently": "9.2.1",
     "cross-env": "7.0.3",
     "dotenv": "16.4.7",
-    "electron": "39.2.3",
-    "electron-builder": "26.0.12",
     "eslint": "9.39.4",
     "eslint-config-next": "15.3.0",
     "eslint-config-prettier": "10.1.2",
@@ -212,8 +183,12 @@
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.4",
-    "vitest-axe": "0.1.0",
-    "wait-on": "9.0.3"
+    "vitest-axe": "0.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": ">=7.3.2"
+    }
   },
   "lint-staged": {
     "*.ts?(x)": [

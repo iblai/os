@@ -36,5 +36,5 @@
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["**/node_modules", ".next", "dist-electron", "e2e"]
+  "exclude": ["**/node_modules", ".next", "e2e"]
 }
