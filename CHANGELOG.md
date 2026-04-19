@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.47.2](https://github.com/iblai/mentorai/compare/v0.47.1...v0.47.2) (2026-04-19)
+
+### Chores
+
+* bump next from 15.3.6 to 15.5.14 ([dfd1435](https://github.com/iblai/mentorai/commit/dfd143506c2beb60c809da3642646346dad358a3))
+* update pnpm-lock.yaml ([ec9cf09](https://github.com/iblai/mentorai/commit/ec9cf094cc68fa5ac0ff696c63359cb63397084a))
+
 ## [0.47.1](https://github.com/iblai/mentorai/compare/v0.47.0...v0.47.1) (2026-04-19)
 
 ### Chores
