@@ -149,6 +149,7 @@ export function NavBar() {
       skip: !mentorId || !tenantKey || !username || isTauriOffline,
     },
   );
+
   const { data: mentorSettingsCombinedPublicAndPrivate } = useMentorSettings();
 
   const requiresLoginForChat =

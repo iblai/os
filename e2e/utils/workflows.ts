@@ -1,45 +1,22 @@
 import { Page, expect } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
-import { safeWaitForURL, parsePlatformUrl } from './navigation';
-import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
+import { safeWaitForURL } from './navigation';
 
 /**
- * Navigate to the workflows list page for the current mentor.
- * Extracts tenantKey and mentorId from the current platform URL.
+ * Navigate to the workflows list page via the sidebar Workflows button.
+ * This avoids a full page.goto() which can lose client-side auth tokens.
  */
 export async function navigateToWorkflowsPage(page: Page): Promise<void> {
-  const { platformKey: tenantKey, mentorId } = parsePlatformUrl(page.url());
-
-  // Log localStorage tokens before navigating to help diagnose redirect-to-login issues
-  const tokenSnapshot = await page.evaluate(() => {
-    const keys = [
-      'dm_token',
-      'axd_token',
-      'axd_token_expires',
-      'edx_jwt_token',
-    ];
-    return Object.fromEntries(
-      keys.map((k) => [k, localStorage.getItem(k) ? 'present' : 'NULL']),
-    );
+  const workflowsButton = page.getByRole('button', {
+    name: 'Workflows',
+    exact: true,
   });
-  logger.info(
-    `[navigateToWorkflowsPage] localStorage before goto: ${JSON.stringify(tokenSnapshot)}`,
-  );
-
-  await page.goto(
-    `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/workflows/${mentorId}`,
-    { waitUntil: 'domcontentloaded', timeout: 60_000 },
-  );
-
-  logger.info(`[navigateToWorkflowsPage] URL after goto: ${page.url()}`);
+  await expect(workflowsButton).toBeVisible({ timeout: 15_000 });
+  await workflowsButton.click();
 
   await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
     timeout: 60_000,
   });
-
-  logger.info(
-    `[navigateToWorkflowsPage] URL after safeWaitForURL: ${page.url()}`,
-  );
 
   const heading = page.getByRole('heading', { name: 'Workflows' });
   await expect(heading).toBeVisible({ timeout: 30_000 });

@@ -68,7 +68,6 @@ export default defineConfig({
         '.next/**',
         'dist/**',
         'build/**',
-        'electron-dist/**',
         'offline-shell/**',
         '**/*.d.ts',
         '**/*.config.*',
