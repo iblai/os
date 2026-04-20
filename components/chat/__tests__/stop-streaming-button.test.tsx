@@ -98,6 +98,42 @@ describe('StopStreamingButton', () => {
     expect(tooltip).toHaveTextContent('Stop Streaming');
   });
 
+  // Issue #576 — exercise the preventDefault branch by mocking
+  // `matches(':focus-visible')` to false (simulating non-keyboard focus in
+  // a real browser). JSDOM otherwise treats any focused element as
+  // focus-visible, leaving the suppression branch unreachable in tests.
+  it('exercises the preventDefault branch on non-focus-visible focus (issue #576)', async () => {
+    renderButton({ stopGenerating: vi.fn() });
+    const button = screen.getByRole('button', { name: 'Stop streaming' });
+
+    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
+      selector === ':focus-visible'
+        ? false
+        : Element.prototype.matches.call(button, selector),
+    );
+
+    button.focus();
+    expect(button).toHaveFocus();
+
+    // Give Radix's delayed open a chance to run; it should stay suppressed.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('skips the preventDefault branch when :focus-visible is matched (issue #576)', () => {
+    renderButton({ stopGenerating: vi.fn() });
+    const button = screen.getByRole('button', { name: 'Stop streaming' });
+
+    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
+      selector === ':focus-visible'
+        ? true
+        : Element.prototype.matches.call(button, selector),
+    );
+
+    button.focus();
+    expect(button).toHaveFocus();
+  });
+
   it('forwards ref to the button element', () => {
     const ref = createRef<HTMLButtonElement>();
 

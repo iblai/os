@@ -95,6 +95,41 @@ describe('AIMessageCopy', () => {
     expect(tooltip).toHaveTextContent('Copy to Clipboard');
   });
 
+  // Issue #576 — exercise the preventDefault branch by mocking
+  // `matches(':focus-visible')` to false (simulating non-keyboard focus in
+  // a real browser). JSDOM otherwise treats any focused element as
+  // focus-visible, leaving the suppression branch unreachable in tests.
+  it('exercises the preventDefault branch on non-focus-visible focus (issue #576)', async () => {
+    renderCopy();
+    const button = screen.getByLabelText('Copy to Clipboard');
+
+    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
+      selector === ':focus-visible'
+        ? false
+        : Element.prototype.matches.call(button, selector),
+    );
+
+    button.focus();
+    expect(button).toHaveFocus();
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('skips the preventDefault branch when :focus-visible is matched (issue #576)', () => {
+    renderCopy();
+    const button = screen.getByLabelText('Copy to Clipboard');
+
+    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
+      selector === ':focus-visible'
+        ? true
+        : Element.prototype.matches.call(button, selector),
+    );
+
+    button.focus();
+    expect(button).toHaveFocus();
+  });
+
   it('shows "Copied" tooltip when status is success', async () => {
     mockStatus = 'success';
     const user = userEvent.setup();
