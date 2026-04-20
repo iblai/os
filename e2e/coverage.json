@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-31",
+  "lastUpdated": "2026-04-03",
   "summary": {
-    "totalCheckpoints": 283,
-    "coveredCheckpoints": 283,
+    "totalCheckpoints": 307,
+    "coveredCheckpoints": 307,
     "percent": 100,
     "totalJourneys": 38
   },
@@ -1040,47 +1040,81 @@
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
-        "components/modals/disclaimer-modal.tsx"
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/disclaimer-modal.tsx",
+        "hooks/use-user-agreement.ts",
+        "constants/disclaimer.ts"
       ],
       "checkpoints": [
         {
           "id": "disc-01",
-          "description": "Admin toggles User Agreement on and unauthenticated user sees disclaimer modal",
+          "description": "Admin enables User Agreement toggle and sees Active status",
           "status": "covered"
         },
         {
           "id": "disc-02",
-          "description": "Admin can edit User Agreement content",
+          "description": "Admin disables User Agreement toggle and sees Inactive status",
           "status": "covered"
         },
         {
           "id": "disc-03",
-          "description": "Admin can copy User Agreement content",
+          "description": "Admin edits User Agreement content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-04",
-          "description": "Admin can edit Advisory text",
+          "description": "Admin edits Advisory content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-05",
-          "description": "Disclaimers tab has proper WCAG accessibility",
+          "description": "Admin cancels User Agreement edit without saving",
           "status": "covered"
         },
         {
           "id": "disc-06",
-          "description": "User Agreement modal is accessible",
+          "description": "Save button is disabled when User Agreement content is empty",
           "status": "covered"
         },
         {
           "id": "disc-07",
-          "description": "Create mentor and configure all disclaimers end-to-end",
+          "description": "Admin copies User Agreement content to clipboard",
           "status": "covered"
         },
         {
           "id": "disc-08",
-          "description": "Toggle User Agreement on/off affects chat modal appearance",
+          "description": "Admin copies Advisory content to clipboard",
+          "status": "covered"
+        },
+        {
+          "id": "disc-09",
+          "description": "Non-admin must accept User Agreement modal before sending a chat message when agreement is enabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-10",
+          "description": "Non-admin sends a message without seeing agreement modal when User Agreement is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-11",
+          "description": "Non-admin who accepted User Agreement is not shown the modal again on subsequent messages",
+          "status": "covered"
+        },
+        {
+          "id": "disc-12",
+          "description": "Disclaimers tab shows both User Agreement and Advisory sections with their controls",
+          "status": "covered"
+        },
+        {
+          "id": "disc-13",
+          "description": "Advisory Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-14",
+          "description": "User Agreement Edit modal opens with the correct title",
           "status": "covered"
         }
       ]

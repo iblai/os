@@ -317,17 +317,24 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (8 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
-- [x] Admin can toggle User Agreement on/off; toggling on causes disclaimer modal to appear before chat _(uses fresh unauthenticated browser context; skips if non-admin)_
-- [x] Admin can edit User Agreement content _(skips if non-admin)_
-- [x] Admin can copy User Agreement content to clipboard _(skips if non-admin)_
-- [x] Admin can edit Advisory text and it appears above the chat input _(skips if non-admin)_
-- [x] Disclaimers tab has proper WCAG accessibility attributes _(skips if non-admin)_
-- [x] User Agreement modal is accessible _(skips if non-admin)_
-- [x] Create a new mentor and configure all disclaimer settings end-to-end _(uses fresh unauthenticated browser context; skips if non-admin)_
+- [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits User Agreement content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits Advisory content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin cancels User Agreement edit without saving — preview content unchanged _(creates fresh mentor; skips if non-admin)_
+- [x] Save button is disabled when User Agreement content is empty _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies User Agreement content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies Advisory content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin enables user agreement and non-admin must accept it before chatting _(creates fresh mentor; uses non-admin browser context)_
+- [x] Admin disables user agreement and non-admin sends message without seeing agreement modal _(creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin accepts user agreement and subsequent messages do not trigger modal again _(creates fresh mentor; uses non-admin browser context)_
+- [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
+- [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 
 ---
 
