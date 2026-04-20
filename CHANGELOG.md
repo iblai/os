@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.47.10](https://github.com/iblai/mentorai/compare/v0.47.9...v0.47.10) (2026-04-20)
+
+### Bug Fixes
+
+* **security:** add permissions: {} to all workflows ([d18796d](https://github.com/iblai/mentorai/commit/d18796d8d90ffab9fc4fce2b8ce90e63491b3392))
+* **security:** address CodeQL alerts - SSRF, TLS, redirect, sanitization ([7d8a96e](https://github.com/iblai/mentorai/commit/7d8a96e25edff3e36e9eb890c5f9381a87c59c57))
+
 ## [0.47.9](https://github.com/iblai/mentorai/compare/v0.47.8...v0.47.9) (2026-04-20)
 
 ### CI
