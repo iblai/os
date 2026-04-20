@@ -73,6 +73,31 @@ describe('StopStreamingButton', () => {
     expect(tooltip).toHaveTextContent('Stop Streaming');
   });
 
+  // Issue #576 — the tooltip should NOT flash when focus lands on this
+  // button as a side-effect (submit → stop button swap, programmatic
+  // .focus()). Keyboard Tab navigation still opens the tooltip normally.
+  it('does not show tooltip when focus is programmatic (issue #576)', () => {
+    renderButton({ stopGenerating: vi.fn() });
+
+    const button = screen.getByRole('button', { name: 'Stop streaming' });
+    button.focus();
+    expect(button).toHaveFocus();
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('still shows tooltip when focus arrives via keyboard Tab (issue #576)', async () => {
+    const user = userEvent.setup();
+    renderButton({ stopGenerating: vi.fn() });
+
+    await user.tab();
+    const button = screen.getByRole('button', { name: 'Stop streaming' });
+    expect(button).toHaveFocus();
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Stop Streaming');
+  });
+
   it('forwards ref to the button element', () => {
     const ref = createRef<HTMLButtonElement>();
 
