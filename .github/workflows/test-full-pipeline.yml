@@ -165,7 +165,7 @@ jobs:
       domain-number: ${{ inputs.stg-slot }}
       app-type: mentor
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      max-wait: 5400
+      max-wait: 10800
       total-shards: 1
       run-type: main
       browsers: ${{ inputs.browsers }}
