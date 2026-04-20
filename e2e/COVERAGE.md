@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-20 | 286 checkpoints | 38 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -410,9 +410,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (16 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -430,6 +430,9 @@ When adding a new page or modifying an existing user flow:
 - [x] History dialog is accessible
 - [x] Safety dialog is accessible
 - [x] API key dialog is accessible
+- [x] Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)
+- [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
+- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 
 ---
 
