@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-20 | 295 checkpoints | 39 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -543,25 +543,44 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 38: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
+## Journey 38: Suggested Prompts (12 checkpoints) — `journeys/38-suggested-prompts.spec.ts`
 
-**Source files:** `components/modals/settings-modal.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx`
 
-- [x] TMS-38.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
+- [x] Admin opens the Prompts tab and sees the Suggested Prompts section
+- [x] Admin adds a new suggested prompt from the Prompts tab
+- [x] Admin edits a suggested prompt from the Prompts tab
+- [x] Admin sees Run buttons on suggested prompts in the Prompts tab
+- [x] Admin runs a suggested prompt and the chat input is populated
+- [x] Admin sees the See More button when more than the page size of prompts exist
+- [x] Admin sees Delete buttons on suggested prompts in the Prompts tab
+- [x] Admin deletes a suggested prompt from the Prompts tab
+- [x] Admin opens the Prompt Gallery from the chat area
+- [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
+- [x] Admin deletes a prompt from the Prompt Gallery in the chat area
+- [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
 
 ---
 
-## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
+## Journey 40: Tenant Memory System Toggle (1 checkpoint) — `journeys/40-tenant-memory-system-toggle.spec.ts`
+
+**Source files:** `components/modals/settings-modal.tsx`
+
+- [x] TMS-40.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
+
+---
+
+## Journey 41: Audit Log (7 checkpoints) — `journeys/41-audit-log.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
 
-- [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
-- [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
-- [x] AL-39.3: Admin opens Audit Log tab from navbar mentor dropdown
-- [x] AL-39.4: Audit tab header shows correct title and description in Edit Mentor
-- [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
-- [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
-- [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+- [x] AL-41.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
+- [x] AL-41.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
+- [x] AL-41.3: Admin opens Audit Log tab from navbar mentor dropdown
+- [x] AL-41.4: Audit tab header shows correct title and description in Edit Mentor
+- [x] AL-41.5: Admin can navigate between Audit and other tabs in Edit Mentor
+- [x] AL-41.6: Audit Log analytics page is accessible via direct URL navigation
+- [x] AL-41.7: Non-admin user does not see Audit tab in the mentor dropdown
 
 ---
 
