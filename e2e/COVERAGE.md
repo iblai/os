@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-20 | 285 checkpoints | 38 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -176,9 +176,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 12: Chat Sharing (6 checkpoints) — `journeys/12-chat-sharing.spec.ts`
+## Journey 12: Chat Sharing (8 checkpoints) — `journeys/12-chat-sharing.spec.ts`
 
-**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`
+**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `hooks/use-shared-chat-messages.ts`
 
 - [x] Shared chat URL is created and matches the `/share/chat/{uuid}` pattern
 - [x] Unauthenticated user can access shared chat and sees the chat history
@@ -186,6 +186,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Shared chat page loads correctly and displays the chat interface
 - [x] "Sign up for Free" button on shared chat redirects to the auth host
 - [x] Chat textarea is not shown (or is disabled) for unauthenticated users on shared chat
+- [x] Share button renders exactly once per session in the navbar, not per AI message (issue #645)
+- [x] Share button is hidden on non-chat pages like `/explore` (issue #645)
 
 ---
 

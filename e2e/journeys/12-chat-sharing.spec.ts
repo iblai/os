@@ -8,7 +8,10 @@ test.describe('Journey 12: Chat Sharing', () => {
 
   let sharedChatUrl = '';
 
-  // fixme: shareable chat URL creation times out — share button not responding
+  // fixme: shareable chat URL creation times out — share button not responding.
+  // Issue #645 relocated the share button from per-AI-message to the navbar,
+  // which we expect to fix this. Keeping it fixme until we've confirmed the
+  // timeout is gone in CI — flip to `test(...)` once a green run lands.
   test.fixme(
     'non-admin goes to chat page and creates a shareable chat URL',
     async ({ nonadminPage, nonadminChatPage, browserName }) => {
@@ -40,7 +43,9 @@ test.describe('Journey 12: Chat Sharing', () => {
       );
       await nonadminChatPage.waitForAIResponse();
 
-      // H9 fix: use exact button name from original
+      // Issue #645 — the share button now lives in the navbar (session-level),
+      // not per-message. The aria-label is unchanged so this selector still
+      // resolves to exactly one element.
       const shareButton = nonadminPage.getByRole('button', {
         name: 'Share this chat',
       });
@@ -79,6 +84,58 @@ test.describe('Journey 12: Chat Sharing', () => {
       expect(sharedChatUrl).toMatch(/\/share\/chat\/[a-f0-9-]+/);
     },
   );
+
+  // Issue #645 — structural check: the share button is rendered exactly once
+  // per session in the navbar, not once per AI message. Sending additional
+  // messages must NOT create additional share buttons.
+  test('non-admin sees exactly one session-level share button regardless of message count', async ({
+    nonadminPage,
+    nonadminChatPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+
+    await nonadminChatPage.sendMessage('First message');
+    await nonadminChatPage.waitForAIResponse();
+
+    await nonadminChatPage.sendMessage('Second message');
+    await nonadminChatPage.waitForAIResponse();
+
+    const shareButtons = nonadminPage.getByRole('button', {
+      name: 'Share this chat',
+    });
+    await expect(shareButtons).toHaveCount(1);
+
+    // Verify the button is inside the top navbar, not inside a chat message.
+    const navbar = nonadminPage.getByRole('navigation');
+    await expect(
+      navbar.getByRole('button', { name: 'Share this chat' }),
+    ).toHaveCount(1);
+  });
+
+  // Issue #645 — the share button is hidden on non-chat pages.
+  test('non-admin does not see the share button on the explore page', async ({
+    nonadminPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+
+    // Navigate to the explore route via the current URL's tenant/mentor.
+    await nonadminPage.evaluate(() => {
+      const match = window.location.pathname.match(
+        /\/platform\/([^/]+)\/([^/]+)/,
+      );
+      if (match) {
+        const [, tenantKey, mentorId] = match;
+        window.location.assign(`/platform/${tenantKey}/${mentorId}/explore`);
+      }
+    });
+    await nonadminPage.waitForLoadState('domcontentloaded');
+    await nonadminPage.waitForTimeout(2_000);
+
+    const shareButton = nonadminPage.getByRole('button', {
+      name: 'Share this chat',
+    });
+    await expect(shareButton).not.toBeVisible();
+  });
 
   test('unauthenticated user goes to shared chat URL and sees the chat history', async ({
     page,

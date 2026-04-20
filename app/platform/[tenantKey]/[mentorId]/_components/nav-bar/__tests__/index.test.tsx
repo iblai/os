@@ -369,6 +369,38 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   ),
 }));
 
+// Chat-slice selectors used by the session-share button (issue #645).
+let mockSessionId = 'session-123';
+let mockShowingSharedChat = false;
+let mockActiveChatMessages: Array<{ role: string; content: string }> = [
+  { role: 'assistant', content: 'Welcome!' },
+  { role: 'user', content: 'Hi' },
+];
+
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    selectSessionId: () => mockSessionId,
+    selectShowingSharedChat: () => mockShowingSharedChat,
+    selectActiveChatMessages: () => mockActiveChatMessages,
+  };
+});
+
+vi.mock('@/components/chat/ai-message-share', () => ({
+  AIMessageShare: ({
+    sessionId,
+    tenantKey,
+  }: {
+    sessionId: string;
+    tenantKey: string;
+  }) => (
+    <button data-testid="session-share-button">
+      Share: {sessionId} ({tenantKey})
+    </button>
+  ),
+}));
+
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileModal: ({
     isOpen,
@@ -445,6 +477,12 @@ describe('NavBar', () => {
     mockUserIsStudent = false;
     mockIsVisiting = false;
     mockIsAccessingPublicRoute = false;
+    mockSessionId = 'session-123';
+    mockShowingSharedChat = false;
+    mockActiveChatMessages = [
+      { role: 'assistant', content: 'Welcome!' },
+      { role: 'user', content: 'Hi' },
+    ];
     mockMentorSettings = {
       mentor: 'Test Mentor',
       mentor_id: 123,
@@ -798,6 +836,138 @@ describe('NavBar', () => {
 
       expect(screen.getByTestId('embed-nav-bar')).toBeInTheDocument();
       expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Session-level share button (issue #645)
+  //
+  // Share lives on the navbar (not per-message) and is visible only when
+  // there is a real conversation to share. The first message is often an AI
+  // welcome — it's skipped so an empty session can't be shared.
+  // --------------------------------------------------------------------------
+
+  describe('Session-level share button (issue #645)', () => {
+    it('renders the share button when there is a real user message', () => {
+      mockActiveChatMessages = [
+        { role: 'assistant', content: 'Welcome!' },
+        { role: 'user', content: 'Hello' },
+      ];
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('session-share-button')).toHaveTextContent(
+        'Share: session-123 (tenant123)',
+      );
+    });
+
+    it('hides the share button when the only message is the AI welcome', () => {
+      mockActiveChatMessages = [{ role: 'assistant', content: 'Welcome!' }];
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the share button when there are no messages at all', () => {
+      mockActiveChatMessages = [];
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the share button when viewing a shared chat', () => {
+      mockShowingSharedChat = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the share button when sessionId is empty', () => {
+      mockSessionId = '';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the share button on non-chat pages (e.g. analytics)', () => {
+      mockPathname = '/platform/tenant123/mentor456/analytics';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the share button on the explore page', () => {
+      mockPathname = '/platform/tenant123/mentor456/explore';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('session-share-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('treats a user-first message list as a real conversation', () => {
+      // No leading AI welcome — every message is real.
+      mockActiveChatMessages = [{ role: 'user', content: 'Hi' }];
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('session-share-button')).toBeInTheDocument();
     });
   });
 });

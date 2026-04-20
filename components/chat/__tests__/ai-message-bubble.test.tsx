@@ -40,20 +40,6 @@ vi.mock('@/components/chat/ai-message-copy', () => ({
   ),
 }));
 
-vi.mock('@/components/chat/ai-message-share', () => ({
-  AIMessageShare: ({
-    sessionId,
-    tenantKey,
-  }: {
-    sessionId: string;
-    tenantKey: string;
-  }) => (
-    <button data-testid="ai-message-share">
-      Share: {sessionId} ({tenantKey})
-    </button>
-  ),
-}));
-
 vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
@@ -216,16 +202,11 @@ describe('AIMessageBubble', () => {
       expect(screen.getByTestId('ai-message-copy')).toBeInTheDocument();
     });
 
-    it('should render share button when not in shared chat', () => {
+    // Session-level share button was relocated out of per-message actions
+    // in issue #645 — it now lives at the top of the thread in ChatMessages.
+    it('should not render a per-message share button (moved session-level, #645)', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
-      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
-    });
-
-    it('should not render share button when in shared chat', () => {
-      mockShowingSharedChat = true;
-      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
-      mockShowingSharedChat = false; // Reset for other tests
     });
 
     it('should render rating component when logged in and not shared chat', () => {
