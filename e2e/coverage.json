@@ -1855,9 +1855,7 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": [
-        "components/modals/settings-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
       "checkpoints": [
         {
           "id": "tms-01",

@@ -16,6 +16,7 @@ import {
   FileWarning,
   UserCog,
   Archive,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -43,6 +44,7 @@ import { config } from '@/lib/config';
  */
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
+  isClawEnabled: boolean;
 };
 
 export type MentorSegment = {
@@ -235,6 +237,19 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.claw,
+    label: 'CLAW',
+    icon: Bot,
+    userTypes: [UserType.ADMIN],
+    // rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/claw/#config`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    enabledThroughConfig: (flags) => flags.isClawEnabled,
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.embed,
     label: 'Embed',
     icon: MonitorSmartphone,
@@ -365,6 +380,8 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+  // @ts-expect-error is_claw_enabled is not yet in the MentorSettingsPublic type
+  const isClawEnabled: boolean = mentorSettings?.is_claw_enabled ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -379,10 +396,17 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
-      flags: { isMemsearchEnabled },
+      flags: { isMemsearchEnabled, isClawEnabled },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
-    [isAdmin, tenantKey, mentorSettings, rbacPermissions, isMemsearchEnabled],
+    [
+      isAdmin,
+      tenantKey,
+      mentorSettings,
+      rbacPermissions,
+      isMemsearchEnabled,
+      isClawEnabled,
+    ],
   );
 
   const filteredSegments = useMemo(
