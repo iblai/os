@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.12](https://github.com/iblai/mentorai/compare/v0.47.11...v0.47.12) (2026-04-20)
+
+### CI
+
+* **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
+
 ## [0.47.11](https://github.com/iblai/mentorai/compare/v0.47.10...v0.47.11) (2026-04-20)
 
 ### Bug Fixes
