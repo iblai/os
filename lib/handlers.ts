@@ -80,12 +80,13 @@ export function useIframeHandlers() {
 
     // Context/page content handler
     'MENTOR:CONTEXT_UPDATE': (_payload: unknown, event: MessageEvent) => {
-      const { hostInfo, pageContent } = event.data;
+      const { hostInfo, pageContent, metadata } = event.data;
 
       dispatch(
         chatActions.setIframeContext({
           hostInfo,
           pageContent,
+          metadata,
         }),
       );
     },

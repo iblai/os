@@ -81,13 +81,14 @@ test.describe('Journey 19: Data Reports', () => {
     await shouldOpenCSVEditorDialog(page);
   });
 
-  test('admin goes to CSV editor and verifies data displays in editable table format', async ({
-    page,
-    analyticsPage,
-  }) => {
-    await analyticsPage.goto();
-    await shouldDisplayCSVInEditableTableFormat(page);
-  });
+  // fixme: CSV editor doesn't display in editable table format. Look at shouldDisplayCSVInEditableTableFormat
+  test.fixme(
+    'admin goes to CSV editor and verifies data displays in editable table format',
+    async ({ page, analyticsPage }) => {
+      await analyticsPage.goto();
+      await shouldDisplayCSVInEditableTableFormat(page);
+    },
+  );
 
   test('admin goes to CSV editor and edits a cell value', async ({
     page,

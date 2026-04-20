@@ -4,8 +4,9 @@ export class MemoryTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  readonly referenceToggle: Locator;
+  readonly enableMemoryToggle: Locator;
   readonly addMemoryButton: Locator;
+  readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
   // Each memory entry has an unnamed icon button (MoreHorizontal) as its action trigger.
   // We use these as a proxy for the memory entry count.
@@ -22,14 +23,17 @@ export class MemoryTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.referenceToggle = dialog
-      .getByText('Reference saved memories')
+    this.enableMemoryToggle = dialog
+      .getByText('Enable Memory')
       .locator('..')
       .locator('..')
       .getByRole('switch');
     this.addMemoryButton = dialog
       .locator('button')
       .filter({ hasText: /add memory/i });
+    this.manageCategoriesButton = dialog.getByRole('button', {
+      name: 'Manage categories',
+    });
     this.emptyState = dialog.getByText('No saved memories yet.');
     // The per-memory action button is an unnamed icon-only button (MoreHorizontal).
     // It lives inside each memory entry card alongside the memory content text.
@@ -39,19 +43,22 @@ export class MemoryTab {
       .or(dialog.locator('button[class*="ghost"][class*="h-6"]'));
   }
 
-  async isReferenceEnabled(): Promise<boolean> {
+  async isEnableMemoryChecked(): Promise<boolean> {
     return (
-      (await this.referenceToggle
+      (await this.enableMemoryToggle
         .getAttribute('aria-checked')
         .catch(() => 'false')) === 'true'
     );
   }
 
-  async toggleReference(): Promise<void> {
-    await expect(this.referenceToggle).toBeVisible({ timeout: 10_000 });
-    await this.referenceToggle.click();
+  async toggleEnableMemory(): Promise<void> {
+    await expect(this.enableMemoryToggle).toBeVisible({ timeout: 10_000 });
+    await this.enableMemoryToggle.click();
+    // Toast says "Memory enabled" or "Memory disabled". Use .first() to
+    // avoid strict-mode violations when a prior toggle's toast is still
+    // fading out in the Sonner stack.
     await expect(
-      this.page.getByText('Reference saved memories updated'),
+      this.page.getByText(/Memory enabled|Memory disabled/).first(),
     ).toBeVisible({ timeout: 10_000 });
   }
 
@@ -60,6 +67,79 @@ export class MemoryTab {
       .isVisible({ timeout: 5_000 })
       .catch(() => false);
     return !empty;
+  }
+
+  /**
+   * Creates a new memory via the Add Memory button + dialog.
+   * @param content - The memory content text.
+   * @param category - Optional category to select from the dropdown.
+   */
+  async createMemory(content: string, category?: string): Promise<void> {
+    await expect(this.addMemoryButton).toBeVisible({ timeout: 10_000 });
+    await this.addMemoryButton.click();
+
+    const addDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /add memory/i })
+      .last();
+    await expect(addDialog).toBeVisible({ timeout: 10_000 });
+
+    // Always pick a concrete category — the modal pre-fills the current
+    // filter (often "All"), which gets filtered out of the dropdown and
+    // falls back to a non-existent slug server-side. Picking the first
+    // real option keeps the create request valid.
+    const selectTrigger = addDialog.getByRole('combobox').first();
+    await selectTrigger.click();
+    const option = category
+      ? this.page.getByRole('option', { name: category, exact: true })
+      : this.page.getByRole('option').first();
+    await expect(option).toBeVisible({ timeout: 5_000 });
+    await option.click();
+
+    const textarea = addDialog.locator('textarea');
+    await textarea.fill(content);
+
+    const saveButton = addDialog.getByRole('button', { name: /save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await expect(this.page.getByText(/Memory created/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Edits the first memory entry by clicking its action menu and selecting "Edit".
+   * @param newContent - The updated memory content.
+   */
+  async editFirst(newContent: string): Promise<void> {
+    const firstActionBtn = this.memoryActionButtons.first();
+    await expect(firstActionBtn).toBeVisible({ timeout: 10_000 });
+    await firstActionBtn.click();
+
+    const editMenuItem = this.page
+      .getByRole('menuitem', { name: /edit/i })
+      .last();
+    await expect(editMenuItem).toBeVisible({ timeout: 5_000 });
+    await editMenuItem.click();
+
+    const editDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /edit memory/i })
+      .last();
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+
+    const textarea = editDialog.locator('textarea');
+    await textarea.clear();
+    await textarea.fill(newContent);
+
+    const saveButton = editDialog.getByRole('button', { name: /save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
   }
 
   /**
@@ -93,5 +173,120 @@ export class MemoryTab {
         .last()
         .click();
     }
+  }
+
+  /**
+   * Returns the number of visible memory entries.
+   */
+  async getMemoryCount(): Promise<number> {
+    return this.memoryActionButtons.count().catch(() => 0);
+  }
+
+  /**
+   * Locator for the Manage Categories dialog, scoped by its heading.
+   */
+  get categoriesDialog(): Locator {
+    return this.page
+      .getByRole('dialog')
+      .filter({ hasText: 'Manage Categories' });
+  }
+
+  /**
+   * Opens the Manage Categories modal from the memory tab.
+   */
+  async openManageCategories(): Promise<void> {
+    await expect(this.manageCategoriesButton).toBeVisible({ timeout: 10_000 });
+    await this.manageCategoriesButton.click();
+    await expect(this.categoriesDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Closes the Manage Categories modal via the Done button.
+   */
+  async closeManageCategories(): Promise<void> {
+    await this.categoriesDialog.getByRole('button', { name: 'Done' }).click();
+    await expect(this.categoriesDialog).not.toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Creates a new category inside the Manage Categories modal.
+   * Assumes the modal is already open.
+   */
+  async createCategory(name: string): Promise<void> {
+    const modal = this.categoriesDialog;
+    const input = modal.getByPlaceholder('New category name');
+    await expect(input).toBeVisible({ timeout: 10_000 });
+    await input.fill(name);
+    await modal.getByRole('button', { name: /^add$/i }).click();
+    await expect(this.page.getByText('Category created')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(modal.getByText(name, { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Renames an existing category in the Manage Categories modal.
+   * Assumes the modal is already open and the category is in the list.
+   */
+  async renameCategory(oldName: string, newName: string): Promise<void> {
+    const modal = this.categoriesDialog;
+    await modal.getByRole('button', { name: `Edit ${oldName}` }).click();
+    // Edit row injects a second <input> (first is the "new category" input).
+    const editInput = modal.locator('input').nth(1);
+    await expect(editInput).toBeVisible({ timeout: 5_000 });
+    await editInput.fill(newName);
+    await modal.getByRole('button', { name: 'Save category' }).click();
+    await expect(this.page.getByText('Category updated')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(modal.getByText(newName, { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Deletes a category from the Manage Categories modal.
+   * Handles the inline confirmation step. Assumes the modal is already open.
+   */
+  async deleteCategory(name: string): Promise<void> {
+    const modal = this.categoriesDialog;
+    await modal.getByRole('button', { name: `Delete ${name}` }).click();
+    // Inline confirm shows a destructive Delete button in the same row.
+    const confirmButton = modal
+      .getByRole('button', { name: /^delete$/i })
+      .last();
+    await expect(confirmButton).toBeVisible({ timeout: 5_000 });
+    await confirmButton.click();
+    await expect(this.page.getByText('Category deleted')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(modal.getByText(name, { exact: true })).not.toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Checks whether a category with the given name is visible in the
+   * Manage Categories modal. Assumes the modal is already open.
+   */
+  async hasCategory(name: string): Promise<boolean> {
+    return this.categoriesDialog
+      .getByText(name, { exact: true })
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+  }
+
+  /**
+   * Returns the text content of the first memory entry.
+   */
+  async getFirstMemoryContent(): Promise<string> {
+    // Memory content is rendered inside a div with text-sm class within the entry card
+    const firstEntry = this.dialog
+      .locator('.space-y-3 > div')
+      .first()
+      .locator('.text-sm.leading-relaxed');
+    return (await firstEntry.textContent().catch(() => '')) ?? '';
   }
 }
