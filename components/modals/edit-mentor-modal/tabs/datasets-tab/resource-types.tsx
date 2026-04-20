@@ -335,6 +335,30 @@ export const resourceTypes: ResourceType[] = [
     ),
   },
   {
+    id: 'markdown',
+    name: 'Markdown',
+    bgColor: 'bg-blue-100',
+    isActive: true,
+    type: 'local',
+    accept: 'text/markdown,.md,.markdown',
+    icon: (
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        <rect width="24" height="24" rx="4" fill="#1F2937" />
+        <path
+          d="M4 16V8h2l2 3 2-3h2v8H9.5v-4.6L8 13.7l-1.5-2.3V16H4Zm11.5 0L13 13h1.75V8h1.5v5H18l-2.5 3Z"
+          fill="white"
+        />
+      </svg>
+    ),
+  },
+  {
     id: 'audio',
     name: 'Audio',
     bgColor: 'bg-blue-100',

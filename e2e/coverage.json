@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-31",
+  "lastUpdated": "2026-04-20",
   "summary": {
-    "totalCheckpoints": 283,
-    "coveredCheckpoints": 283,
+    "totalCheckpoints": 285,
+    "coveredCheckpoints": 285,
     "percent": 100,
     "totalJourneys": 38
   },
@@ -975,6 +975,16 @@
         {
           "id": "ds-16",
           "description": "File upload cancellation is handled gracefully",
+          "status": "covered"
+        },
+        {
+          "id": "ds-17",
+          "description": "Markdown resource type is available in the Add Resources modal (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-18",
+          "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
           "status": "covered"
         }
       ]

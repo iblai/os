@@ -90,6 +90,14 @@ describe('resourceTypes', () => {
       expect(txt!.isActive).toBe(true);
     });
 
+    it('includes Markdown resource with correct accept type', () => {
+      const markdown = localResources.find((r) => r.id === 'markdown');
+      expect(markdown).toBeDefined();
+      expect(markdown!.accept).toBe('text/markdown,.md,.markdown');
+      expect(markdown!.isActive).toBe(true);
+      expect(markdown!.fileType).toBeUndefined();
+    });
+
     it('includes Audio resource with correct fileType', () => {
       const audio = localResources.find((r) => r.id === 'audio');
       expect(audio).toBeDefined();
@@ -195,6 +203,42 @@ describe('resourceTypes', () => {
   // --------------------------------------------------------------------------
   // CSV-specific tests (Issue #984)
   // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // Markdown-specific tests (Issue #1117)
+  // --------------------------------------------------------------------------
+
+  describe('Markdown Resource (Issue #1117)', () => {
+    const markdown = resourceTypes.find((r) => r.id === 'markdown');
+
+    it('exists in the resource types list', () => {
+      expect(markdown).toBeDefined();
+    });
+
+    it('has type "local" so it is uploaded via local-file-upload-modal', () => {
+      expect(markdown!.type).toBe('local');
+    });
+
+    it('has no fileType so the payload sends type "file"', () => {
+      expect(markdown!.fileType).toBeUndefined();
+    });
+
+    it('accepts the markdown MIME type and both .md and .markdown extensions', () => {
+      expect(markdown!.accept).toBe('text/markdown,.md,.markdown');
+    });
+
+    it('is active so users can see and select it', () => {
+      expect(markdown!.isActive).toBe(true);
+    });
+
+    it('has an icon defined', () => {
+      expect(markdown!.icon).toBeDefined();
+    });
+
+    it('has a human-readable name', () => {
+      expect(markdown!.name).toBe('Markdown');
+    });
+  });
 
   describe('CSV Resource (Issue #984)', () => {
     const csv = resourceTypes.find((r) => r.id === 'csv');

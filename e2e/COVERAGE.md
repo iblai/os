@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-20 | 285 checkpoints | 38 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -278,9 +278,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 20: Dataset Management (16 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -298,6 +298,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Multiple different file types can be uploaded in one session (TC23)
 - [x] Untrained dataset can be trained (TC24)
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
+- [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
+- [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
 
 ---
 
