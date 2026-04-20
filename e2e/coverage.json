@@ -5,7 +5,7 @@
     "totalCheckpoints": 295,
     "coveredCheckpoints": 295,
     "percent": 100,
-    "totalJourneys": 39
+    "totalJourneys": 40
   },
   "journeys": [
     {
@@ -1926,7 +1926,7 @@
     {
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
-      "spec": "40-tenant-memory-system-toggle.spec.ts",
+      "spec": "38-tenant-memory-system-toggle.spec.ts",
       "sourceFiles": ["components/modals/settings-modal.tsx"],
       "checkpoints": [
         {
@@ -1939,7 +1939,7 @@
     {
       "id": "audit-log",
       "name": "Audit Log",
-      "spec": "41-audit-log.spec.ts",
+      "spec": "39-audit-log.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
         "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
