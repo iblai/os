@@ -48,7 +48,7 @@ export function AIMessageSpeak({ content }: Props) {
     window.speechSynthesis.speak(utterance);
   };
 
-  const label = isSpeaking ? 'Stop reading aloud' : 'Read aloud';
+  const label = isSpeaking ? 'Stop Reading Aloud' : 'Read Aloud';
 
   return (
     <Tooltip>
