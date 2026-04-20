@@ -1,35 +1,121 @@
 # Changelog
 
+## [0.47.9](https://github.com/iblai/mentorai/compare/v0.47.8...v0.47.9) (2026-04-20)
+
+### CI
+
+* double max-wait for full pipeline tests to 3 hours ([6c668bb](https://github.com/iblai/mentorai/commit/6c668bb8778e1a58f3d60070422b668fda93d309))
+
+## [0.47.8](https://github.com/iblai/mentorai/compare/v0.47.7...v0.47.8) (2026-04-19)
+
+### Bug Fixes
+
+* **security:** add SSRF protection to WebCache fetch_from_network ([ed5999b](https://github.com/iblai/mentorai/commit/ed5999bb45f7ace1dac1d8054ac0e44c997f333e))
+
+## [0.47.7](https://github.com/iblai/mentorai/compare/v0.47.6...v0.47.7) (2026-04-19)
+
+### Chores
+
+* **deps:** cargo update all Tauri dependencies ([d1b0bbc](https://github.com/iblai/mentorai/commit/d1b0bbcb5a6f9da2b09724caad84090ea529b3da))
+
+## [0.47.6](https://github.com/iblai/mentorai/compare/v0.47.5...v0.47.6) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** update bytes 1.11.0 -> 1.11.1 in Cargo.lock ([68915ec](https://github.com/iblai/mentorai/commit/68915ecf851a1f12834ba036bf6099a7131ddf92)), closes [#46](https://github.com/iblai/mentorai/issues/46)
+
+## [0.47.5](https://github.com/iblai/mentorai/compare/v0.47.4...v0.47.5) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** fix misspelled lodash/lodash-es overrides ([bc615f2](https://github.com/iblai/mentorai/commit/bc615f2042e2885be3598b587d9f9c3d36d4af84))
+* **deps:** remove bogus npm overrides and update Cargo.lock ([b95371a](https://github.com/iblai/mentorai/commit/b95371ae481015e969768f731ca99f016637537e))
+
+## [0.47.4](https://github.com/iblai/mentorai/compare/v0.47.3...v0.47.4) (2026-04-19)
+
+### Bug Fixes
+
+* **deps:** add more security overrides for transitive vulnerabilities ([a0c6632](https://github.com/iblai/mentorai/commit/a0c663287807762c535b9b7cd11c47a4519299ee))
+* **deps:** add security overrides and bump next to 15.5.15 ([ebdf831](https://github.com/iblai/mentorai/commit/ebdf831a546d1cca34654dd4efa25cc3465ee91c))
+* **deps:** override basic-ftp and follow-redirects for security patches ([22e5b4d](https://github.com/iblai/mentorai/commit/22e5b4d68244fcb2a41e20322da9aef61957a555)), closes [#143](https://github.com/iblai/mentorai/issues/143)
+
+### Chores
+
+* **release:** v0.47.3 ([438c209](https://github.com/iblai/mentorai/commit/438c2097e154f718ee94c099dfc1d191865243df))
+
+* fix(deps): add security overrides and bump next to 15.5.15 (ebdf831)
+* fix(deps): override basic-ftp and follow-redirects for security patches (22e5b4d)
+
+## [0.47.3](https://github.com/iblai/mentorai/compare/v0.47.2...v0.47.3) (2026-04-19)
+
+### Chores
+
+* bump nextjs version ([1a650f0](https://github.com/iblai/mentorai/commit/1a650f01e1eed67700a0d7b08b965b69e3e566c0))
+
+## [0.47.2](https://github.com/iblai/mentorai/compare/v0.47.1...v0.47.2) (2026-04-19)
+
+### Chores
+
+* bump next from 15.3.6 to 15.5.14 ([dfd1435](https://github.com/iblai/mentorai/commit/dfd143506c2beb60c809da3642646346dad358a3))
+* update pnpm-lock.yaml ([ec9cf09](https://github.com/iblai/mentorai/commit/ec9cf094cc68fa5ac0ff696c63359cb63397084a))
+
+## [0.47.1](https://github.com/iblai/mentorai/compare/v0.47.0...v0.47.1) (2026-04-19)
+
+### Chores
+
+- remove electron and electron-builder ([517028e](https://github.com/iblai/mentorai/commit/517028efd1ba5f483ad618850c575c2ae99bbe25)), closes [#54](https://github.com/iblai/mentorai/issues/54)
+
+## [0.47.0](https://github.com/iblai/mentorai/compare/v0.46.5...v0.47.0) (2026-04-17)
+
+### Features
+
+- **mentor:** adding audit logs for analytics and edit mentor ([7bf80fa](https://github.com/iblai/mentorai/commit/7bf80fa828b4e7bd655f387211ca27dea986fb26))
+
+### Bug Fixes
+
+- **e2e:** adding coverage json fixes for the test mapping ([9bcc469](https://github.com/iblai/mentorai/commit/9bcc4690e87b4780e205016c2cb3f669f05a64e1))
+- **e2e:** adding e2e coverage changelogs ([b202b18](https://github.com/iblai/mentorai/commit/b202b18e3aefb9444e2f0e92a0c1602a0b474216))
+- **e2e:** adding fix for workflow tests ([aed038b](https://github.com/iblai/mentorai/commit/aed038bc896ef5419907a6ea9eb867b9b203fcbc))
+- **mentor:** pre push hook debug fixes ([260c1f4](https://github.com/iblai/mentorai/commit/260c1f46dbcd15b9188eaeb1d1b7021587acc337))
+- **mentor:** pre push hook debug fixes ([93192ad](https://github.com/iblai/mentorai/commit/93192adf2bbcbb568c8941e828ce0e45bda75c16))
+- **mentor:** test coverage for header component ([e3a7a84](https://github.com/iblai/mentorai/commit/e3a7a84750949dd4b87bebe1ec0c3841e62e011e))
+- replace yalc @iblai/iblai-js with registry version 1.1.9 ([bf26f7a](https://github.com/iblai/mentorai/commit/bf26f7adf69082351cd927e6206900332f4ce67f))
+
+### Chores
+
+- **mentor:** adding playwright tests and hooks changes ([a8f9380](https://github.com/iblai/mentorai/commit/a8f9380dc497895047e2d299a501c858fb9a96bc))
+- **mentor:** removing yalc ([c7a29fb](https://github.com/iblai/mentorai/commit/c7a29fb9058857a3e42ee43f6cab17e457744453))
+
 ## [0.46.5](https://github.com/iblai/mentorai/compare/v0.46.4...v0.46.5) (2026-04-16)
 
 ### Bug Fixes
 
-* expand the chat widgets to 100% ([cc37c1f](https://github.com/iblai/mentorai/commit/cc37c1fcb83f2d7e42a6600d9446d44f7b18b805))
-* **tests:** fixed playwright tests ([236460f](https://github.com/iblai/mentorai/commit/236460f102a46b2c2416c7591e0384a6858df25d))
+- expand the chat widgets to 100% ([cc37c1f](https://github.com/iblai/mentorai/commit/cc37c1fcb83f2d7e42a6600d9446d44f7b18b805))
+- **tests:** fixed playwright tests ([236460f](https://github.com/iblai/mentorai/commit/236460f102a46b2c2416c7591e0384a6858df25d))
 
 ## [0.46.4](https://github.com/iblai/mentorai/compare/v0.46.3...v0.46.4) (2026-04-16)
 
 ### Bug Fixes
 
-* **e2e:** re-enable analytics tab tests and fixme financial/CSV editor tests ([e3e3b9f](https://github.com/iblai/mentorai/commit/e3e3b9f3c2a268af1228f91d0c098573266e5f99))
+- **e2e:** re-enable analytics tab tests and fixme financial/CSV editor tests ([e3e3b9f](https://github.com/iblai/mentorai/commit/e3e3b9f3c2a268af1228f91d0c098573266e5f99))
 
 ## [0.46.3](https://github.com/iblai/mentorai/compare/v0.46.2...v0.46.3) (2026-04-15)
 
 ### Bug Fixes
 
-* **mentor:** adding fixes for unit tests in memory ([7d7f2dd](https://github.com/iblai/mentorai/commit/7d7f2ddb712e3b1f363e10ab7723d8f80084b751))
-* **mentor:** lint check fixes ([93c5b77](https://github.com/iblai/mentorai/commit/93c5b7798034d59e95a875e5f18378272b924abc))
+- **mentor:** adding fixes for unit tests in memory ([7d7f2dd](https://github.com/iblai/mentorai/commit/7d7f2ddb712e3b1f363e10ab7723d8f80084b751))
+- **mentor:** lint check fixes ([93c5b77](https://github.com/iblai/mentorai/commit/93c5b7798034d59e95a875e5f18378272b924abc))
 
 ### Chores
 
-* **e2e:** update coverage for memory category management and tenant memory toggle [skip ci] ([7852d66](https://github.com/iblai/mentorai/commit/7852d66f110d19a9fad246bb7d0085217a86f8f6))
-* **mentor:** adding memory categories and students memory ([48744c4](https://github.com/iblai/mentorai/commit/48744c4ae3f4405b268d5ac0632e3963894e302c))
-* **mentor:** fixes for the mem search status ([0cd1578](https://github.com/iblai/mentorai/commit/0cd1578d5c871fc19c31df958a2ce4ffb60dcbb5))
-* **mentor:** version bump for iblai-js ([ab7e0af](https://github.com/iblai/mentorai/commit/ab7e0af8ecc6c5c0ca8c194933f90688985f3f85))
+- **e2e:** update coverage for memory category management and tenant memory toggle [skip ci] ([7852d66](https://github.com/iblai/mentorai/commit/7852d66f110d19a9fad246bb7d0085217a86f8f6))
+- **mentor:** adding memory categories and students memory ([48744c4](https://github.com/iblai/mentorai/commit/48744c4ae3f4405b268d5ac0632e3963894e302c))
+- **mentor:** fixes for the mem search status ([0cd1578](https://github.com/iblai/mentorai/commit/0cd1578d5c871fc19c31df958a2ce4ffb60dcbb5))
+- **mentor:** version bump for iblai-js ([ab7e0af](https://github.com/iblai/mentorai/commit/ab7e0af8ecc6c5c0ca8c194933f90688985f3f85))
 
 ### Tests
 
-* **mentor:** 95% coverage for unit tests ([27794f0](https://github.com/iblai/mentorai/commit/27794f0c0fedc663e1f6a34e35e5b6cb86a6d007))
+- **mentor:** 95% coverage for unit tests ([27794f0](https://github.com/iblai/mentorai/commit/27794f0c0fedc663e1f6a34e35e5b6cb86a6d007))
 
 ## [0.46.2](https://github.com/iblai/mentorai/compare/v0.46.1...v0.46.2) (2026-04-10)
 

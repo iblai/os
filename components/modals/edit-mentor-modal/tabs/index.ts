@@ -10,3 +10,4 @@ export * from './datasets-tab';
 export * from './api-tab';
 export * from './embed-tab';
 export * from './access-tab';
+export * from './audit-log-tab';
