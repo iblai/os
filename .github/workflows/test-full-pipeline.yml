@@ -11,6 +11,11 @@ on:
         description: 'Browsers to test'
         required: false
         default: 'chrome'
+      terminate:
+        description: 'Terminate the launched instance when done (uncheck to keep it running for debugging)'
+        required: false
+        type: boolean
+        default: true
 
 run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})'
 
@@ -178,7 +183,7 @@ jobs:
   # ============================================================
   terminate:
     needs: [launch-infra, run-tests]
-    if: always() && needs.launch-infra.result != 'skipped'
+    if: always() && needs.launch-infra.result != 'skipped' && inputs.terminate
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.SERVICE_UPDATE_ACCESS_KEY }}
@@ -215,3 +220,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Instance: ${{ needs.launch-infra.outputs.instance-id }}" >> $GITHUB_STEP_SUMMARY
           echo "Test result: ${{ needs.run-tests.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.terminate }}" != "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Instance kept running (terminate=false). IP: ${{ needs.launch-infra.outputs.instance-ip }}" >> $GITHUB_STEP_SUMMARY
+            echo "Remember to terminate it manually when you're done." >> $GITHUB_STEP_SUMMARY
+          fi
