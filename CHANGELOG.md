@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.47.9](https://github.com/iblai/mentorai/compare/v0.47.8...v0.47.9) (2026-04-20)
+
+### CI
+
+* double max-wait for full pipeline tests to 3 hours ([6c668bb](https://github.com/iblai/mentorai/commit/6c668bb8778e1a58f3d60070422b668fda93d309))
+
 ## [0.47.8](https://github.com/iblai/mentorai/compare/v0.47.7...v0.47.8) (2026-04-19)
 
 ### Bug Fixes
