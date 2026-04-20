@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.47.11](https://github.com/iblai/mentorai/compare/v0.47.10...v0.47.11) (2026-04-20)
+
+### Bug Fixes
+
+* update page objects and playwright coverage ([0f04c6e](https://github.com/iblai/mentorai/commit/0f04c6e4c9eff02e31c7d6dcd8760bfc425f51fa))
+
+### Refactors
+
+* **e2e:** remove toast visibility checks for user agreement toggle tests ([451dc72](https://github.com/iblai/mentorai/commit/451dc72639520387b0267e74c1870319730f5e7e))
+
 ## [0.47.10](https://github.com/iblai/mentorai/compare/v0.47.9...v0.47.10) (2026-04-20)
 
 ### Bug Fixes
