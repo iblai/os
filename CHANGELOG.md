@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.47.13](https://github.com/iblai/mentorai/compare/v0.47.12...v0.47.13) (2026-04-20)
+
+### CI
+
+* **test-full-pipeline:** grant contents:read so reusable checkout works ([6cc9660](https://github.com/iblai/mentorai/commit/6cc966087a3b28da983ca72bccffa365ef9a7de8))
+
+## [0.47.12](https://github.com/iblai/mentorai/compare/v0.47.11...v0.47.12) (2026-04-20)
+
+### CI
+
+* **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
+
+## [0.47.11](https://github.com/iblai/mentorai/compare/v0.47.10...v0.47.11) (2026-04-20)
+
+### Bug Fixes
+
+* update page objects and playwright coverage ([0f04c6e](https://github.com/iblai/mentorai/commit/0f04c6e4c9eff02e31c7d6dcd8760bfc425f51fa))
+
+### Refactors
+
+* **e2e:** remove toast visibility checks for user agreement toggle tests ([451dc72](https://github.com/iblai/mentorai/commit/451dc72639520387b0267e74c1870319730f5e7e))
+
+## [0.47.10](https://github.com/iblai/mentorai/compare/v0.47.9...v0.47.10) (2026-04-20)
+
+### Bug Fixes
+
+* **security:** add permissions: {} to all workflows ([d18796d](https://github.com/iblai/mentorai/commit/d18796d8d90ffab9fc4fce2b8ce90e63491b3392))
+* **security:** address CodeQL alerts - SSRF, TLS, redirect, sanitization ([7d8a96e](https://github.com/iblai/mentorai/commit/7d8a96e25edff3e36e9eb890c5f9381a87c59c57))
+
+## [0.47.9](https://github.com/iblai/mentorai/compare/v0.47.8...v0.47.9) (2026-04-20)
+
+### CI
+
+* double max-wait for full pipeline tests to 3 hours ([6c668bb](https://github.com/iblai/mentorai/commit/6c668bb8778e1a58f3d60070422b668fda93d309))
+
 ## [0.47.8](https://github.com/iblai/mentorai/compare/v0.47.7...v0.47.8) (2026-04-19)
 
 ### Bug Fixes

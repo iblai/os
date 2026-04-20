@@ -83,7 +83,7 @@ export function UrlUploadModal({ resource }: Props) {
 
     if (resource.name.toLocaleLowerCase() === 'url') {
       const urlPattern =
-        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+        /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .-]*\/?$/;
       if (!urlPattern.test(url)) {
         toast.error('Invalid URL');
         return;

@@ -34,6 +34,8 @@ concurrency:
   group: debug-test-mentor
   cancel-in-progress: false
 
+permissions: {}
+
 jobs:
   # ============================================================
   # CONFIG
