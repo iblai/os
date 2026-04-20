@@ -9,6 +9,7 @@ export class ChatPage {
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
   readonly canvasToggle: Locator;
+  readonly memoryButton: Locator;
   readonly createMentorDialog: Locator;
   readonly loginBanner: Locator;
   readonly uploadButton: Locator;
@@ -27,6 +28,7 @@ export class ChatPage {
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    this.memoryButton = page.getByRole('button', { name: /memory/i });
     this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });

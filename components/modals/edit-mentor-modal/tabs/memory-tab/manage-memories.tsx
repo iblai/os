@@ -12,6 +12,7 @@ import {
   Calendar,
   ChevronsUpDown,
   Check,
+  Settings,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -73,6 +74,14 @@ const BulkDeleteMemoryModal = dynamic(
   () =>
     import('./bulk-delete-memory-modal').then((module) => ({
       default: module.BulkDeleteMemoryModal,
+    })),
+  { ssr: false },
+);
+
+const ManageCategoriesModal = dynamic(
+  () =>
+    import('./manage-categories-modal').then((module) => ({
+      default: module.ManageCategoriesModal,
     })),
   { ssr: false },
 );
@@ -234,6 +243,7 @@ export function ManageMemories({
   const [showMobileDropdown, setShowMobileDropdown] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showManageCategories, setShowManageCategories] = useState(false);
 
   const selectedCategoryName =
     categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
@@ -534,6 +544,17 @@ export function ManageMemories({
             </div>
 
             <Button
+              onClick={() => setShowManageCategories(true)}
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              aria-label="Manage categories"
+            >
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Categories</span>
+            </Button>
+
+            <Button
               onClick={startAddMemory}
               size="sm"
               className="ibl-button-primary shrink-0"
@@ -662,6 +683,13 @@ export function ManageMemories({
         }
         onCancel={() => setShowDeleteConfirm(null)}
         isDeleting={isDeleting}
+      />
+
+      <ManageCategoriesModal
+        open={showManageCategories}
+        onOpenChange={setShowManageCategories}
+        tenantKey={tenantKey}
+        mentorId={mentorId}
       />
 
       <BulkDeleteMemoryModal

@@ -18,7 +18,7 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 # Copy package manifests from repo root (deps live here, not in e2e/)
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies (skip optional like electron, skip postinstall scripts)
+# Install dependencies (skip postinstall scripts)
 RUN pnpm install --frozen-lockfile --ignore-scripts --no-optional
 
 # Copy e2e test suite

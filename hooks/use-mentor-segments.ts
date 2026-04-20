@@ -16,12 +16,13 @@ import {
   FileWarning,
   UserCog,
   Archive,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import {
   useGetMentorSettingsQuery,
-  useGetMemsearchConfigQuery,
+  useGetMemsearchStatusQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { MODALS, UserType } from '@/lib/constants';
@@ -211,6 +212,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.audit_log,
+    label: 'Audit',
+    icon: ScrollText,
+    userTypes: [UserType.ADMIN],
+    // rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_log`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.datasets,
     label: 'Datasets',
     icon: Grid,
@@ -352,13 +362,15 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
     },
   );
 
-  const { data: memsearchConfig } = useGetMemsearchConfigQuery(
+  const { data: memsearchConfig } = useGetMemsearchStatusQuery(
     {
       org: tenantKey,
       userId: username ?? '',
     },
     {
       skip: !tenantKey || !username,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
     },
   );
 

@@ -40,6 +40,14 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockCreateMentorMemory,
     { isLoading: mockCreateMentorMemoryLoading() },
   ],
+  // Category mutation hooks used by ManageCategoriesModal. The modal itself
+  // is stubbed below via `vi.mock('../manage-categories-modal', ...)`, but
+  // these stubs guard against any transitive resolution of the module.
+  useCreateMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  useDeleteMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
+  // Pulled in transitively via use-mentor-settings on some import chains.
+  useGetMemsearchStatusQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 vi.mock('sonner', () => ({
@@ -155,6 +163,11 @@ vi.mock('../edit-memory-modal', () => ({
         </button>
       </div>
     ) : null,
+}));
+
+vi.mock('../manage-categories-modal', () => ({
+  ManageCategoriesModal: ({ open }: any) =>
+    open ? <div data-testid="manage-categories-modal" /> : null,
 }));
 
 vi.mock('../add-memory-modal', () => ({
@@ -931,6 +944,67 @@ describe('ManageMemories', () => {
       render(<ManageMemories {...defaultProps} />);
       expect(screen.getAllByText('alice').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('bob').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('selects a learner from the user dropdown and re-queries with user_id', () => {
+      render(<ManageMemories {...defaultProps} />);
+      const callsBefore = mockGetMentorMemoriesQuery.mock.calls.length;
+
+      // CommandItems render inside the user combobox; the learner items
+      // come after the "All Users" item. Click the first learner item
+      // (which invokes onSelect → setSelectedLearner).
+      const commandItems = screen.getAllByRole('option');
+      // index 0 is "All Users", index 1+ are learner items.
+      fireEvent.click(commandItems[1]!);
+
+      // After selecting a learner, the filtered query re-runs — at
+      // least one of the new calls should carry user_id in params.
+      const newCalls = mockGetMentorMemoriesQuery.mock.calls.slice(callsBefore);
+      const withUserId = newCalls.find(
+        (call) => call[0]?.params && 'user_id' in call[0].params,
+      );
+      expect(withUserId).toBeTruthy();
+    });
+  });
+
+  describe('Category fallback when admin categories are unavailable', () => {
+    it('derives category tabs from the memories response when admin categories are empty', () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
+      render(<ManageMemories {...defaultProps} />);
+
+      // The derived categories include the seed "All" plus those found on
+      // the response payload — Preferences and Background.
+      expect(screen.getAllByText('Preferences').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Background').length).toBeGreaterThan(0);
+    });
+
+    it('falls back to just "All" when the memories response is undefined', () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
+      render(<ManageMemories {...defaultProps} />);
+      // "All" still renders as the only category tab.
+      expect(screen.getAllByText('All').length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Mobile category dropdown', () => {
+    it('selects a category via the mobile dropdown onClick', () => {
+      render(<ManageMemories {...defaultProps} />);
+
+      // Desktop tab renders "Background" as a <button>, mobile dropdown
+      // renders each category as a DropdownMenuItem (role=menuitem).
+      const backgroundMenuItem = screen
+        .getAllByRole('menuitem')
+        .find((el) => el.textContent === 'Background');
+      expect(backgroundMenuItem).toBeTruthy();
+      fireEvent.click(backgroundMenuItem!);
+
+      // Only "Background" memories should remain visible.
+      expect(screen.getByText('Former backend dev')).toBeInTheDocument();
+      expect(screen.queryByText('Loves dark mode')).not.toBeInTheDocument();
     });
   });
 

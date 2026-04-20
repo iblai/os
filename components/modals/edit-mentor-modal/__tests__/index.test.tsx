@@ -103,7 +103,7 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: true,
     }),
-    useGetMemsearchConfigQuery: () => ({
+    useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: mockMemsearchEnabled },
       isLoading: false,
       isSuccess: true,
@@ -168,6 +168,7 @@ vi.mock('../tabs', () => ({
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
+  AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
 }));
 
 vi.mock('../tabs/memory-tab', () => ({

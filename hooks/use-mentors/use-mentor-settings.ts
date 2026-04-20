@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   useGetMentorPublicSettingsQuery,
   useGetMentorSettingsQuery,
+  useGetMemsearchStatusQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { useUsername } from '@/providers/use-user';
@@ -100,6 +101,18 @@ export function useMentorSettings({
     },
     {
       skip: !tenantKey || !mentorId || isOffline,
+    },
+  );
+
+  const { data: memsearchConfig } = useGetMemsearchStatusQuery(
+    {
+      org: tenantKey ?? '',
+      userId: username ?? '',
+    },
+    {
+      skip: !tenantKey || !username || isOffline,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
     },
   );
 
@@ -248,6 +261,13 @@ export function useMentorSettings({
 
       starterPrompts: (effectiveSettings?.starter_prompts ??
         effectivePublicSettings?.starter_prompts) as string | undefined,
+
+      // @ts-ignore - enable_memory_component exists in API response but not in type
+      memoryEnabled:
+        (memsearchConfig?.enable_memsearch ?? false) &&
+        (effectiveSettings?.enable_memory_component ??
+          effectivePublicSettings?.enable_memory_component ??
+          false),
     },
   };
 }
