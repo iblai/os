@@ -19,7 +19,8 @@ on:
 
 run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})'
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   # ============================================================
