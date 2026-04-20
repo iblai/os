@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { CircleStop, Volume2 } from 'lucide-react';
 
 import {
   Tooltip,
@@ -61,7 +61,7 @@ export function AIMessageSpeak({ content }: Props) {
         >
           <span className="sr-only">{label}</span>
           {isSpeaking ? (
-            <VolumeX className="h-4 w-4" />
+            <CircleStop className="h-4 w-4" />
           ) : (
             <Volume2 className="h-4 w-4" />
           )}
