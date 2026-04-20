@@ -40,6 +40,8 @@ concurrency:
   group: debug-test-local-mentor
   cancel-in-progress: false
 
+permissions: {}
+
 jobs:
   # ============================================================
   # CONFIG

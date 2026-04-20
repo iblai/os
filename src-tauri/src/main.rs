@@ -1913,7 +1913,6 @@ fn main() {
                 let client = match reqwest::blocking::Client::builder()
                     .timeout(std::time::Duration::from_secs(2))
                     .connect_timeout(std::time::Duration::from_secs(1))
-                    .danger_accept_invalid_certs(true)
                     .build()
                 {
                     Ok(c) => c,
