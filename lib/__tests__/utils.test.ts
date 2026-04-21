@@ -139,7 +139,9 @@ describe('cn function', () => {
     expect(cn('class1', 'class2')).toBe('class1 class2');
 
     // Test with conditional classes
-    expect(cn('class1', true && 'class2', false && 'class3')).toBe('class1 class2');
+    expect(cn('class1', true && 'class2', false && 'class3')).toBe(
+      'class1 class2',
+    );
 
     // Test with null and undefined
     expect(cn('class1', null, undefined, 'class2')).toBe('class1 class2');
@@ -148,7 +150,9 @@ describe('cn function', () => {
     expect(cn(['class1', 'class2'], 'class3')).toBe('class1 class2 class3');
 
     // Test with object notation
-    expect(cn({ class1: true, class2: false, class3: true })).toBe('class1 class3');
+    expect(cn({ class1: true, class2: false, class3: true })).toBe(
+      'class1 class3',
+    );
 
     // Test tailwind merge functionality
     expect(cn('px-2 py-1', 'px-4')).toBe('py-1 px-4');
@@ -190,7 +194,10 @@ describe('hasNonExpiredAuthToken function', () => {
     pastDate.setDate(pastDate.getDate() - 1); // Yesterday
 
     localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
-    localStorageMock.setItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY, pastDate.toISOString());
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
+      pastDate.toISOString(),
+    );
 
     expect(hasNonExpiredAuthToken()).toBe(false);
   });
@@ -200,7 +207,10 @@ describe('hasNonExpiredAuthToken function', () => {
     futureDate.setDate(futureDate.getDate() + 1); // Tomorrow
 
     localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
-    localStorageMock.setItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY, futureDate.toISOString());
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
+      futureDate.toISOString(),
+    );
 
     expect(hasNonExpiredAuthToken()).toBe(true);
   });
@@ -212,7 +222,10 @@ describe('hasNonExpiredAuthToken function', () => {
     Date.now = vi.fn(() => currentDate.getTime());
 
     localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
-    localStorageMock.setItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY, currentDate.toISOString());
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
+      currentDate.toISOString(),
+    );
 
     expect(hasNonExpiredAuthToken()).toBe(false);
 
@@ -283,7 +296,10 @@ describe('redirectToAuthSpa function', () => {
     await redirectToAuthSpa();
 
     // Check correct redirect path was stored
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(LOCAL_STORAGE_KEYS.REDIRECT_TO, '');
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      LOCAL_STORAGE_KEYS.REDIRECT_TO,
+      '',
+    );
 
     // Check if window.location.href was set correctly (through API redirect)
     const directAuthUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}&${QUERY_PARAMS.REDIRECT_TO}=https://example.com`;
@@ -298,7 +314,9 @@ describe('redirectToAuthSpa function', () => {
 
 describe('getPlatformKey function', () => {
   it('should extract platform key from URL', () => {
-    expect(getPlatformKey('/platform/test-platform/dashboard')).toBe('test-platform');
+    expect(getPlatformKey('/platform/test-platform/dashboard')).toBe(
+      'test-platform',
+    );
   });
 
   it('should return null when no platform key is found', () => {
@@ -306,16 +324,16 @@ describe('getPlatformKey function', () => {
   });
 
   it('should work with complex URLs', () => {
-    expect(getPlatformKey('/platform/complex-platform-123/settings/user?id=456')).toBe(
-      'complex-platform-123',
-    );
+    expect(
+      getPlatformKey('/platform/complex-platform-123/settings/user?id=456'),
+    ).toBe('complex-platform-123');
   });
 
   it('should handle URLs with multiple platform-like patterns', () => {
     // Only the first match should be returned
-    expect(getPlatformKey('/platform/first-platform/some/platform/second-platform')).toBe(
-      'first-platform',
-    );
+    expect(
+      getPlatformKey('/platform/first-platform/some/platform/second-platform'),
+    ).toBe('first-platform');
   });
 
   it('should handle edge case with empty URL', () => {
@@ -391,7 +409,9 @@ describe('redirectToAuthSpaJoinTenant function', () => {
           locationHrefSpy = value;
         },
         get href() {
-          return locationHrefSpy || 'https://example.com/platform/test-tenant/mentor';
+          return (
+            locationHrefSpy || 'https://example.com/platform/test-tenant/mentor'
+          );
         },
       },
       writable: true,
@@ -401,7 +421,9 @@ describe('redirectToAuthSpaJoinTenant function', () => {
 
   it('should redirect to join URL with tenant key', () => {
     redirectToAuthSpaJoinTenant('my-tenant');
-    expect(locationHrefSpy).toContain('https://auth.example.com/join?tenant=my-tenant');
+    expect(locationHrefSpy).toContain(
+      'https://auth.example.com/join?tenant=my-tenant',
+    );
   });
 
   it('should use current URL as redirect when not provided', () => {
@@ -452,7 +474,9 @@ describe('redirectToAuthSpaJoinTenant function', () => {
 
     // Should redirect via the auth-redirect API endpoint
     expect(locationHrefSpy).toContain('/api/auth-redirect');
-    expect(locationHrefSpy).toContain(encodeURIComponent('https://auth.example.com/login'));
+    expect(locationHrefSpy).toContain(
+      encodeURIComponent('https://auth.example.com/login'),
+    );
 
     consoleSpy.mockRestore();
   });
@@ -575,7 +599,9 @@ describe('storageService function', () => {
   it('should set item in localStorage', async () => {
     const service = storageService();
     await service.setItem('test-key', { value: 'test' });
-    expect(localStorageMock.getItem('test-key')).toBe(JSON.stringify({ value: 'test' }));
+    expect(localStorageMock.getItem('test-key')).toBe(
+      JSON.stringify({ value: 'test' }),
+    );
   });
 
   it('should remove item from localStorage', async () => {
@@ -681,7 +707,9 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should not escape already escaped dollar signs', () => {
-    expect(preprocessLaTeX('Already \\$5 escaped')).toBe('Already \\$5 escaped');
+    expect(preprocessLaTeX('Already \\$5 escaped')).toBe(
+      'Already \\$5 escaped',
+    );
   });
 
   it('should convert block LaTeX delimiters', () => {
@@ -711,7 +739,9 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert underline to HTML', () => {
-    expect(preprocessLaTeX('\\underline{underlined}')).toBe('<u>underlined</u>');
+    expect(preprocessLaTeX('\\underline{underlined}')).toBe(
+      '<u>underlined</u>',
+    );
   });
 
   it('should convert itemize to unordered list', () => {
@@ -729,7 +759,9 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert quote to blockquote', () => {
-    expect(preprocessLaTeX('\\begin{quote}quoted text\\end{quote}')).toContain('> quoted text');
+    expect(preprocessLaTeX('\\begin{quote}quoted text\\end{quote}')).toContain(
+      '> quoted text',
+    );
   });
 
   it('should convert center to centered div', () => {
@@ -743,7 +775,9 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert starred section to markdown heading', () => {
-    expect(preprocessLaTeX('\\section*{Heading One}')).toContain('## Heading One');
+    expect(preprocessLaTeX('\\section*{Heading One}')).toContain(
+      '## Heading One',
+    );
   });
 
   it('should convert subsection to markdown heading', () => {
@@ -751,15 +785,21 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert starred subsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsection*{Core Evidence}')).toContain('### Core Evidence');
+    expect(preprocessLaTeX('\\subsection*{Core Evidence}')).toContain(
+      '### Core Evidence',
+    );
   });
 
   it('should convert subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection{Sub-subtitle}')).toContain('#### Sub-subtitle');
+    expect(preprocessLaTeX('\\subsubsection{Sub-subtitle}')).toContain(
+      '#### Sub-subtitle',
+    );
   });
 
   it('should convert starred subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection*{Deep Heading}')).toContain('#### Deep Heading');
+    expect(preprocessLaTeX('\\subsubsection*{Deep Heading}')).toContain(
+      '#### Deep Heading',
+    );
   });
 
   it('should convert line breaks', () => {
@@ -784,7 +824,8 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should handle complex LaTeX document', () => {
-    const input = '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\\\item Test';
+    const input =
+      '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\\\item Test';
     const result = preprocessLaTeX(input);
     expect(result).toContain('## Title');
     expect(result).toContain('**Bold**');
@@ -828,7 +869,8 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert tabular inside \\[...\\] math delimiters', () => {
-    const input = '\\[\\begin{tabular}{lcc}A & B & C \\\\D & E & F\\end{tabular}\\]';
+    const input =
+      '\\[\\begin{tabular}{lcc}A & B & C \\\\D & E & F\\end{tabular}\\]';
     const result = preprocessLaTeX(input);
     expect(result).toContain('| A | B | C |');
     expect(result).toContain('| D | E | F |');
@@ -913,7 +955,10 @@ describe('textTruncate function', () => {
 describe('mentorIsIframe function', () => {
   it('should return true when in iframe', () => {
     Object.defineProperty(window, 'self', { value: {}, writable: true });
-    Object.defineProperty(window, 'top', { value: { different: true }, writable: true });
+    Object.defineProperty(window, 'top', {
+      value: { different: true },
+      writable: true,
+    });
     expect(mentorIsIframe()).toBe(true);
   });
 
@@ -948,7 +993,11 @@ describe('isJSON function', () => {
 
 describe('isInIframe function', () => {
   it('should return true when in iframe', () => {
-    Object.defineProperty(window, 'self', { value: {}, writable: true, configurable: true });
+    Object.defineProperty(window, 'self', {
+      value: {},
+      writable: true,
+      configurable: true,
+    });
     Object.defineProperty(window, 'top', {
       value: { different: true },
       writable: true,
@@ -959,8 +1008,16 @@ describe('isInIframe function', () => {
 
   it('should return false when not in iframe', () => {
     const windowRef = {};
-    Object.defineProperty(window, 'self', { value: windowRef, writable: true, configurable: true });
-    Object.defineProperty(window, 'top', { value: windowRef, writable: true, configurable: true });
+    Object.defineProperty(window, 'self', {
+      value: windowRef,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'top', {
+      value: windowRef,
+      writable: true,
+      configurable: true,
+    });
     expect(isInIframe()).toBe(false);
   });
 
@@ -1173,11 +1230,17 @@ describe('convertFromBytes function', () => {
   });
 
   it('should convert bytes to GB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024)).toEqual({ value: 1, unit: 'GB' });
+    expect(convertFromBytes(1024 * 1024 * 1024)).toEqual({
+      value: 1,
+      unit: 'GB',
+    });
   });
 
   it('should convert bytes to TB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024 * 1024)).toEqual({ value: 1, unit: 'TB' });
+    expect(convertFromBytes(1024 * 1024 * 1024 * 1024)).toEqual({
+      value: 1,
+      unit: 'TB',
+    });
   });
 
   it('should handle decimal values', () => {
@@ -1204,7 +1267,9 @@ describe('formatRelativeDate function', () => {
     const date = new Date();
     date.setDate(date.getDate() - 3);
     const result = formatRelativeDate(date.toISOString());
-    expect(result).toMatch(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/);
+    expect(result).toMatch(
+      /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/,
+    );
   });
 
   it('should format dates within 30 days with month', () => {
@@ -1230,42 +1295,66 @@ describe('getLLMProviderDetails function', () => {
 
   it('should return NVIDIA details for IBLChatNvidia', () => {
     const result = getLLMProviderDetails('IBLChatNvidia');
-    expect(result).toEqual({ logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' });
+    expect(result).toEqual({
+      logo: '/llm-nvidia-provider.webp',
+      name: 'NVIDIA',
+    });
   });
 
   it('should return NVIDIA details for nvidia', () => {
     const result = getLLMProviderDetails('nvidia');
-    expect(result).toEqual({ logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' });
+    expect(result).toEqual({
+      logo: '/llm-nvidia-provider.webp',
+      name: 'NVIDIA',
+    });
   });
 
   it('should return Microsoft details', () => {
     const result = getLLMProviderDetails('azure_openai');
-    expect(result).toEqual({ logo: '/llm-microsoft-provider.png', name: 'Microsoft' });
+    expect(result).toEqual({
+      logo: '/llm-microsoft-provider.png',
+      name: 'Microsoft',
+    });
   });
 
   it('should return OpenAI details with model name', () => {
     const result = getLLMProviderDetails('openai', 'gpt-4');
-    expect(result).toEqual({ logo: '/llm-openai-provider.jpg', name: 'OpenAI' });
+    expect(result).toEqual({
+      logo: '/llm-openai-provider.jpg',
+      name: 'OpenAI',
+    });
   });
 
   it('should return OpenAI details without model name', () => {
     const result = getLLMProviderDetails('openai');
-    expect(result).toEqual({ logo: '/llm-openai-provider-2.svg', name: 'OpenAI' });
+    expect(result).toEqual({
+      logo: '/llm-openai-provider-2.svg',
+      name: 'OpenAI',
+    });
   });
 
   it('should return Mistral details', () => {
     const result = getLLMProviderDetails('mistral');
-    expect(result).toEqual({ logo: '/llm-mistral-provider.jpeg', name: 'Mistral' });
+    expect(result).toEqual({
+      logo: '/llm-mistral-provider.jpeg',
+      name: 'Mistral',
+    });
   });
 
   it('should return Google details with model name', () => {
     const result = getLLMProviderDetails('google', 'gemini');
-    expect(result).toEqual({ logo: '/llm-gemini-provider.png', name: 'Google' });
+    expect(result).toEqual({
+      logo: '/llm-gemini-provider.png',
+      name: 'Google',
+    });
   });
 
   it('should return Google details without model name', () => {
     const result = getLLMProviderDetails('google');
-    expect(result).toEqual({ logo: '/llm-google-provider.svg', name: 'Google' });
+    expect(result).toEqual({
+      logo: '/llm-google-provider.svg',
+      name: 'Google',
+    });
   });
 
   it('should return Meta details', () => {
@@ -1275,22 +1364,34 @@ describe('getLLMProviderDetails function', () => {
 
   it('should return Anthropic details for IBLChatAnthropic', () => {
     const result = getLLMProviderDetails('IBLChatAnthropic');
-    expect(result).toEqual({ logo: '/llm-claude-provider.png', name: 'Anthropic' });
+    expect(result).toEqual({
+      logo: '/llm-claude-provider.png',
+      name: 'Anthropic',
+    });
   });
 
   it('should return Anthropic details for anthropic', () => {
     const result = getLLMProviderDetails('anthropic');
-    expect(result).toEqual({ logo: '/llm-claude-provider.png', name: 'Anthropic' });
+    expect(result).toEqual({
+      logo: '/llm-claude-provider.png',
+      name: 'Anthropic',
+    });
   });
 
   it('should return Perplexity details', () => {
     const result = getLLMProviderDetails('perplexity');
-    expect(result).toEqual({ logo: '/llm-perplexity-provider.webp', name: 'Perplexity' });
+    expect(result).toEqual({
+      logo: '/llm-perplexity-provider.webp',
+      name: 'Perplexity',
+    });
   });
 
   it('should return DeepSeek details', () => {
     const result = getLLMProviderDetails('deepseek');
-    expect(result).toEqual({ logo: '/llm-deepseek-provider.png', name: 'DeepSeek' });
+    expect(result).toEqual({
+      logo: '/llm-deepseek-provider.png',
+      name: 'DeepSeek',
+    });
   });
 
   it('should return xAI details', () => {
@@ -1300,12 +1401,18 @@ describe('getLLMProviderDetails function', () => {
 
   it('should return NVIDIA details for nvidia provider', () => {
     const result = getLLMProviderDetails('nvidia');
-    expect(result).toEqual({ logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' });
+    expect(result).toEqual({
+      logo: '/llm-nvidia-provider.webp',
+      name: 'NVIDIA',
+    });
   });
 
   it('should return generic details for unknown provider', () => {
     const result = getLLMProviderDetails('unknown-provider');
-    expect(result).toEqual({ logo: '/llm-generic-provider.png', name: 'unknown-provider' });
+    expect(result).toEqual({
+      logo: '/llm-generic-provider.png',
+      name: 'unknown-provider',
+    });
   });
 });
 
@@ -1806,7 +1913,9 @@ describe('htmlToMarkdown function', () => {
 
   it('should return original text when conversion fails (error path)', () => {
     // Mock the unified/rehype modules to throw an error
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
     // Pass an input that will cause the parser to fail
     // The unified ecosystem is robust, so we need to mock the module
@@ -1845,13 +1954,15 @@ describe('htmlToMarkdown function', () => {
   // TipTap math serialization (data-math-latex) tests
   describe('data-math-latex handling', () => {
     it('should convert inline data-math-latex span to inline math', () => {
-      const html = '<p>The value is <span data-math-latex="x^2"></span> here</p>';
+      const html =
+        '<p>The value is <span data-math-latex="x^2"></span> here</p>';
       const result = htmlToMarkdown(html);
       expect(result).toContain('$x^2$');
     });
 
     it('should convert display data-math-latex span to display math', () => {
-      const html = '<p><span data-math-latex="\\frac{a}{b}" data-math-display="true"></span></p>';
+      const html =
+        '<p><span data-math-latex="\\frac{a}{b}" data-math-display="true"></span></p>';
       const result = htmlToMarkdown(html);
       expect(result).toContain('$$\\frac{a}{b}$$');
     });
@@ -1942,7 +2053,8 @@ describe('markdownToHtml function', () => {
   });
 
   it('should linkify plain URLs, emails, and phone numbers', () => {
-    const markdown = 'Visit https://example.com, email test@example.com, call (555) 123-4567.';
+    const markdown =
+      'Visit https://example.com, email test@example.com, call (555) 123-4567.';
     const result = markdownToHtml(markdown);
     expect(result).toContain('href="https://example.com"');
     expect(result).toContain('href="mailto:test@example.com"');
@@ -1995,7 +2107,8 @@ describe('markdownToHtml function', () => {
   });
 
   it('should handle GFM tables', () => {
-    const markdown = '| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1 | Cell 2 |';
+    const markdown =
+      '| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1 | Cell 2 |';
     const result = markdownToHtml(markdown);
     expect(result).toContain('table');
     expect(result).toContain('Header 1');
@@ -2137,7 +2250,9 @@ describe('handleTenantSwitch function', () => {
   it('should switch to new tenant', async () => {
     await handleTenantSwitch('new-tenant');
     expect(localStorageMock.getItem('tenant')).toBe('new-tenant');
-    expect(locationHrefSpy).toContain('https://auth.example.com/login/complete');
+    expect(locationHrefSpy).toContain(
+      'https://auth.example.com/login/complete',
+    );
   });
 
   it('should include redirect URL', async () => {
@@ -2148,7 +2263,9 @@ describe('handleTenantSwitch function', () => {
 
   it('should save redirect path when requested', async () => {
     await handleTenantSwitch('new-tenant', true);
-    expect(localStorageMock.getItem('redirect-to')).toBe('/current-path?query=value');
+    expect(localStorageMock.getItem('redirect-to')).toBe(
+      '/current-path?query=value',
+    );
   });
 
   it('should clear localStorage before switching', async () => {
@@ -2181,7 +2298,9 @@ describe('handleTenantSwitch function', () => {
   });
 
   it('should call clearCurrentTenantCookie', async () => {
-    const { clearCurrentTenantCookie } = await import('@iblai/iblai-js/web-utils');
+    const { clearCurrentTenantCookie } = await import(
+      '@iblai/iblai-js/web-utils'
+    );
     await handleTenantSwitch('new-tenant');
     expect(clearCurrentTenantCookie).toHaveBeenCalled();
   });
@@ -2194,25 +2313,33 @@ describe('isStripeActivated function', () => {
 
   it('should return true when stripe is enabled and tenant is main and not enterprise', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<typeof isStripeActivated>[0];
+    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+      typeof isStripeActivated
+    >[0];
     expect(isStripeActivated(tenant)).toBe(true);
   });
 
   it('should return true when stripe is enabled and tenant is main even if enterprise', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: true } as Parameters<typeof isStripeActivated>[0];
+    const tenant = { key: 'main', is_enterprise: true } as Parameters<
+      typeof isStripeActivated
+    >[0];
     expect(isStripeActivated(tenant)).toBe(true);
   });
 
   it('should return false when stripe is disabled', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('false');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<typeof isStripeActivated>[0];
+    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+      typeof isStripeActivated
+    >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
   it('should return false for enterprise tenant that is not main', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'other', is_enterprise: true } as Parameters<typeof isStripeActivated>[0];
+    const tenant = { key: 'other', is_enterprise: true } as Parameters<
+      typeof isStripeActivated
+    >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
@@ -2297,7 +2424,9 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
           locationHrefSpy = value;
         },
         get href() {
-          return locationHrefSpy || 'https://example.com/platform/my-tenant/page';
+          return (
+            locationHrefSpy || 'https://example.com/platform/my-tenant/page'
+          );
         },
       },
       writable: true,
@@ -2526,7 +2655,9 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
       writable: true,
     });
 
-    const postMessageSpy = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
+    const postMessageSpy = vi
+      .spyOn(window.parent, 'postMessage')
+      .mockImplementation(() => {});
 
     await redirectToAuthSpa();
 
@@ -2535,7 +2666,9 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
 
     // Should send message to parent
     expect(postMessageSpy).toHaveBeenCalledWith({ authExpired: true }, '*');
-    expect(consoleSpy).toHaveBeenCalledWith('[redirectToAuthSpa]: sending authExpired to parent');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[redirectToAuthSpa]: sending authExpired to parent',
+    );
 
     // Should not redirect when in iframe
     expect(locationHrefSpy).toBe('');
@@ -2574,7 +2707,9 @@ describe('saveUserObjectToLocalStorage - syncAuthDataToCookies coverage', () => 
     });
 
     const userObject = {
-      [LOCAL_STORAGE_KEYS.CURRENT_TENANT]: JSON.stringify({ key: 'test-tenant' }),
+      [LOCAL_STORAGE_KEYS.CURRENT_TENANT]: JSON.stringify({
+        key: 'test-tenant',
+      }),
     };
 
     saveUserObjectToLocalStorage(userObject);
@@ -2591,7 +2726,9 @@ describe('saveUserObjectToLocalStorage - syncAuthDataToCookies coverage', () => 
     });
 
     const userObject = {
-      [LOCAL_STORAGE_KEYS.USER_DATA]: JSON.stringify({ user_nicename: 'testuser' }),
+      [LOCAL_STORAGE_KEYS.USER_DATA]: JSON.stringify({
+        user_nicename: 'testuser',
+      }),
     };
 
     saveUserObjectToLocalStorage(userObject);
@@ -2686,7 +2823,9 @@ describe('getCurrentArtifactTitle function', () => {
   });
 
   it('should return null when artifact_versions is empty', () => {
-    const messages = [{ message: { data: { content: 'Hello' } }, artifact_versions: [] }];
+    const messages = [
+      { message: { data: { content: 'Hello' } }, artifact_versions: [] },
+    ];
     expect(getCurrentArtifactTitle(messages)).toBeNull();
   });
 
@@ -2696,7 +2835,12 @@ describe('getCurrentArtifactTitle function', () => {
         message: { data: { content: '' } },
         artifact_versions: [
           { id: 1, title: 'Version 1', version_number: 1, is_current: false },
-          { id: 2, title: 'Current Version', version_number: 2, is_current: true },
+          {
+            id: 2,
+            title: 'Current Version',
+            version_number: 2,
+            is_current: true,
+          },
           { id: 3, title: 'Version 3', version_number: 3, is_current: false },
         ],
       },
@@ -2740,12 +2884,19 @@ describe('getCurrentArtifactTitle function', () => {
     const messages = [
       {
         message: { data: { content: '' } },
-        artifact_versions: [{ id: 1, title: 'First Message Artifact', version_number: 1 }],
+        artifact_versions: [
+          { id: 1, title: 'First Message Artifact', version_number: 1 },
+        ],
       },
       {
         message: { data: { content: '' } },
         artifact_versions: [
-          { id: 2, title: 'Second Message Artifact', version_number: 2, is_current: true },
+          {
+            id: 2,
+            title: 'Second Message Artifact',
+            version_number: 2,
+            is_current: true,
+          },
         ],
       },
     ];
@@ -2756,7 +2907,9 @@ describe('getCurrentArtifactTitle function', () => {
     const messages = [
       {
         message: { data: { content: '' } },
-        artifact_versions: [{ id: 1, title: null, artifact: { title: null }, version_number: 1 }],
+        artifact_versions: [
+          { id: 1, title: null, artifact: { title: null }, version_number: 1 },
+        ],
       },
     ];
     expect(getCurrentArtifactTitle(messages)).toBeNull();
@@ -2822,7 +2975,10 @@ describe('getFirstMessageWithContent function', () => {
   });
 
   it('should skip messages with missing data property', () => {
-    const messages = [{ message: {} }, { message: { data: { content: 'Valid message' } } }];
+    const messages = [
+      { message: {} },
+      { message: { data: { content: 'Valid message' } } },
+    ];
     expect(getFirstMessageWithContent(messages)).toBe('Valid message');
   });
 
@@ -2928,7 +3084,8 @@ describe('isSafariBrowser function', () => {
 
   it('should return false for Firefox', () => {
     Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0',
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0',
       writable: true,
       configurable: true,
     });

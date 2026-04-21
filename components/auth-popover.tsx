@@ -2,9 +2,17 @@
 
 import { MouseEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { config } from '@/lib/config';
-import { isLoggedIn, redirectToAuthSpa, redirectToAuthSpaJoinTenant } from '@/lib/utils';
+import {
+  isLoggedIn,
+  redirectToAuthSpa,
+  redirectToAuthSpaJoinTenant,
+} from '@/lib/utils';
 import { useCurrentTenant, useVisitingTenant } from '@/hooks/use-user';
 
 type AuthPopoverProps = {
@@ -23,7 +31,9 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
   const advertisingEnabled = config.advertisingEnabled();
   const shouldShowAd =
     advertisingEnabled &&
-    (isMainTenant || currentTenant?.is_advertising || visitingTenant?.is_advertising) &&
+    (isMainTenant ||
+      currentTenant?.is_advertising ||
+      visitingTenant?.is_advertising) &&
     (!loggedIn || isHovering);
 
   useEffect(() => {
@@ -50,7 +60,9 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
 
       if (
         advertisingEnabled &&
-        (isMainTenant || currentTenant?.is_advertising || visitingTenant?.is_advertising)
+        (isMainTenant ||
+          currentTenant?.is_advertising ||
+          visitingTenant?.is_advertising)
       ) {
         event.preventDefault();
         setOpen(true);
@@ -66,7 +78,9 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
   const handleMouseEnter = useCallback(() => {
     if (
       !advertisingEnabled ||
-      (!isMainTenant && !currentTenant?.is_advertising && !visitingTenant?.is_advertising)
+      (!isMainTenant &&
+        !currentTenant?.is_advertising &&
+        !visitingTenant?.is_advertising)
     )
       return;
     setIsHovering(true);
@@ -81,7 +95,10 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
   }, [loggedIn]);
 
   return (
-    <Popover open={open && shouldShowAd} onOpenChange={(nextOpen) => setOpen(nextOpen)}>
+    <Popover
+      open={open && shouldShowAd}
+      onOpenChange={(nextOpen) => setOpen(nextOpen)}
+    >
       <PopoverTrigger
         asChild
         onMouseEnter={handleMouseEnter}
@@ -93,9 +110,12 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
       {shouldShowAd && (
         <PopoverContent className="w-80 p-4">
           <div className="space-y-1.5">
-            <h3 className="text-gray-900 font-medium">Try advanced features for free</h3>
+            <h3 className="font-medium text-gray-900">
+              Try advanced features for free
+            </h3>
             <p className="text-sm text-gray-600">
-              Get better responses, create mentors with your data, and more by logging in.
+              Get better responses, create mentors with your data, and more by
+              logging in.
             </p>
             <div className="mt-4 flex space-x-2">
               <Button onClick={handleLogin} className="ibl-button-primary">

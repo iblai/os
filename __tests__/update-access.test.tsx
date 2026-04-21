@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RoleAccessPanel } from "@/components/modals/edit-mentor-modal/tabs/access-tab/update-access";
+import { RoleAccessPanel } from '@/components/modals/edit-mentor-modal/tabs/access-tab/update-access';
 
 /* ------------------------------------------------------------------ */
 /*  Mocks                                                              */
@@ -16,17 +16,17 @@ const mockUpdateMentorAccess = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockCheckRbacPermission = vi.fn();
 
-vi.mock("next/navigation", () => ({
+vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-vi.mock("@/hooks/use-user", () => ({
+vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
 const mockUseGetRbacGroupsQuery = vi.fn();
 
-vi.mock("@iblai/iblai-js/data-layer", () => ({
+vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorSettingsQuery(...args),
   usePlatformUsersQuery: (...args: unknown[]) =>
@@ -37,19 +37,19 @@ vi.mock("@iblai/iblai-js/data-layer", () => ({
   isPoliciesResponse: () => false,
 }));
 
-vi.mock("@/lib/hooks", () => ({
+vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => mockRbacPermissions(),
 }));
 
-vi.mock("@/features/rbac/rbac-slice", () => ({
-  selectRbacPermissions: "selectRbacPermissions",
+vi.mock('@/features/rbac/rbac-slice', () => ({
+  selectRbacPermissions: 'selectRbacPermissions',
 }));
 
-vi.mock("@/hoc/withPermissions", () => ({
+vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -63,8 +63,8 @@ vi.mock("sonner", () => ({
 const createPolicy = (overrides = {}) => ({
   id: 1,
   mentor_id: 42,
-  platform_key: "test-tenant",
-  role: "editor",
+  platform_key: 'test-tenant',
+  role: 'editor',
   users: [],
   ...overrides,
 });
@@ -85,14 +85,14 @@ function setup(overrides: Partial<typeof defaultProps> = {}) {
 /*  Test suites                                                        */
 /* ------------------------------------------------------------------ */
 
-describe("RoleAccessPanel", () => {
+describe('RoleAccessPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseParams.mockReturnValue({
-      tenantKey: "test-tenant",
-      mentorId: "test-mentor",
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
     });
-    mockUseUsername.mockReturnValue("testuser");
+    mockUseUsername.mockReturnValue('testuser');
     mockUseGetMentorSettingsQuery.mockReturnValue({
       data: { mentor_id: 42 },
       isLoading: false,
@@ -116,44 +116,44 @@ describe("RoleAccessPanel", () => {
 
   /* ---------- Assigned users display ---------- */
 
-  it("shows assigned users with email (email || username fallback)", () => {
+  it('shows assigned users with email (email || username fallback)', () => {
     setup({
       policy: createPolicy({
         users: [
-          { id: 1, username: "alice", email: "alice@test.com" },
-          { id: 2, username: "bob", email: "" },
+          { id: 1, username: 'alice', email: 'alice@test.com' },
+          { id: 2, username: 'bob', email: '' },
         ],
       }),
     });
 
     // alice should show email
-    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    expect(screen.getByText('alice@test.com')).toBeInTheDocument();
     // bob has no email, should show username
-    expect(screen.getByText("bob")).toBeInTheDocument();
+    expect(screen.getByText('bob')).toBeInTheDocument();
   });
 
-  it("shows empty state when no users assigned", () => {
+  it('shows empty state when no users assigned', () => {
     setup({ policy: createPolicy({ users: [] }) });
 
     expect(
-      screen.getByText("No users have this role yet."),
+      screen.getByText('No users have this role yet.'),
     ).toBeInTheDocument();
   });
 
-  it("removes user and calls mutation with users_to_remove", async () => {
+  it('removes user and calls mutation with users_to_remove', async () => {
     const { user } = setup({
       policy: createPolicy({
-        users: [{ id: 1, username: "alice", email: "alice@test.com" }],
+        users: [{ id: 1, username: 'alice', email: 'alice@test.com' }],
       }),
     });
 
-    await user.click(screen.getByRole("button", { name: /remove alice/i }));
+    await user.click(screen.getByRole('button', { name: /remove alice/i }));
 
     await waitFor(() => {
       expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
         requestBody: expect.objectContaining({
           users_to_remove: [1],
-          role: "editor",
+          role: 'editor',
         }),
       });
     });
@@ -161,31 +161,31 @@ describe("RoleAccessPanel", () => {
 
   /* ---------- With permission: search mode ---------- */
 
-  describe("with users permission (search mode)", () => {
+  describe('with users permission (search mode)', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockReturnValue(true);
     });
 
-    it("renders search input", () => {
+    it('renders search input', () => {
       setup();
 
       expect(
-        screen.getByPlaceholderText("Search by name, username, or email"),
+        screen.getByPlaceholderText('Search by name, username, or email'),
       ).toBeInTheDocument();
       expect(
-        screen.queryByLabelText("Select input type"),
+        screen.queryByLabelText('Select input type'),
       ).not.toBeInTheDocument();
     });
 
-    it("adds user via search and calls mutation with users_to_add", async () => {
+    it('adds user via search and calls mutation with users_to_add', async () => {
       mockUsePlatformUsersQuery.mockReturnValue({
         data: {
           results: [
             {
               user_id: 5,
-              name: "Charlie",
-              username: "charlie",
-              email: "charlie@test.com",
+              name: 'Charlie',
+              username: 'charlie',
+              email: 'charlie@test.com',
             },
           ],
         },
@@ -196,18 +196,18 @@ describe("RoleAccessPanel", () => {
       const { user } = setup();
 
       const searchInput = screen.getByPlaceholderText(
-        "Search by name, username, or email",
+        'Search by name, username, or email',
       );
-      await user.type(searchInput, "cha");
+      await user.type(searchInput, 'cha');
 
-      const resultButton = await screen.findByText("Charlie");
+      const resultButton = await screen.findByText('Charlie');
       await user.click(resultButton);
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
             users_to_add: [5],
-            role: "editor",
+            role: 'editor',
           }),
         });
       });
@@ -216,159 +216,159 @@ describe("RoleAccessPanel", () => {
 
   /* ---------- Without permission: manual input mode ---------- */
 
-  describe("without users permission (manual input mode)", () => {
+  describe('without users permission (manual input mode)', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockReturnValue(false);
     });
 
-    it("renders manual input with email/username selector", () => {
+    it('renders manual input with email/username selector', () => {
       setup();
 
-      expect(screen.getByLabelText("Select input type")).toBeInTheDocument();
+      expect(screen.getByLabelText('Select input type')).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("user@example.com"),
+        screen.getByPlaceholderText('user@example.com'),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /add entry/i }),
+        screen.getByRole('button', { name: /add entry/i }),
       ).toBeInTheDocument();
       expect(
-        screen.queryByPlaceholderText("Search by name, username, or email"),
+        screen.queryByPlaceholderText('Search by name, username, or email'),
       ).not.toBeInTheDocument();
     });
 
-    it("stages entries via Enter key", async () => {
+    it('stages entries via Enter key', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
 
-      expect(screen.getByText("alice@test.com")).toBeInTheDocument();
-      expect(input).toHaveValue("");
+      expect(screen.getByText('alice@test.com')).toBeInTheDocument();
+      expect(input).toHaveValue('');
     });
 
-    it("stages entries via plus button", async () => {
+    it('stages entries via plus button', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "bob@test.com");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'bob@test.com');
 
-      await user.click(screen.getByRole("button", { name: /add entry/i }));
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
 
-      expect(screen.getByText("bob@test.com")).toBeInTheDocument();
-      expect(input).toHaveValue("");
+      expect(screen.getByText('bob@test.com')).toBeInTheDocument();
+      expect(input).toHaveValue('');
     });
 
-    it("does not stage empty entries", async () => {
+    it('does not stage empty entries', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "   {Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, '   {Enter}');
 
       expect(
-        screen.queryByRole("button", { name: /remove/i }),
+        screen.queryByRole('button', { name: /remove/i }),
       ).not.toBeInTheDocument();
     });
 
-    it("does not stage duplicate entries", async () => {
+    it('does not stage duplicate entries', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'alice@test.com{Enter}');
 
-      const chips = screen.getAllByText("alice@test.com");
+      const chips = screen.getAllByText('alice@test.com');
       expect(chips).toHaveLength(1);
     });
 
-    it("removes staged entries when X is clicked", async () => {
+    it('removes staged entries when X is clicked', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'bob@test.com{Enter}');
 
       await user.click(
-        screen.getByRole("button", { name: /remove alice@test.com/i }),
+        screen.getByRole('button', { name: /remove alice@test.com/i }),
       );
 
-      expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
-      expect(screen.getByText("bob@test.com")).toBeInTheDocument();
+      expect(screen.queryByText('alice@test.com')).not.toBeInTheDocument();
+      expect(screen.getByText('bob@test.com')).toBeInTheDocument();
     });
 
-    it("submits with emails_to_add when input type is email", async () => {
+    it('submits with emails_to_add when input type is email', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'bob@test.com{Enter}');
 
       // Click the "Add 2 users" button
-      const addButton = screen.getByRole("button", { name: /add 2 users/i });
+      const addButton = screen.getByRole('button', { name: /add 2 users/i });
       await user.click(addButton);
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            platform_key: "test-tenant",
+            platform_key: 'test-tenant',
             mentor_id: 42,
-            role: "editor",
-            emails_to_add: ["alice@test.com", "bob@test.com"],
+            role: 'editor',
+            emails_to_add: ['alice@test.com', 'bob@test.com'],
           }),
         });
       });
     });
 
-    it("submits with usernames_to_add when input type is username", async () => {
+    it('submits with usernames_to_add when input type is username', async () => {
       const { user } = setup();
 
       // Switch to username mode
-      await user.click(screen.getByLabelText("Select input type"));
-      await user.click(screen.getByRole("option", { name: /username/i }));
+      await user.click(screen.getByLabelText('Select input type'));
+      await user.click(screen.getByRole('option', { name: /username/i }));
 
-      const input = screen.getByPlaceholderText("username");
-      await user.type(input, "alice{Enter}");
-      await user.type(input, "bob{Enter}");
+      const input = screen.getByPlaceholderText('username');
+      await user.type(input, 'alice{Enter}');
+      await user.type(input, 'bob{Enter}');
 
-      const addButton = screen.getByRole("button", { name: /add 2 users/i });
+      const addButton = screen.getByRole('button', { name: /add 2 users/i });
       await user.click(addButton);
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            usernames_to_add: ["alice", "bob"],
+            usernames_to_add: ['alice', 'bob'],
           }),
         });
       });
     });
 
-    it("also stages remaining input text on submit", async () => {
+    it('also stages remaining input text on submit', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
-      await user.type(input, "bob@test.com");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
+      await user.type(input, 'bob@test.com');
       // Don't press Enter, click Add directly
 
       // The "Add 1 user" button (not the "Add entry" plus button)
-      const addButton = screen.getByRole("button", { name: /add 1 user/i });
+      const addButton = screen.getByRole('button', { name: /add 1 user/i });
       await user.click(addButton);
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
-            emails_to_add: ["alice@test.com", "bob@test.com"],
+            emails_to_add: ['alice@test.com', 'bob@test.com'],
           }),
         });
       });
     });
 
-    it("clears entries after successful submission", async () => {
+    it('clears entries after successful submission', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
 
-      const addButton = screen.getByRole("button", { name: /add 1 user/i });
+      const addButton = screen.getByRole('button', { name: /add 1 user/i });
       await user.click(addButton);
 
       await waitFor(() => {
@@ -377,17 +377,17 @@ describe("RoleAccessPanel", () => {
 
       // After success, entries should be cleared
       await waitFor(() => {
-        expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
+        expect(screen.queryByText('alice@test.com')).not.toBeInTheDocument();
       });
     });
 
-    it("disables plus button when input is empty", () => {
+    it('disables plus button when input is empty', () => {
       setup();
 
-      expect(screen.getByRole("button", { name: /add entry/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /add entry/i })).toBeDisabled();
     });
 
-    it("shows helper text about staging entries", () => {
+    it('shows helper text about staging entries', () => {
       setup();
 
       expect(
@@ -395,21 +395,21 @@ describe("RoleAccessPanel", () => {
       ).toBeInTheDocument();
     });
 
-    it("shows single user add text for one entry", async () => {
+    it('shows single user add text for one entry', async () => {
       const { user } = setup();
 
-      const input = screen.getByPlaceholderText("user@example.com");
-      await user.type(input, "alice@test.com{Enter}");
+      const input = screen.getByPlaceholderText('user@example.com');
+      await user.type(input, 'alice@test.com{Enter}');
 
       expect(
-        screen.getByRole("button", { name: /add 1 user$/i }),
+        screen.getByRole('button', { name: /add 1 user$/i }),
       ).toBeInTheDocument();
     });
   });
 
   /* ---------- Groups ---------- */
 
-  describe("with groups permission", () => {
+  describe('with groups permission', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockImplementation(
         (_perms: unknown, resource: string) => {
@@ -420,58 +420,58 @@ describe("RoleAccessPanel", () => {
       );
     });
 
-    it("renders assigned groups section", () => {
+    it('renders assigned groups section', () => {
       setup({
         policy: createPolicy({
-          groups: [{ id: 10, name: "Engineering", unique_id: "eng-1" }],
+          groups: [{ id: 10, name: 'Engineering', unique_id: 'eng-1' }],
         }),
       });
 
-      expect(screen.getByText("Assigned groups")).toBeInTheDocument();
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
+      expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+      expect(screen.getByText('Engineering')).toBeInTheDocument();
     });
 
-    it("shows empty groups state when no groups assigned", () => {
+    it('shows empty groups state when no groups assigned', () => {
       setup({ policy: createPolicy({ groups: [] }) });
 
       expect(
-        screen.getByText("No groups have this role yet."),
+        screen.getByText('No groups have this role yet.'),
       ).toBeInTheDocument();
     });
 
-    it("renders groups search input", () => {
+    it('renders groups search input', () => {
       setup();
 
       expect(
-        screen.getByPlaceholderText("Search groups by name"),
+        screen.getByPlaceholderText('Search groups by name'),
       ).toBeInTheDocument();
     });
 
-    it("removes group and calls mutation with groups_to_remove", async () => {
+    it('removes group and calls mutation with groups_to_remove', async () => {
       const { user } = setup({
         policy: createPolicy({
-          groups: [{ id: 10, name: "Engineering", unique_id: "eng-1" }],
+          groups: [{ id: 10, name: 'Engineering', unique_id: 'eng-1' }],
         }),
       });
 
       await user.click(
-        screen.getByRole("button", { name: /remove engineering/i }),
+        screen.getByRole('button', { name: /remove engineering/i }),
       );
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
             groups_to_remove: [10],
-            role: "editor",
+            role: 'editor',
           }),
         });
       });
     });
 
-    it("adds group via search and calls mutation with groups_to_add", async () => {
+    it('adds group via search and calls mutation with groups_to_add', async () => {
       mockUseGetRbacGroupsQuery.mockReturnValue({
         data: {
-          results: [{ id: 20, name: "Design" }],
+          results: [{ id: 20, name: 'Design' }],
         },
         isFetching: false,
         isLoading: false,
@@ -479,24 +479,24 @@ describe("RoleAccessPanel", () => {
 
       const { user } = setup();
 
-      const searchInput = screen.getByPlaceholderText("Search groups by name");
-      await user.type(searchInput, "des");
+      const searchInput = screen.getByPlaceholderText('Search groups by name');
+      await user.type(searchInput, 'des');
 
-      const resultButton = await screen.findByText("Design");
+      const resultButton = await screen.findByText('Design');
       await user.click(resultButton);
 
       await waitFor(() => {
         expect(mockUpdateMentorAccess).toHaveBeenCalledWith({
           requestBody: expect.objectContaining({
             groups_to_add: [20],
-            role: "editor",
+            role: 'editor',
           }),
         });
       });
     });
   });
 
-  describe("without groups permission", () => {
+  describe('without groups permission', () => {
     beforeEach(() => {
       mockCheckRbacPermission.mockImplementation(
         (_perms: unknown, resource: string) => {
@@ -507,12 +507,12 @@ describe("RoleAccessPanel", () => {
       );
     });
 
-    it("does not render groups section", () => {
+    it('does not render groups section', () => {
       setup();
 
-      expect(screen.queryByText("Assigned groups")).not.toBeInTheDocument();
+      expect(screen.queryByText('Assigned groups')).not.toBeInTheDocument();
       expect(
-        screen.queryByPlaceholderText("Search groups by name"),
+        screen.queryByPlaceholderText('Search groups by name'),
       ).not.toBeInTheDocument();
     });
   });

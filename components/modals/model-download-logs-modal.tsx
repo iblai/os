@@ -31,14 +31,19 @@ function LogEntry({ log }: { log: InstallationLog }) {
   const timestamp = new Date(log.timestamp).toLocaleTimeString();
 
   return (
-    <div className="flex items-start gap-2 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-      <Badge variant="outline" className={`text-xs shrink-0 ${levelStyles[log.level] || ''}`}>
+    <div className="flex items-start gap-2 border-b border-gray-100 py-2 last:border-0 dark:border-gray-800">
+      <Badge
+        variant="outline"
+        className={`shrink-0 text-xs ${levelStyles[log.level] || ''}`}
+      >
         {log.level.toUpperCase()}
       </Badge>
-      <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 font-mono">
+      <span className="shrink-0 font-mono text-xs text-gray-400 dark:text-gray-500">
         {timestamp}
       </span>
-      <span className="text-sm text-gray-700 dark:text-gray-300 break-all">{log.message}</span>
+      <span className="text-sm break-all text-gray-700 dark:text-gray-300">
+        {log.message}
+      </span>
     </div>
   );
 }
@@ -53,7 +58,9 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     if (scrollRef.current && isOpen) {
-      const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      const scrollElement = scrollRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]',
+      );
       if (scrollElement) {
         scrollElement.scrollTop = scrollElement.scrollHeight;
       }
@@ -62,7 +69,10 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
 
   const handleExportLogs = () => {
     const logText = state.logs
-      .map((log) => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`)
+      .map(
+        (log) =>
+          `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`,
+      )
       .join('\n');
 
     const blob = new Blob([logText], { type: 'text/plain' });
@@ -78,7 +88,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-h-[80vh] max-w-2xl">
         <DialogHeader>
           <DialogTitle>Model Installation Logs</DialogTitle>
           <DialogDescription>
@@ -86,9 +96,10 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {state.logs.length} log {state.logs.length === 1 ? 'entry' : 'entries'}
+            {state.logs.length} log{' '}
+            {state.logs.length === 1 ? 'entry' : 'entries'}
           </span>
           <div className="flex gap-2">
             <Button
@@ -97,7 +108,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
               onClick={handleExportLogs}
               disabled={state.logs.length === 0}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
             <Button
@@ -106,18 +117,18 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
               onClick={clearLogs}
               disabled={state.logs.length === 0}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               Clear
             </Button>
           </div>
         </div>
 
         <ScrollArea
-          className="h-[400px] border rounded-md p-4 bg-gray-50 dark:bg-gray-900"
+          className="h-[400px] rounded-md border bg-gray-50 p-4 dark:bg-gray-900"
           ref={scrollRef}
         >
           {state.logs.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               No logs available. Start a download to see logs.
             </p>
           ) : (
@@ -133,8 +144,8 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
         {state.status === 'downloading' && (
           <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
             </span>
             Download in progress... ({Math.round(state.progress)}%)
           </div>

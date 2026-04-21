@@ -34,14 +34,17 @@ vi.mock('@/components/accessibility/floating-accessibility-button', () => ({
 }));
 
 vi.mock('@/components/accessibility/accessibility-toolbar', () => ({
-  AccessibilityToolbar: () => <div data-testid="accessibility-toolbar">Toolbar</div>,
+  AccessibilityToolbar: () => (
+    <div data-testid="accessibility-toolbar">Toolbar</div>
+  ),
 }));
 
 // Create a mock Redux store
 function createMockStore() {
   return configureStore({
     reducer: {
-      chatSliceShared: (state = { chats: { chat: [] }, activeTab: 'chat' }) => state,
+      chatSliceShared: (state = { chats: { chat: [] }, activeTab: 'chat' }) =>
+        state,
     },
   });
 }
@@ -50,14 +53,18 @@ describe('AccessibilityFab', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
     mockUseParams.mockReturnValue({ tenantKey: 'test-tenant' });
-    mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: false } });
+    mockUseTenantMetadata.mockReturnValue({
+      metadata: { accessibility_menu: false },
+    });
     mockUseEmbedMode.mockReturnValue(false);
   });
 
   describe('Rendering behavior', () => {
     it('renders both FloatingAccessibilityButton and AccessibilityToolbar when conditions are met', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       render(
@@ -66,13 +73,17 @@ describe('AccessibilityFab', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('floating-accessibility-button')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('floating-accessibility-button'),
+      ).toBeInTheDocument();
       expect(screen.getByTestId('accessibility-toolbar')).toBeInTheDocument();
     });
 
     it('returns null when not in embed mode but accessibility_menu is false', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: false } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: false },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -82,8 +93,12 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when not in embed mode and metadata is undefined', () => {
@@ -98,13 +113,19 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when accessibility_menu is null', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: null } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: null },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -120,7 +141,9 @@ describe('AccessibilityFab', () => {
   describe('Embed mode behavior', () => {
     it('returns null when in embed mode regardless of accessibility_menu value', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: false } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: false },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -130,13 +153,19 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when in embed mode even if accessibility_menu is true', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -146,8 +175,12 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when in embed mode and accessibility_menu is undefined', () => {
@@ -162,8 +195,12 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when in embed mode and metadata is null', () => {
@@ -183,9 +220,13 @@ describe('AccessibilityFab', () => {
 
   describe('Analytics page behavior', () => {
     it('returns null when on analytics page even with accessibility_menu enabled', () => {
-      mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor/analytics');
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/analytics',
+      );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -195,14 +236,22 @@ describe('AccessibilityFab', () => {
       );
 
       expect(container.firstChild).toBeNull();
-      expect(screen.queryByTestId('floating-accessibility-button')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('accessibility-toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('floating-accessibility-button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('accessibility-toolbar'),
+      ).not.toBeInTheDocument();
     });
 
     it('returns null when on analytics subpage', () => {
-      mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor/analytics/details');
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/analytics/details',
+      );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -215,9 +264,13 @@ describe('AccessibilityFab', () => {
     });
 
     it('analytics check takes precedence over embed mode check', () => {
-      mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor/analytics');
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/analytics',
+      );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -233,7 +286,9 @@ describe('AccessibilityFab', () => {
   describe('Container styling', () => {
     it('renders with correct fixed positioning and styling classes', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       // Create store with messages so bottom-[21rem] is applied
       const store = configureStore({
@@ -327,7 +382,9 @@ describe('AccessibilityFab', () => {
     it('handles null pathname gracefully when accessibility is enabled', () => {
       mockUsePathname.mockReturnValue(null);
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       render(
@@ -336,13 +393,17 @@ describe('AccessibilityFab', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('floating-accessibility-button')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('floating-accessibility-button'),
+      ).toBeInTheDocument();
     });
 
     it('handles undefined pathname gracefully when accessibility is enabled', () => {
       mockUsePathname.mockReturnValue(undefined);
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       render(
@@ -351,13 +412,19 @@ describe('AccessibilityFab', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('floating-accessibility-button')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('floating-accessibility-button'),
+      ).toBeInTheDocument();
     });
 
     it('case-sensitive analytics check - renders when path has capital A', () => {
-      mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor/Analytics');
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/Analytics',
+      );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
 
       const store = createMockStore();
       const { container } = render(
@@ -368,12 +435,16 @@ describe('AccessibilityFab', () => {
 
       // Should NOT be null because 'Analytics' with capital A won't match '/analytics'
       expect(container.firstChild).not.toBeNull();
-      expect(screen.getByTestId('floating-accessibility-button')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('floating-accessibility-button'),
+      ).toBeInTheDocument();
     });
 
     it('order of checks: embed mode checked first', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: true } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
       mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
 
       const store = createMockStore();
@@ -389,7 +460,9 @@ describe('AccessibilityFab', () => {
 
     it('order of checks: accessibility_menu checked after embed mode', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: { accessibility_menu: false } });
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: false },
+      });
       mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
 
       const store = createMockStore();

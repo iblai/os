@@ -8,7 +8,10 @@ vi.mock('@/hooks/use-show-attachment');
 
 describe('UploadMenu', () => {
   const mockOnFileInputTrigger = vi.fn();
-  const mockUseShowAttachment = vi.spyOn(useShowAttachmentModule, 'useShowAttachment');
+  const mockUseShowAttachment = vi.spyOn(
+    useShowAttachmentModule,
+    'useShowAttachment',
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,7 +30,9 @@ describe('UploadMenu', () => {
     it('should not render when useShowAttachment returns false', () => {
       mockUseShowAttachment.mockReturnValue(false);
 
-      const { container } = render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      const { container } = render(
+        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />,
+      );
 
       expect(container.firstChild).toBeNull();
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -176,7 +181,9 @@ describe('UploadMenu', () => {
       await user.click(button);
 
       await waitFor(() => {
-        const menuItem = screen.getByText('Upload File').closest('[role="menuitem"]');
+        const menuItem = screen
+          .getByText('Upload File')
+          .closest('[role="menuitem"]');
         expect(menuItem).toBeInTheDocument();
       });
     });
@@ -189,7 +196,9 @@ describe('UploadMenu', () => {
       await user.click(button);
 
       await waitFor(() => {
-        const menuItem = screen.getByText('Upload File').closest('[role="menuitem"]');
+        const menuItem = screen
+          .getByText('Upload File')
+          .closest('[role="menuitem"]');
         expect(menuItem).toHaveClass('cursor-pointer');
       });
     });
@@ -257,7 +266,9 @@ describe('UploadMenu', () => {
       await user.click(button);
 
       await waitFor(() => {
-        const menuItem = screen.getByText('Upload File').closest('[role="menuitem"]');
+        const menuItem = screen
+          .getByText('Upload File')
+          .closest('[role="menuitem"]');
         expect(menuItem).toBeInTheDocument();
       });
     });
@@ -291,7 +302,9 @@ describe('UploadMenu', () => {
     });
 
     it('should handle being rendered and unmounted multiple times', () => {
-      const { unmount } = render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      const { unmount } = render(
+        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />,
+      );
 
       expect(screen.getByRole('button')).toBeInTheDocument();
 
@@ -308,7 +321,9 @@ describe('UploadMenu', () => {
       const mockOnFileInputTrigger1 = vi.fn();
       const mockOnFileInputTrigger2 = vi.fn();
 
-      const { rerender } = render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger1} />);
+      const { rerender } = render(
+        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger1} />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);

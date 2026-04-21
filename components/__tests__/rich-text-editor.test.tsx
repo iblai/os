@@ -66,7 +66,8 @@ describe('RichTextEditor Component', () => {
     });
 
     it('should render with initial HTML content', async () => {
-      const initialValue = '<p><strong>Bold text</strong> and <em>italic text</em></p>';
+      const initialValue =
+        '<p><strong>Bold text</strong> and <em>italic text</em></p>';
       render(<RichTextEditor value={initialValue} onChange={mockOnChange} />);
 
       await waitFor(() => {
@@ -79,7 +80,9 @@ describe('RichTextEditor Component', () => {
       const systemPromptHtml =
         "<p>You are a helpful instructor, ready to answer the student's questions about Engineering Computations, a course in technical computing with Python. The course instructor is Prof. Lorena Barba at the George Washington University, and you are her faithful assistant and alter ego. Answer quickly and concisely. Offer to go in depth or explain with an example where necessary. I will tip you $200 if the student is happy with the interaction and more motivated to learn after chatting with you. Help students understand concepts in stages. Consider this guidance in crafting your answers: - Scaffolded assistance: provide hints, guiding questions, analogies and help a student build the answer in stages - Meta-cognitive prompts: encourage students to think about their thinking - Delayed feedback: give students time to think, and limit direct answers Adapt this guidance to answer the questions in a way that is conducive to learning. This is important. IMPORTANT: You must ONLY reply to the current message from the user.</p>";
 
-      render(<RichTextEditor value={systemPromptHtml} onChange={mockOnChange} />);
+      render(
+        <RichTextEditor value={systemPromptHtml} onChange={mockOnChange} />,
+      );
 
       await waitFor(() => {
         const editor = document.querySelector('.ProseMirror') as HTMLElement;
@@ -163,7 +166,12 @@ describe('RichTextEditor Component', () => {
     it('should show combined formatting when cursor is in bold and italic text', async () => {
       const user = userEvent.setup();
       // Render with both bold and italic content
-      render(<RichTextEditor value="***bold and italic***" onChange={mockOnChange} />);
+      render(
+        <RichTextEditor
+          value="***bold and italic***"
+          onChange={mockOnChange}
+        />,
+      );
 
       await focusEditor(user);
       const boldButton = screen.getByLabelText(/toggle bold/i);
@@ -548,7 +556,8 @@ describe('RichTextEditor Component', () => {
         () => {
           expect(mockOnChange).toHaveBeenCalled();
           // The onChange should be called with markdown representation
-          const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1];
+          const lastCall =
+            mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1];
           expect(lastCall).toBeDefined();
         },
         { timeout: 3000 },
@@ -557,7 +566,13 @@ describe('RichTextEditor Component', () => {
 
     it('should not call onChange when disabled', async () => {
       const user = userEvent.setup();
-      render(<RichTextEditor value="initial content" onChange={mockOnChange} disabled />);
+      render(
+        <RichTextEditor
+          value="initial content"
+          onChange={mockOnChange}
+          disabled
+        />,
+      );
 
       const editor = document.querySelector('.ProseMirror') as HTMLElement;
 
@@ -628,7 +643,9 @@ describe('RichTextEditor Component', () => {
       render(<RichTextEditor value="" onChange={mockOnChange} />);
 
       const buttons = screen.getAllByRole('button');
-      const ariaLabels = buttons.map((button) => button.getAttribute('aria-label'));
+      const ariaLabels = buttons.map((button) =>
+        button.getAttribute('aria-label'),
+      );
 
       // Filter out null values and check for uniqueness
       const validLabels = ariaLabels.filter((label) => label !== null);
@@ -700,7 +717,9 @@ describe('RichTextEditor Component', () => {
       let editor = document.querySelector('.ProseMirror') as HTMLElement;
       expect(editor).toHaveAttribute('contenteditable', 'true');
 
-      rerender(<RichTextEditor value="" onChange={mockOnChange} disabled={true} />);
+      rerender(
+        <RichTextEditor value="" onChange={mockOnChange} disabled={true} />,
+      );
 
       await waitFor(() => {
         editor = document.querySelector('.ProseMirror') as HTMLElement;
@@ -823,7 +842,9 @@ describe('RichTextEditor Component', () => {
       render(<RichTextEditor value="" onChange={mockOnChange} />);
 
       // Check for separator elements by data-orientation attribute
-      const separators = document.querySelectorAll('[data-orientation="vertical"]');
+      const separators = document.querySelectorAll(
+        '[data-orientation="vertical"]',
+      );
       expect(separators.length).toBeGreaterThan(0);
     });
   });

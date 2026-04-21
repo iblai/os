@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { DeleteModerationLogModal } from './delete-moderation-log-modal';
@@ -154,7 +160,9 @@ describe('DeleteModerationLogModal', () => {
     });
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith('Moderation log deleted successfully');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Moderation log deleted successfully',
+      );
     });
 
     await waitFor(() => {
@@ -172,7 +180,9 @@ describe('DeleteModerationLogModal', () => {
     fireEvent.click(screen.getByText('Delete'));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Failed to delete moderation log');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to delete moderation log',
+      );
     });
 
     consoleSpy.mockRestore();
@@ -182,11 +192,19 @@ describe('DeleteModerationLogModal', () => {
     const mockUnwrap = vi.fn().mockResolvedValue({});
     mockDeleteModerationLog.mockReturnValue({ unwrap: mockUnwrap });
 
-    render(<DeleteModerationLogModal isOpen={true} onClose={vi.fn()} logId="log-123" />);
+    render(
+      <DeleteModerationLogModal
+        isOpen={true}
+        onClose={vi.fn()}
+        logId="log-123"
+      />,
+    );
     fireEvent.click(screen.getByText('Delete'));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith('Moderation log deleted successfully');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Moderation log deleted successfully',
+      );
     });
   });
 });

@@ -251,14 +251,18 @@ describe('useTenantProvider', () => {
 
   describe('error handling', () => {
     it('should call onAuthFailure when fetchUserTenants throws', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockFetchUserTenants.mockRejectedValue(new Error('Network error'));
 
       renderHook(() => useTenantProvider(defaultProps));
 
       await waitFor(() => {
-        expect(mockOnAuthFailure).toHaveBeenCalledWith('Unexpected error: Network error');
+        expect(mockOnAuthFailure).toHaveBeenCalledWith(
+          'Unexpected error: Network error',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -266,7 +270,9 @@ describe('useTenantProvider', () => {
     });
 
     it('should redirect to auth spa on error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockFetchUserTenants.mockRejectedValue(new Error('Network error'));
 
@@ -281,7 +287,9 @@ describe('useTenantProvider', () => {
     });
 
     it('should set isLoading to false after error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockFetchUserTenants.mockRejectedValue(new Error('Network error'));
 
@@ -296,14 +304,18 @@ describe('useTenantProvider', () => {
     });
 
     it('should handle non-Error thrown objects', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockFetchUserTenants.mockRejectedValue('String error');
 
       renderHook(() => useTenantProvider(defaultProps));
 
       await waitFor(() => {
-        expect(mockOnAuthFailure).toHaveBeenCalledWith('Unexpected error: String error');
+        expect(mockOnAuthFailure).toHaveBeenCalledWith(
+          'Unexpected error: String error',
+        );
       });
 
       consoleSpy.mockRestore();
@@ -339,7 +351,9 @@ describe('useTenantProvider', () => {
     });
 
     it('should work without onAuthFailure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockFetchUserTenants.mockRejectedValue(new Error('Network error'));
 

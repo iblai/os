@@ -37,7 +37,10 @@ export function useUsername() {
 }
 
 export function useCurrentTenant() {
-  const [data, setValue] = useLocalStorage<Tenant | null>(LOCAL_STORAGE_KEYS.CURRENT_TENANT, null);
+  const [data, setValue] = useLocalStorage<Tenant | null>(
+    LOCAL_STORAGE_KEYS.CURRENT_TENANT,
+    null,
+  );
 
   return { currentTenant: data, saveCurrentTenant: setValue };
 }
@@ -96,10 +99,14 @@ export function useLearnerMode() {
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const userIsAdmin = useIsAdmin();
-  const isInstructorMode = useAppSelector((state: RootState) => state.user.isInstructorMode);
+  const isInstructorMode = useAppSelector(
+    (state: RootState) => state.user.isInstructorMode,
+  );
 
   const isAdminPage = () => {
-    return Object.values(ADMIN_PAGES_SUBPATHS).some((subpath) => pathname.includes(subpath));
+    return Object.values(ADMIN_PAGES_SUBPATHS).some((subpath) =>
+      pathname.includes(subpath),
+    );
   };
 
   function toggleLearnerMode() {
@@ -107,7 +114,8 @@ export function useLearnerMode() {
       if (isInstructorMode && isAdminPage()) {
         dispatch(
           initCustomAlertDialog({
-            message: 'Switching to learner mode will redirect you to the chat page.',
+            message:
+              'Switching to learner mode will redirect you to the chat page.',
             validateTrigger: 'SWITCH_TO_LEARNER',
             cancelTrigger: '',
             title: 'Are you sure?',

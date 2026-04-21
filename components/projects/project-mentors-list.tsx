@@ -20,7 +20,10 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 
 const MinimumMentorAlert = dynamic(
-  () => import('./minimum-mentor-alert').then((mod) => ({ default: mod.MinimumMentorAlert })),
+  () =>
+    import('./minimum-mentor-alert').then((mod) => ({
+      default: mod.MinimumMentorAlert,
+    })),
   {
     ssr: false,
   },
@@ -95,9 +98,13 @@ export function ProjectMentorsList({
 
   if (projectMentors.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">No mentors assigned to this project yet.</p>
-        <p className="text-sm text-gray-500">Select mentors below to add them to your project.</p>
+      <div className="py-8 text-center">
+        <p className="mb-4 text-gray-600">
+          No mentors assigned to this project yet.
+        </p>
+        <p className="text-sm text-gray-500">
+          Select mentors below to add them to your project.
+        </p>
       </div>
     );
   }
@@ -107,7 +114,9 @@ export function ProjectMentorsList({
       {showTitle && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold text-gray-900">Project Mentors</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Project Mentors
+            </h2>
           </div>
           {onAddMentorClick && (
             <Button onClick={onAddMentorClick} className="ibl-button-primary">
@@ -118,7 +127,7 @@ export function ProjectMentorsList({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {projectMentors.map((mentor) => {
           const handleMentorSelect = () => {
             if (mentor.unique_id === mentorId) {
@@ -138,7 +147,7 @@ export function ProjectMentorsList({
             <div
               key={mentor.id}
               className={cn(
-                'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2',
+                'group h-full cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none',
                 {
                   'border-blue-500': mentor.unique_id === mentorId,
                 },
@@ -149,21 +158,28 @@ export function ProjectMentorsList({
               role="button"
               aria-label={`Select mentor ${mentor.name}`}
             >
-              <div className="flex items-start gap-3 h-full">
+              <div className="flex h-full items-start gap-3">
                 <Avatar className="h-12 w-12 flex-shrink-0">
-                  <AvatarImage src={mentor.avatar || '/placeholder.svg'} alt={mentor.name} />
+                  <AvatarImage
+                    src={mentor.avatar || '/placeholder.svg'}
+                    alt={mentor.name}
+                  />
                   <AvatarFallback>{mentor.name.substring(0, 2)}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0 flex flex-col h-full">
-                  <h3 className="font-medium text-gray-900 text-sm mb-2">{mentor.name}</h3>
-                  <p className="text-xs text-gray-600 line-clamp-2 flex-1">{mentor.description}</p>
+                <div className="flex h-full min-w-0 flex-1 flex-col">
+                  <h3 className="mb-2 text-sm font-medium text-gray-900">
+                    {mentor.name}
+                  </h3>
+                  <p className="line-clamp-2 flex-1 text-xs text-gray-600">
+                    {mentor.description}
+                  </p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:opacity-100"
+                      className="h-6 w-6 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 focus:outline-none"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <MoreHorizontal className="h-4 w-4" />
@@ -188,7 +204,10 @@ export function ProjectMentorsList({
         })}
       </div>
 
-      <MinimumMentorAlert open={showMinimumMentorAlert} onOpenChange={setShowMinimumMentorAlert} />
+      <MinimumMentorAlert
+        open={showMinimumMentorAlert}
+        onOpenChange={setShowMinimumMentorAlert}
+      />
     </div>
   );
 }

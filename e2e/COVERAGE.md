@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-01 | 277 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-21 | 297 checkpoints | 39 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -145,8 +145,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call dialog opens correctly on Firefox and WebKit
 - [x] Voice call button is hidden when "Show voice call" is toggled off in settings
 - [x] Voice call button reappears after re-enabling the toggle
-- [x] Full voice call flow: user speaks and receives an AI audio response *(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)*
-- [x] Full voice call with real LiveKit *(skipped — requires real LiveKit server, audio device, and STT pipeline)*
+- [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
+- [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
 
 ---
 
@@ -317,17 +317,24 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (8 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
-- [x] Admin can toggle User Agreement on/off; toggling on causes disclaimer modal to appear before chat _(uses fresh unauthenticated browser context; skips if non-admin)_
-- [x] Admin can edit User Agreement content _(skips if non-admin)_
-- [x] Admin can copy User Agreement content to clipboard _(skips if non-admin)_
-- [x] Admin can edit Advisory text and it appears above the chat input _(skips if non-admin)_
-- [x] Disclaimers tab has proper WCAG accessibility attributes _(skips if non-admin)_
-- [x] User Agreement modal is accessible _(skips if non-admin)_
-- [x] Create a new mentor and configure all disclaimer settings end-to-end _(uses fresh unauthenticated browser context; skips if non-admin)_
+- [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits User Agreement content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits Advisory content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin cancels User Agreement edit without saving — preview content unchanged _(creates fresh mentor; skips if non-admin)_
+- [x] Save button is disabled when User Agreement content is empty _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies User Agreement content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies Advisory content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin enables user agreement and non-admin must accept it before chatting _(creates fresh mentor; uses non-admin browser context)_
+- [x] Admin disables user agreement and non-admin sends message without seeing agreement modal _(creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin accepts user agreement and subsequent messages do not trigger modal again _(creates fresh mentor; uses non-admin browser context)_
+- [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
+- [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 
 ---
 
@@ -343,13 +350,18 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 24: Mentor Memory Tab (3 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
 
-- [x] Memory tab is visible in the Edit Mentor modal
-- [x] "Reference saved memories" toggle can be enabled and disabled
-- [x] User memories list shows entries or empty state, and an entry can be deleted
+- [x] CP-24.1: Memory tab is visible and Enable Memory section is present
+- [x] CP-24.2: "Enable Memory" toggle can be enabled and disabled (sends enable_memory_component)
+- [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
+- [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
+- [x] CP-24.5: Admin can edit a memory entry via action menu
+- [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
+- [x] CP-24.7: User filter and date range filter are visible in manage memories
+- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting
 
 ---
 
@@ -549,6 +561,28 @@ When adding a new page or modifying an existing user flow:
 - [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
+
+---
+
+## Journey 38: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
+
+**Source files:** `components/modals/settings-modal.tsx`
+
+- [x] TMS-38.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
+
+---
+
+## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+
+- [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
+- [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
+- [x] AL-39.3: Admin opens Audit Log tab from navbar mentor dropdown
+- [x] AL-39.4: Audit tab header shows correct title and description in Edit Mentor
+- [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
+- [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
+- [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
 
 ---
 

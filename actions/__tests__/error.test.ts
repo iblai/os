@@ -17,7 +17,9 @@ describe('actions/error', () => {
       const error = new Error('Test error');
       await handleError(error, 'test-tenant');
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('test-tenant'));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('test-tenant'),
+      );
     });
 
     it('should log error without tenant key', async () => {
@@ -37,7 +39,9 @@ describe('actions/error', () => {
       const error = { message: 'Object error', code: 500 };
       await handleError(error, 'tenant');
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Object error'));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Object error'),
+      );
     });
 
     it('should handle null error', async () => {

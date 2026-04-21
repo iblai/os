@@ -21,6 +21,49 @@ setup('authenticate', async ({ page }, testInfo) => {
   );
   fs.mkdirSync(path.dirname(authFile), { recursive: true });
 
+  // ── Step 0: Intercept request-jwt ────────────────────────────────────────
+  // web-utils 1.2.5 calls POST /ibl-auth/request-jwt/ synchronously on mount.
+  // If the Open edX session cookie is absent, it 401s and AuthProvider
+  // immediately redirects away from the app — before we can save storage state.
+  // Strategy: pass through if the real request succeeds; otherwise return a
+  // stub JWT with no user_id so validateJwtToken skips the mismatch guard.
+  await page.route('**/ibl-auth/request-jwt/**', async (route) => {
+    if (route.request().method() !== 'POST') {
+      return route.continue();
+    }
+    try {
+      const response = await route.fetch();
+      if (response.ok()) {
+        console.log(
+          `[auth.setup] [${browserKey}] request-jwt: real token received`,
+        );
+        return route.fulfill({ response });
+      }
+      console.log(
+        `[auth.setup] [${browserKey}] request-jwt: status ${response.status()} → returning stub JWT`,
+      );
+    } catch (err) {
+      console.log(
+        `[auth.setup] [${browserKey}] request-jwt: fetch error → returning stub JWT`,
+      );
+    }
+    // Build a minimal JWT with no user_id.
+    // validateJwtToken only fails the mismatch check when decodedToken.user_id
+    // is truthy, so omitting it causes validateJwtToken to return true.
+    const header = Buffer.from(
+      JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+    ).toString('base64url');
+    const stubPayload = Buffer.from(
+      JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+    ).toString('base64url');
+    const stubJwt = `${header}.${stubPayload}.stub`;
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: stubJwt }),
+    });
+  });
+
   // ── Step 1: Navigate to the app ──────────────────────────────────────────
   console.log(`[auth.setup] [${browserKey}] Step 1: Navigating to ${HOST}`);
   await page.goto(HOST, { waitUntil: 'domcontentloaded', timeout: 60_000 });
@@ -100,6 +143,56 @@ setup('authenticate', async ({ page }, testInfo) => {
     `[auth.setup] [${browserKey}] axd_token: ${axdToken ? 'present' : 'NULL'}`,
   );
   expect(dmToken).not.toBeNull();
+
+  // ── Step 7b: Wait for edx_jwt_token (set async by AuthProvider) ───────────
+  // web-utils 1.2.5 validateJwtToken() requires edx_jwt_token in localStorage.
+  // AuthProvider calls refreshJwtToken() → POST /ibl-auth/request-jwt/ to get it.
+  // We must wait for it before saving storage state, otherwise tests redirect to auth.
+  console.log(
+    `[auth.setup] [${browserKey}] Step 7b: Waiting up to 30s for edx_jwt_token…`,
+  );
+  try {
+    await page.waitForFunction(
+      () => localStorage.getItem('edx_jwt_token') !== null,
+      { timeout: 30_000 },
+    );
+    console.log(`[auth.setup] [${browserKey}] edx_jwt_token: present`);
+
+    // Log user_id from token vs userData to detect mismatches
+    const tokenInfo = await page.evaluate(() => {
+      try {
+        const token = localStorage.getItem('edx_jwt_token') ?? '';
+        const userData = localStorage.getItem('userData');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const user = userData ? JSON.parse(userData) : null;
+        return {
+          tokenUserId: payload.user_id ?? null,
+          dataUserId: user?.user_id ?? null,
+        };
+      } catch {
+        return null;
+      }
+    });
+    if (tokenInfo) {
+      const match =
+        String(tokenInfo.tokenUserId) === String(tokenInfo.dataUserId);
+      console.log(
+        `[auth.setup] [${browserKey}] edx_jwt_token.user_id=${tokenInfo.tokenUserId}  userData.user_id=${tokenInfo.dataUserId}  match=${match}`,
+      );
+      if (!match) {
+        console.warn(
+          `[auth.setup] [${browserKey}] ⚠ user_id MISMATCH — validateJwtToken will fail and trigger request-jwt on each page load`,
+        );
+      }
+    }
+  } catch {
+    const edxToken = await page.evaluate(() =>
+      localStorage.getItem('edx_jwt_token'),
+    );
+    console.warn(
+      `[auth.setup] [${browserKey}] edx_jwt_token: ${edxToken ? 'present' : 'NULL — timed out (request-jwt may have failed or not yet called)'}`,
+    );
+  }
 
   // ── Step 8: Save storage state ────────────────────────────────────────────
   await page.context().storageState({ path: authFile });

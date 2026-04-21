@@ -15,7 +15,11 @@ const DEFAULT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
  * Check if we're in Tauri offline mode
  */
 export function isTauriOfflineMode(): boolean {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return false;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return false;
   if (!isTauriApp()) return false;
   return localStorage.getItem('tauri_offline_mode') === 'true';
 }
@@ -23,7 +27,10 @@ export function isTauriOfflineMode(): boolean {
 /**
  * Generate a cache key from endpoint and params
  */
-function getCacheKey(endpoint: string, params?: Record<string, unknown>): string {
+function getCacheKey(
+  endpoint: string,
+  params?: Record<string, unknown>,
+): string {
   const paramStr = params ? JSON.stringify(params) : '';
   return `${CACHE_PREFIX}${endpoint}_${paramStr}`;
 }
@@ -117,7 +124,11 @@ function clearOldCacheEntries(): void {
     }
 
     keysToRemove.forEach((key) => localStorage.removeItem(key));
-    console.log('[TauriApiCache] Cleared', keysToRemove.length, 'old cache entries');
+    console.log(
+      '[TauriApiCache] Cleared',
+      keysToRemove.length,
+      'old cache entries',
+    );
   } catch (error) {
     console.error('[TauriApiCache] Error clearing old cache:', error);
   }
@@ -176,7 +187,10 @@ export async function fetchWithCache<T>(
     // If fetch fails, try to return cached data
     const cached = getCachedApiResponse<T>(endpoint, params);
     if (cached !== null) {
-      console.log('[TauriApiCache] Fetch failed, returning cached response for:', endpoint);
+      console.log(
+        '[TauriApiCache] Fetch failed, returning cached response for:',
+        endpoint,
+      );
       return cached;
     }
     throw error;
@@ -190,7 +204,8 @@ export const CacheKeys = {
   mentorSettings: (org: string, mentor: string, userId: string) =>
     `mentor_settings_${org}_${mentor}_${userId}`,
 
-  mentorPublicSettings: (org: string, mentor: string) => `mentor_public_settings_${org}_${mentor}`,
+  mentorPublicSettings: (org: string, mentor: string) =>
+    `mentor_public_settings_${org}_${mentor}`,
 
   tenantMetadata: (org: string) => `tenant_metadata_${org}`,
 
@@ -212,18 +227,30 @@ export async function preCacheMentorData(
 ): Promise<void> {
   if (!isTauriApp()) return;
 
-  console.log('[TauriApiCache] Pre-caching mentor data for:', { org, mentorId, userId });
+  console.log('[TauriApiCache] Pre-caching mentor data for:', {
+    org,
+    mentorId,
+    userId,
+  });
 
   try {
     // Cache in parallel
     await Promise.all([
-      fetchWithCache(CacheKeys.mentorSettings(org, mentorId, userId), fetchMentorSettings, {
-        org,
-        mentor: mentorId,
-        userId,
-      }).catch((e) => console.warn('[TauriApiCache] Failed to cache mentor settings:', e)),
+      fetchWithCache(
+        CacheKeys.mentorSettings(org, mentorId, userId),
+        fetchMentorSettings,
+        {
+          org,
+          mentor: mentorId,
+          userId,
+        },
+      ).catch((e) =>
+        console.warn('[TauriApiCache] Failed to cache mentor settings:', e),
+      ),
 
-      fetchWithCache(CacheKeys.tenantMetadata(org), fetchTenantMetadata, { org }).catch((e) =>
+      fetchWithCache(CacheKeys.tenantMetadata(org), fetchTenantMetadata, {
+        org,
+      }).catch((e) =>
         console.warn('[TauriApiCache] Failed to cache tenant metadata:', e),
       ),
     ]);

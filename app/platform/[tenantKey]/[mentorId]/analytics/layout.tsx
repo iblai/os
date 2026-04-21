@@ -5,7 +5,11 @@ import { AnalyticsLayout } from '@iblai/iblai-js/web-containers';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
-export default function AnalyticsLayoutWrapper({ children }: { children: React.ReactNode }) {
+export default function AnalyticsLayoutWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -18,7 +22,12 @@ export default function AnalyticsLayoutWrapper({ children }: { children: React.R
   };
 
   return (
-    <AnalyticsLayout excludeTabs={['courses', 'programs']} currentPath={pathname} basePath={basePath} onTabChange={handleTabChange}>
+    <AnalyticsLayout
+      excludeTabs={['courses', 'programs']}
+      currentPath={pathname}
+      basePath={basePath}
+      onTabChange={handleTabChange}
+    >
       {children}
     </AnalyticsLayout>
   );

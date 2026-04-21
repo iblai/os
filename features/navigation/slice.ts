@@ -48,7 +48,10 @@ export const modalSlice: Slice<ModalState> = createSlice({
     },
 
     // Initialize the custom alert dialog stack from URL (or other sources)
-    initCustomAlertDialog: (state, action: PayloadAction<customAlertDialogInfo>) => {
+    initCustomAlertDialog: (
+      state,
+      action: PayloadAction<customAlertDialogInfo>,
+    ) => {
       state.customAlertDialog = action.payload;
     },
 
@@ -116,27 +119,31 @@ export const {
 } = modalSlice.actions;
 
 // Selectors
-export const selectModalStack = (state: { modals: ModalState }) => state.modals.modalStack;
+export const selectModalStack = (state: { modals: ModalState }) =>
+  state.modals.modalStack;
 
 export const selectCurrentModal = (state: { modals: ModalState }) => {
   const { modalStack } = state.modals;
   return modalStack.length > 0 ? modalStack[modalStack.length - 1] : null;
 };
 
-export const selectIsModalOpen = (name: string) => (state: { modals: ModalState }) => {
-  return state.modals.modalStack.some((modal) => modal.name === name);
-};
+export const selectIsModalOpen =
+  (name: string) => (state: { modals: ModalState }) => {
+    return state.modals.modalStack.some((modal) => modal.name === name);
+  };
 
-export const selectModalTab = (name: string) => (state: { modals: ModalState }) => {
-  const modal = state.modals.modalStack.find((m) => m.name === name);
-  return modal?.tab;
-};
+export const selectModalTab =
+  (name: string) => (state: { modals: ModalState }) => {
+    const modal = state.modals.modalStack.find((m) => m.name === name);
+    return modal?.tab;
+  };
 
 export const selectModalMentorId = (state: { modals: ModalState }) => {
   const currentModal = selectCurrentModal(state);
   return currentModal?.mentorId;
 };
 
-export const selectShortcutsModal = (state: { modals: ModalState }) => state.modals.shortcutsModal;
+export const selectShortcutsModal = (state: { modals: ModalState }) =>
+  state.modals.shortcutsModal;
 
 export const modalReducer = modalSlice.reducer;

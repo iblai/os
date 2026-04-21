@@ -33,7 +33,9 @@ export function IblDataHandler() {
           params.delete('ibl-data');
 
           // Build the new URL without the ibl-data param
-          const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+          const newUrl = params.toString()
+            ? `${pathname}?${params.toString()}`
+            : pathname;
 
           // Replace the URL without the ibl-data param
           router.replace(newUrl);

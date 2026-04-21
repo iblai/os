@@ -40,7 +40,9 @@ export function AllMentorsSection({
             <ul
               data-testid="all-mentors-card-list"
               className="grid w-full grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 md:gap-4"
-              aria-label={activeTab === '' ? 'All mentors' : `${activeTab} mentors`}
+              aria-label={
+                activeTab === '' ? 'All mentors' : `${activeTab} mentors`
+              }
             >
               {mentors?.map((mentor) => (
                 <li key={mentor.id} role="listitem">

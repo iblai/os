@@ -64,7 +64,11 @@ describe('useTauriOffline', () => {
     clearLocalStorage();
     mockPathname.mockReturnValue(null);
     mockIsTauriApp.mockReturnValue(false);
-    mockInvoke.mockResolvedValue({ cached_count: 0, failed_count: 0, cached_urls: [] });
+    mockInvoke.mockResolvedValue({
+      cached_count: 0,
+      failed_count: 0,
+      cached_urls: [],
+    });
   });
 
   afterEach(() => {
@@ -174,7 +178,9 @@ describe('useTauriOffline', () => {
         result.current.saveCurrentRoute();
       });
 
-      expect(localStorage.getItem(LAST_MENTOR_ROUTE_KEY)).toBe('/platform/tenant-1/mentor-123');
+      expect(localStorage.getItem(LAST_MENTOR_ROUTE_KEY)).toBe(
+        '/platform/tenant-1/mentor-123',
+      );
 
       consoleSpy.mockRestore();
     });
@@ -233,17 +239,25 @@ describe('useTauriOffline', () => {
     it('should return cached response when available', () => {
       mockIsTauriApp.mockReturnValue(true);
       const cachedData = { key1: { data: 'value1' } };
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify(cachedData));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify(cachedData),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
-      expect(result.current.getCachedApiResponse('key1')).toEqual({ data: 'value1' });
+      expect(result.current.getCachedApiResponse('key1')).toEqual({
+        data: 'value1',
+      });
     });
 
     it('should return null when key not found', () => {
       mockIsTauriApp.mockReturnValue(true);
       const cachedData = { key1: { data: 'value1' } };
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify(cachedData));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify(cachedData),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -261,7 +275,10 @@ describe('useTauriOffline', () => {
     it('should return null when not in Tauri', () => {
       mockIsTauriApp.mockReturnValue(false);
       const cachedData = { key1: { data: 'value1' } };
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify(cachedData));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify(cachedData),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -269,7 +286,9 @@ describe('useTauriOffline', () => {
     });
 
     it('should handle JSON parse errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
       localStorage.setItem(CACHED_API_RESPONSES_KEY, 'invalid-json');
 
@@ -292,13 +311,18 @@ describe('useTauriOffline', () => {
         result.current.setCachedApiResponse('key1', { data: 'value1' });
       });
 
-      const cached = JSON.parse(localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}');
+      const cached = JSON.parse(
+        localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}',
+      );
       expect(cached.key1).toEqual({ data: 'value1' });
     });
 
     it('should preserve existing cached responses', () => {
       mockIsTauriApp.mockReturnValue(true);
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify({ existing: 'data' }));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify({ existing: 'data' }),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -306,7 +330,9 @@ describe('useTauriOffline', () => {
         result.current.setCachedApiResponse('key1', { data: 'value1' });
       });
 
-      const cached = JSON.parse(localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}');
+      const cached = JSON.parse(
+        localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}',
+      );
       expect(cached.existing).toBe('data');
       expect(cached.key1).toEqual({ data: 'value1' });
     });
@@ -331,7 +357,10 @@ describe('useTauriOffline', () => {
       for (let i = 0; i < 100; i++) {
         existingData[`key${i}`] = { data: i };
       }
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify(existingData));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify(existingData),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -339,14 +368,18 @@ describe('useTauriOffline', () => {
         result.current.setCachedApiResponse('newKey', { data: 'new' });
       });
 
-      const cached = JSON.parse(localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}');
+      const cached = JSON.parse(
+        localStorage.getItem(CACHED_API_RESPONSES_KEY) || '{}',
+      );
       const keys = Object.keys(cached);
       expect(keys.length).toBeLessThanOrEqual(100);
       expect(cached.newKey).toEqual({ data: 'new' });
     });
 
     it('should handle JSON parse errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockIsTauriApp.mockReturnValue(true);
       localStorage.setItem(CACHED_API_RESPONSES_KEY, 'invalid-json');
 
@@ -365,7 +398,10 @@ describe('useTauriOffline', () => {
   describe('clearCachedApiResponses', () => {
     it('should clear all cached API responses', () => {
       mockIsTauriApp.mockReturnValue(true);
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify({ key: 'value' }));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify({ key: 'value' }),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -378,7 +414,10 @@ describe('useTauriOffline', () => {
 
     it('should do nothing when not in Tauri', () => {
       mockIsTauriApp.mockReturnValue(false);
-      localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify({ key: 'value' }));
+      localStorage.setItem(
+        CACHED_API_RESPONSES_KEY,
+        JSON.stringify({ key: 'value' }),
+      );
 
       const { result } = renderHook(() => useTauriOffline());
 
@@ -546,7 +585,11 @@ describe('triggerPrecache error handling', () => {
       if (cmd === 'save_last_mentor_route') {
         return Promise.reject(new Error('Save route failed'));
       }
-      return Promise.resolve({ cached_count: 0, failed_count: 0, cached_urls: [] });
+      return Promise.resolve({
+        cached_count: 0,
+        failed_count: 0,
+        cached_urls: [],
+      });
     });
 
     const { result } = renderHook(() => useTauriOffline());
@@ -579,7 +622,11 @@ describe('triggerPrecache error handling', () => {
       if (cmd === 'precache_app') {
         return Promise.reject(new Error('Precache failed'));
       }
-      return Promise.resolve({ cached_count: 0, failed_count: 0, cached_urls: [] });
+      return Promise.resolve({
+        cached_count: 0,
+        failed_count: 0,
+        cached_urls: [],
+      });
     });
 
     const { result } = renderHook(() => useTauriOffline());
@@ -591,7 +638,10 @@ describe('triggerPrecache error handling', () => {
     });
 
     // Should have logged the precache error
-    expect(consoleSpy).toHaveBeenCalledWith('[TauriOffline] Pre-cache failed:', expect.any(Error));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[TauriOffline] Pre-cache failed:',
+      expect.any(Error),
+    );
 
     consoleSpy.mockRestore();
     consoleLogSpy.mockRestore();

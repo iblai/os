@@ -81,7 +81,9 @@ describe('useIsPreviewMode', () => {
   describe('userIsNotAllowedToChat logic', () => {
     it('should return true when user has no username, mentor is not anonymous, has token, and token is not enabled', () => {
       mockUseUsername.mockReturnValue(null);
-      mockUseMentorSettings.mockReturnValue({ data: { allowAnonymous: false } });
+      mockUseMentorSettings.mockReturnValue({
+        data: { allowAnonymous: false },
+      });
       mockUseAppSelector.mockReturnValue(false); // tokenEnabled = false
       mockGet.mockImplementation((key: string) => {
         if (key === 'token') return 'some-token';
@@ -96,7 +98,9 @@ describe('useIsPreviewMode', () => {
 
     it('should return false when user has username', () => {
       mockUseUsername.mockReturnValue('testuser');
-      mockUseMentorSettings.mockReturnValue({ data: { allowAnonymous: false } });
+      mockUseMentorSettings.mockReturnValue({
+        data: { allowAnonymous: false },
+      });
       mockUseAppSelector.mockReturnValue(false);
       mockGet.mockImplementation((key: string) => {
         if (key === 'token') return 'some-token';
@@ -124,7 +128,9 @@ describe('useIsPreviewMode', () => {
 
     it('should return false when no token in URL', () => {
       mockUseUsername.mockReturnValue(null);
-      mockUseMentorSettings.mockReturnValue({ data: { allowAnonymous: false } });
+      mockUseMentorSettings.mockReturnValue({
+        data: { allowAnonymous: false },
+      });
       mockUseAppSelector.mockReturnValue(false);
       mockGet.mockReturnValue(null);
 
@@ -135,7 +141,9 @@ describe('useIsPreviewMode', () => {
 
     it('should return false when token is enabled', () => {
       mockUseUsername.mockReturnValue(null);
-      mockUseMentorSettings.mockReturnValue({ data: { allowAnonymous: false } });
+      mockUseMentorSettings.mockReturnValue({
+        data: { allowAnonymous: false },
+      });
       mockUseAppSelector.mockReturnValue(true); // tokenEnabled = true
       mockGet.mockImplementation((key: string) => {
         if (key === 'token') return 'some-token';
@@ -193,7 +201,9 @@ describe('useIsPreviewMode', () => {
 
     it('should handle empty string username as falsy', () => {
       mockUseUsername.mockReturnValue('');
-      mockUseMentorSettings.mockReturnValue({ data: { allowAnonymous: false } });
+      mockUseMentorSettings.mockReturnValue({
+        data: { allowAnonymous: false },
+      });
       mockUseAppSelector.mockReturnValue(false);
       mockGet.mockImplementation((key: string) => {
         if (key === 'token') return 'some-token';

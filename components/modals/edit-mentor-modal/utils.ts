@@ -1,5 +1,8 @@
 import { config } from '@/lib/config';
-import { CustomFloatingBubbleConfig, EmbedFormValues } from './hooks/useEmbedTab';
+import {
+  CustomFloatingBubbleConfig,
+  EmbedFormValues,
+} from './hooks/useEmbedTab';
 
 const getBubbleImage = async (tenant: string) => {
   let bubbleImg = `/images/ibl-logo-animated.gif`;
@@ -25,7 +28,11 @@ const getBubbleImage = async (tenant: string) => {
   return bubbleImg;
 };
 
-const getUrl = (settings: EmbedFormValues, tenant: string, extraBodyClasses = '') => {
+const getUrl = (
+  settings: EmbedFormValues,
+  tenant: string,
+  extraBodyClasses = '',
+) => {
   let url = `${config.mentorIframeUrl()}/platform/${tenant}/${settings?.slug}?embed=true`;
   if (extraBodyClasses) {
     url += `&extra-body-classes=${extraBodyClasses}`;
@@ -155,42 +162,54 @@ export const getEmbedCode = async (
                     iframeContainer.style = "${
                       useCustomFloatingBubble
                         ? getIframeContainerStyle({
-                            ...(customFloatingBubbleConfig?.position === 'bottom-right'
+                            ...(customFloatingBubbleConfig?.position ===
+                            'bottom-right'
                               ? {
                                   right: 30,
                                   bottom: Number(
                                     Number(customFloatingBubbleConfig.padding) +
-                                      Number(customFloatingBubbleConfig.imageSize) +
+                                      Number(
+                                        customFloatingBubbleConfig.imageSize,
+                                      ) +
                                       50,
                                   ),
                                 }
                               : {}),
-                            ...(customFloatingBubbleConfig?.position === 'bottom-left'
+                            ...(customFloatingBubbleConfig?.position ===
+                            'bottom-left'
                               ? {
                                   left: 30,
                                   bottom: Number(
                                     Number(customFloatingBubbleConfig.padding) +
-                                      Number(customFloatingBubbleConfig.imageSize) +
+                                      Number(
+                                        customFloatingBubbleConfig.imageSize,
+                                      ) +
                                       50,
                                   ),
                                 }
                               : {}),
-                            ...(customFloatingBubbleConfig?.position === 'top-right'
+                            ...(customFloatingBubbleConfig?.position ===
+                            'top-right'
                               ? {
                                   right: 30,
                                   top: Number(
                                     Number(customFloatingBubbleConfig.padding) +
-                                      Number(customFloatingBubbleConfig.imageSize) +
+                                      Number(
+                                        customFloatingBubbleConfig.imageSize,
+                                      ) +
                                       50,
                                   ),
                                 }
                               : {}),
-                            ...(customFloatingBubbleConfig?.position === 'top-left'
+                            ...(customFloatingBubbleConfig?.position ===
+                            'top-left'
                               ? {
                                   left: 30,
                                   top: Number(
                                     Number(customFloatingBubbleConfig.padding) +
-                                      Number(customFloatingBubbleConfig.imageSize) +
+                                      Number(
+                                        customFloatingBubbleConfig.imageSize,
+                                      ) +
                                       50,
                                   ),
                                 }

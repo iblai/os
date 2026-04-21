@@ -53,7 +53,8 @@ const isRetriableVersionError = (error: unknown): boolean => {
   if (err.status !== 404) return false;
 
   // Check error message to distinguish between artifact not found vs version not found
-  const detail = typeof err.data === 'string' ? err.data : (err.data?.detail ?? '');
+  const detail =
+    typeof err.data === 'string' ? err.data : (err.data?.detail ?? '');
 
   // "No Artifact matches the given query" suggests wrong artifact ID - don't retry
   if (detail.toLowerCase().includes('no artifact matches')) {
@@ -73,7 +74,8 @@ const getRetryDelay = (attempt: number): number => {
 };
 
 // Sleep utility
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useCanvasVersionNavigation({
   artifactId,
@@ -93,7 +95,9 @@ export function useCanvasVersionNavigation({
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [activeVersionIsCurrent, setActiveVersionIsCurrent] = useState(true);
   const [isVersionLoading, setIsVersionLoading] = useState(false);
-  const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>([]);
+  const [versionHistory, setVersionHistory] = useState<VersionHistoryEntry[]>(
+    [],
+  );
 
   // Refs
   const hasUserNavigatedVersionRef = useRef(false);
@@ -119,16 +123,17 @@ export function useCanvasVersionNavigation({
   // 3. After mentor streaming ends (artifact-stream-end event)
   // 4. After title update (via PUT endpoint)
   // 5. After version restore
-  const { data: versionsData, refetch: refetchVersions } = useListArtifactVersionsQuery(
-    {
-      id: artifactId ?? 0,
-      org: org ?? '',
-      userId: userId ?? '',
-    },
-    {
-      skip: !artifactId || !org || !userId || !initialFetchDone,
-    },
-  );
+  const { data: versionsData, refetch: refetchVersions } =
+    useListArtifactVersionsQuery(
+      {
+        id: artifactId ?? 0,
+        org: org ?? '',
+        userId: userId ?? '',
+      },
+      {
+        skip: !artifactId || !org || !userId || !initialFetchDone,
+      },
+    );
 
   // Initial fetch with retry logic for list versions
   useEffect(() => {
@@ -158,10 +163,13 @@ export function useCanvasVersionNavigation({
           // Check if this error is retriable
           if (!isRetriableVersionError(error)) {
             // Non-retriable error (e.g., wrong artifact ID) - log and stop
-            console.error('[Canvas] Failed to list versions - non-retriable error:', {
-              artifactId,
-              error,
-            });
+            console.error(
+              '[Canvas] Failed to list versions - non-retriable error:',
+              {
+                artifactId,
+                error,
+              },
+            );
             // Still mark as done to prevent infinite attempts, but versions will be empty
             setInitialFetchDone(true);
             return;
@@ -204,7 +212,10 @@ export function useCanvasVersionNavigation({
   // Computed values
   const isViewingCurrentVersion = activeVersionIsCurrent;
   const isVersionNavDisabled =
-    isStreamingArtifact || isContentUpdating || isInitialLoading || isVersionLoading;
+    isStreamingArtifact ||
+    isContentUpdating ||
+    isInitialLoading ||
+    isVersionLoading;
 
   // Update version history from API data
   useEffect(() => {
@@ -233,12 +244,16 @@ export function useCanvasVersionNavigation({
           activeVersionId &&
           activeVersionId !== currentId
         ) {
-          const newCurrentVersion = formattedVersions.find((v) => v.id === currentId);
+          const newCurrentVersion = formattedVersions.find(
+            (v) => v.id === currentId,
+          );
           if (newCurrentVersion) {
             suppressNextOnChangeRef.current = true;
             hasUserNavigatedVersionRef.current = false;
 
-            const normalizedContent = normalizeContentToMarkdown(newCurrentVersion.content);
+            const normalizedContent = normalizeContentToMarkdown(
+              newCurrentVersion.content,
+            );
             setActiveVersionId(currentId);
             setActiveVersionIsCurrent(true);
             setCurrentVersion(currentId);
@@ -261,7 +276,11 @@ export function useCanvasVersionNavigation({
                     const docSize = currentEditor.state.doc.content.size;
                     const from = Math.min(selectionRange.from, docSize);
                     const to = Math.min(selectionRange.to, docSize);
-                    currentEditor.chain().focus().setTextSelection({ from, to }).run();
+                    currentEditor
+                      .chain()
+                      .focus()
+                      .setTextSelection({ from, to })
+                      .run();
                   });
                 }
               }
@@ -282,7 +301,9 @@ export function useCanvasVersionNavigation({
   }, [versionsData, activeVersionId, editorRef]);
 
   // Explicit override for version index when we know it should be at the latest
-  const [versionIndexOverride, setVersionIndexOverride] = useState<number | null>(null);
+  const [versionIndexOverride, setVersionIndexOverride] = useState<
+    number | null
+  >(null);
 
   // Current version index and navigation state
   const currentVersionIndex = useMemo(() => {
@@ -294,7 +315,11 @@ export function useCanvasVersionNavigation({
     if (!targetId || versionHistory.length === 0) return -1;
     const foundIndex = versionHistory.findIndex((v) => v.id === targetId);
     // If we're viewing the current version but can't find it, assume we're at the end
-    if (foundIndex === -1 && activeVersionIsCurrent && versionHistory.length > 0) {
+    if (
+      foundIndex === -1 &&
+      activeVersionIsCurrent &&
+      versionHistory.length > 0
+    ) {
       return versionHistory.length - 1;
     }
     return foundIndex;
@@ -307,7 +332,8 @@ export function useCanvasVersionNavigation({
   ]);
 
   const canGoPrevious = currentVersionIndex > 0;
-  const canGoNext = currentVersionIndex < versionHistory.length - 1 && currentVersionIndex >= 0;
+  const canGoNext =
+    currentVersionIndex < versionHistory.length - 1 && currentVersionIndex >= 0;
 
   // Clear version index override when history updates
   useEffect(() => {
@@ -331,7 +357,8 @@ export function useCanvasVersionNavigation({
 
     // Determine target version: metadata version if provided and valid, otherwise current version
     const targetVersionNumber =
-      metadataVersionNumber && versionsData.find((v) => v.version_number === metadataVersionNumber)
+      metadataVersionNumber &&
+      versionsData.find((v) => v.version_number === metadataVersionNumber)
         ? metadataVersionNumber
         : versionsData.find((v) => v.is_current)?.version_number;
 
@@ -347,7 +374,9 @@ export function useCanvasVersionNavigation({
     if (!needsInit) return;
 
     const targetId = `v${targetVersionNumber}`;
-    const targetVersion = versionsData.find((v) => v.version_number === targetVersionNumber);
+    const targetVersion = versionsData.find(
+      (v) => v.version_number === targetVersionNumber,
+    );
     if (!targetVersion) return;
 
     // Track the version we're initializing
@@ -378,7 +407,9 @@ export function useCanvasVersionNavigation({
     if (justUpdatedFromStreamingRef.current) {
       return;
     }
-    const match = versionsData.find((v) => `v${v.version_number}` === activeVersionId);
+    const match = versionsData.find(
+      (v) => `v${v.version_number}` === activeVersionId,
+    );
     if (match) {
       setActiveVersionIsCurrent(!!match.is_current);
     }
@@ -417,7 +448,8 @@ export function useCanvasVersionNavigation({
           );
           const isCurrent = !!fetchedVersion.is_current;
           const nextId =
-            `v${fetchedVersion.version_number ?? version.versionNumber ?? ''}` || versionId;
+            `v${fetchedVersion.version_number ?? version.versionNumber ?? ''}` ||
+            versionId;
 
           setActiveVersionId(nextId);
           setActiveVersionIsCurrent(isCurrent);
@@ -431,7 +463,8 @@ export function useCanvasVersionNavigation({
                     ...v,
                     content: nextContent,
                     isCurrent,
-                    versionNumber: fetchedVersion.version_number ?? v.versionNumber,
+                    versionNumber:
+                      fetchedVersion.version_number ?? v.versionNumber,
                   }
                 : {
                     ...v,
@@ -449,11 +482,14 @@ export function useCanvasVersionNavigation({
           // Check if this error is retriable (version not found yet vs artifact not found)
           if (!isRetriableVersionError(error)) {
             // Non-retriable error (e.g., wrong artifact ID) - log and break immediately
-            console.error('[Canvas] Failed to load version - non-retriable error:', {
-              artifactId,
-              versionId: version.versionId,
-              error,
-            });
+            console.error(
+              '[Canvas] Failed to load version - non-retriable error:',
+              {
+                artifactId,
+                versionId: version.versionId,
+                error,
+              },
+            );
             break;
           }
 
@@ -584,10 +620,14 @@ export function useCanvasVersionNavigation({
         const withoutCurrent = prev.map((v) =>
           v.id === nextVersionId ? v : { ...v, isCurrent: false },
         );
-        const existingIndex = withoutCurrent.findIndex((v) => v.id === nextVersionId);
+        const existingIndex = withoutCurrent.findIndex(
+          (v) => v.id === nextVersionId,
+        );
         const normalizedContent = normalizeContentToMarkdown(
           startIndex !== undefined && endIndex !== undefined && previousContent
-            ? previousContent.slice(0, startIndex) + content + previousContent.slice(endIndex)
+            ? previousContent.slice(0, startIndex) +
+                content +
+                previousContent.slice(endIndex)
             : content,
         );
         const nextEntry = {
@@ -611,7 +651,9 @@ export function useCanvasVersionNavigation({
           // Set override to the last index (new version added)
           setVersionIndexOverride(withoutCurrent.length - 1);
         }
-        return withoutCurrent.sort((a, b) => (a.versionNumber ?? 0) - (b.versionNumber ?? 0));
+        return withoutCurrent.sort(
+          (a, b) => (a.versionNumber ?? 0) - (b.versionNumber ?? 0),
+        );
       });
 
       // Allow sync after API has time to update (after refetch)

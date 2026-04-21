@@ -1,12 +1,12 @@
-import dayjs from "dayjs";
-import type { OpUnitType } from "dayjs";
-import duration from "dayjs/plugin/duration";
+import dayjs from 'dayjs';
+import type { OpUnitType } from 'dayjs';
+import duration from 'dayjs/plugin/duration';
 dayjs.extend(duration);
 export const useDayJs = () => {
   const getTimeDifferenceBetweenTwoDates = (
     futureDate: string,
     pastDate: string,
-    format: OpUnitType = "second",
+    format: OpUnitType = 'second',
   ) => {
     const targetDate = dayjs(futureDate);
     // Calculate the difference in seconds
@@ -18,7 +18,7 @@ export const useDayJs = () => {
           return 0;
         } */
     // Create a duration object from the seconds
-    return dayjs.duration(seconds, "seconds");
+    return dayjs.duration(seconds, 'seconds');
   };
 
   const generateFutureDateForNMinutes = (minute = 2) => {
@@ -32,8 +32,8 @@ export const useDayJs = () => {
     const isoString = futureDate.toISOString(); // e.g., "2025-03-29T13:14:24.839Z"
     const microseconds = Math.floor(Math.random() * 1000000)
       .toString()
-      .padStart(6, "0"); // Random microseconds
-    return isoString.replace("Z", `${microseconds}+00:00`);
+      .padStart(6, '0'); // Random microseconds
+    return isoString.replace('Z', `${microseconds}+00:00`);
   };
 
   return {

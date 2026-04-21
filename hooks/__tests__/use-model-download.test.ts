@@ -295,8 +295,16 @@ describe('useModelDownload hook', () => {
       };
 
       vi.mocked(useLocalStorageModule.useLocalStorage)
-        .mockImplementationOnce(() => [stateWithManyLogs, mockSetState, vi.fn()])
-        .mockImplementationOnce(() => [false, mockSetIsFirstLaunchDismissed, vi.fn()]);
+        .mockImplementationOnce(() => [
+          stateWithManyLogs,
+          mockSetState,
+          vi.fn(),
+        ])
+        .mockImplementationOnce(() => [
+          false,
+          mockSetIsFirstLaunchDismissed,
+          vi.fn(),
+        ]);
 
       const unlistenMock = vi.fn();
       let logCallback: any;
@@ -323,7 +331,9 @@ describe('useModelDownload hook', () => {
           });
         });
 
-        const setStateCall = mockSetState.mock.calls.find((call) => typeof call[0] === 'function');
+        const setStateCall = mockSetState.mock.calls.find(
+          (call) => typeof call[0] === 'function',
+        );
         if (setStateCall) {
           const newState = setStateCall[0](stateWithManyLogs);
           expect(newState.logs.length).toBeLessThanOrEqual(100);
@@ -548,7 +558,9 @@ describe('useModelDownload hook', () => {
         });
 
         expect(mockSetState).toHaveBeenCalled();
-        const call = mockSetState.mock.calls.find((c) => typeof c[0] === 'function');
+        const call = mockSetState.mock.calls.find(
+          (c) => typeof c[0] === 'function',
+        );
         if (call) {
           const updater = call[0];
           const newState = updater(mockState);

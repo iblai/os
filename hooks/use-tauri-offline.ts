@@ -37,7 +37,9 @@ export function useTauriOffline(): TauriOfflineState & {
 
   // Check if we're in offline mode (set by the shell)
   const isOffline =
-    isTauri && typeof window !== 'undefined' && localStorage.getItem(OFFLINE_MODE_KEY) === 'true';
+    isTauri &&
+    typeof window !== 'undefined' &&
+    localStorage.getItem(OFFLINE_MODE_KEY) === 'true';
 
   // Parse mentor route
   const routeMatch = pathname?.match(MENTOR_ROUTE_PATTERN);
@@ -50,7 +52,9 @@ export function useTauriOffline(): TauriOfflineState & {
 
   // Get the last saved mentor route
   const lastMentorRoute =
-    typeof window !== 'undefined' ? localStorage.getItem(LAST_MENTOR_ROUTE_KEY) : null;
+    typeof window !== 'undefined'
+      ? localStorage.getItem(LAST_MENTOR_ROUTE_KEY)
+      : null;
 
   // Save the current route to localStorage (for offline mode to use)
   const saveCurrentRoute = useCallback(() => {
@@ -88,7 +92,10 @@ export function useTauriOffline(): TauriOfflineState & {
         const responses = JSON.parse(cached) as Record<string, unknown>;
         return responses[key] ?? null;
       } catch (error) {
-        console.error('[TauriOffline] Error reading cached API response:', error);
+        console.error(
+          '[TauriOffline] Error reading cached API response:',
+          error,
+        );
         return null;
       }
     },
@@ -102,7 +109,9 @@ export function useTauriOffline(): TauriOfflineState & {
 
       try {
         const cached = localStorage.getItem(CACHED_API_RESPONSES_KEY);
-        const responses = cached ? (JSON.parse(cached) as Record<string, unknown>) : {};
+        const responses = cached
+          ? (JSON.parse(cached) as Record<string, unknown>)
+          : {};
 
         responses[key] = data;
 
@@ -113,7 +122,10 @@ export function useTauriOffline(): TauriOfflineState & {
           keysToRemove.forEach((k) => delete responses[k]);
         }
 
-        localStorage.setItem(CACHED_API_RESPONSES_KEY, JSON.stringify(responses));
+        localStorage.setItem(
+          CACHED_API_RESPONSES_KEY,
+          JSON.stringify(responses),
+        );
       } catch (error) {
         console.error('[TauriOffline] Error caching API response:', error);
       }
@@ -206,7 +218,9 @@ async function triggerPrecache(route: string): Promise<void> {
 export function isOfflineServerOrigin(): boolean {
   if (typeof window === 'undefined') return false;
   const origin = window.location.origin;
-  return origin === 'http://127.0.0.1:3456' || origin === 'http://localhost:3456';
+  return (
+    origin === 'http://127.0.0.1:3456' || origin === 'http://localhost:3456'
+  );
 }
 
 /**
@@ -244,6 +258,10 @@ export function isTauriOfflineMode(): boolean {
  * Get the last saved mentor route (for use in the shell)
  */
 export function getLastMentorRoute(): string | null {
-  if (typeof window === 'undefined' || typeof localStorage?.getItem !== 'function') return null;
+  if (
+    typeof window === 'undefined' ||
+    typeof localStorage?.getItem !== 'function'
+  )
+    return null;
   return localStorage.getItem(LAST_MENTOR_ROUTE_KEY);
 }

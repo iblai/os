@@ -1,4 +1,8 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useShowVoiceCall } from '@/hooks/use-show-voice-call';
 import { Button } from '@/components/ui/button';
 
@@ -8,7 +12,11 @@ type Props = {
   disabled?: boolean;
 };
 
-export function VoiceCallButton({ isPreviewMode, onClick, disabled = false }: Props) {
+export function VoiceCallButton({
+  isPreviewMode,
+  onClick,
+  disabled = false,
+}: Props) {
   const showVoiceCall = useShowVoiceCall();
 
   if (!showVoiceCall) {
@@ -41,7 +49,9 @@ export function VoiceCallButton({ isPreviewMode, onClick, disabled = false }: Pr
           </Button>
         </div>
       </TooltipTrigger>
-      <TooltipContent className="ibl-tooltip-content capitalize">Voice Call</TooltipContent>
+      <TooltipContent className="ibl-tooltip-content capitalize">
+        Voice Call
+      </TooltipContent>
     </Tooltip>
   );
 }

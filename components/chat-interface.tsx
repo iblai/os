@@ -13,9 +13,12 @@ interface ChatInterfaceProps {
  * Used in split-view layouts like CanvasView where chat needs to be
  * displayed alongside other content
  */
-export function ChatInterface({ containerRef, isInCanvasView = false }: ChatInterfaceProps) {
+export function ChatInterface({
+  containerRef,
+  isInCanvasView = false,
+}: ChatInterfaceProps) {
   return (
-    <div ref={containerRef} className="h-full flex flex-col overflow-hidden">
+    <div ref={containerRef} className="flex h-full flex-col overflow-hidden">
       <Chat
         mode="default"
         isPreviewMode={false}

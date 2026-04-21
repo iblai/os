@@ -15,7 +15,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Download, MessageCircleIcon, MoreHorizontal, Pin, Trash2 } from 'lucide-react';
+import {
+  Download,
+  MessageCircleIcon,
+  MoreHorizontal,
+  Pin,
+  Trash2,
+} from 'lucide-react';
 import {
   chatApiSlice,
   useAddPinnedMessageMutation,
@@ -27,10 +33,17 @@ import { useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { chatActions, clearFiles, selectSessionId } from '@iblai/iblai-js/web-utils';
+import {
+  chatActions,
+  clearFiles,
+  selectSessionId,
+} from '@iblai/iblai-js/web-utils';
 import { useSidebar } from '@/components/ui/sidebar';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { getCurrentArtifactTitle, getFirstMessageWithContent } from '@/lib/utils';
+import {
+  getCurrentArtifactTitle,
+  getFirstMessageWithContent,
+} from '@/lib/utils';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Markdown from '@/components/markdown';
 
@@ -39,7 +52,10 @@ interface PinnedMessagesProps {
   mentorId: string;
 }
 
-export function PinnedMessages({ onSelectMessage, mentorId }: PinnedMessagesProps) {
+export function PinnedMessages({
+  onSelectMessage,
+  mentorId,
+}: PinnedMessagesProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const dispatch = useAppDispatch();
   const params = useParams<{ tenantKey: string }>();
@@ -209,13 +225,13 @@ export function PinnedMessages({ onSelectMessage, mentorId }: PinnedMessagesProp
     <div>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="pinned" className="border-none">
-          <AccordionTrigger className="text-sm font-medium hover:no-underline cursor-pointer py-1.5 px-2 space-x-1 text-gray-700 hover:bg-[#c9d8f8] rounded-md">
+          <AccordionTrigger className="cursor-pointer space-x-1 rounded-md px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-[#c9d8f8] hover:no-underline">
             <span className="flex items-center gap-3">
               <Pin className="h-4 w-4 text-gray-500" />
               Pinned
             </span>
           </AccordionTrigger>
-          <AccordionContent className="pb-0 ml-4 mt-1">
+          <AccordionContent className="mt-1 ml-4 pb-0">
             <div className="space-y-1 border-l border-[#D0E0FF]">
               {/* @ts-expect-error - pinnedMessage type not fully defined */}
               {pinnedMessages?.results?.map((pinnedMessage: any) => (
@@ -240,38 +256,54 @@ export function PinnedMessages({ onSelectMessage, mentorId }: PinnedMessagesProp
                     </div>
                     <div className="-ml-1 line-clamp-1 flex-1 overflow-hidden pr-6 text-left text-xs text-gray-800 [&_*]:!my-0 [&_*]:!text-xs [&_*]:!leading-snug [&_*]:!font-normal [&_*]:!text-gray-800 [&_h2]:!border-0">
                       {(() => {
-                        const content = getFirstMessageWithContent(pinnedMessage?.messages);
+                        const content = getFirstMessageWithContent(
+                          pinnedMessage?.messages,
+                        );
 
                         if (!content) {
-                          const artifactTitle = getCurrentArtifactTitle(pinnedMessage?.messages);
+                          const artifactTitle = getCurrentArtifactTitle(
+                            pinnedMessage?.messages,
+                          );
                           if (artifactTitle) {
                             return artifactTitle;
                           }
                           return 'No content';
                         }
 
-                        return <Markdown className="!space-y-0">{content}</Markdown>;
+                        return (
+                          <Markdown className="!space-y-0">{content}</Markdown>
+                        );
                       })()}
                     </div>
                   </Button>
                   <div className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0"
+                        >
                           <span className="sr-only">More chat options</span>
                           <MoreHorizontal className="h-4 w-4 text-gray-400" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handlePin(pinnedMessage.session_id)}>
+                        <DropdownMenuItem
+                          onClick={() => handlePin(pinnedMessage.session_id)}
+                        >
                           <Pin className="mr-2 h-4 w-4" />
                           <span>Unpin</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExport(pinnedMessage.messages)}>
+                        <DropdownMenuItem
+                          onClick={() => handleExport(pinnedMessage.messages)}
+                        >
                           <Download className="mr-2 h-4 w-4" />
                           <span>Export</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(pinnedMessage)}>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(pinnedMessage)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           <span>Delete</span>
                         </DropdownMenuItem>

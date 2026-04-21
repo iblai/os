@@ -46,10 +46,13 @@ export function PipChat({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [currentTranscription, setCurrentTranscription] = useState<Transcription | null>(null);
+  const [currentTranscription, setCurrentTranscription] =
+    useState<Transcription | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const transcriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -75,7 +78,11 @@ export function PipChat({
     const handleMessage = (event: MessageEvent) => {
       // Only log PIP-related messages to reduce noise
       if (event.data?.type?.startsWith?.('PIP:')) {
-        console.log('[PipChat] Received message:', event.data?.type, event.data);
+        console.log(
+          '[PipChat] Received message:',
+          event.data?.type,
+          event.data,
+        );
       }
 
       if (event.data?.type === 'PIP:CHAT_MESSAGE') {
@@ -91,14 +98,25 @@ export function PipChat({
         });
       } else if (event.data?.type === 'PIP:CHAT_MESSAGES_SYNC') {
         // Sync all messages when PIP opens
-        console.log('[PipChat] Syncing messages:', event.data.messages?.length || 0, 'messages');
+        console.log(
+          '[PipChat] Syncing messages:',
+          event.data.messages?.length || 0,
+          'messages',
+        );
         setChatMessages(event.data.messages || []);
       } else if (event.data?.type === 'PIP:SEND_COMPLETE') {
         console.log('[PipChat] Send complete');
         setIsSending(false);
       } else if (event.data?.type === 'PIP:TRANSCRIPTION') {
         console.log('[PipChat] Received transcription:', event.data);
-        const { id, text, participantIdentity, participantName, isFinal, timestamp } = event.data;
+        const {
+          id,
+          text,
+          participantIdentity,
+          participantName,
+          isFinal,
+          timestamp,
+        } = event.data;
 
         // Clear any existing timeout
         if (transcriptionTimeoutRef.current) {
@@ -124,7 +142,10 @@ export function PipChat({
       }
     };
 
-    console.log('[PipChat] Adding message listener to', pipWindow ? 'pipWindow' : 'window');
+    console.log(
+      '[PipChat] Adding message listener to',
+      pipWindow ? 'pipWindow' : 'window',
+    );
     targetWindow.addEventListener('message', handleMessage);
 
     // Request initial message sync from parent
@@ -194,12 +215,15 @@ export function PipChat({
           <div className="pip-transcription-header">
             <div className="pip-transcription-indicator" />
             <span>
-              {currentTranscription.participantIdentity === localParticipantIdentity
+              {currentTranscription.participantIdentity ===
+              localParticipantIdentity
                 ? 'You are speaking'
                 : `${mentorName || currentTranscription.participantName || currentTranscription.participantIdentity || 'Mentor'} is speaking`}
             </span>
           </div>
-          <div className="pip-transcription-text">{currentTranscription.text}</div>
+          <div className="pip-transcription-text">
+            {currentTranscription.text}
+          </div>
         </div>
       )}
 
@@ -208,7 +232,9 @@ export function PipChat({
         {chatMessages.length === 0 ? (
           <div className="pip-chat-empty">
             <p>No messages yet</p>
-            <p className="pip-chat-empty-subtitle">Start chatting with the mentor</p>
+            <p className="pip-chat-empty-subtitle">
+              Start chatting with the mentor
+            </p>
           </div>
         ) : (
           chatMessages.map((msg) => {
@@ -220,9 +246,16 @@ export function PipChat({
               >
                 <div className="pip-chat-message-header">
                   <span className="pip-chat-message-sender">
-                    {isOwn ? 'You' : mentorName || msg.from?.name || msg.from?.identity || 'Mentor'}
+                    {isOwn
+                      ? 'You'
+                      : mentorName ||
+                        msg.from?.name ||
+                        msg.from?.identity ||
+                        'Mentor'}
                   </span>
-                  <span className="pip-chat-message-time">{formatTime(msg.timestamp)}</span>
+                  <span className="pip-chat-message-time">
+                    {formatTime(msg.timestamp)}
+                  </span>
                 </div>
                 <div className="pip-chat-message-content">{msg.message}</div>
               </div>
@@ -251,7 +284,11 @@ export function PipChat({
           className="pip-chat-send-button"
           aria-label="Send message"
         >
-          {isSending ? <div className="pip-chat-sending-spinner" /> : <Send size={18} />}
+          {isSending ? (
+            <div className="pip-chat-sending-spinner" />
+          ) : (
+            <Send size={18} />
+          )}
         </button>
       </div>
 

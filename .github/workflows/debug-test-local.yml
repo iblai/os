@@ -34,11 +34,13 @@ on:
         type: string
         default: '1'
 
-run-name: "Local Debug - ${{ inputs.branch || github.ref_name }} - ${{ inputs.browser }} - ${{ inputs.test-files }}"
+run-name: 'Local Debug - ${{ inputs.branch || github.ref_name }} - ${{ inputs.browser }} - ${{ inputs.test-files }}'
 
 concurrency:
   group: debug-test-local-mentor
   cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   # ============================================================
@@ -69,7 +71,7 @@ jobs:
     with:
       action: acquire
       app-type: testing
-      context: "Local debug - ${{ github.actor }} - ${{ inputs.browser }}"
+      context: 'Local debug - ${{ github.actor }} - ${{ inputs.browser }}'
       allowed-domains: '3'
       max-wait: 18000
 
@@ -174,7 +176,15 @@ jobs:
   # HEALTH CHECK
   # ============================================================
   health-check:
-    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth]
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+      ]
     if: always() && needs.deploy-auth.result == 'success'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
@@ -332,7 +342,17 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth, health-check, run-tests]
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+        health-check,
+        run-tests,
+      ]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
@@ -347,7 +367,18 @@ jobs:
   # SUMMARY
   # ============================================================
   summary:
-    needs: [config, acquire-domain, check-prod-versions, build-app-image, deploy-app, deploy-auth, health-check, run-tests, release-domain]
+    needs:
+      [
+        config,
+        acquire-domain,
+        check-prod-versions,
+        build-app-image,
+        deploy-app,
+        deploy-auth,
+        health-check,
+        run-tests,
+        release-domain,
+      ]
     if: always()
     runs-on: ubuntu-22.04
     steps:

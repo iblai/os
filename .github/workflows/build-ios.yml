@@ -4,13 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
+        description: 'Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version'
         required: false
         type: string
 
 concurrency:
   group: ios-build
   cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   build-ios:

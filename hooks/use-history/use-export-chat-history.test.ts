@@ -1,16 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useExportChatHistory } from "./use-export-chat-history";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useExportChatHistory } from './use-export-chat-history';
 
 // Mock next/navigation
 const mockUseParams = vi.fn();
-vi.mock("next/navigation", () => ({
+vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
 // Mock user-navigate
 const mockGetMentorId = vi.fn();
-vi.mock("@/hooks/user-navigate", () => ({
+vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     getMentorId: () => mockGetMentorId(),
   }),
@@ -19,18 +19,18 @@ vi.mock("@/hooks/user-navigate", () => ({
 // Mock useReports from web-containers
 const mockInitializeReportDownload = vi.fn();
 const mockUseReports = vi.fn();
-vi.mock("@iblai/iblai-js/web-containers", () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   useReports: (params: unknown) => mockUseReports(params),
 }));
 
-describe("useExportChatHistory", () => {
+describe('useExportChatHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Default mock implementations
     mockUseParams.mockReturnValue({
-      tenantKey: "test-tenant",
-      mentorId: "mentor-123",
+      tenantKey: 'test-tenant',
+      mentorId: 'mentor-123',
     });
     mockGetMentorId.mockReturnValue(null);
 
@@ -40,39 +40,39 @@ describe("useExportChatHistory", () => {
     });
   });
 
-  describe("initial state", () => {
-    it("should return handleExport function and isExporting state", () => {
+  describe('initial state', () => {
+    it('should return handleExport function and isExporting state', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
-      expect(typeof result.current.handleExport).toBe("function");
+      expect(typeof result.current.handleExport).toBe('function');
       expect(result.current.isExporting).toBe(false);
     });
 
-    it("should initialize useReports with correct params using mentorId from params", () => {
+    it('should initialize useReports with correct params using mentorId from params', () => {
       mockGetMentorId.mockReturnValue(null);
 
       renderHook(() => useExportChatHistory());
 
       expect(mockUseReports).toHaveBeenCalledWith({
-        tenantKey: "test-tenant",
-        selectedMentorId: "mentor-123",
+        tenantKey: 'test-tenant',
+        selectedMentorId: 'mentor-123',
       });
     });
 
-    it("should use getMentorId result when available", () => {
-      mockGetMentorId.mockReturnValue("override-mentor-id");
+    it('should use getMentorId result when available', () => {
+      mockGetMentorId.mockReturnValue('override-mentor-id');
 
       renderHook(() => useExportChatHistory());
 
       expect(mockUseReports).toHaveBeenCalledWith({
-        tenantKey: "test-tenant",
-        selectedMentorId: "override-mentor-id",
+        tenantKey: 'test-tenant',
+        selectedMentorId: 'override-mentor-id',
       });
     });
   });
 
-  describe("isExporting state", () => {
-    it("should be true when isGenerating is true", () => {
+  describe('isExporting state', () => {
+    it('should be true when isGenerating is true', () => {
       mockUseReports.mockReturnValue({
         initializeReportDownload: mockInitializeReportDownload,
         isGenerating: true,
@@ -83,7 +83,7 @@ describe("useExportChatHistory", () => {
       expect(result.current.isExporting).toBe(true);
     });
 
-    it("should be false when isGenerating is false", () => {
+    it('should be false when isGenerating is false', () => {
       mockUseReports.mockReturnValue({
         initializeReportDownload: mockInitializeReportDownload,
         isGenerating: false,
@@ -95,8 +95,8 @@ describe("useExportChatHistory", () => {
     });
   });
 
-  describe("handleExport", () => {
-    it("should call initializeReportDownload with correct params for basic filters", () => {
+  describe('handleExport', () => {
+    it('should call initializeReportDownload with correct params for basic filters', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
@@ -110,7 +110,7 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: {
@@ -118,19 +118,19 @@ describe("useExportChatHistory", () => {
           start_date: undefined,
           sentiment: undefined,
           topics: undefined,
-          source: "http://localhost:3000",
+          source: 'http://localhost:3000',
         },
       });
     });
 
-    it("should format date range correctly", () => {
+    it('should format date range correctly', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: {
-            from: new Date("2024-01-15"),
-            to: new Date("2024-01-31"),
+            from: new Date('2024-01-15'),
+            to: new Date('2024-01-31'),
           },
           sentiment: undefined,
           topics: undefined,
@@ -140,23 +140,23 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
-          start_date: "2024-01-15",
-          end_date: "2024-01-31",
+          start_date: '2024-01-15',
+          end_date: '2024-01-31',
         }),
       });
     });
 
-    it("should handle date range with only from date", () => {
+    it('should handle date range with only from date', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: {
-            from: new Date("2024-01-15"),
+            from: new Date('2024-01-15'),
             to: undefined,
           },
           sentiment: undefined,
@@ -167,24 +167,24 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
-          start_date: "2024-01-15",
+          start_date: '2024-01-15',
           end_date: undefined,
         }),
       });
     });
 
-    it("should handle date range with only to date", () => {
+    it('should handle date range with only to date', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: {
             from: undefined,
-            to: new Date("2024-01-31"),
+            to: new Date('2024-01-31'),
           },
           sentiment: undefined,
           topics: undefined,
@@ -194,23 +194,23 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
           start_date: undefined,
-          end_date: "2024-01-31",
+          end_date: '2024-01-31',
         }),
       });
     });
 
-    it("should pass sentiment filter", () => {
+    it('should pass sentiment filter', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: undefined,
-          sentiment: "positive",
+          sentiment: 'positive',
           topics: undefined,
           users: undefined,
         });
@@ -218,79 +218,79 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
-          sentiment: "positive",
+          sentiment: 'positive',
         }),
       });
     });
 
-    it("should pass topics filter", () => {
+    it('should pass topics filter', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: undefined,
           sentiment: undefined,
-          topics: "topic1,topic2",
+          topics: 'topic1,topic2',
           users: undefined,
         });
       });
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
-          topics: "topic1,topic2",
+          topics: 'topic1,topic2',
         }),
       });
     });
 
-    it("should handle all filters provided at once", () => {
+    it('should handle all filters provided at once', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       act(() => {
         result.current.handleExport({
           dateRange: {
-            from: new Date("2024-01-01"),
-            to: new Date("2024-12-31"),
+            from: new Date('2024-01-01'),
+            to: new Date('2024-12-31'),
           },
-          sentiment: "negative",
-          topics: "topic1,topic2,topic3",
-          users: "user1",
+          sentiment: 'negative',
+          topics: 'topic1,topic2,topic3',
+          users: 'user1',
         });
       });
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: {
-          start_date: "2024-01-01",
-          end_date: "2024-12-31",
-          sentiment: "negative",
-          topics: "topic1,topic2,topic3",
-          source: "http://localhost:3000",
+          start_date: '2024-01-01',
+          end_date: '2024-12-31',
+          sentiment: 'negative',
+          topics: 'topic1,topic2,topic3',
+          source: 'http://localhost:3000',
         },
       });
     });
   });
 
-  describe("date formatting", () => {
-    it("should format dates in yyyy-MM-dd format", () => {
+  describe('date formatting', () => {
+    it('should format dates in yyyy-MM-dd format', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       // Using a date that could be formatted differently in other formats
       act(() => {
         result.current.handleExport({
           dateRange: {
-            from: new Date("2024-03-05"), // Month < 10, Day < 10
-            to: new Date("2024-11-22"),
+            from: new Date('2024-03-05'), // Month < 10, Day < 10
+            to: new Date('2024-11-22'),
           },
           sentiment: undefined,
           topics: undefined,
@@ -300,33 +300,33 @@ describe("useExportChatHistory", () => {
 
       expect(mockInitializeReportDownload).toHaveBeenCalledWith({
         report: {
-          report_name: "ai-mentor-chat-history",
+          report_name: 'ai-mentor-chat-history',
         },
         autoDownload: true,
         extraRequestBody: expect.objectContaining({
-          start_date: "2024-03-05",
-          end_date: "2024-11-22",
+          start_date: '2024-03-05',
+          end_date: '2024-11-22',
         }),
       });
     });
   });
 
-  describe("edge cases", () => {
-    it("should handle empty tenant key", () => {
-      mockUseParams.mockReturnValue({ tenantKey: "", mentorId: "mentor-123" });
+  describe('edge cases', () => {
+    it('should handle empty tenant key', () => {
+      mockUseParams.mockReturnValue({ tenantKey: '', mentorId: 'mentor-123' });
 
       const { result } = renderHook(() => useExportChatHistory());
 
       expect(result.current).toBeDefined();
       expect(mockUseReports).toHaveBeenCalledWith({
-        tenantKey: "",
-        selectedMentorId: "mentor-123",
+        tenantKey: '',
+        selectedMentorId: 'mentor-123',
       });
     });
 
-    it("should handle undefined mentor id in params", () => {
+    it('should handle undefined mentor id in params', () => {
       mockUseParams.mockReturnValue({
-        tenantKey: "test-tenant",
+        tenantKey: 'test-tenant',
         mentorId: undefined,
       });
       mockGetMentorId.mockReturnValue(null);
@@ -335,12 +335,12 @@ describe("useExportChatHistory", () => {
 
       expect(result.current).toBeDefined();
       expect(mockUseReports).toHaveBeenCalledWith({
-        tenantKey: "test-tenant",
+        tenantKey: 'test-tenant',
         selectedMentorId: undefined,
       });
     });
 
-    it("should handle multiple rapid exports", () => {
+    it('should handle multiple rapid exports', () => {
       const { result } = renderHook(() => useExportChatHistory());
 
       const filters = {
@@ -360,8 +360,8 @@ describe("useExportChatHistory", () => {
     });
   });
 
-  describe("handleExport callback stability", () => {
-    it("should maintain stable reference when dependencies do not change", () => {
+  describe('handleExport callback stability', () => {
+    it('should maintain stable reference when dependencies do not change', () => {
       const { result, rerender } = renderHook(() => useExportChatHistory());
 
       const firstHandleExport = result.current.handleExport;

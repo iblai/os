@@ -29,7 +29,9 @@ vi.mock('@/features/users/slice', () => ({
 // Mock useAppSelector
 const mockIsInstructorMode = vi.fn();
 vi.mock('@/lib/hooks', () => ({
-  useAppSelector: (selector: (state: { user: { isInstructorMode: boolean } }) => boolean) => {
+  useAppSelector: (
+    selector: (state: { user: { isInstructorMode: boolean } }) => boolean,
+  ) => {
     const mockState = { user: { isInstructorMode: mockIsInstructorMode() } };
     return selector(mockState);
   },
@@ -78,7 +80,11 @@ describe('useCustomAlertDialog', () => {
       const { result } = renderHook(() => useCustomAlertDialog());
 
       act(() => {
-        result.current.openCustomAlertDialog('Test message', 'TEST_VALIDATE', 'Test Title');
+        result.current.openCustomAlertDialog(
+          'Test message',
+          'TEST_VALIDATE',
+          'Test Title',
+        );
       });
 
       expect(mockDispatch).toHaveBeenCalledWith({

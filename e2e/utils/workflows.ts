@@ -1,19 +1,18 @@
 import { Page, expect } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
-import { safeWaitForURL, parsePlatformUrl } from './navigation';
-import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
+import { safeWaitForURL } from './navigation';
 
 /**
- * Navigate to the workflows list page for the current mentor.
- * Extracts tenantKey and mentorId from the current platform URL.
+ * Navigate to the workflows list page via the sidebar Workflows button.
+ * This avoids a full page.goto() which can lose client-side auth tokens.
  */
 export async function navigateToWorkflowsPage(page: Page): Promise<void> {
-  const { platformKey: tenantKey, mentorId } = parsePlatformUrl(page.url());
-
-  await page.goto(
-    `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/workflows/${mentorId}`,
-    { waitUntil: 'domcontentloaded', timeout: 60_000 },
-  );
+  const workflowsButton = page.getByRole('button', {
+    name: 'Workflows',
+    exact: true,
+  });
+  await expect(workflowsButton).toBeVisible({ timeout: 15_000 });
+  await workflowsButton.click();
 
   await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
     timeout: 60_000,
@@ -120,9 +119,9 @@ export async function openWorkflowByName(
  * Delete the currently open workflow via the more options menu.
  */
 export async function deleteCurrentWorkflow(page: Page): Promise<void> {
-  const moreButton = page
-    .locator('button')
-    .filter({ has: page.locator('svg.lucide-more-horizontal') });
+  const moreButton = page.getByRole('button', {
+    name: 'More workflow options',
+  });
   await expect(moreButton).toBeVisible({ timeout: 10_000 });
   await moreButton.click();
 
@@ -130,7 +129,7 @@ export async function deleteCurrentWorkflow(page: Page): Promise<void> {
   await expect(deleteItem).toBeVisible({ timeout: 5_000 });
   await deleteItem.click();
 
-  const deleteModal = page.getByRole('dialog');
+  const deleteModal = page.getByRole('alertdialog');
   await expect(deleteModal).toBeVisible({ timeout: 10_000 });
 
   const confirmButton = deleteModal.getByRole('button', { name: /delete/i });
@@ -150,13 +149,11 @@ export async function editWorkflowName(
   page: Page,
   newName: string,
 ): Promise<void> {
-  const nameButton = page
-    .locator('button')
-    .filter({ has: page.locator('svg.lucide-pencil') });
+  const nameButton = page.getByRole('button', { name: 'Edit workflow name' });
   await expect(nameButton).toBeVisible({ timeout: 10_000 });
   await nameButton.click();
 
-  const nameInput = page.locator('input[autofocus]');
+  const nameInput = page.getByRole('textbox', { name: 'Enter workflow name' });
   await expect(nameInput).toBeVisible({ timeout: 5_000 });
   await nameInput.fill(newName);
   await nameInput.press('Enter');

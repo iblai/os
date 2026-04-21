@@ -10,7 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 
 interface FlaggedPromptsFiltersProps {
@@ -31,18 +35,18 @@ export function FlaggedPromptsFilters({
   onDateRangeChange,
 }: FlaggedPromptsFiltersProps) {
   return (
-    <div className="border rounded-lg p-4">
-      <div className="flex flex-col lg:flex-row gap-3">
+    <div className="rounded-lg border p-4">
+      <div className="flex flex-col gap-3 lg:flex-row">
         {/* Row 1: Search + Date (Mobile/Tablet) | All filters (Desktop) */}
-        <div className="flex flex-wrap gap-3 flex-1">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+        <div className="flex flex-1 flex-wrap gap-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-500" />
             <Input
               type="search"
               placeholder="Search for User"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9 w-full"
+              className="w-full pl-9"
             />
           </div>
 
@@ -50,7 +54,7 @@ export function FlaggedPromptsFilters({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="flex items-center gap-2 whitespace-nowrap font-normal bg-transparent"
+                className="flex items-center gap-2 bg-transparent font-normal whitespace-nowrap"
               >
                 <Calendar className="h-4 w-4" />
                 {dateRange?.from && dateRange?.to
@@ -70,7 +74,7 @@ export function FlaggedPromptsFilters({
           </Popover>
 
           {/* Desktop only - show selects in same row */}
-          <div className="hidden lg:flex gap-3">
+          <div className="hidden gap-3 lg:flex">
             <Select value={filterType} onValueChange={onFilterTypeChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Types" />

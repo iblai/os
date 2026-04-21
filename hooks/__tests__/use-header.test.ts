@@ -6,7 +6,8 @@ import { useHeader } from '../use-header';
 const mockIblEnableSpecialLogoWhenIframed = vi.fn();
 vi.mock('@/lib/config', () => ({
   config: {
-    iblEnableSpecialLogoWhenIframed: () => mockIblEnableSpecialLogoWhenIframed(),
+    iblEnableSpecialLogoWhenIframed: () =>
+      mockIblEnableSpecialLogoWhenIframed(),
   },
 }));
 

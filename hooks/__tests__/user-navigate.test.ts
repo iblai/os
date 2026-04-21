@@ -1361,6 +1361,8 @@ describe('user-navigate', () => {
 
     it('New Chat onClick - should open no mentor selected modal when no mentorId', () => {
       mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      // Reset push so we can assert the modal-open navigation specifically
+      mocked.push.mockClear();
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newChatItem = result.current.contentItems.find(
@@ -1368,8 +1370,14 @@ describe('user-navigate', () => {
       );
       newChatItem?.onClick();
 
+      // The no-mentorId branch dispatches clearFiles, opens the
+      // "no mentor selected" modal, and returns early — it does NOT
+      // dispatch setShouldStartNewChat (see useSidebarNavigation in
+      // hooks/user-navigate.ts). Opening the modal pushes a new URL via
+      // the navigation router, so we assert on router.push instead.
       expect(mocked.dispatch).toHaveBeenCalledWith(mocked.clearFiles());
-      expect(mocked.dispatch).toHaveBeenCalledWith(
+      expect(mocked.push).toHaveBeenCalled();
+      expect(mocked.dispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({ type: 'setShouldStartNewChat' }),
       );
     });

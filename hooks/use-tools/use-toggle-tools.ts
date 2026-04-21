@@ -9,7 +9,12 @@ type Props = {
   username: string;
 };
 
-export function useToggleTools({ activeMentorId, tenantKey, username, tools = [] }: Props) {
+export function useToggleTools({
+  activeMentorId,
+  tenantKey,
+  username,
+  tools = [],
+}: Props) {
   const [editMentor, { isLoading }] = useEditMentorMutation();
 
   async function toggleTools(toolSlug: string, callback?: () => void) {
@@ -33,7 +38,8 @@ export function useToggleTools({ activeMentorId, tenantKey, username, tools = []
       callback?.();
     } catch (error: any) {
       console.error(JSON.stringify(error));
-      const errorMessage = error?.data?.error || error?.error?.error || 'Failed to update tool';
+      const errorMessage =
+        error?.data?.error || error?.error?.error || 'Failed to update tool';
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }

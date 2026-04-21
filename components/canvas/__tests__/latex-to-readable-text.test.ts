@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { latexToReadableText, extractReadableMath } from '../canvas-export-handlers';
+import {
+  latexToReadableText,
+  extractReadableMath,
+} from '../canvas-export-handlers';
 
 describe('latexToReadableText', () => {
   // ============================================================================
@@ -38,7 +41,9 @@ describe('latexToReadableText', () => {
     });
 
     it('should handle multiple Greek letters in one expression', () => {
-      expect(latexToReadableText('\\alpha + \\beta = \\gamma')).toBe('α + β = γ');
+      expect(latexToReadableText('\\alpha + \\beta = \\gamma')).toBe(
+        'α + β = γ',
+      );
     });
   });
 
@@ -120,7 +125,9 @@ describe('latexToReadableText', () => {
     });
 
     it('should convert nested fractions', () => {
-      expect(latexToReadableText('\\frac{\\frac{a}{b}}{c}')).toBe('((a)/(b))/(c)');
+      expect(latexToReadableText('\\frac{\\frac{a}{b}}{c}')).toBe(
+        '((a)/(b))/(c)',
+      );
     });
 
     it('should convert fraction with Greek letters', () => {
@@ -128,7 +135,9 @@ describe('latexToReadableText', () => {
     });
 
     it('should convert fraction with complex numerator and denominator', () => {
-      const result = latexToReadableText('\\frac{\\Gamma(k + r)}{\\Gamma(k + 1)\\Gamma(r)}');
+      const result = latexToReadableText(
+        '\\frac{\\Gamma(k + r)}{\\Gamma(k + 1)\\Gamma(r)}',
+      );
       expect(result).toBe('(Γ(k + r))/(Γ(k + 1)Γ(r))');
     });
 
@@ -280,7 +289,9 @@ describe('latexToReadableText', () => {
   // ============================================================================
   describe('Complex formulas', () => {
     it('should convert Poisson PMF', () => {
-      const result = latexToReadableText('P(X = k) = \\frac{\\lambda^k e^{-\\lambda}}{k!}');
+      const result = latexToReadableText(
+        'P(X = k) = \\frac{\\lambda^k e^{-\\lambda}}{k!}',
+      );
       expect(result).toBe('P(X = k) = (λ^k e^(-λ))/(k!)');
     });
 

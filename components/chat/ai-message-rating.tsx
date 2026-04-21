@@ -4,7 +4,11 @@ import { ThumbsDown, ThumbsUp } from 'lucide-react';
 
 import { toast } from 'sonner';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUpdateMessageFeedbackMutation } from '@iblai/iblai-js/data-layer';
 import { useUsername } from '@/hooks/use-user';
 import type { Message } from '@iblai/iblai-js/web-utils';
@@ -13,7 +17,9 @@ import { cn } from '@/lib/utils';
 
 function getUserMessageBeforeCurrentId(messages: Message[], currentId: string) {
   // get the position of the current message in the array
-  const currentMessageIndex = messages.findIndex((message) => message.id === currentId);
+  const currentMessageIndex = messages.findIndex(
+    (message) => message.id === currentId,
+  );
   const newMessages = messages.slice(0, currentMessageIndex);
 
   for (let i = newMessages.length - 1; i >= 0; i--) {
@@ -40,11 +46,18 @@ const RATING = {
   BAD: -1,
 };
 
-export function AIMessageRating({ content, messages, mentorId, sessionId, tenantKey }: Props) {
+export function AIMessageRating({
+  content,
+  messages,
+  mentorId,
+  sessionId,
+  tenantKey,
+}: Props) {
   const [rating, setRating] = React.useState<number | null>(null);
 
   const username = useUsername();
-  const [updateMessageFeedback, { isLoading }] = useUpdateMessageFeedbackMutation();
+  const [updateMessageFeedback, { isLoading }] =
+    useUpdateMessageFeedbackMutation();
 
   async function handleUpdateMessageFeedback(rating: number) {
     try {
@@ -81,17 +94,19 @@ export function AIMessageRating({ content, messages, mentorId, sessionId, tenant
             onClick={async () => {
               await handleUpdateMessageFeedback(RATING.GOOD);
             }}
-            className="text-gray-500 hover:text-gray-700 -ml-1"
+            className="-ml-1 text-gray-500 hover:text-gray-700"
           >
             <span className="sr-only">Positive Feedback Thumbs Up</span>
             <ThumbsUp
               className={cn('h-4 w-4', {
-                'text-gray-400 fill-gray-400 stroke-1': rating === RATING.GOOD,
+                'fill-gray-400 stroke-1 text-gray-400': rating === RATING.GOOD,
               })}
             />
           </button>
         </TooltipTrigger>
-        <TooltipContent className="ibl-tooltip-content">Positive Feedback</TooltipContent>
+        <TooltipContent className="ibl-tooltip-content">
+          Positive Feedback
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -101,17 +116,19 @@ export function AIMessageRating({ content, messages, mentorId, sessionId, tenant
             onClick={async () => {
               await handleUpdateMessageFeedback(RATING.BAD);
             }}
-            className="text-gray-500 hover:text-gray-700 -ml-1"
+            className="-ml-1 text-gray-500 hover:text-gray-700"
           >
             <span className="sr-only">Negative Feedback Thumbs Down</span>
             <ThumbsDown
               className={cn('h-4 w-4', {
-                'text-gray-400 fill-gray-400 stroke-1': rating === RATING.BAD,
+                'fill-gray-400 stroke-1 text-gray-400': rating === RATING.BAD,
               })}
             />
           </button>
         </TooltipTrigger>
-        <TooltipContent className="ibl-tooltip-content">Negative Feedback</TooltipContent>
+        <TooltipContent className="ibl-tooltip-content">
+          Negative Feedback
+        </TooltipContent>
       </Tooltip>
     </>
   );

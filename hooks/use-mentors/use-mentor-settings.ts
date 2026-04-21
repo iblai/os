@@ -1,7 +1,11 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { useGetMentorPublicSettingsQuery, useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetMentorPublicSettingsQuery,
+  useGetMentorSettingsQuery,
+  useGetMemsearchStatusQuery,
+} from '@iblai/iblai-js/data-layer';
 
 import { useUsername } from '@/providers/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -40,12 +44,17 @@ export function useMentorSettings({
 
   // Get cached data for offline mode
   const [cachedSettings, setCachedSettings] = useState<unknown>(null);
-  const [cachedPublicSettings, setCachedPublicSettings] = useState<unknown>(null);
+  const [cachedPublicSettings, setCachedPublicSettings] =
+    useState<unknown>(null);
 
   useEffect(() => {
     if (isOffline && mentorId && tenantKey) {
       const cached = getCachedApiResponse(
-        CacheKeys.mentorSettings(tenantKey, mentorId, username || ANONYMOUS_USERNAME),
+        CacheKeys.mentorSettings(
+          tenantKey,
+          mentorId,
+          username || ANONYMOUS_USERNAME,
+        ),
       );
       if (cached) {
         setCachedSettings(cached);
@@ -61,34 +70,62 @@ export function useMentorSettings({
   }, [isOffline, mentorId, tenantKey, username]);
 
   // Skip RTK Query when offline
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } = useGetMentorSettingsQuery(
-    {
-      mentor: mentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-    },
-    {
-      skip: !mentorId || !tenantKey || !username || !isLoggedIn || isOffline || isAccessingPublicRoute,
-    },
-  );
-
-  const { data: mentorPublicSettings, isLoading: isMentorPublicSettingsLoading } =
-    useGetMentorPublicSettingsQuery(
+  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
+    useGetMentorSettingsQuery(
       {
         mentor: mentorId,
         org: tenantKey,
         // @ts-ignore
-        userId: username || ANONYMOUS_USERNAME,
+        userId: username ?? '',
       },
       {
-        skip: !tenantKey || !mentorId || isOffline,
+        skip:
+          !mentorId ||
+          !tenantKey ||
+          !username ||
+          !isLoggedIn ||
+          isOffline ||
+          isAccessingPublicRoute,
       },
     );
 
+  const {
+    data: mentorPublicSettings,
+    isLoading: isMentorPublicSettingsLoading,
+  } = useGetMentorPublicSettingsQuery(
+    {
+      mentor: mentorId,
+      org: tenantKey,
+      // @ts-ignore
+      userId: username || ANONYMOUS_USERNAME,
+    },
+    {
+      skip: !tenantKey || !mentorId || isOffline,
+    },
+  );
+
+  const { data: memsearchConfig } = useGetMemsearchStatusQuery(
+    {
+      org: tenantKey ?? '',
+      userId: username ?? '',
+    },
+    {
+      skip: !tenantKey || !username || isOffline,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+    },
+  );
+
   // Cache responses when online for offline use
   useEffect(() => {
-    if (isTauriApp() && !isOffline && mentorSettings && mentorId && tenantKey && username) {
+    if (
+      isTauriApp() &&
+      !isOffline &&
+      mentorSettings &&
+      mentorId &&
+      tenantKey &&
+      username
+    ) {
       setCachedApiResponse(
         CacheKeys.mentorSettings(tenantKey, mentorId, username),
         mentorSettings,
@@ -98,7 +135,13 @@ export function useMentorSettings({
   }, [mentorSettings, mentorId, tenantKey, username, isOffline]);
 
   useEffect(() => {
-    if (isTauriApp() && !isOffline && mentorPublicSettings && mentorId && tenantKey) {
+    if (
+      isTauriApp() &&
+      !isOffline &&
+      mentorPublicSettings &&
+      mentorId &&
+      tenantKey
+    ) {
       setCachedApiResponse(
         CacheKeys.mentorPublicSettings(tenantKey, mentorId),
         mentorPublicSettings,
@@ -108,7 +151,9 @@ export function useMentorSettings({
   }, [mentorPublicSettings, mentorId, tenantKey, isOffline]);
 
   // Use cached data when offline
-  const effectiveSettings = isOffline ? (cachedSettings as typeof mentorSettings) : mentorSettings;
+  const effectiveSettings = isOffline
+    ? (cachedSettings as typeof mentorSettings)
+    : mentorSettings;
   const effectivePublicSettings = isOffline
     ? (cachedPublicSettings as typeof mentorPublicSettings)
     : mentorPublicSettings;
@@ -121,29 +166,38 @@ export function useMentorSettings({
   return {
     isLoading: effectiveIsLoading,
     data: {
-      profileImage: effectiveSettings?.profile_image ?? effectivePublicSettings?.profile_image,
+      profileImage:
+        effectiveSettings?.profile_image ??
+        effectivePublicSettings?.profile_image,
 
       greetingMethod:
-        effectiveSettings?.greeting_method ?? effectivePublicSettings?.greeting_method,
+        effectiveSettings?.greeting_method ??
+        effectivePublicSettings?.greeting_method,
 
       proactiveResponse:
-        effectiveSettings?.proactive_response ?? effectivePublicSettings?.proactive_response,
+        effectiveSettings?.proactive_response ??
+        effectivePublicSettings?.proactive_response,
 
       // @ts-ignore
       llmProvider:
-        effectiveSettings?.llm_provider || effectivePublicSettings?.llm_provider || '',
+        effectiveSettings?.llm_provider ||
+        effectivePublicSettings?.llm_provider ||
+        '',
 
       llmName: effectiveSettings?.llm_name ?? effectivePublicSettings?.llm_name,
 
       mentorUniqueId:
-        effectiveSettings?.mentor_unique_id ?? effectivePublicSettings?.mentor_unique_id,
+        effectiveSettings?.mentor_unique_id ??
+        effectivePublicSettings?.mentor_unique_id,
 
       mentorName: effectiveSettings?.mentor ?? effectivePublicSettings?.mentor,
 
       enableGuidedPrompts:
-        effectiveSettings?.enable_guided_prompts ?? effectivePublicSettings?.enable_guided_prompts,
+        effectiveSettings?.enable_guided_prompts ??
+        effectivePublicSettings?.enable_guided_prompts,
 
-      mentorSlug: effectiveSettings?.mentor_slug ?? effectivePublicSettings?.mentor_slug,
+      mentorSlug:
+        effectiveSettings?.mentor_slug ?? effectivePublicSettings?.mentor_slug,
 
       safetyDisclaimer:
         effectiveSettings?.metadata?.safety_disclaimer ??
@@ -156,33 +210,41 @@ export function useMentorSettings({
         effectiveSettings?.platform_key === config.mainTenantKey(),
 
       // @ts-ignore
-      disclaimer: effectiveSettings?.disclaimer ?? effectivePublicSettings?.disclaimer,
+      disclaimer:
+        effectiveSettings?.disclaimer ?? effectivePublicSettings?.disclaimer,
 
       mentorVisibility:
-        effectiveSettings?.mentor_visibility ?? effectivePublicSettings?.mentor_visibility,
+        effectiveSettings?.mentor_visibility ??
+        effectivePublicSettings?.mentor_visibility,
 
       allowAnonymous:
-        effectiveSettings?.allow_anonymous ?? effectivePublicSettings?.allow_anonymous,
+        effectiveSettings?.allow_anonymous ??
+        effectivePublicSettings?.allow_anonymous,
 
       // @ts-ignore - show_attachment exists in API response but not in type
       showAttachment:
-        effectiveSettings?.show_attachment ?? effectivePublicSettings?.show_attachment,
+        effectiveSettings?.show_attachment ??
+        effectivePublicSettings?.show_attachment,
 
       // @ts-ignore - show_voice_call exists in API response but not in type
       showVoiceCall:
-        effectiveSettings?.show_voice_call ?? effectivePublicSettings?.show_voice_call,
+        effectiveSettings?.show_voice_call ??
+        effectivePublicSettings?.show_voice_call,
 
       // @ts-ignore - show_voice_record exists in API response but not in type
       showVoiceRecord:
-        effectiveSettings?.show_voice_record ?? effectivePublicSettings?.show_voice_record,
+        effectiveSettings?.show_voice_record ??
+        effectivePublicSettings?.show_voice_record,
 
       // @ts-ignore
       embedShowAttachment:
-        effectiveSettings?.embed_show_attachment ?? effectivePublicSettings?.embed_show_attachment,
+        effectiveSettings?.embed_show_attachment ??
+        effectivePublicSettings?.embed_show_attachment,
 
       // @ts-ignore
       embedShowVoiceCall:
-        effectiveSettings?.embed_show_voice_call ?? effectivePublicSettings?.embed_show_voice_call,
+        effectiveSettings?.embed_show_voice_call ??
+        effectivePublicSettings?.embed_show_voice_call,
 
       // @ts-ignore
       embedShowVoiceRecord:
@@ -190,13 +252,22 @@ export function useMentorSettings({
         effectivePublicSettings?.embed_show_voice_record,
 
       // @ts-ignore
-      llmConfig: effectiveSettings?.llm_config ?? effectivePublicSettings?.llm_config,
+      llmConfig:
+        effectiveSettings?.llm_config ?? effectivePublicSettings?.llm_config,
 
       // @ts-ignore - mentor_id is the numeric database ID used for RBAC resource paths
-      mentorDbId: effectiveSettings?.mentor_id ?? effectivePublicSettings?.mentor_id,
+      mentorDbId:
+        effectiveSettings?.mentor_id ?? effectivePublicSettings?.mentor_id,
 
       starterPrompts: (effectiveSettings?.starter_prompts ??
         effectivePublicSettings?.starter_prompts) as string | undefined,
+
+      // @ts-ignore - enable_memory_component exists in API response but not in type
+      memoryEnabled:
+        (memsearchConfig?.enable_memsearch ?? false) &&
+        (effectiveSettings?.enable_memory_component ??
+          effectivePublicSettings?.enable_memory_component ??
+          false),
     },
   };
 }

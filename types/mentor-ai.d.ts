@@ -1,6 +1,6 @@
 declare namespace JSX {
   interface IntrinsicElements {
-    "mentor-ai": React.DetailedHTMLProps<
+    'mentor-ai': React.DetailedHTMLProps<
       React.HTMLAttributes<HTMLElement> & {
         mentorUrl?: string;
         authUrl?: string;

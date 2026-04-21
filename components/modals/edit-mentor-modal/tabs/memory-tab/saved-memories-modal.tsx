@@ -2,7 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Plus, ChevronDown } from 'lucide-react';
 import {
@@ -12,32 +17,39 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  useGetMemoriesQuery,
-  useGetMemoryCategoriesQuery,
-  useDeleteMemoryMutation,
-  useDeleteMemoryByCategoryMutation,
-  useUpdateMemoryEntryMutation,
-  useCreateMemoryMutation,
-  type Memory as ApiMemory,
-  type MemoryEntry,
+  useGetMentorMemoriesQuery,
+  useDeleteMentorMemoryMutation,
+  useUpdateMentorMemoryMutation,
+  useCreateMentorMemoryMutation,
+  useGetMemoryCategoriesAdminQuery,
+  type MentorMemory,
+  type MentorMemoryCategory,
 } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
-import { transformCategoryToApi, transformCategoryToDisplay } from './utils';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 const EditMemoryModal = dynamic(
-  () => import('./edit-memory-modal').then((module) => ({ default: module.EditMemoryModal })),
+  () =>
+    import('./edit-memory-modal').then((module) => ({
+      default: module.EditMemoryModal,
+    })),
   { ssr: false },
 );
 
 const AddMemoryModal = dynamic(
-  () => import('./add-memory-modal').then((module) => ({ default: module.AddMemoryModal })),
+  () =>
+    import('./add-memory-modal').then((module) => ({
+      default: module.AddMemoryModal,
+    })),
   { ssr: false },
 );
 
 const DeleteMemoryModal = dynamic(
-  () => import('./delete-memory-modal').then((module) => ({ default: module.DeleteMemoryModal })),
+  () =>
+    import('./delete-memory-modal').then((module) => ({
+      default: module.DeleteMemoryModal,
+    })),
   { ssr: false },
 );
 
@@ -50,11 +62,13 @@ const BulkDeleteMemoryModal = dynamic(
 );
 
 interface Memory {
-  id: string;
+  id: number;
   content: string;
-  category: string;
-  memoryId?: string;
-  entryKey?: string;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
 }
 
 interface SavedMemoriesModalProps {
@@ -70,62 +84,87 @@ export function SavedMemoriesModal({
   tenantKey,
   username,
 }: SavedMemoriesModalProps) {
-  const { tenantKey: tenantKeyParam } = useParams<TenantKeyMentorIdParams>();
+  const { mentorId } = useParams<TenantKeyMentorIdParams>();
+
   // API hooks
-  const { data: memoriesResponse, isLoading: isLoadingMemories } = useGetMemoriesQuery(
+  const { data: memoriesByCategoryResponse, isLoading: isLoadingMemories } =
+    useGetMentorMemoriesQuery(
+      {
+        org: tenantKey,
+        userId: username ?? '',
+        mentorId,
+      },
+      {
+        skip: !tenantKey || !username || !mentorId || !open,
+      },
+    );
+
+  const { data: adminCategories } = useGetMemoryCategoriesAdminQuery(
     {
-      tenantKey,
-      username: username ?? '',
+      org: tenantKey,
+      mentorId,
     },
     {
-      skip: !tenantKey || !username || !open,
+      skip: !tenantKey || !mentorId,
     },
   );
 
-  const { data: categoriesResponse } = useGetMemoryCategoriesQuery(
-    {
-      tenantKey,
-      username: username ?? '',
-    },
-    {
-      skip: !tenantKey || !username,
-    },
-  );
+  const [deleteMentorMemory, { isLoading: isDeleting }] =
+    useDeleteMentorMemoryMutation();
+  const [updateMentorMemory, { isLoading: isEditing }] =
+    useUpdateMentorMemoryMutation();
+  const [createMentorMemory, { isLoading: isSaving }] =
+    useCreateMentorMemoryMutation();
 
-  const [deleteMemory, { isLoading: isDeleting }] = useDeleteMemoryMutation();
-  const [deleteMemoryByCategory] = useDeleteMemoryByCategoryMutation();
-  const [updateMemoryEntry, { isLoading: isEditing }] = useUpdateMemoryEntryMutation();
-  const [createMemory, { isLoading: isSaving }] = useCreateMemoryMutation();
+  // Flatten the by-category response into a flat list of memories
+  const memories: Memory[] = useMemo(() => {
+    if (!memoriesByCategoryResponse) return [];
 
-  // Transform API data to local format
-  const memories = useMemo(() => {
-    if (!memoriesResponse?.results) return [];
-
-    return memoriesResponse.results.flatMap((memory: ApiMemory) =>
-      memory.entries.map((entry: MemoryEntry) => ({
-        id: entry.unique_id,
-        content: entry.value,
-        category: memory.category,
-        memoryId: memory.unique_id,
-        entryKey: entry.key,
+    return memoriesByCategoryResponse.flatMap((item) =>
+      item.memories.map((memory: MentorMemory) => ({
+        id: memory.id,
+        content: memory.content,
+        category: {
+          id: memory.category.id,
+          name: memory.category.name,
+          slug: memory.category.slug,
+        },
       })),
     );
-  }, [memoriesResponse]);
+  }, [memoriesByCategoryResponse]);
 
+  // Build category list from admin categories or from the response
   const categories = useMemo(() => {
-    const apiCategories = categoriesResponse?.categories ?? [];
-    // Transform API categories to display format
-    const displayCategories = apiCategories.map(transformCategoryToDisplay);
-    const uniqueCategories = Array.from(['All', ...displayCategories]);
-    const withoutAll = uniqueCategories.filter((item) => item !== 'All');
-    return ['All', ...withoutAll];
-  }, [categoriesResponse]);
+    if (adminCategories && adminCategories.length > 0) {
+      return [
+        { id: 0, name: 'All', slug: 'all' },
+        ...adminCategories.map((cat: MentorMemoryCategory) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+        })),
+      ];
+    }
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+    if (!memoriesByCategoryResponse)
+      return [{ id: 0, name: 'All', slug: 'all' }];
+
+    const responseCats = memoriesByCategoryResponse.map((item) => ({
+      id: item.category.id,
+      name: item.category.name,
+      slug: item.category.slug,
+    }));
+
+    return [{ id: 0, name: 'All', slug: 'all' }, ...responseCats];
+  }, [adminCategories, memoriesByCategoryResponse]);
+
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState('all');
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(
+    null,
+  );
   const [showAddMemory, setShowAddMemory] = useState(false);
   const [newMemoryContent, setNewMemoryContent] = useState('');
   const [newMemoryCategory, setNewMemoryCategory] = useState('');
@@ -133,22 +172,24 @@ export function SavedMemoriesModal({
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  const filteredMemories =
-    selectedCategory === 'All'
-      ? memories
-      : memories.filter((memory: any) => {
-          // Transform display category back to API format for filtering
-          const apiCategory = transformCategoryToApi(selectedCategory);
-          return memory.category === apiCategory;
-        });
+  const selectedCategoryName =
+    categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
 
-  const handleDeleteMemory = async (id: string) => {
+  const filteredMemories =
+    selectedCategorySlug === 'all'
+      ? memories
+      : memories.filter(
+          (memory) => memory.category.slug === selectedCategorySlug,
+        );
+
+  const handleDeleteMemory = async (id: number) => {
     if (!tenantKey || !username) return;
 
     try {
-      await deleteMemory({
-        tenantKey,
-        username,
+      await deleteMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
         memoryId: id,
       }).unwrap();
       setShowDeleteConfirm(null);
@@ -156,7 +197,6 @@ export function SavedMemoriesModal({
     } catch (error) {
       console.error('Failed to delete memory:', error);
       toast.error('Failed to delete memory');
-      console.error(JSON.stringify({ tenant: tenantKeyParam, error }));
     }
   };
 
@@ -165,18 +205,26 @@ export function SavedMemoriesModal({
 
     setIsBulkDeleting(true);
     try {
-      const apiCategory = transformCategoryToApi(selectedCategory);
-      await deleteMemoryByCategory({
-        tenantKey,
-        username,
-        category: apiCategory,
-      }).unwrap();
-      toast.success(`All ${selectedCategory} memories deleted successfully`);
+      const memoriesToDelete = memories.filter(
+        (memory) => memory.category.slug === selectedCategorySlug,
+      );
+      await Promise.all(
+        memoriesToDelete.map((memory) =>
+          deleteMentorMemory({
+            org: tenantKey,
+            userId: username!,
+            mentorId,
+            memoryId: memory.id,
+          }).unwrap(),
+        ),
+      );
+      toast.success(
+        `All ${selectedCategoryName} memories deleted successfully`,
+      );
       setShowBulkDeleteConfirm(false);
     } catch (error) {
       console.error('Failed to delete memories:', error);
       toast.error('Failed to delete memories');
-      console.error(JSON.stringify({ tenant: tenantKeyParam, error }));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -185,20 +233,24 @@ export function SavedMemoriesModal({
   const startEdit = (memory: Memory) => {
     setEditingMemory(memory);
     setEditContent(memory.content);
-    setEditCategory(transformCategoryToDisplay(memory.category));
+    setEditCategory(memory.category.name);
   };
 
   const saveEdit = async () => {
     if (!editingMemory || !tenantKey || !username) return;
 
     try {
-      await updateMemoryEntry({
-        tenantKey,
-        username,
-        entryId: editingMemory.id,
+      const selectedCat = categories.find((c) => c.name === editCategory);
+      await updateMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
+        memoryId: editingMemory.id,
         data: {
-          key: editingMemory.entryKey,
-          value: editContent,
+          content: editContent,
+          ...(selectedCat && selectedCat.slug !== editingMemory.category.slug
+            ? { category_slug: selectedCat.slug }
+            : {}),
         },
       }).unwrap();
       toast.success('Memory updated successfully');
@@ -209,7 +261,6 @@ export function SavedMemoriesModal({
     } catch (error) {
       console.error('Failed to update memory:', error);
       toast.error('Failed to update memory');
-      console.error(JSON.stringify({ tenant: tenantKeyParam, error }));
     }
   };
 
@@ -221,40 +272,36 @@ export function SavedMemoriesModal({
 
   const startAddMemory = () => {
     setShowAddMemory(true);
-    setNewMemoryCategory(selectedCategory);
+    setNewMemoryCategory(selectedCategoryName);
   };
 
   const saveNewMemory = async () => {
     if (!newMemoryContent.trim() || !tenantKey || !username) return;
 
     try {
-      const apiCategory = transformCategoryToApi(newMemoryCategory || selectedCategory);
+      const selectedCat = categories.find((c) => c.name === newMemoryCategory);
+      const categorySlug = selectedCat?.slug ?? selectedCategorySlug;
 
-      await createMemory({
-        tenantKey,
-        username,
+      await createMentorMemory({
+        org: tenantKey,
+        userId: username,
+        mentorId,
         data: {
-          name: `Memory ${Date.now()}`,
-          platform: tenantKey,
-          entries: [
-            {
-              key: 'memory',
-              value: newMemoryContent.trim(),
-            },
-          ],
-          category: apiCategory,
+          category_slug: categorySlug === 'all' ? 'general' : categorySlug,
+          content: newMemoryContent.trim(),
         },
       }).unwrap();
 
       setShowAddMemory(false);
       setNewMemoryContent('');
       setNewMemoryCategory('');
-      setSelectedCategory(newMemoryCategory || selectedCategory);
+      if (selectedCat) {
+        setSelectedCategorySlug(selectedCat.slug);
+      }
       toast.success('Memory created successfully');
     } catch (error) {
       console.error('Failed to create memory:', error);
       toast.error('Failed to create memory');
-      console.error(JSON.stringify({ tenant: tenantKeyParam, error }));
     }
   };
 
@@ -264,85 +311,103 @@ export function SavedMemoriesModal({
     setNewMemoryCategory('');
   };
 
+  const categoryNames = categories.map((c) => c.name);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] bg-background text-foreground border-border mx-4 sm:mx-auto">
+      <DialogContent className="bg-background text-foreground border-border mx-4 max-h-[80vh] max-w-4xl sm:mx-auto">
         <DialogHeader className="space-y-0">
           <div className="">
-            <DialogTitle className="text-md font-medium">Saved Memories</DialogTitle>
+            <DialogTitle className="text-md font-medium">
+              Saved Memories
+            </DialogTitle>
           </div>
         </DialogHeader>
 
         <div className="space-y-4 overflow-x-hidden">
-          <div className="border-t border-border"></div>
+          <div className="border-border border-t"></div>
 
           <div className="flex items-center justify-between gap-4">
-            <div className="hidden sm:flex space-x-8 overflow-x-auto flex-1 scrollbar-none border-border border-b">
+            <div className="scrollbar-none border-border hidden flex-1 space-x-8 overflow-x-auto border-b sm:flex">
               {categories.map((category) => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`relative py-2 px-1 text-sm font-medium whitespace-nowrap transition-colors ${
-                    selectedCategory === category
+                  key={category.slug}
+                  onClick={() => setSelectedCategorySlug(category.slug)}
+                  className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategorySlug === category.slug
                       ? 'text-[#38A1E5]'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {category}
-                  {selectedCategory === category && (
+                  {category.name}
+                  {selectedCategorySlug === category.slug && (
                     <div
-                      className="absolute bottom-0 left-1/2 transform -translate-x-1/2 h-0.5 bg-[#38A1E5] transition-all duration-200"
-                      style={{ width: `${category.length * 0.55}em` }}
+                      className="absolute bottom-0 left-1/2 h-0.5 -translate-x-1/2 transform bg-[#38A1E5] transition-all duration-200"
+                      style={{ width: `${category.name.length * 0.55}em` }}
                     />
                   )}
                 </button>
               ))}
             </div>
 
-            <div className="sm:hidden py-2 w-full">
-              <DropdownMenu open={showMobileDropdown} onOpenChange={setShowMobileDropdown}>
+            <div className="w-full py-2 sm:hidden">
+              <DropdownMenu
+                open={showMobileDropdown}
+                onOpenChange={setShowMobileDropdown}
+              >
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between bg-transparent">
-                    {selectedCategory}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-transparent"
+                  >
+                    {selectedCategoryName}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-full">
                   {categories.map((category) => (
                     <DropdownMenuItem
-                      key={category}
+                      key={category.slug}
                       onClick={() => {
-                        setSelectedCategory(category);
+                        setSelectedCategorySlug(category.slug);
                         setShowMobileDropdown(false);
                       }}
-                      className={selectedCategory === category ? 'bg-accent' : ''}
+                      className={
+                        selectedCategorySlug === category.slug
+                          ? 'bg-accent'
+                          : ''
+                      }
                     >
-                      {category}
+                      {category.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            <Button onClick={startAddMemory} size="sm" className="ibl-button-primary shrink-0">
-              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <Button
+              onClick={startAddMemory}
+              size="sm"
+              className="ibl-button-primary shrink-0"
+            >
+              <Plus className="mr-1 h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Add Memory</span>
               <span className="sm:hidden">Add</span>
             </Button>
           </div>
 
-          <div className="space-y-3 max-h-96 overflow-y-auto px-1 sm:px-0">
+          <div className="max-h-96 space-y-3 overflow-y-auto px-1 sm:px-0">
             {isLoadingMemories ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 <p>Loading memories...</p>
               </div>
             ) : (
-              filteredMemories.map((memory: any) => (
+              filteredMemories.map((memory) => (
                 <div
                   key={memory.id}
-                  className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border"
+                  className="bg-card border-border flex items-start gap-3 rounded-lg border p-3"
                 >
-                  <div className="flex-1 text-sm text-foreground leading-relaxed">
+                  <div className="text-foreground flex-1 text-sm leading-relaxed">
                     {memory.content}
                   </div>
                   <DropdownMenu>
@@ -350,14 +415,18 @@ export function SavedMemoriesModal({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        className="text-muted-foreground hover:text-foreground h-6 w-6 flex-shrink-0 p-0"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => startEdit(memory)}>Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowDeleteConfirm(memory.id)}>
+                      <DropdownMenuItem onClick={() => startEdit(memory)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowDeleteConfirm(memory.id)}
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -367,16 +436,19 @@ export function SavedMemoriesModal({
             )}
           </div>
 
-          {filteredMemories.length > 0 && selectedCategory.toLowerCase() !== 'all' && (
-            <div className="flex justify-end pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setShowBulkDeleteConfirm(true)}>
+          {filteredMemories.length > 0 && selectedCategorySlug !== 'all' && (
+            <div className="border-border flex justify-end border-t pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+              >
                 Delete All
               </Button>
             </div>
           )}
 
           {filteredMemories.length === 0 && !isLoadingMemories && (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-muted-foreground py-8 text-center">
               <p>No saved memories yet.</p>
             </div>
           )}
@@ -392,7 +464,7 @@ export function SavedMemoriesModal({
         onCategoryChange={setEditCategory}
         onSave={saveEdit}
         onCancel={cancelEdit}
-        categories={categories}
+        categories={categoryNames}
         isSaving={isEditing}
       />
 
@@ -405,14 +477,16 @@ export function SavedMemoriesModal({
         onCategoryChange={setNewMemoryCategory}
         onSave={saveNewMemory}
         onCancel={cancelAddMemory}
-        categories={categories}
+        categories={categoryNames}
         isSaving={isSaving}
       />
 
       <DeleteMemoryModal
         open={!!showDeleteConfirm}
         onOpenChange={(open) => !open && setShowDeleteConfirm(null)}
-        onConfirm={() => showDeleteConfirm && handleDeleteMemory(showDeleteConfirm)}
+        onConfirm={() =>
+          showDeleteConfirm !== null && handleDeleteMemory(showDeleteConfirm)
+        }
         onCancel={() => setShowDeleteConfirm(null)}
         isDeleting={isDeleting}
       />
@@ -423,7 +497,7 @@ export function SavedMemoriesModal({
         onConfirm={handleBulkDelete}
         onCancel={() => setShowBulkDeleteConfirm(false)}
         isDeleting={isBulkDeleting}
-        selectedCategory={selectedCategory}
+        selectedCategory={selectedCategoryName}
       />
     </Dialog>
   );

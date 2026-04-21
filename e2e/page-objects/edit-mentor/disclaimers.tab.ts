@@ -8,7 +8,6 @@ export class DisclaimersTab {
   readonly activeStatus: Locator;
   // H20 fix: the Edit button is just labeled "Edit", not "Edit Agreement"
   readonly editButtons: Locator;
-  readonly saveButton: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;

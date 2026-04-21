@@ -87,8 +87,9 @@ export function useScreenSharing({
       }).unwrap();
     } catch (error) {
       console.error(JSON.stringify(error));
-      // @ts-ignore
-      const errorMessage = error?.error?.error || 'Failed to initiate call. Please try again.';
+      const errorMessage =
+        // @ts-ignore error is unknown at the catch binding
+        error?.error?.error || 'Failed to initiate call. Please try again.';
       console.error(JSON.stringify({ tenant: tenantKey, error }));
       toast.error(errorMessage);
       updateConnectionState('error');
@@ -183,7 +184,9 @@ export function useScreenSharing({
     };
 
     // Detect when screen share is stopped (e.g., via browser's "Stop sharing" button)
-    const handleLocalTrackUnpublished = (publication: LocalTrackPublication) => {
+    const handleLocalTrackUnpublished = (
+      publication: LocalTrackPublication,
+    ) => {
       if (
         publication.source === Track.Source.ScreenShare ||
         publication.source === Track.Source.ScreenShareAudio
@@ -200,7 +203,10 @@ export function useScreenSharing({
         setIsMentorAudioEnabled(false);
       }
       // Sync local mic state when toggled externally (e.g., from PIP window)
-      if (participant.isLocal && publication.source === Track.Source.Microphone) {
+      if (
+        participant.isLocal &&
+        publication.source === Track.Source.Microphone
+      ) {
         setIsMicrophoneEnabled(false);
       }
     };
@@ -210,7 +216,10 @@ export function useScreenSharing({
         setIsMentorAudioEnabled(true);
       }
       // Sync local mic state when toggled externally (e.g., from PIP window)
-      if (participant.isLocal && publication.source === Track.Source.Microphone) {
+      if (
+        participant.isLocal &&
+        publication.source === Track.Source.Microphone
+      ) {
         setIsMicrophoneEnabled(true);
       }
     };

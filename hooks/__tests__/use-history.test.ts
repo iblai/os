@@ -35,8 +35,10 @@ const mockUseGetChatHistoryFilterQuery = vi.fn();
 const mockUseGetChatHistoryQuery = vi.fn();
 const mockUseGetMentorPublicSettingsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetChatHistoryFilterQuery: (...args: unknown[]) => mockUseGetChatHistoryFilterQuery(...args),
-  useGetChatHistoryQuery: (...args: unknown[]) => mockUseGetChatHistoryQuery(...args),
+  useGetChatHistoryFilterQuery: (...args: unknown[]) =>
+    mockUseGetChatHistoryFilterQuery(...args),
+  useGetChatHistoryQuery: (...args: unknown[]) =>
+    mockUseGetChatHistoryQuery(...args),
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
 }));
@@ -46,7 +48,10 @@ describe('useHistoryWithPagination', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
     mockUseUserIsOnTrial.mockReturnValue(false);
     mockGetMentorId.mockReturnValue(null);

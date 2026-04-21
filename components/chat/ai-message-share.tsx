@@ -1,6 +1,10 @@
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { Loader2, Share2 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUpdateChatSessionSharedMutation } from '@iblai/iblai-js/data-layer';
 import { useUsername } from '@/hooks/use-user';
 import { toast } from 'sonner';
@@ -15,7 +19,8 @@ export function AIMessageShare({ sessionId, tenantKey }: Props) {
   const { copy, status } = useCopyToClipboard();
   const isCopied = status === 'success';
   const username = useUsername();
-  const [updateChatSessionShared, { isLoading }] = useUpdateChatSessionSharedMutation();
+  const [updateChatSessionShared, { isLoading }] =
+    useUpdateChatSessionSharedMutation();
 
   const handleShare = async () => {
     // Copy the URL to clipboard first, before the async API call.
@@ -64,7 +69,7 @@ export function AIMessageShare({ sessionId, tenantKey }: Props) {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-blue-500 h-4 w-4"
+              className="h-4 w-4 text-blue-500"
             >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>

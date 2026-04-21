@@ -23,7 +23,12 @@ export const mockStarredMentor = {
 export const mockMentorsList = {
   results: [
     mockMentor,
-    { ...mockMentor, id: 'mentor-456', name: 'Another Mentor', unique_id: 'another-mentor' },
+    {
+      ...mockMentor,
+      id: 'mentor-456',
+      name: 'Another Mentor',
+      unique_id: 'another-mentor',
+    },
   ],
   next: null,
   count: 2,
@@ -33,7 +38,12 @@ export const mockMentorsList = {
 export const mockMentorsListWithPagination = {
   results: [
     mockMentor,
-    { ...mockMentor, id: 'mentor-456', name: 'Another Mentor', unique_id: 'another-mentor' },
+    {
+      ...mockMentor,
+      id: 'mentor-456',
+      name: 'Another Mentor',
+      unique_id: 'another-mentor',
+    },
   ],
   next: 'https://api.example.com/mentors?page=2',
   count: 10,

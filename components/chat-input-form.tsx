@@ -1,52 +1,52 @@
-"use client";
+'use client';
 
-import type React from "react";
+import type React from 'react';
 
-import { useState, useRef, ChangeEvent } from "react";
-import { format } from "date-fns";
-import { useMediaQuery } from "react-responsive";
-import { FileText } from "lucide-react";
-import { useAppSelector, useAppDispatch } from "@/lib/hooks";
-import { removeFile } from "@iblai/iblai-js/web-utils";
-import { RootState } from "@/store";
-import { Message } from "@iblai/iblai-js/web-utils";
-import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from "@iblai/iblai-js/web-utils";
-import { useAccessingPublicRoute } from "@/hooks/use-anonymous-mentor";
-import { useChatFileUpload } from "@/hooks/use-chat-file-upload";
-import { cn, isLoggedIn } from "@/lib/utils";
-import useVoiceChat from "@/hooks/use-voice-chat";
-import { VoiceChatButton } from "./chat-input-form/voice-chat-button";
-import { RetrievedDocumentsButton } from "./retrieved-documents-button";
-import dynamic from "next/dynamic";
-import { useEmbedMode } from "@/hooks/use-embed-mode";
-import { StopStreamingButton } from "./chat/stop-streaming-button";
-import { SubmitMessageButton } from "./chat/submit-message-button";
-import { useShowFreeTrialDialog } from "@/hooks/user-user-actions";
-import { CSS_CLASS_NAMES } from "@/lib/constants";
-import { ScreenSharingButton } from "./chat-input-form/screen-sharing-button";
-import AutoResizeTextarea from "./auto-resize-text-area";
-import { OutsideButtons } from "./chat-input-form/outside-buttons";
-import { UploadMenu } from "./chat-input-form/upload-menu";
+import { useState, useRef, ChangeEvent } from 'react';
+import { format } from 'date-fns';
+import { useMediaQuery } from 'react-responsive';
+import { FileText } from 'lucide-react';
+import { useAppSelector, useAppDispatch } from '@/lib/hooks';
+import { removeFile } from '@iblai/iblai-js/web-utils';
+import { RootState } from '@/store';
+import { Message } from '@iblai/iblai-js/web-utils';
+import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
+import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
+import { useChatFileUpload } from '@/hooks/use-chat-file-upload';
+import { cn, isLoggedIn } from '@/lib/utils';
+import useVoiceChat from '@/hooks/use-voice-chat';
+import { VoiceChatButton } from './chat-input-form/voice-chat-button';
+import { RetrievedDocumentsButton } from './retrieved-documents-button';
+import dynamic from 'next/dynamic';
+import { useEmbedMode } from '@/hooks/use-embed-mode';
+import { StopStreamingButton } from './chat/stop-streaming-button';
+import { SubmitMessageButton } from './chat/submit-message-button';
+import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import { CSS_CLASS_NAMES } from '@/lib/constants';
+import { ScreenSharingButton } from './chat-input-form/screen-sharing-button';
+import AutoResizeTextarea from './auto-resize-text-area';
+import { OutsideButtons } from './chat-input-form/outside-buttons';
+import { UploadMenu } from './chat-input-form/upload-menu';
 import {
   chatInputSliceActions,
   chatInputSliceSelectors,
-} from "@/features/chat-input/api-slice";
-import { useResponsive } from "@/hooks/use-responsive";
-import { InsideButtons } from "./chat-input-form/inside-buttons";
-import { VoiceCallButton } from "./chat-input-form/voice-call-button";
-import { useMentorSettings } from "@/hooks/use-mentors/use-mentor-settings";
-import { MentorVisibilityEnum } from "@iblai/iblai-api";
-import { selectShowingSharedChat } from "@iblai/iblai-js/web-utils";
-import { useVisitingTenant } from "@/hooks/use-user";
-import { FileAttachmentsList } from "./chat-input-form/file-attachments-list";
-import { toast } from "sonner";
-import { useModelFileUploadCapabilities } from "@/hooks/use-model-file-upload-capabilities";
-import { selectRbacPermissions } from "@/features/rbac/rbac-slice";
-import { checkRbacPermission } from "@/hoc/withPermissions";
+} from '@/features/chat-input/api-slice';
+import { useResponsive } from '@/hooks/use-responsive';
+import { InsideButtons } from './chat-input-form/inside-buttons';
+import { VoiceCallButton } from './chat-input-form/voice-call-button';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { MentorVisibilityEnum } from '@iblai/iblai-api';
+import { selectShowingSharedChat } from '@iblai/iblai-js/web-utils';
+import { useVisitingTenant } from '@/hooks/use-user';
+import { FileAttachmentsList } from './chat-input-form/file-attachments-list';
+import { toast } from 'sonner';
+import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-capabilities';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 
 const PromptGalleryModal = dynamic(
   () =>
-    import("@/components/modals/prompt-gallery-modal").then(
+    import('@/components/modals/prompt-gallery-modal').then(
       (mod) => mod.PromptGalleryModal,
     ),
   {
@@ -200,7 +200,7 @@ export function ChatInputForm({
   // Check if any files are currently uploading
   const hasUploadingFiles = attachedFiles.some(
     (file) =>
-      file.uploadStatus === "pending" || file.uploadStatus === "uploading",
+      file.uploadStatus === 'pending' || file.uploadStatus === 'uploading',
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -208,7 +208,7 @@ export function ChatInputForm({
     // Prevent submission when chat is disabled, files are uploading, or session not ready
     if (isChatDisabledByRbac || hasUploadingFiles || !sessionId) return;
     onSubmit(inputValue);
-    setInputValue("");
+    setInputValue('');
     setFileAddedNotification(null);
   };
 
@@ -228,7 +228,7 @@ export function ChatInputForm({
 
       // Show notification
       setFileAddedNotification(
-        `Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`,
+        `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`,
       );
 
       // Upload files (validation happens inside the hook)
@@ -241,7 +241,7 @@ export function ChatInputForm({
 
       // Reset the file input so the same file can be uploaded again if needed
       if (fileUploadInputRef.current) {
-        fileUploadInputRef.current.value = "";
+        fileUploadInputRef.current.value = '';
       }
     }
   };
@@ -259,20 +259,20 @@ export function ChatInputForm({
 
   const textAreaPlaceholder = () => {
     if (recording) {
-      const formattedTime = format(new Date(time), "mm:ss");
+      const formattedTime = format(new Date(time), 'mm:ss');
       return `Listening... ${formattedTime}`;
     }
     if (processing) {
-      return "Processing...";
+      return 'Processing...';
     }
-    return "Ask anything";
+    return 'Ask anything';
   };
 
   return (
     <>
       {isTabletOrMobile && !isPreviewMode && !embedMode && !compactMode && (
         <div
-          className="pl-4 pt-4 flex justify-end w-full mx-auto"
+          className="mx-auto flex w-full justify-end pt-4 pl-4"
           style={
             chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
           }
@@ -282,14 +282,14 @@ export function ChatInputForm({
       )}
       {mentorSettings?.data?.disclaimer && !compactMode && (
         <div
-          className="mt-1 pb-1 w-full mx-auto"
+          className="mx-auto mt-1 w-full pb-1"
           style={
             chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
           }
         >
           <p
             id="chat-input-disclaimer"
-            className="text-[0.625rem] text-gray-500 text-center italic"
+            className="text-center text-[0.625rem] text-gray-500 italic"
           >
             {mentorSettings?.data?.disclaimer}
           </p>
@@ -299,14 +299,14 @@ export function ChatInputForm({
         ref={containerRef}
         onSubmit={handleSubmit}
         className={cn(
-          "mt-4 pb-2 w-full mx-auto",
+          'mx-auto mt-4 w-full pb-2',
           CSS_CLASS_NAMES.CHAT.TEXTAREA,
         )}
         style={
           chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
         }
       >
-        <div className="relative rounded-2xl border border-gray-200 bg-[#fbfbfb] pb-3 shadow-xs overflow-hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-[#fbfbfb] pb-3 shadow-xs">
           <FileAttachmentsList
             attachedFiles={attachedFiles}
             onRemoveFile={handleRemoveFile}
@@ -333,7 +333,7 @@ export function ChatInputForm({
               aria-labelledby="chat-input-label"
               aria-describedby={
                 mentorSettings?.data?.disclaimer
-                  ? "chat-input-disclaimer"
+                  ? 'chat-input-disclaimer'
                   : undefined
               }
               value={inputValue}
@@ -356,7 +356,7 @@ export function ChatInputForm({
               }
               embedMode={embedMode}
             />
-            <div className="flex items-center px-2 gap-2">
+            <div className="flex items-center gap-2 px-2">
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <UploadMenu
                   onFileInputTrigger={() =>
@@ -378,6 +378,10 @@ export function ChatInputForm({
                   embedMode={embedMode}
                   promptsIsEnabled={promptsIsEnabled}
                   studyMode={studyMode}
+                  memoryEnabled={mentorSettings.data.memoryEnabled}
+                  isAnonymousMentor={!!mentorSettings.data.allowAnonymous}
+                  tenantKey={tenantKey}
+                  username={username}
                 />
               )}
 
@@ -437,8 +441,8 @@ export function ChatInputForm({
             onChange={handleFileInputChange}
             accept={
               fileUploadCapabilities.allSupportedTypes.length > 0
-                ? fileUploadCapabilities.allSupportedTypes.join(",")
-                : MENTOR_CHAT_DOCUMENTS_EXTENSIONS.join(",")
+                ? fileUploadCapabilities.allSupportedTypes.join(',')
+                : MENTOR_CHAT_DOCUMENTS_EXTENSIONS.join(',')
             }
             multiple
             disabled={isChatDisabledByRbac || !sessionId}
@@ -446,7 +450,7 @@ export function ChatInputForm({
         </div>
 
         {visibleToLoggedInUsersOnly && !compactMode && (
-          <div className="w-full flex justify-center">
+          <div className="flex w-full justify-center">
             <OutsideButtons
               activeOptions={activeTools}
               onOptionClick={updateSessionTools}

@@ -113,7 +113,7 @@ export const AIMessageBubble = forwardRef<
               </AvatarFallback>
             </Avatar>
           </div>
-          <div className="max-w-full min-w-0 flex-1 md:max-w-[75%]">
+          <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center">
               <span className="mr-2 text-sm font-medium text-gray-900">
                 {mentorName}
@@ -122,7 +122,7 @@ export const AIMessageBubble = forwardRef<
             </div>
             <div
               className={cn(
-                'mb-1.5 rounded-lg bg-gray-100 p-3 wrap-anywhere',
+                'mb-1.5 rounded-2xl bg-gray-100 p-3 wrap-anywhere',
                 CSS_CLASS_NAMES.CHAT.AI_MESSAGE_RESPONSE,
                 hasArtifactVersions(message) && 'bg-white p-0',
               )}

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 import {
   Pagination,
@@ -8,8 +8,8 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/pagination';
+import { cn } from '@/lib/utils';
 
 interface IblPaginationProps {
   currentPage: number;
@@ -46,7 +46,7 @@ export const IblPagination: React.FC<IblPaginationProps> = ({
 
     // Add ellipsis before middle pages if needed
     if (startPage > 2) {
-      pages.push("ellipsis-start");
+      pages.push('ellipsis-start');
     }
 
     // Add middle pages
@@ -58,7 +58,7 @@ export const IblPagination: React.FC<IblPaginationProps> = ({
 
     // Add ellipsis after middle pages if needed
     if (endPage < totalPages - 1) {
-      pages.push("ellipsis-end");
+      pages.push('ellipsis-end');
     }
 
     // Always show last page if there is more than one page
@@ -88,38 +88,39 @@ export const IblPagination: React.FC<IblPaginationProps> = ({
             }}
             aria-disabled={currentPage === 1 || disabled}
             className={cn(
-              "cursor-pointer",
+              'cursor-pointer',
               (currentPage === 1 || disabled) &&
-                "pointer-events-none opacity-50",
+                'pointer-events-none opacity-50',
             )}
           />
         </PaginationItem>
 
         {/* Page Numbers - Hide  when disableNumberedButtons is true */}
-        {!disableNumberedButtons && getPageNumbers().map((page, index) => (
-          <PaginationItem key={index}>
-            {page === "ellipsis-start" || page === "ellipsis-end" ? (
-              <PaginationEllipsis />
-            ) : (
-              <PaginationLink
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!disabled && typeof page === "number") {
-                    onPageChange(page);
-                  }
-                }}
-                isActive={page === currentPage}
-                className={cn(
-                  "cursor-pointer",
-                  disabled && "pointer-events-none opacity-50",
-                )}
-              >
-                {page}
-              </PaginationLink>
-            )}
-          </PaginationItem>
-        ))}
+        {!disableNumberedButtons &&
+          getPageNumbers().map((page, index) => (
+            <PaginationItem key={index}>
+              {page === 'ellipsis-start' || page === 'ellipsis-end' ? (
+                <PaginationEllipsis />
+              ) : (
+                <PaginationLink
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!disabled && typeof page === 'number') {
+                      onPageChange(page);
+                    }
+                  }}
+                  isActive={page === currentPage}
+                  className={cn(
+                    'cursor-pointer',
+                    disabled && 'pointer-events-none opacity-50',
+                  )}
+                >
+                  {page}
+                </PaginationLink>
+              )}
+            </PaginationItem>
+          ))}
 
         {/* Next Button */}
         <PaginationItem>
@@ -133,9 +134,9 @@ export const IblPagination: React.FC<IblPaginationProps> = ({
             }}
             aria-disabled={currentPage === totalPages || disabled}
             className={cn(
-              "cursor-pointer",
+              'cursor-pointer',
               (currentPage === totalPages || disabled) &&
-                "pointer-events-none opacity-50",
+                'pointer-events-none opacity-50',
             )}
           />
         </PaginationItem>

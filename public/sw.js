@@ -95,11 +95,18 @@ function getOfflineFallback(request) {
   const url = request.url;
 
   // API request
-  if (url.includes('/api/') || url.includes('api-ai.') || url.includes('api-core.')) {
-    return new Response(JSON.stringify({ error: 'Offline - data not cached', offline: true }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (
+    url.includes('/api/') ||
+    url.includes('api-ai.') ||
+    url.includes('api-core.')
+  ) {
+    return new Response(
+      JSON.stringify({ error: 'Offline - data not cached', offline: true }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 
   // Image
@@ -116,7 +123,10 @@ function getOfflineFallback(request) {
   }
 
   // Page/navigation
-  if (request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')) {
+  if (
+    request.mode === 'navigate' ||
+    (request.headers.get('accept') || '').includes('text/html')
+  ) {
     return new Response(
       `<!DOCTYPE html>
       <html>
@@ -169,7 +179,9 @@ self.addEventListener('message', (event) => {
 
     case 'CLEAR_CACHE':
       caches.keys().then((names) => {
-        names.filter((n) => n.startsWith('mentor-')).forEach((n) => caches.delete(n));
+        names
+          .filter((n) => n.startsWith('mentor-'))
+          .forEach((n) => caches.delete(n));
       });
       break;
 

@@ -145,10 +145,9 @@ function getChangedFiles(baseBranch) {
     return diff ? diff.split('\n') : [];
   } catch {
     try {
-      const diff = execSync(
-        `git diff --name-only HEAD~1 -- app/ components/`,
-        { encoding: 'utf8' },
-      ).trim();
+      const diff = execSync(`git diff --name-only HEAD~1 -- app/ components/`, {
+        encoding: 'utf8',
+      }).trim();
       return diff ? diff.split('\n') : [];
     } catch {
       return [];
@@ -161,9 +160,7 @@ function getAllAppPages() {
     const result = execSync(`find ${APP_DIR} -name "page.tsx" -type f`, {
       encoding: 'utf8',
     }).trim();
-    return result
-      ? result.split('\n').map((f) => relative(REPO_ROOT, f))
-      : [];
+    return result ? result.split('\n').map((f) => relative(REPO_ROOT, f)) : [];
   } catch {
     return [];
   }

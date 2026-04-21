@@ -22,7 +22,6 @@ playwright/.auth/
 .env
 .env.*
 !.env.example
-.npmrc
 
 # keys & certificates
 *.pem
@@ -51,9 +50,6 @@ Thumbs.db
 
 # Sentry
 .sentryclirc
-
-# Electron
-dist-electron/
 
 # Tauri
 src-tauri/target/

@@ -13,7 +13,7 @@ export function ToggleSidebarButton() {
     <Button
       size="icon"
       variant="ghost"
-      className={cn('cursor-pointer grid place-items-center z-10')}
+      className={cn('z-10 grid cursor-pointer place-items-center')}
       onClick={toggleSidebar}
     >
       <span className="sr-only">
@@ -24,7 +24,7 @@ export function ToggleSidebarButton() {
         alt="Toggle Sidebar"
         width={20}
         height={20}
-        className="text-gray-500 transform hover:rotate-180 hover:transition-transform duration-200"
+        className="transform text-gray-500 duration-200 hover:rotate-180 hover:transition-transform"
       />
     </Button>
   );

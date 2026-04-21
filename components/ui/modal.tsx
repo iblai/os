@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import type * as React from "react";
+import type * as React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
 interface ModalProps {
   isOpen: boolean;

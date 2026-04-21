@@ -1,8 +1,17 @@
 'use client';
 
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Mic, MicOff, X, Loader2 } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
 type ConnectionState =
@@ -95,7 +104,9 @@ export function VoiceChatModal({
   connectionState,
   isSpeaking,
 }: VoiceChatModalProps) {
-  const isLoading = connectionState === 'requesting-permission' || connectionState === 'connecting';
+  const isLoading =
+    connectionState === 'requesting-permission' ||
+    connectionState === 'connecting';
   const isConnected = connectionState === 'connected';
   const shouldAnimate = isConnected && !isMuted;
 
@@ -109,7 +120,7 @@ export function VoiceChatModal({
     <>
       <style dangerouslySetInnerHTML={{ __html: pulseAnimations }} />
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="m-0 bg-white p-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+        <DialogContent className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 m-0 bg-white p-0">
           <DialogTitle className="sr-only">Voice Chat</DialogTitle>
           <DialogDescription className="sr-only">
             Real-time voice conversation with your mentor
@@ -165,7 +176,11 @@ export function VoiceChatModal({
                               className="w-1 transform-gpu rounded-full bg-white"
                               style={{
                                 height: shouldAnimate ? '30px' : '12px',
-                                opacity: shouldAnimate ? (isSpeaking ? 1 : 0.7) : 0.5,
+                                opacity: shouldAnimate
+                                  ? isSpeaking
+                                    ? 1
+                                    : 0.7
+                                  : 0.5,
                                 animation: shouldAnimate
                                   ? `${animName} ${isSpeaking ? 0.8 + i * 0.15 : 1.2 + i * 0.2}s ease-in-out infinite`
                                   : 'none',
@@ -219,7 +234,9 @@ export function VoiceChatModal({
 
               {/* Loading message */}
               {isLoading && (
-                <p className="text-center text-sm text-gray-600 animate-pulse">{loadingMessage}</p>
+                <p className="animate-pulse text-center text-sm text-gray-600">
+                  {loadingMessage}
+                </p>
               )}
             </div>
 
@@ -232,15 +249,19 @@ export function VoiceChatModal({
                     disabled={isLoading}
                     size="icon"
                     variant="outline"
-                    className={`h-14 w-14 rounded-full transition-all text-blue-500 border-blue-500 hover:text-blue-600 hover:border-blue-600 ${
+                    className={`h-14 w-14 rounded-full border-blue-500 text-blue-500 transition-all hover:border-blue-600 hover:text-blue-600 ${
                       isLoading
-                        ? 'opacity-50 cursor-not-allowed'
+                        ? 'cursor-not-allowed opacity-50'
                         : 'hover:scale-105 active:scale-95'
                     }`}
-                    aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                    aria-label={
+                      isMuted ? 'Unmute microphone' : 'Mute microphone'
+                    }
                   >
                     {isLoading || isMuted ? (
-                      <MicOff className={`h-5 w-5 ${isLoading ? 'text-blue-500' : ''}`} />
+                      <MicOff
+                        className={`h-5 w-5 ${isLoading ? 'text-blue-500' : ''}`}
+                      />
                     ) : (
                       <Mic className="h-5 w-5" />
                     )}
@@ -262,7 +283,9 @@ export function VoiceChatModal({
                     <X className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content">End Call</TooltipContent>
+                <TooltipContent className="ibl-tooltip-content">
+                  End Call
+                </TooltipContent>
               </Tooltip>
             </div>
           </div>

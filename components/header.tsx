@@ -14,6 +14,7 @@ import {
   Shield,
   Network,
   Clock,
+  ScrollText,
   Grid,
   Key,
   MonitorSmartphone,
@@ -42,7 +43,11 @@ import { HelpModal } from '@/components/modals/help-modal';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
@@ -106,6 +111,12 @@ const menuItems = [
     isAdmin: true,
   },
   {
+    icon: ScrollText,
+    label: 'Audit',
+    tab: MODALS.EDIT_MENTOR.tabs.audit_log,
+    isAdmin: true,
+  },
+  {
     icon: Grid,
     label: 'Datasets',
     tab: MODALS.EDIT_MENTOR.tabs.datasets,
@@ -149,7 +160,8 @@ export function Header({
     closeCreateMentorModal,
   } = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-  const [isProviderSelectionOpen, setIsProviderSelectionOpen] = React.useState(false);
+  const [isProviderSelectionOpen, setIsProviderSelectionOpen] =
+    React.useState(false);
 
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
     {
@@ -276,7 +288,9 @@ export function Header({
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
                       alt="mentorAI"
                     />
-                    <AvatarFallback>{selectedMentorName.substring(0, 2)}</AvatarFallback>
+                    <AvatarFallback>
+                      {selectedMentorName.substring(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
                   <span>{selectedMentorName}</span>
                   <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -314,7 +328,9 @@ export function Header({
                       onClick={() => setIsMyMentorsModalOpen(true)}
                     >
                       <Users className="h-4 w-4 text-[#646464]" />
-                      <span className="hidden whitespace-nowrap md:inline">My Mentors</span>
+                      <span className="hidden whitespace-nowrap md:inline">
+                        My Mentors
+                      </span>
                       <ChevronDown className="h-4 w-4 text-gray-500 md:hidden" />
                     </button>
                   </TooltipTrigger>
@@ -344,14 +360,20 @@ export function Header({
           isOpen={isProviderSelectionOpen}
           onClose={() => setIsProviderSelectionOpen(false)}
         />
-        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+        />
         <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
         <MentorListModal
           isOpen={isMentorListOpen}
           onClose={() => setIsMentorListOpen(false)}
           onSelect={handleMentorSelect}
         />
-        <EditMentorModal isOpen={showEditMentorModal} onClose={closeEditMentorModal} />
+        <EditMentorModal
+          isOpen={showEditMentorModal}
+          onClose={closeEditMentorModal}
+        />
         {/* <UserProfileModal
           isOpen={isUserProfileOpen}
           onClose={() => setIsUserProfileOpen(false)}
@@ -439,7 +461,9 @@ export function Header({
                     <span className="hidden max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap md:block">
                       {selectedMentorCategory}
                     </span>
-                    {isAdmin && <ChevronDown className="h-4 w-4 text-gray-500" />}
+                    {isAdmin && (
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    )}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
@@ -464,7 +488,9 @@ export function Header({
                           alt="mentorAI"
                           onClick={handleAvatarClick}
                         />
-                        <AvatarFallback>{selectedMentorName.substring(0, 2)}</AvatarFallback>
+                        <AvatarFallback>
+                          {selectedMentorName.substring(0, 2)}
+                        </AvatarFallback>
                       </Avatar>
                       <span>{selectedMentorName}</span>
                       <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -483,7 +509,9 @@ export function Header({
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
                       alt="mentorAI"
                     />
-                    <AvatarFallback>{selectedMentorName.substring(0, 2)}</AvatarFallback>
+                    <AvatarFallback>
+                      {selectedMentorName.substring(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
                   <span>{selectedMentorName}</span>
                   <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -559,7 +587,9 @@ export function Header({
       <div className="mr-2 flex items-center space-x-6">
         {isAdmin && (
           <div className="hidden items-center gap-2 md:flex">
-            <span className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}>
+            <span
+              className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
+            >
               Learner
             </span>
             <Switch
@@ -567,7 +597,9 @@ export function Header({
               onCheckedChange={setIsInstructor}
               className="data-[state=checked]:bg-blue-500"
             />
-            <span className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}>
+            <span
+              className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
+            >
               Instructor
             </span>
           </div>
@@ -587,9 +619,15 @@ export function Header({
         isOpen={isProviderSelectionOpen}
         onClose={() => setIsProviderSelectionOpen(false)}
       />
-      <EditMentorModal isOpen={showEditMentorModal} onClose={closeEditMentorModal} />
+      <EditMentorModal
+        isOpen={showEditMentorModal}
+        onClose={closeEditMentorModal}
+      />
       {showCreateMentorModal && (
-        <CreateMentorModal isOpen={showCreateMentorModal} onClose={closeCreateMentorModal} />
+        <CreateMentorModal
+          isOpen={showCreateMentorModal}
+          onClose={closeCreateMentorModal}
+        />
       )}
       <MyMentorsModal
         isOpen={isMyMentorsModalOpen}

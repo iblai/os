@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useParams } from 'next/navigation';
@@ -19,7 +24,10 @@ interface CreateProjectModalProps {
   onClose: () => void;
 }
 
-export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
+export function CreateProjectModal({
+  isOpen,
+  onClose,
+}: CreateProjectModalProps) {
   const dispatch = useDispatch();
   const [projectName, setProjectName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +50,12 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   };
 
   const handleCreate = async () => {
-    if (projectName.trim() && selectedMentors.length > 0 && username && tenantKey) {
+    if (
+      projectName.trim() &&
+      selectedMentors.length > 0 &&
+      username &&
+      tenantKey
+    ) {
       try {
         const project = await createUserProject({
           tenantKey,
@@ -66,7 +79,10 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         dispatch(chatActions.setShouldStartNewChat(true));
 
         // Navigate to project page
-        navigateToMentorInProject(project.mentors[0]?.unique_id, String(project.id));
+        navigateToMentorInProject(
+          project.mentors[0]?.unique_id,
+          String(project.id),
+        );
       } catch (error) {
         toast.error('Failed to create project');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -84,7 +100,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-4xl w-[95vw] p-0 gap-0 overflow-hidden"
+        className="w-[95vw] max-w-4xl gap-0 overflow-hidden p-0"
         style={{
           height: 'auto',
           maxHeight: '90vh',
@@ -93,13 +109,15 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         }}
       >
         {/* Header */}
-        <DialogHeader className="px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-          <DialogTitle className="text-xl font-semibold text-gray-900">New Project</DialogTitle>
+        <DialogHeader className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            New Project
+          </DialogTitle>
         </DialogHeader>
 
         {/* Scrollable Content */}
         <div
-          className="flex-1 px-6 py-6 space-y-6"
+          className="flex-1 space-y-6 px-6 py-6"
           style={{
             overflowY: 'auto',
             overflowX: 'hidden',
@@ -107,12 +125,14 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         >
           {/* Project Name Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Project Name
+            </label>
             <Input
               placeholder="Project Name"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="text-base h-12 px-4 border-2 border-gray-200 rounded-lg focus:border-gray-200 focus:ring-0 focus:outline-none"
+              className="h-12 rounded-lg border-2 border-gray-200 px-4 text-base focus:border-gray-200 focus:ring-0 focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   handleCreate();
@@ -122,10 +142,10 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="mb-3 block text-sm font-medium text-gray-700">
               Select Mentors <span className="text-red-500">*</span>
               {selectedMentors.length > 0 && (
-                <span className="text-blue-600 font-normal ml-2">
+                <span className="ml-2 font-normal text-blue-600">
                   ({selectedMentors.length} selected)
                 </span>
               )}
@@ -143,14 +163,20 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
           </div>
         </div>
 
-        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-          <Button variant="outline" onClick={handleCancel} className="px-6 bg-transparent">
+        <div className="flex flex-shrink-0 justify-end gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            className="bg-transparent px-6"
+          >
             Cancel
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={!projectName.trim() || selectedMentors.length === 0 || isLoading}
-            className="px-6 text-white bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90"
+            disabled={
+              !projectName.trim() || selectedMentors.length === 0 || isLoading
+            }
+            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] px-6 text-white hover:opacity-90"
           >
             {isLoading ? 'Creating...' : 'Save'}
           </Button>

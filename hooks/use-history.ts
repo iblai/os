@@ -64,17 +64,23 @@ export function useHistoryWithPagination(itemsPerPage = 10) {
       org: tenantKey,
       // @ts-ignore
       userId: username ?? '',
-      endDate: filters.dateRange?.to ? format(filters.dateRange.to, 'yyyy-MM-dd') : undefined,
+      endDate: filters.dateRange?.to
+        ? format(filters.dateRange.to, 'yyyy-MM-dd')
+        : undefined,
       mentor: activeMentorId,
       pageSize: itemsPerPage,
       page: currentPage,
       sentiment: filters.sentiment,
-      startDate: filters.dateRange?.from ? format(filters.dateRange.from, 'yyyy-MM-dd') : undefined,
+      startDate: filters.dateRange?.from
+        ? format(filters.dateRange.from, 'yyyy-MM-dd')
+        : undefined,
       topics: filters.topics,
       filterUserId: filters.users,
     },
     {
-      skip: (chatHistoryFilter === undefined && userIsOnTrial) || isAccessingPublicRoute,
+      skip:
+        (chatHistoryFilter === undefined && userIsOnTrial) ||
+        isAccessingPublicRoute,
     },
   );
 
@@ -90,7 +96,9 @@ export function useHistoryWithPagination(itemsPerPage = 10) {
   };
 
   // Calculate total pages based on count and limit
-  const totalPages = chatHistory ? Math.ceil(chatHistory.count / itemsPerPage) : 0;
+  const totalPages = chatHistory
+    ? Math.ceil(chatHistory.count / itemsPerPage)
+    : 0;
 
   return {
     chatHistory,

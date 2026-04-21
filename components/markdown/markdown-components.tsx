@@ -10,7 +10,10 @@ export const components: Components = {
     const content = String(props.children || '').trim();
     if (!content) return null;
     return (
-      <h1 {...props} className="scroll-m-20 text-xl font-extrabold tracking-tight text-balance" />
+      <h1
+        {...props}
+        className="scroll-m-20 text-xl font-extrabold tracking-tight text-balance"
+      />
     );
   },
 
@@ -28,16 +31,28 @@ export const components: Components = {
   h3: ({ node, ...props }) => {
     const content = String(props.children || '').trim();
     if (!content) return null;
-    return <h3 {...props} className="scroll-m-20 text-base font-semibold tracking-tight" />;
+    return (
+      <h3
+        {...props}
+        className="scroll-m-20 text-base font-semibold tracking-tight"
+      />
+    );
   },
 
   h4: ({ node, ...props }) => {
     const content = String(props.children || '').trim();
     if (!content) return null;
-    return <h4 {...props} className="scroll-m-20 text-sm font-semibold tracking-tight" />;
+    return (
+      <h4
+        {...props}
+        className="scroll-m-20 text-sm font-semibold tracking-tight"
+      />
+    );
   },
 
-  p: ({ node, ...props }) => <p {...props} className="leading-7 [&:not(:first-child)]:mt-6" />,
+  p: ({ node, ...props }) => (
+    <p {...props} className="leading-7 [&:not(:first-child)]:mt-6" />
+  ),
 
   strong: ({ node, ...props }) => {
     const content = String(props.children || '').trim();
@@ -52,7 +67,12 @@ export const components: Components = {
   },
 
   a: ({ node, ...props }) => (
-    <a className="text-blue-500 underline" target="_blank" rel="noopener noreferrer" {...props} />
+    <a
+      className="text-blue-500 underline"
+      target="_blank"
+      rel="noopener noreferrer"
+      {...props}
+    />
   ),
 
   blockquote: ({ node, ...props }) => (
@@ -66,7 +86,10 @@ export const components: Components = {
   ),
 
   tr: ({ node, ...props }) => (
-    <tr {...props} className="even:bg-muted even:text-gray-700 m-0 border-t p-0" />
+    <tr
+      {...props}
+      className="even:bg-muted m-0 border-t p-0 even:text-gray-700"
+    />
   ),
 
   th: ({ node, ...props }) => (
@@ -83,9 +106,13 @@ export const components: Components = {
     />
   ),
 
-  ul: ({ node, ...props }) => <ul {...props} className="my-6 ml-6 list-disc [&>li]:mt-2" />,
+  ul: ({ node, ...props }) => (
+    <ul {...props} className="my-6 ml-6 list-disc [&>li]:mt-2" />
+  ),
 
-  ol: ({ node, ...props }) => <ol {...props} className="my-6 ml-6 list-decimal [&>li]:mt-2" />,
+  ol: ({ node, ...props }) => (
+    <ol {...props} className="my-6 ml-6 list-decimal [&>li]:mt-2" />
+  ),
 
   li: ({ node, ...props }) => <li {...props} className="overflow-x-auto" />,
 
@@ -96,7 +123,9 @@ export const components: Components = {
         <div>
           <div className="flex">
             <div className="ml-auto">
-              <CopyButtonIcon text={String(props.children).replace(/\n$/, '')} />
+              <CopyButtonIcon
+                text={String(props.children).replace(/\n$/, '')}
+              />
             </div>
           </div>
           <SyntaxHighlighter
@@ -120,12 +149,20 @@ export const components: Components = {
     );
   },
 
-  pre: ({ node, ...props }) => <pre {...props} className={`bg-gray-200 w-full overflow-x-auto`} />,
+  pre: ({ node, ...props }) => (
+    <pre {...props} className={`w-full overflow-x-auto bg-gray-200`} />
+  ),
 
-  small: ({ node, ...props }) => <small {...props} className="text-sm leading-none font-medium" />,
+  small: ({ node, ...props }) => (
+    <small {...props} className="text-sm leading-none font-medium" />
+  ),
 
   img: ({ node, ...props }) => (
-    <MarkdownImageComponent src={props.src} alt={props.alt} title={props.title} />
+    <MarkdownImageComponent
+      src={props.src}
+      alt={props.alt}
+      title={props.title}
+    />
   ),
 
   textarea: ({ node, ...props }) => {

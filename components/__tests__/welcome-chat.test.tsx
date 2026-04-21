@@ -50,7 +50,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetPromptsSearchQuery: (args: any, options: any) =>
     mockUseGetPromptsSearchQuery(args, options),
   useGetMentorSettingsQuery: () => ({ data: undefined, isLoading: false }),
-  useGetMentorPublicSettingsQuery: () => ({ data: undefined, isLoading: false }),
+  useGetMentorPublicSettingsQuery: () => ({
+    data: undefined,
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
@@ -62,7 +65,13 @@ vi.mock('@/lib/config', () => ({
 }));
 
 vi.mock('@/components/markdown', () => ({
-  default: ({ children, className }: { children: string; className?: string }) => (
+  default: ({
+    children,
+    className,
+  }: {
+    children: string;
+    className?: string;
+  }) => (
     <div data-testid="markdown-content" className={className}>
       {children}
     </div>
@@ -87,7 +96,10 @@ describe('WelcomeChat', () => {
     vi.clearAllMocks();
     mockUseUsername.mockReturnValue('test-user');
     mockUseAxdToken.mockReturnValue('test-token');
-    mockUseParams.mockReturnValue({ tenantKey: 'test-tenant', mentorId: 'mentor-123' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'mentor-123',
+    });
     mockUseWelcome.mockReturnValue({ welcomeMessage: 'Welcome message' });
     mockUseGetGuidedPromptsQuery.mockReturnValue({
       data: undefined,
@@ -119,7 +131,9 @@ describe('WelcomeChat', () => {
     it('should render mentor avatar container', () => {
       const { container } = render(<WelcomeChat {...defaultProps} />);
       // The avatar container with the ring styling should be present
-      const avatarContainer = container.querySelector('.border-2.border-blue-500');
+      const avatarContainer = container.querySelector(
+        '.border-2.border-blue-500',
+      );
       expect(avatarContainer).toBeInTheDocument();
     });
 
@@ -191,7 +205,9 @@ describe('WelcomeChat', () => {
       render(<WelcomeChat {...defaultProps} />);
 
       const markdownContent = screen.getByTestId('markdown-content');
-      expect(markdownContent).toHaveTextContent('Hello! How can I help you? 🤖');
+      expect(markdownContent).toHaveTextContent(
+        'Hello! How can I help you? 🤖',
+      );
     });
 
     it('should handle multiline markdown content', () => {
@@ -230,7 +246,13 @@ describe('WelcomeChat', () => {
     it('should limit guided prompts to 4', () => {
       mockUseGetGuidedPromptsQuery.mockReturnValue({
         data: {
-          ai_prompts: ['Prompt 1', 'Prompt 2', 'Prompt 3', 'Prompt 4', 'Prompt 5'],
+          ai_prompts: [
+            'Prompt 1',
+            'Prompt 2',
+            'Prompt 3',
+            'Prompt 4',
+            'Prompt 5',
+          ],
         },
         isLoading: false,
         error: undefined,
@@ -428,7 +450,9 @@ describe('WelcomeChat', () => {
     });
 
     it('should handle invalid profile image URL', () => {
-      const { container } = render(<WelcomeChat {...defaultProps} profileImage="invalid-url" />);
+      const { container } = render(
+        <WelcomeChat {...defaultProps} profileImage="invalid-url" />,
+      );
 
       // Avatar container should still be present
       const avatarContainer = container.querySelector('[data-slot="avatar"]');
@@ -458,7 +482,9 @@ describe('WelcomeChat', () => {
     it('should have correct container classes', () => {
       const { container } = render(<WelcomeChat {...defaultProps} />);
 
-      const mainContainer = container.querySelector('.rounded-lg.p-4.max-w-2xl.mx-auto.h-full');
+      const mainContainer = container.querySelector(
+        '.rounded-lg.p-4.max-w-2xl.mx-auto.h-full',
+      );
       expect(mainContainer).toBeInTheDocument();
     });
 
@@ -496,7 +522,9 @@ describe('WelcomeChat', () => {
       const { container } = render(<WelcomeChat {...defaultProps} />);
 
       // Check for the avatar container having the correct border
-      const avatarContainer = container.querySelector('.border-2.border-blue-500');
+      const avatarContainer = container.querySelector(
+        '.border-2.border-blue-500',
+      );
       expect(avatarContainer).toBeInTheDocument();
     });
   });

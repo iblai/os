@@ -25,14 +25,21 @@ vi.mock('./delete-moderation-log-modal', () => ({
 
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
 }));
 
 vi.mock('lucide-react', () => ({
-  Trash2: ({ className }: any) => <span data-testid="trash-icon" className={className} />,
+  Trash2: ({ className }: any) => (
+    <span data-testid="trash-icon" className={className} />
+  ),
 }));
 
 // ============================================================================
@@ -72,16 +79,28 @@ describe('FlaggedPromptDetail', () => {
   });
 
   it('shows placeholder text when no prompt is selected', () => {
-    render(<FlaggedPromptDetail prompt={null} onContactUser={vi.fn()} onDeleteSuccess={vi.fn()} />);
-    expect(screen.getByText('Select a flagged prompt to view details.')).toBeInTheDocument();
+    render(
+      <FlaggedPromptDetail
+        prompt={null}
+        onContactUser={vi.fn()}
+        onDeleteSuccess={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText('Select a flagged prompt to view details.'),
+    ).toBeInTheDocument();
   });
 
   it('renders prompt details when a prompt is provided', () => {
     render(<FlaggedPromptDetail {...defaultProps} />);
-    expect(screen.getByText('Flagged by Moderation System')).toBeInTheDocument();
+    expect(
+      screen.getByText('Flagged by Moderation System'),
+    ).toBeInTheDocument();
     expect(screen.getByText('January 15, 2025, 10:30 AM')).toBeInTheDocument();
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
-    expect(screen.getByText('This is the flagged prompt content')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is the flagged prompt content'),
+    ).toBeInTheDocument();
   });
 
   it('shows user email initial in avatar', () => {
@@ -106,7 +125,9 @@ describe('FlaggedPromptDetail', () => {
 
   it('shows system response', () => {
     render(<FlaggedPromptDetail {...defaultProps} />);
-    expect(screen.getByText('This prompt was flagged for policy violation')).toBeInTheDocument();
+    expect(
+      screen.getByText('This prompt was flagged for policy violation'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Moderation System')).toBeInTheDocument();
   });
 
@@ -162,6 +183,8 @@ describe('FlaggedPromptDetail', () => {
   it('passes onDeleteSuccess to delete modal', () => {
     render(<FlaggedPromptDetail {...defaultProps} />);
     fireEvent.click(screen.getByText('Delete'));
-    expect(mockDeleteModalProps.onDeleteSuccess).toBe(defaultProps.onDeleteSuccess);
+    expect(mockDeleteModalProps.onDeleteSuccess).toBe(
+      defaultProps.onDeleteSuccess,
+    );
   });
 });

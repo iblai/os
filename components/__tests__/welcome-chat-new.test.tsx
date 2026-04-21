@@ -69,12 +69,20 @@ vi.mock('@/lib/config', () => ({
 }));
 
 vi.mock('@/components/welcome-chat', () => ({
-  WelcomeChat: ({ onPromptSelect, mentorName, profileImage, sessionId }: any) => (
+  WelcomeChat: ({
+    onPromptSelect,
+    mentorName,
+    profileImage,
+    sessionId,
+  }: any) => (
     <div data-testid="welcome-chat">
       <div data-testid="mentor-name">{mentorName}</div>
       <div data-testid="profile-image">{profileImage}</div>
       <div data-testid="session-id">{sessionId}</div>
-      <button onClick={() => onPromptSelect('test prompt')} data-testid="prompt-select">
+      <button
+        onClick={() => onPromptSelect('test prompt')}
+        data-testid="prompt-select"
+      >
         Select Prompt
       </button>
     </div>
@@ -95,16 +103,27 @@ vi.mock('@/components/welcome-chat/app-sync-banner', () => ({
 }));
 
 vi.mock('@/components/welcome-chat/explore-mentors', () => ({
-  ExploreMentors: () => <div data-testid="explore-mentors">Explore Mentors</div>,
+  ExploreMentors: () => (
+    <div data-testid="explore-mentors">Explore Mentors</div>
+  ),
 }));
 
 vi.mock('@/components/welcome-chat/conversation-starters', () => ({
-  ConversationStarters: ({ onTemplateSelect, enabledGuidedPrompts, sessionId }: any) => (
+  ConversationStarters: ({
+    onTemplateSelect,
+    enabledGuidedPrompts,
+    sessionId,
+  }: any) => (
     <div data-testid="conversation-starters">
-      <button onClick={() => onTemplateSelect('template 1')} data-testid="template-select">
+      <button
+        onClick={() => onTemplateSelect('template 1')}
+        data-testid="template-select"
+      >
         Select Template
       </button>
-      <div data-testid="guided-prompts">{enabledGuidedPrompts ? 'enabled' : 'disabled'}</div>
+      <div data-testid="guided-prompts">
+        {enabledGuidedPrompts ? 'enabled' : 'disabled'}
+      </div>
       <div data-testid="conversation-session-id">{sessionId}</div>
     </div>
   ),
@@ -114,7 +133,10 @@ vi.mock('@/components/chat-input-form', () => ({
   ChatInputForm: (props: any) => (
     <div data-testid="chat-input-form">
       <input data-testid="chat-input" placeholder="Type a message..." />
-      <button onClick={() => props.onSubmit('test message')} data-testid="submit-button">
+      <button
+        onClick={() => props.onSubmit('test message')}
+        data-testid="submit-button"
+      >
         Submit
       </button>
       <div data-testid="chat-session-id">{props.sessionId}</div>
@@ -124,7 +146,13 @@ vi.mock('@/components/chat-input-form', () => ({
 }));
 
 vi.mock('@/components/markdown', () => ({
-  default: ({ children, className }: { children: string; className?: string }) => (
+  default: ({
+    children,
+    className,
+  }: {
+    children: string;
+    className?: string;
+  }) => (
     <div data-testid="markdown-content" className={className}>
       {children}
     </div>
@@ -132,7 +160,8 @@ vi.mock('@/components/markdown', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
   return {
     ...actual,
     useSubscriptionHandlerV2: vi.fn(() => ({
@@ -197,8 +226,13 @@ const createMockStore = (preloadedState = {}) =>
     },
   });
 
-const renderWithRedux = (component: React.ReactElement, preloadedState = {}) => {
-  return render(<Provider store={createMockStore(preloadedState)}>{component}</Provider>);
+const renderWithRedux = (
+  component: React.ReactElement,
+  preloadedState = {},
+) => {
+  return render(
+    <Provider store={createMockStore(preloadedState)}>{component}</Provider>,
+  );
 };
 
 describe('WelcomeChatNew', () => {
@@ -288,15 +322,23 @@ describe('WelcomeChatNew', () => {
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
-      expect(screen.getByTestId('mentor-name')).toHaveTextContent('Test Mentor');
-      expect(screen.queryByTestId('project-landing-page')).not.toBeInTheDocument();
+      expect(screen.getByTestId('mentor-name')).toHaveTextContent(
+        'Test Mentor',
+      );
+      expect(
+        screen.queryByTestId('project-landing-page'),
+      ).not.toBeInTheDocument();
     });
 
     it('should pass correct props to WelcomeChat in embed mode', () => {
       mockUseEmbedMode.mockReturnValue(true);
 
       renderWithRedux(
-        <WelcomeChatNew {...defaultProps} isNewSession={false} aiWelcomeMessage="Custom welcome" />,
+        <WelcomeChatNew
+          {...defaultProps}
+          isNewSession={false}
+          aiWelcomeMessage="Custom welcome"
+        />,
       );
 
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
@@ -327,7 +369,9 @@ describe('WelcomeChatNew', () => {
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       expect(screen.getByTestId('project-landing-page')).toBeInTheDocument();
-      expect(screen.getByTestId('project-name')).toHaveTextContent('Test Project');
+      expect(screen.getByTestId('project-name')).toHaveTextContent(
+        'Test Project',
+      );
       expect(screen.queryByTestId('welcome-chat')).not.toBeInTheDocument();
     });
 
@@ -339,7 +383,9 @@ describe('WelcomeChatNew', () => {
         error: undefined,
       });
 
-      const { container } = renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
 
       expect(container.firstChild).toBeNull();
     });
@@ -347,7 +393,9 @@ describe('WelcomeChatNew', () => {
     it('should skip query when username is missing', () => {
       mockUseParams.mockReturnValue({ projectId: '1' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username={undefined as any} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username={undefined as any} />,
+      );
 
       expect(mockUseGetUserProjectDetailsQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -364,7 +412,9 @@ describe('WelcomeChatNew', () => {
     it('should skip query when tenantKey is missing', () => {
       mockUseParams.mockReturnValue({ projectId: '1' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} tenantKey={undefined as any} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} tenantKey={undefined as any} />,
+      );
 
       expect(mockUseGetUserProjectDetailsQuery).toHaveBeenCalledWith(
         expect.any(Object),
@@ -454,7 +504,9 @@ describe('WelcomeChatNew', () => {
       mockConfig.mainTenantKey.mockReturnValue('main');
       mockConfig.showAppBanner.mockReturnValue('true');
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} tenantKey="other-tenant" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} tenantKey="other-tenant" />,
+      );
 
       expect(screen.queryByTestId('app-sync-banner')).not.toBeInTheDocument();
     });
@@ -498,7 +550,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: '' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Welcome" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Welcome" />,
+      );
 
       expect(screen.getByText('AI Welcome')).toBeInTheDocument();
     });
@@ -508,7 +562,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: 'Hook Welcome' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Welcome" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Welcome" />,
+      );
 
       expect(screen.getByText('Hook Welcome')).toBeInTheDocument();
       expect(screen.queryByText('AI Welcome')).not.toBeInTheDocument();
@@ -558,18 +614,26 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username="test-user" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username="test-user" />,
+      );
 
       expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-session-id')).toHaveTextContent('session-123');
-      expect(screen.getByTestId('chat-username')).toHaveTextContent('test-user');
+      expect(screen.getByTestId('chat-session-id')).toHaveTextContent(
+        'session-123',
+      );
+      expect(screen.getByTestId('chat-username')).toHaveTextContent(
+        'test-user',
+      );
     });
 
     it('should handle username as null in ChatInputForm', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username={null as any} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username={null as any} />,
+      );
 
       expect(screen.getByTestId('chat-username')).toHaveTextContent('');
     });
@@ -590,7 +654,9 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} chatAreaMaxWidth={800} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} chatAreaMaxWidth={800} />,
+      );
 
       // Find the parent container of the chat input form
       const chatInputForm = screen.getByTestId('chat-input-form');
@@ -602,11 +668,15 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} enabledGuidedPrompts={true} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} enabledGuidedPrompts={true} />,
+      );
 
       expect(screen.getByTestId('conversation-starters')).toBeInTheDocument();
       expect(screen.getByTestId('guided-prompts')).toHaveTextContent('enabled');
-      expect(screen.getByTestId('conversation-session-id')).toHaveTextContent('session-123');
+      expect(screen.getByTestId('conversation-session-id')).toHaveTextContent(
+        'session-123',
+      );
     });
 
     it('should handle template selection from ConversationStarters', () => {
@@ -636,7 +706,9 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} isNewSession={undefined as any} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} isNewSession={undefined as any} />,
+      );
 
       expect(mockUseWelcome).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -650,7 +722,12 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: '' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage={undefined as any} />);
+      renderWithRedux(
+        <WelcomeChatNew
+          {...defaultProps}
+          aiWelcomeMessage={undefined as any}
+        />,
+      );
 
       // Verify Markdown component exists and is empty
       const markdownContent = screen.getByTestId('markdown-content');
@@ -662,7 +739,12 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} chatAreaMaxWidth={undefined as any} />);
+      renderWithRedux(
+        <WelcomeChatNew
+          {...defaultProps}
+          chatAreaMaxWidth={undefined as any}
+        />,
+      );
 
       // Find the parent container of the chat input form
       const chatInputForm = screen.getByTestId('chat-input-form');
@@ -689,7 +771,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
 
       const longName = 'A'.repeat(1000);
-      renderWithRedux(<WelcomeChatNew {...defaultProps} mentorName={longName} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} mentorName={longName} />,
+      );
 
       expect(screen.getByText(longName)).toBeInTheDocument();
     });
@@ -743,7 +827,10 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
 
       renderWithRedux(
-        <WelcomeChatNew {...defaultProps} activeTools={['canvas', 'web_browsing']} />,
+        <WelcomeChatNew
+          {...defaultProps}
+          activeTools={['canvas', 'web_browsing']}
+        />,
       );
 
       expect(screen.getByTestId('chat-input-form')).toBeInTheDocument();
@@ -757,7 +844,9 @@ describe('WelcomeChatNew', () => {
         error: undefined,
       });
 
-      const { container } = renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
 
       // Should return null while loading
       expect(container.firstChild).toBeNull();
@@ -771,7 +860,9 @@ describe('WelcomeChatNew', () => {
         error: { message: 'Error loading project' },
       });
 
-      const { container } = renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
 
       // Should return null on error
       expect(container.firstChild).toBeNull();
@@ -819,7 +910,9 @@ describe('WelcomeChatNew', () => {
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
-      expect(screen.queryByTestId('project-landing-page')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('project-landing-page'),
+      ).not.toBeInTheDocument();
     });
 
     it('should prioritize projectId over default view when not in embed mode', () => {
@@ -835,7 +928,9 @@ describe('WelcomeChatNew', () => {
 
       expect(screen.getByTestId('project-landing-page')).toBeInTheDocument();
       expect(screen.queryByTestId('welcome-chat')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('conversation-starters')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('conversation-starters'),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -875,7 +970,9 @@ describe('WelcomeChatNew', () => {
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       expect(screen.getByTestId('project-landing-page')).toBeInTheDocument();
-      expect(screen.getByTestId('project-name')).toHaveTextContent('Test Project');
+      expect(screen.getByTestId('project-name')).toHaveTextContent(
+        'Test Project',
+      );
       expect(screen.getByTestId('session-id')).toHaveTextContent('session-123');
     });
 
@@ -891,7 +988,9 @@ describe('WelcomeChatNew', () => {
       );
 
       expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
-      expect(screen.getByTestId('mentor-name')).toHaveTextContent('Test Mentor');
+      expect(screen.getByTestId('mentor-name')).toHaveTextContent(
+        'Test Mentor',
+      );
     });
   });
 
@@ -901,7 +1000,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: 'Hook Message' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Message" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Message" />,
+      );
 
       expect(screen.getByText('Hook Message')).toBeInTheDocument();
       expect(screen.queryByText('AI Message')).not.toBeInTheDocument();
@@ -912,7 +1013,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: '' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Fallback" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Fallback" />,
+      );
 
       expect(screen.getByText('AI Fallback')).toBeInTheDocument();
     });
@@ -922,7 +1025,9 @@ describe('WelcomeChatNew', () => {
       mockUseParams.mockReturnValue({ projectId: undefined });
       mockUseWelcome.mockReturnValue({ welcomeMessage: null as any });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Fallback" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="AI Fallback" />,
+      );
 
       expect(screen.getByText('AI Fallback')).toBeInTheDocument();
     });
@@ -1039,7 +1144,9 @@ describe('WelcomeChatNew', () => {
         error: undefined,
       });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username="user" tenantKey="tenant" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username="user" tenantKey="tenant" />,
+      );
 
       expect(mockUseGetUserProjectDetailsQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1056,7 +1163,9 @@ describe('WelcomeChatNew', () => {
     it('should skip query when username is falsy', () => {
       mockUseParams.mockReturnValue({ projectId: '1' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username="" tenantKey="tenant" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username="" tenantKey="tenant" />,
+      );
 
       expect(mockUseGetUserProjectDetailsQuery).toHaveBeenCalledWith(
         expect.any(Object),
@@ -1069,7 +1178,9 @@ describe('WelcomeChatNew', () => {
     it('should skip query when tenantKey is falsy', () => {
       mockUseParams.mockReturnValue({ projectId: '1' });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} username="user" tenantKey="" />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} username="user" tenantKey="" />,
+      );
 
       expect(mockUseGetUserProjectDetailsQuery).toHaveBeenCalledWith(
         expect.any(Object),
@@ -1084,7 +1195,9 @@ describe('WelcomeChatNew', () => {
     it('should have correct container classes in embed mode', () => {
       mockUseEmbedMode.mockReturnValue(true);
 
-      const { container } = renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
       const embedContainer = container.querySelector('.flex-1.h-full');
       expect(embedContainer).toBeInTheDocument();
     });
@@ -1093,7 +1206,9 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      const { container } = renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
       const defaultContainer = container.querySelector('.overflow-y-auto');
       expect(defaultContainer).toBeInTheDocument();
     });
@@ -1102,7 +1217,9 @@ describe('WelcomeChatNew', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
 
-      renderWithRedux(<WelcomeChatNew {...defaultProps} chatAreaMaxWidth={900} />);
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} chatAreaMaxWidth={900} />,
+      );
 
       // Find the parent container of the chat input form
       const chatInputForm = screen.getByTestId('chat-input-form');
@@ -1143,11 +1260,16 @@ describe('WelcomeChatNew', () => {
       mockUseWelcome.mockReturnValue({ welcomeMessage: '' });
 
       renderWithRedux(
-        <WelcomeChatNew {...defaultProps} aiWelcomeMessage="Welcome with *markdown* content" />,
+        <WelcomeChatNew
+          {...defaultProps}
+          aiWelcomeMessage="Welcome with *markdown* content"
+        />,
       );
 
       const markdownContent = screen.getByTestId('markdown-content');
-      expect(markdownContent).toHaveTextContent('Welcome with *markdown* content');
+      expect(markdownContent).toHaveTextContent(
+        'Welcome with *markdown* content',
+      );
     });
 
     it('should handle markdown content with special characters', () => {
@@ -1160,7 +1282,9 @@ describe('WelcomeChatNew', () => {
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       const markdownContent = screen.getByTestId('markdown-content');
-      expect(markdownContent).toHaveTextContent('Hello! How can I help you today? 🤖');
+      expect(markdownContent).toHaveTextContent(
+        'Hello! How can I help you today? 🤖',
+      );
     });
 
     it('should handle markdown content with links', () => {

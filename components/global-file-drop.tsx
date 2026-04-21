@@ -22,11 +22,17 @@ export function GlobalFileDrop() {
     };
 
     // Add event listener
-    window.addEventListener('addResourceModalState' as any, handleAddResourceModalState);
+    window.addEventListener(
+      'addResourceModalState' as any,
+      handleAddResourceModalState,
+    );
 
     // Clean up
     return () => {
-      window.removeEventListener('addResourceModalState' as any, handleAddResourceModalState);
+      window.removeEventListener(
+        'addResourceModalState' as any,
+        handleAddResourceModalState,
+      );
     };
   }, []);
 

@@ -24,6 +24,10 @@ interface InsideButtonsProps {
   onOpenPromptGallery?: () => void;
   embedMode?: boolean;
   promptsIsEnabled?: boolean;
+  memoryEnabled?: boolean;
+  isAnonymousMentor?: boolean;
+  tenantKey?: string;
+  username?: string;
 }
 
 export const InsideButtons = ({
@@ -37,7 +41,13 @@ export const InsideButtons = ({
   onOpenPromptGallery,
   embedMode = false,
   promptsIsEnabled = false,
+  memoryEnabled = false,
+  isAnonymousMentor = false,
+  tenantKey,
+  username,
 }: InsideButtonsProps) => {
+  console.log('memory==> isAnonymousMentor', isAnonymousMentor);
+  console.log('memory==> memoryEnabled', memoryEnabled);
   const allInsideButtons = [
     {
       name: 'Canvas',
@@ -71,9 +81,8 @@ export const InsideButtons = ({
       name: 'Memory',
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
-      // Memory actions are disabled for now.
-      action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
-      isEnabled: false,
+      action: () => onOptionClick(TOOLS.MEMORY),
+      isEnabled: memoryEnabled && !embedMode && !isAnonymousMentor,
     },
   ].filter((item) => item.isEnabled);
 
@@ -96,7 +105,8 @@ export const InsideButtons = ({
       };
     } else if (containerWidth < 800) {
       // Tablet: show active buttons + first inactive one if space allows
-      const visibleInactive = activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : [];
+      const visibleInactive =
+        activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : [];
       return {
         visible: [...activeButtons, ...visibleInactive],
         hidden: inactiveButtons.filter((btn) => !visibleInactive.includes(btn)),
@@ -107,15 +117,21 @@ export const InsideButtons = ({
     }
   };
 
-  const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } = getVisibleInsideButtons();
+  const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } =
+    getVisibleInsideButtons();
 
   return (
-    <div className="flex items-center gap-1.5 relative">
+    <div className="relative flex items-center gap-1.5">
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
-        // Memory buttons are disabled for now.
-        /* istanbul ignore next */ if (button.name === 'Memory') {
-          return <MemoryButton key={button.name} />;
+        if (button.name === 'Memory') {
+          return (
+            <MemoryButton
+              key={button.name}
+              tenantKey={tenantKey}
+              username={username}
+            />
+          );
         }
 
         return (
@@ -125,10 +141,10 @@ export const InsideButtons = ({
               size="sm"
               type="button"
               disabled={disabled}
-              className={`h-8 px-2 text-sm rounded-lg flex items-center gap-1.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                 button.isActive
-                  ? 'text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]'
-                  : 'text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF]'
+                  ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                  : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
               }`}
               onClick={(e) => {
                 e.preventDefault();
@@ -136,13 +152,15 @@ export const InsideButtons = ({
                 button.action();
               }}
             >
-              <span className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}>
+              <span
+                className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}
+              >
                 {button.icon}
               </span>
               {button.name}
               {button.isActive && (
                 <X
-                  className="h-3 w-3 ml-1 cursor-pointer"
+                  className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -163,7 +181,7 @@ export const InsideButtons = ({
               size="icon"
               type="button"
               disabled={disabled}
-              className="h-8 w-8 text-gray-600 hover:bg-[#F5F8FF] hover:border hover:border-[#D0E0FF] rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="text-xs">•••</span>
               <span className="sr-only">More options</span>
@@ -176,10 +194,12 @@ export const InsideButtons = ({
                 key={button.name}
                 onClick={button.action}
                 className={
-                  /* istanbul ignore next */ button.isActive ? 'bg-[#F5F8FF] text-[#38A1E5]' : ''
+                  /* istanbul ignore next */ button.isActive
+                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                    : ''
                 }
               >
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex w-full items-center gap-2">
                   <span
                     className={
                       /* istanbul ignore next */ button.isActive

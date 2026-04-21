@@ -5,7 +5,10 @@ import type { Artifact } from '@iblai/iblai-api';
 
 interface UseCanvasChatIntegrationProps {
   currentArtifact: Artifact | null;
-  sendMessage?: (text: string, options?: { visible?: boolean; artifact?: any }) => void;
+  sendMessage?: (
+    text: string,
+    options?: { visible?: boolean; artifact?: any },
+  ) => void;
   isCanvasOpen: boolean;
 }
 
@@ -25,7 +28,8 @@ export function useCanvasChatIntegration({
     }
 
     // Store the original sendMessage function
-    const originalSendMessage = (window as any).__originalSendMessage || sendMessage;
+    const originalSendMessage =
+      (window as any).__originalSendMessage || sendMessage;
     (window as any).__originalSendMessage = originalSendMessage;
 
     // Create an enhanced sendMessage that includes artifact reference
@@ -44,10 +48,13 @@ export function useCanvasChatIntegration({
           is_partial: false, // Full artifact reference
         };
 
-        console.log('[Canvas] Enhancing message with full artifact reference:', {
-          text,
-          artifact: artifactPayload,
-        });
+        console.log(
+          '[Canvas] Enhancing message with full artifact reference:',
+          {
+            text,
+            artifact: artifactPayload,
+          },
+        );
 
         return originalSendMessage(text, {
           ...options,

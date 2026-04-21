@@ -7,12 +7,14 @@ Analyze recent code changes and sync the e2e test coverage. Follow these steps:
 3. **Read COVERAGE.md and coverage.json**: Read `e2e/COVERAGE.md` and `e2e/coverage.json` to understand existing journey coverage and checkpoint counts.
 
 4. **Analyze each change**: For each modified source file, determine:
+
    - Does it belong to an existing journey? (Check the `sourceFiles` arrays in coverage.json)
    - Does the change add new user-visible behavior that needs new checkpoints?
    - Does the change introduce a completely new feature that needs a new journey?
    - Did any locators, labels, or flows change that would break existing tests?
 
 5. **Write or update tests**: For each gap found:
+
    - Create new journey spec files in `e2e/journeys/` following existing patterns
    - Add new checkpoints to existing journeys if the change extends a feature
    - Update existing test locators if UI elements changed
@@ -20,6 +22,7 @@ Analyze recent code changes and sync the e2e test coverage. Follow these steps:
    - Use `navigateToMentorApp` and `checkAdminStatus` from `e2e/utils/auth`
 
 6. **Update coverage artifacts**: Keep ALL THREE in sync:
+
    - `e2e/coverage.json` — structured data (sourceFiles, checkpoints, summary stats)
    - `e2e/COVERAGE.md` — human-readable checklist (header stats, journey sections)
    - Spec files in `e2e/journeys/` — actual test implementations

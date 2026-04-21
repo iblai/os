@@ -105,7 +105,9 @@ export const OutsideButtons = ({
     const popup = window.open('about:blank', '_blank', 'width=600,height=600');
 
     if (!popup || popup.closed) {
-      toast.error('Please allow popups for this site to connect Google services');
+      toast.error(
+        'Please allow popups for this site to connect Google services',
+      );
       return;
     }
 
@@ -217,7 +219,8 @@ export const OutsideButtons = ({
       slug: TOOLS.QUIZ,
       icon: <QuizIcon className="h-4 w-4" />,
       description: 'Create a quiz or assessment',
-      action: /* istanbul ignore next -- @preserve */ () => onOptionClick(TOOLS.QUIZ),
+      action: /* istanbul ignore next -- @preserve */ () =>
+        onOptionClick(TOOLS.QUIZ),
       isEnabled: false,
     },
     {
@@ -225,7 +228,8 @@ export const OutsideButtons = ({
       slug: TOOLS.RUBRIC,
       icon: <RubricIcon className="h-4 w-4" />,
       description: 'Generate a grading rubric',
-      action: /* istanbul ignore next -- @preserve */ () => onOptionClick(TOOLS.RUBRIC),
+      action: /* istanbul ignore next -- @preserve */ () =>
+        onOptionClick(TOOLS.RUBRIC),
       isEnabled: false,
     },
     {
@@ -233,7 +237,8 @@ export const OutsideButtons = ({
       slug: TOOLS.RESOURCE,
       icon: <ResourceIcon className="h-4 w-4" />,
       description: 'Find or create resources',
-      action: /* istanbul ignore next -- @preserve */ () => onOptionClick(TOOLS.RESOURCE),
+      action: /* istanbul ignore next -- @preserve */ () =>
+        onOptionClick(TOOLS.RESOURCE),
       isEnabled: false,
     },
     {
@@ -241,7 +246,8 @@ export const OutsideButtons = ({
       slug: TOOLS.LESSON_PLAN,
       icon: <LessonPlanIcon className="h-4 w-4" />,
       description: 'Create a lesson plan',
-      action: /* istanbul ignore next -- @preserve */ () => onOptionClick(TOOLS.LESSON_PLAN),
+      action: /* istanbul ignore next -- @preserve */ () =>
+        onOptionClick(TOOLS.LESSON_PLAN),
       isEnabled: false,
     },
     {
@@ -249,7 +255,8 @@ export const OutsideButtons = ({
       slug: TOOLS.SYLLABUS,
       icon: <SyllabusIcon className="h-4 w-4" />,
       description: 'Generate a course syllabus',
-      action: /* istanbul ignore next -- @preserve */ () => onOptionClick(TOOLS.SYLLABUS),
+      action: /* istanbul ignore next -- @preserve */ () =>
+        onOptionClick(TOOLS.SYLLABUS),
       isEnabled: false,
     },
   ].filter((item) => item.isEnabled);
@@ -260,8 +267,12 @@ export const OutsideButtons = ({
     const moreButtonWidth = minButtonWidth;
     const hasStaticMoreMenu = moreMenuItems.length > 0;
 
-    const maxButtonsNoMore = Math.max(1, Math.floor(containerWidth / minButtonWidth));
-    const shouldReserveMore = hasStaticMoreMenu || allButtons.length > maxButtonsNoMore;
+    const maxButtonsNoMore = Math.max(
+      1,
+      Math.floor(containerWidth / minButtonWidth),
+    );
+    const shouldReserveMore =
+      hasStaticMoreMenu || allButtons.length > maxButtonsNoMore;
     const availableWidth = shouldReserveMore
       ? Math.max(0, containerWidth - moreButtonWidth)
       : containerWidth;
@@ -274,40 +285,48 @@ export const OutsideButtons = ({
     };
   };
 
-  const { visible: visibleButtons, hidden: hiddenButtons } = getVisibleButtons();
+  const { visible: visibleButtons, hidden: hiddenButtons } =
+    getVisibleButtons();
 
   // Get the currently selected more option for display
   const getSelectedMoreOption = () => {
     return (
       /* istanbul ignore next -- @preserve moreMenuItems is always empty */ moreMenuItems.find(
         (item) => item.slug && activeOptions.includes(item.slug),
-      ) || hiddenButtons.find((item) => item.slug && activeOptions.includes(item.slug))
+      ) ||
+      hiddenButtons.find(
+        (item) => item.slug && activeOptions.includes(item.slug),
+      )
     );
   };
 
   const selectedMoreOption = getSelectedMoreOption();
 
   // Don't render anything if there are no buttons to show
-  if (visibleButtons.length === 0 && hiddenButtons.length === 0 && moreMenuItems.length === 0) {
+  if (
+    visibleButtons.length === 0 &&
+    hiddenButtons.length === 0 &&
+    moreMenuItems.length === 0
+  ) {
     return null;
   }
 
   return (
-    <div className="flex items-center justify-center gap-4 text-sm text-gray-600 border border-t-0 border-gray-200 rounded-b-xl bg-card w-full max-w-[calc(100%-1rem)] py-3">
+    <div className="bg-card flex w-full max-w-[calc(100%-1rem)] items-center justify-center gap-4 rounded-b-xl border border-t-0 border-gray-200 py-3 text-sm text-gray-600">
       {visibleButtons.map((button, index) => (
         <React.Fragment key={button.name}>
-          {index > 0 && <span className="text-gray-500 font-medium">|</span>}
+          {index > 0 && <span className="font-medium text-gray-500">|</span>}
           <Button
             variant="ghost"
             size="sm"
             type="button"
             disabled={disabled || pendingAuth !== null}
-            className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
               button.isActive
-                ? 'text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]' // Active state
+                ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]' // Active state
                 : pendingAuth === button.slug
-                  ? 'opacity-60 cursor-wait border border-gray-200' // Pending state
-                  : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]' // Default and hover state
+                  ? 'cursor-wait border border-gray-200 opacity-60' // Pending state
+                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]' // Default and hover state
             }`}
             onClick={(e) => {
               e.preventDefault();
@@ -315,7 +334,9 @@ export const OutsideButtons = ({
               button.action();
             }}
           >
-            <span className={`${button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}`}>
+            <span
+              className={`${button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}`}
+            >
               {button.icon}
             </span>
             {button.name}
@@ -324,7 +345,7 @@ export const OutsideButtons = ({
             )}
             {button.isActive && (
               <X
-                className="h-3 w-3 ml-1 cursor-pointer"
+                className="ml-1 h-3 w-3 cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -342,7 +363,9 @@ export const OutsideButtons = ({
       {/* More Dropdown */}
       {(hiddenButtons.length > 0 || moreMenuItems.length > 0) && (
         <>
-          {visibleButtons.length > 0 && <span className="text-gray-500 font-medium">|</span>}
+          {visibleButtons.length > 0 && (
+            <span className="font-medium text-gray-500">|</span>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild disabled={disabled}>
               <Button
@@ -350,10 +373,10 @@ export const OutsideButtons = ({
                 size="sm"
                 type="button"
                 disabled={disabled}
-                className={`h-8 px-3 rounded-lg flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                   selectedMoreOption
-                    ? 'text-[#38A1E5] bg-[#F5F8FF] border border-[#D0E0FF]' // Active state
-                    : 'border border-gray-200 hover:bg-[#F5F8FF] hover:border-[#D0E0FF]' // Default and hover state
+                    ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]' // Active state
+                    : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]' // Default and hover state
                 }`}
               >
                 {selectedMoreOption ? (
@@ -366,7 +389,7 @@ export const OutsideButtons = ({
                       {selectedMoreOption.icon}
                     </span>
                     {selectedMoreOption.name}
-                    <MoreIcon className="h-3 w-3 ml-1 cursor-pointer text-[#38A1E5]" />
+                    <MoreIcon className="ml-1 h-3 w-3 cursor-pointer text-[#38A1E5]" />
                   </>
                 ) : (
                   <>

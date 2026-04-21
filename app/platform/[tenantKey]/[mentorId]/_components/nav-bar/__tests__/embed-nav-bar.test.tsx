@@ -55,7 +55,10 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   }),
   addProtocolToUrl: (url: string) => url,
   chatActions: {
-    setShouldStartNewChat: (val: boolean) => ({ type: 'chat/setShouldStartNewChat', payload: val }),
+    setShouldStartNewChat: (val: boolean) => ({
+      type: 'chat/setShouldStartNewChat',
+      payload: val,
+    }),
   },
   clearFiles: (val: any) => ({ type: 'chat/clearFiles', payload: val }),
 }));
@@ -165,7 +168,9 @@ describe('EmbedNavBar', () => {
     it('dispatches new chat actions when clicking mentor name area', () => {
       renderEmbedNavBar();
 
-      const newChatButton = screen.getByLabelText('Start new chat with Test Mentor');
+      const newChatButton = screen.getByLabelText(
+        'Start new chat with Test Mentor',
+      );
       fireEvent.click(newChatButton);
 
       expect(mockDispatch).toHaveBeenCalledTimes(2);
@@ -203,7 +208,11 @@ describe('EmbedNavBar', () => {
 
     it('calls toggleSidebar when clicking toggle button', () => {
       const toggleSidebar = vi.fn();
-      renderEmbedNavBar({ isMobile: true, isAnonymousMentor: false, toggleSidebar });
+      renderEmbedNavBar({
+        isMobile: true,
+        isAnonymousMentor: false,
+        toggleSidebar,
+      });
 
       fireEvent.click(screen.getByLabelText(/sidebar/i));
       expect(toggleSidebar).toHaveBeenCalledTimes(1);
@@ -305,7 +314,10 @@ describe('EmbedNavBar', () => {
       await user.click(screen.getByLabelText('Open menu options'));
       await user.click(await screen.findByText('Help'));
 
-      expect(openSpy).toHaveBeenCalledWith('https://help.example.com', '_blank');
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://help.example.com',
+        '_blank',
+      );
     });
 
     it('opens support email when clicking Support', async () => {
@@ -317,7 +329,10 @@ describe('EmbedNavBar', () => {
       await user.click(screen.getByLabelText('Open menu options'));
       await user.click(await screen.findByText('Support'));
 
-      expect(openSpy).toHaveBeenCalledWith('mailto:support@example.com', '_blank');
+      expect(openSpy).toHaveBeenCalledWith(
+        'mailto:support@example.com',
+        '_blank',
+      );
     });
   });
 
@@ -397,7 +412,10 @@ describe('EmbedNavBar', () => {
       await user.click(screen.getByLabelText('Open menu options'));
       await user.click(await screen.findByText('Help'));
 
-      expect(openSpy).toHaveBeenCalledWith('https://help.example.com', '_blank');
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://help.example.com',
+        '_blank',
+      );
     });
 
     it('uses config fallback for support email when metadata is missing', async () => {
@@ -410,7 +428,10 @@ describe('EmbedNavBar', () => {
       await user.click(screen.getByLabelText('Open menu options'));
       await user.click(await screen.findByText('Support'));
 
-      expect(openSpy).toHaveBeenCalledWith('mailto:support@example.com', '_blank');
+      expect(openSpy).toHaveBeenCalledWith(
+        'mailto:support@example.com',
+        '_blank',
+      );
     });
   });
 });

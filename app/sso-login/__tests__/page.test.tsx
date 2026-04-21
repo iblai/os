@@ -3,13 +3,17 @@ import { render, screen } from '@testing-library/react';
 
 // Mock dependencies
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  SsoLogin: vi.fn(({ localStorageKeys, redirectPathKey, defaultRedirectPath }) => (
-    <div data-testid="sso-login-component">
-      <div data-testid="local-storage-keys">{JSON.stringify(localStorageKeys)}</div>
-      <div data-testid="redirect-path-key">{redirectPathKey}</div>
-      <div data-testid="default-redirect-path">{defaultRedirectPath}</div>
-    </div>
-  )),
+  SsoLogin: vi.fn(
+    ({ localStorageKeys, redirectPathKey, defaultRedirectPath }) => (
+      <div data-testid="sso-login-component">
+        <div data-testid="local-storage-keys">
+          {JSON.stringify(localStorageKeys)}
+        </div>
+        <div data-testid="redirect-path-key">{redirectPathKey}</div>
+        <div data-testid="default-redirect-path">{defaultRedirectPath}</div>
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('@/lib/constants', () => ({
@@ -42,7 +46,9 @@ describe('sso-login page', () => {
     render(<SsoLogin />);
 
     const localStorageKeysElement = screen.getByTestId('local-storage-keys');
-    const localStorageKeys = JSON.parse(localStorageKeysElement.textContent || '{}');
+    const localStorageKeys = JSON.parse(
+      localStorageKeysElement.textContent || '{}',
+    );
 
     expect(localStorageKeys).toEqual({
       CURRENT_TENANT: 'currentTenant',
@@ -58,7 +64,9 @@ describe('sso-login page', () => {
 
   it('should pass correct redirectPathKey', () => {
     render(<SsoLogin />);
-    expect(screen.getByTestId('redirect-path-key')).toHaveTextContent('redirect-to');
+    expect(screen.getByTestId('redirect-path-key')).toHaveTextContent(
+      'redirect-to',
+    );
   });
 
   it('should pass correct defaultRedirectPath', () => {

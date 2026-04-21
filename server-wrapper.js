@@ -11,7 +11,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 process.on('unhandledRejection', (reason) => {
   if (reason?.message?.includes?.('HTMLElement is not defined')) {
     // Suppress these specific errors - they're from pre-warming and don't affect functionality
-    console.log('ℹ Suppressed non-blocking HTMLElement error during route pre-warming');
+    console.log(
+      'ℹ Suppressed non-blocking HTMLElement error during route pre-warming',
+    );
     return;
   }
   // Re-throw other errors

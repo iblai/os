@@ -8,7 +8,10 @@ import { isTauriApp } from '@/types/tauri';
 
 // Type definitions for Tauri APIs
 type InvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-type ListenFn = <T>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
+type ListenFn = <T>(
+  event: string,
+  handler: (event: { payload: T }) => void,
+) => Promise<() => void>;
 
 interface TauriAPIs {
   invoke: InvokeFn;
@@ -39,7 +42,8 @@ const checkTauriAvailableSync = (): boolean => {
   if (!inTauri) return false;
 
   // Check for global Tauri object
-  const tauriGlobal = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
+  const tauriGlobal =
+    (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
   if (!tauriGlobal) return false;
 
   // Check if invoke is available
@@ -58,7 +62,8 @@ const checkTauriAvailableSync = (): boolean => {
 const getTauriAPIsSync = (): TauriAPIs | null => {
   if (typeof window === 'undefined') return null;
 
-  const tauriGlobal = (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
+  const tauriGlobal =
+    (window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__;
   if (!tauriGlobal) return null;
 
   const invoke =
@@ -87,7 +92,9 @@ const getTauriAPIsSync = (): TauriAPIs | null => {
  */
 export function useTauri() {
   // Initialize with SYNCHRONOUS check - this ensures isAvailable is correct from first render
-  const [isAvailable, setIsAvailable] = useState(() => checkTauriAvailableSync());
+  const [isAvailable, setIsAvailable] = useState(() =>
+    checkTauriAvailableSync(),
+  );
   const [apis, setApis] = useState<TauriAPIs | null>(() => getTauriAPIsSync());
 
   useEffect(() => {
@@ -141,7 +148,10 @@ export function useTauri() {
    * Returns an unlisten function that should be called on cleanup
    */
   const listen = useCallback(
-    async <T>(event: string, handler: (payload: T) => void): Promise<() => void> => {
+    async <T>(
+      event: string,
+      handler: (payload: T) => void,
+    ): Promise<() => void> => {
       if (!apis?.listen) {
         throw new Error('Tauri is not available');
       }

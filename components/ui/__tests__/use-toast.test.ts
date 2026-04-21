@@ -282,7 +282,9 @@ describe('use-toast', () => {
       });
 
       // Toast should be dismissed (open: false)
-      const dismissedToast = result.current.toasts.find((t) => t.id === toastId!);
+      const dismissedToast = result.current.toasts.find(
+        (t) => t.id === toastId!,
+      );
       if (dismissedToast) {
         expect(dismissedToast.open).toBe(false);
       }
@@ -320,7 +322,9 @@ describe('use-toast', () => {
           addedToast.onOpenChange!(false);
         });
 
-        const foundToast = result.current.toasts.find((t) => t.id === addedToast.id);
+        const foundToast = result.current.toasts.find(
+          (t) => t.id === addedToast.id,
+        );
         if (foundToast) {
           expect(foundToast.open).toBe(false);
         }
@@ -364,7 +368,9 @@ describe('use-toast', () => {
         });
       });
 
-      const updatedToast = result.current.toasts.find((t) => t.id === toastResult!.id);
+      const updatedToast = result.current.toasts.find(
+        (t) => t.id === toastResult!.id,
+      );
       if (updatedToast) {
         expect(updatedToast.title).toBe('Updated');
       }
@@ -425,7 +431,9 @@ describe('use-toast', () => {
       });
 
       // Toast should now be removed from state
-      expect(result.current.toasts.find((t) => t.id === toastId!)).toBeUndefined();
+      expect(
+        result.current.toasts.find((t) => t.id === toastId!),
+      ).toBeUndefined();
 
       vi.useRealTimers();
     });
@@ -454,7 +462,9 @@ describe('use-toast', () => {
         vi.advanceTimersByTime(1000001);
       });
 
-      expect(result.current.toasts.find((t) => t.id === toastId!)).toBeUndefined();
+      expect(
+        result.current.toasts.find((t) => t.id === toastId!),
+      ).toBeUndefined();
 
       vi.useRealTimers();
     });

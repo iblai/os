@@ -5,14 +5,14 @@ on:
     branches: [main]
     types: [labeled]
 
-run-name: "PR #${{ github.event.pull_request.number }} - Mentor Test Validation"
+run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test Validation'
 
 concurrency:
   group: pr-validation-mentor-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # reusable-domain-lock.yml (manage-lock job) requires write
   pull-requests: write
   statuses: write
   id-token: write
@@ -110,9 +110,22 @@ jobs:
     with:
       action: acquire
       app-type: testing
-      context: "PR #${{ github.event.pull_request.number }} - Mentor Testing"
+      context: 'PR #${{ github.event.pull_request.number }} - Mentor Testing'
       allowed-domains: '3'
       max-wait: 18000
+
+  # ============================================================
+  # PINNED VERSIONS CHECK
+  # ============================================================
+  pinned-versions:
+    needs: [gate, acquire-domain]
+    if: always() && needs.acquire-domain.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all dependency versions are pinned
+        run: ./scripts/check-pinned-versions.sh
 
   # ============================================================
   # CONVENTIONAL COMMIT CHECK
@@ -163,7 +176,7 @@ jobs:
     secrets: inherit
 
   e2e-coverage-check:
-    name: "E2E Journey Coverage"
+    name: 'E2E Journey Coverage'
     needs: [gate, acquire-domain]
     if: always() && needs.acquire-domain.result == 'success'
     runs-on: ubuntu-22.04
@@ -180,50 +193,9 @@ jobs:
       - name: Check journey coverage (no regression)
         run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
 
-  claude-review-coverage:
-    name: "Claude E2E Coverage Review"
-    needs: [gate, acquire-domain]
-    if: always() && needs.acquire-domain.result == 'success'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get changed files
-        id: changes
-        run: |
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- app/ components/ hooks/ lib/ providers/ | head -100)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "count=$(echo "$CHANGED" | grep -c . || echo 0)" >> $GITHUB_OUTPUT
-
-      - name: Claude coverage analysis
-        if: steps.changes.outputs.count != '0'
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are an E2E coverage analyst. Analyze the changed files in this PR and determine if e2e/coverage.json and e2e/COVERAGE.md are properly updated.
-
-            Changed files:
-            ${{ steps.changes.outputs.files }}
-
-            Tasks:
-            1. Read e2e/coverage.json and e2e/COVERAGE.md
-            2. For each changed file in app/ or components/:
-               - Check if it's listed in a journey's sourceFiles in coverage.json
-               - If it's a new page.tsx route, verify a journey covers it
-               - If it adds new user-visible behavior, check for corresponding checkpoints
-            3. Compare checkpoint counts: current branch vs base branch
-            4. Post a summary comment on the PR with:
-               - Files covered by existing journeys
-               - Files missing coverage (if any)
-               - Checkpoint count change (regression warning if decreased)
-               - Recommended actions (new journeys or checkpoints to add)
-
-            If all changes are covered, approve. If there are gaps, request changes with specific instructions.
+  # Coverage review is now handled by the dedicated e2e-coverage-bot.yml workflow,
+  # which uses Claude + the bot account to analyze, auto-update coverage files,
+  # and post APPROVE / REQUEST_CHANGES reviews as a required reviewer.
 
   claude-review-quality:
     needs: [gate, acquire-domain]
@@ -357,7 +329,8 @@ jobs:
 
   # --- Chrome ---
   verify-chrome:
-    needs: [gate, acquire-domain, deploy-auth, build-app-image, check-prod-versions]
+    needs:
+      [gate, acquire-domain, deploy-auth, build-app-image, check-prod-versions]
     if: always() && needs.deploy-auth.result == 'success'
     uses: iblai/iblai-web-ops/.github/workflows/reusable-pre-test-health-check.yml@main
     with:
@@ -372,7 +345,15 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-chrome:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -394,7 +375,8 @@ jobs:
 
   # --- Firefox ---
   verify-firefox:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-chrome]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-chrome]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -412,7 +394,14 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-firefox:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-firefox]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-firefox,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -434,7 +423,8 @@ jobs:
 
   # --- Safari ---
   verify-safari:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-firefox]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-firefox]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -452,7 +442,14 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-safari:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-safari]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-safari,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -474,7 +471,8 @@ jobs:
 
   # --- Edge ---
   verify-edge:
-    needs: [gate, acquire-domain, build-app-image, check-prod-versions, test-safari]
+    needs:
+      [gate, acquire-domain, build-app-image, check-prod-versions, test-safari]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -492,7 +490,14 @@ jobs:
       git-token: ${{ secrets.GIT_TOKEN }}
 
   test-edge:
-    needs: [gate, check-resumption, acquire-domain, build-playwright-image, verify-edge]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        build-playwright-image,
+        verify-edge,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE != 'parallel-browsers' &&
@@ -517,7 +522,15 @@ jobs:
   # All 4 browsers launch after first health check
   # ============================================================
   test-chrome-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
@@ -538,7 +551,15 @@ jobs:
       workers: '3'
 
   test-firefox-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
@@ -559,7 +580,15 @@ jobs:
       workers: '3'
 
   test-safari-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
@@ -580,7 +609,15 @@ jobs:
       workers: '3'
 
   test-edge-parallel:
-    needs: [gate, check-resumption, acquire-domain, deploy-auth, build-playwright-image, verify-chrome]
+    needs:
+      [
+        gate,
+        check-resumption,
+        acquire-domain,
+        deploy-auth,
+        build-playwright-image,
+        verify-chrome,
+      ]
     if: >-
       always() &&
       vars.EXECUTION_MODE == 'parallel-browsers' &&
@@ -604,8 +641,19 @@ jobs:
   # SAVE TEST STATUS (for resumption on next run)
   # ============================================================
   save-status:
-    name: "Save Mentor Status"
-    needs: [gate, test-chrome, test-firefox, test-safari, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel]
+    name: 'Save Mentor Status'
+    needs:
+      [
+        gate,
+        test-chrome,
+        test-firefox,
+        test-safari,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+      ]
     if: always()
     runs-on: ubuntu-22.04
     environment: iblai.app
@@ -713,7 +761,37 @@ jobs:
   # RELEASE DOMAIN LOCK
   # ============================================================
   release-domain:
-    needs: [gate, acquire-domain, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status]
+    needs:
+      [
+        gate,
+        acquire-domain,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        deploy-app,
+        deploy-auth,
+        verify-chrome,
+        test-chrome,
+        verify-firefox,
+        test-firefox,
+        verify-safari,
+        test-safari,
+        verify-edge,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+        save-status,
+      ]
     if: >-
       always() &&
       needs.acquire-domain.result == 'success'
@@ -728,7 +806,38 @@ jobs:
   # FINAL SUMMARY
   # ============================================================
   summary:
-    needs: [gate, acquire-domain, commitlint, lint, typecheck, coverage, e2e-coverage-check, claude-review-coverage, claude-review-quality, claude-review-uiux, check-prod-versions, build-app-image, build-playwright-image, deploy-app, deploy-auth, verify-chrome, test-chrome, verify-firefox, test-firefox, verify-safari, test-safari, verify-edge, test-edge, test-chrome-parallel, test-firefox-parallel, test-safari-parallel, test-edge-parallel, save-status, release-domain]
+    needs:
+      [
+        gate,
+        acquire-domain,
+        pinned-versions,
+        commitlint,
+        lint,
+        typecheck,
+        coverage,
+        e2e-coverage-check,
+        claude-review-quality,
+        claude-review-uiux,
+        check-prod-versions,
+        build-app-image,
+        build-playwright-image,
+        deploy-app,
+        deploy-auth,
+        verify-chrome,
+        test-chrome,
+        verify-firefox,
+        test-firefox,
+        verify-safari,
+        test-safari,
+        verify-edge,
+        test-edge,
+        test-chrome-parallel,
+        test-firefox-parallel,
+        test-safari-parallel,
+        test-edge-parallel,
+        save-status,
+        release-domain,
+      ]
     if: always()
     runs-on: ubuntu-22.04
     env:
@@ -746,6 +855,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|:------:|" >> $GITHUB_STEP_SUMMARY
+
+          PINNED_RESULT="${{ needs.pinned-versions.result }}"
+          if [[ "$PINNED_RESULT" == "success" ]]; then
+            echo "| Pinned Versions | :white_check_mark: PASSED |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Pinned Versions | :x: FAILED |" >> $GITHUB_STEP_SUMMARY
+          fi
 
           COMMITLINT_RESULT="${{ needs.commitlint.result }}"
           if [[ "$COMMITLINT_RESULT" == "success" ]]; then
@@ -805,14 +921,7 @@ jobs:
             echo "| UI/UX | :x: Failed |" >> $GITHUB_STEP_SUMMARY
           fi
 
-          COV_REVIEW_RESULT="${{ needs.claude-review-coverage.result }}"
-          if [[ "$COV_REVIEW_RESULT" == "success" ]]; then
-            echo "| E2E Coverage | :white_check_mark: Completed |" >> $GITHUB_STEP_SUMMARY
-          elif [[ "$COV_REVIEW_RESULT" == "skipped" ]]; then
-            echo "| E2E Coverage | :fast_forward: Skipped |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| E2E Coverage | :x: Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
+          # E2E coverage review is handled by the dedicated e2e-coverage-bot.yml workflow
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Browser test results
@@ -860,6 +969,12 @@ jobs:
           echo "============================================"
           echo "Checking test results..."
           echo "============================================"
+
+          if [[ "${{ needs.pinned-versions.result }}" != "success" ]]; then
+            echo "Pinned versions FAILED"; FAILED=true
+          else
+            echo "Pinned versions PASSED"
+          fi
 
           if [[ "${{ needs.commitlint.result }}" != "success" ]]; then
             echo "Conventional commits FAILED"; FAILED=true

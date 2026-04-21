@@ -145,7 +145,9 @@ describe('useToggleTools', () => {
 
   describe('error handling', () => {
     it('shows error toast with data.error message on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUnwrap.mockRejectedValue({ data: { error: 'Custom API error' } });
 
       const { result } = renderHook(() => useToggleTools(defaultProps));
@@ -159,8 +161,12 @@ describe('useToggleTools', () => {
     });
 
     it('shows error toast with error.error message on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockUnwrap.mockRejectedValue({ error: { error: 'Nested error message' } });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockUnwrap.mockRejectedValue({
+        error: { error: 'Nested error message' },
+      });
 
       const { result } = renderHook(() => useToggleTools(defaultProps));
 
@@ -173,7 +179,9 @@ describe('useToggleTools', () => {
     });
 
     it('shows default error message when no specific error message available', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUnwrap.mockRejectedValue({});
 
       const { result } = renderHook(() => useToggleTools(defaultProps));
@@ -187,7 +195,9 @@ describe('useToggleTools', () => {
     });
 
     it('logs error to console on failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const error = { data: { error: 'Test error' } };
       mockUnwrap.mockRejectedValue(error);
 
@@ -202,7 +212,9 @@ describe('useToggleTools', () => {
     });
 
     it('does not call callback on error', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockUnwrap.mockRejectedValue({ data: { error: 'Error' } });
       const callback = vi.fn();
 

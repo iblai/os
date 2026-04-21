@@ -1,7 +1,11 @@
 import React from 'react';
 
 import { toast } from 'sonner';
-import { Room, RoomEvent, ConnectionState as LiveKitConnectionState } from 'livekit-client';
+import {
+  Room,
+  RoomEvent,
+  ConnectionState as LiveKitConnectionState,
+} from 'livekit-client';
 import { useCreateCallCredentialsMutation } from '@iblai/iblai-js/data-layer';
 import { RoomAudioRenderer, RoomContext } from '@livekit/components-react';
 
@@ -73,8 +77,9 @@ export function LiveKitChat({
     return new Room({});
   });
   const [isMuted, setIsMuted] = React.useState(true);
-  const [connectionState, setConnectionState] =
-    React.useState<ConnectionState>('requesting-permission');
+  const [connectionState, setConnectionState] = React.useState<ConnectionState>(
+    'requesting-permission',
+  );
   const [isSpeaking, setIsSpeaking] = React.useState(false);
   const permissionStreamRef = React.useRef<MediaStream | null>(null);
 
@@ -95,7 +100,12 @@ export function LiveKitChat({
   }
 
   async function connectRoom() {
-    voiceLog('connectRoom() called', { tenantKey, mentorUniqueId, sessionId, username });
+    voiceLog('connectRoom() called', {
+      tenantKey,
+      mentorUniqueId,
+      sessionId,
+      username,
+    });
 
     // Request microphone permission first
     setConnectionState('requesting-permission');
@@ -183,11 +193,13 @@ export function LiveKitChat({
           roomName: room.name,
           roomState: room.state,
           localParticipant: room.localParticipant?.identity,
-          remoteParticipants: Array.from(room.remoteParticipants.values()).map((p) => ({
-            identity: p.identity,
-            sid: p.sid,
-            trackCount: p.trackPublications.size,
-          })),
+          remoteParticipants: Array.from(room.remoteParticipants.values()).map(
+            (p) => ({
+              identity: p.identity,
+              sid: p.sid,
+              trackCount: p.trackPublications.size,
+            }),
+          ),
         });
       } catch (error) {
         voiceError('Failed to connect to LiveKit room', error);
@@ -203,16 +215,16 @@ export function LiveKitChat({
         voiceLog('Enabling local microphone...');
         await room.localParticipant.setMicrophoneEnabled(true);
         voiceLog('Microphone enabled successfully', {
-          audioTracks: Array.from(room.localParticipant.audioTrackPublications.values()).map(
-            (pub) => ({
-              trackSid: pub.trackSid,
-              trackName: pub.trackName,
-              source: pub.source,
-              isMuted: pub.isMuted,
-              isSubscribed: pub.isSubscribed,
-              kind: pub.kind,
-            }),
-          ),
+          audioTracks: Array.from(
+            room.localParticipant.audioTrackPublications.values(),
+          ).map((pub) => ({
+            trackSid: pub.trackSid,
+            trackName: pub.trackName,
+            source: pub.source,
+            isMuted: pub.isMuted,
+            isSubscribed: pub.isSubscribed,
+            kind: pub.kind,
+          })),
         });
         setIsMuted(false); // Auto-unmute when successfully connected
         setConnectionState('connected');
@@ -235,10 +247,13 @@ export function LiveKitChat({
   // Monitor audio activity for speaking animation
   React.useEffect(() => {
     if (connectionState !== 'connected' || !room.localParticipant) {
-      voiceLog('Speaking monitor: skipping (not connected or no local participant)', {
-        connectionState,
-        hasLocalParticipant: !!room.localParticipant,
-      });
+      voiceLog(
+        'Speaking monitor: skipping (not connected or no local participant)',
+        {
+          connectionState,
+          hasLocalParticipant: !!room.localParticipant,
+        },
+      );
       return;
     }
 
@@ -317,7 +332,11 @@ export function LiveKitChat({
     };
 
     // Additional diagnostic events
-    const handleTrackSubscribed = (track: any, publication: any, participant: any) => {
+    const handleTrackSubscribed = (
+      track: any,
+      publication: any,
+      participant: any,
+    ) => {
       voiceLog('TrackSubscribed', {
         trackSid: track?.sid,
         trackKind: track?.kind,
@@ -327,7 +346,11 @@ export function LiveKitChat({
       });
     };
 
-    const handleTrackUnsubscribed = (track: any, publication: any, participant: any) => {
+    const handleTrackUnsubscribed = (
+      track: any,
+      publication: any,
+      participant: any,
+    ) => {
       voiceLog('TrackUnsubscribed', {
         trackSid: track?.sid,
         trackKind: track?.kind,
@@ -420,7 +443,10 @@ export function LiveKitChat({
       room.off(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
       room.off(RoomEvent.LocalTrackUnpublished, handleLocalTrackUnpublished);
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
-      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+      room.off(
+        RoomEvent.ParticipantDisconnected,
+        handleParticipantDisconnected,
+      );
       room.off(RoomEvent.ActiveSpeakersChanged, handleActiveSpeakersChanged);
       room.off(RoomEvent.MediaDevicesError, handleMediaDevicesError);
       room.off(RoomEvent.SignalConnected, handleSignalConnected);
@@ -473,7 +499,9 @@ export function LiveKitChat({
     if (connectionState !== 'connected') return;
 
     const dumpRoomState = () => {
-      const localPub = Array.from(room.localParticipant?.audioTrackPublications.values() ?? []);
+      const localPub = Array.from(
+        room.localParticipant?.audioTrackPublications.values() ?? [],
+      );
       const remoteParticipants = Array.from(room.remoteParticipants.values());
 
       voiceLog('Room state dump', {

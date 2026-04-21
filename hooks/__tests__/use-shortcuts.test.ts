@@ -26,7 +26,10 @@ vi.mock('@/lib/hooks', () => ({
 }));
 
 vi.mock('@/features/navigation/slice', () => ({
-  shortcutsModalUpdated: (value: boolean) => ({ type: 'SHORTCUTS_MODAL_UPDATED', payload: value }),
+  shortcutsModalUpdated: (value: boolean) => ({
+    type: 'SHORTCUTS_MODAL_UPDATED',
+    payload: value,
+  }),
 }));
 
 describe('useShortcuts', () => {
@@ -114,7 +117,9 @@ describe('useShortcuts', () => {
   describe('focusInput callback', () => {
     afterEach(() => {
       // Clean up any created elements
-      const textarea = document.querySelector('textarea[placeholder="Ask anything"]');
+      const textarea = document.querySelector(
+        'textarea[placeholder="Ask anything"]',
+      );
       if (textarea) {
         textarea.remove();
       }

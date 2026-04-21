@@ -2,10 +2,18 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useEditMentorMutation, useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useEditMentorMutation,
+  useGetMentorSettingsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -71,31 +79,37 @@ export function ProjectInstructionsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full mx-4 max-h-[90vh] p-0 gap-0">
+      <DialogContent className="mx-4 max-h-[90vh] w-full max-w-4xl gap-0 p-0">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <DialogTitle className="text-xl font-semibold text-gray-900">Instructions</DialogTitle>
+        <div className="border-b border-gray-200 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              Instructions
+            </DialogTitle>
           </div>
           <DialogDescription className="text-gray-600">
-            You can ask mentorAI to focus on certain topics, or ask it to use a certain tone or
-            format for responses.
+            You can ask mentorAI to focus on certain topics, or ask it to use a
+            certain tone or format for responses.
           </DialogDescription>
         </div>
 
         {/* Content */}
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           <Textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             placeholder='e.g. "Reference the latest JavaScript documentation. Keep answers short and focused."'
-            className="min-h-[400px] resize-none border-2 border-gray-200 rounded-lg p-4 text-base placeholder:text-gray-400 focus:border-blue-500 focus:ring-0"
+            className="min-h-[400px] resize-none rounded-lg border-2 border-gray-200 p-4 text-base placeholder:text-gray-400 focus:border-blue-500 focus:ring-0"
           />
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-          <Button variant="outline" onClick={handleCancel} aria-label="Cancel editing instructions">
+        <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-6">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            aria-label="Cancel editing instructions"
+          >
             Cancel
           </Button>
           <Button

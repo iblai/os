@@ -44,7 +44,10 @@ interface MockConfig {
  *
  * @see lib/utils.ts:isStripeActivated
  */
-function isStripeActivated(config: MockConfig, currentTenant: MockTenant | null): boolean {
+function isStripeActivated(
+  config: MockConfig,
+  currentTenant: MockTenant | null,
+): boolean {
   return (
     config.stripeEnabled() === 'true' &&
     (!currentTenant?.is_enterprise ||
@@ -58,7 +61,10 @@ function isStripeActivated(config: MockConfig, currentTenant: MockTenant | null)
  *
  * @see user-profile.tsx:handleGetSubscriptionRelatedData
  */
-function shouldCallBillingAPIs(config: MockConfig, currentTenant: MockTenant | null): boolean {
+function shouldCallBillingAPIs(
+  config: MockConfig,
+  currentTenant: MockTenant | null,
+): boolean {
   return isStripeActivated(config, currentTenant) && !!currentTenant?.is_admin;
 }
 
@@ -134,8 +140,12 @@ describe('UserProfile - Enterprise Billing Bypass Logic with isStripeActivated',
           is_enterprise: true,
         };
 
-        expect(isStripeActivated(configStripeDisabled, nonEnterprise)).toBe(false);
-        expect(isStripeActivated(configStripeDisabled, enterpriseOnMain)).toBe(false);
+        expect(isStripeActivated(configStripeDisabled, nonEnterprise)).toBe(
+          false,
+        );
+        expect(isStripeActivated(configStripeDisabled, enterpriseOnMain)).toBe(
+          false,
+        );
       });
     });
   });
@@ -282,13 +292,17 @@ describe('UserProfile - Enterprise Billing Bypass Logic with isStripeActivated',
       });
 
       it('returns false when tenant has no is_admin property', () => {
+        // Deliberately malformed — the test verifies the guard rejects a
+        // tenant missing `is_admin`. Cast through `unknown` to bypass the
+        // type check without leaving an unused @ts-expect-error lying around.
         const malformedTenant = {
           key: 'tenant-123',
           org: 'org-123',
-        };
+        } as unknown as MockTenant;
 
-        // @ts-expect-error - Testing malformed tenant without is_admin property
-        expect(shouldCallBillingAPIs(configStripeEnabled, malformedTenant)).toBe(false);
+        expect(
+          shouldCallBillingAPIs(configStripeEnabled, malformedTenant),
+        ).toBe(false);
       });
     });
 
@@ -297,13 +311,55 @@ describe('UserProfile - Enterprise Billing Bypass Logic with isStripeActivated',
         // Test key permutations
         const tests = [
           // stripe, key, is_admin, is_enterprise, expected result
-          { stripe: 'true', key: 'other', admin: true, enterprise: false, expected: true },
-          { stripe: 'true', key: 'other', admin: true, enterprise: true, expected: false }, // enterprise on non-main blocks
-          { stripe: 'true', key: 'main', admin: true, enterprise: true, expected: true }, // enterprise on main allowed
-          { stripe: 'true', key: 'main', admin: false, enterprise: true, expected: false }, // non-admin blocked
-          { stripe: 'true', key: 'other', admin: false, enterprise: false, expected: false }, // non-admin blocked
-          { stripe: 'false', key: 'other', admin: true, enterprise: false, expected: false }, // stripe disabled
-          { stripe: 'false', key: 'main', admin: true, enterprise: true, expected: false }, // stripe disabled
+          {
+            stripe: 'true',
+            key: 'other',
+            admin: true,
+            enterprise: false,
+            expected: true,
+          },
+          {
+            stripe: 'true',
+            key: 'other',
+            admin: true,
+            enterprise: true,
+            expected: false,
+          }, // enterprise on non-main blocks
+          {
+            stripe: 'true',
+            key: 'main',
+            admin: true,
+            enterprise: true,
+            expected: true,
+          }, // enterprise on main allowed
+          {
+            stripe: 'true',
+            key: 'main',
+            admin: false,
+            enterprise: true,
+            expected: false,
+          }, // non-admin blocked
+          {
+            stripe: 'true',
+            key: 'other',
+            admin: false,
+            enterprise: false,
+            expected: false,
+          }, // non-admin blocked
+          {
+            stripe: 'false',
+            key: 'other',
+            admin: true,
+            enterprise: false,
+            expected: false,
+          }, // stripe disabled
+          {
+            stripe: 'false',
+            key: 'main',
+            admin: true,
+            enterprise: true,
+            expected: false,
+          }, // stripe disabled
         ];
 
         tests.forEach(({ stripe, key, admin, enterprise, expected }) => {

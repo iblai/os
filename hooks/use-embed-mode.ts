@@ -1,4 +1,4 @@
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from 'next/navigation';
 
 export function useEmbedMode() {
   const searchParams = useSearchParams();

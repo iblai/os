@@ -55,7 +55,9 @@ describe('StoreProvider', () => {
 
       return (
         <div data-testid="connected">
-          {typeof dispatch === 'function' ? 'dispatch available' : 'no dispatch'}
+          {typeof dispatch === 'function'
+            ? 'dispatch available'
+            : 'no dispatch'}
         </div>
       );
     }
@@ -66,7 +68,9 @@ describe('StoreProvider', () => {
       </StoreProvider>,
     );
 
-    expect(screen.getByTestId('connected')).toHaveTextContent('dispatch available');
+    expect(screen.getByTestId('connected')).toHaveTextContent(
+      'dispatch available',
+    );
   });
 
   it('handles null children', () => {
@@ -106,6 +110,8 @@ describe('StoreProvider', () => {
       </StoreProvider>,
     );
 
-    expect(screen.getByTestId('deeply-nested')).toHaveTextContent('Deep Content');
+    expect(screen.getByTestId('deeply-nested')).toHaveTextContent(
+      'Deep Content',
+    );
   });
 });

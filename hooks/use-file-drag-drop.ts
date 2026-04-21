@@ -49,7 +49,10 @@ export function useFileDragDrop({ org, userId }: UseFileDragDropOptions) {
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     // Only hide overlay when leaving the container entirely
-    if (e.relatedTarget === null || !e.currentTarget.contains(e.relatedTarget as Node)) {
+    if (
+      e.relatedTarget === null ||
+      !e.currentTarget.contains(e.relatedTarget as Node)
+    ) {
       setIsDraggingFile(false);
     }
   }, []);
@@ -67,7 +70,9 @@ export function useFileDragDrop({ org, userId }: UseFileDragDropOptions) {
             ? fileUploadCapabilities.allSupportedTypes
             : MENTOR_CHAT_DOCUMENTS_EXTENSIONS;
 
-        const files = allFiles.filter((file) => isFileAccepted(file, acceptedTypes));
+        const files = allFiles.filter((file) =>
+          isFileAccepted(file, acceptedTypes),
+        );
 
         if (files.length === 0) {
           toast.error('The dropped file type is not supported.');

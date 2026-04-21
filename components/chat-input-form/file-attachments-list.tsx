@@ -1,5 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { X, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileTypeIcon } from './file-type-icon';
@@ -48,23 +53,26 @@ export function FileAttachmentsList({
                     statusColors[file.uploadStatus],
                   )}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 relative">
-                    <FileTypeIcon fileName={file.fileName} fileType={file.fileType} />
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <FileTypeIcon
+                      fileName={file.fileName}
+                      fileType={file.fileType}
+                    />
                     {file.uploadStatus === 'uploading' && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-blue-100/90 rounded-lg">
-                        <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-blue-100/90">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                       </div>
                     )}
                     {file.uploadStatus === 'success' && (
-                      <div className="absolute -top-1 -right-1 h-3 w-3 bg-blue-500 rounded-full border-2 border-white" />
+                      <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-blue-500" />
                     )}
                     {file.uploadStatus === 'error' && (
-                      <div className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full border-2 border-white bg-red-500">
                         <X className="h-2 w-2 text-white" />
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="max-w-[150px] truncate text-sm font-medium text-gray-900">
                       {file.fileName}
                     </div>
@@ -73,15 +81,17 @@ export function FileAttachmentsList({
                         {file.fileType.split('/')[1] || 'FILE'}
                       </div>
                       {file.uploadStatus === 'uploading' && (
-                        <span className="text-xs text-blue-600 font-medium">
+                        <span className="text-xs font-medium text-blue-600">
                           {file.uploadProgress}%
-                          {file.retryCount && file.retryCount > 0 && ` (retry ${file.retryCount})`}
+                          {file.retryCount &&
+                            file.retryCount > 0 &&
+                            ` (retry ${file.retryCount})`}
                         </span>
                       )}
                       {file.uploadStatus === 'error' && (
                         <button
                           onClick={() => onRetryFile(file.id)}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                          className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
                         >
                           <RotateCw className="h-3 w-3" />
                           Retry
@@ -89,7 +99,7 @@ export function FileAttachmentsList({
                       )}
                     </div>
                     {file.uploadStatus === 'uploading' && (
-                      <div className="mt-1 w-[150px] h-1 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="mt-1 h-1 w-[150px] overflow-hidden rounded-full bg-gray-200">
                         <div
                           className="h-full bg-blue-500 transition-all duration-300 ease-out"
                           style={{ width: `${file.uploadProgress}%` }}
@@ -101,11 +111,14 @@ export function FileAttachmentsList({
               </TooltipTrigger>
               <TooltipContent className="ibl-tooltip-content">
                 <p>{file.fileName}</p>
-                <p className="text-xs text-gray-500 capitalize mt-1">
+                <p className="mt-1 text-xs text-gray-500 capitalize">
                   Status: {file.uploadStatus}
-                  {file.uploadStatus === 'uploading' && ` (${file.uploadProgress}%)`}
+                  {file.uploadStatus === 'uploading' &&
+                    ` (${file.uploadProgress}%)`}
                   {file.retryCount && file.retryCount > 0 && (
-                    <span className="block text-yellow-600">Retry attempt {file.retryCount}</span>
+                    <span className="block text-yellow-600">
+                      Retry attempt {file.retryCount}
+                    </span>
                   )}
                 </p>
               </TooltipContent>

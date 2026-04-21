@@ -51,7 +51,8 @@ export function DeleteApiModal({ isOpen, onClose, apiKey }: Props) {
         <div className="my-5">
           <p className="text-sm text-[#646464]">
             Are you sure you want to delete the API Key with the name{' '}
-            <span className="font-bold italic">{apiKey.name}</span>? This action cannot be undone.
+            <span className="font-bold italic">{apiKey.name}</span>? This action
+            cannot be undone.
           </p>
         </div>
         <DialogFooter className="gap-3">

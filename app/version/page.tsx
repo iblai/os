@@ -12,7 +12,7 @@ const logo = (
     alt="ibl.ai"
     width={43}
     height={19}
-    className="h-4 w-auto mx-2 mb-1"
+    className="mx-2 mb-1 h-4 w-auto"
   />
 );
 export default function AppVersion() {

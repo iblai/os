@@ -3,10 +3,7 @@ import { ChatTab } from './chat-tab';
 import { ExpandTab } from './expand-tab';
 import { SummarizeTab } from './summarize-tab';
 import { TranslateTab } from './translate-tab';
-import {
-  type AdvancedTab,
-  translatePrompt,
-} from '@iblai/iblai-js/web-utils';
+import { type AdvancedTab, translatePrompt } from '@iblai/iblai-js/web-utils';
 
 type Props = {
   mentorName: string;

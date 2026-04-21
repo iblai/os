@@ -7,7 +7,10 @@ type LoginRequiredBannerProps = {
   className?: string;
 };
 
-export function LoginRequiredBanner({ message, className }: LoginRequiredBannerProps) {
+export function LoginRequiredBanner({
+  message,
+  className,
+}: LoginRequiredBannerProps) {
   return (
     <div
       className={cn(

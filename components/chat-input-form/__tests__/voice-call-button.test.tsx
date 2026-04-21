@@ -7,7 +7,10 @@ vi.mock('@/hooks/use-show-voice-call');
 
 describe('VoiceCallButton', () => {
   const mockOnClick = vi.fn();
-  const mockUseShowVoiceCall = vi.spyOn(useShowVoiceCallModule, 'useShowVoiceCall');
+  const mockUseShowVoiceCall = vi.spyOn(
+    useShowVoiceCallModule,
+    'useShowVoiceCall',
+  );
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -174,7 +177,9 @@ describe('VoiceCallButton', () => {
 
   describe('edge cases', () => {
     it('should handle rapid state changes', () => {
-      const { rerender } = render(<VoiceCallButton onClick={mockOnClick} isPreviewMode={false} />);
+      const { rerender } = render(
+        <VoiceCallButton onClick={mockOnClick} isPreviewMode={false} />,
+      );
 
       let button = screen.getByRole('button');
       expect(button).not.toBeDisabled();
@@ -231,7 +236,9 @@ describe('VoiceCallButton', () => {
     it('should toggle visibility when useShowVoiceCall changes', () => {
       mockUseShowVoiceCall.mockReturnValue(true);
 
-      const { rerender, container } = render(<VoiceCallButton onClick={mockOnClick} />);
+      const { rerender, container } = render(
+        <VoiceCallButton onClick={mockOnClick} />,
+      );
 
       expect(screen.getByRole('button')).toBeInTheDocument();
 

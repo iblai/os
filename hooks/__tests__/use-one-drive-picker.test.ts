@@ -30,11 +30,15 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils', () => ({
-  extractErrorMessage: vi.fn(
-    (error: unknown, defaultMsg: string) => (error as { message?: string })?.message || defaultMsg,
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
+  () => ({
+    extractErrorMessage: vi.fn(
+      (error: unknown, defaultMsg: string) =>
+        (error as { message?: string })?.message || defaultMsg,
+    ),
+  }),
+);
 
 import useOneDrivePicker from '../use-one-drive-picker';
 import { toast } from 'sonner';
@@ -44,12 +48,17 @@ describe('useOneDrivePicker', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: 'mentor-1' });
+    mockUseParams.mockReturnValue({
+      tenantKey: 'tenant-1',
+      mentorId: 'mentor-1',
+    });
     mockUseUsername.mockReturnValue('testuser');
 
     // Mock OneDrive global - set it so SDK appears loaded
     mockOneDriveOpen = vi.fn();
-    (window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }).OneDrive = {
+    (
+      window as unknown as { OneDrive: { open: typeof mockOneDriveOpen } }
+    ).OneDrive = {
       open: mockOneDriveOpen,
     };
 
@@ -103,7 +112,9 @@ describe('useOneDrivePicker', () => {
     });
 
     it('should log error to console when credentials fail to load', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       mockGetCredentials.mockReturnValue({
         unwrap: () => Promise.reject(new Error('API error')),
       });
@@ -167,7 +178,9 @@ describe('useOneDrivePicker', () => {
         result.current.pickOneDriveFile();
       });
 
-      expect(toast.error).toHaveBeenCalledWith('OneDrive credentials are not loaded yet');
+      expect(toast.error).toHaveBeenCalledWith(
+        'OneDrive credentials are not loaded yet',
+      );
 
       consoleSpy.mockRestore();
     });
@@ -266,14 +279,19 @@ describe('useOneDrivePicker', () => {
         });
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Document has been queued for training');
+      expect(toast.success).toHaveBeenCalledWith(
+        'Document has been queued for training',
+      );
 
       consoleSpy.mockRestore();
     });
 
     it('should show error toast when mentorId is missing', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockUseParams.mockReturnValue({ tenantKey: 'tenant-1', mentorId: undefined });
+      mockUseParams.mockReturnValue({
+        tenantKey: 'tenant-1',
+        mentorId: undefined,
+      });
 
       const { result } = renderHook(() => useOneDrivePicker());
 
@@ -302,7 +320,9 @@ describe('useOneDrivePicker', () => {
 
   describe('file selection error', () => {
     it('should show error toast when adding document fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
@@ -357,7 +377,9 @@ describe('useOneDrivePicker', () => {
     });
 
     it('should handle error callback', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const { result } = renderHook(() => useOneDrivePicker());
 
@@ -376,7 +398,9 @@ describe('useOneDrivePicker', () => {
         errorCallback(new Error('Picker error'));
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Error selecting files from OneDrive');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Error selecting files from OneDrive',
+      );
 
       consoleSpy.mockRestore();
       logSpy.mockRestore();
@@ -389,7 +413,9 @@ describe('useOneDrivePicker', () => {
 
   describe('OneDrive.open error handling', () => {
     it('should show error toast when OneDrive.open throws', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       mockOneDriveOpen.mockImplementation(() => {
         throw new Error('Open failed');
@@ -406,7 +432,9 @@ describe('useOneDrivePicker', () => {
         result.current.pickOneDriveFile();
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Failed to open OneDrive picker');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to open OneDrive picker',
+      );
 
       consoleSpy.mockRestore();
       logSpy.mockRestore();

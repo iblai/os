@@ -1,4 +1,4 @@
-import { SERVICES } from "@/features/constants";
+import { SERVICES } from '@/features/constants';
 
 export const TENANTS_ENDPOINTS = {
   GET_USER_TENANTS: {
@@ -12,8 +12,8 @@ export const TENANTS_ENDPOINTS = {
 };
 
 export const TENANTS_QUERY_KEYS = {
-  GET_USER_TENANTS: () => "USER_TENANTS",
-  GET_PLATFORM_METADATA: () => "TENANT_METADATA",
+  GET_USER_TENANTS: () => 'USER_TENANTS',
+  GET_PLATFORM_METADATA: () => 'TENANT_METADATA',
 };
 
-export const TENANTS_REDUCER_KEY = "tenantsApiSliceLocal";
+export const TENANTS_REDUCER_KEY = 'tenantsApiSliceLocal';

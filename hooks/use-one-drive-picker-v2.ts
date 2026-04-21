@@ -88,44 +88,48 @@ const useOneDrivePicker = () => {
     return finalFullDomain;
   };
 
-  const pickOneDriveFile = useCallback((handleSuccess?: (files: any) => void) => {
-    console.log('onedriveAppId', onedriveAppId);
-    if (!onedriveAppId) {
-      toast.error('OneDrive credentials are not loaded yet');
-      return;
-    }
+  const pickOneDriveFile = useCallback(
+    (handleSuccess?: (files: any) => void) => {
+      console.log('onedriveAppId', onedriveAppId);
+      if (!onedriveAppId) {
+        toast.error('OneDrive credentials are not loaded yet');
+        return;
+      }
 
-    console.log('isSDKLoaded', isSDKLoaded);
-    console.log('window.OneDrive', window.OneDrive);
-    if (!isSDKLoaded || !window.OneDrive) {
-      toast.error('OneDrive SDK not loaded yet');
-      return;
-    }
+      console.log('isSDKLoaded', isSDKLoaded);
+      console.log('window.OneDrive', window.OneDrive);
+      if (!isSDKLoaded || !window.OneDrive) {
+        toast.error('OneDrive SDK not loaded yet');
+        return;
+      }
 
-    const odOptions = {
-      clientId: onedriveAppId,
-      action: 'download',
-      multiSelect: true,
-      openInNewWindow: true,
-      advanced: {
-        redirectUri: getFullDomain(),
-        // only show folders, images, word files, powerpoint files, excel files, txt, PDF, csv, HTML, XML
-        filter: 'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
-      },
-      success:
-        handleSuccess ??
-        (() => {
-          toast.success('OneDrive file picked');
-        }),
-      cancel: function () {
-        toast.info('OneDrive file pick cancelled');
-      },
-      error: function () {
-        toast.error('Failed to pick OneDrive file');
-      },
-    };
-    window.OneDrive.open(odOptions);
-  }, []);
+      const odOptions = {
+        clientId: onedriveAppId,
+        action: 'download',
+        multiSelect: true,
+        openInNewWindow: true,
+        advanced: {
+          redirectUri: getFullDomain(),
+          // only show folders, images, word files, powerpoint files, excel files, txt, PDF, csv, HTML, XML
+          filter:
+            'folder,photo,.docx,.doc,.txt,.pdf,.csv,.ppt,.pptx,.xls,.xlsx,.html,.htm,.xml',
+        },
+        success:
+          handleSuccess ??
+          (() => {
+            toast.success('OneDrive file picked');
+          }),
+        cancel: function () {
+          toast.info('OneDrive file pick cancelled');
+        },
+        error: function () {
+          toast.error('Failed to pick OneDrive file');
+        },
+      };
+      window.OneDrive.open(odOptions);
+    },
+    [],
+  );
 
   return { pickOneDriveFile, onedriveAppId };
 };

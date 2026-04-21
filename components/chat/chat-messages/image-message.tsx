@@ -18,12 +18,12 @@ export function ImageMessage({ url, fileName, setPreviewImage }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg w-full h-full max-w-96 max-h-64">
+    <div className="h-full max-h-64 w-full max-w-96 overflow-hidden rounded-lg">
       <div className="relative">
         <img
           src={url}
           alt={fileName}
-          className="w-full h-auto object-contain p-2 cursor-pointer"
+          className="h-auto w-full cursor-pointer object-contain p-2"
           onClick={() => setPreviewImage(url)}
           onError={() => setHasError(true)}
         />

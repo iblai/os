@@ -17,7 +17,9 @@ describe('useEmbedMode', () => {
 
   describe('embed parameter detection', () => {
     it('should return true when embed=true', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'true' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'true' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -26,7 +28,9 @@ describe('useEmbedMode', () => {
     });
 
     it('should return false when embed=false', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'false' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'false' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -42,7 +46,9 @@ describe('useEmbedMode', () => {
     });
 
     it('should return false when embed has unexpected value', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'yes' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'yes' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -50,7 +56,9 @@ describe('useEmbedMode', () => {
     });
 
     it('should return false when embed is empty string', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? '' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? '' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -58,7 +66,9 @@ describe('useEmbedMode', () => {
     });
 
     it('should be case sensitive (TRUE should return false)', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'TRUE' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'TRUE' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -66,7 +76,9 @@ describe('useEmbedMode', () => {
     });
 
     it('should be case sensitive (True should return false)', () => {
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'True' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'True' : null,
+      );
 
       const { result } = renderHook(() => useEmbedMode());
 
@@ -82,7 +94,9 @@ describe('useEmbedMode', () => {
 
       expect(result.current).toBe(false);
 
-      mockGet.mockImplementation((key: string) => (key === 'embed' ? 'true' : null));
+      mockGet.mockImplementation((key: string) =>
+        key === 'embed' ? 'true' : null,
+      );
       rerender();
 
       expect(result.current).toBe(true);

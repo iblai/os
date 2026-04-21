@@ -28,7 +28,9 @@ export default function ErrorPage() {
 
   useEffect(() => {
     if (errorType) {
-      setErrorData(customErrorMessages[errorType as keyof typeof customErrorMessages]);
+      setErrorData(
+        customErrorMessages[errorType as keyof typeof customErrorMessages],
+      );
     }
   }, [errorType]);
 

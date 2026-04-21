@@ -14,13 +14,15 @@ vi.mock('react-redux', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-  AnalyticsFinancialStats: vi.fn(({ tenantKey, mentorId, selectedMentorId }) => (
-    <div data-testid="analytics-financial-stats">
-      <span data-testid="tenant-key">{tenantKey}</span>
-      <span data-testid="mentor-id">{mentorId}</span>
-      <span data-testid="selected-mentor-id">{selectedMentorId}</span>
-    </div>
-  )),
+  AnalyticsFinancialStats: vi.fn(
+    ({ tenantKey, mentorId, selectedMentorId }) => (
+      <div data-testid="analytics-financial-stats">
+        <span data-testid="tenant-key">{tenantKey}</span>
+        <span data-testid="mentor-id">{mentorId}</span>
+        <span data-testid="selected-mentor-id">{selectedMentorId}</span>
+      </div>
+    ),
+  ),
 }));
 
 vi.mock('@/features/analytics/slice', () => ({
@@ -61,7 +63,9 @@ describe('analytics/financial page', () => {
 
     expect(screen.getByTestId('tenant-key')).toHaveTextContent('my-tenant');
     expect(screen.getByTestId('mentor-id')).toHaveTextContent('my-mentor');
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('my-mentor');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'my-mentor',
+    );
   });
 
   it('should use selectedMentorInfo unique_id when available', () => {
@@ -76,6 +80,8 @@ describe('analytics/financial page', () => {
 
     render(<FinancialPage />);
 
-    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent('selected-mentor-id');
+    expect(screen.getByTestId('selected-mentor-id')).toHaveTextContent(
+      'selected-mentor-id',
+    );
   });
 });

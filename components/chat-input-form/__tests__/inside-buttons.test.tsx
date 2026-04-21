@@ -52,7 +52,9 @@ describe('InsideButtons', () => {
     vi.clearAllMocks();
     // Reset mocks to default values
     (useIsAdmin as ReturnType<typeof vi.fn>).mockReturnValue(true);
-    (useLearnerMode as ReturnType<typeof vi.fn>).mockReturnValue({ isInstructorMode: true });
+    (useLearnerMode as ReturnType<typeof vi.fn>).mockReturnValue({
+      isInstructorMode: true,
+    });
   });
 
   describe('rendering', () => {
@@ -72,12 +74,24 @@ describe('InsideButtons', () => {
     });
 
     it('should render Study Mode button when studyMode is true', () => {
-      render(<InsideButtons {...defaultProps} studyMode={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          studyMode={true}
+          containerWidth={1000}
+        />,
+      );
       expect(screen.getByText('Study Mode')).toBeInTheDocument();
     });
 
     it('should not render Study Mode button when studyMode is false', () => {
-      render(<InsideButtons {...defaultProps} studyMode={false} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          studyMode={false}
+          containerWidth={1000}
+        />,
+      );
       expect(screen.queryByText('Study Mode')).not.toBeInTheDocument();
     });
 
@@ -95,40 +109,54 @@ describe('InsideButtons', () => {
       expect(screen.getByText('Deep Research')).toBeInTheDocument();
     });
 
-    it('should render MemoryButton when the filtered list includes Memory', () => {
-      const originalFilter = Array.prototype.filter;
-      let bypassed = false;
-      const filterSpy = vi.spyOn(Array.prototype, 'filter').mockImplementation(function (
-        this: any[],
-        ...args: Parameters<typeof Array.prototype.filter>
-      ) {
-        if (!bypassed) {
-          bypassed = true;
-          return this;
-        }
-        return originalFilter.apply(
-          this,
-          args as [predicate: (value: any, index: number, array: any[]) => unknown, thisArg?: any],
-        );
-      });
-
+    it('should render MemoryButton when memoryEnabled is true', () => {
       render(
         <InsideButtons
           {...defaultProps}
-          artifactsEnabled={true}
-          deepResearch={true}
+          memoryEnabled={true}
           containerWidth={1000}
         />,
       );
 
       expect(screen.getByTestId('memory-button')).toBeInTheDocument();
-      filterSpy.mockRestore();
+    });
+
+    it('should not render MemoryButton for an anonymous mentor', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          isAnonymousMentor={true}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.queryByTestId('memory-button')).not.toBeInTheDocument();
+    });
+
+    it('should not render MemoryButton in embed mode', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          embedMode={true}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.queryByTestId('memory-button')).not.toBeInTheDocument();
     });
   });
 
   describe('button interactions', () => {
     it('should call onOptionClick with CANVAS when Canvas button is clicked', async () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
       expect(canvasButton).toBeInTheDocument();
@@ -140,7 +168,9 @@ describe('InsideButtons', () => {
     it('should call onOptionClick with DEEP_RESEARCH when Deep Research button is clicked', async () => {
       render(<InsideButtons {...defaultProps} containerWidth={1000} />);
 
-      const deepResearchButton = screen.getByText('Deep Research').closest('button');
+      const deepResearchButton = screen
+        .getByText('Deep Research')
+        .closest('button');
       expect(deepResearchButton).toBeInTheDocument();
       fireEvent.click(deepResearchButton!);
 
@@ -148,7 +178,13 @@ describe('InsideButtons', () => {
     });
 
     it('should call onOptionClick with STUDY_MODE when Study Mode button is clicked', async () => {
-      render(<InsideButtons {...defaultProps} studyMode={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          studyMode={true}
+          containerWidth={1000}
+        />,
+      );
 
       const studyModeButton = screen.getByText('Study Mode').closest('button');
       expect(studyModeButton).toBeInTheDocument();
@@ -158,10 +194,19 @@ describe('InsideButtons', () => {
     });
 
     it('should prevent default and stop propagation on button click', async () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
       const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
@@ -174,7 +219,13 @@ describe('InsideButtons', () => {
 
   describe('active state styling', () => {
     it('should apply active styling when Canvas is active', () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
       // When artifactsEnabled is true, button should have active styling
@@ -183,10 +234,16 @@ describe('InsideButtons', () => {
 
     it('should apply active styling when Deep Research is in activeOptions', () => {
       render(
-        <InsideButtons {...defaultProps} activeOptions={['deep-research']} containerWidth={1000} />,
+        <InsideButtons
+          {...defaultProps}
+          activeOptions={['deep-research']}
+          containerWidth={1000}
+        />,
       );
 
-      const deepResearchButton = screen.getByText('Deep Research').closest('button');
+      const deepResearchButton = screen
+        .getByText('Deep Research')
+        .closest('button');
       expect(deepResearchButton).toHaveClass('text-[#38A1E5]');
     });
 
@@ -219,7 +276,13 @@ describe('InsideButtons', () => {
     });
 
     it('should show X icon when button is active', () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
       // Check for X icon in active button
@@ -228,13 +291,22 @@ describe('InsideButtons', () => {
     });
 
     it('should prevent default and stop propagation when X icon is clicked', () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
       const xIcon = canvasButton?.querySelector('.ml-1') as SVGElement | null;
       expect(xIcon).toBeInTheDocument();
 
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const clickEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      });
       const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault');
       const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation');
 
@@ -333,7 +405,13 @@ describe('InsideButtons', () => {
 
   describe('button type attribute', () => {
     it('should have type="button" to prevent form submission', () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
       expect(canvasButton).toHaveAttribute('type', 'button');
@@ -360,12 +438,24 @@ describe('InsideButtons', () => {
 
   describe('icons', () => {
     it('should render CanvasIcon for Canvas button', () => {
-      render(<InsideButtons {...defaultProps} artifactsEnabled={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
       expect(screen.getByTestId('canvas-icon')).toBeInTheDocument();
     });
 
     it('should render DeepSearchIcon for Deep Research button', () => {
-      render(<InsideButtons {...defaultProps} deepResearch={true} containerWidth={1000} />);
+      render(
+        <InsideButtons
+          {...defaultProps}
+          deepResearch={true}
+          containerWidth={1000}
+        />,
+      );
       expect(screen.getByTestId('deep-search-icon')).toBeInTheDocument();
     });
   });
@@ -539,7 +629,9 @@ describe('InsideButtons', () => {
       );
 
       const canvasButton = screen.getByText('Canvas').closest('button');
-      const deepResearchButton = screen.getByText('Deep Research').closest('button');
+      const deepResearchButton = screen
+        .getByText('Deep Research')
+        .closest('button');
 
       expect(canvasButton).toBeDisabled();
       expect(deepResearchButton).toBeDisabled();
@@ -659,7 +751,9 @@ describe('InsideButtons', () => {
         />,
       );
       const buttons = screen.getAllByRole('button');
-      const buttonTexts = buttons.map((btn) => btn.textContent?.replace(/[×✕]/g, '').trim());
+      const buttonTexts = buttons.map((btn) =>
+        btn.textContent?.replace(/[×✕]/g, '').trim(),
+      );
       const canvasIndex = buttonTexts.indexOf('Canvas');
       const promptsIndex = buttonTexts.indexOf('Prompts');
       expect(promptsIndex).toBe(canvasIndex + 1);

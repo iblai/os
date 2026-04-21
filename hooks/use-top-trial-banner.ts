@@ -1,8 +1,8 @@
-import { setOpenPricingModal } from "@/features/subscription/subscription-slice";
-import { TRIGGERS } from "@/features/top-banner/constants";
-import { TopTrialBannerProps } from "@/lib/types";
-import { useEffect, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
+import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
+import { TRIGGERS } from '@/features/top-banner/constants';
+import { TopTrialBannerProps } from '@/lib/types';
+import { useEffect, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
 export const useTopTrialBanner = ({
   parentContainer,
   onUpgrade,
@@ -41,13 +41,13 @@ export const useTopTrialBanner = ({
     if (bannerRef.current) {
       resizeObserver.observe(bannerRef.current);
     }
-    window.addEventListener("resize", updateParentHeight);
+    window.addEventListener('resize', updateParentHeight);
 
     return () => {
       if (resizeObserver && bannerRef.current) {
         resizeObserver.unobserve(bannerRef.current);
       }
-      window.removeEventListener("resize", updateParentHeight);
+      window.removeEventListener('resize', updateParentHeight);
       // Restore previous height
       if (parentElRef.current && prevParentHeight.current !== null) {
         parentElRef.current.style.height = prevParentHeight.current;
@@ -65,7 +65,7 @@ export const useTopTrialBanner = ({
         handlePricingModalTrigger();
         break;
       case TRIGGERS.SUBSCRIBE_USER:
-        alert("in");
+        alert('in');
         break;
       default:
       //do nothing

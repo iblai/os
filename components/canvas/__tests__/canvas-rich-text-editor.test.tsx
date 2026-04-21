@@ -54,14 +54,21 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock @/lib/utils
 vi.mock('@/lib/utils', () => ({
-  htmlToMarkdown: vi.fn((html: string) => (html || '').replace(/<[^>]*>/g, '').trim()),
+  htmlToMarkdown: vi.fn((html: string) =>
+    (html || '').replace(/<[^>]*>/g, '').trim(),
+  ),
   markdownToHtml: vi.fn((md: string) => `<p>${md || ''}</p>`),
 }));
 
 // Mock Button component
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} {...props}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -116,7 +123,9 @@ const mockEditor = {
 vi.mock('@tiptap/react', () => ({
   useEditor: vi.fn(() => mockEditor),
   EditorContent: ({ editor }: any) => (
-    <div data-testid="editor-content">{editor ? 'Editor loaded' : 'No editor'}</div>
+    <div data-testid="editor-content">
+      {editor ? 'Editor loaded' : 'No editor'}
+    </div>
   ),
 }));
 
@@ -154,7 +163,9 @@ describe('CanvasRichTextEditor', () => {
 
   describe('CanvasRichTextEditorToolbar', () => {
     it('renders null when editor is null', () => {
-      const { container } = render(<CanvasRichTextEditorToolbar editor={null} />);
+      const { container } = render(
+        <CanvasRichTextEditorToolbar editor={null} />,
+      );
       expect(container.firstChild).toBeNull();
     });
 
@@ -414,7 +425,9 @@ describe('CanvasRichTextEditor', () => {
 
   describe('CanvasRichTextEditorContent', () => {
     it('renders null when editor is null', () => {
-      const { container } = render(<CanvasRichTextEditorContent editor={null} />);
+      const { container } = render(
+        <CanvasRichTextEditorContent editor={null} />,
+      );
       expect(container.firstChild).toBeNull();
     });
 
@@ -636,7 +649,10 @@ describe('CanvasRichTextEditor', () => {
           onChange: vi.fn(),
         }),
       );
-      expect(mockEditor.on).toHaveBeenCalledWith('update', expect.any(Function));
+      expect(mockEditor.on).toHaveBeenCalledWith(
+        'update',
+        expect.any(Function),
+      );
     });
 
     it('cleans up event listeners on unmount', () => {
@@ -754,7 +770,8 @@ describe('CanvasRichTextEditor', () => {
 
   describe('Toolbar Transaction Handling', () => {
     it('tracks user edits via transaction handler', () => {
-      const transactionHandlers: ((params: { transaction: any }) => void)[] = [];
+      const transactionHandlers: ((params: { transaction: any }) => void)[] =
+        [];
       const editorWithHandlers = {
         ...mockEditor,
         on: vi.fn((event: string, handler: any) => {
@@ -765,7 +782,9 @@ describe('CanvasRichTextEditor', () => {
         off: vi.fn(),
       };
 
-      render(<CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />);
+      render(
+        <CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />,
+      );
 
       // Simulate a user transaction
       if (transactionHandlers.length > 0) {
@@ -781,7 +800,8 @@ describe('CanvasRichTextEditor', () => {
     });
 
     it('ignores programmatic updates in transaction handler', () => {
-      const transactionHandlers: ((params: { transaction: any }) => void)[] = [];
+      const transactionHandlers: ((params: { transaction: any }) => void)[] =
+        [];
       const editorWithHandlers = {
         ...mockEditor,
         on: vi.fn((event: string, handler: any) => {
@@ -792,13 +812,17 @@ describe('CanvasRichTextEditor', () => {
         off: vi.fn(),
       };
 
-      render(<CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />);
+      render(
+        <CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />,
+      );
 
       // Simulate a programmatic transaction
       if (transactionHandlers.length > 0) {
         transactionHandlers[0]({
           transaction: {
-            getMeta: vi.fn((key: string) => (key === 'addToHistory' ? false : undefined)),
+            getMeta: vi.fn((key: string) =>
+              key === 'addToHistory' ? false : undefined,
+            ),
             steps: [{}],
           },
         });
@@ -808,7 +832,8 @@ describe('CanvasRichTextEditor', () => {
     });
 
     it('handles transaction with preventUpdate meta', () => {
-      const transactionHandlers: ((params: { transaction: any }) => void)[] = [];
+      const transactionHandlers: ((params: { transaction: any }) => void)[] =
+        [];
       const editorWithHandlers = {
         ...mockEditor,
         on: vi.fn((event: string, handler: any) => {
@@ -819,13 +844,17 @@ describe('CanvasRichTextEditor', () => {
         off: vi.fn(),
       };
 
-      render(<CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />);
+      render(
+        <CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />,
+      );
 
       // Simulate a transaction with preventUpdate
       if (transactionHandlers.length > 0) {
         transactionHandlers[0]({
           transaction: {
-            getMeta: vi.fn((key: string) => (key === 'preventUpdate' ? true : undefined)),
+            getMeta: vi.fn((key: string) =>
+              key === 'preventUpdate' ? true : undefined,
+            ),
             steps: [{}],
           },
         });
@@ -835,7 +864,8 @@ describe('CanvasRichTextEditor', () => {
     });
 
     it('handles empty transaction steps', () => {
-      const transactionHandlers: ((params: { transaction: any }) => void)[] = [];
+      const transactionHandlers: ((params: { transaction: any }) => void)[] =
+        [];
       const editorWithHandlers = {
         ...mockEditor,
         on: vi.fn((event: string, handler: any) => {
@@ -846,7 +876,9 @@ describe('CanvasRichTextEditor', () => {
         off: vi.fn(),
       };
 
-      render(<CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />);
+      render(
+        <CanvasRichTextEditorToolbar editor={editorWithHandlers as any} />,
+      );
 
       // Simulate a transaction with no steps
       if (transactionHandlers.length > 0) {
@@ -968,7 +1000,9 @@ describe('CanvasRichTextEditor', () => {
     });
 
     it('returns true for complex nested HTML', () => {
-      expect(isHtml('<div><p>Nested <strong>content</strong></p></div>')).toBe(true);
+      expect(isHtml('<div><p>Nested <strong>content</strong></p></div>')).toBe(
+        true,
+      );
     });
 
     it('returns true for HTML with newlines', () => {
@@ -1406,7 +1440,10 @@ describe('CanvasRichTextEditor', () => {
       render(<CanvasRichTextEditorToolbar editor={editor as any} />);
       expect(onMock).toHaveBeenCalledWith('transaction', expect.any(Function));
       expect(onMock).toHaveBeenCalledWith('update', expect.any(Function));
-      expect(onMock).toHaveBeenCalledWith('selectionUpdate', expect.any(Function));
+      expect(onMock).toHaveBeenCalledWith(
+        'selectionUpdate',
+        expect.any(Function),
+      );
     });
 
     it('unregisters listeners on unmount', () => {
@@ -1417,11 +1454,16 @@ describe('CanvasRichTextEditor', () => {
         on: onMock,
         off: offMock,
       };
-      const { unmount } = render(<CanvasRichTextEditorToolbar editor={editor as any} />);
+      const { unmount } = render(
+        <CanvasRichTextEditorToolbar editor={editor as any} />,
+      );
       unmount();
       expect(offMock).toHaveBeenCalledWith('transaction', expect.any(Function));
       expect(offMock).toHaveBeenCalledWith('update', expect.any(Function));
-      expect(offMock).toHaveBeenCalledWith('selectionUpdate', expect.any(Function));
+      expect(offMock).toHaveBeenCalledWith(
+        'selectionUpdate',
+        expect.any(Function),
+      );
     });
 
     it('enables undo when user has edited and can undo', async () => {
@@ -1506,26 +1548,46 @@ describe('getInitialEditorContent', () => {
 
   it('returns value as-is when exportFormat is html', () => {
     expect(
-      getInitialEditorContent('<p>HTML</p>', 'html', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getInitialEditorContent(
+        '<p>HTML</p>',
+        'html',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('<p>HTML</p>');
   });
 
   it('converts HTML value to markdown then back to HTML for markdown format', () => {
     expect(
-      getInitialEditorContent('<p>Test</p>', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getInitialEditorContent(
+        '<p>Test</p>',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('HTML:MD:<p>Test</p>');
   });
 
   it('converts markdown value to HTML for markdown format', () => {
     expect(
-      getInitialEditorContent('# Heading', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getInitialEditorContent(
+        '# Heading',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('HTML:# Heading');
   });
 
   it('handles empty value', () => {
-    expect(getInitialEditorContent('', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe(
-      'HTML:',
-    );
+    expect(
+      getInitialEditorContent(
+        '',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('HTML:');
   });
 
   it('detects HTML by starting with < and ending with >', () => {
@@ -1540,9 +1602,14 @@ describe('getInitialEditorContent', () => {
   });
 
   it('treats value starting with < but not ending with > as markdown', () => {
-    expect(getInitialEditorContent('< 5', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe(
-      'HTML:< 5',
-    );
+    expect(
+      getInitialEditorContent(
+        '< 5',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('HTML:< 5');
   });
 });
 
@@ -1556,26 +1623,46 @@ describe('getNextEditorContent', () => {
 
   it('returns value as-is when exportFormat is html', () => {
     expect(
-      getNextEditorContent('<p>HTML</p>', 'html', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getNextEditorContent(
+        '<p>HTML</p>',
+        'html',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('<p>HTML</p>');
   });
 
   it('converts HTML value through markdown round trip for markdown format', () => {
     expect(
-      getNextEditorContent('<p>Test</p>', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getNextEditorContent(
+        '<p>Test</p>',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('HTML:MD:<p>Test</p>');
   });
 
   it('converts markdown value to HTML', () => {
     expect(
-      getNextEditorContent('Plain text', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml),
+      getNextEditorContent(
+        'Plain text',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
     ).toBe('HTML:Plain text');
   });
 
   it('handles empty value', () => {
-    expect(getNextEditorContent('', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe(
-      'HTML:',
-    );
+    expect(
+      getNextEditorContent(
+        '',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('HTML:');
   });
 });
 
@@ -1779,17 +1866,30 @@ describe('isHtml - Additional Cases', () => {
 });
 
 describe('getInitialEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) => `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) =>
+    `MD:${html.replace(/<[^>]*>/g, '')}`;
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with html format', () => {
-    expect(getInitialEditorContent('', 'html', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe('');
+    expect(
+      getInitialEditorContent(
+        '',
+        'html',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('');
   });
 
   it('handles whitespace with html format', () => {
-    expect(getInitialEditorContent('   ', 'html', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe(
-      '   ',
-    );
+    expect(
+      getInitialEditorContent(
+        '   ',
+        'html',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('   ');
   });
 
   it('handles nested HTML with markdown format', () => {
@@ -1814,13 +1914,19 @@ describe('getInitialEditorContent - Additional Cases', () => {
 });
 
 describe('getNextEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) => `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) =>
+    `MD:${html.replace(/<[^>]*>/g, '')}`;
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with markdown format', () => {
-    expect(getNextEditorContent('', 'markdown', mockHtmlToMarkdown, mockMarkdownToHtml)).toBe(
-      '<p></p>',
-    );
+    expect(
+      getNextEditorContent(
+        '',
+        'markdown',
+        mockHtmlToMarkdown,
+        mockMarkdownToHtml,
+      ),
+    ).toBe('<p></p>');
   });
 
   it('handles plain text with markdown format', () => {
@@ -1882,7 +1988,8 @@ describe('canAutoSave - Additional Cases', () => {
 describe('isTransactionProgrammatic - Additional Cases', () => {
   it('handles getMeta returning truthy non-true values', () => {
     const transaction = {
-      getMeta: (key: string) => (key === 'preventUpdate' ? 'truthy-string' : undefined),
+      getMeta: (key: string) =>
+        key === 'preventUpdate' ? 'truthy-string' : undefined,
     } as any;
     // 'truthy-string' !== true, so should return false for preventUpdate check
     expect(isTransactionProgrammatic(transaction)).toBe(false);
@@ -1910,19 +2017,29 @@ describe('isTransactionProgrammatic - Additional Cases', () => {
 
 describe('validateAutoSaveConfig', () => {
   it('returns valid when all fields present', () => {
-    const result = validateAutoSaveConfig({ artifactId: 123, org: 'test-org', userId: 'user-1' });
+    const result = validateAutoSaveConfig({
+      artifactId: 123,
+      org: 'test-org',
+      userId: 'user-1',
+    });
     expect(result.isValid).toBe(true);
     expect(result.missingFields).toEqual([]);
   });
 
   it('returns invalid when artifactId missing', () => {
-    const result = validateAutoSaveConfig({ org: 'test-org', userId: 'user-1' });
+    const result = validateAutoSaveConfig({
+      org: 'test-org',
+      userId: 'user-1',
+    });
     expect(result.isValid).toBe(false);
     expect(result.missingFields).toContain('artifactId');
   });
 
   it('returns invalid when org missing', () => {
-    const result = validateAutoSaveConfig({ artifactId: 123, userId: 'user-1' });
+    const result = validateAutoSaveConfig({
+      artifactId: 123,
+      userId: 'user-1',
+    });
     expect(result.isValid).toBe(false);
     expect(result.missingFields).toContain('org');
   });
@@ -1940,14 +2057,22 @@ describe('validateAutoSaveConfig', () => {
   });
 
   it('handles empty string values as missing', () => {
-    const result = validateAutoSaveConfig({ artifactId: 123, org: '', userId: '' });
+    const result = validateAutoSaveConfig({
+      artifactId: 123,
+      org: '',
+      userId: '',
+    });
     expect(result.isValid).toBe(false);
     expect(result.missingFields).toContain('org');
     expect(result.missingFields).toContain('userId');
   });
 
   it('handles zero artifactId as missing', () => {
-    const result = validateAutoSaveConfig({ artifactId: 0, org: 'test', userId: 'user' });
+    const result = validateAutoSaveConfig({
+      artifactId: 0,
+      org: 'test',
+      userId: 'user',
+    });
     expect(result.isValid).toBe(false);
     expect(result.missingFields).toContain('artifactId');
   });
@@ -2039,7 +2164,11 @@ describe('needsSaving', () => {
 
 describe('findHistoryPlugin', () => {
   it('finds plugin with key starting with history$', () => {
-    const plugins = [{ key: 'other' }, { key: 'history$abc' }, { key: 'another' }];
+    const plugins = [
+      { key: 'other' },
+      { key: 'history$abc' },
+      { key: 'another' },
+    ];
     const result = findHistoryPlugin(plugins);
     expect(result?.key).toBe('history$abc');
   });
@@ -2195,14 +2324,21 @@ describe('markdownContentMatches', () => {
 // ==========================================================================
 
 describe('getExportValue', () => {
-  const mockHtmlToMarkdown = (html: string) => `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) =>
+    `MD:${html.replace(/<[^>]*>/g, '')}`;
 
   it('returns html directly when exportFormat is html', () => {
-    expect(getExportValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe('<p>Test</p>');
+    expect(getExportValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(
+      '<p>Test</p>',
+    );
   });
 
   it('converts to markdown when exportFormat is markdown', () => {
-    const result = getExportValue('<p>Test</p>', 'markdown', mockHtmlToMarkdown);
+    const result = getExportValue(
+      '<p>Test</p>',
+      'markdown',
+      mockHtmlToMarkdown,
+    );
     expect(result).toBe('MD:Test');
   });
 
@@ -2313,7 +2449,10 @@ describe('shouldTriggerAutoSave', () => {
 
 describe('processAutoSaveResponse', () => {
   it('returns savedArtifact content when available', () => {
-    const result = processAutoSaveResponse({ content: 'saved content' }, 'original');
+    const result = processAutoSaveResponse(
+      { content: 'saved content' },
+      'original',
+    );
     expect(result).toBe('saved content');
   });
 
@@ -2333,7 +2472,10 @@ describe('processAutoSaveResponse', () => {
   });
 
   it('returns original markdown when savedArtifact.content is empty', () => {
-    const result = processAutoSaveResponse({ content: '' }, 'original markdown');
+    const result = processAutoSaveResponse(
+      { content: '' },
+      'original markdown',
+    );
     expect(result).toBe('original markdown');
   });
 
@@ -2442,14 +2584,19 @@ describe('shouldProceedWithUpdate', () => {
 // ==========================================================================
 
 describe('getOnChangeValue', () => {
-  const mockHtmlToMarkdown = (html: string) => `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) =>
+    `MD:${html.replace(/<[^>]*>/g, '')}`;
 
   it('returns html directly for html format', () => {
-    expect(getOnChangeValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe('<p>Test</p>');
+    expect(getOnChangeValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(
+      '<p>Test</p>',
+    );
   });
 
   it('converts to markdown for markdown format', () => {
-    expect(getOnChangeValue('<p>Test</p>', 'markdown', mockHtmlToMarkdown)).toBe('MD:Test');
+    expect(
+      getOnChangeValue('<p>Test</p>', 'markdown', mockHtmlToMarkdown),
+    ).toBe('MD:Test');
   });
 
   it('handles empty html', () => {

@@ -34,10 +34,7 @@ import {
   onAccountDeleted,
 } from '@/lib/utils';
 import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
-import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
-import { useLazyGetTenantMetadataQuery } from '@/features/tenants/api-slice';
-import { MentorVisibilityEnum, UserApp } from '@iblai/iblai-api';
-import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import { UserApp } from '@iblai/iblai-api';
 import {
   selectRbacPermissions,
   updateRbacPermissions,
@@ -121,8 +118,6 @@ export function UserProfile() {
 
   const { currentTenant, saveCurrentTenant } = useCurrentTenant();
   const { userTenants = [], saveUserTenants } = useUserTenants();
-  const [fetchTenantMetadata] = useLazyGetTenantMetadataQuery();
-  const [loadingTenantInfo, setLoadingTenantInfo] = useState(false);
 
   const dispatch = useAppDispatch();
   const topBannerOptions = useAppSelector(
@@ -156,6 +151,7 @@ export function UserProfile() {
       SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
     );
     triggerPricingModal();
+    handleModalOpenChange(false);
   }, [bannerButtonTriggerCallback]);
 
   const [billingURL, setBillingURL] = useState<string>('');
@@ -167,17 +163,6 @@ export function UserProfile() {
     org: tenantKey,
   });
 
-  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
-    {
-      mentor: mentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? ANONYMOUS_USERNAME,
-    },
-    {
-      skip: !mentorId || !tenantKey,
-    },
-  );
   const rbacPermissions = useAppSelector(selectRbacPermissions);
 
   // Local LLM download hook for Tauri app
@@ -198,72 +183,76 @@ export function UserProfile() {
     onSelectFoundryModel,
   } = useModelDownload();
 
-  useEffect(() => {
-    if (!username || !tenantKey || !mentorPublicSettings) {
-      return;
-    }
-
-    const allowsAnonymousChat = mentorPublicSettings.allow_anonymous === true;
-    const viewableByAnyone =
-      mentorPublicSettings.mentor_visibility ===
-      MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
-
-    if (!allowsAnonymousChat || !viewableByAnyone) {
-      return;
-    }
-
-    const tenantAlreadyAdded = userTenants.some(
-      (tenant) => tenant.key === tenantKey,
-    );
-
-    if (tenantAlreadyAdded) {
-      const existingTenant = userTenants.find(
-        (tenant) => tenant.key === tenantKey,
-      );
-      if (existingTenant && currentTenant?.key !== tenantKey) {
-        saveCurrentTenant(existingTenant);
-      }
-      return;
-    }
-
-    if (loadingTenantInfo) {
-      return;
-    }
-
-    setLoadingTenantInfo(true);
-    fetchTenantMetadata({ tenantKey })
-      .unwrap()
-      .then((metadata) => {
-        const newTenant: Tenant = {
-          key: tenantKey,
-          org: tenantKey,
-          is_admin: false,
-          platform_name: metadata?.platform_name || tenantKey,
-          name: metadata?.platform_name || tenantKey,
-        };
-
-        const updatedTenants = [...userTenants, newTenant];
-        saveUserTenants(updatedTenants);
-        saveCurrentTenant(newTenant);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch tenant metadata', error);
-      })
-      .finally(() => {
-        setLoadingTenantInfo(false);
-      });
-  }, [
-    currentTenant?.key,
-    fetchTenantMetadata,
-    loadingTenantInfo,
-    mentorId,
-    mentorPublicSettings,
-    saveCurrentTenant,
-    saveUserTenants,
-    tenantKey,
-    userTenants,
-    username,
-  ]);
+  // TODO: The tenant provider already handles fetching tenant metadata and
+  // syncing currentTenant/userTenants for anonymous-viewable mentors. This
+  // effect is commented out so we can monitor whether removing the duplicate
+  // fetch causes any regressions. If nothing breaks, delete this block.
+  // useEffect(() => {
+  //   if (!username || !tenantKey || !mentorPublicSettings) {
+  //     return;
+  //   }
+  //
+  //   const allowsAnonymousChat = mentorPublicSettings.allow_anonymous === true;
+  //   const viewableByAnyone =
+  //     mentorPublicSettings.mentor_visibility ===
+  //     MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
+  //
+  //   if (!allowsAnonymousChat || !viewableByAnyone) {
+  //     return;
+  //   }
+  //
+  //   const tenantAlreadyAdded = userTenants.some(
+  //     (tenant) => tenant.key === tenantKey,
+  //   );
+  //
+  //   if (tenantAlreadyAdded) {
+  //     const existingTenant = userTenants.find(
+  //       (tenant) => tenant.key === tenantKey,
+  //     );
+  //     if (existingTenant && currentTenant?.key !== tenantKey) {
+  //       saveCurrentTenant(existingTenant);
+  //     }
+  //     return;
+  //   }
+  //
+  //   if (loadingTenantInfo) {
+  //     return;
+  //   }
+  //
+  //   setLoadingTenantInfo(true);
+  //   fetchTenantMetadata({ tenantKey })
+  //     .unwrap()
+  //     .then((metadata) => {
+  //       const newTenant: Tenant = {
+  //         key: tenantKey,
+  //         org: tenantKey,
+  //         is_admin: false,
+  //         platform_name: metadata?.platform_name || tenantKey,
+  //         name: metadata?.platform_name || tenantKey,
+  //       };
+  //
+  //       const updatedTenants = [...userTenants, newTenant];
+  //       saveUserTenants(updatedTenants);
+  //       saveCurrentTenant(newTenant);
+  //     })
+  //     .catch((error) => {
+  //       console.error('Failed to fetch tenant metadata', error);
+  //     })
+  //     .finally(() => {
+  //       setLoadingTenantInfo(false);
+  //     });
+  // }, [
+  //   currentTenant?.key,
+  //   fetchTenantMetadata,
+  //   loadingTenantInfo,
+  //   mentorId,
+  //   mentorPublicSettings,
+  //   saveCurrentTenant,
+  //   saveUserTenants,
+  //   tenantKey,
+  //   userTenants,
+  //   username,
+  // ]);
   const { visitingTenant } = useVisitingTenant();
 
   const handleGetSubscriptionRelatedData = async () => {
@@ -392,6 +381,7 @@ export function UserProfile() {
       onModalOpenChange={handleModalOpenChange}
       defaultActiveTab={activeProfileTab}
       onAccountDeleted={() => onAccountDeleted()}
+      enableMemoryTab={true}
     />
   );
 }

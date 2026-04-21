@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
-import React, { forwardRef } from "react";
+import dynamic from 'next/dynamic';
+import React, { forwardRef } from 'react';
 
-import { formatRelativeDate } from "@/lib/utils";
+import { formatRelativeDate } from '@/lib/utils';
 import {
   Message as BaseMessage,
   type ToolCallInfo,
-} from "@iblai/iblai-js/web-utils";
-import { AIMessageBubble } from "@/components/chat/ai-message-bubble";
-import type { CanvasOpenPayload } from "./types";
-import { UserMessageBubble } from "./user-message-bubble";
+} from '@iblai/iblai-js/web-utils';
+import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
+import type { CanvasOpenPayload } from './types';
+import { UserMessageBubble } from './user-message-bubble';
 
 const ImagePreviewModal = dynamic(
-  () => import("./image-preview-modal").then((mod) => mod.ImagePreviewModal),
+  () => import('./image-preview-modal').then((mod) => mod.ImagePreviewModal),
   {
     ssr: false,
   },
@@ -71,7 +71,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     );
     const lastAIMessageIndex = visibleMessages.reduce(
       (lastIndex, message, index) => {
-        return message.role === "assistant" ? index : lastIndex;
+        return message.role === 'assistant' ? index : lastIndex;
       },
       -1,
     );
@@ -80,7 +80,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     return (
       <>
         {visibleMessages.map((message, i) =>
-          message.role === "user" ? (
+          message.role === 'user' ? (
             <UserMessageBubble
               key={`message-${message.id}-${i}`}
               message={message}
@@ -94,7 +94,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
           ) : (
             <div
               key={i}
-              className={`transition-all duration-300 ${highlightedMessageId === i ? "bg-blue-100 rounded-lg" : ""}`}
+              className={`transition-all duration-300 ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
             >
               <AIMessageBubble
                 ref={i === lastAIMessageIndex ? ref : undefined}

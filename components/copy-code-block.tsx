@@ -40,7 +40,11 @@ export const CopyCodeBlock = ({ code, className }: CopyCodeBlockProps) => {
         size="icon"
         className="absolute top-2 right-4 h-2 w-2 cursor-pointer"
       >
-        {copied ? <Check className="h-2 w-2 text-blue-500" /> : <Copy className="h-1 w-1" />}
+        {copied ? (
+          <Check className="h-2 w-2 text-blue-500" />
+        ) : (
+          <Copy className="h-1 w-1" />
+        )}
       </Button>
     </div>
   );

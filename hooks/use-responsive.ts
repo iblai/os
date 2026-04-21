@@ -14,7 +14,9 @@ export const useResponsive = (containerRef?: React.RefObject<HTMLElement>) => {
         ? containerRef.current.getBoundingClientRect().width
         : window.innerWidth;
       const nextWidth = Math.round(availableWidth);
-      setContainerWidth((prevWidth) => (prevWidth === nextWidth ? prevWidth : nextWidth));
+      setContainerWidth((prevWidth) =>
+        prevWidth === nextWidth ? prevWidth : nextWidth,
+      );
 
       // Adjust breakpoints based on actual available space
       let nextScreenSize: 'sm' | 'md' | 'lg' | 'xl';

@@ -18,17 +18,21 @@ vi.mock('@/providers/use-user', () => ({
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockUseGetMentorPublicSettingsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorSettingsQuery: (...args: unknown[]) => mockUseGetMentorSettingsQuery(...args),
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockUseGetMentorSettingsQuery(...args),
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
+  useGetMemsearchStatusQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
 const mockGetCachedApiResponse = vi.fn();
 const mockSetCachedApiResponse = vi.fn();
 const mockIsTauriOfflineMode = vi.fn();
 vi.mock('@/lib/tauri-api-cache', () => ({
-  getCachedApiResponse: (...args: unknown[]) => mockGetCachedApiResponse(...args),
-  setCachedApiResponse: (...args: unknown[]) => mockSetCachedApiResponse(...args),
+  getCachedApiResponse: (...args: unknown[]) =>
+    mockGetCachedApiResponse(...args),
+  setCachedApiResponse: (...args: unknown[]) =>
+    mockSetCachedApiResponse(...args),
   isTauriOfflineMode: () => mockIsTauriOfflineMode(),
   CacheKeys: {
     mentorSettings: (tenantKey: string, mentorId: string, userId: string) =>
@@ -128,7 +132,9 @@ describe('useMentorSettings', () => {
     it('should return mentor settings for logged in user', () => {
       const { result } = renderHook(() => useMentorSettings());
 
-      expect(result.current.data.profileImage).toBe('https://example.com/profile.jpg');
+      expect(result.current.data.profileImage).toBe(
+        'https://example.com/profile.jpg',
+      );
       expect(result.current.data.greetingMethod).toBe('hello');
       expect(result.current.data.llmProvider).toBe('openai');
       expect(result.current.data.llmName).toBe('gpt-4');
@@ -221,7 +227,9 @@ describe('useMentorSettings', () => {
     it('should return public settings for anonymous user', () => {
       const { result } = renderHook(() => useMentorSettings());
 
-      expect(result.current.data.profileImage).toBe('https://example.com/public-profile.jpg');
+      expect(result.current.data.profileImage).toBe(
+        'https://example.com/public-profile.jpg',
+      );
       expect(result.current.data.greetingMethod).toBe('hi');
       expect(result.current.data.llmProvider).toBe('');
       expect(result.current.data.llmName).toBe('gpt-3.5');
@@ -278,7 +286,12 @@ describe('useMentorSettings', () => {
     });
 
     it('should use both props when provided', () => {
-      renderHook(() => useMentorSettings({ mentorId: 'props-mentor', tenantKey: 'props-tenant' }));
+      renderHook(() =>
+        useMentorSettings({
+          mentorId: 'props-mentor',
+          tenantKey: 'props-tenant',
+        }),
+      );
 
       expect(mockUseGetMentorSettingsQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -314,7 +327,9 @@ describe('useMentorSettings', () => {
 
       const { result } = renderHook(() => useMentorSettings());
 
-      expect(result.current.data.profileImage).toBe('https://example.com/profile.jpg');
+      expect(result.current.data.profileImage).toBe(
+        'https://example.com/profile.jpg',
+      );
       expect(result.current.data.greetingMethod).toBe('hello');
     });
 
@@ -325,7 +340,9 @@ describe('useMentorSettings', () => {
 
       const { result } = renderHook(() => useMentorSettings());
 
-      expect(result.current.data.profileImage).toBe('https://example.com/public-profile.jpg');
+      expect(result.current.data.profileImage).toBe(
+        'https://example.com/public-profile.jpg',
+      );
     });
 
     it('should show loading when offline without cache', () => {
@@ -462,7 +479,9 @@ describe('useMentorSettings', () => {
     it('should fallback to public settings for missing fields', () => {
       const { result } = renderHook(() => useMentorSettings());
 
-      expect(result.current.data.profileImage).toBe('https://example.com/public-profile.jpg');
+      expect(result.current.data.profileImage).toBe(
+        'https://example.com/public-profile.jpg',
+      );
       expect(result.current.data.greetingMethod).toBe('hi');
     });
 

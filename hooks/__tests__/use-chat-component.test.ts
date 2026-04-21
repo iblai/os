@@ -39,10 +39,12 @@ describe('useChatComponent', () => {
     });
 
     // Mock document.querySelector
-    vi.spyOn(document, 'querySelector').mockImplementation((selector: string) => {
-      if (selector === 'mentor-ai') return mentorElement;
-      return null;
-    });
+    vi.spyOn(document, 'querySelector').mockImplementation(
+      (selector: string) => {
+        if (selector === 'mentor-ai') return mentorElement;
+        return null;
+      },
+    );
   });
 
   afterEach(() => {
@@ -63,7 +65,10 @@ describe('useChatComponent', () => {
         result.current.triggerNewChatSession();
       });
 
-      expect(mockPostMessage).toHaveBeenCalledWith({ reason: 'NEW_CHAT_SESSION' }, '*');
+      expect(mockPostMessage).toHaveBeenCalledWith(
+        { reason: 'NEW_CHAT_SESSION' },
+        '*',
+      );
     });
 
     it('should not throw when mentor-ai element does not exist', () => {

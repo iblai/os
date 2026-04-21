@@ -12,7 +12,12 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { PromptVisibilityEnum } from '@iblai/iblai-api';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useUsername } from '@/hooks/use-user';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -33,7 +38,8 @@ import { parsePrompt } from '@/lib/utils';
 import Markdown from '@/components/markdown';
 
 export function PromptsTab() {
-  const { showAddPromptModal, closeAddPromptModal, openAddPromptModal } = useNavigate();
+  const { showAddPromptModal, closeAddPromptModal, openAddPromptModal } =
+    useNavigate();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -41,35 +47,39 @@ export function PromptsTab() {
     useShowFreeTrialDialog();
   const activeMentorId = getMentorId() || mentorId;
 
-  const [selectedPrompt, setSelectedPrompt] = React.useState<SelectedPrompt | null>(null);
+  const [selectedPrompt, setSelectedPrompt] =
+    React.useState<SelectedPrompt | null>(null);
 
   const isOpen = !!selectedPrompt;
 
-  const { data: mentorSettings, isLoading: isLoadingMentor } = useGetMentorSettingsQuery(
-    // @ts-expect-error - userId parameter may not exist in API but passed from legacy code
-    { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
-    {
-      skip: !activeMentorId || !tenantKey || !username,
-    },
-  );
+  const { data: mentorSettings, isLoading: isLoadingMentor } =
+    useGetMentorSettingsQuery(
+      // @ts-expect-error - userId parameter may not exist in API but passed from legacy code
+      { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
+      {
+        skip: !activeMentorId || !tenantKey || !username,
+      },
+    );
 
-  const { data: prompts, isLoading: isLoadingPrompts } = useGetPromptsSearchQuery(
-    {
-      org: tenantKey,
-      username: username ?? '',
-      category: '',
-      limit: 10,
-      offset: 0,
-      mentor: mentorId,
-      orderDirection: 'asc',
-    },
-    {
-      skip: !tenantKey || !username || !mentorId,
-    },
-  );
+  const { data: prompts, isLoading: isLoadingPrompts } =
+    useGetPromptsSearchQuery(
+      {
+        org: tenantKey,
+        username: username ?? '',
+        category: '',
+        limit: 10,
+        offset: 0,
+        mentor: mentorId,
+        orderDirection: 'asc',
+      },
+      {
+        skip: !tenantKey || !username || !mentorId,
+      },
+    );
 
   const [editMentor, { isLoading: isEditingMentor }] = useEditMentorMutation();
-  const [updatePrompt, { isLoading: isUpdatingPrompt }] = useUpdatePromptMutation();
+  const [updatePrompt, { isLoading: isUpdatingPrompt }] =
+    useUpdatePromptMutation();
 
   const isLoading = isLoadingMentor || isLoadingPrompts;
 
@@ -97,7 +107,10 @@ export function PromptsTab() {
     }
   }
 
-  async function editPrompt(selectedPrompt: SelectedPrompt, value: EditFormValues) {
+  async function editPrompt(
+    selectedPrompt: SelectedPrompt,
+    value: EditFormValues,
+  ) {
     if (selectedPrompt.isSystem) {
       try {
         await editMentor({
@@ -143,14 +156,16 @@ export function PromptsTab() {
 
   return (
     <>
-      <div className="hidden lg:block flex-shrink-0 p-4 border-b border-gray-200 bg-white h-[73px] flex items-center">
+      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="text-base font-medium text-gray-900 mb-1">Prompts</h3>
-          <p className="text-gray-700 text-xs">Manage and configure prompts for your mentor.</p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Prompts</h3>
+          <p className="text-xs text-gray-700">
+            Manage and configure prompts for your mentor.
+          </p>
         </div>
       </div>
       <div
-        className="flex-1 p-3 lg:p-4 space-y-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -168,7 +183,9 @@ export function PromptsTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-[1.12rem]">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">System Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        System Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about system prompt">
@@ -235,7 +252,9 @@ export function PromptsTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Proactive Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Proactive Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about proactive prompt">
@@ -255,13 +274,15 @@ export function PromptsTab() {
                       {({ disabled }) => (
                         <div className="flex items-center gap-2">
                           <span className="text-primary text-xs">
-                            {mentorSettings?.greeting_method === GreetingMethod.PROACTIVE_PROMPT
+                            {mentorSettings?.greeting_method ===
+                            GreetingMethod.PROACTIVE_PROMPT
                               ? 'Active'
                               : 'Inactive'}
                           </span>
                           <Switch
                             checked={
-                              mentorSettings?.greeting_method === GreetingMethod.PROACTIVE_PROMPT
+                              mentorSettings?.greeting_method ===
+                              GreetingMethod.PROACTIVE_PROMPT
                             }
                             onCheckedChange={async (checked) => {
                               await toggleToolSettings(
@@ -327,7 +348,9 @@ export function PromptsTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Study Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Study Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about study mode prompt">
@@ -373,7 +396,9 @@ export function PromptsTab() {
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
                     </Button>
-                    <CopyButton text={mentorSettings?.study_mode_prompt ?? ''} />
+                    <CopyButton
+                      text={mentorSettings?.study_mode_prompt ?? ''}
+                    />
                   </div>
                 </div>
               )}
@@ -389,7 +414,9 @@ export function PromptsTab() {
                 <div className="overflow-hidden rounded-lg bg-gray-50">
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-gray-900">Guided Prompt</h3>
+                      <h3 className="text-sm font-medium text-gray-900">
+                        Guided Prompt
+                      </h3>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger aria-label="More info about guided prompt">
@@ -409,12 +436,17 @@ export function PromptsTab() {
                       {({ disabled }) => (
                         <div className="flex items-center gap-2">
                           <span className="text-primary text-xs">
-                            {mentorSettings?.enable_guided_prompts ? 'Active' : 'Inactive'}
+                            {mentorSettings?.enable_guided_prompts
+                              ? 'Active'
+                              : 'Inactive'}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_guided_prompts}
                             onCheckedChange={async (checked) => {
-                              await toggleToolSettings('enable_guided_prompts', checked);
+                              await toggleToolSettings(
+                                'enable_guided_prompts',
+                                checked,
+                              );
                             }}
                             disabled={isLoading || isEditingMentor || disabled}
                             aria-label={`Guided prompt ${mentorSettings?.enable_guided_prompts ? 'enabled' : 'disabled'}`}
@@ -452,8 +484,9 @@ export function PromptsTab() {
                           label: 'Guided Prompt',
                           isSystem: true,
                           name: 'guided_prompt_instructions',
-                          // @ts-ignore
-                          prompt: mentorSettings?.guided_prompt_instructions ?? '',
+                          prompt:
+                            // @ts-ignore guided_prompt_instructions not in type of MentorSettingsPublic
+                            mentorSettings?.guided_prompt_instructions ?? '',
                         })
                       }
                     >
@@ -479,7 +512,9 @@ export function PromptsTab() {
             {({ disabled }) => (
               <div className="mt-8">
                 <div className="mb-4 flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-gray-900">Suggested Prompts</h3>
+                  <h3 className="text-sm font-medium text-gray-900">
+                    Suggested Prompts
+                  </h3>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger aria-label="More info about suggested prompts">
@@ -495,7 +530,10 @@ export function PromptsTab() {
                 {/* list of prompts */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {prompts?.results.map((prompt, index) => (
-                    <div className="overflow-hidden rounded-lg bg-gray-50" key={prompt.id}>
+                    <div
+                      className="overflow-hidden rounded-lg bg-gray-50"
+                      key={prompt.id}
+                    >
                       <div className="flex items-start gap-2 p-4">
                         <div className="mt-1 flex-shrink-0">📝</div>
                         <div className="flex h-[180px] flex-1 flex-col">
@@ -527,7 +565,8 @@ export function PromptsTab() {
                               // @ts-expect-error - name property does not exist on string type (category might be string instead of object)
                               category: prompt?.category?.name ?? '',
                               promptVisibility:
-                                prompt?.prompt_visibility && prompt?.prompt_visibility !== 'null'
+                                prompt?.prompt_visibility &&
+                                prompt?.prompt_visibility !== 'null'
                                   ? (prompt?.prompt_visibility as PromptVisibilityEnum)
                                   : undefined,
                             });
@@ -565,7 +604,10 @@ export function PromptsTab() {
           )}
 
           {showAddPromptModal && (
-            <AddPromptModal isOpen={showAddPromptModal} onClose={closeAddPromptModal} />
+            <AddPromptModal
+              isOpen={showAddPromptModal}
+              onClose={closeAddPromptModal}
+            />
           )}
 
           {isModalOpen && FreeTrialDialog && (

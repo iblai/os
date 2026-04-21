@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -84,10 +90,14 @@ vi.mock('@sentry/nextjs', () => ({
 const mockEditMentorAndRefresh = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
   return {
     ...actual,
-    useEditMentorAndRefreshListMutation: () => [mockEditMentorAndRefresh, { isLoading: false }],
+    useEditMentorAndRefreshListMutation: () => [
+      mockEditMentorAndRefresh,
+      { isLoading: false },
+    ],
   };
 });
 
@@ -129,9 +139,19 @@ vi.mock('@/hooks/use-mentors', () => ({
 
 // Mock EditMentorModal to avoid complex dependencies
 vi.mock('../edit-mentor-modal', () => ({
-  EditMentorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
     isOpen ? (
-      <div data-testid="mock-edit-mentor-modal" role="dialog" aria-label="Edit Mentor">
+      <div
+        data-testid="mock-edit-mentor-modal"
+        role="dialog"
+        aria-label="Edit Mentor"
+      >
         <button onClick={onClose}>Close Edit Modal</button>
       </div>
     ) : null,
@@ -217,7 +237,9 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      expect(screen.getByRole('button', { name: /create mentor/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /create mentor/i }),
+      ).toBeInTheDocument();
     });
 
     it('renders the mentors table', () => {
@@ -277,7 +299,9 @@ describe('SettingsModal', () => {
       );
 
       // Click Create Mentor button
-      const createButton = screen.getByRole('button', { name: /create mentor/i });
+      const createButton = screen.getByRole('button', {
+        name: /create mentor/i,
+      });
       fireEvent.click(createButton);
 
       // Verify router.push was called (modal state update via URL)
@@ -328,7 +352,11 @@ describe('SettingsModal', () => {
     it('renders EditMentorModal when showEditMentorModal is true', async () => {
       const modalStack: ModalInfo[] = [
         { name: MODALS.SETTINGS.name },
-        { name: MODALS.EDIT_MENTOR.name, tab: 'settings', mentorId: 'test-mentor-1' },
+        {
+          name: MODALS.EDIT_MENTOR.name,
+          tab: 'settings',
+          mentorId: 'test-mentor-1',
+        },
       ];
       mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
       const store = createTestStore(modalStack);
@@ -400,11 +428,15 @@ describe('SettingsModal', () => {
       );
 
       // The sr-only description should be present (there are 2 - one sr-only and one visible)
-      const descriptions = screen.getAllByText('Showing list of mentors used with the mentorAI');
+      const descriptions = screen.getAllByText(
+        'Showing list of mentors used with the mentorAI',
+      );
       expect(descriptions.length).toBeGreaterThan(0);
 
       // Verify at least one has sr-only class for accessibility
-      const srOnlyDescription = descriptions.find((el) => el.classList.contains('sr-only'));
+      const srOnlyDescription = descriptions.find((el) =>
+        el.classList.contains('sr-only'),
+      );
       expect(srOnlyDescription).toBeDefined();
     });
 
@@ -522,7 +554,9 @@ describe('SettingsModal', () => {
       fireEvent.click(toggleSwitch);
 
       await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith('Mentor featured status updated');
+        expect(toast.success).toHaveBeenCalledWith(
+          'Mentor featured status updated',
+        );
       });
     });
 
@@ -546,7 +580,9 @@ describe('SettingsModal', () => {
       fireEvent.click(toggleSwitch);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor featured status');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Failed to update mentor featured status',
+        );
       });
     });
   });
@@ -585,7 +621,9 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      expect(screen.queryByRole('button', { name: /create mentor/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /create mentor/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('prevents mentor name click for students', async () => {

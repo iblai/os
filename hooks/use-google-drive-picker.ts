@@ -2,7 +2,10 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import GoogleDrivePicker from 'google-drive-picker';
-import { useAddTrainingDocumentMutation, useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useAddTrainingDocumentMutation,
+  useLazyGetCredentialsQuery,
+} from '@iblai/iblai-js/data-layer';
 import { useUsername } from './use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils';
@@ -44,7 +47,11 @@ const useGoogleDrivePicker = () => {
           name: 'drive',
           learner_id: username,
         }).unwrap();
-        if (credentials && Array.isArray(credentials) && credentials.length > 0) {
+        if (
+          credentials &&
+          Array.isArray(credentials) &&
+          credentials.length > 0
+        ) {
           setCredentials(credentials[0].value);
         }
       } catch (error) {
@@ -103,7 +110,9 @@ const useGoogleDrivePicker = () => {
               'https://www.googleapis.com/auth/drive.readonly',
             ],
             token_type: authToken?.token_type,
-            expiry_date: new Date(Date.now() + (authToken?.expires_in || 0) * 1000).toISOString(),
+            expiry_date: new Date(
+              Date.now() + (authToken?.expires_in || 0) * 1000,
+            ).toISOString(),
           },
           data: driveFiles.map((file: any) => ({
             path: file.url,
@@ -124,7 +133,10 @@ const useGoogleDrivePicker = () => {
         setDriveFiles([]); // Clear selected files after successful upload
       } catch (error: unknown) {
         console.error(JSON.stringify(error));
-        const errorMessage = extractErrorMessage(error, 'Error adding training document');
+        const errorMessage = extractErrorMessage(
+          error,
+          'Error adding training document',
+        );
 
         toast.error(errorMessage);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -134,13 +146,22 @@ const useGoogleDrivePicker = () => {
     if (authToken && driveFiles.length > 0) {
       handlePickerFileSelection();
     }
-  }, [authToken, driveFiles, credentials, addTrainingDocument, tenantKey, username]);
+  }, [
+    authToken,
+    driveFiles,
+    credentials,
+    addTrainingDocument,
+    tenantKey,
+    username,
+  ]);
 
   // Force close picker modal
   const forceClosePickerModal = React.useCallback(() => {
     try {
       // Try to close any open Google picker modals
-      const pickerIframes = document.querySelectorAll('iframe[src*="docs.google.com/picker"]');
+      const pickerIframes = document.querySelectorAll(
+        'iframe[src*="docs.google.com/picker"]',
+      );
       pickerIframes.forEach((iframe) => {
         const parent = iframe.parentElement;
         if (parent) {
@@ -155,7 +176,9 @@ const useGoogleDrivePicker = () => {
       });
 
       // Also try to close picker overlay divs
-      const pickerOverlays = document.querySelectorAll('div[role="dialog"][aria-label*="picker"]');
+      const pickerOverlays = document.querySelectorAll(
+        'div[role="dialog"][aria-label*="picker"]',
+      );
       pickerOverlays.forEach((overlay) => {
         (overlay as HTMLElement).style.display = 'none';
       });
@@ -172,7 +195,9 @@ const useGoogleDrivePicker = () => {
   // Reset and clean up before opening picker
   const resetPickerState = React.useCallback(() => {
     // Clear any existing picker modals/iframes
-    const pickerIframes = document.querySelectorAll('iframe[src*="docs.google.com/picker"]');
+    const pickerIframes = document.querySelectorAll(
+      'iframe[src*="docs.google.com/picker"]',
+    );
     pickerIframes.forEach((iframe) => {
       const parent = iframe.parentElement;
       if (parent && parent.parentElement) {
@@ -181,7 +206,9 @@ const useGoogleDrivePicker = () => {
     });
 
     // Clear picker overlay divs
-    const pickerOverlays = document.querySelectorAll('div[role="dialog"][aria-label*="picker"]');
+    const pickerOverlays = document.querySelectorAll(
+      'div[role="dialog"][aria-label*="picker"]',
+    );
     pickerOverlays.forEach((overlay) => {
       if (overlay.parentElement) {
         overlay.parentElement.removeChild(overlay);
@@ -280,7 +307,13 @@ const useGoogleDrivePicker = () => {
     } else {
       toast.error('Google Picker is not loaded yet. Please try again.');
     }
-  }, [credentials, handlePickerFileSelected, openPicker, isPickerLoaded, resetPickerState]);
+  }, [
+    credentials,
+    handlePickerFileSelected,
+    openPicker,
+    isPickerLoaded,
+    resetPickerState,
+  ]);
 
   // Handle auth response
   React.useEffect(() => {

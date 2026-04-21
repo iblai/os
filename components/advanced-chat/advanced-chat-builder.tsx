@@ -2,7 +2,10 @@ import { advancedTabsProperties } from '@iblai/iblai-js/web-utils';
 import type { AdvancedTab, Prompt } from '@iblai/iblai-js/web-utils';
 import { DefaultTag } from './ui-tags/default-tag';
 import { OptionsTag } from './ui-tags/options-tag';
-import { useLazyGetGuidedPromptsQuery, useLazyGetPromptsSearchQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useLazyGetGuidedPromptsQuery,
+  useLazyGetPromptsSearchQuery,
+} from '@iblai/iblai-js/data-layer';
 import { useEffect, useState } from 'react';
 import { config } from '@/lib/config';
 import useWelcome from '@/hooks/use-welcome-message';
@@ -46,7 +49,14 @@ export function AdvancedStaticChatBuilder({
   const [promptsData, setPromptsData] = useState<Prompt[]>([]);
 
   const handleFetchPromptData = async () => {
-    if (!tenantKey || !realUsername || !isChatTabActive || !mentorUniqueId || !sessionId) return;
+    if (
+      !tenantKey ||
+      !realUsername ||
+      !isChatTabActive ||
+      !mentorUniqueId ||
+      !sessionId
+    )
+      return;
     try {
       const suggestedPrompts = await triggerGetPromptsSearch(
         {
@@ -141,8 +151,12 @@ export function AdvancedStaticChatBuilder({
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">{mentorName}</h1>
-                <Markdown className="mt-1 text-[14px] text-gray-600">{welcomeMessage}</Markdown>
+                <h1 className="text-xl font-bold text-gray-800">
+                  {mentorName}
+                </h1>
+                <Markdown className="mt-1 text-[14px] text-gray-600">
+                  {welcomeMessage}
+                </Markdown>
               </div>
             </div>
           </div>

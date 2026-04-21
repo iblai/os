@@ -62,7 +62,7 @@ export function GuidedSuggestedPrompts({
 
   return (
     <div
-      className="mt-8 flex justify-end w-full"
+      className="mt-8 flex w-full justify-end"
       aria-live="polite"
       aria-relevant="additions text"
       aria-atomic="true"
@@ -70,7 +70,7 @@ export function GuidedSuggestedPrompts({
       <span className="sr-only" aria-label={ariaLabel}>
         {ariaLabel}
       </span>
-      <div className="text-sm/7 flex gap-2 items-end">
+      <div className="flex items-end gap-2 text-sm/7">
         {/* Question Cards */}
         <div className="flex flex-col gap-2">
           {data?.ai_prompts?.slice(0, 3).map((question, index) => (
@@ -81,7 +81,7 @@ export function GuidedSuggestedPrompts({
                 onPromptSelect(question);
               }}
               className={cn(
-                'flex items-center gap-2 border rounded-md px-1.5 py-0.5 text-blue-700 border-blue-700 cursor-pointer justify-between text-left',
+                'flex cursor-pointer items-center justify-between gap-2 rounded-md border border-blue-700 px-1.5 py-0.5 text-left text-blue-700',
                 CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS,
               )}
             >
@@ -105,7 +105,7 @@ export function GuidedSuggestedPrompts({
           >
             <span className="sr-only">Refresh Guided Prompts</span>
             <Icon
-              className={cn('w-4 h-4 text-blue-700', {
+              className={cn('h-4 w-4 text-blue-700', {
                 'animate-spin': isFetching,
               })}
             />

@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SendNotificationDialog } from '@/components/modals/send-notification-dialog';
 import { IblPagination } from '@/components/ibl-pagination';
 import { FlaggedPrompt } from './types';
@@ -36,7 +41,9 @@ export function FlaggedPromptsModal({
   tenantKey,
   username,
 }: FlaggedPromptsModalProps) {
-  const [selectedPrompt, setSelectedPrompt] = useState<FlaggedPrompt | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<FlaggedPrompt | null>(
+    null,
+  );
   const [isSendNotificationOpen, setIsSendNotificationOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
@@ -87,8 +94,8 @@ export function FlaggedPromptsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 flex-shrink-0">
+        <DialogContent className="flex h-[90vh] max-w-6xl flex-col p-0">
+          <DialogHeader className="flex-shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-semibold text-gray-900">
                 Flagged Prompts
@@ -96,7 +103,7 @@ export function FlaggedPromptsModal({
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+          <div className="scrollbar-hide flex-1 overflow-y-auto p-4">
             <div className="space-y-6">
               <FlaggedPromptsSummary totalFlagged={totalFlagged} />
 
@@ -113,10 +120,12 @@ export function FlaggedPromptsModal({
 
               {totalFlagged === 0 ? (
                 <div className="flex items-center justify-center py-12">
-                  <p className="text-gray-500 text-sm">No flagged prompts found</p>
+                  <p className="text-sm text-gray-500">
+                    No flagged prompts found
+                  </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="space-y-4">
                     <FlaggedPromptsList
                       prompts={paginatedPrompts}

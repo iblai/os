@@ -63,9 +63,12 @@ describe('useEventCallback', () => {
     it('should maintain stable reference even when callback changes', () => {
       const callback1 = vi.fn();
       const callback2 = vi.fn();
-      const { result, rerender } = renderHook(({ cb }) => useEventCallback(cb), {
-        initialProps: { cb: callback1 },
-      });
+      const { result, rerender } = renderHook(
+        ({ cb }) => useEventCallback(cb),
+        {
+          initialProps: { cb: callback1 },
+        },
+      );
 
       const firstRef = result.current;
       rerender({ cb: callback2 });
@@ -79,9 +82,12 @@ describe('useEventCallback', () => {
     it('should use the latest callback after update', () => {
       const callback1 = vi.fn().mockReturnValue('first');
       const callback2 = vi.fn().mockReturnValue('second');
-      const { result, rerender } = renderHook(({ cb }) => useEventCallback(cb), {
-        initialProps: { cb: callback1 },
-      });
+      const { result, rerender } = renderHook(
+        ({ cb }) => useEventCallback(cb),
+        {
+          initialProps: { cb: callback1 },
+        },
+      );
 
       rerender({ cb: callback2 });
 
@@ -99,9 +105,12 @@ describe('useEventCallback', () => {
       const callback1 = vi.fn().mockReturnValue(1);
       const callback2 = vi.fn().mockReturnValue(2);
       const callback3 = vi.fn().mockReturnValue(3);
-      const { result, rerender } = renderHook(({ cb }) => useEventCallback(cb), {
-        initialProps: { cb: callback1 },
-      });
+      const { result, rerender } = renderHook(
+        ({ cb }) => useEventCallback(cb),
+        {
+          initialProps: { cb: callback1 },
+        },
+      );
 
       rerender({ cb: callback2 });
       rerender({ cb: callback3 });
@@ -137,9 +146,14 @@ describe('useEventCallback', () => {
 
     it('should handle transition from defined to undefined callback', () => {
       const callback = vi.fn();
-      const { result, rerender } = renderHook(({ cb }) => useEventCallback(cb), {
-        initialProps: { cb: callback as ((...args: unknown[]) => unknown) | undefined },
-      });
+      const { result, rerender } = renderHook(
+        ({ cb }) => useEventCallback(cb),
+        {
+          initialProps: {
+            cb: callback as ((...args: unknown[]) => unknown) | undefined,
+          },
+        },
+      );
 
       expect(result.current).toBeDefined();
 
@@ -275,13 +289,17 @@ describe('useEventCallback', () => {
       }
 
       // Suppress console.error for expected error
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       // The render should complete but the error should have been caught
       render(React.createElement(TestComponent));
 
       expect(thrownError).not.toBeNull();
-      expect(thrownError!.message).toBe('Cannot call an event handler while rendering.');
+      expect(thrownError!.message).toBe(
+        'Cannot call an event handler while rendering.',
+      );
 
       consoleSpy.mockRestore();
     });

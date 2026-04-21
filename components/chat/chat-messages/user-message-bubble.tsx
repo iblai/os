@@ -33,13 +33,13 @@ export function UserMessageBubble({
 }: Props) {
   return (
     <div
-      className={`flex flex-col items-end mb-4 pl-4 message-container transition-all duration-300 ${
-        isHighlighted ? 'bg-blue-100 rounded-lg' : ''
+      className={`message-container mb-4 flex flex-col items-end transition-all duration-300 ${
+        isHighlighted ? 'rounded-2xl bg-blue-100' : ''
       }`}
     >
       {/* Render file attachments if present (new structure) */}
       {message.fileAttachments && message.fileAttachments.length > 0 && (
-        <div className="flex flex-col items-end gap-2 mb-2">
+        <div className="mb-2 flex flex-col items-end gap-2">
           {message.fileAttachments.map((attachment, idx) => {
             if (attachment.fileType.startsWith('image/')) {
               return (
@@ -74,7 +74,11 @@ export function UserMessageBubble({
               setPreviewImage={onPreviewImage}
             />
           ) : (
-            <FileCard key={message.id} fileName={message.content} fileType={message.fileType} />
+            <FileCard
+              key={message.id}
+              fileName={message.content}
+              fileType={message.fileType}
+            />
           )}
         </div>
       )}
@@ -82,16 +86,19 @@ export function UserMessageBubble({
       {/* If this is a reply to another message, show the reply context */}
       {message.replyTo && (
         <div
-          className="rounded-lg overflow-hidden mb-2 max-w-[80%] w-full cursor-pointer shadow-sm border border-gray-100"
+          className="mb-2 max-w-full cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm"
           onClick={() => {
             // Find the index of the original message
             const originalMessageIndex = messages.findIndex(
-              (m) => m.role === message.replyTo?.role && m.content === message.replyTo?.content,
+              (m) =>
+                m.role === message.replyTo?.role &&
+                m.content === message.replyTo?.content,
             );
             if (originalMessageIndex !== -1) {
               onHighlightMessage(originalMessageIndex);
               // Scroll to the original message if needed
-              const messageElements = document.querySelectorAll('.message-container');
+              const messageElements =
+                document.querySelectorAll('.message-container');
               if (messageElements[originalMessageIndex]) {
                 messageElements[originalMessageIndex].scrollIntoView({
                   behavior: 'smooth',
@@ -102,19 +109,25 @@ export function UserMessageBubble({
           }}
         >
           {/* Quoted message with white background */}
-          <div className="bg-white rounded-t-lg p-1.5">
-            <div className="flex items-center gap-1 mb-0.5">
-              <span className="text-gray-500 text-sm">"</span>
-              <div className="w-4 h-4 rounded-full bg-gray-500 flex items-center justify-center overflow-hidden">
-                <img src={profileImage} alt={mentorName} className="w-full h-full object-cover" />
+          <div className="rounded-t-2xl bg-white p-1.5">
+            <div className="mb-0.5 flex items-center gap-1">
+              <span className="text-sm text-gray-500">"</span>
+              <div className="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-gray-500">
+                <img
+                  src={profileImage}
+                  alt={mentorName}
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <span className="font-medium text-xs">{mentorName}</span>
+              <span className="text-xs font-medium">{mentorName}</span>
             </div>
-            <div className="text-gray-800 text-xs ml-5 line-clamp-2">{message.replyTo.content}</div>
+            <div className="ml-5 line-clamp-2 text-xs text-gray-800">
+              {message.replyTo.content}
+            </div>
           </div>
 
           {/* Reply message with light blue background */}
-          <div className="bg-blue-50 rounded-b-lg px-4 py-2 text-gray-800 text-sm whitespace-pre-wrap">
+          <div className="rounded-b-2xl bg-blue-50 px-4 py-2 text-sm whitespace-pre-wrap text-gray-800">
             {message.content}
           </div>
         </div>
@@ -124,7 +137,7 @@ export function UserMessageBubble({
       {!message.replyTo && message.content && (
         <div
           className={cn(
-            'bg-blue-50 text-gray-800 text-sm rounded-lg px-4 py-2 max-w-[80%] wrap-anywhere whitespace-pre-wrap',
+            'max-w-full rounded-2xl bg-blue-50 px-4 py-2 text-sm wrap-anywhere whitespace-pre-wrap text-gray-800',
             CSS_CLASS_NAMES.CHAT.USER_MESSAGE_QUERY,
           )}
         >
