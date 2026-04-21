@@ -27,6 +27,8 @@ import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
+  useGetClawMentorConfigsQuery,
+  useUpdateClawMentorConfigMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 
@@ -115,6 +117,13 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+
+  const { data: clawMentorConfigs } = useGetClawMentorConfigsQuery(
+    { org: tenantKey!, mentor: activeMentorId! },
+    { skip: !tenantKey || !activeMentorId },
+  );
+  const clawMentorConfig = clawMentorConfigs?.[0] ?? null;
+  const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -233,7 +242,21 @@ export function SettingsTab() {
         values.is_claw_enabled = value.is_claw_enabled;
       }
 
+      // @ts-ignore - is_claw_enabled exists in API response but not in type
+      const currentIsClawEnabled: boolean = mentor?.is_claw_enabled ?? false;
+      const clawEnabledChanged =
+        value.is_claw_enabled !== undefined &&
+        value.is_claw_enabled !== currentIsClawEnabled;
+
       try {
+        if (clawEnabledChanged && clawMentorConfig && tenantKey) {
+          await updateClawConfig({
+            org: tenantKey,
+            id: clawMentorConfig.id,
+            enabled: value.is_claw_enabled,
+          }).unwrap();
+        }
+
         await editMentor({
           mentor: activeMentorId,
           org: tenantKey,
@@ -827,7 +850,7 @@ export function SettingsTab() {
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
                             <p>
-                              CLAW sandbox mode for configuring agent settings,
+                              Sandbox mode for configuring agent settings,
                               prompts, and skills.
                             </p>
                           </TooltipContent>
@@ -837,7 +860,7 @@ export function SettingsTab() {
                     <Switch
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
-                      disabled={isDisabled}
+                      disabled={isDisabled || !clawMentorConfig}
                       aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
