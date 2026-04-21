@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.49.0](https://github.com/iblai/mentorai/compare/v0.48.0...v0.49.0) (2026-04-21)
+
+### Features
+
+* **chat:** add speaker button to read AI messages aloud ([ba31e0f](https://github.com/iblai/mentorai/commit/ba31e0f48f1d92e83cd0ae4fa44bd146b246fe23))
+* **chat:** use stop icon while speaking aloud ([00c7193](https://github.com/iblai/mentorai/commit/00c71933d15296d168c8e19a64b824226a957d9e))
+
+### Bug Fixes
+
+* **chat:** update button label for speech control to improve readability ([b1ae4b0](https://github.com/iblai/mentorai/commit/b1ae4b01cf740dafe1c8e58c1caa1523717bf3cb))
+
+### Tests
+
+* **e2e:** add journey 40 for AI message read aloud button ([112f318](https://github.com/iblai/mentorai/commit/112f31885d0f72e281cc044019b0a51931c952e5))
+
 ## [0.48.0](https://github.com/iblai/mentorai/compare/v0.47.13...v0.48.0) (2026-04-21)
 
 ### Features
