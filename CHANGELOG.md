@@ -4,40 +4,40 @@
 
 ### Bug Fixes
 
-* **mentor:** close welcome WebSocket with explicit status code 1000 ([3bd0a9f](https://github.com/iblai/mentorai/commit/3bd0a9f13da7386544f709bd182c531c6ca28088))
+- **mentor:** close welcome WebSocket with explicit status code 1000 ([3bd0a9f](https://github.com/iblai/mentorai/commit/3bd0a9f13da7386544f709bd182c531c6ca28088))
 
 ## [0.49.0](https://github.com/iblai/mentorai/compare/v0.48.0...v0.49.0) (2026-04-21)
 
 ### Features
 
-* **chat:** add speaker button to read AI messages aloud ([ba31e0f](https://github.com/iblai/mentorai/commit/ba31e0f48f1d92e83cd0ae4fa44bd146b246fe23))
-* **chat:** use stop icon while speaking aloud ([00c7193](https://github.com/iblai/mentorai/commit/00c71933d15296d168c8e19a64b824226a957d9e))
+- **chat:** add speaker button to read AI messages aloud ([ba31e0f](https://github.com/iblai/mentorai/commit/ba31e0f48f1d92e83cd0ae4fa44bd146b246fe23))
+- **chat:** use stop icon while speaking aloud ([00c7193](https://github.com/iblai/mentorai/commit/00c71933d15296d168c8e19a64b824226a957d9e))
 
 ### Bug Fixes
 
-* **chat:** update button label for speech control to improve readability ([b1ae4b0](https://github.com/iblai/mentorai/commit/b1ae4b01cf740dafe1c8e58c1caa1523717bf3cb))
+- **chat:** update button label for speech control to improve readability ([b1ae4b0](https://github.com/iblai/mentorai/commit/b1ae4b01cf740dafe1c8e58c1caa1523717bf3cb))
 
 ### Tests
 
-* **e2e:** add journey 40 for AI message read aloud button ([112f318](https://github.com/iblai/mentorai/commit/112f31885d0f72e281cc044019b0a51931c952e5))
+- **e2e:** add journey 40 for AI message read aloud button ([112f318](https://github.com/iblai/mentorai/commit/112f31885d0f72e281cc044019b0a51931c952e5))
 
 ## [0.48.0](https://github.com/iblai/mentorai/compare/v0.47.13...v0.48.0) (2026-04-21)
 
 ### Features
 
-* add prod-images-tag input to test-full-pipeline workflow ([bb8b6c8](https://github.com/iblai/mentorai/commit/bb8b6c8bd4f6400b925ef6d74bd35314ba51e459))
+- add prod-images-tag input to test-full-pipeline workflow ([bb8b6c8](https://github.com/iblai/mentorai/commit/bb8b6c8bd4f6400b925ef6d74bd35314ba51e459))
 
 ## [0.47.13](https://github.com/iblai/mentorai/compare/v0.47.12...v0.47.13) (2026-04-20)
 
 ### CI
 
-* **test-full-pipeline:** grant contents:read so reusable checkout works ([6cc9660](https://github.com/iblai/mentorai/commit/6cc966087a3b28da983ca72bccffa365ef9a7de8))
+- **test-full-pipeline:** grant contents:read so reusable checkout works ([6cc9660](https://github.com/iblai/mentorai/commit/6cc966087a3b28da983ca72bccffa365ef9a7de8))
 
 ## [0.47.12](https://github.com/iblai/mentorai/compare/v0.47.11...v0.47.12) (2026-04-20)
 
 ### CI
 
-* **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
+- **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
 
 ## [0.47.11](https://github.com/iblai/mentorai/compare/v0.47.10...v0.47.11) (2026-04-20)
 

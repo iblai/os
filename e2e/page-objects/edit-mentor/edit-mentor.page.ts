@@ -10,6 +10,7 @@ import { MemoryTab } from './memory.tab';
 import { McpTab } from './mcp.tab';
 import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
+import { AccessTab } from './access.tab';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -27,6 +28,7 @@ export class EditMentorPage {
   readonly memory: MemoryTab;
   readonly mcp: McpTab;
   readonly embed: EmbedTab;
+  readonly access: AccessTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -47,6 +49,7 @@ export class EditMentorPage {
     this.memory = new MemoryTab(page, this.dialog);
     this.mcp = new McpTab(page, this.dialog);
     this.embed = new EmbedTab(page, this.dialog);
+    this.access = new AccessTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
