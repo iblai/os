@@ -105,7 +105,7 @@ const sentryWebpackPluginOptions = {
   org: 'ibl-ai',
   project: 'mentorai-iblai-app',
   widenClientFileUpload: true,
-hideSourceMaps: false,
+  hideSourceMaps: false,
   disableLogger: true,
   automaticVercelMonitors: false,
 };

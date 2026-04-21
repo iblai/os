@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-21 | 317 checkpoints | 39 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -569,6 +569,23 @@ When adding a new page or modifying an existing user flow:
 - [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
 - [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
 - [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+
+---
+
+## Journey 40: Mentor Access Tab (10 checkpoints) — `journeys/40-mentor-access-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
+
+- [x] AC-40.1: Access tab label is visible in the Edit Mentor modal sidebar
+- [x] AC-40.2: Access control heading and description render correctly
+- [x] AC-40.3: Access tab shows roles table or empty state — never a blank crash screen
+- [x] AC-40.4: Each policy row shows role name, user count badge, and edit button
+- [x] AC-40.5: Create role access dialog opens with role selector and can be cancelled
+- [x] AC-40.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
+- [x] AC-40.7: Selecting a role in Create dialog enables the Create button
+- [x] AC-40.8: Manage access dialog shows assigned users section or no-users placeholder
+- [x] AC-40.9: Error state Try again button is present when the error banner renders
+- [x] AC-40.10: Closing the manage dialog via Escape or click-outside clears editing state
 
 ---
 
