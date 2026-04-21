@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-21 | 317 checkpoints | 39 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-21 | 317 checkpoints | 40 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -572,7 +572,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 40: Mentor Access Tab (10 checkpoints) — `journeys/40-mentor-access-tab.spec.ts`
+## Journey 41: Mentor Access Tab (10 checkpoints) — `journeys/40-mentor-access-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
 
@@ -586,6 +586,14 @@ When adding a new page or modifying an existing user flow:
 - [x] AC-40.8: Manage access dialog shows assigned users section or no-users placeholder
 - [x] AC-40.9: Error state Try again button is present when the error banner renders
 - [x] AC-40.10: Closing the manage dialog via Escape or click-outside clears editing state
+
+## Journey 40: AI Message Read Aloud (3 checkpoints) — `journeys/40-ai-message-read-aloud.spec.ts`
+
+**Source files:** `components/chat/ai-message-bubble.tsx`, `components/chat/ai-message-speak.tsx`, `components/chat/chat-messages/index.tsx`
+
+- [x] SPEAK-40.1: Read Aloud button is visible on an AI response with `aria-pressed="false"`
+- [x] SPEAK-40.2: Clicking Read Aloud toggles label to Stop Reading Aloud with `aria-pressed="true"` and triggers `speechSynthesis.speak`
+- [x] SPEAK-40.3: Clicking Stop Reading Aloud resets to Read Aloud with `aria-pressed="false"` and calls `speechSynthesis.cancel`
 
 ---
 

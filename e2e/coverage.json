@@ -5,7 +5,7 @@
     "totalCheckpoints": 317,
     "coveredCheckpoints": 317,
     "percent": 100,
-    "totalJourneys": 39
+    "totalJourneys": 40
   },
   "journeys": [
     {
@@ -1949,7 +1949,7 @@
     {
       "id": "mentor-access-tab",
       "name": "Mentor Access Tab",
-      "spec": "40-mentor-access-tab.spec.ts",
+      "spec": "41-mentor-access-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/access-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx",
