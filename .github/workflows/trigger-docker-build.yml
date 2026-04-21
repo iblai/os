@@ -7,8 +7,7 @@ on:
 
 run-name: 'Build mentor ${{ github.ref_name }}'
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   prepare:
