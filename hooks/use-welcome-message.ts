@@ -101,7 +101,7 @@ export default function useWelcome({
 
   const _endConnection = () => {
     if (webSocket.current?.readyState === WebSocket.OPEN) {
-      webSocket.current?.close();
+      webSocket.current?.close(1000, 'Normal closure');
     }
   };
 

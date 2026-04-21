@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.50.2](https://github.com/iblai/mentorai/compare/v0.50.1...v0.50.2) (2026-04-21)
+
+### CI
+
+* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([43f84e9](https://github.com/iblai/mentorai/commit/43f84e9775afce21b22f142df9826ea7ce33f406))
+
+## [0.50.1](https://github.com/iblai/mentorai/compare/v0.50.0...v0.50.1) (2026-04-21)
+
+### CI
+
+* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([483b2ca](https://github.com/iblai/mentorai/commit/483b2caa062121cf0b3c3997b2db8b0e8a5f496e))
+
+## [0.50.0](https://github.com/iblai/mentorai/compare/v0.49.1...v0.50.0) (2026-04-21)
+
+### Features
+
+* access tab > analytics viewer role added ([30e0e7a](https://github.com/iblai/mentorai/commit/30e0e7a9947d9c1c4848ca6eb500aff99fa680ce))
+* access tab > analytics viewer role added > playwright test coverage ([90a9ba5](https://github.com/iblai/mentorai/commit/90a9ba551f5e0148818d528aca489941fad9073d))
+* access tab > analytics viewer role added > unit test coverage ([e2a2178](https://github.com/iblai/mentorai/commit/e2a217811ce2900cf06f5cf1f3022ebd3e2c0b1e))
+
+## [0.49.1](https://github.com/iblai/mentorai/compare/v0.49.0...v0.49.1) (2026-04-21)
+
+### Bug Fixes
+
+- **mentor:** close welcome WebSocket with explicit status code 1000 ([3bd0a9f](https://github.com/iblai/mentorai/commit/3bd0a9f13da7386544f709bd182c531c6ca28088))
+
+## [0.49.0](https://github.com/iblai/mentorai/compare/v0.48.0...v0.49.0) (2026-04-21)
+
+### Features
+
+- **chat:** add speaker button to read AI messages aloud ([ba31e0f](https://github.com/iblai/mentorai/commit/ba31e0f48f1d92e83cd0ae4fa44bd146b246fe23))
+- **chat:** use stop icon while speaking aloud ([00c7193](https://github.com/iblai/mentorai/commit/00c71933d15296d168c8e19a64b824226a957d9e))
+
+### Bug Fixes
+
+- **chat:** update button label for speech control to improve readability ([b1ae4b0](https://github.com/iblai/mentorai/commit/b1ae4b01cf740dafe1c8e58c1caa1523717bf3cb))
+
+### Tests
+
+- **e2e:** add journey 40 for AI message read aloud button ([112f318](https://github.com/iblai/mentorai/commit/112f31885d0f72e281cc044019b0a51931c952e5))
+
 ## [0.48.0](https://github.com/iblai/mentorai/compare/v0.47.13...v0.48.0) (2026-04-21)
 
 ### Features
