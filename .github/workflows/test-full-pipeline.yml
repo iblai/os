@@ -161,6 +161,20 @@ jobs:
             echo "Skills: $(curl -s -o /dev/null -w %{http_code} http://localhost:5002/)"
           '
 
+      - name: Run DM migrations
+        # Always run after infra/service-update so any new migrations bundled
+        # with the pinned iblai-prod-images tag are applied before tests.
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} \
+            'cd /ibl/app/ibl-dm/ibl-dm-pro && docker compose exec -T web ./manage.py migrate --noinput'
+
+      - name: Seed DM RBAC data
+        # Re-run after migrations so RBAC policies/roles exist for any new
+        # tenants and stay in sync with the app's current seed definitions.
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy-key ubuntu@${{ steps.launch.outputs.instance-ip }} \
+            'cd /ibl/app/ibl-dm/ibl-dm-pro && docker compose exec -T web ./manage.py seed_rbac_data'
+
       - name: Revoke SSH
         if: always()
         run: |
