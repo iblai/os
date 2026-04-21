@@ -560,7 +560,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
 
 - [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
 - [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
