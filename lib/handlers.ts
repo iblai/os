@@ -6,7 +6,7 @@ import {
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
-import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import { addMessage, enableChatActionsPopup } from '@/features/chat/chatSlice';
 
 export function useIframeHandlers() {
   const dispatch = useAppDispatch();
@@ -147,6 +147,9 @@ export function useIframeHandlers() {
     },
     'MENTOR:ENABLE_CHAT_ACTION_POPUPS': (payload: { enable: boolean }) => {
       dispatch(enableChatActionsPopup(payload.enable));
+    },
+    'MENTOR:CHAT_ACTION_ADD_MESSAGE': (payload: { message: string }) => {
+      dispatch(addMessage(payload.message));
     },
   };
 
