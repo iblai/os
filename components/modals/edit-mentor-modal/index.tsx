@@ -22,7 +22,8 @@ import {
   ApiTab,
   EmbedTab,
   AccessTab,
-  ClawTab,
+  SandboxTab,
+  SkillsTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -50,9 +51,11 @@ type Props = {
  */
 export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.settings]: <SettingsTab />,
+  [MODALS.EDIT_MENTOR.tabs.sandbox]: <SandboxTab />,
   [MODALS.EDIT_MENTOR.tabs.access]: <AccessTab />,
   [MODALS.EDIT_MENTOR.tabs.llm]: <LLMTab />,
   [MODALS.EDIT_MENTOR.tabs.prompts]: <PromptsTab />,
+  [MODALS.EDIT_MENTOR.tabs.skills]: <SkillsTab />,
   [MODALS.EDIT_MENTOR.tabs.safety]: <SafetyTab />,
   [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
   [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
@@ -61,7 +64,6 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
-  [MODALS.EDIT_MENTOR.tabs.claw]: <ClawTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
 };
 

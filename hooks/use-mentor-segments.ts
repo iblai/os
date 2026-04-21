@@ -16,7 +16,8 @@ import {
   FileWarning,
   UserCog,
   Archive,
-  Bot,
+  Container,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -94,6 +95,18 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.sandbox,
+    label: 'Sandbox',
+    icon: Container,
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    enabledThroughConfig: (flags) => flags.isClawEnabled,
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.access,
     label: 'Access',
     icon: UserCog,
@@ -130,6 +143,18 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.skills,
+    label: 'Skills',
+    icon: Sparkles,
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    enabledThroughConfig: (flags) => flags.isClawEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
@@ -235,19 +260,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.claw,
-    label: 'CLAW',
-    icon: Bot,
-    userTypes: [UserType.ADMIN],
-    // rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/claw/#config`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    enabledThroughConfig: (flags) => flags.isClawEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.embed,

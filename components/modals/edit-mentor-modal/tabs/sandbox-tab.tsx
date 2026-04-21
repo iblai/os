@@ -1,11 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { ClawConfigContent } from '@iblai/web-containers';
+import { SandboxConfig } from '@iblai/web-containers';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
-export function ClawTab() {
+export function SandboxTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() ?? mentorId;
@@ -16,17 +16,17 @@ export function ClawTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">CLAW</h3>
+          <h3 className="mb-1 text-base font-medium text-gray-900">Sandbox</h3>
           <p className="text-xs text-gray-700">
-            Configure CLAW agent settings for your mentor.
+            Configure sandbox connection and deployment settings.
           </p>
         </div>
       </div>
       <div
-        className="flex-1 space-y-4 px-3 pt-3 pb-3 lg:px-4 lg:pt-4 lg:pb-4"
+        className="flex-1 space-y-4 p-3 lg:p-4"
         style={{ overflowY: 'auto', overflowX: 'hidden' }}
       >
-        <ClawConfigContent
+        <SandboxConfig
           platformKey={tenantKey}
           mentorUniqueId={activeMentorId}
         />

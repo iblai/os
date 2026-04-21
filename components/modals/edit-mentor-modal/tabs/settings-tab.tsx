@@ -85,6 +85,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  is_claw_enabled: boolean;
 }
 
 export function SettingsTab() {
@@ -171,6 +172,8 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - is_claw_enabled exists in API response but not in type
+      is_claw_enabled: mentor?.is_claw_enabled ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -224,6 +227,10 @@ export function SettingsTab() {
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
+      }
+
+      if (value.is_claw_enabled !== undefined) {
+        values.is_claw_enabled = value.is_claw_enabled;
       }
 
       try {
@@ -798,6 +805,40 @@ export function SettingsTab() {
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
                       aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field name="is_claw_enabled">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Advanced Sandbox
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about advanced sandbox mode"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              CLAW sandbox mode for configuring agent settings,
+                              prompts, and skills.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}

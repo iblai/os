@@ -4,6 +4,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import { Edit, Info, Plus } from 'lucide-react';
+import { AgentConfigPrompts } from '@iblai/web-containers';
 import {
   useEditMentorMutation,
   useGetMentorSettingsQuery,
@@ -592,6 +593,22 @@ export function PromptsTab() {
               </div>
             )}
           </WithFormPermissions>
+
+          {/* @ts-expect-error is_claw_enabled is not yet in the MentorSettingsPublic type */}
+          {mentorSettings?.is_claw_enabled && tenantKey && activeMentorId && (
+            <div className="mt-8">
+              <div className="mb-4 flex items-center gap-2">
+                <h3 className="text-sm font-medium text-gray-900">
+                  Agent Configuration
+                </h3>
+                <Info className="h-4 w-4 text-gray-400" />
+              </div>
+              <AgentConfigPrompts
+                platformKey={tenantKey}
+                mentorUniqueId={activeMentorId}
+              />
+            </div>
+          )}
 
           {selectedPrompt && (
             <EditPromptModal
