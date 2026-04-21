@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.50.1](https://github.com/iblai/mentorai/compare/v0.50.0...v0.50.1) (2026-04-21)
+
+### CI
+
+* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([483b2ca](https://github.com/iblai/mentorai/commit/483b2caa062121cf0b3c3997b2db8b0e8a5f496e))
+
 ## [0.50.0](https://github.com/iblai/mentorai/compare/v0.49.1...v0.50.0) (2026-04-21)
 
 ### Features
