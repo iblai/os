@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.48.0](https://github.com/iblai/mentorai/compare/v0.47.13...v0.48.0) (2026-04-21)
+
+### Features
+
+* add prod-images-tag input to test-full-pipeline workflow ([bb8b6c8](https://github.com/iblai/mentorai/commit/bb8b6c8bd4f6400b925ef6d74bd35314ba51e459))
+
 ## [0.47.13](https://github.com/iblai/mentorai/compare/v0.47.12...v0.47.13) (2026-04-20)
 
 ### CI
