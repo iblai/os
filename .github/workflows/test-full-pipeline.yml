@@ -16,8 +16,12 @@ on:
         required: false
         type: boolean
         default: true
+      prod-images-tag:
+        description: 'iblai-prod-images git ref (tag/branch/sha). Pins both the iblai-cli-ops CLI and the container image tags. Default: main (latest).'
+        required: false
+        default: 'main'
 
-run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})'
+run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }}) @ ${{ inputs.prod-images-tag }}'
 
 permissions:
   contents: read
@@ -130,7 +134,8 @@ jobs:
           iblai infra service-update \
             --host ${{ steps.launch.outputs.instance-ip }} \
             --ssh-key ~/.ssh/deploy-key \
-            --git-token ${{ secrets.GIT_TOKEN }}
+            --git-token ${{ secrets.GIT_TOKEN }} \
+            --prod-images-tag ${{ inputs.prod-images-tag }}
 
       - name: Register new target then deregister old
         run: |
