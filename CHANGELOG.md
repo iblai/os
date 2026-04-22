@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.51.4](https://github.com/iblai/mentorai/compare/v0.51.3...v0.51.4) (2026-04-22)
+
+### Bug Fixes
+
+* bump iblai-js to 1.4.9, increase auth setup timeouts, fix entity decode order ([31d9f12](https://github.com/iblai/mentorai/commit/31d9f12309c622df5a8c4cb983da978024231678))
+
+### Chores
+
+* updates pnpm lock file ([94f6f44](https://github.com/iblai/mentorai/commit/94f6f443e9e3e3b341901c87e05fd916918dc62d))
+
 ## [0.51.3](https://github.com/iblai/mentorai/compare/v0.51.2...v0.51.3) (2026-04-22)
 
 ### Bug Fixes
