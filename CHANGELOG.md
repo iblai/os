@@ -4,49 +4,49 @@
 
 ### Bug Fixes
 
-* **e2e:** handle Chromium net::ERR_ABORTED in navigation retry logic ([a6a534a](https://github.com/iblai/mentorai/commit/a6a534a06ecb79f19e5619eecf1460d1db2fdf01))
+- **e2e:** handle Chromium net::ERR_ABORTED in navigation retry logic ([a6a534a](https://github.com/iblai/mentorai/commit/a6a534a06ecb79f19e5619eecf1460d1db2fdf01))
 
 ## [0.51.1](https://github.com/iblai/mentorai/compare/v0.51.0...v0.51.1) (2026-04-22)
 
 ### Bug Fixes
 
-* **test-full-pipeline:** wrap run-tests `if:` with always() to bypass GHA transitive-skip ([168911e](https://github.com/iblai/mentorai/commit/168911ed7b300197254eaa911dd16b4c92734b47)), closes [#24792062653](https://github.com/iblai/mentorai/issues/24792062653)
+- **test-full-pipeline:** wrap run-tests `if:` with always() to bypass GHA transitive-skip ([168911e](https://github.com/iblai/mentorai/commit/168911ed7b300197254eaa911dd16b4c92734b47)), closes [#24792062653](https://github.com/iblai/mentorai/issues/24792062653)
 
 ## [0.51.0](https://github.com/iblai/mentorai/compare/v0.50.3...v0.51.0) (2026-04-22)
 
 ### Features
 
-* **test-full-pipeline:** add skip-infra-launch input (default true) ([073afdb](https://github.com/iblai/mentorai/commit/073afdb4820bd0d32ca93e58148040bf52106c13))
+- **test-full-pipeline:** add skip-infra-launch input (default true) ([073afdb](https://github.com/iblai/mentorai/commit/073afdb4820bd0d32ca93e58148040bf52106c13))
 
 ## [0.50.3](https://github.com/iblai/mentorai/compare/v0.50.2...v0.50.3) (2026-04-22)
 
 ### Bug Fixes
 
-* **mentor:** adding fix for the audit and memory for email ([28b08a6](https://github.com/iblai/mentorai/commit/28b08a6fb4811bc0d83f8144670ecc670fe422f6))
+- **mentor:** adding fix for the audit and memory for email ([28b08a6](https://github.com/iblai/mentorai/commit/28b08a6fb4811bc0d83f8144670ecc670fe422f6))
 
 ### Chores
 
-* **mentor:** version bump for iblai-js ([3c64534](https://github.com/iblai/mentorai/commit/3c6453431d0fd1c81bab6f58868a822489b4c45e))
+- **mentor:** version bump for iblai-js ([3c64534](https://github.com/iblai/mentorai/commit/3c6453431d0fd1c81bab6f58868a822489b4c45e))
 
 ## [0.50.2](https://github.com/iblai/mentorai/compare/v0.50.1...v0.50.2) (2026-04-21)
 
 ### CI
 
-* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([43f84e9](https://github.com/iblai/mentorai/commit/43f84e9775afce21b22f142df9826ea7ce33f406))
+- grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([43f84e9](https://github.com/iblai/mentorai/commit/43f84e9775afce21b22f142df9826ea7ce33f406))
 
 ## [0.50.1](https://github.com/iblai/mentorai/compare/v0.50.0...v0.50.1) (2026-04-21)
 
 ### CI
 
-* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([483b2ca](https://github.com/iblai/mentorai/commit/483b2caa062121cf0b3c3997b2db8b0e8a5f496e))
+- grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([483b2ca](https://github.com/iblai/mentorai/commit/483b2caa062121cf0b3c3997b2db8b0e8a5f496e))
 
 ## [0.50.0](https://github.com/iblai/mentorai/compare/v0.49.1...v0.50.0) (2026-04-21)
 
 ### Features
 
-* access tab > analytics viewer role added ([30e0e7a](https://github.com/iblai/mentorai/commit/30e0e7a9947d9c1c4848ca6eb500aff99fa680ce))
-* access tab > analytics viewer role added > playwright test coverage ([90a9ba5](https://github.com/iblai/mentorai/commit/90a9ba551f5e0148818d528aca489941fad9073d))
-* access tab > analytics viewer role added > unit test coverage ([e2a2178](https://github.com/iblai/mentorai/commit/e2a217811ce2900cf06f5cf1f3022ebd3e2c0b1e))
+- access tab > analytics viewer role added ([30e0e7a](https://github.com/iblai/mentorai/commit/30e0e7a9947d9c1c4848ca6eb500aff99fa680ce))
+- access tab > analytics viewer role added > playwright test coverage ([90a9ba5](https://github.com/iblai/mentorai/commit/90a9ba551f5e0148818d528aca489941fad9073d))
+- access tab > analytics viewer role added > unit test coverage ([e2a2178](https://github.com/iblai/mentorai/commit/e2a217811ce2900cf06f5cf1f3022ebd3e2c0b1e))
 
 ## [0.49.1](https://github.com/iblai/mentorai/compare/v0.49.0...v0.49.1) (2026-04-21)
 
