@@ -12,11 +12,14 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
     exact: true,
   });
   await expect(workflowsButton).toBeVisible({ timeout: 15_000 });
-  await workflowsButton.click();
 
-  await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
-    timeout: 60_000,
-  });
+  // Click + verify URL together and retry if the first click races the
+  // sidebar router (can happen right after hydration on the mentor page).
+  // Accept both /workflows (list) and /workflows/{id} (editor).
+  await expect(async () => {
+    await workflowsButton.click();
+    await expect(page).toHaveURL(/\/workflows(\/|$)/, { timeout: 10_000 });
+  }).toPass({ timeout: 30_000, intervals: [1_000, 2_000] });
 
   const heading = page.getByRole('heading', { name: 'Workflows' });
   await expect(heading).toBeVisible({ timeout: 30_000 });
