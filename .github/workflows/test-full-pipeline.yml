@@ -177,9 +177,10 @@ jobs:
   # ============================================================
   run-tests:
     needs: [build-playwright-image, launch-infra]
-    # Run tests when the playwright image built AND either (a) launch-infra succeeded
-    # or (b) it was skipped because skip-infra-launch=true (tests hit the existing slot).
-    if: needs.build-playwright-image.result == 'success' && (needs.launch-infra.result == 'success' || (needs.launch-infra.result == 'skipped' && inputs.skip-infra-launch))
+    # `always()` is required to override GHA's default transitive-skip: without it,
+    # a skipped `launch-infra` auto-skips this job regardless of the `if:` result.
+    # Then we gate on the actual conditions we care about.
+    if: always() && needs.build-playwright-image.result == 'success' && (needs.launch-infra.result == 'success' || (needs.launch-infra.result == 'skipped' && inputs.skip-infra-launch))
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
