@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.0](https://github.com/iblai/mentorai/compare/v0.50.3...v0.51.0) (2026-04-22)
+
+### Features
+
+* **test-full-pipeline:** add skip-infra-launch input (default true) ([073afdb](https://github.com/iblai/mentorai/commit/073afdb4820bd0d32ca93e58148040bf52106c13))
+
 ## [0.50.3](https://github.com/iblai/mentorai/compare/v0.50.2...v0.50.3) (2026-04-22)
 
 ### Bug Fixes
