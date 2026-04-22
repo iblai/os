@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.2](https://github.com/iblai/mentorai/compare/v0.51.1...v0.51.2) (2026-04-22)
+
+### Bug Fixes
+
+* **e2e:** handle Chromium net::ERR_ABORTED in navigation retry logic ([a6a534a](https://github.com/iblai/mentorai/commit/a6a534a06ecb79f19e5619eecf1460d1db2fdf01))
+
 ## [0.51.1](https://github.com/iblai/mentorai/compare/v0.51.0...v0.51.1) (2026-04-22)
 
 ### Bug Fixes
