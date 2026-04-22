@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.1](https://github.com/iblai/mentorai/compare/v0.51.0...v0.51.1) (2026-04-22)
+
+### Bug Fixes
+
+* **test-full-pipeline:** wrap run-tests `if:` with always() to bypass GHA transitive-skip ([168911e](https://github.com/iblai/mentorai/commit/168911ed7b300197254eaa911dd16b4c92734b47)), closes [#24792062653](https://github.com/iblai/mentorai/issues/24792062653)
+
 ## [0.51.0](https://github.com/iblai/mentorai/compare/v0.50.3...v0.51.0) (2026-04-22)
 
 ### Features
