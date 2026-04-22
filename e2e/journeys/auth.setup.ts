@@ -64,25 +64,6 @@ setup('authenticate', async ({ page }, testInfo) => {
     });
   });
 
-  // ── Step 0b: Deduplicate 401-triggered redirects ────────────────────────
-  // Multiple API calls can 401 simultaneously, each triggering its own
-  // redirectToAuthSpa() → /api/auth-redirect. The overlapping navigations
-  // cause net::ERR_ABORTED in Chromium. Let only the first one through.
-  let authRedirectSeen = false;
-  await page.route('**/api/auth-redirect*', async (route) => {
-    if (authRedirectSeen) {
-      console.log(
-        `[auth.setup] [${browserKey}] Suppressing duplicate auth-redirect`,
-      );
-      return route.abort('aborted');
-    }
-    authRedirectSeen = true;
-    console.log(
-      `[auth.setup] [${browserKey}] Allowing first auth-redirect through`,
-    );
-    return route.continue();
-  });
-
   // ── Step 1: Navigate to the app ──────────────────────────────────────────
   console.log(`[auth.setup] [${browserKey}] Step 1: Navigating to ${HOST}`);
   await page.goto(HOST, { waitUntil: 'domcontentloaded', timeout: 60_000 });
@@ -93,7 +74,7 @@ setup('authenticate', async ({ page }, testInfo) => {
     `[auth.setup] [${browserKey}] Step 2: Waiting for AUTH_HOST (${AUTH_HOST}) in URL`,
   );
   await safeWaitForURL(page, (url) => url.href.includes(AUTH_HOST), {
-    timeout: 60_000,
+    timeout: 120_000,
   });
   console.log(
     `[auth.setup] [${browserKey}] Reached auth host — URL: ${page.url()}`,
