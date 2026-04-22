@@ -261,7 +261,7 @@ const mockMemory = (overrides: Partial<any> = {}) => ({
   id: overrides.id ?? 1,
   content: overrides.content ?? 'Default memory content',
   category: overrides.category ?? mockCategory(1, 'Preferences', 'preferences'),
-  username: overrides.username ?? 'alice',
+  email: overrides.email ?? 'alice@example.com',
   created_at: overrides.created_at ?? '2024-01-15T10:30:00.000Z',
 });
 
@@ -273,13 +273,13 @@ const defaultResponse = [
         id: 1,
         content: 'Loves dark mode',
         category: mockCategory(1, 'Preferences', 'preferences'),
-        username: 'alice',
+        email: 'alice@example.com',
       }),
       mockMemory({
         id: 2,
         content: 'Prefers vim keybindings',
         category: mockCategory(1, 'Preferences', 'preferences'),
-        username: 'bob',
+        email: 'bob@example.com',
       }),
     ],
   },
@@ -290,7 +290,7 @@ const defaultResponse = [
         id: 3,
         content: 'Former backend dev',
         category: mockCategory(2, 'Background', 'background'),
-        username: 'alice',
+        email: 'alice@example.com',
       }),
     ],
   },
@@ -383,11 +383,15 @@ describe('ManageMemories', () => {
       expect(screen.getByText('Former backend dev')).toBeInTheDocument();
     });
 
-    it('renders the username for every memory card', () => {
+    it('renders the email for every memory card', () => {
       render(<ManageMemories {...defaultProps} />);
-      // Usernames appear both on cards and in the user-filter command items.
-      expect(screen.getAllByText('alice').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('bob').length).toBeGreaterThanOrEqual(1);
+      // Emails appear both on cards and in the user-filter command items.
+      expect(
+        screen.getAllByText('alice@example.com').length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('bob@example.com').length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -940,13 +944,17 @@ describe('ManageMemories', () => {
       expect(screen.getByText('All Users')).toBeInTheDocument();
     });
 
-    it('includes every unique learner username in the user dropdown', () => {
+    it('includes every unique learner email in the user dropdown', () => {
       render(<ManageMemories {...defaultProps} />);
-      expect(screen.getAllByText('alice').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('bob').length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('alice@example.com').length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText('bob@example.com').length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
-    it('selects a learner from the user dropdown and re-queries with user_id', () => {
+    it('selects a learner from the user dropdown and re-queries with email', () => {
       render(<ManageMemories {...defaultProps} />);
       const callsBefore = mockGetMentorMemoriesQuery.mock.calls.length;
 
@@ -958,12 +966,12 @@ describe('ManageMemories', () => {
       fireEvent.click(commandItems[1]!);
 
       // After selecting a learner, the filtered query re-runs — at
-      // least one of the new calls should carry user_id in params.
+      // least one of the new calls should carry email in params.
       const newCalls = mockGetMentorMemoriesQuery.mock.calls.slice(callsBefore);
-      const withUserId = newCalls.find(
-        (call) => call[0]?.params && 'user_id' in call[0].params,
+      const withEmail = newCalls.find(
+        (call) => call[0]?.params && 'email' in call[0].params,
       );
-      expect(withUserId).toBeTruthy();
+      expect(withEmail).toBeTruthy();
     });
   });
 

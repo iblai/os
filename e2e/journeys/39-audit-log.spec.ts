@@ -67,7 +67,7 @@ test.describe('Journey 39: Audit log (tenant admin)', () => {
   }) => {
     await analyticsPage.goto();
     await navigateToAuditLog(page);
-    await expect(page).toHaveURL(/\/analytics\/audit-log$/);
+    await expect(page).toHaveURL(/\/analytics\/audit$/);
     await expectAdminAuditLogUi(page);
   });
 

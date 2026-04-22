@@ -1904,7 +1904,7 @@
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx",
         "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/index.ts"
       ],
