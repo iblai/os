@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.50.3](https://github.com/iblai/mentorai/compare/v0.50.2...v0.50.3) (2026-04-22)
+
+### Bug Fixes
+
+* **mentor:** adding fix for the audit and memory for email ([28b08a6](https://github.com/iblai/mentorai/commit/28b08a6fb4811bc0d83f8144670ecc670fe422f6))
+
+### Chores
+
+* **mentor:** version bump for iblai-js ([3c64534](https://github.com/iblai/mentorai/commit/3c6453431d0fd1c81bab6f58868a822489b4c45e))
+
 ## [0.50.2](https://github.com/iblai/mentorai/compare/v0.50.1...v0.50.2) (2026-04-21)
 
 ### CI
