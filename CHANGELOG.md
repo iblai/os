@@ -1,98 +1,139 @@
 # Changelog
 
+## [0.50.2](https://github.com/iblai/mentorai/compare/v0.50.1...v0.50.2) (2026-04-21)
+
+### CI
+
+* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([43f84e9](https://github.com/iblai/mentorai/commit/43f84e9775afce21b22f142df9826ea7ce33f406))
+
+## [0.50.1](https://github.com/iblai/mentorai/compare/v0.50.0...v0.50.1) (2026-04-21)
+
+### CI
+
+* grant contents:read to GITHUB_TOKEN so checkout can fetch the repo ([483b2ca](https://github.com/iblai/mentorai/commit/483b2caa062121cf0b3c3997b2db8b0e8a5f496e))
+
+## [0.50.0](https://github.com/iblai/mentorai/compare/v0.49.1...v0.50.0) (2026-04-21)
+
+### Features
+
+* access tab > analytics viewer role added ([30e0e7a](https://github.com/iblai/mentorai/commit/30e0e7a9947d9c1c4848ca6eb500aff99fa680ce))
+* access tab > analytics viewer role added > playwright test coverage ([90a9ba5](https://github.com/iblai/mentorai/commit/90a9ba551f5e0148818d528aca489941fad9073d))
+* access tab > analytics viewer role added > unit test coverage ([e2a2178](https://github.com/iblai/mentorai/commit/e2a217811ce2900cf06f5cf1f3022ebd3e2c0b1e))
+
+## [0.49.1](https://github.com/iblai/mentorai/compare/v0.49.0...v0.49.1) (2026-04-21)
+
+### Bug Fixes
+
+- **mentor:** close welcome WebSocket with explicit status code 1000 ([3bd0a9f](https://github.com/iblai/mentorai/commit/3bd0a9f13da7386544f709bd182c531c6ca28088))
+
+## [0.49.0](https://github.com/iblai/mentorai/compare/v0.48.0...v0.49.0) (2026-04-21)
+
+### Features
+
+- **chat:** add speaker button to read AI messages aloud ([ba31e0f](https://github.com/iblai/mentorai/commit/ba31e0f48f1d92e83cd0ae4fa44bd146b246fe23))
+- **chat:** use stop icon while speaking aloud ([00c7193](https://github.com/iblai/mentorai/commit/00c71933d15296d168c8e19a64b824226a957d9e))
+
+### Bug Fixes
+
+- **chat:** update button label for speech control to improve readability ([b1ae4b0](https://github.com/iblai/mentorai/commit/b1ae4b01cf740dafe1c8e58c1caa1523717bf3cb))
+
+### Tests
+
+- **e2e:** add journey 40 for AI message read aloud button ([112f318](https://github.com/iblai/mentorai/commit/112f31885d0f72e281cc044019b0a51931c952e5))
+
 ## [0.48.0](https://github.com/iblai/mentorai/compare/v0.47.13...v0.48.0) (2026-04-21)
 
 ### Features
 
-* add prod-images-tag input to test-full-pipeline workflow ([bb8b6c8](https://github.com/iblai/mentorai/commit/bb8b6c8bd4f6400b925ef6d74bd35314ba51e459))
+- add prod-images-tag input to test-full-pipeline workflow ([bb8b6c8](https://github.com/iblai/mentorai/commit/bb8b6c8bd4f6400b925ef6d74bd35314ba51e459))
 
 ## [0.47.13](https://github.com/iblai/mentorai/compare/v0.47.12...v0.47.13) (2026-04-20)
 
 ### CI
 
-* **test-full-pipeline:** grant contents:read so reusable checkout works ([6cc9660](https://github.com/iblai/mentorai/commit/6cc966087a3b28da983ca72bccffa365ef9a7de8))
+- **test-full-pipeline:** grant contents:read so reusable checkout works ([6cc9660](https://github.com/iblai/mentorai/commit/6cc966087a3b28da983ca72bccffa365ef9a7de8))
 
 ## [0.47.12](https://github.com/iblai/mentorai/compare/v0.47.11...v0.47.12) (2026-04-20)
 
 ### CI
 
-* **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
+- **test-full-pipeline:** make EC2 termination optional ([53709e5](https://github.com/iblai/mentorai/commit/53709e55121791acc42010f2d6fe2ba6d5bf9922))
 
 ## [0.47.11](https://github.com/iblai/mentorai/compare/v0.47.10...v0.47.11) (2026-04-20)
 
 ### Bug Fixes
 
-* update page objects and playwright coverage ([0f04c6e](https://github.com/iblai/mentorai/commit/0f04c6e4c9eff02e31c7d6dcd8760bfc425f51fa))
+- update page objects and playwright coverage ([0f04c6e](https://github.com/iblai/mentorai/commit/0f04c6e4c9eff02e31c7d6dcd8760bfc425f51fa))
 
 ### Refactors
 
-* **e2e:** remove toast visibility checks for user agreement toggle tests ([451dc72](https://github.com/iblai/mentorai/commit/451dc72639520387b0267e74c1870319730f5e7e))
+- **e2e:** remove toast visibility checks for user agreement toggle tests ([451dc72](https://github.com/iblai/mentorai/commit/451dc72639520387b0267e74c1870319730f5e7e))
 
 ## [0.47.10](https://github.com/iblai/mentorai/compare/v0.47.9...v0.47.10) (2026-04-20)
 
 ### Bug Fixes
 
-* **security:** add permissions: {} to all workflows ([d18796d](https://github.com/iblai/mentorai/commit/d18796d8d90ffab9fc4fce2b8ce90e63491b3392))
-* **security:** address CodeQL alerts - SSRF, TLS, redirect, sanitization ([7d8a96e](https://github.com/iblai/mentorai/commit/7d8a96e25edff3e36e9eb890c5f9381a87c59c57))
+- **security:** add permissions: {} to all workflows ([d18796d](https://github.com/iblai/mentorai/commit/d18796d8d90ffab9fc4fce2b8ce90e63491b3392))
+- **security:** address CodeQL alerts - SSRF, TLS, redirect, sanitization ([7d8a96e](https://github.com/iblai/mentorai/commit/7d8a96e25edff3e36e9eb890c5f9381a87c59c57))
 
 ## [0.47.9](https://github.com/iblai/mentorai/compare/v0.47.8...v0.47.9) (2026-04-20)
 
 ### CI
 
-* double max-wait for full pipeline tests to 3 hours ([6c668bb](https://github.com/iblai/mentorai/commit/6c668bb8778e1a58f3d60070422b668fda93d309))
+- double max-wait for full pipeline tests to 3 hours ([6c668bb](https://github.com/iblai/mentorai/commit/6c668bb8778e1a58f3d60070422b668fda93d309))
 
 ## [0.47.8](https://github.com/iblai/mentorai/compare/v0.47.7...v0.47.8) (2026-04-19)
 
 ### Bug Fixes
 
-* **security:** add SSRF protection to WebCache fetch_from_network ([ed5999b](https://github.com/iblai/mentorai/commit/ed5999bb45f7ace1dac1d8054ac0e44c997f333e))
+- **security:** add SSRF protection to WebCache fetch_from_network ([ed5999b](https://github.com/iblai/mentorai/commit/ed5999bb45f7ace1dac1d8054ac0e44c997f333e))
 
 ## [0.47.7](https://github.com/iblai/mentorai/compare/v0.47.6...v0.47.7) (2026-04-19)
 
 ### Chores
 
-* **deps:** cargo update all Tauri dependencies ([d1b0bbc](https://github.com/iblai/mentorai/commit/d1b0bbcb5a6f9da2b09724caad84090ea529b3da))
+- **deps:** cargo update all Tauri dependencies ([d1b0bbc](https://github.com/iblai/mentorai/commit/d1b0bbcb5a6f9da2b09724caad84090ea529b3da))
 
 ## [0.47.6](https://github.com/iblai/mentorai/compare/v0.47.5...v0.47.6) (2026-04-19)
 
 ### Bug Fixes
 
-* **deps:** update bytes 1.11.0 -> 1.11.1 in Cargo.lock ([68915ec](https://github.com/iblai/mentorai/commit/68915ecf851a1f12834ba036bf6099a7131ddf92)), closes [#46](https://github.com/iblai/mentorai/issues/46)
+- **deps:** update bytes 1.11.0 -> 1.11.1 in Cargo.lock ([68915ec](https://github.com/iblai/mentorai/commit/68915ecf851a1f12834ba036bf6099a7131ddf92)), closes [#46](https://github.com/iblai/mentorai/issues/46)
 
 ## [0.47.5](https://github.com/iblai/mentorai/compare/v0.47.4...v0.47.5) (2026-04-19)
 
 ### Bug Fixes
 
-* **deps:** fix misspelled lodash/lodash-es overrides ([bc615f2](https://github.com/iblai/mentorai/commit/bc615f2042e2885be3598b587d9f9c3d36d4af84))
-* **deps:** remove bogus npm overrides and update Cargo.lock ([b95371a](https://github.com/iblai/mentorai/commit/b95371ae481015e969768f731ca99f016637537e))
+- **deps:** fix misspelled lodash/lodash-es overrides ([bc615f2](https://github.com/iblai/mentorai/commit/bc615f2042e2885be3598b587d9f9c3d36d4af84))
+- **deps:** remove bogus npm overrides and update Cargo.lock ([b95371a](https://github.com/iblai/mentorai/commit/b95371ae481015e969768f731ca99f016637537e))
 
 ## [0.47.4](https://github.com/iblai/mentorai/compare/v0.47.3...v0.47.4) (2026-04-19)
 
 ### Bug Fixes
 
-* **deps:** add more security overrides for transitive vulnerabilities ([a0c6632](https://github.com/iblai/mentorai/commit/a0c663287807762c535b9b7cd11c47a4519299ee))
-* **deps:** add security overrides and bump next to 15.5.15 ([ebdf831](https://github.com/iblai/mentorai/commit/ebdf831a546d1cca34654dd4efa25cc3465ee91c))
-* **deps:** override basic-ftp and follow-redirects for security patches ([22e5b4d](https://github.com/iblai/mentorai/commit/22e5b4d68244fcb2a41e20322da9aef61957a555)), closes [#143](https://github.com/iblai/mentorai/issues/143)
+- **deps:** add more security overrides for transitive vulnerabilities ([a0c6632](https://github.com/iblai/mentorai/commit/a0c663287807762c535b9b7cd11c47a4519299ee))
+- **deps:** add security overrides and bump next to 15.5.15 ([ebdf831](https://github.com/iblai/mentorai/commit/ebdf831a546d1cca34654dd4efa25cc3465ee91c))
+- **deps:** override basic-ftp and follow-redirects for security patches ([22e5b4d](https://github.com/iblai/mentorai/commit/22e5b4d68244fcb2a41e20322da9aef61957a555)), closes [#143](https://github.com/iblai/mentorai/issues/143)
 
 ### Chores
 
-* **release:** v0.47.3 ([438c209](https://github.com/iblai/mentorai/commit/438c2097e154f718ee94c099dfc1d191865243df))
+- **release:** v0.47.3 ([438c209](https://github.com/iblai/mentorai/commit/438c2097e154f718ee94c099dfc1d191865243df))
 
-* fix(deps): add security overrides and bump next to 15.5.15 (ebdf831)
-* fix(deps): override basic-ftp and follow-redirects for security patches (22e5b4d)
+- fix(deps): add security overrides and bump next to 15.5.15 (ebdf831)
+- fix(deps): override basic-ftp and follow-redirects for security patches (22e5b4d)
 
 ## [0.47.3](https://github.com/iblai/mentorai/compare/v0.47.2...v0.47.3) (2026-04-19)
 
 ### Chores
 
-* bump nextjs version ([1a650f0](https://github.com/iblai/mentorai/commit/1a650f01e1eed67700a0d7b08b965b69e3e566c0))
+- bump nextjs version ([1a650f0](https://github.com/iblai/mentorai/commit/1a650f01e1eed67700a0d7b08b965b69e3e566c0))
 
 ## [0.47.2](https://github.com/iblai/mentorai/compare/v0.47.1...v0.47.2) (2026-04-19)
 
 ### Chores
 
-* bump next from 15.3.6 to 15.5.14 ([dfd1435](https://github.com/iblai/mentorai/commit/dfd143506c2beb60c809da3642646346dad358a3))
-* update pnpm-lock.yaml ([ec9cf09](https://github.com/iblai/mentorai/commit/ec9cf094cc68fa5ac0ff696c63359cb63397084a))
+- bump next from 15.3.6 to 15.5.14 ([dfd1435](https://github.com/iblai/mentorai/commit/dfd143506c2beb60c809da3642646346dad358a3))
+- update pnpm-lock.yaml ([ec9cf09](https://github.com/iblai/mentorai/commit/ec9cf094cc68fa5ac0ff696c63359cb63397084a))
 
 ## [0.47.1](https://github.com/iblai/mentorai/compare/v0.47.0...v0.47.1) (2026-04-19)
 
