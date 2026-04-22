@@ -21,12 +21,12 @@ on:
         required: false
         default: 'main'
       skip-infra-launch:
-        description: 'Skip the infra launch + service-update. Run tests against whatever instance is already in the stg slot''s target group. Defaults to true — untick to launch a fresh EC2 from the slot''s AMI.'
+        description: "Skip the infra launch + service-update. Run tests against whatever instance is already in the stg slot's target group. Defaults to true — untick to launch a fresh EC2 from the slot's AMI."
         required: false
         type: boolean
         default: true
 
-run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})${{ inputs.skip-infra-launch && '' [skip-launch]'' || format('' @ {0}'', inputs.prod-images-tag) }}'
+run-name: "Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})${{ inputs.skip-infra-launch && ' [skip-launch]' || format(' @ {0}', inputs.prod-images-tag) }}"
 
 permissions:
   contents: read
