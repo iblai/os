@@ -148,8 +148,25 @@ export function useIframeHandlers() {
     'MENTOR:ENABLE_CHAT_ACTION_POPUPS': (payload: { enable: boolean }) => {
       dispatch(enableChatActionsPopup(payload.enable));
     },
-    'MENTOR:CHAT_ACTION_ADD_MESSAGE': (payload: { message: string }) => {
-      dispatch(addMessage(payload.message));
+    'MENTOR:CHAT_ACTION_ADD_MESSAGE': (
+      _payload: unknown,
+      event: MessageEvent,
+    ) => {
+      console.log('[RECEIVED POSTMESSAGE]: ', event.data, _payload);
+      const { message } = event.data;
+      console.log('[ADDING MESSAGE]: ', { message });
+      dispatch(
+        chatActions.addUserMessage({
+          tab: 'chat',
+          message: {
+            id: `user-${Date.now()}`,
+            role: 'user',
+            content: message,
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        }),
+      );
     },
   };
 
