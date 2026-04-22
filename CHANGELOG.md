@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.3](https://github.com/iblai/mentorai/compare/v0.51.2...v0.51.3) (2026-04-22)
+
+### Bug Fixes
+
+* **e2e:** deduplicate 401-triggered auth redirects in setup ([2991709](https://github.com/iblai/mentorai/commit/299170980f83aad70728058e074fe5abf86c3fbb))
+
 ## [0.51.2](https://github.com/iblai/mentorai/compare/v0.51.1...v0.51.2) (2026-04-22)
 
 ### Bug Fixes
