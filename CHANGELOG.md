@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.52.1](https://github.com/iblai/mentorai/compare/v0.52.0...v0.52.1) (2026-04-23)
+
+### Bug Fixes
+
+* **mentor:** suppress chat tooltip flash on non-keyboard focus ([98fd45c](https://github.com/iblai/mentorai/commit/98fd45cf592c4222bae69eedad64a5379d1d1000))
+* **tests:** update unit tests to 100% coverage ([35b99c2](https://github.com/iblai/mentorai/commit/35b99c2a927c13991050f8bef995d068b26b9d0f))
+
+### Chores
+
+* **e2e:** reconcile COVERAGE.md and coverage.json to 323/41 ([aad0476](https://github.com/iblai/mentorai/commit/aad04765ccc659c7564af722a8e64cd2c2cf09f5))
+
+### Tests
+
+* **mentor:** add fixme e2e coverage for [#576](https://github.com/iblai/mentorai/issues/576) tooltip focus fix ([aed2562](https://github.com/iblai/mentorai/commit/aed25629b8a85abd397de8769014e394cd73d23f))
+
 ## [0.52.0](https://github.com/iblai/mentorai/compare/v0.51.5...v0.52.0) (2026-04-23)
 
 ### Features
