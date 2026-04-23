@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.53.0](https://github.com/iblai/mentorai/compare/v0.52.1...v0.53.0) (2026-04-23)
+
+### Features
+
+* data reports mentor id query param added > test coverage added ([6082569](https://github.com/iblai/mentorai/commit/6082569a1e509bec5b2111d5aad85debfc6fed09))
+
+## [0.51.2-patch-1](https://github.com/iblai/mentorai/compare/v0.52.1...v0.53.0) (2026-04-22)
+
+### Features
+
+* bump version to 0.51.2-patch-1 ([6e9ab07](https://github.com/iblai/mentorai/commit/6e9ab07341a123cec6161dc2fb48166947051a5d))
+* data reports mentor id query param added ([2ad1b35](https://github.com/iblai/mentorai/commit/2ad1b354af4ad7462d20960083a75da9b797bee3))
+
 ## [0.52.1](https://github.com/iblai/mentorai/compare/v0.52.0...v0.52.1) (2026-04-23)
 
 ### Bug Fixes
