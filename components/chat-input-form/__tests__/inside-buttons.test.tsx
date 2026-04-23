@@ -109,11 +109,12 @@ describe('InsideButtons', () => {
       expect(screen.getByText('Deep Research')).toBeInTheDocument();
     });
 
-    it('should render MemoryButton when memoryEnabled is true', () => {
+    it('should render MemoryButton when memoryEnabled is true and user is authenticated', () => {
       render(
         <InsideButtons
           {...defaultProps}
           memoryEnabled={true}
+          username="testuser"
           containerWidth={1000}
         />,
       );
@@ -121,12 +122,12 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('memory-button')).toBeInTheDocument();
     });
 
-    it('should not render MemoryButton for an anonymous mentor', () => {
+    it('should not render MemoryButton when user is not authenticated', () => {
       render(
         <InsideButtons
           {...defaultProps}
           memoryEnabled={true}
-          isAnonymousMentor={true}
+          username=""
           containerWidth={1000}
         />,
       );

@@ -12,6 +12,7 @@ const PDF_FILE = path.join(
 const IMAGE_FILE = path.join(FILES_DIR, 'acessibility png.png');
 const TXT_FILE = path.join(FILES_DIR, 'outerHTML.txt');
 const CSV_FILE = path.join(FILES_DIR, 'test-data.csv');
+const MARKDOWN_FILE = path.join(FILES_DIR, 'test-data.md');
 
 test.describe('Journey 20: Dataset Management', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -222,6 +223,36 @@ test.describe('Journey 20: Dataset Management', () => {
     const csvEntry = editMentorPage.dialog.getByText(/test-data\.csv/i);
     await expect(csvEntry).toBeVisible({ timeout: 15_000 });
     logger.info('TC29: CSV file uploaded and visible in dataset list');
+  });
+
+  // ── TC30: Markdown resource type is available in Add Resources modal ──────
+  // Issue #1117 — frontend UI for Markdown file ingestion.
+
+  test('admin goes to datasets tab and sees the Markdown option in the Add Resources modal', async ({
+    editMentorPage,
+  }) => {
+    const modal = await editMentorPage.datasets.openAddResourceModal();
+    await expect(modal).toBeVisible();
+
+    const markdownBtn = modal
+      .locator('button')
+      .filter({ hasText: /^Markdown$/i });
+    await expect(markdownBtn).toBeVisible({ timeout: 5_000 });
+    await expect(markdownBtn).toBeEnabled();
+
+    logger.info('TC30: Markdown resource type is available');
+  });
+
+  // ── TC31: Markdown file upload ─────────────────────────────────────────────
+
+  test('admin goes to datasets tab and uploads a Markdown file successfully', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.datasets.uploadFile(MARKDOWN_FILE, 'Markdown');
+
+    const mdEntry = editMentorPage.dialog.getByText(/test-data\.md/i);
+    await expect(mdEntry).toBeVisible({ timeout: 15_000 });
+    logger.info('TC31: Markdown file uploaded and visible in dataset list');
   });
 
   // ── TC13: Train or Delete modal ────────────────────────────────────────────

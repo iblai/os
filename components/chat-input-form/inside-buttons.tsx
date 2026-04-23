@@ -25,7 +25,6 @@ interface InsideButtonsProps {
   embedMode?: boolean;
   promptsIsEnabled?: boolean;
   memoryEnabled?: boolean;
-  isAnonymousMentor?: boolean;
   tenantKey?: string;
   username?: string;
 }
@@ -42,12 +41,9 @@ export const InsideButtons = ({
   embedMode = false,
   promptsIsEnabled = false,
   memoryEnabled = false,
-  isAnonymousMentor = false,
   tenantKey,
   username,
 }: InsideButtonsProps) => {
-  console.log('memory==> isAnonymousMentor', isAnonymousMentor);
-  console.log('memory==> memoryEnabled', memoryEnabled);
   const allInsideButtons = [
     {
       name: 'Canvas',
@@ -82,7 +78,7 @@ export const InsideButtons = ({
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
       action: () => onOptionClick(TOOLS.MEMORY),
-      isEnabled: memoryEnabled && !embedMode && !isAnonymousMentor,
+      isEnabled: memoryEnabled && !embedMode && !!username,
     },
   ].filter((item) => item.isEnabled);
 

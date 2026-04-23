@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-04-23",
   "summary": {
-    "totalCheckpoints": 323,
-    "coveredCheckpoints": 323,
+    "totalCheckpoints": 325,
+    "coveredCheckpoints": 325,
     "percent": 100,
     "totalJourneys": 41
   },
@@ -582,7 +582,10 @@
       "id": "shareable-links-and-embed-integration",
       "name": "Shareable Links & Embed Integration",
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+      ],
       "checkpoints": [
         {
           "id": "emb-01",
@@ -603,6 +606,11 @@
           "id": "emb-04",
           "description": "Advanced anonymous embed with context awareness configured",
           "status": "covered"
+        },
+        {
+          "id": "emb-05",
+          "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
         }
       ]
     },
@@ -610,7 +618,10 @@
       "id": "anonymous-public-access",
       "name": "Anonymous / Public Access",
       "spec": "14-anonymous-public-access.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
       "checkpoints": [
         {
           "id": "anon-01",
@@ -640,6 +651,11 @@
         {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
+          "status": "covered"
+        },
+        {
+          "id": "anon-07",
+          "description": "Memory button is hidden in the chat input for unauthenticated users",
           "status": "covered"
         }
       ]
@@ -975,6 +991,16 @@
         {
           "id": "ds-16",
           "description": "File upload cancellation is handled gracefully",
+          "status": "covered"
+        },
+        {
+          "id": "ds-17",
+          "description": "Markdown resource type is available in the Add Resources modal (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-18",
+          "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
           "status": "covered"
         }
       ]
