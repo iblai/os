@@ -60,6 +60,15 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
       await setupPage.waitForTimeout(2_000);
       await editMentorPage.close();
       logger.info('Mentor visibility and chat access set to Anyone');
+
+      // Enable memory on the mentor so the auth-gate assertion below is
+      // meaningful (the Memory button also requires mentor memory to be on).
+      await editMentorPage.open('Memory');
+      await waitForPageReady(setupPage);
+      if (!(await editMentorPage.memory.isEnableMemoryChecked())) {
+        await editMentorPage.memory.toggleEnableMemory();
+      }
+      await editMentorPage.close();
     } finally {
       await setupPage.close();
       await setupContext.close();
@@ -152,6 +161,20 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     await goToAnonymousMentor(page);
     const loginButton = page.getByRole('button', { name: 'Log in' });
     await expect(loginButton).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('unauthenticated user does not see the Memory button in the chat input', async ({
+    page,
+    chatPage,
+  }) => {
+    test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
+    await goToAnonymousMentor(page);
+    // Wait for the chat input to render so the inside-buttons have had a
+    // chance to mount before we assert absence.
+    await expect(
+      page.getByPlaceholder('Ask anything', { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(chatPage.memoryButton).not.toBeVisible({ timeout: 5_000 });
   });
 
   test('unauthenticated user clicks Log In and is redirected to auth host', async ({

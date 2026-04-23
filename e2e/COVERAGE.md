@@ -200,9 +200,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 14: Anonymous / Public Access (6 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
+## Journey 14: Anonymous / Public Access (7 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`, `components/chat-input-form/inside-buttons.tsx`
 
 - [x] Anonymous user sees "Log in" button on a public mentor page
 - [x] Clicking "Log in" redirects to the auth host login page
@@ -210,6 +210,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Anonymous user can chat with a mentor configured for "Anyone" and start a new chat
 - [x] Anonymous user can open My Mentors modal; "Create" button is not visible
 - [x] Collapsed sidebar admin buttons redirect anonymous user to the auth host
+- [x] Memory button is hidden in the chat input for unauthenticated users
 
 ---
 
