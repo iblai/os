@@ -222,7 +222,13 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     handlers?: unknown;
     defaultHandler?: (data: Record<string, unknown>) => void;
   }) => {
-    capturedIframeMessageHandler = opts;
+    // The provider tree contains multiple useIframeMessageHandler calls
+    // (Providers + AppProvider). Merge opts so a later call without a
+    // defaultHandler doesn't clobber one registered by an earlier call.
+    capturedIframeMessageHandler = {
+      ...capturedIframeMessageHandler,
+      ...opts,
+    };
     if (opts.defaultHandler && pendingIframeMessages.length > 0) {
       for (const msg of pendingIframeMessages) {
         opts.defaultHandler(msg);
