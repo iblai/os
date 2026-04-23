@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.53.1](https://github.com/iblai/mentorai/compare/v0.53.0...v0.53.1) (2026-04-23)
+
+### Bug Fixes
+
+* **e2e:** fall back to Cancel button when Escape fails on Copy Mentor dialog ([ed22103](https://github.com/iblai/mentorai/commit/ed22103404d709091243db4f1739054f89eb10ce))
+
 ## [0.53.0](https://github.com/iblai/mentorai/compare/v0.52.1...v0.53.0) (2026-04-23)
 
 ### Features
