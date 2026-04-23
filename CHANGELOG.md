@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.55.0](https://github.com/iblai/mentorai/compare/v0.54.1...v0.55.0) (2026-04-23)
+
+### Features
+
+* **mentor:** Adding playwright test memory hide for non authenticates user ([3da9390](https://github.com/iblai/mentorai/commit/3da9390385e4524623cc744f9119248044d1fd11))
+
+### Bug Fixes
+
+* **mentor:** fixing user data schema for full name as optional ([0dfdb35](https://github.com/iblai/mentorai/commit/0dfdb359a41c9ec9a7b286213bde833700a37e6f))
+* **mentor:** full name as nullable and anonymous mentor to have memory ([404e750](https://github.com/iblai/mentorai/commit/404e7504edcc30ad1f9bd94dc7d3217ce6fabc22))
+
 ## [0.54.1](https://github.com/iblai/mentorai/compare/v0.54.0...v0.54.1) (2026-04-23)
 
 ### Bug Fixes
