@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.51.5](https://github.com/iblai/mentorai/compare/v0.51.4...v0.51.5) (2026-04-23)
+
+### Bug Fixes
+
+* **e2e:** rewrite journey 14 to properly test anonymous public access ([fa99431](https://github.com/iblai/mentorai/commit/fa9943173df8529398d3b7eadfcc253520391050))
+
 ## [0.51.4](https://github.com/iblai/mentorai/compare/v0.51.3...v0.51.4) (2026-04-22)
 
 ### Bug Fixes
