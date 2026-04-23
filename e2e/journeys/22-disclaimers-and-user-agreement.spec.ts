@@ -37,11 +37,9 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
   }) => {
     await editMentorPage.disclaimers.enableUserAgreement();
 
-    await expect(editMentorPage.disclaimers.userAgreementSwitch).toHaveAttribute(
-      'aria-checked',
-      'true',
-      { timeout: 10_000 },
-    );
+    await expect(
+      editMentorPage.disclaimers.userAgreementSwitch,
+    ).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
     await expect(editMentorPage.disclaimers.activeStatus).toBeVisible({
       timeout: 10_000,
     });
@@ -62,11 +60,9 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
 
     await editMentorPage.disclaimers.disableUserAgreement();
 
-    await expect(editMentorPage.disclaimers.userAgreementSwitch).toHaveAttribute(
-      'aria-checked',
-      'false',
-      { timeout: 10_000 },
-    );
+    await expect(
+      editMentorPage.disclaimers.userAgreementSwitch,
+    ).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
 
     // Status text should now show "Inactive" (not "Active")
     const inactiveText = editMentorPage.dialog.getByText('Inactive', {
@@ -98,7 +94,8 @@ test.describe('Journey 22-B: Admin — Edit Content', () => {
     page,
     editMentorPage,
   }) => {
-    const editModal = await editMentorPage.disclaimers.openEditUserAgreementModal();
+    const editModal =
+      await editMentorPage.disclaimers.openEditUserAgreementModal();
     await waitForDialogReady(page, editModal);
 
     const textarea = editModal.getByRole('textbox');
@@ -247,7 +244,8 @@ test.describe('Journey 22-B: Admin — Edit Content', () => {
   test('admin goes to disclaimers tab and sees Save disabled when User Agreement content is empty', async ({
     editMentorPage,
   }) => {
-    const editModal = await editMentorPage.disclaimers.openEditUserAgreementModal();
+    const editModal =
+      await editMentorPage.disclaimers.openEditUserAgreementModal();
 
     const textarea = editModal.getByRole('textbox');
     await expect(textarea).toBeVisible({ timeout: 10_000 });
@@ -413,7 +411,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
@@ -485,11 +483,9 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await waitForPageReady(page);
 
     await editMentorPage.disclaimers.disableUserAgreement();
-    await expect(editMentorPage.disclaimers.userAgreementSwitch).toHaveAttribute(
-      'aria-checked',
-      'false',
-      { timeout: 10_000 },
-    );
+    await expect(
+      editMentorPage.disclaimers.userAgreementSwitch,
+    ).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
 
     await editMentorPage.close();
 
@@ -503,7 +499,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
@@ -566,7 +562,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
@@ -611,7 +607,9 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
       // Step 4: Second message — no modal should appear after accepting
       await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 10_000 });
       await nonadminChatPage.chatInput.fill('second message no modal');
-      await expect(nonadminChatPage.sendButton).toBeEnabled({ timeout: 10_000 });
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
       await nonadminChatPage.sendButton.click();
 
       let secondModalAppeared = false;

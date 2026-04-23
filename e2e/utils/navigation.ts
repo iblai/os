@@ -19,7 +19,8 @@ function isNavigationAbortedError(error: unknown): boolean {
   const message = (error as Error)?.message ?? '';
   return (
     message.includes('NS_BINDING_ABORTED') ||
-    message.includes('Navigation interrupted')
+    message.includes('Navigation interrupted') ||
+    message.includes('net::ERR_ABORTED')
   );
 }
 
