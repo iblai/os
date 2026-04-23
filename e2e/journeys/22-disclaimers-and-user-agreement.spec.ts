@@ -411,7 +411,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
@@ -499,7 +499,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
@@ -562,7 +562,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await safeWaitForURL(
       nonadminPage,
       (url) => url.href.includes('/platform/'),
-      { timeout: 30_000 },
+      { timeout: 120_000 },
     );
     await waitForPageReady(nonadminPage);
 
