@@ -83,6 +83,14 @@ vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: () => true,
 }));
 
+// Mocked so EDIT_MENTOR_TAB_COMPONENTS can import SandboxTab/SkillsTab without
+// pulling in @iblai/web-utils -> axios, which fails to resolve in tests.
+vi.mock('@iblai/web-containers', () => ({
+  SandboxConfig: () => null,
+  AgentSkills: () => null,
+  AgentConfigPrompts: () => null,
+}));
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
@@ -116,6 +124,116 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     expect(MENTOR_SEGMENTS).toHaveLength(15);
+  });
+
+  it('places the Sandbox segment right after Settings', () => {
+    const settingsIndex = MENTOR_SEGMENTS.findIndex(
+      (s) => s.label === 'Settings',
+    );
+    expect(MENTOR_SEGMENTS[settingsIndex + 1]?.label).toBe('Sandbox');
+  });
+
+  it('places the Skills segment right after Prompts', () => {
+    const promptsIndex = MENTOR_SEGMENTS.findIndex(
+      (s) => s.label === 'Prompts',
+    );
+    expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
+  });
+
+  describe('isClawEnabled gating', () => {
+    it('hides Sandbox and Skills when is_claw_enabled is false', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_claw_enabled: false,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('hides Sandbox and Skills when is_claw_enabled is missing', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('shows Sandbox and Skills when is_claw_enabled is true', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_claw_enabled: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).toContain('Sandbox');
+      expect(labels).toContain('Skills');
+    });
+
+    it('hides Sandbox and Skills from non-admin users even when claw is enabled', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_claw_enabled: true,
+      });
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.FREE_TRIAL) &&
+          !s.userTypes.includes(UserType.ADMIN),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('isSegmentVisible reflects the claw gate for Sandbox', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_claw_enabled: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const sandboxSegment = MENTOR_SEGMENTS.find(
+        (s) => s.label === 'Sandbox',
+      )!;
+      expect(result.current.isSegmentVisible(sandboxSegment)).toBe(true);
+
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_claw_enabled: false,
+      });
+      const { result: result2 } = renderHook(() => useMentorSegments());
+      expect(result2.current.isSegmentVisible(sandboxSegment)).toBe(false);
+    });
   });
 
   it('returns the filtered segment list for an admin on a non-main tenant', () => {

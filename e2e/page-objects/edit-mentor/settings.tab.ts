@@ -17,6 +17,7 @@ export class SettingsTab {
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
   readonly showVoiceCallToggle: Locator;
+  readonly advancedSandboxToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -60,6 +61,10 @@ export class SettingsTab {
     });
     this.showVoiceCallToggle = dialog.getByRole('switch', {
       name: /show voice call/i,
+    });
+    // The Advanced Sandbox switch — aria-label reflects its current state
+    this.advancedSandboxToggle = dialog.getByRole('switch', {
+      name: /^Advanced sandbox/i,
     });
   }
 
@@ -141,6 +146,46 @@ export class SettingsTab {
       await this.saveButton.click();
       await this.page.waitForTimeout(2_000);
     }
+  }
+
+  /**
+   * Returns true when the Advanced Sandbox toggle is ON (aria-checked="true").
+   */
+  async isAdvancedSandboxEnabled(): Promise<boolean> {
+    const state = await this.advancedSandboxToggle
+      .getAttribute('aria-checked')
+      .catch(() => 'false');
+    return state === 'true';
+  }
+
+  /**
+   * Returns true when the Advanced Sandbox toggle is in a disabled state
+   * (no claw mentor config exists).
+   */
+  async isAdvancedSandboxDisabled(): Promise<boolean> {
+    return this.advancedSandboxToggle.isDisabled();
+  }
+
+  /**
+   * Sets the Advanced Sandbox toggle to the desired state and clicks Save.
+   * Does nothing if the toggle is already in the desired state.
+   */
+  async setAdvancedSandbox(desired: boolean): Promise<void> {
+    await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
+    const current = await this.isAdvancedSandboxEnabled();
+    if (current !== desired) {
+      await this.advancedSandboxToggle.click();
+      // Wait for aria-checked to flip so we don't race ahead to Save
+      await expect(this.advancedSandboxToggle).toHaveAttribute(
+        'aria-checked',
+        desired ? 'true' : 'false',
+        { timeout: 5_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    // Brief wait for the mutation + RTK cache invalidation to settle
+    await this.page.waitForTimeout(2_000);
   }
 
   async deleteMentor(): Promise<void> {

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-13 | 276 checkpoints | 37 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-22 | 284 checkpoints | 38 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -548,6 +548,21 @@ When adding a new page or modifying an existing user flow:
 **Source files:** `components/modals/settings-modal.tsx`
 
 - [x] TMS-38.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
+
+---
+
+## Journey 40: CLAW Advanced Sandbox (8 checkpoints) — `journeys/40-claw-advanced-sandbox.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+- [x] Admin opens Settings tab and Advanced Sandbox toggle is present _(gracefully skipped if no claw config)_
+- [x] Advanced Sandbox toggle is disabled when no claw mentor config exists for the mentor
+- [x] Flipping the toggle without clicking Save does not reveal Sandbox or Skills tabs _(pre-save state check)_
+- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear immediately after Settings tab
+- [x] Enabling Advanced Sandbox and saving causes Skills tab to appear immediately after Prompts tab
+- [x] Enabling Advanced Sandbox and saving shows "Agent Configuration" section inside the Prompts tab
+- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Admin can navigate to the Sandbox tab and the sandbox config container renders
 
 ---
 

@@ -22,7 +22,7 @@ export function SkillsTab() {
 
   const mentorDbId = mentorSettings?.mentor_id;
 
-  if (!tenantKey || !mentorDbId) return null;
+  if (!tenantKey || !mentorDbId || !activeMentorId) return null;
 
   return (
     <>
@@ -38,7 +38,11 @@ export function SkillsTab() {
         className="flex-1 space-y-4 p-3 lg:p-4"
         style={{ overflowY: 'auto', overflowX: 'hidden' }}
       >
-        <AgentSkills platformKey={tenantKey} mentorId={mentorDbId} />
+        <AgentSkills
+          platformKey={tenantKey}
+          mentorId={mentorDbId}
+          mentorUniqueId={activeMentorId}
+        />
       </div>
     </>
   );

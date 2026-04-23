@@ -191,6 +191,22 @@ vi.mock('@iblai/iblai-api', () => ({
   },
 }));
 
+const mockAgentConfigPrompts = vi.fn();
+vi.mock('@iblai/web-containers', () => ({
+  AgentConfigPrompts: (props: any) => {
+    mockAgentConfigPrompts(props);
+    return (
+      <div
+        data-testid="agent-config-prompts"
+        data-platform-key={props.platformKey}
+        data-mentor-unique-id={props.mentorUniqueId}
+      >
+        AgentConfigPrompts
+      </div>
+    );
+  },
+}));
+
 // ============================================================================
 // TEST DATA
 // ============================================================================
@@ -1827,6 +1843,111 @@ describe('PromptsTab', () => {
           'Mentor updated successfully',
         );
       });
+    });
+  });
+
+  // ==========================================================================
+  // ADVANCED SANDBOX (CLAW) — Agent Configuration section
+  // ==========================================================================
+
+  describe('Agent Configuration (CLAW)', () => {
+    it('does not render the Agent Configuration section when is_claw_enabled is false', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: false },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('Agent Configuration')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('agent-config-prompts'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not render the Agent Configuration section when is_claw_enabled is missing', () => {
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('Agent Configuration')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('agent-config-prompts'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the Agent Configuration section when is_claw_enabled is true', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.getByText('Agent Configuration')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-config-prompts')).toBeInTheDocument();
+    });
+
+    it('passes platformKey and mentorUniqueId to AgentConfigPrompts', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(mockAgentConfigPrompts).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'test-mentor',
+      });
+    });
+
+    it('uses getMentorId() result as mentorUniqueId when provided', () => {
+      mockGetMentorId.mockReturnValue('nav-mentor-xyz');
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(mockAgentConfigPrompts).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'nav-mentor-xyz',
+      });
+    });
+
+    it('does not render AgentConfigPrompts when tenantKey is missing', () => {
+      mockUseParams.mockReturnValue({
+        tenantKey: undefined,
+        mentorId: 'test-mentor',
+      });
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(
+        screen.queryByTestId('agent-config-prompts'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not render AgentConfigPrompts when mentor id cannot be resolved', () => {
+      mockUseParams.mockReturnValue({
+        tenantKey: 'test-tenant',
+        mentorId: undefined,
+      });
+      mockGetMentorId.mockReturnValue(null);
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(
+        screen.queryByTestId('agent-config-prompts'),
+      ).not.toBeInTheDocument();
     });
   });
 });
