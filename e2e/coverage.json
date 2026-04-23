@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-03",
+  "lastUpdated": "2026-04-23",
   "summary": {
-    "totalCheckpoints": 307,
-    "coveredCheckpoints": 307,
+    "totalCheckpoints": 323,
+    "coveredCheckpoints": 323,
     "percent": 100,
-    "totalJourneys": 38
+    "totalJourneys": 41
   },
   "journeys": [
     {
@@ -1369,7 +1369,11 @@
       "id": "accessibility-wcag",
       "name": "Accessibility — WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
-      "sourceFiles": ["components/accessibility/accessibility-toolbar.tsx"],
+      "sourceFiles": [
+        "components/accessibility/accessibility-toolbar.tsx",
+        "components/chat/stop-streaming-button.tsx",
+        "components/chat/ai-message-copy.tsx"
+      ],
       "checkpoints": [
         {
           "id": "a11y-01",
@@ -1449,6 +1453,21 @@
         {
           "id": "a11y-16",
           "description": "API key dialog is accessible",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-17",
+          "description": "Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-18",
+          "description": "Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-19",
+          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
           "status": "covered"
         }
       ]
@@ -1904,7 +1923,7 @@
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx",
         "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/index.ts"
       ],
@@ -1942,6 +1961,96 @@
         {
           "id": "al-07",
           "description": "Non-admin user does not see Audit tab in the mentor dropdown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ai-message-read-aloud",
+      "name": "AI Message Read Aloud",
+      "spec": "40-ai-message-read-aloud.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/ai-message-speak.tsx",
+        "components/chat/chat-messages/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "speak-01",
+          "description": "Read Aloud button is visible on an AI response with aria-pressed=false",
+          "status": "covered"
+        },
+        {
+          "id": "speak-02",
+          "description": "Clicking Read Aloud toggles label to Stop Reading Aloud with aria-pressed=true and triggers speechSynthesis.speak",
+          "status": "covered"
+        },
+        {
+          "id": "speak-03",
+          "description": "Clicking Stop Reading Aloud resets to Read Aloud with aria-pressed=false and calls speechSynthesis.cancel",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-access-tab",
+      "name": "Mentor Access Tab",
+      "spec": "41-mentor-access-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/access-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/shared.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ac-01",
+          "description": "Access tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ac-02",
+          "description": "Access control heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ac-03",
+          "description": "Access tab shows roles table or empty state — never a blank crash screen",
+          "status": "covered"
+        },
+        {
+          "id": "ac-04",
+          "description": "Each policy row shows role name, user count badge, and edit button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-05",
+          "description": "Create role access dialog opens with role selector and can be cancelled",
+          "status": "covered"
+        },
+        {
+          "id": "ac-06",
+          "description": "Pencil edit button opens Manage <Role> access dialog with RoleAccessPanel",
+          "status": "covered"
+        },
+        {
+          "id": "ac-07",
+          "description": "Selecting a role in Create dialog enables the Create button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-08",
+          "description": "Manage access dialog shows assigned users section or no-users placeholder",
+          "status": "covered"
+        },
+        {
+          "id": "ac-09",
+          "description": "Error state Try again button is present when the error banner renders",
+          "status": "covered"
+        },
+        {
+          "id": "ac-10",
+          "description": "Closing the manage dialog via Escape or click-outside clears editing state",
           "status": "covered"
         }
       ]

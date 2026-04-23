@@ -67,6 +67,7 @@ export function MyMentorsModal({
           name: mentor.name,
           profileImage: mentor.profile_image,
           unique_id: mentor.unique_id,
+          id: mentor.id,
         }),
       );
       onClose();

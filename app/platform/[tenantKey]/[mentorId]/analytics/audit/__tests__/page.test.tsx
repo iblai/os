@@ -39,7 +39,7 @@ vi.mock('@/features/analytics/slice', () => ({
 const AuditLogPageModule = await import('../page');
 const AuditLogPage = AuditLogPageModule.default;
 
-describe('analytics audit-log page', () => {
+describe('analytics audit page', () => {
   it('should export dynamic config', () => {
     expect(AuditLogPageModule.dynamic).toBe('force-dynamic');
   });

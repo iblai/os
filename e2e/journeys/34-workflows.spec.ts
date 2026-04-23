@@ -31,7 +31,7 @@ test.describe('Journey 34: Workflows', () => {
     await navigateToWorkflowsPage(page);
 
     await expect(
-      page.getByRole('heading', { name: 'Workflows' }),
+      page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText('Create and manage automated workflows for your mentors'),
@@ -114,7 +114,7 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
 
     await expect(
-      page.getByRole('heading', { name: 'Workflows' }),
+      page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
 
     await searchWorkflow(page, workflowName);

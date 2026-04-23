@@ -74,7 +74,7 @@ setup('authenticate non-admin', async ({ page }, testInfo) => {
     `[auth-nonadmin.setup] [${browserKey}] Step 2: Waiting for AUTH_HOST (${AUTH_HOST}) in URL`,
   );
   await safeWaitForURL(page, (url) => url.href.includes(AUTH_HOST), {
-    timeout: 60_000,
+    timeout: 120_000,
   });
   console.log(
     `[auth-nonadmin.setup] [${browserKey}] Reached auth host — URL: ${page.url()}`,

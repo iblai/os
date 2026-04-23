@@ -339,8 +339,33 @@ describe('MyMentorsModal', () => {
       name: 'Mentor Alpha',
       profileImage: 'https://example.com/alpha.png',
       unique_id: 'mentor-alpha',
+      id: '1',
     });
     expect(onCloseMock).toHaveBeenCalled();
+  });
+
+  it('dispatches mentor db id from mentor.id on analytics click', () => {
+    mockPathname = '/platform/tenant123/mentor456/analytics';
+    const { store } = renderModal();
+    fireEvent.click(screen.getByText('Mentor Beta'));
+    expect(store.getState().analytics.selectedMentor?.id).toBe('2');
+  });
+
+  it('dispatches id as undefined when mentor has no id in analytics view', () => {
+    mockPathname = '/platform/tenant123/mentor456/analytics';
+    mockMentors = [
+      {
+        // no `id` field — simulates a stale/partial mentor record
+        name: 'Idless Mentor',
+        unique_id: 'idless',
+        slug: 'idless',
+        profile_image: '',
+        description: 'no id',
+      },
+    ];
+    const { store } = renderModal();
+    fireEvent.click(screen.getByText('Idless Mentor'));
+    expect(store.getState().analytics.selectedMentor?.id).toBeUndefined();
   });
 
   it('does not call navigateToMentor in analytics view', () => {

@@ -345,6 +345,7 @@ export function NavBar() {
           name: mentorSettingsCombinedPublicAndPrivate?.mentorName ?? '',
           profileImage:
             mentorSettingsCombinedPublicAndPrivate?.profileImage ?? '',
+          id: mentorSettingsCombinedPublicAndPrivate?.mentorDbId ?? '',
         }),
       );
     }
