@@ -12,7 +12,7 @@ import {
   Calendar,
   ChevronsUpDown,
   Check,
-  Settings,
+  Tags,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -94,7 +94,7 @@ interface Memory {
     name: string;
     slug: string;
   };
-  username?: string;
+  email?: string;
   createdAt?: string;
 }
 
@@ -114,10 +114,10 @@ export function ManageMemories({
 
   // Build query params for server-side filtering
   const queryParams = useMemo(() => {
-    const params: { start_date?: string; end_date?: string; user_id?: string } =
+    const params: { start_date?: string; end_date?: string; email?: string } =
       {};
     if (selectedLearner) {
-      params.user_id = selectedLearner;
+      params.email = selectedLearner;
     }
     if (dateRange?.from) {
       params.start_date = format(dateRange.from, 'yyyy-MM-dd');
@@ -172,7 +172,7 @@ export function ManageMemories({
           name: memory.category.name,
           slug: memory.category.slug,
         },
-        username: memory.username,
+        email: memory.email,
         createdAt: memory.created_at,
       })),
     );
@@ -193,15 +193,15 @@ export function ManageMemories({
   // Derive unique learners from all (unfiltered) memories for the filter dropdown
   const learners = useMemo(() => {
     if (!unfilteredResponse) return [];
-    const userMap = new Map<string, { username: string; email: string }>();
+    const emailSet = new Set<string>();
     unfilteredResponse.forEach((item) =>
       item.memories.forEach((m: MentorMemory) => {
-        if (m.username && !userMap.has(m.username)) {
-          userMap.set(m.username, { username: m.username, email: m.username });
+        if (m.email) {
+          emailSet.add(m.email);
         }
       }),
     );
-    return Array.from(userMap.values());
+    return Array.from(emailSet).map((email) => ({ email }));
   }, [unfilteredResponse]);
 
   // Build category list from admin categories or from the response
@@ -402,9 +402,9 @@ export function ManageMemories({
                     className="w-full justify-between bg-transparent font-normal"
                   >
                     {selectedLearner
-                      ? learners.find(
-                          (learner) => learner.username === selectedLearner,
-                        )?.email
+                      ? (learners.find(
+                          (learner) => learner.email === selectedLearner,
+                        )?.email ?? selectedLearner)
                       : 'Search for User'}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -434,13 +434,13 @@ export function ManageMemories({
                             key={learner.email}
                             value={learner.email}
                             onSelect={() => {
-                              setSelectedLearner(learner.username);
+                              setSelectedLearner(learner.email);
                             }}
                           >
                             <Check
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedLearner === learner.username
+                                selectedLearner === learner.email
                                   ? 'opacity-100'
                                   : 'opacity-0',
                               )}
@@ -550,7 +550,7 @@ export function ManageMemories({
               className="shrink-0"
               aria-label="Manage categories"
             >
-              <Settings className="h-4 w-4 sm:mr-2" />
+              <Tags className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Categories</span>
             </Button>
 
@@ -578,7 +578,7 @@ export function ManageMemories({
                     addSuffix: true,
                   })
                 : '';
-              const displayUser = memory.username || 'Unknown';
+              const displayUser = memory.email || 'Unknown';
 
               return (
                 <div

@@ -12,6 +12,8 @@ concurrency:
   group: ios-build
   cancel-in-progress: false
 
+permissions: {}
+
 jobs:
   build-ios:
     name: Build iOS (.ipa)

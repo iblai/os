@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-20 | 286 checkpoints | 38 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-23 | 306 checkpoints | 40 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -317,17 +317,24 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (8 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
-- [x] Admin can toggle User Agreement on/off; toggling on causes disclaimer modal to appear before chat _(uses fresh unauthenticated browser context; skips if non-admin)_
-- [x] Admin can edit User Agreement content _(skips if non-admin)_
-- [x] Admin can copy User Agreement content to clipboard _(skips if non-admin)_
-- [x] Admin can edit Advisory text and it appears above the chat input _(skips if non-admin)_
-- [x] Disclaimers tab has proper WCAG accessibility attributes _(skips if non-admin)_
-- [x] User Agreement modal is accessible _(skips if non-admin)_
-- [x] Create a new mentor and configure all disclaimer settings end-to-end _(uses fresh unauthenticated browser context; skips if non-admin)_
+- [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits User Agreement content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits Advisory content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin cancels User Agreement edit without saving — preview content unchanged _(creates fresh mentor; skips if non-admin)_
+- [x] Save button is disabled when User Agreement content is empty _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies User Agreement content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies Advisory content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin enables user agreement and non-admin must accept it before chatting _(creates fresh mentor; uses non-admin browser context)_
+- [x] Admin disables user agreement and non-admin sends message without seeing agreement modal _(creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin accepts user agreement and subsequent messages do not trigger modal again _(creates fresh mentor; uses non-admin browser context)_
+- [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
+- [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 
 ---
 
@@ -556,7 +563,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
 
 - [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
 - [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
@@ -565,6 +572,31 @@ When adding a new page or modifying an existing user flow:
 - [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
 - [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
 - [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+
+---
+
+## Journey 41: Mentor Access Tab (10 checkpoints) — `journeys/40-mentor-access-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
+
+- [x] AC-40.1: Access tab label is visible in the Edit Mentor modal sidebar
+- [x] AC-40.2: Access control heading and description render correctly
+- [x] AC-40.3: Access tab shows roles table or empty state — never a blank crash screen
+- [x] AC-40.4: Each policy row shows role name, user count badge, and edit button
+- [x] AC-40.5: Create role access dialog opens with role selector and can be cancelled
+- [x] AC-40.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
+- [x] AC-40.7: Selecting a role in Create dialog enables the Create button
+- [x] AC-40.8: Manage access dialog shows assigned users section or no-users placeholder
+- [x] AC-40.9: Error state Try again button is present when the error banner renders
+- [x] AC-40.10: Closing the manage dialog via Escape or click-outside clears editing state
+
+## Journey 40: AI Message Read Aloud (3 checkpoints) — `journeys/40-ai-message-read-aloud.spec.ts`
+
+**Source files:** `components/chat/ai-message-bubble.tsx`, `components/chat/ai-message-speak.tsx`, `components/chat/chat-messages/index.tsx`
+
+- [x] SPEAK-40.1: Read Aloud button is visible on an AI response with `aria-pressed="false"`
+- [x] SPEAK-40.2: Clicking Read Aloud toggles label to Stop Reading Aloud with `aria-pressed="true"` and triggers `speechSynthesis.speak`
+- [x] SPEAK-40.3: Clicking Stop Reading Aloud resets to Read Aloud with `aria-pressed="false"` and calls `speechSynthesis.cancel`
 
 ---
 
