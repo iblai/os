@@ -618,7 +618,10 @@
       "id": "anonymous-public-access",
       "name": "Anonymous / Public Access",
       "spec": "14-anonymous-public-access.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
       "checkpoints": [
         {
           "id": "anon-01",
@@ -648,6 +651,11 @@
         {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
+          "status": "covered"
+        },
+        {
+          "id": "anon-07",
+          "description": "Memory button is hidden in the chat input for unauthenticated users",
           "status": "covered"
         }
       ]
