@@ -18,7 +18,20 @@ export const StopStreamingButton = forwardRef<HTMLButtonElement, Props>(
   function StopStreamingButton({ stopGenerating }, ref) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger
+          asChild
+          // Only suppress the tooltip when focus is NOT from the keyboard —
+          // i.e. the submit button swaps into the stop button mid-typing and
+          // this element inherits focus, or JS calls .focus(). Keyboard Tab
+          // navigation (:focus-visible) still opens the tooltip normally.
+          // See issue #576.
+          onFocus={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.matches(':focus-visible') === false) {
+              e.preventDefault();
+            }
+          }}
+        >
           <div>
             <Button
               ref={ref}
