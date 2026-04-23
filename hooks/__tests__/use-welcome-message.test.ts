@@ -397,8 +397,12 @@ describe('useWelcome', () => {
         vi.advanceTimersByTime(200);
       });
 
-      // Should have closed the connection
-      expect(mockWebSocketInstance.close).toHaveBeenCalled();
+      // Should have closed the connection with an explicit status code
+      // (prevents WebSocket close code 1005 "No Status" — issue #1088)
+      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(
+        1000,
+        'Normal closure',
+      );
 
       // Should have loaded guided prompts
       expect(mockLoadGuidedPrompts).toHaveBeenCalledWith({
@@ -408,6 +412,44 @@ describe('useWelcome', () => {
       });
 
       vi.useRealTimers();
+    });
+
+    it('should close WebSocket with explicit code 1000 on unmount cleanup', () => {
+      mockUseMentorSettings.mockReturnValue({
+        data: {
+          greetingMethod: 'proactive_prompt',
+          proactiveResponse: null,
+        },
+      });
+
+      mockWebSocketInstance.readyState = WebSocket.OPEN;
+
+      const { unmount } = renderHook(() => useWelcome(defaultProps));
+
+      unmount();
+
+      // Unmount triggers the cleanup which calls _endConnection
+      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(
+        1000,
+        'Normal closure',
+      );
+    });
+
+    it('should not close WebSocket when readyState is not OPEN', () => {
+      mockUseMentorSettings.mockReturnValue({
+        data: {
+          greetingMethod: 'proactive_prompt',
+          proactiveResponse: null,
+        },
+      });
+
+      mockWebSocketInstance.readyState = WebSocket.CLOSED;
+
+      const { unmount } = renderHook(() => useWelcome(defaultProps));
+
+      unmount();
+
+      expect(mockWebSocketInstance.close).not.toHaveBeenCalled();
     });
   });
 });

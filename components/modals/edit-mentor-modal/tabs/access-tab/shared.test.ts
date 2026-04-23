@@ -126,16 +126,40 @@ describe('shared access-tab utilities', () => {
       expect(roleDescriptions.editor).toBeDefined();
       expect(typeof roleDescriptions.editor).toBe('string');
     });
+
+    it('should have chat description', () => {
+      expect(roleDescriptions.chat).toBeDefined();
+      expect(typeof roleDescriptions.chat).toBe('string');
+    });
+
+    it('should have analytics_viewer description mentioning analytics', () => {
+      expect(roleDescriptions.analytics_viewer).toBeDefined();
+      expect(roleDescriptions.analytics_viewer.toLowerCase()).toContain(
+        'analytics',
+      );
+    });
   });
 
   describe('DEFAULT_MENTOR_ROLES', () => {
-    it('should include editor role', () => {
+    it('should include editor, chat, and analytics_viewer roles', () => {
+      expect(DEFAULT_MENTOR_ROLES.length).toBe(3);
       expect(DEFAULT_MENTOR_ROLES).toContain('editor');
+      expect(DEFAULT_MENTOR_ROLES).toContain('chat');
+      expect(DEFAULT_MENTOR_ROLES).toContain('analytics_viewer');
     });
 
-    it('should include editor and chat roles', () => {
-      expect(DEFAULT_MENTOR_ROLES.length).toBe(2);
-      expect(DEFAULT_MENTOR_ROLES).toContain('chat');
+    it('should have a description for every default role', () => {
+      for (const role of DEFAULT_MENTOR_ROLES) {
+        expect(roleDescriptions[role]).toBeDefined();
+        expect(typeof roleDescriptions[role]).toBe('string');
+        expect(roleDescriptions[role].length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('formatRoleName for default roles', () => {
+    it('formats analytics_viewer as "Analytics Viewer"', () => {
+      expect(formatRoleName('analytics_viewer')).toBe('Analytics Viewer');
     });
   });
 });

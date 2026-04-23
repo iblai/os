@@ -93,10 +93,6 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
                 mentorName={mentorName}
                 timestamp={formatRelativeDate(message.timestamp)}
                 sessionId={sessionId}
-                onSpeak={() => {
-                  // const utterance = new SpeechSynthesisUtterance(message.content);
-                  // window.speechSynthesis.speak(utterance);
-                }}
                 onReply={() => onReply?.(message)}
                 onRetry={handleSubmit}
                 messages={messages}
