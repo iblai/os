@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.52.0](https://github.com/iblai/mentorai/compare/v0.51.5...v0.52.0) (2026-04-23)
+
+### Features
+
+* **chat:** add loading spinner for cached session message retrieval ([3b70a63](https://github.com/iblai/mentorai/commit/3b70a6347db2782559bc5e130352795d47495026))
+
+### Bug Fixes
+
+* **e2e:** update heading role queries for workflows to include level and exact match ([4a9c025](https://github.com/iblai/mentorai/commit/4a9c0256a96520e037b375158a79cc7210b7fc0f))
+
+### Tests
+
+* **chat:** add tests for loading spinner behavior during cached session retrieval ([e8c1f3b](https://github.com/iblai/mentorai/commit/e8c1f3b15044a9663782e2fc8f79a7224488a95b))
+
 ## [0.51.5](https://github.com/iblai/mentorai/compare/v0.51.4...v0.51.5) (2026-04-23)
 
 ### Bug Fixes
