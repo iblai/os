@@ -17,7 +17,6 @@ export default function ReportsPage() {
   }>();
 
   const selectedMentorInfo = useSelector(selectSelectedMentor);
-  console.log('selectedMentorInfo: ', { selectedMentorInfo });
   const selectedMentorId = selectedMentorInfo?.unique_id || mentorId;
   const selectedMentorDbId = selectedMentorInfo?.id || '';
   const disabledAnalyticsReports = (
