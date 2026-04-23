@@ -2,10 +2,10 @@
   "version": 2,
   "lastUpdated": "2026-04-23",
   "summary": {
-    "totalCheckpoints": 320,
-    "coveredCheckpoints": 320,
+    "totalCheckpoints": 323,
+    "coveredCheckpoints": 323,
     "percent": 100,
-    "totalJourneys": 40
+    "totalJourneys": 41
   },
   "journeys": [
     {
@@ -1961,6 +1961,33 @@
         {
           "id": "al-07",
           "description": "Non-admin user does not see Audit tab in the mentor dropdown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ai-message-read-aloud",
+      "name": "AI Message Read Aloud",
+      "spec": "40-ai-message-read-aloud.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/ai-message-speak.tsx",
+        "components/chat/chat-messages/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "speak-01",
+          "description": "Read Aloud button is visible on an AI response with aria-pressed=false",
+          "status": "covered"
+        },
+        {
+          "id": "speak-02",
+          "description": "Clicking Read Aloud toggles label to Stop Reading Aloud with aria-pressed=true and triggers speechSynthesis.speak",
+          "status": "covered"
+        },
+        {
+          "id": "speak-03",
+          "description": "Clicking Stop Reading Aloud resets to Read Aloud with aria-pressed=false and calls speechSynthesis.cancel",
           "status": "covered"
         }
       ]

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 306 checkpoints | 40 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-23 | 323 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -92,7 +92,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (9 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (10 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
 
@@ -273,8 +273,16 @@ When adding a new page or modifying an existing user flow:
 - [x] New row can be added in the CSV editor _(skips gracefully when no report data exists in env)_
 - [x] Edited CSV saves successfully and triggers a file download _(skips gracefully when no report data exists in env)_
 - [x] CSV editor closes without saving when Cancel is clicked _(skips gracefully when no report data exists in env)_
+- [x] CSV editor closes when clicking the Close button _(skips gracefully when no report data exists in env)_
+- [x] CSV editor has proper ARIA labels and roles _(skips gracefully when no report data exists in env)_
+- [x] CSV editor opens for the User Metadata Report _(skips gracefully when no report data exists in env)_
 - [x] Chat History report downloads directly without opening the CSV editor _(skips gracefully when no report data exists in env)_
-- [x] Report download page shows preparing → complete phases and Back Home button works
+- [x] Other download buttons are disabled while a report is generating _(skips gracefully when no report data exists in env)_
+- [x] Report download page shows the preparing phase
+- [x] Full report download flow completes end-to-end
+- [x] Download Again button works after a completed download
+- [x] Back Home button navigates to root
+- [x] Error phase is shown for an invalid report name
 
 ---
 
@@ -553,6 +561,22 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
+## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
+
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat/index.tsx`
+
+- [x] Non-admin screen share button has `type="button"` and does not submit the chat form
+- [x] Non-admin clicking screen share activates screen sharing, not form submit
+- [x] Non-admin voice call button has `type="button"`
+- [x] Admin screen share button has `type="button"` and does not submit the chat form
+- [x] Admin clicking screen share activates screen sharing, not form submit
+- [x] Admin voice call button has `type="button"`
+- [x] Admin creates mentor, enables tools, opens canvas; voice call opens dialog
+- [x] Admin creates mentor, enables tools, opens canvas; screen share activates
+- [x] Admin creates mentor, enables tools, opens canvas; screen share does not submit form
+
+---
+
 ## Journey 38: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
 
 **Source files:** `components/modals/settings-modal.tsx`
@@ -575,21 +599,6 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 41: Mentor Access Tab (10 checkpoints) — `journeys/40-mentor-access-tab.spec.ts`
-
-**Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
-
-- [x] AC-40.1: Access tab label is visible in the Edit Mentor modal sidebar
-- [x] AC-40.2: Access control heading and description render correctly
-- [x] AC-40.3: Access tab shows roles table or empty state — never a blank crash screen
-- [x] AC-40.4: Each policy row shows role name, user count badge, and edit button
-- [x] AC-40.5: Create role access dialog opens with role selector and can be cancelled
-- [x] AC-40.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
-- [x] AC-40.7: Selecting a role in Create dialog enables the Create button
-- [x] AC-40.8: Manage access dialog shows assigned users section or no-users placeholder
-- [x] AC-40.9: Error state Try again button is present when the error banner renders
-- [x] AC-40.10: Closing the manage dialog via Escape or click-outside clears editing state
-
 ## Journey 40: AI Message Read Aloud (3 checkpoints) — `journeys/40-ai-message-read-aloud.spec.ts`
 
 **Source files:** `components/chat/ai-message-bubble.tsx`, `components/chat/ai-message-speak.tsx`, `components/chat/chat-messages/index.tsx`
@@ -597,6 +606,23 @@ When adding a new page or modifying an existing user flow:
 - [x] SPEAK-40.1: Read Aloud button is visible on an AI response with `aria-pressed="false"`
 - [x] SPEAK-40.2: Clicking Read Aloud toggles label to Stop Reading Aloud with `aria-pressed="true"` and triggers `speechSynthesis.speak`
 - [x] SPEAK-40.3: Clicking Stop Reading Aloud resets to Read Aloud with `aria-pressed="false"` and calls `speechSynthesis.cancel`
+
+---
+
+## Journey 41: Mentor Access Tab (10 checkpoints) — `journeys/41-mentor-access-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
+
+- [x] AC-41.1: Access tab label is visible in the Edit Mentor modal sidebar
+- [x] AC-41.2: Access control heading and description render correctly
+- [x] AC-41.3: Access tab shows roles table or empty state — never a blank crash screen
+- [x] AC-41.4: Each policy row shows role name, user count badge, and edit button
+- [x] AC-41.5: Create role access dialog opens with role selector and can be cancelled
+- [x] AC-41.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
+- [x] AC-41.7: Selecting a role in Create dialog enables the Create button
+- [x] AC-41.8: Manage access dialog shows assigned users section or no-users placeholder
+- [x] AC-41.9: Error state Try again button is present when the error banner renders
+- [x] AC-41.10: Closing the manage dialog via Escape or click-outside clears editing state
 
 ---
 
