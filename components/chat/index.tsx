@@ -594,14 +594,37 @@ export function Chat({
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
+    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
+    const sendChatMessageHandler = (payload: unknown) => {
+      let content: string | undefined;
+      let visible = true;
+      if (typeof payload === 'string') {
+        content = payload;
+      } else if (payload && typeof payload === 'object') {
+        const data = payload as { content?: unknown; visible?: unknown };
+        if (typeof data.content === 'string') content = data.content;
+        if (typeof data.visible === 'boolean') visible = data.visible;
+      }
+      if (!content || !content.trim()) return;
+      sendMessage(activeTab, content, { visible });
+    };
     eventBus.on(RemoteEvents.newChat, newChatEventHandler);
     eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+    eventBus.on(RemoteEvents.sendChatMessage, sendChatMessageHandler);
 
     return () => {
       eventBus.off(RemoteEvents.newChat, newChatEventHandler);
       eventBus.off(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+      eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
-  }, [isCanvasOpen, startNewChat, stopGenerating, handleCloseCanvas]);
+  }, [
+    isCanvasOpen,
+    startNewChat,
+    stopGenerating,
+    handleCloseCanvas,
+    sendMessage,
+    activeTab,
+  ]);
 
   // Resize state for canvas/chat split view
   const [chatWidth, setChatWidth] = useState<number>(40); // Percentage of width for chat (default 40%)

@@ -6,7 +6,8 @@ import {
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
-import { addMessage, enableChatActionsPopup } from '@/features/chat/chatSlice';
+import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import eventBus, { RemoteEvents } from './eventBus';
 
 export function useIframeHandlers() {
   const dispatch = useAppDispatch();
@@ -152,21 +153,11 @@ export function useIframeHandlers() {
       _payload: unknown,
       event: MessageEvent,
     ) => {
-      console.log('[RECEIVED POSTMESSAGE]: ', event.data, _payload);
       const { message } = event.data;
-      console.log('[ADDING MESSAGE]: ', { message });
-      dispatch(
-        chatActions.addUserMessage({
-          tab: 'chat',
-          message: {
-            id: `user-${Date.now()}`,
-            role: 'user',
-            content: message,
-            timestamp: new Date().toISOString(),
-            visible: true,
-          },
-        }),
-      );
+      eventBus.emit(RemoteEvents.sendChatMessage, {
+        content: message,
+        visible: false,
+      });
     },
   };
 
