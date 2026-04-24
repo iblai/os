@@ -4,24 +4,24 @@
 
 ### Features
 
-* **mentor:** Adding playwright test memory hide for non authenticates user ([3da9390](https://github.com/iblai/mentorai/commit/3da9390385e4524623cc744f9119248044d1fd11))
+- **mentor:** Adding playwright test memory hide for non authenticates user ([3da9390](https://github.com/iblai/mentorai/commit/3da9390385e4524623cc744f9119248044d1fd11))
 
 ### Bug Fixes
 
-* **mentor:** fixing user data schema for full name as optional ([0dfdb35](https://github.com/iblai/mentorai/commit/0dfdb359a41c9ec9a7b286213bde833700a37e6f))
-* **mentor:** full name as nullable and anonymous mentor to have memory ([404e750](https://github.com/iblai/mentorai/commit/404e7504edcc30ad1f9bd94dc7d3217ce6fabc22))
+- **mentor:** fixing user data schema for full name as optional ([0dfdb35](https://github.com/iblai/mentorai/commit/0dfdb359a41c9ec9a7b286213bde833700a37e6f))
+- **mentor:** full name as nullable and anonymous mentor to have memory ([404e750](https://github.com/iblai/mentorai/commit/404e7504edcc30ad1f9bd94dc7d3217ce6fabc22))
 
 ## [0.54.1](https://github.com/iblai/mentorai/compare/v0.54.0...v0.54.1) (2026-04-23)
 
 ### Bug Fixes
 
-* **a11y:** harden ESC handler and add tests for embed close ([#772](https://github.com/iblai/mentorai/issues/772)) ([5c82442](https://github.com/iblai/mentorai/commit/5c82442d62d98ba83a9b81ce15cc7d157d6cf243))
+- **a11y:** harden ESC handler and add tests for embed close ([#772](https://github.com/iblai/mentorai/issues/772)) ([5c82442](https://github.com/iblai/mentorai/commit/5c82442d62d98ba83a9b81ce15cc7d157d6cf243))
 
 ## [0.54.0](https://github.com/iblai/mentorai/compare/v0.53.1...v0.54.0) (2026-04-23)
 
 ### Features
 
-* **mentor:** add Markdown file support to dataset ingestion ([e83fb7d](https://github.com/iblai/mentorai/commit/e83fb7d41bf1ae927eb9fefd854dd64d9a35ec01))
+- **mentor:** add Markdown file support to dataset ingestion ([e83fb7d](https://github.com/iblai/mentorai/commit/e83fb7d41bf1ae927eb9fefd854dd64d9a35ec01))
 
 ## [0.53.1](https://github.com/iblai/mentorai/compare/v0.53.0...v0.53.1) (2026-04-23)
 

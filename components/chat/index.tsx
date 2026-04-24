@@ -119,6 +119,11 @@ interface Message extends BaseMessage {
   actions?: MessageAction[] | undefined;
 }
 
+interface SendChatMessagePayload {
+  content: string;
+  visible?: boolean;
+}
+
 /**
  * Check if running in Tauri desktop app
  */
@@ -596,16 +601,11 @@ export function Chat({
       stopGenerating();
     };
     /* istanbul ignore next -- @preserve eventBus handler tested via mock */
-    const sendChatMessageHandler = (payload: unknown) => {
-      let content: string | undefined;
-      let visible = true;
-      if (typeof payload === 'string') {
-        content = payload;
-      } else if (payload && typeof payload === 'object') {
-        const data = payload as { content?: unknown; visible?: unknown };
-        if (typeof data.content === 'string') content = data.content;
-        if (typeof data.visible === 'boolean') visible = data.visible;
-      }
+    const sendChatMessageHandler = (
+      payload: SendChatMessagePayload | unknown,
+    ) => {
+      const visible = (payload as SendChatMessagePayload)?.visible ?? true;
+      const content = (payload as SendChatMessagePayload)?.content ?? '';
       if (!content || !content.trim()) return;
       sendMessage(activeTab, content, { visible });
     };
