@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.56.1](https://github.com/iblai/mentorai/compare/v0.56.0...v0.56.1) (2026-04-24)
+
+### Bug Fixes
+
+* **mentor:** adding fix for the playwright test for workflows preview new chat ([8c4ccc2](https://github.com/iblai/mentorai/commit/8c4ccc2f067bad622ee5a7033447681125c783c4))
+
 ## [0.56.0](https://github.com/iblai/mentorai/compare/v0.55.0...v0.56.0) (2026-04-24)
 
 ### Features
