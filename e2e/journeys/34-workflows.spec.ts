@@ -247,7 +247,9 @@ test.describe('Journey 34: Workflows', () => {
     await expect(
       page.getByRole('button', { name: 'Close preview' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'New Chat' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'New chat for workflow preview' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
 
     await exitPreviewMode(page);

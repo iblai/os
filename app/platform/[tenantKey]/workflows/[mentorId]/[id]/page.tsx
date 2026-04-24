@@ -663,6 +663,7 @@ export default function WorkflowDetailPage() {
                 size="sm"
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleNewChat}
+                aria-label="New chat for workflow preview"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 New Chat
