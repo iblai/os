@@ -588,9 +588,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
+## Journey 39: Audit Log (9 checkpoints) — `journeys/39-audit-log.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/layout.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`, `hooks/use-mentor-segments.ts`
 
 - [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
 - [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
@@ -599,6 +599,8 @@ When adding a new page or modifying an existing user flow:
 - [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
 - [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
 - [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+- [x] AL-39.8: Non-admin user does not see Audit tab in the Analytics tab bar (view_audit_logs RBAC)
+- [x] AL-39.9: Non-admin user visiting audit page directly does not see audit content (view_audit_logs RBAC)
 
 ---
 
