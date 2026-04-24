@@ -119,6 +119,11 @@ interface Message extends BaseMessage {
   actions?: MessageAction[] | undefined;
 }
 
+interface SendChatMessagePayload {
+  content: string;
+  visible?: boolean;
+}
+
 /**
  * Check if running in Tauri desktop app
  */
@@ -595,14 +600,32 @@ export function Chat({
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
+    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
+    const sendChatMessageHandler = (
+      payload: SendChatMessagePayload | unknown,
+    ) => {
+      const visible = (payload as SendChatMessagePayload)?.visible ?? true;
+      const content = (payload as SendChatMessagePayload)?.content ?? '';
+      if (!content || !content.trim()) return;
+      sendMessage(activeTab, content, { visible });
+    };
     eventBus.on(RemoteEvents.newChat, newChatEventHandler);
     eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+    eventBus.on(RemoteEvents.sendChatMessage, sendChatMessageHandler);
 
     return () => {
       eventBus.off(RemoteEvents.newChat, newChatEventHandler);
       eventBus.off(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+      eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
-  }, [isCanvasOpen, startNewChat, stopGenerating, handleCloseCanvas]);
+  }, [
+    isCanvasOpen,
+    startNewChat,
+    stopGenerating,
+    handleCloseCanvas,
+    sendMessage,
+    activeTab,
+  ]);
 
   // Resize state for canvas/chat split view
   const [chatWidth, setChatWidth] = useState<number>(40); // Percentage of width for chat (default 40%)
