@@ -280,6 +280,22 @@ export function EmbedTab() {
     warnings: [],
   });
 
+  const [isSavingEmbedSettings, setIsSavingEmbedSettings] = useState(false);
+  const handleSaveEmbedSettings = async () => {
+    try {
+      setIsSavingEmbedSettings(true);
+      const result = await syncEmbedSettings();
+      if (result.success) {
+        toast.toast({ description: 'Successfully saved embed settings' });
+      }
+    } catch (error) {
+      console.error('handleSaveEmbedSettings error: ', error);
+      toast.toast({ description: 'Failed to save embed settings' });
+    } finally {
+      setIsSavingEmbedSettings(false);
+    }
+  };
+
   // Initialize CSS value from settings
   useEffect(() => {
     if (mentorSettings?.custom_css !== undefined) {
@@ -2258,11 +2274,19 @@ export function EmbedTab() {
             )}
           </form>
         </div>
-        <div className="flex flex-shrink-0 justify-end border-t border-gray-200 bg-white px-3 py-4">
+        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-gray-200 bg-white px-3 py-4">
+          <Button
+            onClick={handleSaveEmbedSettings}
+            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
+            disabled={isSavingEmbedSettings || form.state.isSubmitting}
+          >
+            {isSavingEmbedSettings ? 'Saving...' : 'Save'}
+          </Button>
           <Button
             onClick={() => form.handleSubmit()}
-            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
-            disabled={form.state.isSubmitting}
+            variant="outline"
+            className="text-sm"
+            disabled={form.state.isSubmitting || isSavingEmbedSettings}
           >
             {form.state.isSubmitting ? 'Generating Embed' : 'Create Embed'}
           </Button>
