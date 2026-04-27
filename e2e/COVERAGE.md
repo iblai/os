@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-20 | 295 checkpoints | 40 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-27 | 339 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -92,7 +92,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (9 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (10 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
 
@@ -200,9 +200,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 14: Anonymous / Public Access (6 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
+## Journey 14: Anonymous / Public Access (7 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`, `components/chat-input-form/inside-buttons.tsx`
 
 - [x] Anonymous user sees "Log in" button on a public mentor page
 - [x] Clicking "Log in" redirects to the auth host login page
@@ -210,6 +210,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Anonymous user can chat with a mentor configured for "Anyone" and start a new chat
 - [x] Anonymous user can open My Mentors modal; "Create" button is not visible
 - [x] Collapsed sidebar admin buttons redirect anonymous user to the auth host
+- [x] Memory button is hidden in the chat input for unauthenticated users
 
 ---
 
@@ -273,14 +274,22 @@ When adding a new page or modifying an existing user flow:
 - [x] New row can be added in the CSV editor _(skips gracefully when no report data exists in env)_
 - [x] Edited CSV saves successfully and triggers a file download _(skips gracefully when no report data exists in env)_
 - [x] CSV editor closes without saving when Cancel is clicked _(skips gracefully when no report data exists in env)_
+- [x] CSV editor closes when clicking the Close button _(skips gracefully when no report data exists in env)_
+- [x] CSV editor has proper ARIA labels and roles _(skips gracefully when no report data exists in env)_
+- [x] CSV editor opens for the User Metadata Report _(skips gracefully when no report data exists in env)_
 - [x] Chat History report downloads directly without opening the CSV editor _(skips gracefully when no report data exists in env)_
-- [x] Report download page shows preparing → complete phases and Back Home button works
+- [x] Other download buttons are disabled while a report is generating _(skips gracefully when no report data exists in env)_
+- [x] Report download page shows the preparing phase
+- [x] Full report download flow completes end-to-end
+- [x] Download Again button works after a completed download
+- [x] Back Home button navigates to root
+- [x] Error phase is shown for an invalid report name
 
 ---
 
-## Journey 20: Dataset Management (16 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -298,6 +307,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Multiple different file types can be uploaded in one session (TC23)
 - [x] Untrained dataset can be trained (TC24)
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
+- [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
+- [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
 
 ---
 
@@ -317,17 +328,24 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (8 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
-- [x] Admin can toggle User Agreement on/off; toggling on causes disclaimer modal to appear before chat _(uses fresh unauthenticated browser context; skips if non-admin)_
-- [x] Admin can edit User Agreement content _(skips if non-admin)_
-- [x] Admin can copy User Agreement content to clipboard _(skips if non-admin)_
-- [x] Admin can edit Advisory text and it appears above the chat input _(skips if non-admin)_
-- [x] Disclaimers tab has proper WCAG accessibility attributes _(skips if non-admin)_
-- [x] User Agreement modal is accessible _(skips if non-admin)_
-- [x] Create a new mentor and configure all disclaimer settings end-to-end _(uses fresh unauthenticated browser context; skips if non-admin)_
+- [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits User Agreement content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin edits Advisory content and saves _(creates fresh mentor; skips if non-admin)_
+- [x] Admin cancels User Agreement edit without saving — preview content unchanged _(creates fresh mentor; skips if non-admin)_
+- [x] Save button is disabled when User Agreement content is empty _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies User Agreement content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin copies Advisory content to clipboard _(creates fresh mentor; skips if non-admin)_
+- [x] Admin enables user agreement and non-admin must accept it before chatting _(creates fresh mentor; uses non-admin browser context)_
+- [x] Admin disables user agreement and non-admin sends message without seeing agreement modal _(creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin accepts user agreement and subsequent messages do not trigger modal again _(creates fresh mentor; uses non-admin browser context)_
+- [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
+- [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 
 ---
 
@@ -410,9 +428,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (16 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -430,6 +448,9 @@ When adding a new page or modifying an existing user flow:
 - [x] History dialog is accessible
 - [x] Safety dialog is accessible
 - [x] API key dialog is accessible
+- [x] Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)
+- [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
+- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 
 ---
 
@@ -543,7 +564,72 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 38: Suggested Prompts (12 checkpoints) — `journeys/38-suggested-prompts.spec.ts`
+## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
+
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat/index.tsx`
+
+- [x] Non-admin screen share button has `type="button"` and does not submit the chat form
+- [x] Non-admin clicking screen share activates screen sharing, not form submit
+- [x] Non-admin voice call button has `type="button"`
+- [x] Admin screen share button has `type="button"` and does not submit the chat form
+- [x] Admin clicking screen share activates screen sharing, not form submit
+- [x] Admin voice call button has `type="button"`
+- [x] Admin creates mentor, enables tools, opens canvas; voice call opens dialog
+- [x] Admin creates mentor, enables tools, opens canvas; screen share activates
+- [x] Admin creates mentor, enables tools, opens canvas; screen share does not submit form
+
+---
+
+## Journey 38: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
+
+**Source files:** `components/modals/settings-modal.tsx`
+
+- [x] TMS-38.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
+
+---
+
+## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+
+- [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
+- [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
+- [x] AL-39.3: Admin opens Audit Log tab from navbar mentor dropdown
+- [x] AL-39.4: Audit tab header shows correct title and description in Edit Mentor
+- [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
+- [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
+- [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+
+---
+
+## Journey 40: AI Message Read Aloud (3 checkpoints) — `journeys/40-ai-message-read-aloud.spec.ts`
+
+**Source files:** `components/chat/ai-message-bubble.tsx`, `components/chat/ai-message-speak.tsx`, `components/chat/chat-messages/index.tsx`
+
+- [x] SPEAK-40.1: Read Aloud button is visible on an AI response with `aria-pressed="false"`
+- [x] SPEAK-40.2: Clicking Read Aloud toggles label to Stop Reading Aloud with `aria-pressed="true"` and triggers `speechSynthesis.speak`
+- [x] SPEAK-40.3: Clicking Stop Reading Aloud resets to Read Aloud with `aria-pressed="false"` and calls `speechSynthesis.cancel`
+
+---
+
+## Journey 41: Mentor Access Tab (10 checkpoints) — `journeys/41-mentor-access-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
+
+- [x] AC-41.1: Access tab label is visible in the Edit Mentor modal sidebar
+- [x] AC-41.2: Access control heading and description render correctly
+- [x] AC-41.3: Access tab shows roles table or empty state — never a blank crash screen
+- [x] AC-41.4: Each policy row shows role name, user count badge, and edit button
+- [x] AC-41.5: Create role access dialog opens with role selector and can be cancelled
+- [x] AC-41.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
+- [x] AC-41.7: Selecting a role in Create dialog enables the Create button
+- [x] AC-41.8: Manage access dialog shows assigned users section or no-users placeholder
+- [x] AC-41.9: Error state Try again button is present when the error banner renders
+- [x] AC-41.10: Closing the manage dialog via Escape or click-outside clears editing state
+
+---
+
+## Journey 42: Suggested Prompts (12 checkpoints) — `journeys/42-suggested-prompts.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx`
 
@@ -559,28 +645,6 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
 - [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
-
----
-
-## Journey 39: Tenant Memory System Toggle (1 checkpoint) — `journeys/38-tenant-memory-system-toggle.spec.ts`
-
-**Source files:** `components/modals/settings-modal.tsx`
-
-- [x] TMS-39.1: Admin toggles Memory System in Advanced tab and the chat Memory button reflects it
-
----
-
-## Journey 40: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
-
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
-
-- [x] AL-40.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
-- [x] AL-40.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
-- [x] AL-40.3: Admin opens Audit Log tab from navbar mentor dropdown
-- [x] AL-40.4: Audit tab header shows correct title and description in Edit Mentor
-- [x] AL-40.5: Admin can navigate between Audit and other tabs in Edit Mentor
-- [x] AL-40.6: Audit Log analytics page is accessible via direct URL navigation
-- [x] AL-40.7: Non-admin user does not see Audit tab in the mentor dropdown
 
 ---
 

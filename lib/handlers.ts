@@ -7,6 +7,7 @@ import {
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import eventBus, { RemoteEvents } from './eventBus';
 
 export function useIframeHandlers() {
   const dispatch = useAppDispatch();
@@ -147,6 +148,16 @@ export function useIframeHandlers() {
     },
     'MENTOR:ENABLE_CHAT_ACTION_POPUPS': (payload: { enable: boolean }) => {
       dispatch(enableChatActionsPopup(payload.enable));
+    },
+    'MENTOR:CHAT_ACTION_ADD_MESSAGE': (
+      _payload: unknown,
+      event: MessageEvent,
+    ) => {
+      const { message } = event.data;
+      eventBus.emit(RemoteEvents.sendChatMessage, {
+        content: message,
+        visible: false,
+      });
     },
   };
 

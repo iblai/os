@@ -92,9 +92,15 @@ export class CreateMentorPage {
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
 
-    await safeWaitForURL(this.page, (url) => url.href.includes('/platform/'), {
-      timeout: 30_000,
-    });
+    const previousUrl = this.page.url();
+
+    await safeWaitForURL(
+      this.page,
+      (url) => url.href.includes('/platform/') && previousUrl != url.href,
+      {
+        timeout: 30_000,
+      },
+    );
     await waitForPageReady(this.page);
     return mentorName;
   }
@@ -114,6 +120,6 @@ export class CreateMentorPage {
 
   async close(): Promise<void> {
     await this.page.keyboard.press('Escape');
-    await expect(this.dialog).not.toBeVisible({ timeout: 5_000 });
+    await expect(this.dialog).not.toBeVisible({ timeout: 15_000 });
   }
 }

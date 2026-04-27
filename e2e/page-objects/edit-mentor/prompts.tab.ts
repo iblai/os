@@ -59,7 +59,9 @@ export class PromptsTab {
 
   /** Returns all Edit buttons in the Suggested Prompts area (after the 4 system prompt Edit buttons). */
   getSuggestedPromptEditButtons(): Locator {
-    return this.dialog.getByRole('button', { name: /^Delete suggested prompt/ });
+    return this.dialog.getByRole('button', {
+      name: /^Delete suggested prompt/,
+    });
   }
 
   /** Returns all Delete buttons in the Suggested Prompts section. */
@@ -179,9 +181,7 @@ export class PromptsTab {
     await editor.clear();
     await editor.fill(newPromptText);
 
-    const saveBtn = editDialog
-      .getByRole('button', { name: /save/i })
-      .first();
+    const saveBtn = editDialog.getByRole('button', { name: /save/i }).first();
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import {
   BadgeHelp,
@@ -74,6 +74,22 @@ export function EmbedNavBar({
       '*',
     );
   }
+
+  useEffect(() => {
+    if (isPreviewMode) return;
+
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      // Let nested overlays (dropdowns, dialogs, popovers, tooltips) handle ESC first.
+      if (event.defaultPrevented) return;
+      if (document.querySelector('[data-state="open"]')) return;
+      notifyParentOnEmbedClose();
+    }
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isPreviewMode]);
 
   const helpItems = [
     ...(metadata?.show_help !== false

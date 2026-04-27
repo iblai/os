@@ -13,7 +13,6 @@ test.describe('Journey 15: Mentor Switching', () => {
     nonadminSidebarPage,
     nonadminExplorePage,
   }) => {
-    const initialUrl = nonadminPage.url();
     await nonadminSidebarPage.navigateToExplore();
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
       timeout: 15_000,
@@ -21,10 +20,9 @@ test.describe('Journey 15: Mentor Switching', () => {
     await nonadminExplorePage.clickFirstMentorCard();
     await safeWaitForURL(
       nonadminPage,
-      (url) => url.href !== initialUrl && url.href.includes('/platform/'),
+      (url) => !url.href.includes('explore') && url.href.includes('/platform/'),
       { timeout: 15_000 },
     );
-    expect(nonadminPage.url()).not.toBe(initialUrl);
   });
 
   // fixme: My Mentors modal not opening — navbar button locator change

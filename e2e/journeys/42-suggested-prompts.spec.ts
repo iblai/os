@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
-test.describe('Journey 38: Suggested Prompts', () => {
+test.describe('Journey 42: Suggested Prompts', () => {
   test.setTimeout(200_000);
 
   test.beforeEach(async ({ page, createMentorPage }) => {

@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-31",
+  "lastUpdated": "2026-04-27",
   "summary": {
-    "totalCheckpoints": 295,
-    "coveredCheckpoints": 295,
+    "totalCheckpoints": 339,
+    "coveredCheckpoints": 339,
     "percent": 100,
-    "totalJourneys": 40
+    "totalJourneys": 42
   },
   "journeys": [
     {
@@ -582,7 +582,10 @@
       "id": "shareable-links-and-embed-integration",
       "name": "Shareable Links & Embed Integration",
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+      ],
       "checkpoints": [
         {
           "id": "emb-01",
@@ -603,6 +606,11 @@
           "id": "emb-04",
           "description": "Advanced anonymous embed with context awareness configured",
           "status": "covered"
+        },
+        {
+          "id": "emb-05",
+          "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
         }
       ]
     },
@@ -610,7 +618,10 @@
       "id": "anonymous-public-access",
       "name": "Anonymous / Public Access",
       "spec": "14-anonymous-public-access.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
       "checkpoints": [
         {
           "id": "anon-01",
@@ -640,6 +651,11 @@
         {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
+          "status": "covered"
+        },
+        {
+          "id": "anon-07",
+          "description": "Memory button is hidden in the chat input for unauthenticated users",
           "status": "covered"
         }
       ]
@@ -976,6 +992,16 @@
           "id": "ds-16",
           "description": "File upload cancellation is handled gracefully",
           "status": "covered"
+        },
+        {
+          "id": "ds-17",
+          "description": "Markdown resource type is available in the Add Resources modal (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-18",
+          "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
+          "status": "covered"
         }
       ]
     },
@@ -1040,47 +1066,81 @@
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
-        "components/modals/disclaimer-modal.tsx"
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/disclaimer-modal.tsx",
+        "hooks/use-user-agreement.ts",
+        "constants/disclaimer.ts"
       ],
       "checkpoints": [
         {
           "id": "disc-01",
-          "description": "Admin toggles User Agreement on and unauthenticated user sees disclaimer modal",
+          "description": "Admin enables User Agreement toggle and sees Active status",
           "status": "covered"
         },
         {
           "id": "disc-02",
-          "description": "Admin can edit User Agreement content",
+          "description": "Admin disables User Agreement toggle and sees Inactive status",
           "status": "covered"
         },
         {
           "id": "disc-03",
-          "description": "Admin can copy User Agreement content",
+          "description": "Admin edits User Agreement content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-04",
-          "description": "Admin can edit Advisory text",
+          "description": "Admin edits Advisory content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-05",
-          "description": "Disclaimers tab has proper WCAG accessibility",
+          "description": "Admin cancels User Agreement edit without saving",
           "status": "covered"
         },
         {
           "id": "disc-06",
-          "description": "User Agreement modal is accessible",
+          "description": "Save button is disabled when User Agreement content is empty",
           "status": "covered"
         },
         {
           "id": "disc-07",
-          "description": "Create mentor and configure all disclaimers end-to-end",
+          "description": "Admin copies User Agreement content to clipboard",
           "status": "covered"
         },
         {
           "id": "disc-08",
-          "description": "Toggle User Agreement on/off affects chat modal appearance",
+          "description": "Admin copies Advisory content to clipboard",
+          "status": "covered"
+        },
+        {
+          "id": "disc-09",
+          "description": "Non-admin must accept User Agreement modal before sending a chat message when agreement is enabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-10",
+          "description": "Non-admin sends a message without seeing agreement modal when User Agreement is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-11",
+          "description": "Non-admin who accepted User Agreement is not shown the modal again on subsequent messages",
+          "status": "covered"
+        },
+        {
+          "id": "disc-12",
+          "description": "Disclaimers tab shows both User Agreement and Advisory sections with their controls",
+          "status": "covered"
+        },
+        {
+          "id": "disc-13",
+          "description": "Advisory Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-14",
+          "description": "User Agreement Edit modal opens with the correct title",
           "status": "covered"
         }
       ]
@@ -1335,7 +1395,11 @@
       "id": "accessibility-wcag",
       "name": "Accessibility — WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
-      "sourceFiles": ["components/accessibility/accessibility-toolbar.tsx"],
+      "sourceFiles": [
+        "components/accessibility/accessibility-toolbar.tsx",
+        "components/chat/stop-streaming-button.tsx",
+        "components/chat/ai-message-copy.tsx"
+      ],
       "checkpoints": [
         {
           "id": "a11y-01",
@@ -1415,6 +1479,21 @@
         {
           "id": "a11y-16",
           "description": "API key dialog is accessible",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-17",
+          "description": "Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-18",
+          "description": "Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-19",
+          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
           "status": "covered"
         }
       ]
@@ -1853,9 +1932,159 @@
       ]
     },
     {
+      "id": "tenant-memory-system-toggle",
+      "name": "Tenant Memory System Toggle",
+      "spec": "38-tenant-memory-system-toggle.spec.ts",
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "checkpoints": [
+        {
+          "id": "tms-01",
+          "description": "Admin toggles Memory System in Advanced tab and the chat Memory button reflects it",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "audit-log",
+      "name": "Audit Log",
+      "spec": "39-audit-log.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx",
+        "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "al-01",
+          "description": "Admin opens Analytics and navigates to Audit tab, sees audit content or empty state",
+          "status": "covered"
+        },
+        {
+          "id": "al-02",
+          "description": "Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state",
+          "status": "covered"
+        },
+        {
+          "id": "al-03",
+          "description": "Admin opens Audit Log tab from navbar mentor dropdown",
+          "status": "covered"
+        },
+        {
+          "id": "al-04",
+          "description": "Audit tab header shows correct title and description in Edit Mentor",
+          "status": "covered"
+        },
+        {
+          "id": "al-05",
+          "description": "Admin can navigate between Audit and other tabs in Edit Mentor",
+          "status": "covered"
+        },
+        {
+          "id": "al-06",
+          "description": "Audit Log analytics page is accessible via direct URL navigation",
+          "status": "covered"
+        },
+        {
+          "id": "al-07",
+          "description": "Non-admin user does not see Audit tab in the mentor dropdown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ai-message-read-aloud",
+      "name": "AI Message Read Aloud",
+      "spec": "40-ai-message-read-aloud.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/ai-message-speak.tsx",
+        "components/chat/chat-messages/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "speak-01",
+          "description": "Read Aloud button is visible on an AI response with aria-pressed=false",
+          "status": "covered"
+        },
+        {
+          "id": "speak-02",
+          "description": "Clicking Read Aloud toggles label to Stop Reading Aloud with aria-pressed=true and triggers speechSynthesis.speak",
+          "status": "covered"
+        },
+        {
+          "id": "speak-03",
+          "description": "Clicking Stop Reading Aloud resets to Read Aloud with aria-pressed=false and calls speechSynthesis.cancel",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-access-tab",
+      "name": "Mentor Access Tab",
+      "spec": "41-mentor-access-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/access-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/shared.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ac-01",
+          "description": "Access tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ac-02",
+          "description": "Access control heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ac-03",
+          "description": "Access tab shows roles table or empty state — never a blank crash screen",
+          "status": "covered"
+        },
+        {
+          "id": "ac-04",
+          "description": "Each policy row shows role name, user count badge, and edit button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-05",
+          "description": "Create role access dialog opens with role selector and can be cancelled",
+          "status": "covered"
+        },
+        {
+          "id": "ac-06",
+          "description": "Pencil edit button opens Manage <Role> access dialog with RoleAccessPanel",
+          "status": "covered"
+        },
+        {
+          "id": "ac-07",
+          "description": "Selecting a role in Create dialog enables the Create button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-08",
+          "description": "Manage access dialog shows assigned users section or no-users placeholder",
+          "status": "covered"
+        },
+        {
+          "id": "ac-09",
+          "description": "Error state Try again button is present when the error banner renders",
+          "status": "covered"
+        },
+        {
+          "id": "ac-10",
+          "description": "Closing the manage dialog via Escape or click-outside clears editing state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "suggested-prompts",
       "name": "Suggested Prompts",
-      "spec": "38-suggested-prompts.spec.ts",
+      "spec": "42-suggested-prompts.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx"
@@ -1919,66 +2148,6 @@
         {
           "id": "sp-12",
           "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
-          "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "tenant-memory-system-toggle",
-      "name": "Tenant Memory System Toggle",
-      "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
-      "checkpoints": [
-        {
-          "id": "tms-01",
-          "description": "Admin toggles Memory System in Advanced tab and the chat Memory button reflects it",
-          "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "audit-log",
-      "name": "Audit Log",
-      "spec": "39-audit-log.spec.ts",
-      "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
-        "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/index.ts"
-      ],
-      "checkpoints": [
-        {
-          "id": "al-01",
-          "description": "Admin opens Analytics and navigates to Audit tab, sees audit content or empty state",
-          "status": "covered"
-        },
-        {
-          "id": "al-02",
-          "description": "Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state",
-          "status": "covered"
-        },
-        {
-          "id": "al-03",
-          "description": "Admin opens Audit Log tab from navbar mentor dropdown",
-          "status": "covered"
-        },
-        {
-          "id": "al-04",
-          "description": "Audit tab header shows correct title and description in Edit Mentor",
-          "status": "covered"
-        },
-        {
-          "id": "al-05",
-          "description": "Admin can navigate between Audit and other tabs in Edit Mentor",
-          "status": "covered"
-        },
-        {
-          "id": "al-06",
-          "description": "Audit Log analytics page is accessible via direct URL navigation",
-          "status": "covered"
-        },
-        {
-          "id": "al-07",
-          "description": "Non-admin user does not see Audit tab in the mentor dropdown",
           "status": "covered"
         }
       ]

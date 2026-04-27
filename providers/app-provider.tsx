@@ -2,12 +2,8 @@
 
 import { getUserId, getUserName } from '@/features/utils';
 import { updateSessionId } from '@/lib/features/app/app-slice';
-import { useIframeHandlers } from '@/lib/handlers';
 import { useAppDispatch } from '@/lib/hooks';
-import {
-  saveUserObjectToLocalStorage,
-  sendMessageToParentWebsite,
-} from '@/lib/utils';
+import { sendMessageToParentWebsite } from '@/lib/utils';
 import {
   useLazyGetPinnedMessagesQuery,
   useLazyGetRecentMessageQuery,
@@ -33,8 +29,9 @@ export default function AppProvider({
     sendMessageToParentWebsite({ ready: true });
   }, []);
 
-  const handlers = useIframeHandlers();
-
+  // NOTE: the shared iframe handlers from `useIframeHandlers` are registered
+  // once in `Providers` (providers/index.tsx). Registering them again here
+  // would add a second `message` listener and fire every handler twice.
   useIframeMessageHandler({
     handlers: {
       'MENTOR:RESPONDED': async (event: MessageEvent) => {
@@ -59,13 +56,6 @@ export default function AppProvider({
           userId: getUserName(),
         });
       },
-      ...handlers,
-    },
-    defaultHandler: (data) => {
-      if (data.axd_token) {
-        saveUserObjectToLocalStorage(data);
-        window.location.reload();
-      }
     },
   });
 

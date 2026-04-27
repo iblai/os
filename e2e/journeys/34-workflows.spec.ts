@@ -31,7 +31,7 @@ test.describe('Journey 34: Workflows', () => {
     await navigateToWorkflowsPage(page);
 
     await expect(
-      page.getByRole('heading', { name: 'Workflows' }),
+      page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText('Create and manage automated workflows for your mentors'),
@@ -114,7 +114,7 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
 
     await expect(
-      page.getByRole('heading', { name: 'Workflows' }),
+      page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
 
     await searchWorkflow(page, workflowName);
@@ -247,7 +247,9 @@ test.describe('Journey 34: Workflows', () => {
     await expect(
       page.getByRole('button', { name: 'Close preview' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'New Chat' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'New chat for workflow preview' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
 
     await exitPreviewMode(page);

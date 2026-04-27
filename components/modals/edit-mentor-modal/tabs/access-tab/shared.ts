@@ -28,11 +28,16 @@ export const roleDescriptions: Record<string, string> = {
   editor: 'Editors can update mentor configuration, prompts, and tools.',
   // Temporarily commented out - not yet functional backend wise.
   chat: 'Chat access limits users to conversations without editing capabilities.',
+  analytics_viewer: 'Allows the user to view analytics data for this mentor.',
 };
 
 // Temporarily commented out viewer & chat roles - not yet functional backend wise
 // export const DEFAULT_MENTOR_ROLES = ['viewer', 'editor', 'chat'] as const;
-export const DEFAULT_MENTOR_ROLES = ['editor', 'chat'] as const;
+export const DEFAULT_MENTOR_ROLES = [
+  'editor',
+  'chat',
+  'analytics_viewer',
+] as const;
 export type DefaultMentorRole = (typeof DEFAULT_MENTOR_ROLES)[number];
 
 export const formatRoleName = (role: string) =>
