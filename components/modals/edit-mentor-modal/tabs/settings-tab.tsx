@@ -85,6 +85,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  enable_multi_query_rag: boolean;
 }
 
 export function SettingsTab() {
@@ -171,6 +172,7 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -224,6 +226,10 @@ export function SettingsTab() {
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
+      }
+
+      if (value.enable_multi_query_rag !== undefined) {
+        values.enable_multi_query_rag = value.enable_multi_query_rag;
       }
 
       try {
@@ -802,6 +808,54 @@ export function SettingsTab() {
                   </div>
                 )}
               </form.Field>
+
+              <WithFormPermissions
+                name="enable_multi_query_rag"
+                // @ts-ignore
+                permissions={mentor?.permissions?.field}
+              >
+                {({ disabled }) => (
+                  <form.Field name="enable_multi_query_rag">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Enhance Document Retrieval
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about enhance document retrieval"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Generates multiple search queries from a
+                                  single user question to retrieve more
+                                  comprehensive and relevant documents. Improves
+                                  answer quality by approaching the knowledge
+                                  base from different angles, reducing the
+                                  chance of missing relevant information.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled || disabled}
+                          aria-label={`Enhance document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+                )}
+              </WithFormPermissions>
             </div>
 
             <WithFormPermissions
