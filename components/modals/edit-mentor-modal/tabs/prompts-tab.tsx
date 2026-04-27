@@ -37,7 +37,7 @@ import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { useAppDispatch } from '@/lib/hooks';
 import { chatInputSliceActions } from '@/features/chat-input/api-slice';
-import { cn, parsePrompt } from '@/lib/utils';
+import { parsePrompt } from '@/lib/utils';
 import Markdown from '@/components/markdown';
 
 const SUGGESTED_PROMPTS_PAGE_SIZE = 6;
