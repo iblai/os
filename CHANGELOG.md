@@ -1,46 +1,79 @@
 # Changelog
 
+## [0.56.3](https://github.com/iblai/mentorai/compare/v0.56.2...v0.56.3) (2026-04-27)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.4.13 ([74a1eff](https://github.com/iblai/mentorai/commit/74a1efffe2f70ed48fd1a367e70bfcca4d513533))
+
+## [0.56.2](https://github.com/iblai/mentorai/compare/v0.56.1...v0.56.2) (2026-04-27)
+
+### Bug Fixes
+
+* **e2e:** correct audit log URL pattern to match /analytics/audit ([6db3bfd](https://github.com/iblai/mentorai/commit/6db3bfd595758b0a2d57e7f2b39d5dcbe21fbc5c))
+
+## [0.56.1](https://github.com/iblai/mentorai/compare/v0.56.0...v0.56.1) (2026-04-24)
+
+### Bug Fixes
+
+- **mentor:** adding fix for the playwright test for workflows preview new chat ([8c4ccc2](https://github.com/iblai/mentorai/commit/8c4ccc2f067bad622ee5a7033447681125c783c4))
+
+## [0.56.0](https://github.com/iblai/mentorai/compare/v0.55.0...v0.56.0) (2026-04-24)
+
+### Features
+
+- proactive message via postmessage API on progress ([a688217](https://github.com/iblai/mentorai/commit/a688217811d431f015f647171fdb1fd05a3f35c2))
+- proactive messaging via post message API ([804d274](https://github.com/iblai/mentorai/commit/804d274dd3954f0ed14695af18ace6a55a2c7b60))
+- proactive messaging via postmessage API functionality added ([cee2662](https://github.com/iblai/mentorai/commit/cee266275ecb00287369aeda753457c69c7e852d))
+- proactive messaging via postmessage API functionality added > test coverage added ([bdd86d8](https://github.com/iblai/mentorai/commit/bdd86d88cd1cae95a8c7e614ca4b1f588707dc4c))
+- proactive messaging via postmessage API functionality added > test coverage added ([2625768](https://github.com/iblai/mentorai/commit/2625768d0b87f0a5ca3b1da573acb56478f304af))
+- proactive messaging via postmessage API functionality added > test coverage added ([78e0574](https://github.com/iblai/mentorai/commit/78e05748e8b0c45eea4145bde9a8c33bd248f4fc))
+
+### Bug Fixes
+
+- typing sendChatMessageHandler props ([47b7f2c](https://github.com/iblai/mentorai/commit/47b7f2c6aa2a37ab7bf7d2326b07470692d9c069))
+
 ## [0.55.0](https://github.com/iblai/mentorai/compare/v0.54.1...v0.55.0) (2026-04-23)
 
 ### Features
 
-* **mentor:** Adding playwright test memory hide for non authenticates user ([3da9390](https://github.com/iblai/mentorai/commit/3da9390385e4524623cc744f9119248044d1fd11))
+- **mentor:** Adding playwright test memory hide for non authenticates user ([3da9390](https://github.com/iblai/mentorai/commit/3da9390385e4524623cc744f9119248044d1fd11))
 
 ### Bug Fixes
 
-* **mentor:** fixing user data schema for full name as optional ([0dfdb35](https://github.com/iblai/mentorai/commit/0dfdb359a41c9ec9a7b286213bde833700a37e6f))
-* **mentor:** full name as nullable and anonymous mentor to have memory ([404e750](https://github.com/iblai/mentorai/commit/404e7504edcc30ad1f9bd94dc7d3217ce6fabc22))
+- **mentor:** fixing user data schema for full name as optional ([0dfdb35](https://github.com/iblai/mentorai/commit/0dfdb359a41c9ec9a7b286213bde833700a37e6f))
+- **mentor:** full name as nullable and anonymous mentor to have memory ([404e750](https://github.com/iblai/mentorai/commit/404e7504edcc30ad1f9bd94dc7d3217ce6fabc22))
 
 ## [0.54.1](https://github.com/iblai/mentorai/compare/v0.54.0...v0.54.1) (2026-04-23)
 
 ### Bug Fixes
 
-* **a11y:** harden ESC handler and add tests for embed close ([#772](https://github.com/iblai/mentorai/issues/772)) ([5c82442](https://github.com/iblai/mentorai/commit/5c82442d62d98ba83a9b81ce15cc7d157d6cf243))
+- **a11y:** harden ESC handler and add tests for embed close ([#772](https://github.com/iblai/mentorai/issues/772)) ([5c82442](https://github.com/iblai/mentorai/commit/5c82442d62d98ba83a9b81ce15cc7d157d6cf243))
 
 ## [0.54.0](https://github.com/iblai/mentorai/compare/v0.53.1...v0.54.0) (2026-04-23)
 
 ### Features
 
-* **mentor:** add Markdown file support to dataset ingestion ([e83fb7d](https://github.com/iblai/mentorai/commit/e83fb7d41bf1ae927eb9fefd854dd64d9a35ec01))
+- **mentor:** add Markdown file support to dataset ingestion ([e83fb7d](https://github.com/iblai/mentorai/commit/e83fb7d41bf1ae927eb9fefd854dd64d9a35ec01))
 
 ## [0.53.1](https://github.com/iblai/mentorai/compare/v0.53.0...v0.53.1) (2026-04-23)
 
 ### Bug Fixes
 
-* **e2e:** fall back to Cancel button when Escape fails on Copy Mentor dialog ([ed22103](https://github.com/iblai/mentorai/commit/ed22103404d709091243db4f1739054f89eb10ce))
+- **e2e:** fall back to Cancel button when Escape fails on Copy Mentor dialog ([ed22103](https://github.com/iblai/mentorai/commit/ed22103404d709091243db4f1739054f89eb10ce))
 
 ## [0.53.0](https://github.com/iblai/mentorai/compare/v0.52.1...v0.53.0) (2026-04-23)
 
 ### Features
 
-* data reports mentor id query param added > test coverage added ([6082569](https://github.com/iblai/mentorai/commit/6082569a1e509bec5b2111d5aad85debfc6fed09))
+- data reports mentor id query param added > test coverage added ([6082569](https://github.com/iblai/mentorai/commit/6082569a1e509bec5b2111d5aad85debfc6fed09))
 
 ## [0.51.2-patch-1](https://github.com/iblai/mentorai/compare/v0.52.1...v0.53.0) (2026-04-22)
 
 ### Features
 
-* bump version to 0.51.2-patch-1 ([6e9ab07](https://github.com/iblai/mentorai/commit/6e9ab07341a123cec6161dc2fb48166947051a5d))
-* data reports mentor id query param added ([2ad1b35](https://github.com/iblai/mentorai/commit/2ad1b354af4ad7462d20960083a75da9b797bee3))
+- bump version to 0.51.2-patch-1 ([6e9ab07](https://github.com/iblai/mentorai/commit/6e9ab07341a123cec6161dc2fb48166947051a5d))
+- data reports mentor id query param added ([2ad1b35](https://github.com/iblai/mentorai/commit/2ad1b354af4ad7462d20960083a75da9b797bee3))
 
 ## [0.52.1](https://github.com/iblai/mentorai/compare/v0.52.0...v0.52.1) (2026-04-23)
 
