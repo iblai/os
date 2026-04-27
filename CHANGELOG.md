@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.56.4](https://github.com/iblai/mentorai/compare/v0.56.3...v0.56.4) (2026-04-27)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.4.17 ([20bd931](https://github.com/iblai/mentorai/commit/20bd9318c2ad972165ff0ba3bf3c9940854b73d0))
+
 ## [0.56.3](https://github.com/iblai/mentorai/compare/v0.56.2...v0.56.3) (2026-04-27)
 
 ### Chores
