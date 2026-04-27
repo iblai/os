@@ -53,10 +53,12 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E test suggested prompt',
     );
-    await page.waitForTimeout(3_000);
 
-    const countAfter = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(countAfter).toBeGreaterThan(countBefore);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(countBefore);
 
     await editMentorPage.close();
   });
@@ -74,9 +76,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
 
     // Fresh mentor — add a prompt to edit
     await editMentorPage.prompts.addSuggestedPrompt('E2E prompt to be edited');
-    await page.waitForTimeout(3_000);
-    const count = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(count).toBeGreaterThan(0);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
 
     // Click the Edit button on the first suggested prompt
     const editButton = editMentorPage.dialog
@@ -126,9 +130,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E prompt for run visibility',
     );
-    await page.waitForTimeout(3_000);
-    const count = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(count).toBeGreaterThan(0);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
 
     const runButtons = editMentorPage.prompts.getSuggestedPromptRunButtons();
     await expect(runButtons.first()).toBeVisible();
@@ -146,9 +152,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await waitForPageReady(page);
 
     await editMentorPage.prompts.addSuggestedPrompt('E2E run prompt');
-    await page.waitForTimeout(3_000);
-    const count = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(count).toBeGreaterThan(0);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
 
     // Get the prompt text from the first card so we can verify it later
     const firstRunButton = editMentorPage.prompts
@@ -207,9 +215,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E prompt for delete visibility',
     );
-    await page.waitForTimeout(3_000);
-    const count = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(count).toBeGreaterThan(0);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
 
     // Verify each suggested prompt has a Delete button
     const deleteButtons =
@@ -231,17 +241,22 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E temp prompt for deletion',
     );
-    await page.waitForTimeout(3_000);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
     const countBefore = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(countBefore).toBeGreaterThan(0);
 
     // Delete the first suggested prompt
     await editMentorPage.prompts.deleteSuggestedPrompt(0);
-    await page.waitForTimeout(3_000);
 
     // Verify the count decreased
-    const countAfter = await editMentorPage.prompts.getSuggestedPromptCount();
-    expect(countAfter).toBeLessThan(countBefore);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeLessThan(countBefore);
 
     await editMentorPage.close();
   });
@@ -286,7 +301,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E gallery prompt visibility',
     );
-    await page.waitForTimeout(3_000);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
     await editMentorPage.close();
 
     const promptsVisible = await chatPage.promptsButton
@@ -322,7 +341,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E gallery prompt to delete',
     );
-    await page.waitForTimeout(3_000);
+    await expect
+      .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
     await editMentorPage.close();
 
     const promptsVisible = await chatPage.promptsButton
@@ -341,10 +364,12 @@ test.describe('Journey 42: Suggested Prompts', () => {
 
     // Delete the first prompt
     await chatPage.deletePromptFromGallery(0);
-    await page.waitForTimeout(3_000);
 
-    const countAfter = await chatPage.getPromptGalleryDeleteButtons().count();
-    expect(countAfter).toBeLessThan(countBefore);
+    await expect
+      .poll(() => chatPage.getPromptGalleryDeleteButtons().count(), {
+        timeout: 10_000,
+      })
+      .toBeLessThan(countBefore);
 
     await chatPage.closePromptGallery();
   });
@@ -373,11 +398,12 @@ test.describe('Journey 42: Suggested Prompts', () => {
 
       const promptText = `Non-admin visible prompt ${Date.now()}`;
       await editMentorPage.prompts.addSuggestedPrompt(promptText);
-      await page.waitForTimeout(3_000);
 
-      const promptCount =
-        await editMentorPage.prompts.getSuggestedPromptCount();
-      expect(promptCount).toBeGreaterThan(0);
+      await expect
+        .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
+          timeout: 10_000,
+        })
+        .toBeGreaterThan(0);
 
       await editMentorPage.close();
       await waitForPageReady(page);
