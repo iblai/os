@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 325 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-27 | 328 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -109,7 +109,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (5 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (8 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -118,6 +118,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
+- [x] Enhance Document Retrieval toggle is visible with correct label and defaults to OFF
+- [x] Enhance Document Retrieval tooltip contains wording about multiple search queries
+- [x] Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles
 
 ---
 

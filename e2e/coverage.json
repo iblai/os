@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-23",
+  "lastUpdated": "2026-04-27",
   "summary": {
-    "totalCheckpoints": 325,
-    "coveredCheckpoints": 325,
+    "totalCheckpoints": 328,
+    "coveredCheckpoints": 328,
     "percent": 100,
     "totalJourneys": 41
   },
@@ -360,6 +360,21 @@
         {
           "id": "uid-05",
           "description": "Tooltip info icons have type=button and do not submit the form",
+          "status": "covered"
+        },
+        {
+          "id": "uid-06",
+          "description": "Enhance Document Retrieval toggle is visible with correct label and defaults to OFF",
+          "status": "covered"
+        },
+        {
+          "id": "uid-07",
+          "description": "Enhance Document Retrieval tooltip contains wording about multiple search queries",
+          "status": "covered"
+        },
+        {
+          "id": "uid-08",
+          "description": "Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
         }
       ]
