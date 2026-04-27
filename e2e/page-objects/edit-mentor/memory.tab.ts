@@ -109,8 +109,107 @@ export class MemoryTab {
   }
 
   /**
+   * Locator for a memory entry card containing the given content. Use this
+   * (not "first") when tests run in parallel — multiple specs may be
+   * adding/removing entries concurrently, so positional selectors race.
+   */
+  entryByContent(content: string): Locator {
+    return this.dialog.locator('.space-y-3 > div').filter({ hasText: content });
+  }
+
+  async hasMemoryWithContent(content: string): Promise<boolean> {
+    return this.entryByContent(content)
+      .first()
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+  }
+
+  /**
+   * Opens the action menu (MoreHorizontal) for the entry whose content
+   * matches `content`. Throws if no such entry is visible.
+   */
+  private async openActionMenuForContent(content: string): Promise<void> {
+    const entry = this.entryByContent(content).first();
+    await expect(entry).toBeVisible({ timeout: 10_000 });
+    const actionBtn = entry
+      .locator('button:not([aria-label]):not([name])')
+      .or(entry.locator('button[class*="ghost"][class*="h-6"]'))
+      .first();
+    await expect(actionBtn).toBeVisible({ timeout: 10_000 });
+    await actionBtn.click();
+  }
+
+  /**
+   * Edits a memory entry identified by its current content. Prefer this over
+   * editFirst for parallel-safe tests.
+   */
+  async editByContent(
+    currentContent: string,
+    newContent: string,
+  ): Promise<void> {
+    await this.openActionMenuForContent(currentContent);
+
+    const editMenuItem = this.page
+      .getByRole('menuitem', { name: /edit/i })
+      .last();
+    await expect(editMenuItem).toBeVisible({ timeout: 5_000 });
+    await editMenuItem.click();
+
+    const editDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /edit memory/i })
+      .last();
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+
+    const textarea = editDialog.locator('textarea');
+    await textarea.clear();
+    await textarea.fill(newContent);
+
+    const saveButton = editDialog.getByRole('button', { name: /save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Deletes a memory entry identified by its content. Prefer this over
+   * deleteFirst for parallel-safe tests.
+   */
+  async deleteByContent(content: string): Promise<void> {
+    await this.openActionMenuForContent(content);
+
+    const deleteMenuItem = this.page
+      .getByRole('menuitem', { name: /delete/i })
+      .last();
+    await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
+    await deleteMenuItem.click();
+
+    const confirmDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /delete|confirm/i })
+      .last();
+    const confirmVisible = await confirmDialog
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (confirmVisible) {
+      await confirmDialog
+        .getByRole('button', { name: /delete|confirm/i })
+        .last()
+        .click();
+    }
+
+    await expect(this.entryByContent(content).first()).toHaveCount(0, {
+      timeout: 10_000,
+    });
+  }
+
+  /**
    * Edits the first memory entry by clicking its action menu and selecting "Edit".
    * @param newContent - The updated memory content.
+   * @deprecated Positional — races with parallel tests. Use editByContent.
    */
   async editFirst(newContent: string): Promise<void> {
     const firstActionBtn = this.memoryActionButtons.first();
@@ -145,6 +244,7 @@ export class MemoryTab {
   /**
    * Deletes the first memory entry by clicking its action menu (MoreHorizontal)
    * and selecting "Delete" from the dropdown, then confirming if a dialog appears.
+   * @deprecated Positional — races with parallel tests. Use deleteByContent.
    */
   async deleteFirst(): Promise<void> {
     // Click the MoreHorizontal icon button for the first memory entry.

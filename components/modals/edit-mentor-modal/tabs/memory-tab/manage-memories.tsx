@@ -248,6 +248,13 @@ export function ManageMemories({
   const selectedCategoryName =
     categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
 
+  const VISIBLE_CATEGORY_LIMIT = 10;
+  const visibleCategories = categories.slice(0, VISIBLE_CATEGORY_LIMIT);
+  const overflowCategories = categories.slice(VISIBLE_CATEGORY_LIMIT);
+  const overflowSelected = overflowCategories.find(
+    (c) => c.slug === selectedCategorySlug,
+  );
+
   const filteredMemories =
     selectedCategorySlug === 'all'
       ? memories
@@ -314,6 +321,8 @@ export function ManageMemories({
 
     try {
       const selectedCat = categories.find((c) => c.name === editCategory);
+      const categoryChanged =
+        !!selectedCat && selectedCat.slug !== editingMemory.category.slug;
       await updateMentorMemory({
         org: tenantKey,
         userId: username,
@@ -321,12 +330,16 @@ export function ManageMemories({
         memoryId: editingMemory.id,
         data: {
           content: editContent,
-          ...(selectedCat && selectedCat.slug !== editingMemory.category.slug
-            ? { category_slug: selectedCat.slug }
-            : {}),
+          ...(categoryChanged ? { category_slug: selectedCat.slug } : {}),
         },
       }).unwrap();
       toast.success('Memory updated successfully');
+
+      // Follow the entry to its new category tab so the user doesn't lose
+      // sight of it. Skip when viewing "All" — the entry is still visible.
+      if (categoryChanged && selectedCategorySlug !== 'all') {
+        setSelectedCategorySlug(selectedCat.slug);
+      }
 
       setEditingMemory(null);
       setEditContent('');
@@ -486,8 +499,8 @@ export function ManageMemories({
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <div className="scrollbar-none hidden flex-1 space-x-8 overflow-x-auto sm:flex">
-              {categories.map((category) => (
+            <div className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex">
+              {visibleCategories.map((category) => (
                 <button
                   key={category.slug}
                   onClick={() => setSelectedCategorySlug(category.slug)}
@@ -506,6 +519,47 @@ export function ManageMemories({
                   )}
                 </button>
               ))}
+              {overflowCategories.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        'relative flex items-center gap-1 px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                        overflowSelected
+                          ? 'text-[#38A1E5]'
+                          : 'text-gray-600 hover:text-gray-900',
+                      )}
+                      aria-label="More categories"
+                    >
+                      {overflowSelected ? overflowSelected.name : 'More'}
+                      <ChevronDown className="h-3.5 w-3.5" />
+                      {overflowSelected && (
+                        <div
+                          className="absolute bottom-0 left-0 h-0.5 bg-[#38A1E5] transition-all duration-200"
+                          style={{
+                            width: `${overflowSelected.name.length * 0.55}em`,
+                          }}
+                        />
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {overflowCategories.map((category) => (
+                      <DropdownMenuItem
+                        key={category.slug}
+                        onClick={() => setSelectedCategorySlug(category.slug)}
+                        className={
+                          selectedCategorySlug === category.slug
+                            ? 'bg-gray-100'
+                            : ''
+                        }
+                      >
+                        {category.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             <div className="w-full py-2 sm:hidden">
