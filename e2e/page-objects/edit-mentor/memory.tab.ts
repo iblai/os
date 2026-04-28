@@ -117,10 +117,20 @@ export class MemoryTab {
     return this.dialog.locator('.space-y-3 > div').filter({ hasText: content });
   }
 
-  async hasMemoryWithContent(content: string): Promise<boolean> {
+  /**
+   * Returns true if a memory entry with the given content becomes visible
+   * within `timeout` ms. Uses waitFor (auto-retry) — `Locator.isVisible()`
+   * does not actually wait, so it would race with RTK Query refetches that
+   * fire after create/update mutations.
+   */
+  async hasMemoryWithContent(
+    content: string,
+    timeout = 10_000,
+  ): Promise<boolean> {
     return this.entryByContent(content)
       .first()
-      .isVisible({ timeout: 5_000 })
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
       .catch(() => false);
   }
 

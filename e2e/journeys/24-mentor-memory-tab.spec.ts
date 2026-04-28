@@ -48,14 +48,12 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     // specs that may be adding/removing entries concurrently.
     const seedContent = `Delete-target memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await editMentorPage.memory.createMemory(seedContent);
-    expect(await editMentorPage.memory.hasMemoryWithContent(seedContent)).toBe(
-      true,
-    );
+    await expect(
+      editMentorPage.memory.entryByContent(seedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
+    // deleteByContent already asserts the entry is gone; no extra check needed.
     await editMentorPage.memory.deleteByContent(seedContent);
-    expect(await editMentorPage.memory.hasMemoryWithContent(seedContent)).toBe(
-      false,
-    );
     await editMentorPage.close();
   });
 
@@ -64,12 +62,11 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   }) => {
     const testContent = `E2E test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await editMentorPage.memory.createMemory(testContent);
-    // Verify the specific entry we just created is in the list — checking
-    // hasMemories() alone is insufficient when other parallel specs may be
-    // mutating the list at the same time.
-    expect(await editMentorPage.memory.hasMemoryWithContent(testContent)).toBe(
-      true,
-    );
+    // Auto-retrying expect rides out the brief RTK Query refetch window
+    // that follows the "Memory created" toast.
+    await expect(
+      editMentorPage.memory.entryByContent(testContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
     await editMentorPage.close();
   });
 
@@ -84,18 +81,21 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     const updatedContent = `Updated memory ${suffix}`;
 
     await editMentorPage.memory.createMemory(seedContent);
-    expect(await editMentorPage.memory.hasMemoryWithContent(seedContent)).toBe(
-      true,
-    );
+    await expect(
+      editMentorPage.memory.entryByContent(seedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
     await editMentorPage.memory.editByContent(seedContent, updatedContent);
 
-    // Verify the specific edited entry by content, not by list position.
-    expect(
-      await editMentorPage.memory.hasMemoryWithContent(updatedContent),
-    ).toBe(true);
-    expect(await editMentorPage.memory.hasMemoryWithContent(seedContent)).toBe(
-      false,
+    // After save, the list refetches; use auto-retrying assertions so we
+    // wait for the DOM to settle into the post-update state instead of
+    // snapshotting it mid-refetch.
+    await expect(
+      editMentorPage.memory.entryByContent(updatedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.memory.entryByContent(seedContent)).toHaveCount(
+      0,
+      { timeout: 10_000 },
     );
     await editMentorPage.close();
   });
@@ -139,15 +139,13 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   }) => {
     const testContent = `CRUD test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await editMentorPage.memory.createMemory(testContent);
-    expect(await editMentorPage.memory.hasMemoryWithContent(testContent)).toBe(
-      true,
-    );
+    await expect(
+      editMentorPage.memory.entryByContent(testContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Delete by content, not position — parallel specs mutate the list.
+    // deleteByContent has its own auto-retrying detached assertion.
     await editMentorPage.memory.deleteByContent(testContent);
-    expect(await editMentorPage.memory.hasMemoryWithContent(testContent)).toBe(
-      false,
-    );
     await editMentorPage.close();
   });
 });
