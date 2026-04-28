@@ -16,6 +16,8 @@ export class ChatPage {
   readonly voiceCallButton: Locator;
   readonly voiceInputButton: Locator;
   readonly dragOverlay: Locator;
+  readonly promptsButton: Locator;
+  readonly promptGalleryDialog: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -39,6 +41,13 @@ export class ChatPage {
     this.dragOverlay = page.locator(
       '[data-testid="drag-overlay"], [class*="drag-overlay"]',
     );
+    this.promptsButton = page.getByRole('button', {
+      name: 'Prompts',
+      exact: true,
+    });
+    this.promptGalleryDialog = page.getByRole('dialog', {
+      name: 'Prompt Gallery',
+    });
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -62,5 +71,67 @@ export class ChatPage {
   async startNewChat(): Promise<void> {
     await expect(this.newChatButton).toBeVisible({ timeout: 5_000 });
     await this.newChatButton.click();
+  }
+
+  async openPromptGallery(): Promise<void> {
+    await expect(this.promptsButton).toBeVisible({ timeout: 10_000 });
+    await this.promptsButton.click();
+    await expect(this.promptGalleryDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Returns all Delete buttons inside the Prompt Gallery dialog. */
+  getPromptGalleryDeleteButtons(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Delete',
+      exact: true,
+    });
+  }
+
+  /** Returns all Run buttons inside the Prompt Gallery dialog. */
+  getPromptGalleryRunButtons(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Run',
+      exact: true,
+    });
+  }
+
+  /** Returns all Edit buttons inside the Prompt Gallery dialog. */
+  getPromptGalleryEditButtons(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Edit',
+      exact: true,
+    });
+  }
+
+  /** Returns the Add prompt button inside the Prompt Gallery dialog. */
+  getPromptGalleryAddButton(): Locator {
+    return this.promptGalleryDialog.getByRole('button', {
+      name: 'Add',
+      exact: true,
+    });
+  }
+
+  /** Deletes the nth prompt (0-indexed) from the Prompt Gallery. */
+  async deletePromptFromGallery(index = 0): Promise<void> {
+    const deleteButton = this.getPromptGalleryDeleteButtons().nth(index);
+    await expect(deleteButton).toBeVisible({ timeout: 10_000 });
+    await deleteButton.click();
+  }
+
+  /** Clicks the Run button on the nth prompt (0-indexed) in the Prompt Gallery. */
+  async runPromptFromGallery(index = 0): Promise<void> {
+    const runButton = this.getPromptGalleryRunButtons().nth(index);
+    await expect(runButton).toBeVisible({ timeout: 10_000 });
+    await runButton.click();
+  }
+
+  async closePromptGallery(): Promise<void> {
+    const closeButton = this.promptGalleryDialog
+      .getByRole('button', { name: 'Close' })
+      .first();
+    await closeButton.click();
+    await expect(this.promptGalleryDialog).not.toBeVisible({
+      timeout: 10_000,
+    });
   }
 }

@@ -86,13 +86,26 @@ export class MemoryTab {
 
     // Always pick a concrete category — the modal pre-fills the current
     // filter (often "All"), which gets filtered out of the dropdown and
-    // falls back to a non-existent slug server-side. Picking the first
-    // real option keeps the create request valid.
+    // falls back to a non-existent slug server-side. Picking a stable
+    // server-seeded option keeps the create request valid even when the
+    // categories list still contains stale entries from a sibling test
+    // (e.g. an "E2E Cat …" leftover whose slug 404s).
     const selectTrigger = addDialog.getByRole('combobox').first();
     await selectTrigger.click();
-    const option = category
+    let option = category
       ? this.page.getByRole('option', { name: category, exact: true })
-      : this.page.getByRole('option').first();
+      : this.page
+          .getByRole('option')
+          .filter({ hasNotText: /^E2E /i })
+          .filter({ hasNotText: /^All$/i })
+          .first();
+    try {
+      await option.waitFor({ state: 'visible', timeout: 3_000 });
+    } catch {
+      // Fall back to whatever option is available — the test can still proceed
+      // even if no "stable" category exists in this tenant's seed data.
+      option = this.page.getByRole('option').first();
+    }
     await expect(option).toBeVisible({ timeout: 5_000 });
     await option.click();
 
@@ -103,9 +116,36 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory created/i).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    // Treat either the success toast or the dialog closing as success — Sonner
+    // toasts can disappear before the assertion polls, so dialog-hidden is the
+    // most reliable signal that the create mutation completed. Surface the
+    // error toast explicitly so a 4xx from a stale category slug is obvious.
+    const successToast = this.page.getByText(/Memory created/i).first();
+    const errorToast = this.page.getByText(/Failed to create memory/i).first();
+    const completed = await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      addDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      errorToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'timeout' as const),
+    ]);
+    if (completed === 'error') {
+      throw new Error(
+        'createMemory failed: backend rejected the request (saw "Failed to create memory" toast)',
+      );
+    }
+    if (completed === 'timeout') {
+      throw new Error(
+        'createMemory timed out: no success toast, no error toast, dialog still open',
+      );
+    }
   }
 
   /**

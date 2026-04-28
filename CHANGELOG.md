@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.56.5](https://github.com/iblai/mentorai/compare/v0.56.4...v0.56.5) (2026-04-28)
+
+### Bug Fixes
+
+* **e2e:** correct spec file names in coverage files [skip ci] ([3d10224](https://github.com/iblai/mentorai/commit/3d10224cbfaa09527b6d3848e91a7e74caddfa91))
+* **e2e:** increase timeout for anonymous chat response assertion ([8c32aaa](https://github.com/iblai/mentorai/commit/8c32aaaab8b4855a040d2217082310df31c70ca3))
+* **e2e:** update audit log URL and replace fixed timeouts in suggested prompts spec ([8494641](https://github.com/iblai/mentorai/commit/84946418a38be1f0112598119df992de732c9e03))
+* **prompts:** add delete, run and pagination for suggested prompts ([c0d7959](https://github.com/iblai/mentorai/commit/c0d7959ad572635a868e5d875d17a3f2706481b5)), closes [#1176](https://github.com/iblai/mentorai/issues/1176)
+* **providers:** preserve Error object in getMentorPublicSettings catch ([#343](https://github.com/iblai/mentorai/issues/343)) ([096ff67](https://github.com/iblai/mentorai/commit/096ff67591ab2a1ac276adfa0f50400e116a825c))
+
+### Chores
+
+* **e2e:** update coverage for suggested prompts feature [skip ci] ([afb262b](https://github.com/iblai/mentorai/commit/afb262bafa9b95d3943609e078abb606900cadca))
+* **prompts:** remove unused cn import ([94060a5](https://github.com/iblai/mentorai/commit/94060a51f7566c2cc0f4a9f323a5d9e3f18ae965))
+
+### Tests
+
+* **prompts-tab:** add unit tests for CopyButton ([aa8bf9b](https://github.com/iblai/mentorai/commit/aa8bf9b6b3b5f4cffdc856d87b22b0de120cb3c6))
+* **prompts:** add non-admin RBAC test for suggested prompts ([203f593](https://github.com/iblai/mentorai/commit/203f5934c955f1e32985e98ae5c95628b9eb993f))
+
 ## [0.56.4](https://github.com/iblai/mentorai/compare/v0.56.3...v0.56.4) (2026-04-27)
 
 ### Chores

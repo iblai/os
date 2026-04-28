@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 325 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-27 | 339 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -628,6 +628,25 @@ When adding a new page or modifying an existing user flow:
 - [x] AC-41.8: Manage access dialog shows assigned users section or no-users placeholder
 - [x] AC-41.9: Error state Try again button is present when the error banner renders
 - [x] AC-41.10: Closing the manage dialog via Escape or click-outside clears editing state
+
+---
+
+## Journey 42: Suggested Prompts (12 checkpoints) — `journeys/42-suggested-prompts.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx`
+
+- [x] Admin opens the Prompts tab and sees the Suggested Prompts section
+- [x] Admin adds a new suggested prompt from the Prompts tab
+- [x] Admin edits a suggested prompt from the Prompts tab
+- [x] Admin sees Run buttons on suggested prompts in the Prompts tab
+- [x] Admin runs a suggested prompt and the chat input is populated
+- [x] Admin sees the See More button when more than the page size of prompts exist
+- [x] Admin sees Delete buttons on suggested prompts in the Prompts tab
+- [x] Admin deletes a suggested prompt from the Prompts tab
+- [x] Admin opens the Prompt Gallery from the chat area
+- [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
+- [x] Admin deletes a prompt from the Prompt Gallery in the chat area
+- [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
 
 ---
 
