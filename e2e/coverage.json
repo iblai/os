@@ -2,10 +2,12 @@
   "version": 2,
   "lastUpdated": "2026-04-28",
   "summary": {
-    "totalCheckpoints": 330,
+    "totalCheckpoints": 339,
     "coveredCheckpoints": 330,
+    "deprecatedCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 41
+    "totalJourneys": 42,
+    "activeJourneys": 41
   },
   "journeys": [
     {
@@ -652,6 +654,13 @@
           "id": "anon-07",
           "description": "Memory button is hidden in the chat input for unauthenticated users",
           "status": "covered"
+        },
+        {
+          "id": "anon-05",
+          "description": "Anonymous user can open My Mentors modal without Create button",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; no anonymous-Explore equivalent to substitute"
         }
       ]
     },
@@ -678,6 +687,59 @@
           "id": "sw-06",
           "description": "Switch between mentors via home page Explore section",
           "status": "covered"
+        },
+        {
+          "id": "sw-02",
+          "description": "User can switch mentor via My Mentors modal and continue chatting",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
+        },
+        {
+          "id": "sw-03",
+          "description": "User can switch mentor via My Mentors modal",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
+        },
+        {
+          "id": "sw-04",
+          "description": "Switch between mentors via My Mentors modal (dedicated spec)",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
+        }
+      ]
+    },
+    {
+      "id": "my-mentors-modal",
+      "name": "My Mentors Modal",
+      "spec": "16-my-mentors-modal.spec.ts",
+      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "status": "deprecated",
+      "deprecatedIn": "#1431",
+      "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
+      "checkpoints": [
+        {
+          "id": "mm-01",
+          "description": "User can access a mentor through the My Mentors dropdown",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
+        },
+        {
+          "id": "mm-02",
+          "description": "Next pagination button in My Mentors modal navigates correctly",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
+        },
+        {
+          "id": "mm-03",
+          "description": "Admin can invite a user from the My Mentors modal",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
         }
       ]
     },
@@ -1450,6 +1512,13 @@
           "id": "a11y-19",
           "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
           "status": "covered"
+        },
+        {
+          "id": "a11y-06",
+          "description": "My Mentors dialog meets accessibility guidelines",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore page a11y already covered in this journey"
         }
       ]
     },
@@ -1602,6 +1671,13 @@
           "id": "mt-11",
           "description": "Advertising tenant: user can log in to mentor",
           "status": "covered"
+        },
+        {
+          "id": "mt-03",
+          "description": "Enterprise tenant: new mentor can be created from My Mentors dialog",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; sidebar New Mentor flow covered by mt-01"
         }
       ]
     },
