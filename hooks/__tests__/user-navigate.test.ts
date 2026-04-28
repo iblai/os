@@ -96,7 +96,6 @@ vi.mock('@/lib/constants', () => ({
     CREATE_MENTOR: { name: 'create_mentor' },
     INVITE_USER: { name: 'invite_user' },
     SETTINGS: { name: 'settings' },
-    MY_MENTORS: { name: 'my_mentors' },
     LLM_PROVIDERS: { name: 'llm_providers' },
     EDIT_MENTOR: {
       name: 'edit_mentor',
@@ -750,12 +749,12 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalled();
       });
 
-      it('openMyMentorsModal - should open my mentors modal', () => {
+      it('should not expose openMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        result.current.openMyMentorsModal();
-
-        expect(mocked.push).toHaveBeenCalled();
+        expect(
+          (result.current as Record<string, unknown>).openMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('openLLMProvidersModal - should open LLM providers modal', () => {
@@ -874,15 +873,12 @@ describe('user-navigate', () => {
         );
       });
 
-      it('closeMyMentorsModal - should close modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'my_mentors' }]);
+      it('should not expose closeMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        result.current.closeMyMentorsModal();
-
-        expect(mocked.push).toHaveBeenCalledWith(
-          '/platform/test-tenant/mentor-123',
-        );
+        expect(
+          (result.current as Record<string, unknown>).closeMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('closeLLMProvidersModal - should close modal', () => {
@@ -972,11 +968,12 @@ describe('user-navigate', () => {
         expect(result.current.showSettingsModal).toBe(true);
       });
 
-      it('showMyMentorsModal - should return correct state', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'my_mentors' }]);
+      it('should not expose showMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        expect(result.current.showMyMentorsModal).toBe(true);
+        expect(
+          (result.current as Record<string, unknown>).showMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('showLLMProvidersModal - should return correct state', () => {
@@ -1063,13 +1060,12 @@ describe('user-navigate', () => {
         expect(result.current.getSettingsTab()).toBe('profile');
       });
 
-      it('getMyMentorsTab - should return tab for my mentors modal', () => {
-        mocked.selectModalStack.mockReturnValue([
-          { name: 'my_mentors', tab: 'favorites' },
-        ]);
+      it('should not expose getMyMentorsTab', () => {
         const { result } = renderHook(() => useNavigate());
 
-        expect(result.current.getMyMentorsTab()).toBe('favorites');
+        expect(
+          (result.current as Record<string, unknown>).getMyMentorsTab,
+        ).toBeUndefined();
       });
 
       it('getLLMProvidersTab - should return tab for LLM providers modal', () => {
