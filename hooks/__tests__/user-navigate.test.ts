@@ -1612,6 +1612,50 @@ describe('user-navigate', () => {
       );
     });
 
+    it('Workflows onClick - should open no mentor selected modal when no mentorId', () => {
+      mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      mocked.push.mockClear();
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find(
+        (item) => item.label === 'Workflows',
+      );
+      workflowsItem?.onClick();
+
+      // The no-mentorId branch opens the "no mentor selected" modal and
+      // returns early — it does NOT navigate to /workflows.
+      expect(mocked.push).toHaveBeenCalledTimes(1);
+      const calledWith = mocked.push.mock.calls[0]![0] as string;
+      expect(calledWith).toContain('modal=');
+      expect(calledWith).not.toContain('/workflows');
+    });
+
+    it('New Chat rbacResource - returns chat resource path when mentorId is present', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
+      // mentorPublicSettings comes back undefined from the mocked query,
+      // so the path interpolates the optional-chained id as "undefined"
+      // — what matters here is that the rbacResource function exists and
+      // is callable when mentorId is present (covering line 536).
+      expect(typeof newChatItem?.rbacResource).toBe('function');
+      const path = newChatItem?.rbacResource?.(0);
+      expect(path).toContain('/mentors/');
+      expect(path).toContain('/#chat');
+    });
+
+    it('New Chat rbacResource - is undefined when mentorId is missing', () => {
+      mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
+      expect(newChatItem?.rbacResource).toBeUndefined();
+    });
+
     it('should have hasBorder flag for New Chat', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
