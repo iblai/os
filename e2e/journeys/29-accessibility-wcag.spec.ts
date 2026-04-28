@@ -48,9 +48,12 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     nonadminSidebarPage,
   }) => {
     await nonadminSidebarPage.navigateToExplore();
+    // The All Mentors section streams in via a separate /mentors/ fetch — the
+    // trace shows the page often still renders "Loading mentors…" at 15s
+    // when the backend is under load.
     await expect(
       nonadminPage.getByRole('heading', { name: /all mentors/i }),
-    ).toBeVisible({ timeout: 15_000 });
+    ).toBeVisible({ timeout: 60_000 });
     await expectNoViolations(nonadminPage);
   });
 

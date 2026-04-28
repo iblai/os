@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-23",
+  "lastUpdated": "2026-04-27",
   "summary": {
-    "totalCheckpoints": 323,
-    "coveredCheckpoints": 323,
+    "totalCheckpoints": 339,
+    "coveredCheckpoints": 339,
     "percent": 100,
-    "totalJourneys": 41
+    "totalJourneys": 42
   },
   "journeys": [
     {
@@ -582,7 +582,10 @@
       "id": "shareable-links-and-embed-integration",
       "name": "Shareable Links & Embed Integration",
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+      ],
       "checkpoints": [
         {
           "id": "emb-01",
@@ -603,6 +606,11 @@
           "id": "emb-04",
           "description": "Advanced anonymous embed with context awareness configured",
           "status": "covered"
+        },
+        {
+          "id": "emb-05",
+          "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
         }
       ]
     },
@@ -610,7 +618,10 @@
       "id": "anonymous-public-access",
       "name": "Anonymous / Public Access",
       "spec": "14-anonymous-public-access.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
       "checkpoints": [
         {
           "id": "anon-01",
@@ -640,6 +651,11 @@
         {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
+          "status": "covered"
+        },
+        {
+          "id": "anon-07",
+          "description": "Memory button is hidden in the chat input for unauthenticated users",
           "status": "covered"
         }
       ]
@@ -975,6 +991,16 @@
         {
           "id": "ds-16",
           "description": "File upload cancellation is handled gracefully",
+          "status": "covered"
+        },
+        {
+          "id": "ds-17",
+          "description": "Markdown resource type is available in the Add Resources modal (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-18",
+          "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
           "status": "covered"
         }
       ]
@@ -2104,6 +2130,77 @@
         {
           "id": "ac-10",
           "description": "Closing the manage dialog via Escape or click-outside clears editing state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "suggested-prompts",
+      "name": "Suggested Prompts",
+      "spec": "42-suggested-prompts.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sp-01",
+          "description": "Admin opens the Prompts tab and sees the Suggested Prompts section",
+          "status": "covered"
+        },
+        {
+          "id": "sp-02",
+          "description": "Admin adds a new suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-03",
+          "description": "Admin edits a suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-04",
+          "description": "Admin sees Run buttons on suggested prompts in the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-05",
+          "description": "Admin runs a suggested prompt and the chat input is populated",
+          "status": "covered"
+        },
+        {
+          "id": "sp-06",
+          "description": "Admin sees the See More button when more than the page size of prompts exist",
+          "status": "covered"
+        },
+        {
+          "id": "sp-07",
+          "description": "Admin sees Delete buttons on suggested prompts in the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-08",
+          "description": "Admin deletes a suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-09",
+          "description": "Admin opens the Prompt Gallery from the chat area",
+          "status": "covered"
+        },
+        {
+          "id": "sp-10",
+          "description": "Admin sees prompt cards with Delete buttons in the Prompt Gallery",
+          "status": "covered"
+        },
+        {
+          "id": "sp-11",
+          "description": "Admin deletes a prompt from the Prompt Gallery in the chat area",
+          "status": "covered"
+        },
+        {
+          "id": "sp-12",
+          "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
           "status": "covered"
         }
       ]

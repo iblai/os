@@ -3,13 +3,17 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 test.describe('Journey 24: Mentor Memory Tab', () => {
-  test.beforeEach(async ({ page, editMentorPage }) => {
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Memory tab requires admin access');
       return;
     }
+    // Each test owns its own mentor — the memory tab tests share categories
+    // and entries server-side, so without isolation parallel workers race
+    // (e.g. one worker's category cleanup 404s another worker's create POST).
+    await createMentorPage.openAndCreate();
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
   });
@@ -151,6 +155,7 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
   test('Memory button visibility in chat input reflects mentor memory setting', async ({
     page,
     chatPage,
+    createMentorPage,
     editMentorPage,
   }) => {
     await navigateToMentorApp(page);
@@ -159,6 +164,8 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
       test.skip(true, 'Requires admin access');
       return;
     }
+    // Own mentor per test — see Journey 24 describe block above for rationale.
+    await createMentorPage.openAndCreate();
 
     // First ensure memory is enabled on the mentor
     await editMentorPage.open('Memory');

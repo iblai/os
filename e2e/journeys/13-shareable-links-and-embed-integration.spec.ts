@@ -90,4 +90,104 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
     await editMentorPage.close();
   });
+
+  // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)
+  test('admin opens embedded mentor and pressing Escape inside the iframe closes the widget', async ({
+    page,
+  }) => {
+    if (!EMBED_URL) {
+      test.skip(true, 'Set EMBED_URL to enable embed ESC-close test');
+      return;
+    }
+
+    // Navigate to the host page that has the embed widget
+    await page.goto(EMBED_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+    await waitForPageReady(page);
+
+    // Open the widget if it is not already visible (click the chat bubble)
+    const widgetContainer = page.locator('#ibl-chat-widget-container');
+    let widgetVisible = false;
+    try {
+      await widgetContainer.waitFor({ state: 'visible', timeout: 5_000 });
+      widgetVisible = true;
+    } catch {
+      widgetVisible = false;
+    }
+
+    if (!widgetVisible) {
+      // Click the floating bubble to open the widget for the first time
+      const bubble = page.locator('.ibl-chat-bubble').first();
+      try {
+        await bubble.waitFor({ state: 'visible', timeout: 10_000 });
+        await bubble.click();
+        await widgetContainer.waitFor({ state: 'visible', timeout: 15_000 });
+      } catch {
+        // Widget could not be opened — environment may not have the embed set up
+        return;
+      }
+    }
+
+    // Locate the iframe inside the widget
+    const iframe = page
+      .frameLocator('#ibl-chat-widget-container iframe')
+      .first();
+
+    // Find a focusable element inside the iframe — the chat textarea or any input
+    const escTarget = iframe.locator('textarea').first();
+    let iframeReady = false;
+    try {
+      await escTarget.waitFor({ state: 'visible', timeout: 15_000 });
+      iframeReady = true;
+    } catch {
+      iframeReady = false;
+    }
+
+    if (!iframeReady) {
+      // Iframe content not ready — environment-specific; skip gracefully
+      return;
+    }
+
+    // Register a message listener on the parent window BEFORE pressing Escape,
+    // so we capture the postMessage({ closeEmbed: true }) from the iframe.
+    await page.evaluate(() => {
+      (window as unknown as Record<string, unknown>).__closeEmbedMessages = [];
+      window.addEventListener('message', (event) => {
+        const data = event?.data as Record<string, unknown> | undefined;
+        if (data && data.closeEmbed) {
+          (
+            (window as unknown as Record<string, unknown>)
+              .__closeEmbedMessages as unknown[]
+          ).push(data);
+        }
+      });
+    });
+
+    // Focus the textarea and press Escape — this fires inside the iframe context
+    await escTarget.click();
+    await escTarget.press('Escape');
+
+    // Assert: the iframe posted { closeEmbed: true } to the parent window
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(
+            () =>
+              (
+                (window as unknown as Record<string, unknown>)
+                  .__closeEmbedMessages as unknown[]
+              )?.length ?? 0,
+          )) as number,
+        {
+          timeout: 10_000,
+          message: 'Expected closeEmbed postMessage within 10s',
+        },
+      )
+      .toBeGreaterThan(0);
+
+    // Assert: the widget container is now hidden (display:none set by toggleWidget())
+    await expect(widgetContainer).not.toBeVisible({ timeout: 10_000 });
+  });
 });

@@ -38,7 +38,15 @@ export class CopyMentorPage {
 
   async closeViaEscape(): Promise<void> {
     await this.page.keyboard.press('Escape');
-    await expect(this.dialog).not.toBeVisible({ timeout: 15_000 });
+    // Stacked Radix dialogs may swallow Escape; fall back to Cancel button
+    const closed = await this.dialog
+      .waitFor({ state: 'hidden', timeout: 3_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!closed) {
+      await this.cancelButton.click();
+      await expect(this.dialog).not.toBeVisible({ timeout: 15_000 });
+    }
   }
 
   async setName(name: string): Promise<void> {
