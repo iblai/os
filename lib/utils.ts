@@ -1658,7 +1658,7 @@ export function getTenantKeyFromUrl() {
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    (!currentTenant?.show_paywall || currentTenant?.key === 'main')
   );
 }
 

@@ -4,28 +4,28 @@
 
 ### Bug Fixes
 
-* **e2e:** correct audit log URL pattern to match /analytics/audit ([6db3bfd](https://github.com/iblai/mentorai/commit/6db3bfd595758b0a2d57e7f2b39d5dcbe21fbc5c))
+- **e2e:** correct audit log URL pattern to match /analytics/audit ([6db3bfd](https://github.com/iblai/mentorai/commit/6db3bfd595758b0a2d57e7f2b39d5dcbe21fbc5c))
 
 ## [0.56.1](https://github.com/iblai/mentorai/compare/v0.56.0...v0.56.1) (2026-04-24)
 
 ### Bug Fixes
 
-* **mentor:** adding fix for the playwright test for workflows preview new chat ([8c4ccc2](https://github.com/iblai/mentorai/commit/8c4ccc2f067bad622ee5a7033447681125c783c4))
+- **mentor:** adding fix for the playwright test for workflows preview new chat ([8c4ccc2](https://github.com/iblai/mentorai/commit/8c4ccc2f067bad622ee5a7033447681125c783c4))
 
 ## [0.56.0](https://github.com/iblai/mentorai/compare/v0.55.0...v0.56.0) (2026-04-24)
 
 ### Features
 
-* proactive message via postmessage API on progress ([a688217](https://github.com/iblai/mentorai/commit/a688217811d431f015f647171fdb1fd05a3f35c2))
-* proactive messaging via post message API ([804d274](https://github.com/iblai/mentorai/commit/804d274dd3954f0ed14695af18ace6a55a2c7b60))
-* proactive messaging via postmessage API functionality added ([cee2662](https://github.com/iblai/mentorai/commit/cee266275ecb00287369aeda753457c69c7e852d))
-* proactive messaging via postmessage API functionality added > test coverage added ([bdd86d8](https://github.com/iblai/mentorai/commit/bdd86d88cd1cae95a8c7e614ca4b1f588707dc4c))
-* proactive messaging via postmessage API functionality added > test coverage added ([2625768](https://github.com/iblai/mentorai/commit/2625768d0b87f0a5ca3b1da573acb56478f304af))
-* proactive messaging via postmessage API functionality added > test coverage added ([78e0574](https://github.com/iblai/mentorai/commit/78e05748e8b0c45eea4145bde9a8c33bd248f4fc))
+- proactive message via postmessage API on progress ([a688217](https://github.com/iblai/mentorai/commit/a688217811d431f015f647171fdb1fd05a3f35c2))
+- proactive messaging via post message API ([804d274](https://github.com/iblai/mentorai/commit/804d274dd3954f0ed14695af18ace6a55a2c7b60))
+- proactive messaging via postmessage API functionality added ([cee2662](https://github.com/iblai/mentorai/commit/cee266275ecb00287369aeda753457c69c7e852d))
+- proactive messaging via postmessage API functionality added > test coverage added ([bdd86d8](https://github.com/iblai/mentorai/commit/bdd86d88cd1cae95a8c7e614ca4b1f588707dc4c))
+- proactive messaging via postmessage API functionality added > test coverage added ([2625768](https://github.com/iblai/mentorai/commit/2625768d0b87f0a5ca3b1da573acb56478f304af))
+- proactive messaging via postmessage API functionality added > test coverage added ([78e0574](https://github.com/iblai/mentorai/commit/78e05748e8b0c45eea4145bde9a8c33bd248f4fc))
 
 ### Bug Fixes
 
-* typing sendChatMessageHandler props ([47b7f2c](https://github.com/iblai/mentorai/commit/47b7f2c6aa2a37ab7bf7d2326b07470692d9c069))
+- typing sendChatMessageHandler props ([47b7f2c](https://github.com/iblai/mentorai/commit/47b7f2c6aa2a37ab7bf7d2326b07470692d9c069))
 
 ## [0.55.0](https://github.com/iblai/mentorai/compare/v0.54.1...v0.55.0) (2026-04-23)
 
