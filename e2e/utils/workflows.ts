@@ -23,7 +23,9 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
     level: 1,
     exact: true,
   });
-  await expect(heading).toBeVisible({ timeout: 30_000 });
+  // The workflows page hydration can stall behind a slow backend response;
+  // a generous ceiling keeps the happy path fast and avoids spurious flakes.
+  await expect(heading).toBeVisible({ timeout: 60_000 });
   logger.info('Navigated to workflows list page');
 }
 

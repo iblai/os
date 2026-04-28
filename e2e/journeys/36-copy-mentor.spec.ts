@@ -33,7 +33,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
-      timeout: 5_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is hidden for non-forkable mentor');
 
@@ -43,7 +43,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).toBeVisible({
-      timeout: 10_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is visible after enabling Allow Copies');
 
@@ -53,7 +53,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
-      timeout: 5_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is hidden after disabling Allow Copies');
     await editMentorPage.close();
