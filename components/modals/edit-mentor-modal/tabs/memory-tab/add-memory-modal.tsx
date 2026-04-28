@@ -75,6 +75,11 @@ export function AddMemoryModal({
               placeholder="Enter memory content..."
               className="mt-1"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              {newMemoryContent.trim().length < 10
+                ? `${newMemoryContent.trim().length}/10 characters minimum`
+                : `${newMemoryContent.trim().length} characters`}
+            </p>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onCancel}>
@@ -82,7 +87,7 @@ export function AddMemoryModal({
             </Button>
             <Button
               onClick={onSave}
-              disabled={!newMemoryContent.trim() || isSaving}
+              disabled={newMemoryContent.trim().length < 10 || isSaving}
               className="ibl-button-primary"
             >
               {isSaving ? 'Saving...' : 'Save'}

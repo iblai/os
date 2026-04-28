@@ -7,6 +7,7 @@ const mockUseRouter = vi.fn();
 const mockUseAppSelector = vi.fn();
 const mockCheckRbacPermission = vi.fn();
 const mockUseGetMentorPublicSettingsQuery = vi.fn();
+const mockUseUsername = vi.fn();
 const analyticsLayoutSpy = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -47,6 +48,10 @@ vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => mockUseUsername(),
+}));
+
 const AnalyticsLayoutWrapperModule = await import('../layout');
 const AnalyticsLayoutWrapper = AnalyticsLayoutWrapperModule.default;
 
@@ -62,6 +67,7 @@ describe('AnalyticsLayoutWrapper', () => {
     );
     mockUseRouter.mockReturnValue({ push: vi.fn() });
     mockUseAppSelector.mockReturnValue({});
+    mockUseUsername.mockReturnValue('testuser');
     mockUseGetMentorPublicSettingsQuery.mockReturnValue({
       data: { mentor_id: 42 },
     });

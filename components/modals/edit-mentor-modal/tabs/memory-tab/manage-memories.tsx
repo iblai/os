@@ -248,7 +248,7 @@ export function ManageMemories({
   const selectedCategoryName =
     categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
 
-  const VISIBLE_CATEGORY_LIMIT = 10;
+  const VISIBLE_CATEGORY_LIMIT = 6;
   const visibleCategories = categories.slice(0, VISIBLE_CATEGORY_LIMIT);
   const overflowCategories = categories.slice(VISIBLE_CATEGORY_LIMIT);
   const overflowSelected = overflowCategories.find(

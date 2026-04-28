@@ -7,6 +7,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
+import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
@@ -27,12 +28,13 @@ export default function AnalyticsLayoutWrapper({
   };
 
   const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const username = useUsername();
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
     {
       mentor: mentorId,
       org: tenantKey,
       // @ts-ignore userId is not part of the query definition
-      userId: ANONYMOUS_USERNAME,
+      userId: username ?? ANONYMOUS_USERNAME,
     },
     {
       skip: !mentorId || !tenantKey,

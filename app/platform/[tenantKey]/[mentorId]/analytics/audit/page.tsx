@@ -26,7 +26,7 @@ export default function AuditLogPage() {
       mentor: mentorId,
       org: tenantKey,
       // @ts-ignore userId is not part of the query definition
-      userId: ANONYMOUS_USERNAME,
+      userId: username ?? ANONYMOUS_USERNAME,
     },
     {
       skip: !mentorId || !tenantKey,
