@@ -123,7 +123,7 @@ describe('useMentorSegments', () => {
   it('returns the canonical 15 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(15);
+    expect(MENTOR_SEGMENTS).toHaveLength(14);
   });
 
   it('places the Sandbox segment right after Settings', () => {

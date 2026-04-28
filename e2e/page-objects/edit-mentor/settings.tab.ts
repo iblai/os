@@ -18,6 +18,7 @@ export class SettingsTab {
   readonly copyMentorButton: Locator;
   readonly showVoiceCallToggle: Locator;
   readonly advancedSandboxToggle: Locator;
+  readonly chatAccessCombobox: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -66,6 +67,9 @@ export class SettingsTab {
     this.advancedSandboxToggle = dialog.getByRole('switch', {
       name: /^Advanced sandbox/i,
     });
+    this.chatAccessCombobox = dialog.getByRole('combobox', {
+      name: 'Select who can chat',
+    });
   }
 
   async copyUniqueId(): Promise<void> {
@@ -98,6 +102,31 @@ export class SettingsTab {
 
   async setVisibilityAnyone(): Promise<void> {
     await this.setVisibility('Anyone');
+  }
+
+  async setChatAccess(label: string): Promise<void> {
+    await expect(this.chatAccessCombobox).toBeVisible({ timeout: 5_000 });
+    await this.chatAccessCombobox.click();
+    const opt = this.page.locator('div[role="option"]').filter({
+      hasText: new RegExp(`^${label}$`, 'i'),
+    });
+    const radixVisible = await opt
+      .first()
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (radixVisible) {
+      await opt.first().click();
+    } else {
+      const fallback = this.page.getByRole('option', {
+        name: new RegExp(label, 'i'),
+      });
+      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
+      await fallback.first().click();
+    }
+  }
+
+  async setChatAccessAnyone(): Promise<void> {
+    await this.setChatAccess('Anyone');
   }
 
   async enableAllowCopies(): Promise<void> {

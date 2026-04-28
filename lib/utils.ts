@@ -824,12 +824,12 @@ function decodeHtmlEntities(text: string): string {
   if (typeof document === 'undefined') {
     // Server-side fallback - decode common entities manually
     return text
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ');
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
   }
   const textarea = document.createElement('textarea');
   textarea.innerHTML = text;

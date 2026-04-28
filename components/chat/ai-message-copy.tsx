@@ -22,7 +22,19 @@ export const AIMessageCopy = forwardRef<HTMLButtonElement, Props>(
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
+        <TooltipTrigger
+          asChild
+          // Only suppress the tooltip when focus is NOT from the keyboard —
+          // stops it flashing when the copy button mounts mid-stream or
+          // receives focus programmatically. Keyboard Tab navigation
+          // (:focus-visible) still opens the tooltip normally. See #576.
+          onFocus={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.matches(':focus-visible') === false) {
+              e.preventDefault();
+            }
+          }}
+        >
           <button
             ref={ref}
             onClick={handleCopy}

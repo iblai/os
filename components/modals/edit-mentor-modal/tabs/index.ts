@@ -12,3 +12,4 @@ export * from './embed-tab';
 export * from './access-tab';
 export * from './sandbox-tab';
 export * from './skills-tab';
+export * from './audit-log-tab';

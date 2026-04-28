@@ -21,6 +21,7 @@ import {
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import rbacReducer from '@/features/rbac/rbac-slice';
+import { analyticsReducer } from '@/features/analytics/slice';
 import { UserType } from '@/lib/constants';
 
 // ============================================================================
@@ -197,6 +198,7 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
       mentorSlug: 'test-mentor',
       profileImage: '/test-image.png',
       mentorUniqueId: 'mentor456',
+      mentorDbId: 'db-id-999',
       llmProvider: 'openai',
       llmName: 'GPT-4',
       mentorVisibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -616,6 +618,50 @@ describe('NavBar', () => {
       );
 
       // Test passes if no errors - mobile detection mock would need more complex setup
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Analytics — Selected Mentor Sync
+  //
+  // On mount (and whenever mentorUniqueId changes), the navbar dispatches
+  // setSelectedMentor so the analytics iframe page can read which mentor's
+  // reports to show — including the mentor database id, which is a separate
+  // identifier from mentorUniqueId and is used for data-reports query params.
+  // --------------------------------------------------------------------------
+
+  describe('Selected mentor sync (analytics)', () => {
+    it('dispatches setSelectedMentor including id (mentorDbId) on mount', async () => {
+      const store = configureStore({
+        reducer: {
+          modals: modalReducer,
+          rbac: rbacReducer,
+          [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
+          analytics: analyticsReducer,
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat(
+            mentorApiSlice.middleware,
+          ),
+      });
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      await waitFor(() => {
+        const state = store.getState() as unknown as {
+          analytics: { selectedMentor: { id?: string } | null };
+        };
+        expect(state.analytics.selectedMentor).toEqual({
+          slug: 'test-mentor',
+          name: 'Test Mentor',
+          profileImage: '/test-image.png',
+          id: 'db-id-999',
+        });
+      });
     });
   });
 

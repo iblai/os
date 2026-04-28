@@ -59,6 +59,7 @@ export const MODALS = {
       advanced_js: 'advanced_js',
       sandbox: 'sandbox',
       skills: 'skills',
+      audit_log: 'audit_log',
     },
   },
   ADD_PROMPT: { name: 'add_prompt' },

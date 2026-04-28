@@ -24,6 +24,7 @@ import {
   AccessTab,
   SandboxTab,
   SkillsTab,
+  AuditLogTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -62,6 +63,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,

@@ -149,6 +149,7 @@ export function NavBar() {
       skip: !mentorId || !tenantKey || !username || isTauriOffline,
     },
   );
+
   const { data: mentorSettingsCombinedPublicAndPrivate } = useMentorSettings();
 
   const requiresLoginForChat =
@@ -344,6 +345,7 @@ export function NavBar() {
           name: mentorSettingsCombinedPublicAndPrivate?.mentorName ?? '',
           profileImage:
             mentorSettingsCombinedPublicAndPrivate?.profileImage ?? '',
+          id: mentorSettingsCombinedPublicAndPrivate?.mentorDbId ?? '',
         }),
       );
     }

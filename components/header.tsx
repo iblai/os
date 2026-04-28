@@ -14,6 +14,7 @@ import {
   Shield,
   Network,
   Clock,
+  ScrollText,
   Grid,
   Key,
   MonitorSmartphone,
@@ -107,6 +108,12 @@ const menuItems = [
     icon: Clock,
     label: 'History',
     tab: MODALS.EDIT_MENTOR.tabs.history,
+    isAdmin: true,
+  },
+  {
+    icon: ScrollText,
+    label: 'Audit',
+    tab: MODALS.EDIT_MENTOR.tabs.audit_log,
     isAdmin: true,
   },
   {

@@ -51,9 +51,6 @@ Thumbs.db
 # Sentry
 .sentryclirc
 
-# Electron
-dist-electron/
-
 # Tauri
 src-tauri/target/
 src-tauri/gen/android/
