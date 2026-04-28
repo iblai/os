@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-27 | 339 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-28 | 330 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -45,7 +45,7 @@ When adding a new page or modifying an existing user flow:
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
-- [x] "New Chat" and "My Mentors" buttons are visible; Learner mode toggle is hidden for non-admins
+- [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
 - [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (Settings, Analytics, New Project, Invite Users, New Mentor) show Stripe/upgrade dialog for non-admins
 
@@ -200,7 +200,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 14: Anonymous / Public Access (7 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
+## Journey 14: Anonymous / Public Access (6 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`, `components/chat-input-form/inside-buttons.tsx`
 
@@ -208,32 +208,18 @@ When adding a new page or modifying an existing user flow:
 - [x] Clicking "Log in" redirects to the auth host login page
 - [x] Anonymous user can navigate to the Explore page via the sidebar
 - [x] Anonymous user can chat with a mentor configured for "Anyone" and start a new chat
-- [x] Anonymous user can open My Mentors modal; "Create" button is not visible
 - [x] Collapsed sidebar admin buttons redirect anonymous user to the auth host
 - [x] Memory button is hidden in the chat input for unauthenticated users
 
 ---
 
-## Journey 15: Mentor Switching (6 checkpoints) — `journeys/15-mentor-switching.spec.ts`
+## Journey 15: Mentor Switching (3 checkpoints) — `journeys/15-mentor-switching.spec.ts`
 
-**Source files:** `components/modals/my-mentors-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `hooks/use-mentors.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `hooks/use-mentors.ts`
 
 - [x] User can switch mentor by clicking a card on the Explore Mentors page
-- [x] User can switch mentor via My Mentors modal and continue chatting _(skipped on Safari)_
-- [x] User can switch mentor via My Mentors modal (alternate path)
-- [x] Switch between mentors via My Mentors modal (dedicated spec)
 - [x] Switch between mentors via Explore page (dedicated spec)
 - [x] Switch between mentors via home page Explore section
-
----
-
-## Journey 16: My Mentors Modal (3 checkpoints) — `journeys/16-my-mentors-modal.spec.ts`
-
-**Source files:** `components/modals/my-mentors-modal.tsx`, `hooks/use-mentors.ts`
-
-- [x] User can access a mentor through the My Mentors dropdown
-- [x] "Next" pagination button in My Mentors modal navigates to the next page
-- [x] Admin can invite a user from the My Mentors modal
 
 ---
 
@@ -428,7 +414,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (18 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
 
 **Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
 
@@ -437,7 +423,6 @@ When adding a new page or modifying an existing user flow:
 - [x] Create Mentor modal meets accessibility guidelines
 - [x] Invite Users modal meets accessibility guidelines
 - [x] Settings modal meets accessibility guidelines
-- [x] My Mentors dialog meets accessibility guidelines
 - [x] Embed dialog is accessible
 - [x] Dataset dialog is accessible
 - [x] Mentor Settings dialog is accessible
@@ -483,13 +468,12 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (10 checkpoints) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
 - [x] Enterprise tenant: new mentor can be created from the sidebar dialog
 - [x] Enterprise tenant: new mentor can be created from the Settings dialog
-- [x] Enterprise tenant: new mentor can be created from the My Mentors dialog
 - [x] Enterprise tenant: sidebar open/close behavior works correctly
 - [x] Enterprise tenant: platform logo navigates home
 - [x] Enterprise tenant: New Chat navigation and sidebar items function correctly

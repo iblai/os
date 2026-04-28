@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-27",
+  "lastUpdated": "2026-04-28",
   "summary": {
-    "totalCheckpoints": 339,
-    "coveredCheckpoints": 339,
+    "totalCheckpoints": 330,
+    "coveredCheckpoints": 330,
     "percent": 100,
-    "totalJourneys": 42
+    "totalJourneys": 41
   },
   "journeys": [
     {
@@ -96,7 +96,7 @@
         },
         {
           "id": "ui-02",
-          "description": "Non-admin sees at most 2 menu items in mentor dropdown",
+          "description": "My Mentors button is NOT present in the header; mentor dropdown still shows New Chat item",
           "status": "covered"
         },
         {
@@ -194,7 +194,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery — Explore Page",
+      "name": "Mentor Discovery \u2014 Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -270,7 +270,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management — Admin",
+      "name": "Mentor Management \u2014 Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -331,7 +331,7 @@
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab — Unique ID",
+      "name": "Mentor Settings Tab \u2014 Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
@@ -456,14 +456,14 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
           "status": "covered"
         }
       ]
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas — AI Document Editor",
+      "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": ["components/canvas/canvas-component.tsx"],
       "checkpoints": [
@@ -526,7 +526,7 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas — Embed",
+      "name": "Canvas \u2014 Embed",
       "spec": "11-canvas-embed.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
@@ -644,11 +644,6 @@
           "status": "covered"
         },
         {
-          "id": "anon-05",
-          "description": "Anonymous user can open My Mentors modal without Create button",
-          "status": "covered"
-        },
-        {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
           "status": "covered"
@@ -664,26 +659,14 @@
       "id": "mentor-switching",
       "name": "Mentor Switching",
       "spec": "15-mentor-switching.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
+        "hooks/use-mentors.ts"
+      ],
       "checkpoints": [
         {
           "id": "sw-01",
           "description": "User can switch mentor via Explore Mentors page",
-          "status": "covered"
-        },
-        {
-          "id": "sw-02",
-          "description": "User can switch mentor via My Mentors modal and continue chatting",
-          "status": "covered"
-        },
-        {
-          "id": "sw-03",
-          "description": "User can switch mentor via My Mentors modal",
-          "status": "covered"
-        },
-        {
-          "id": "sw-04",
-          "description": "Switch between mentors via My Mentors modal (dedicated spec)",
           "status": "covered"
         },
         {
@@ -694,29 +677,6 @@
         {
           "id": "sw-06",
           "description": "Switch between mentors via home page Explore section",
-          "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "my-mentors-modal",
-      "name": "My Mentors Modal",
-      "spec": "16-my-mentors-modal.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
-      "checkpoints": [
-        {
-          "id": "mm-01",
-          "description": "User can access a mentor through the My Mentors dropdown",
-          "status": "covered"
-        },
-        {
-          "id": "mm-02",
-          "description": "Next pagination button in My Mentors modal navigates correctly",
-          "status": "covered"
-        },
-        {
-          "id": "mm-03",
-          "description": "Admin can invite a user from the My Mentors modal",
           "status": "covered"
         }
       ]
@@ -1393,7 +1353,7 @@
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility — WCAG 2.1 AA",
+      "name": "Accessibility \u2014 WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
@@ -1424,11 +1384,6 @@
         {
           "id": "a11y-05",
           "description": "Settings modal meets accessibility guidelines",
-          "status": "covered"
-        },
-        {
-          "id": "a11y-06",
-          "description": "My Mentors dialog meets accessibility guidelines",
           "status": "covered"
         },
         {
@@ -1606,11 +1561,6 @@
         {
           "id": "mt-02",
           "description": "Enterprise tenant: new mentor can be created from Settings dialog",
-          "status": "covered"
-        },
-        {
-          "id": "mt-03",
-          "description": "Enterprise tenant: new mentor can be created from My Mentors dialog",
           "status": "covered"
         },
         {
@@ -2041,7 +1991,7 @@
         },
         {
           "id": "ac-03",
-          "description": "Access tab shows roles table or empty state — never a blank crash screen",
+          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
           "status": "covered"
         },
         {
