@@ -125,27 +125,46 @@ export class SettingsTab {
   }
 
   async enableAllowCopies(): Promise<void> {
-    await expect(this.allowCopiesToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked = await this.allowCopiesToggle.getAttribute('aria-checked');
-    if (isChecked !== 'true') {
-      await this.allowCopiesToggle.click();
-    }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
-    await this.page.waitForTimeout(1_000);
+    await this.setAllowCopies(true);
   }
 
   async disableAllowCopies(): Promise<void> {
+    await this.setAllowCopies(false);
+  }
+
+  /**
+   * Toggles the Allow Copies switch to the desired state and waits until the
+   * mutation is fully observable — the success toast must appear AND the next
+   * mentor settings refetch has to settle, otherwise the Copy button on the
+   * subsequent reopen can lag behind the form's toggle state by several
+   * seconds (the cache invalidation is propagated async by RTK Query).
+   */
+  private async setAllowCopies(target: boolean): Promise<void> {
     await expect(this.allowCopiesToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked = await this.allowCopiesToggle.getAttribute('aria-checked');
-    if (isChecked === 'true') {
-      await this.allowCopiesToggle.click();
+    const isChecked =
+      (await this.allowCopiesToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked === target) {
+      return;
     }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.allowCopiesToggle.click();
+    await expect(this.allowCopiesToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 30_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 30_000 });
     await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
-    await this.page.waitForTimeout(1_000);
+    // Block until the backend confirms the write — the success toast is the
+    // earliest reliable signal that the mutation resolved and RTK Query has
+    // started invalidating the mentor cache. Don't wait for networkidle here:
+    // the app fires a periodic analytics heartbeat (~every 30s) so networkidle
+    // can hang indefinitely in steady state.
+    await expect(
+      this.page.getByText(/Mentor updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer to let the post-mutation refetch land and React re-render
+    // with fresh mentor data before the caller closes/reopens the dialog.
+    await this.page.waitForTimeout(500);
   }
 
   async enableVoiceCall(): Promise<void> {

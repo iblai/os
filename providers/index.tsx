@@ -347,7 +347,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             return true;
           }
         } catch (error) {
-          console.error(JSON.stringify(error));
+          console.error('getMentorPublicSettings failed', error);
           return false;
         }
       },

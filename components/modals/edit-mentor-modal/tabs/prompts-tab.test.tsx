@@ -15,6 +15,7 @@ import { PromptsTab } from './prompts-tab';
 // MOCKS
 // ============================================================================
 
+const mockDeletePrompt = vi.fn();
 const mockEditMentor = vi.fn();
 const mockUpdatePrompt = vi.fn();
 const mockUseParams = vi.fn();
@@ -28,6 +29,12 @@ const mockUseShowFreeTrialDialog = vi.fn();
 const mockOpenAddPromptModal = vi.fn();
 const mockCloseAddPromptModal = vi.fn();
 const mockShowAddPromptModal = vi.fn();
+const mockCloseEditMentorModal = vi.fn();
+const mockDispatch = vi.fn();
+const mockSetTextareaInput = vi.fn((payload: string) => ({
+  type: 'chatInput/setTextareaInput',
+  payload,
+}));
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -45,7 +52,18 @@ vi.mock('@/hooks/user-navigate', () => ({
     showAddPromptModal: mockShowAddPromptModal(),
     closeAddPromptModal: mockCloseAddPromptModal,
     openAddPromptModal: mockOpenAddPromptModal,
+    closeEditMentorModal: mockCloseEditMentorModal,
   }),
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => mockDispatch,
+}));
+
+vi.mock('@/features/chat-input/api-slice', () => ({
+  chatInputSliceActions: {
+    setTextareaInput: (payload: string) => mockSetTextareaInput(payload),
+  },
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -57,14 +75,29 @@ const mockEditMentorLoading = vi.fn();
 const mockUpdatePromptLoading = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useDeletePromptMutation: () => [mockDeletePrompt],
   useEditMentorMutation: () => [
     mockEditMentor,
     { isLoading: mockEditMentorLoading() },
   ],
   useGetMentorSettingsQuery: (...args: unknown[]) =>
     mockGetMentorSettingsQuery(...args),
-  useGetPromptsSearchQuery: (...args: unknown[]) =>
-    mockGetPromptsSearchQuery(...args),
+  useGetPromptsSearchQuery: (...args: unknown[]) => {
+    const result = mockGetPromptsSearchQuery(...args) ?? {};
+    const data = result.data
+      ? {
+          count: result.data.results?.length ?? 0,
+          ...result.data,
+        }
+      : result.data;
+    return {
+      status: 'fulfilled',
+      isFetching: false,
+      isLoading: false,
+      ...result,
+      data,
+    };
+  },
   useUpdatePromptMutation: () => [
     mockUpdatePrompt,
     { isLoading: mockUpdatePromptLoading() },
@@ -130,6 +163,7 @@ vi.mock('@/hoc/withPermissions', () => ({
 }));
 
 vi.mock('@/lib/utils', () => ({
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
   parsePrompt: (text: string) => text,
 }));
 
@@ -217,6 +251,7 @@ const defaultMentorSettings = {
 };
 
 const defaultPromptsData = {
+  count: 2,
   results: [
     {
       id: 1,
@@ -248,6 +283,7 @@ describe('PromptsTab', () => {
     });
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('testuser');
+    mockDeletePrompt.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockUpdatePrompt.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentorLoading.mockReturnValue(false);
@@ -273,6 +309,8 @@ describe('PromptsTab', () => {
     mockGetPromptsSearchQuery.mockReturnValue({
       data: defaultPromptsData,
       isLoading: false,
+      isFetching: false,
+      status: 'fulfilled',
     });
   });
 
@@ -354,9 +392,9 @@ describe('PromptsTab', () => {
     it('renders copy buttons for all sections', () => {
       render(<PromptsTab />);
 
-      // 4 system prompts + 2 suggested prompts = 6 copy buttons
+      // 4 system prompts = 4 copy buttons (suggested prompts no longer have Copy)
       const copyButtons = screen.getAllByText('Copy');
-      expect(copyButtons).toHaveLength(6);
+      expect(copyButtons).toHaveLength(4);
     });
 
     it('renders Add New Prompt button', () => {
@@ -1054,6 +1092,527 @@ describe('PromptsTab', () => {
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
       });
+    });
+  });
+
+  // ==========================================================================
+  // RUN SUGGESTED PROMPT
+  // ==========================================================================
+
+  describe('Run Suggested Prompt', () => {
+    it('renders Run buttons for suggested prompts', () => {
+      render(<PromptsTab />);
+
+      const runButtons = screen.getAllByText('Run');
+      // 2 suggested prompts = 2 Run buttons
+      expect(runButtons).toHaveLength(2);
+    });
+
+    it('renders Run button with aria-label', () => {
+      render(<PromptsTab />);
+
+      expect(
+        screen.getByLabelText('Run suggested prompt Suggested prompt 1'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Run suggested prompt Suggested prompt 2'),
+      ).toBeInTheDocument();
+    });
+
+    it('dispatches setTextareaInput with prompt text when Run is clicked', async () => {
+      render(<PromptsTab />);
+
+      const runButtons = screen.getAllByText('Run');
+      fireEvent.click(runButtons[0]);
+
+      await waitFor(() => {
+        expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(mockSetTextareaInput).toHaveBeenCalledWith('Suggested prompt 1');
+      });
+      expect(mockDispatch).toHaveBeenCalled();
+    });
+
+    it('closes the edit mentor modal after running a prompt', async () => {
+      render(<PromptsTab />);
+
+      const runButtons = screen.getAllByText('Run');
+      fireEvent.click(runButtons[1]);
+
+      await waitFor(() => {
+        expect(mockCloseEditMentorModal).toHaveBeenCalled();
+      });
+      expect(mockSetTextareaInput).toHaveBeenCalledWith('Suggested prompt 2');
+    });
+
+    it('does not run when prompt text is empty', async () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              id: 1,
+              prompt: '',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      const runButtons = screen.getAllByText('Run');
+      fireEvent.click(runButtons[0]);
+
+      await waitFor(() => {
+        expect(mockSetTextareaInput).toHaveBeenCalledWith('');
+      });
+    });
+
+    it('does not render Run buttons for system prompts', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: { results: [] },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('Run')).not.toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // PAGINATION
+  // ==========================================================================
+
+  describe('Pagination', () => {
+    it('does not render See More button when there are no more prompts', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 2,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+            {
+              id: 2,
+              prompt: 'Prompt 2',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('See More')).not.toBeInTheDocument();
+    });
+
+    it('renders See More button when there are more prompts to load', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 12,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+            {
+              id: 2,
+              prompt: 'Prompt 2',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.getByText('See More')).toBeInTheDocument();
+    });
+
+    it('queries with the correct page size and offset', () => {
+      render(<PromptsTab />);
+
+      expect(mockGetPromptsSearchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 6,
+          offset: 0,
+        }),
+        expect.anything(),
+      );
+    });
+
+    it('clicking See More triggers a refetch with incremented offset', async () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 12,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      const seeMoreButton = screen.getByText('See More');
+      fireEvent.click(seeMoreButton);
+
+      await waitFor(() => {
+        // After clicking, the query should be re-called with offset 6
+        expect(mockGetPromptsSearchQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            limit: 6,
+            offset: 6,
+          }),
+          expect.anything(),
+        );
+      });
+    });
+
+    it('shows Loading... text on See More button when fetching', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 12,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: true,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
+    });
+
+    it('disables See More button while fetching', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 12,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: true,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      const button = screen.getByText('Loading...');
+      expect(button).toBeDisabled();
+    });
+
+    it('does not load more when already fetching', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 12,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: true,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      const initialCallCount = mockGetPromptsSearchQuery.mock.calls.length;
+
+      const button = screen.getByText('Loading...');
+      fireEvent.click(button);
+
+      // No new calls should be made because the button is disabled
+      expect(mockGetPromptsSearchQuery.mock.calls.length).toBe(
+        initialCallCount,
+      );
+    });
+
+    it('renders all accumulated prompts after pagination', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 6,
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt A',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+            {
+              id: 2,
+              prompt: 'Prompt B',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+            {
+              id: 3,
+              prompt: 'Prompt C',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.getByText('Prompt A')).toBeInTheDocument();
+      expect(screen.getByText('Prompt B')).toBeInTheDocument();
+      expect(screen.getByText('Prompt C')).toBeInTheDocument();
+    });
+
+    it('handles undefined count gracefully', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              id: 1,
+              prompt: 'Prompt 1',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'fulfilled',
+      });
+
+      render(<PromptsTab />);
+
+      // count defaults to 0, so no See More button
+      expect(screen.queryByText('See More')).not.toBeInTheDocument();
+    });
+
+    it('does not accumulate prompts when status is not fulfilled', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          count: 2,
+          results: [
+            {
+              id: 1,
+              prompt: 'Pending prompt',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+        isFetching: false,
+        status: 'pending',
+      });
+
+      render(<PromptsTab />);
+
+      // Effect won't run, so no prompts are accumulated
+      expect(screen.queryByText('Pending prompt')).not.toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // DELETE SUGGESTED PROMPT
+  // ==========================================================================
+
+  describe('Delete Suggested Prompt', () => {
+    it('renders delete buttons for suggested prompts', () => {
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      // 2 suggested prompts = 2 delete buttons
+      expect(deleteButtons).toHaveLength(2);
+    });
+
+    it('renders delete button with aria-label', () => {
+      render(<PromptsTab />);
+
+      expect(
+        screen.getByLabelText('Delete suggested prompt Suggested prompt 1'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Delete suggested prompt Suggested prompt 2'),
+      ).toBeInTheDocument();
+    });
+
+    it('calls deletePromptMutation when delete is clicked', async () => {
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(mockDeletePrompt).toHaveBeenCalledWith({
+          id: 1,
+          org: 'test-tenant',
+        });
+      });
+    });
+
+    it('shows success toast after successful deletion', async () => {
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith(
+          'Prompt deleted successfully',
+        );
+      });
+    });
+
+    it('shows error toast when deletion fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockDeletePrompt.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('Delete failed')),
+      });
+
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Failed to delete prompt');
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('does not call deletePromptMutation when prompt has no id', async () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              id: undefined,
+              prompt: 'No-id prompt',
+              category: { name: 'Cat' },
+              prompt_visibility: 'public',
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      fireEvent.click(deleteButtons[0]);
+
+      expect(mockDeletePrompt).not.toHaveBeenCalled();
+    });
+
+    it('does not render delete buttons for system prompts', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: { results: [] },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('Delete')).not.toBeInTheDocument();
+    });
+
+    it('disables edit and copy buttons while deleting', async () => {
+      // Make delete hang so we can check disabled state
+      let resolveDelete: (value: unknown) => void;
+      const deletePromise = new Promise((resolve) => {
+        resolveDelete = resolve;
+      });
+      mockDeletePrompt.mockReturnValue({
+        unwrap: vi.fn().mockReturnValue(deletePromise),
+      });
+
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      fireEvent.click(deleteButtons[0]);
+
+      // The edit button for the first suggested prompt should be disabled
+      await waitFor(() => {
+        const editTextNodes = screen.getAllByText('Edit');
+        // editTextNodes[4] is the first suggested prompt's edit text;
+        // walk up to the enclosing <button>
+        const editButton = editTextNodes[4].closest('button');
+        expect(editButton).toBeDisabled();
+      });
+
+      // Resolve the delete to clean up
+      resolveDelete!({});
+    });
+
+    it('handles delete aria-label with null prompt text', () => {
+      mockGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              id: 1,
+              prompt: null,
+              category: null,
+              prompt_visibility: null,
+            },
+          ],
+        },
+        isLoading: false,
+      });
+
+      render(<PromptsTab />);
+
+      const deleteButtons = screen.getAllByText('Delete');
+      expect(deleteButtons).toHaveLength(1);
     });
   });
 
