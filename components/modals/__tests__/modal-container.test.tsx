@@ -158,21 +158,6 @@ vi.mock('@/components/modals/shortcuts-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal" role="dialog" aria-label="My Mentors">
-        <button onClick={onClose}>Close My Mentors</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@/components/modals/no-mentor-selected-modal', () => ({
   NoMentorSelectedModal: ({
     isOpen,
@@ -490,9 +475,9 @@ describe('ModalContainer', () => {
     });
   });
 
-  describe('MyMentorsModal', () => {
-    it('renders when my_mentors modal is in the stack', () => {
-      const modalStack: ModalInfo[] = [{ name: MODALS.MY_MENTORS.name }];
+  describe('MyMentorsModal removal', () => {
+    it('does not render anything for a stale my_mentors modal entry', () => {
+      const modalStack: ModalInfo[] = [{ name: 'my_mentors' }];
       mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
       const store = createTestStore({ modalStack });
 
@@ -502,7 +487,7 @@ describe('ModalContainer', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
     });
   });
 
