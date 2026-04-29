@@ -1988,6 +1988,16 @@
           "id": "al-07",
           "description": "Non-admin user does not see Audit tab in the mentor dropdown",
           "status": "covered"
+        },
+        {
+          "id": "al-08",
+          "description": "Non-admin user does not see Audit tab in the Analytics tab bar (view_audit_logs RBAC)",
+          "status": "covered"
+        },
+        {
+          "id": "al-09",
+          "description": "Non-admin user visiting audit page directly does not see audit content (view_audit_logs RBAC)",
+          "status": "covered"
         }
       ]
     },
