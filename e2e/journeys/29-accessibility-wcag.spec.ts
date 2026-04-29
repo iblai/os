@@ -56,17 +56,6 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     ).toBeVisible({ timeout: 60_000 });
     await expectNoViolations(nonadminPage);
   });
-
-  // fixme: real accessibility violations in the app — not test bugs
-  test.fixme(
-    'non-admin goes to My Mentors dialog and it meets accessibility guidelines',
-    async ({ nonadminPage, nonadminNavbarPage }) => {
-      await nonadminNavbarPage.openMyMentors();
-      await nonadminPage.waitForTimeout(1_000);
-      await expectNoViolations(nonadminPage, '[role="dialog"]');
-      await nonadminPage.keyboard.press('Escape');
-    },
-  );
 });
 
 test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {

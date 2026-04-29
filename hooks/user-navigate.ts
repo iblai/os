@@ -415,10 +415,6 @@ export function useNavigate() {
     openSettingsModal: (tab?: string) => openModal(MODALS.SETTINGS.name, tab),
     closeSettingsModal: closeModal,
 
-    openMyMentorsModal: (tab?: string) =>
-      openModal(MODALS.MY_MENTORS.name, tab),
-    closeMyMentorsModal: closeModal,
-
     openLLMProvidersModal: (tab?: string) =>
       openModal(MODALS.LLM_PROVIDERS.name, tab),
     closeLLMProvidersModal: closeModal,
@@ -453,7 +449,6 @@ export function useNavigate() {
     showCreateMentorModal: isModalOpen(MODALS.CREATE_MENTOR.name),
     showInviteUserModal: isModalOpen(MODALS.INVITE_USER.name),
     showSettingsModal: isModalOpen(MODALS.SETTINGS.name),
-    showMyMentorsModal: isModalOpen(MODALS.MY_MENTORS.name),
     showLLMProvidersModal: isModalOpen(MODALS.LLM_PROVIDERS.name),
     showEditMentorModal:
       isModalOpen(MODALS.EDIT_MENTOR.name) &&
@@ -472,7 +467,6 @@ export function useNavigate() {
     getCreateMentorTab: () => getModalTab(MODALS.CREATE_MENTOR.name),
     getInviteUserTab: () => getModalTab(MODALS.INVITE_USER.name),
     getSettingsTab: () => getModalTab(MODALS.SETTINGS.name),
-    getMyMentorsTab: () => getModalTab(MODALS.MY_MENTORS.name),
     getLLMProvidersTab: () => getModalTab(MODALS.LLM_PROVIDERS.name),
     getEditMentorTab: () =>
       getModalTab(MODALS.EDIT_MENTOR.name) || MODALS.EDIT_MENTOR.tabs.settings,
