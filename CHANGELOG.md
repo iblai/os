@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.57.1](https://github.com/iblai/mentorai/compare/v0.57.0...v0.57.1) (2026-04-29)
+
+### Bug Fixes
+
+* replace non-existent chatActions.setMetadata with setIframeContext and add react-paginate dep ([349387e](https://github.com/iblai/mentorai/commit/349387ec4945094f56cb2e018e93e2ccb0c9d053))
+
 ## [0.57.0](https://github.com/iblai/mentorai/compare/v0.56.6...v0.57.0) (2026-04-29)
 
 ### Features
