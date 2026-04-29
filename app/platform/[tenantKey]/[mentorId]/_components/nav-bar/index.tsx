@@ -31,7 +31,10 @@ import {
 } from '@/components/ui/tooltip';
 import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
-import { NotificationDropdown } from '@iblai/iblai-js/web-containers';
+import {
+  CreditBalance,
+  NotificationDropdown,
+} from '@iblai/iblai-js/web-containers';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,11 +45,19 @@ import {
   useEditMentorMutation,
 } from '@iblai/iblai-js/data-layer';
 import {
+  useCurrentTenant,
   useIsAdmin,
   useIsVisiting,
   useUserIsStudent,
   useUsername,
+  useUserTenants,
 } from '@/hooks/use-user';
+import { getUserEmail, getUserName } from '@/features/utils';
+import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
+import {
+  useSubscriptionHandlerV2,
+  SUBSCRIPTION_V2_TRIGGERS,
+} from '@iblai/iblai-js/web-utils';
 import { MODALS, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
@@ -252,6 +263,35 @@ export function NavBar() {
       });
     }
   }, [isUserProfileOpen, foundryStatus, foundryStatusLoaded, isUsingFoundry]);
+
+  const { currentTenant } = useCurrentTenant();
+  const { userTenants = [] } = useUserTenants();
+  const topBannerOptions = useAppSelector(
+    (state) => state.topBanner.topBannerOptions,
+  );
+
+  const subscriptionFlow = new MentorSubscriptionFlowV2({
+    platformName: config.iblPlatform(),
+    currentTenantKey: currentTenant?.key || '',
+    username: getUserName(),
+    currentTenantOrg: currentTenant?.org || '',
+    userTenants,
+    isAdmin: currentTenant?.is_admin || false,
+    mainTenantKey: config.mainTenantKey(),
+    userEmail: getUserEmail(),
+    dispatch,
+    topBannerOptions,
+    mentorUrl: config.mentorUrl(),
+  });
+  const { bannerButtonTriggerCallback } =
+    useSubscriptionHandlerV2(subscriptionFlow);
+
+  const handleCreditBalanceUpgradeClick = React.useCallback(() => {
+    const triggerPricingModal = bannerButtonTriggerCallback(
+      SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
+    );
+    triggerPricingModal();
+  }, [bannerButtonTriggerCallback]);
 
   const [forkMentor, { isLoading: isForkingMentor }] = useForkMentorMutation();
 
@@ -638,6 +678,17 @@ export function NavBar() {
               </span>
             </div>
           )}
+          {!embedMode &&
+            visibleToLoggedInUsersOnly &&
+            currentTenant?.show_paywall &&
+            isLoggedIn() && (
+              <CreditBalance
+                tenant={tenantKey}
+                platformName={config.iblPlatform() || 'mentor'}
+                onUpgradeClick={handleCreditBalanceUpgradeClick}
+                enabled={true}
+              />
+            )}
           {!embedMode && visibleToLoggedInUsersOnly && (
             <NotificationDropdown
               org={tenantKey}
