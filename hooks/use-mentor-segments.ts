@@ -402,8 +402,8 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-  // @ts-expect-error is_claw_enabled is not yet in the MentorSettingsPublic type
-  const isClawEnabled: boolean = mentorSettings?.is_claw_enabled ?? false;
+  // @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type
+  const isClawEnabled: boolean = mentorSettings?.enable_claw ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.

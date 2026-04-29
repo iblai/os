@@ -120,10 +120,10 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 15 mentor segments unfiltered', () => {
+  it('returns the canonical 16 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(14);
+    expect(MENTOR_SEGMENTS).toHaveLength(16);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -141,13 +141,13 @@ describe('useMentorSegments', () => {
   });
 
   describe('isClawEnabled gating', () => {
-    it('hides Sandbox and Skills when is_claw_enabled is false', () => {
+    it('hides Sandbox and Skills when enable_claw is false', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 42,
         permissions: { field: {} },
-        is_claw_enabled: false,
+        enable_claw: false,
       });
 
       const { result } = renderHook(() => useMentorSegments());
@@ -157,7 +157,7 @@ describe('useMentorSegments', () => {
       expect(labels).not.toContain('Skills');
     });
 
-    it('hides Sandbox and Skills when is_claw_enabled is missing', () => {
+    it('hides Sandbox and Skills when enable_claw is missing', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -172,13 +172,13 @@ describe('useMentorSegments', () => {
       expect(labels).not.toContain('Skills');
     });
 
-    it('shows Sandbox and Skills when is_claw_enabled is true', () => {
+    it('shows Sandbox and Skills when enable_claw is true', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 42,
         permissions: { field: {} },
-        is_claw_enabled: true,
+        enable_claw: true,
       });
 
       const { result } = renderHook(() => useMentorSegments());
@@ -194,7 +194,7 @@ describe('useMentorSegments', () => {
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
         mentor_id: 42,
         permissions: { field: {} },
-        is_claw_enabled: true,
+        enable_claw: true,
       });
       mockIsUserTypeAllowed.mockImplementation(
         (s) =>
@@ -215,7 +215,7 @@ describe('useMentorSegments', () => {
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 42,
         permissions: { field: {} },
-        is_claw_enabled: true,
+        enable_claw: true,
       });
 
       const { result } = renderHook(() => useMentorSegments());
@@ -229,7 +229,7 @@ describe('useMentorSegments', () => {
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
         mentor_id: 42,
         permissions: { field: {} },
-        is_claw_enabled: false,
+        enable_claw: false,
       });
       const { result: result2 } = renderHook(() => useMentorSegments());
       expect(result2.current.isSegmentVisible(sandboxSegment)).toBe(false);

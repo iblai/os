@@ -2410,9 +2410,9 @@ describe('PromptsTab', () => {
   // ==========================================================================
 
   describe('Agent Configuration (CLAW)', () => {
-    it('does not render the Agent Configuration section when is_claw_enabled is false', () => {
+    it('does not render the Agent Configuration section when enable_claw is false', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: false },
+        data: { ...defaultMentorSettings, enable_claw: false },
         isLoading: false,
       });
 
@@ -2424,7 +2424,7 @@ describe('PromptsTab', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('does not render the Agent Configuration section when is_claw_enabled is missing', () => {
+    it('does not render the Agent Configuration section when enable_claw is missing', () => {
       render(<PromptsTab />);
 
       expect(screen.queryByText('Agent Configuration')).not.toBeInTheDocument();
@@ -2433,9 +2433,9 @@ describe('PromptsTab', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('renders the Agent Configuration section when is_claw_enabled is true', () => {
+    it('renders the Agent Configuration section when enable_claw is true', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
 
@@ -2447,7 +2447,7 @@ describe('PromptsTab', () => {
 
     it('passes platformKey and mentorUniqueId to AgentConfigPrompts', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
 
@@ -2462,7 +2462,7 @@ describe('PromptsTab', () => {
     it('uses getMentorId() result as mentorUniqueId when provided', () => {
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
 
@@ -2480,7 +2480,7 @@ describe('PromptsTab', () => {
         mentorId: 'test-mentor',
       });
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
 
@@ -2498,7 +2498,7 @@ describe('PromptsTab', () => {
       });
       mockGetMentorId.mockReturnValue(null);
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_claw_enabled: true },
+        data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
 

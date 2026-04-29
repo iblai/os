@@ -1,5 +1,5 @@
 /**
- * Journey 40: CLAW Advanced Sandbox
+ * Journey 43: CLAW Advanced Sandbox
  *
  * Covers the full lifecycle of the "Advanced Sandbox" feature (CLAW) in
  * the Edit Mentor modal:
@@ -8,14 +8,17 @@
  *   Tab visibility — Sandbox tab (after Settings) and Skills tab (after Prompts)
  *   Prompts tab   — "Agent Configuration" section
  *
- * The toggle is disabled when no claw mentor config exists for the mentor.
- * When enabled and saved, the Sandbox and Skills tabs appear and the
- * Agent Configuration section shows in Prompts. All three disappear again
- * after toggling OFF and saving.
+ * The Advanced Sandbox toggle is "admin intent" — it maps directly to
+ * `enable_claw` on the mentor settings PUT. The toggle is always enabled for
+ * admins (no dependency on a wired ClawMentorConfig).
  *
- * Because the tabs are gated on the persisted `is_claw_enabled` value from
- * the mentor-settings API, they must NOT appear while the toggle is changed
- * in-form but before Save is clicked.
+ * When the toggle is ON and saved, the Sandbox tab and Skills tab appear, and
+ * the "Agent Configuration" section shows in Prompts. All three disappear
+ * again after toggling OFF and saving.
+ *
+ * Because the tabs are gated on the persisted `enable_claw` value from
+ * mentor-settings, they must NOT appear while the toggle is changed in-form
+ * but before Save is clicked.
  *
  * Non-admin users must not see the Sandbox or Skills tabs even when a mentor
  * has claw enabled (those segments are ADMIN-only in use-mentor-segments.ts).
@@ -62,13 +65,12 @@ async function expectTabHidden(
   name: string,
   timeout = 10_000,
 ): Promise<void> {
-  // Tab may not exist at all (not just hidden), so use `count` assertion.
   await expect(getTab(dialog, name)).toHaveCount(0, { timeout });
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-test.describe('Journey 40: CLAW Advanced Sandbox', () => {
+test.describe('Journey 43: CLAW Advanced Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -76,7 +78,7 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
       test.skip(true, 'CLAW Advanced Sandbox requires admin access');
   });
 
-  // ── TC01: Toggle visible and reflects disabled state when no claw config ──
+  // ── TC01: Toggle is present in Settings tab ───────────────────────────────
 
   test('admin opens Settings tab and Advanced Sandbox toggle is present', async ({
     page,
@@ -90,40 +92,18 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
     });
   });
 
-  // ── TC02: Disabled toggle when no claw mentor config exists ───────────────
+  // ── TC02: Toggle is always interactable for admins (intent-only) ──────────
 
-  test('admin opens Settings tab and Advanced Sandbox toggle is disabled when no claw config exists', async ({
+  test('Advanced Sandbox toggle is interactable regardless of claw config state', async ({
     page,
     editMentorPage,
   }) => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
-    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
-      timeout: 10_000,
-    });
-
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    // If a claw config exists this test gracefully passes — the important
-    // check is that the toggle is visible regardless.
-    if (isDisabled) {
-      // Confirm truly disabled: clicking should not flip the aria-checked
-      const stateBefore =
-        await editMentorPage.settings.advancedSandboxToggle.getAttribute(
-          'aria-checked',
-        );
-      await editMentorPage.settings.advancedSandboxToggle
-        .click({ force: true })
-        .catch(() => undefined);
-      const stateAfter =
-        await editMentorPage.settings.advancedSandboxToggle.getAttribute(
-          'aria-checked',
-        );
-      expect(stateAfter).toBe(stateBefore);
-    }
-
-    await editMentorPage.close();
+    const toggle = editMentorPage.settings.advancedSandboxToggle;
+    await expect(toggle).toBeVisible({ timeout: 10_000 });
+    await expect(toggle).toBeEnabled({ timeout: 5_000 });
   });
 
   // ── TC03: Pre-save state — toggled but not yet saved ─────────────────────
@@ -138,18 +118,7 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
     const toggle = editMentorPage.settings.advancedSandboxToggle;
     await expect(toggle).toBeVisible({ timeout: 10_000 });
 
-    // Skip if toggle is disabled — no claw config means we cannot test this
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    if (isDisabled) {
-      test.skip(
-        true,
-        'No claw mentor config — toggle is disabled, cannot test pre-save state',
-      );
-      return;
-    }
-
-    // Snapshot current state so we can restore it
+    // Snapshot current state so we can leave the form unchanged
     const wasClaw = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
     // Flip the toggle (don't click Save)
@@ -178,19 +147,9 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
-    const toggle = editMentorPage.settings.advancedSandboxToggle;
-    await expect(toggle).toBeVisible({ timeout: 10_000 });
-
-    // Skip when no claw config (toggle is disabled)
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    if (isDisabled) {
-      test.skip(
-        true,
-        'No claw mentor config — cannot enable Advanced Sandbox in this environment',
-      );
-      return;
-    }
+    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
+      timeout: 10_000,
+    });
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
@@ -246,18 +205,9 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
-    const toggle = editMentorPage.settings.advancedSandboxToggle;
-    await expect(toggle).toBeVisible({ timeout: 10_000 });
-
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    if (isDisabled) {
-      test.skip(
-        true,
-        'No claw mentor config — cannot test disable flow in this environment',
-      );
-      return;
-    }
+    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
+      timeout: 10_000,
+    });
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
@@ -281,21 +231,10 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
       await editMentorPage.navigateToTab('Prompts');
       await waitForPageReady(page);
 
-      const agentConfigSection = editMentorPage.dialog
-        .getByRole('heading', { name: /agent configuration/i })
-        .first();
-
-      let visible = false;
-      try {
-        await agentConfigSection.waitFor({
-          state: 'visible',
-          timeout: 3_000,
-        });
-        visible = true;
-      } catch {
-        visible = false;
-      }
-      expect(visible).toBe(false);
+      const agentConfigHeading = editMentorPage.dialog.getByRole('heading', {
+        name: /agent configuration/i,
+      });
+      await expect(agentConfigHeading).toHaveCount(0, { timeout: 5_000 });
     } finally {
       // Restore original enabled state if needed
       if (wasEnabled) {
@@ -316,16 +255,6 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    if (isDisabled) {
-      test.skip(
-        true,
-        'No claw mentor config — Sandbox tab not available in this environment',
-      );
-      return;
-    }
-
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
     try {
@@ -338,21 +267,9 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
       await waitForPageReady(page);
 
       // The SandboxConfig component from @iblai/web-containers is rendered
-      // inside a scrollable div — check that the tab panel is visible.
-      const sandboxPanel = editMentorPage.dialog
-        .getByRole('tabpanel')
-        .filter({ hasText: /sandbox|connection|deploy/i });
-      const panelVisible = await sandboxPanel
-        .first()
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-
-      // At minimum the tabpanel itself must exist
-      const anyPanel = editMentorPage.dialog.getByRole('tabpanel').first();
-      await expect(anyPanel).toBeVisible({ timeout: 10_000 });
-
-      // Suppress unused warning — panelVisible gives us extra signal in traces
-      void panelVisible;
+      // inside the tabpanel. Verify the panel is visible.
+      const sandboxPanel = editMentorPage.dialog.getByRole('tabpanel').first();
+      await expect(sandboxPanel).toBeVisible({ timeout: 10_000 });
     } finally {
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
@@ -371,16 +288,6 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
   }) => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
-
-    const isDisabled =
-      await editMentorPage.settings.isAdvancedSandboxDisabled();
-    if (isDisabled) {
-      test.skip(
-        true,
-        'No claw mentor config — Skills tab not available in this environment',
-      );
-      return;
-    }
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
@@ -410,7 +317,7 @@ test.describe('Journey 40: CLAW Advanced Sandbox', () => {
 
 // ── Non-admin: Sandbox and Skills tabs invisible even when claw is enabled ───
 
-test.describe('Journey 40: CLAW Advanced Sandbox — Non-Admin', () => {
+test.describe('Journey 43: CLAW Advanced Sandbox — Non-Admin', () => {
   test('non-admin does not see Sandbox or Skills tabs in the Edit Mentor modal', async ({
     nonadminPage,
     nonadminEditMentorPage,

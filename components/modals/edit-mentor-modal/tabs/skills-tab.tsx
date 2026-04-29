@@ -2,27 +2,16 @@
 
 import { useParams } from 'next/navigation';
 import { AgentSkills } from '@iblai/web-containers';
-import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export function SkillsTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
-  const username = useUsername();
   const activeMentorId = getMentorId() ?? mentorId;
 
-  const { data: mentorSettings } = useGetMentorSettingsQuery(
-    // @ts-expect-error userId is not part of the useGetMentorSettingsQuery query definition
-    { mentor: activeMentorId, org: tenantKey, userId: username ?? '' },
-    { skip: !tenantKey || !activeMentorId || !username },
-  );
-
-  const mentorDbId = mentorSettings?.mentor_id;
-
-  if (!tenantKey || !mentorDbId || !activeMentorId) return null;
+  if (!tenantKey || !activeMentorId) return null;
 
   return (
     <>
@@ -38,11 +27,7 @@ export function SkillsTab() {
         className="flex-1 space-y-4 p-3 lg:p-4"
         style={{ overflowY: 'auto', overflowX: 'hidden' }}
       >
-        <AgentSkills
-          platformKey={tenantKey}
-          mentorId={mentorDbId}
-          mentorUniqueId={activeMentorId}
-        />
+        <AgentSkills platformKey={tenantKey} mentorUniqueId={activeMentorId} />
       </div>
     </>
   );

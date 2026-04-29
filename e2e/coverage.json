@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-27",
+  "lastUpdated": "2026-04-29",
   "summary": {
-    "totalCheckpoints": 339,
-    "coveredCheckpoints": 339,
+    "totalCheckpoints": 347,
+    "coveredCheckpoints": 347,
     "percent": 100,
-    "totalJourneys": 42
+    "totalJourneys": 43
   },
   "journeys": [
     {
@@ -1947,7 +1947,7 @@
     {
       "id": "claw-advanced-sandbox",
       "name": "CLAW Advanced Sandbox",
-      "spec": "40-claw-advanced-sandbox.spec.ts",
+      "spec": "43-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
@@ -1963,7 +1963,7 @@
         },
         {
           "id": "claw-02",
-          "description": "Advanced Sandbox toggle is disabled when no claw mentor config exists",
+          "description": "Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
           "status": "covered"
         },
         {
@@ -1993,7 +1993,8 @@
         },
         {
           "id": "claw-08",
-          "description": "Admin navigates to Sandbox tab and the sandbox config container renders"
+          "description": "Admin navigates to Sandbox tab and the sandbox config container renders",
+          "status": "covered"
         }
       ]
     },

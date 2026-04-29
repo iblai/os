@@ -701,8 +701,8 @@ export function PromptsTab() {
             )}
           </WithFormPermissions>
 
-          {/* @ts-expect-error is_claw_enabled is not yet in the MentorSettingsPublic type */}
-          {mentorSettings?.is_claw_enabled && tenantKey && activeMentorId && (
+          {/* @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type */}
+          {mentorSettings?.enable_claw && tenantKey && activeMentorId && (
             <div className="mt-8">
               <div className="mb-4 flex items-center gap-2">
                 <h3 className="text-sm font-medium text-gray-900">

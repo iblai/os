@@ -207,16 +207,12 @@ export class SettingsTab {
   }
 
   /**
-   * Returns true when the Advanced Sandbox toggle is in a disabled state
-   * (no claw mentor config exists).
-   */
-  async isAdvancedSandboxDisabled(): Promise<boolean> {
-    return this.advancedSandboxToggle.isDisabled();
-  }
-
-  /**
    * Sets the Advanced Sandbox toggle to the desired state and clicks Save.
    * Does nothing if the toggle is already in the desired state.
+   *
+   * Waits for the success toast to confirm the save completed before returning,
+   * so callers can immediately assert on the downstream UI changes (Sandbox tab
+   * appearing, Agent Configuration showing, etc.) without race conditions.
    */
   async setAdvancedSandbox(desired: boolean): Promise<void> {
     await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
@@ -232,8 +228,12 @@ export class SettingsTab {
     }
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
-    // Brief wait for the mutation + RTK cache invalidation to settle
-    await this.page.waitForTimeout(2_000);
+    // Wait for the success toast that the mentor settings PUT completed and
+    // RTK cache has been invalidated. Any role="status" toast within the
+    // dialog tree will satisfy this; we match on the visible text.
+    await expect(
+      this.page.getByText(/mentor updated successfully/i).first(),
+    ).toBeVisible({ timeout: 10_000 });
   }
 
   async deleteMentor(): Promise<void> {

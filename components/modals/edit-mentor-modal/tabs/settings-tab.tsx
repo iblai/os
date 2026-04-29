@@ -27,8 +27,6 @@ import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
-  useGetClawMentorConfigsQuery,
-  useUpdateClawMentorConfigMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 
@@ -87,7 +85,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
-  is_claw_enabled: boolean;
+  enable_claw: boolean;
 }
 
 export function SettingsTab() {
@@ -117,13 +115,6 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
-
-  const { data: clawMentorConfigs } = useGetClawMentorConfigsQuery(
-    { org: tenantKey!, mentor: activeMentorId! },
-    { skip: !tenantKey || !activeMentorId },
-  );
-  const clawMentorConfig = clawMentorConfigs?.[0] ?? null;
-  const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -181,8 +172,8 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
-      // @ts-ignore - is_claw_enabled exists in API response but not in type
-      is_claw_enabled: mentor?.is_claw_enabled ?? false,
+      // @ts-ignore - enable_claw exists in API response but not in type
+      enable_claw: mentor?.enable_claw ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -238,25 +229,11 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
-      if (value.is_claw_enabled !== undefined) {
-        values.is_claw_enabled = value.is_claw_enabled;
+      if (value.enable_claw !== undefined) {
+        values.enable_claw = value.enable_claw;
       }
 
-      // @ts-ignore - is_claw_enabled exists in API response but not in type
-      const currentIsClawEnabled: boolean = mentor?.is_claw_enabled ?? false;
-      const clawEnabledChanged =
-        value.is_claw_enabled !== undefined &&
-        value.is_claw_enabled !== currentIsClawEnabled;
-
       try {
-        if (clawEnabledChanged && clawMentorConfig && tenantKey) {
-          await updateClawConfig({
-            org: tenantKey,
-            id: clawMentorConfig.id,
-            enabled: value.is_claw_enabled,
-          }).unwrap();
-        }
-
         await editMentor({
           mentor: activeMentorId,
           org: tenantKey,
@@ -833,7 +810,7 @@ export function SettingsTab() {
                 )}
               </form.Field>
 
-              <form.Field name="is_claw_enabled">
+              <form.Field name="enable_claw">
                 {(field) => (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -860,7 +837,7 @@ export function SettingsTab() {
                     <Switch
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
-                      disabled={isDisabled || !clawMentorConfig}
+                      disabled={isDisabled}
                       aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>

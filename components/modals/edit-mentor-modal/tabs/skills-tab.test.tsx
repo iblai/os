@@ -10,9 +10,7 @@ import { SkillsTab } from './skills-tab';
 
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
-const mockGetMentorSettingsQuery = vi.fn();
 const mockAgentSkills = vi.fn();
-let currentUsername: string | null = 'testuser';
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -24,15 +22,6 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => currentUsername,
-}));
-
-vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorSettingsQuery: (...args: unknown[]) =>
-    mockGetMentorSettingsQuery(...args),
-}));
-
 vi.mock('@iblai/web-containers', () => ({
   AgentSkills: (props: any) => {
     mockAgentSkills(props);
@@ -40,7 +29,6 @@ vi.mock('@iblai/web-containers', () => ({
       <div
         data-testid="agent-skills"
         data-platform-key={props.platformKey}
-        data-mentor-id={String(props.mentorId)}
         data-mentor-unique-id={props.mentorUniqueId}
       >
         AgentSkills
@@ -57,17 +45,12 @@ describe('SkillsTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    currentUsername = 'testuser';
 
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
       mentorId: 'test-mentor',
     });
     mockGetMentorId.mockReturnValue(null);
-    mockGetMentorSettingsQuery.mockReturnValue({
-      data: { mentor_id: 42 },
-      isLoading: false,
-    });
   });
 
   afterEach(() => {
@@ -84,47 +67,32 @@ describe('SkillsTab', () => {
       ).toBeInTheDocument();
     });
 
-    it('renders AgentSkills with platformKey, numeric mentorId, and mentorUniqueId', () => {
+    it('renders AgentSkills with platformKey and mentorUniqueId from url params', () => {
       render(<SkillsTab />);
 
       const agentSkills = screen.getByTestId('agent-skills');
       expect(agentSkills).toHaveAttribute('data-platform-key', 'test-tenant');
-      expect(agentSkills).toHaveAttribute('data-mentor-id', '42');
       expect(agentSkills).toHaveAttribute(
         'data-mentor-unique-id',
         'test-mentor',
       );
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
-        mentorId: 42,
         mentorUniqueId: 'test-mentor',
       });
     });
-
-    it('calls useGetMentorSettingsQuery with resolved mentor id, org, and username', () => {
-      render(<SkillsTab />);
-
-      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
-        {
-          mentor: 'test-mentor',
-          org: 'test-tenant',
-          userId: 'testuser',
-        },
-        expect.objectContaining({ skip: false }),
-      );
-    });
   });
 
-  describe('Active mentor id resolution for the settings query', () => {
-    it('uses getMentorId() when the navigate hook returns a value', () => {
+  describe('Active mentor id resolution', () => {
+    it('prefers getMentorId() from navigate hook when provided', () => {
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
 
       render(<SkillsTab />);
 
-      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ mentor: 'nav-mentor-xyz' }),
-        expect.anything(),
-      );
+      expect(mockAgentSkills).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'nav-mentor-xyz',
+      });
     });
 
     it('falls back to params.mentorId when getMentorId() returns null', () => {
@@ -132,10 +100,21 @@ describe('SkillsTab', () => {
 
       render(<SkillsTab />);
 
-      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ mentor: 'test-mentor' }),
-        expect.anything(),
-      );
+      expect(mockAgentSkills).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'test-mentor',
+      });
+    });
+
+    it('falls back to params.mentorId when getMentorId() returns undefined', () => {
+      mockGetMentorId.mockReturnValue(undefined);
+
+      render(<SkillsTab />);
+
+      expect(mockAgentSkills).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'test-mentor',
+      });
     });
   });
 
@@ -152,54 +131,33 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).not.toHaveBeenCalled();
     });
 
-    it('renders nothing when mentor settings response has no mentor_id', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { mentor_id: undefined },
-        isLoading: false,
-      });
-
-      const { container } = render(<SkillsTab />);
-
-      expect(container.firstChild).toBeNull();
-      expect(mockAgentSkills).not.toHaveBeenCalled();
-    });
-
-    it('renders nothing while mentor settings have not loaded yet', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-      });
-
-      const { container } = render(<SkillsTab />);
-
-      expect(container.firstChild).toBeNull();
-      expect(mockAgentSkills).not.toHaveBeenCalled();
-    });
-
-    it('skips the settings query when username is missing', () => {
-      currentUsername = null;
-
-      render(<SkillsTab />);
-
-      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ skip: true }),
-      );
-    });
-
-    it('skips the settings query when both params and nav return no mentor id', () => {
+    it('renders nothing when both mentorId and getMentorId() are missing', () => {
       mockUseParams.mockReturnValue({
         tenantKey: 'test-tenant',
         mentorId: undefined,
       });
       mockGetMentorId.mockReturnValue(null);
 
+      const { container } = render(<SkillsTab />);
+
+      expect(container.firstChild).toBeNull();
+      expect(mockAgentSkills).not.toHaveBeenCalled();
+    });
+
+    it('renders the tab when getMentorId() provides an id but params.mentorId is missing', () => {
+      mockUseParams.mockReturnValue({
+        tenantKey: 'test-tenant',
+        mentorId: undefined,
+      });
+      mockGetMentorId.mockReturnValue('nav-mentor-xyz');
+
       render(<SkillsTab />);
 
-      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ skip: true }),
-      );
+      expect(screen.getByText('Skills')).toBeInTheDocument();
+      expect(mockAgentSkills).toHaveBeenCalledWith({
+        platformKey: 'test-tenant',
+        mentorUniqueId: 'nav-mentor-xyz',
+      });
     });
   });
 });

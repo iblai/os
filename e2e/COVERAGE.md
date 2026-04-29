@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-27 | 339 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-29 | 347 checkpoints | 43 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -645,6 +645,21 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
 - [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+
+---
+
+## Journey 43: CLAW Advanced Sandbox (8 checkpoints) — `journeys/43-claw-advanced-sandbox.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
+- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
+- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
+- [x] Enabling Advanced Sandbox and saving causes Sandbox tab (after Settings) and Skills tab (after Prompts) to appear
+- [x] Enabling Advanced Sandbox and saving shows Agent Configuration section in Prompts tab
+- [x] Sandbox and Skills tabs are ordered correctly (Sandbox immediately after Settings, Skills immediately after Prompts)
+- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Admin navigates to Sandbox tab and the sandbox config container renders
 
 ---
 
