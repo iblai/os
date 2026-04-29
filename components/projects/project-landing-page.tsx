@@ -13,14 +13,6 @@ import { Message } from '@iblai/iblai-js/web-utils';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { isLoggedIn } from '@/lib/utils';
 
-const MyMentorsModal = dynamic(
-  () =>
-    import('@/components/modals/my-mentors-modal').then(
-      (mod) => mod.MyMentorsModal,
-    ),
-  { ssr: false },
-);
-
 const ProjectInstructionsModal = dynamic(
   () =>
     import('@/components/projects/project-instructions-modal').then(
@@ -106,7 +98,6 @@ export function ProjectLandingPage({
   googleDocumentIsEnabled,
   artifactsEnabled,
 }: Props) {
-  const [isMyMentorsModalOpen, setIsMyMentorsModalOpen] = useState(false);
   const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [isAddMentorModalOpen, setIsAddMentorModalOpen] = useState(false);
@@ -187,14 +178,6 @@ export function ProjectLandingPage({
           </div>
         </div>
       </div>
-
-      {isMyMentorsModalOpen && (
-        <MyMentorsModal
-          isOpen={isMyMentorsModalOpen}
-          onClose={() => setIsMyMentorsModalOpen(false)}
-          hideCreateButton={false}
-        />
-      )}
 
       {isInstructionsModalOpen && (
         <ProjectInstructionsModal

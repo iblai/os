@@ -243,7 +243,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     label: 'Audit',
     icon: ScrollText,
     userTypes: [UserType.ADMIN],
-    // rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_log`,
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },

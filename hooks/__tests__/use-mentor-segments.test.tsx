@@ -23,6 +23,7 @@ const mockIsAdmin = vi.fn();
 const mockUsername = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockIsUserTypeAllowed = vi.fn();
+const mockCheckRbacPermission = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({
@@ -80,7 +81,7 @@ vi.mock('@/hoc/utils', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
 // Mocked so EDIT_MENTOR_TAB_COMPONENTS can import SandboxTab/SkillsTab without
@@ -112,6 +113,7 @@ const setupDefaults = () => {
     mentor_id: 42,
     permissions: { field: {} },
   });
+  mockCheckRbacPermission.mockReturnValue(true);
 };
 
 describe('useMentorSegments', () => {
@@ -290,6 +292,40 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     const labels = result.current.filteredSegments.map((s) => s.label);
     expect(labels).not.toContain('Access');
+  });
+
+  describe('Audit segment RBAC gating', () => {
+    it('declares the view_audit_logs rbac resource on the Audit segment', () => {
+      const auditSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Audit');
+      expect(auditSegment).toBeDefined();
+      expect(auditSegment!.rbacResource).toBeDefined();
+      expect(auditSegment!.rbacResource!(42)).toBe(
+        '/mentors/42/#view_audit_logs',
+      );
+    });
+
+    it('hides the Audit segment when checkRbacPermission denies view_audit_logs', () => {
+      mockCheckRbacPermission.mockImplementation(
+        (_permissions: unknown, resource: string) =>
+          resource !== '/mentors/42/#view_audit_logs',
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Audit');
+      // Other segments still pass
+      expect(labels).toContain('Settings');
+    });
+
+    it('shows the Audit segment when checkRbacPermission grants view_audit_logs', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Audit');
+    });
   });
 
   describe('preferModalMentorId option', () => {

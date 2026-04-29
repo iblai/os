@@ -31,7 +31,6 @@ import {
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { ShortcutsModal } from './shortcuts-modal';
-import { MyMentorsModal } from './my-mentors-modal';
 import { NoMentorSelectedModal } from './no-mentor-selected-modal';
 
 export const ModalContainer = () => {
@@ -43,9 +42,7 @@ export const ModalContainer = () => {
     // closeCreateMentorModal,
     closeInviteUserModal,
     closeSettingsModal,
-    closeMyMentorsModal,
     closeNoMentorSelectedModal,
-    showMyMentorsModal,
   } = useNavigate();
 
   // Get state once with useSelector
@@ -129,14 +126,6 @@ export const ModalContainer = () => {
         <ShortcutsModal
           isOpen={showShortcutsModal}
           onClose={closeShortcutsModal}
-        />
-      )}
-
-      {/* My Mentors Modal */}
-      {showMyMentorsModal && (
-        <MyMentorsModal
-          isOpen={showMyMentorsModal}
-          onClose={closeMyMentorsModal}
         />
       )}
 
