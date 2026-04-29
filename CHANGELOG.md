@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.56.6](https://github.com/iblai/mentorai/compare/v0.56.5...v0.56.6) (2026-04-29)
+
+### Bug Fixes
+
+* **e2e:** fixes for memory tests ([a90f749](https://github.com/iblai/mentorai/commit/a90f7490ec5192c7fbd8f3186ba33f881a87a65c))
+* **mentor:** adding fix for the audit log RBAC ([c6d2389](https://github.com/iblai/mentorai/commit/c6d23896dcd1d6c6a81648518c8a7f3d423fad77))
+* **mentor:** adding memory fixes for the playwright and memory categories ([b7d1759](https://github.com/iblai/mentorai/commit/b7d1759f3ec7c8ee64461fc8d39514a7d58f9f5b))
+* **mentor:** analytics to use real username and memory validations in forms ([80b4ddd](https://github.com/iblai/mentorai/commit/80b4ddda94d64a9c57d0661105665b58ae2fa92a))
+
 ## [0.56.5](https://github.com/iblai/mentorai/compare/v0.56.4...v0.56.5) (2026-04-28)
 
 ### Bug Fixes
