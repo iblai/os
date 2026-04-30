@@ -1479,6 +1479,14 @@ describe('isLoggedIn function', () => {
   it('should return false when token does not exist', () => {
     expect(isLoggedIn()).toBe(false);
   });
+
+  it('should return false when localStorage.getItem is not a function', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {},
+      writable: true,
+    });
+    expect(isLoggedIn()).toBe(false);
+  });
 });
 
 describe('isHtml function', () => {
@@ -2020,6 +2028,22 @@ describe('htmlToMarkdown function', () => {
       const result = htmlToMarkdown(html);
       expect(result).toContain('$x > 0$');
       expect(result).toContain('positive');
+    });
+  });
+
+  describe('KaTeX annotation handling', () => {
+    it('should convert inline KaTeX annotation to inline math', () => {
+      const html =
+        '<p>Inline <span class="katex"><span class="katex-mathml"><math><semantics><annotation encoding="application/x-tex">x^2</annotation></semantics></math></span></span> here</p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$x^2$');
+    });
+
+    it('should convert display KaTeX annotation to display math', () => {
+      const html =
+        '<p><span class="katex-display"><math><semantics><annotation encoding="application/x-tex">\\frac{a}{b}</annotation></semantics></math></span></p>';
+      const result = htmlToMarkdown(html);
+      expect(result).toContain('$$\\frac{a}{b}$$');
     });
   });
 });
