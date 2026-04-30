@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.57.2](https://github.com/iblai/mentorai/compare/v0.57.1...v0.57.2) (2026-04-30)
+
+### CI
+
+* add PR E2E pipeline and make legacy SPA validations dispatch-only ([99d3454](https://github.com/iblai/mentorai/commit/99d3454cc80a60400769d7e52dcb29569c50837d))
+
 ## [0.57.1](https://github.com/iblai/mentorai/compare/v0.57.0...v0.57.1) (2026-04-29)
 
 ### Bug Fixes
