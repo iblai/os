@@ -160,7 +160,7 @@ export class SettingsTab {
     // the app fires a periodic analytics heartbeat (~every 30s) so networkidle
     // can hang indefinitely in steady state.
     await expect(
-      this.page.getByText(/Mentor updated successfully/i).first(),
+      this.page.getByText(/Agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
     // Small buffer to let the post-mutation refetch land and React re-render
     // with fresh mentor data before the caller closes/reopens the dialog.
@@ -195,7 +195,7 @@ export class SettingsTab {
     await expect(this.deleteButton).toBeVisible({ timeout: 10_000 });
     await this.deleteButton.click();
     const confirmDialog = this.page.getByRole('alertdialog', {
-      name: /delete mentor/i,
+      name: /delete agent/i,
     });
     await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
     const confirmButton = confirmDialog.getByRole('button', {
