@@ -369,7 +369,7 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -388,7 +388,7 @@ describe('SafetyTab', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -522,7 +522,7 @@ describe('SafetyTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -548,7 +548,7 @@ describe('SafetyTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();

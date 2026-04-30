@@ -21,8 +21,8 @@ export function AllMentorsSection({
 }: AllMentorsSectionProps) {
   const sectionTitle =
     activeTab === ''
-      ? 'All Mentors'
-      : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Mentors`;
+      ? 'All Agents'
+      : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Agents`;
 
   return (
     <section className="overflow-hidden" aria-labelledby="all-mentors-heading">
@@ -41,7 +41,7 @@ export function AllMentorsSection({
               data-testid="all-mentors-card-list"
               className="grid w-full grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 md:gap-4"
               aria-label={
-                activeTab === '' ? 'All mentors' : `${activeTab} mentors`
+                activeTab === '' ? 'All agents' : `${activeTab} agents`
               }
             >
               {mentors?.map((mentor) => (
@@ -59,8 +59,8 @@ export function AllMentorsSection({
                   disabled={isFetching}
                   aria-label={
                     isFetching
-                      ? `Loading more ${activeTab === '' ? 'mentors' : `${activeTab} mentors`}`
-                      : `Load more ${activeTab === '' ? 'mentors' : `${activeTab} mentors`}`
+                      ? `Loading more ${activeTab === '' ? 'agents' : `${activeTab} agents`}`
+                      : `Load more ${activeTab === '' ? 'agents' : `${activeTab} agents`}`
                   }
                 >
                   {isFetching ? (

@@ -55,7 +55,7 @@ export function ExploreMentors() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Explore Mentors</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Explore Agents</h2>
         <Button
           variant="ghost"
           className="h-auto min-h-6 p-0 text-blue-600 hover:text-blue-700"
@@ -79,7 +79,7 @@ export function ExploreMentors() {
                 navigateToMentor(mentor?.unique_id ?? '');
               }
             }}
-            aria-label={`Explore mentor: ${mentor.name}. ${
+            aria-label={`Explore agent: ${mentor.name}. ${
               // @ts-expect-error - description property may not exist on Mentor type
               mentor.description || 'No description available'
             }`}

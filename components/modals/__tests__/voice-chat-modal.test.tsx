@@ -24,7 +24,7 @@ describe('VoiceChatModal', () => {
       expect(dialog).toBeInTheDocument();
       expect(screen.getByText('Voice Chat')).toBeInTheDocument();
       expect(
-        screen.getByText('Real-time voice conversation with your mentor'),
+        screen.getByText('Real-time voice conversation with your agent'),
       ).toBeInTheDocument();
     });
   });

@@ -946,9 +946,7 @@ describe('Providers', () => {
       fn();
       expect(mockReplace).toHaveBeenCalled();
       vi.advanceTimersByTime(1100);
-      expect(toast.success).toHaveBeenCalledWith(
-        'Mentor switched successfully',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Agent switched successfully');
       vi.useRealTimers();
     });
 

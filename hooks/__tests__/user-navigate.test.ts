@@ -1286,20 +1286,20 @@ describe('user-navigate', () => {
       expect(newChatItem).toBeDefined();
     });
 
-    it('should have Mentors in content items', () => {
+    it('should have Agents in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       expect(mentorsItem).toBeDefined();
     });
 
-    it('should have New Mentor in content items', () => {
+    it('should have New Agent in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem).toBeDefined();
     });
@@ -1392,11 +1392,11 @@ describe('user-navigate', () => {
       );
     });
 
-    it('Mentors onClick - should navigate to explore', () => {
+    it('Agents onClick - should navigate to explore', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       mentorsItem?.onClick();
 
@@ -1405,7 +1405,7 @@ describe('user-navigate', () => {
       );
     });
 
-    it('New Mentor onClick - should execute with trial check', () => {
+    it('New Agent onClick - should execute with trial check', () => {
       const executeWithTrialCheck = vi.fn((fn) => fn());
       mocked.useShowFreeTrialDialog.mockReturnValue({
         executeWithTrialCheck,
@@ -1415,7 +1415,7 @@ describe('user-navigate', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       newMentorItem?.onClick();
 
@@ -1540,11 +1540,11 @@ describe('user-navigate', () => {
       expect(newChatItem?.userTypes).toContain('anonymous');
     });
 
-    it('should have correct user types for Mentors', () => {
+    it('should have correct user types for Agents', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       expect(mentorsItem?.userTypes).toContain('student');
       expect(mentorsItem?.userTypes).toContain('visiting');
@@ -1554,7 +1554,7 @@ describe('user-navigate', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem?.userTypes).toContain('admin');
       expect(newMentorItem?.isAnAdminAction).toBe(true);
@@ -1566,11 +1566,11 @@ describe('user-navigate', () => {
       expect(inviteUsersItem?.isAnAdminAction).toBe(true);
     });
 
-    it('should have rbacResource for New Mentor', () => {
+    it('should have rbacResource for New Agent', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem?.rbacResource).toBeDefined();
       expect(newMentorItem?.rbacResource?.(1)).toBe('/mentors/#create');

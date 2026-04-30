@@ -63,10 +63,10 @@ export function AddMentorToProjectModal({
         },
       }).unwrap();
 
-      toast.success('Mentor added to project');
+      toast.success('Agent added to project');
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to add mentor to project');
+      toast.error('Failed to add agent to project');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -83,16 +83,16 @@ export function AddMentorToProjectModal({
       <DialogContent className="flex max-h-[80vh] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-gray-200 px-6 py-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            Add Mentor to {projectName}
+            Add Agent to {projectName}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-6">
-          {/* Available Mentors Section */}
+          {/* Available Agents Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
-                Available Mentors
+                Available Agents
               </h3>
             </div>
 

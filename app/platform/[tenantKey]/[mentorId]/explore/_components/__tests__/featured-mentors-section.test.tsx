@@ -230,7 +230,7 @@ describe('FeaturedMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Load more featured mentors/i }),
+        screen.getByRole('button', { name: /Load more featured agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -243,7 +243,7 @@ describe('FeaturedMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.queryByRole('button', { name: /Load more featured mentors/i }),
+        screen.queryByRole('button', { name: /Load more featured agents/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -257,7 +257,7 @@ describe('FeaturedMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more featured mentors/i,
+        name: /Load more featured agents/i,
       });
       await user.click(seeMoreButton);
 
@@ -291,7 +291,7 @@ describe('FeaturedMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more featured mentors/i,
+        name: /Load more featured agents/i,
       });
       expect(seeMoreButton).toBeDisabled();
     });

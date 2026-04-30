@@ -206,7 +206,7 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
     await goToAnonymousMentor(page);
     const mentorsButton = page.getByRole('button', {
-      name: 'Mentors',
+      name: 'Agents',
       exact: true,
     });
     await expect(mentorsButton).toBeVisible({ timeout: 10_000 });

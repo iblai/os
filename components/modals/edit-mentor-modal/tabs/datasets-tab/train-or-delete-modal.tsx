@@ -41,8 +41,8 @@ export function TrainOrDeleteModal({
             className="text-sm text-[#646464]"
           >
             This dataset is currently untrained. You can train it to make it
-            available for your mentor, or permanently delete it if it's no
-            longer needed.
+            available for your agent, or permanently delete it if it's no longer
+            needed.
           </p>
         </div>
         <DialogFooter className="gap-3">

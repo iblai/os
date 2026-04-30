@@ -276,7 +276,7 @@ describe('MentorCardWithStar', () => {
       const user = userEvent.setup();
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       await user.click(card);
 
       expect(mockHandleMentorClick).toHaveBeenCalledWith(mockMentor);
@@ -297,7 +297,7 @@ describe('MentorCardWithStar', () => {
     it('navigates to mentor on Enter key press', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       fireEvent.keyDown(card, { key: 'Enter' });
 
       expect(mockHandleMentorClick).toHaveBeenCalledWith(mockMentor);
@@ -306,7 +306,7 @@ describe('MentorCardWithStar', () => {
     it('navigates to mentor on Space key press', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       fireEvent.keyDown(card, { key: ' ' });
 
       expect(mockHandleMentorClick).toHaveBeenCalledWith(mockMentor);
@@ -315,7 +315,7 @@ describe('MentorCardWithStar', () => {
     it('does not navigate on other key press', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       fireEvent.keyDown(card, { key: 'Tab' });
 
       expect(mockHandleMentorClick).not.toHaveBeenCalled();
@@ -346,7 +346,7 @@ describe('MentorCardWithStar', () => {
     it('calls handleMentorClick only once on Enter key press', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       fireEvent.keyDown(card, { key: 'Enter' });
       fireEvent.keyDown(card, { key: 'Enter' });
 
@@ -357,7 +357,7 @@ describe('MentorCardWithStar', () => {
     it('handles Escape key without navigating', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       fireEvent.keyDown(card, { key: 'Escape' });
 
       expect(mockHandleMentorClick).not.toHaveBeenCalled();
@@ -368,10 +368,10 @@ describe('MentorCardWithStar', () => {
     it('has proper aria-label on card with description', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor: Test Mentor/i);
+      const card = screen.getByLabelText(/Explore agent: Test Mentor/i);
       expect(card).toHaveAttribute(
         'aria-label',
-        'Explore mentor: Test Mentor. A helpful mentor for testing',
+        'Explore agent: Test Mentor. A helpful mentor for testing',
       );
     });
 
@@ -379,17 +379,17 @@ describe('MentorCardWithStar', () => {
       const noDescMentor = { ...mockMentor, description: undefined };
       renderWithContext(noDescMentor);
 
-      const card = screen.getByLabelText(/Explore mentor: Test Mentor/i);
+      const card = screen.getByLabelText(/Explore agent: Test Mentor/i);
       expect(card).toHaveAttribute(
         'aria-label',
-        'Explore mentor: Test Mentor. ',
+        'Explore agent: Test Mentor. ',
       );
     });
 
     it('card is focusable with tabIndex', () => {
       renderWithContext(mockMentor);
 
-      const card = screen.getByLabelText(/Explore mentor/i);
+      const card = screen.getByLabelText(/Explore agent/i);
       expect(card).toHaveAttribute('tabindex', '0');
     });
 

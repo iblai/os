@@ -88,7 +88,7 @@ export function ProjectInstructionsModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-gray-600">
-            You can ask mentorAI to focus on certain topics, or ask it to use a
+            You can ask agent to focus on certain topics, or ask it to use a
             certain tone or format for responses.
           </DialogDescription>
         </div>

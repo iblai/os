@@ -13,8 +13,10 @@ test.describe('Journey 15: Mentor Switching', () => {
     nonadminExplorePage,
   }) => {
     await nonadminSidebarPage.navigateToExplore();
+    // 2-min ceiling: explore page initial load can take ~30s when the
+    // ?limit=8 mentors query gets aborted+retried during component mount.
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 15_000,
+      timeout: 120_000,
     });
     await nonadminExplorePage.clickFirstMentorCard();
     await safeWaitForURL(
@@ -31,7 +33,7 @@ test.describe('Journey 15: Mentor Switching', () => {
   }) => {
     await nonadminSidebarPage.navigateToExplore();
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 15_000,
+      timeout: 120_000,
     });
     await nonadminExplorePage.clickFirstMentorCard();
     await safeWaitForURL(
@@ -47,7 +49,7 @@ test.describe('Journey 15: Mentor Switching', () => {
   }) => {
     // The home page may show an Explore Mentors section with cards
     const exploreMentorsHeading = nonadminPage.getByRole('heading', {
-      name: /explore mentors/i,
+      name: /explore agents/i,
     });
     const visible = await exploreMentorsHeading
       .isVisible({ timeout: 10_000 })

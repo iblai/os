@@ -361,7 +361,7 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Configure your mentor's basic settings and preferences.",
+          "Configure your agent's basic settings and preferences.",
         ),
       ).toBeInTheDocument();
     });
@@ -472,7 +472,7 @@ describe('SettingsTab', () => {
     it('renders mentor image when profile_image is a URL', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByAltText('Mentor');
+      const img = screen.getByAltText('Agent');
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', 'https://example.com/avatar.jpg');
     });
@@ -578,7 +578,7 @@ describe('SettingsTab', () => {
       await user.clear(input);
 
       await waitFor(() => {
-        expect(screen.getByText('Mentor name is required')).toBeInTheDocument();
+        expect(screen.getByText('Agent name is required')).toBeInTheDocument();
       });
     });
 
@@ -593,7 +593,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText('Mentor description is required'),
+          screen.getByText('Agent description is required'),
         ).toBeInTheDocument();
       });
     });
@@ -729,7 +729,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -748,7 +748,7 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -872,7 +872,7 @@ describe('SettingsTab', () => {
 
       // After uploading, the image should be displayed
       await waitFor(() => {
-        expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+        expect(screen.getByAltText('Agent')).toBeInTheDocument();
       });
     });
 
@@ -880,7 +880,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Image should be displayed
-      expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+      expect(screen.getByAltText('Agent')).toBeInTheDocument();
 
       const removeButton = screen.getByLabelText('Remove image');
       fireEvent.click(removeButton);
@@ -948,7 +948,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -960,7 +960,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -969,7 +969,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -994,7 +994,7 @@ describe('SettingsTab', () => {
     it('enables fields when nothing is loading', () => {
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).not.toBeDisabled();
     });
   });

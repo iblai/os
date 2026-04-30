@@ -67,11 +67,11 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
           <>
             <p>
               You're currently using our free package with basic access to
-              mentors and you've used all your credits.
+              agents and you've used all your credits.
             </p>
             <p>
               Upgrade to unlock unlimited chat time, custom data sources, and
-              advanced mentor behaviors.
+              advanced agent behaviors.
             </p>
             <p>
               For organizations needing enterprise solutions,{' '}
@@ -93,7 +93,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               subscription and you've used all your credits.
             </p>
             <p>
-              Enjoy unlimited chat time and access to specialized mentors. Some
+              Enjoy unlimited chat time and access to specialized agents. Some
               advanced customization options may require additional permissions.
             </p>
             <p>
@@ -116,9 +116,9 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               access to premium features will renew on your next billing cycle.
             </p>
             <p>
-              To continue creating custom mentors and accessing advanced
-              features immediately, you can purchase additional credits or
-              upgrade to a higher plan.
+              To continue creating custom agents and accessing advanced features
+              immediately, you can purchase additional credits or upgrade to a
+              higher plan.
             </p>
             <p>
               For enterprise solutions or high-volume needs,{' '}
@@ -135,10 +135,10 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
       default:
         return (
           <>
-            <p>Upgrade to create your own mentors.</p>
+            <p>Upgrade to create your own agents.</p>
             <p>
               Enjoy unlimited chat time, custom data sources, and create your
-              own specialized mentors.
+              own specialized agents.
             </p>
             <p>
               For full enterprise control — trusted by leading universities and

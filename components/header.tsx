@@ -278,7 +278,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -444,7 +444,7 @@ export function Header({
                 <Avatar className="mr-1 h-5 w-5">
                   <AvatarImage
                     src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                    alt="mentorAI"
+                    alt="Agentic OS"
                   />
                   <AvatarFallback>
                     {selectedMentorName.substring(0, 2)}
@@ -458,7 +458,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -509,7 +509,7 @@ export function Header({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Create New Mentor
+                    Create New Agent
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

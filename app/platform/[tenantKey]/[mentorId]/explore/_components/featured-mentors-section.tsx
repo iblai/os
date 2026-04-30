@@ -98,7 +98,7 @@ export function FeaturedMentorsSection() {
                   )
                 }
                 disabled={featuredMentorsFetching}
-                aria-label="Load more featured mentors"
+                aria-label="Load more featured agents"
               >
                 {featuredMentorsFetching ? (
                   <div className="flex items-center gap-2">
@@ -122,13 +122,13 @@ export function FeaturedMentorsSection() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="mb-2 text-sm font-medium text-gray-900">
-                    Featured Mentors
+                    Featured Agents
                   </h3>
                   <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    Discover handpicked mentors recommended by our community
+                    Discover handpicked agents recommended by our community
                   </p>
                   <p className="text-xs text-gray-500">
-                    No featured mentors available
+                    No featured agents available
                   </p>
                 </div>
               </div>
