@@ -16,7 +16,7 @@ export default function OneDrivePage() {
       <Script src="https://js.live.net/v7.2/OneDrive.js" />
       <div
         role="status"
-        aria-label="mentorAI loading..."
+        aria-label="loading..."
         className="flex h-dvh w-screen items-center justify-center"
       >
         <Spinner className="h-14 w-14" />

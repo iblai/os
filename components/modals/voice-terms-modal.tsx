@@ -26,14 +26,14 @@ export function VoiceTermsModal({
           Voice Terms and Conditions
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Review and accept the terms for using voice-powered mentorAI
+          Review and accept the terms for voice-powered chat
         </DialogDescription>
         <div className="flex flex-col">
           <h2
             className="mb-8 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] bg-clip-text text-2xl font-medium text-transparent"
             aria-hidden="true"
           >
-            Creating a mentorAI powered with voice
+            Creating a voice-powered agent
           </h2>
 
           <div className="mb-8 space-y-6">
