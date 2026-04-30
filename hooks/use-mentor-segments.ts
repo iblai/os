@@ -44,6 +44,7 @@ import { config } from '@/lib/config';
  */
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
+  isMemoryComponentEnabled: boolean;
 };
 
 export type MentorSegment = {
@@ -197,7 +198,8 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) => flags.isMemsearchEnabled,
+    enabledThroughConfig: (flags) =>
+      flags.isMemsearchEnabled && flags.isMemoryComponentEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.history,
@@ -375,6 +377,9 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+  const isMemoryComponentEnabled =
+    // @ts-ignore - enable_memory_component exists on API but not typed
+    mentorSettings?.enable_memory_component ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -389,10 +394,17 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
-      flags: { isMemsearchEnabled },
+      flags: { isMemsearchEnabled, isMemoryComponentEnabled },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
-    [isAdmin, tenantKey, mentorSettings, rbacPermissions, isMemsearchEnabled],
+    [
+      isAdmin,
+      tenantKey,
+      mentorSettings,
+      rbacPermissions,
+      isMemsearchEnabled,
+      isMemoryComponentEnabled,
+    ],
   );
 
   const filteredSegments = useMemo(

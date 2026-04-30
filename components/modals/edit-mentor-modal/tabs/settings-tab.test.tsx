@@ -622,6 +622,85 @@ describe('SettingsTab', () => {
     });
   });
 
+  describe('Memory toggle', () => {
+    it('renders the Memory switch as disabled when enable_memory_component is unset', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory disabled')).not.toBeChecked();
+    });
+
+    it('renders the Memory switch as enabled when enable_memory_component is true', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory enabled')).toBeChecked();
+    });
+
+    it('does not call editMentor immediately when the Memory toggle is clicked', () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+
+      expect(mockEditMentor).not.toHaveBeenCalled();
+    });
+
+    it('submits enable_memory_component: true on Save when the user enabled it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_memory_component: false on Save when the user disabled it', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('omits enable_memory_component on Save when the user did not change it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const submittedFormData = mockEditMentor.mock.calls[0][0].formData;
+      expect(submittedFormData).not.toHaveProperty('enable_memory_component');
+    });
+  });
+
   describe('Form Field Changes', () => {
     it('updates mentor name when input changes', () => {
       render(<SettingsTab />);

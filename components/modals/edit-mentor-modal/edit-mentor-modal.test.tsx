@@ -67,6 +67,10 @@ function dms() {
     platform_key: 'tenant123',
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     permissions: { field: { ...dfp } },
+    // The Memory segment is gated on this flag (in addition to memsearch).
+    // Default to true so the canonical fully-permitted-mentor case still
+    // exposes the Memory tab in tests that don't override settings.
+    enable_memory_component: true,
   };
 }
 

@@ -857,7 +857,7 @@ const buildContext = (
   tenantKey: undefined,
   mentorSettings: undefined,
   rbacPermissions: {},
-  flags: { isMemsearchEnabled: true },
+  flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
   ...overrides,
@@ -1098,7 +1098,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false },
+          flags: { isMemsearchEnabled: false, isMemoryComponentEnabled: true },
         }),
       );
 
@@ -1113,7 +1113,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true },
+          flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
         }),
       );
 
@@ -1128,7 +1128,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true },
+          flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
         }),
       );
       const disabled = filterMentorSegments(
@@ -1138,7 +1138,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false },
+          flags: { isMemsearchEnabled: false, isMemoryComponentEnabled: true },
         }),
       );
 
