@@ -258,7 +258,7 @@ export function NavBar() {
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
-      toast.error('Unable to modify mentor. Missing context.');
+      toast.error('Unable to modify agent. Missing context.');
       return;
     }
     try {
@@ -289,7 +289,7 @@ export function NavBar() {
         }).unwrap();
       }
       //REDIRECT TO THE NEW MENTOR
-      toast.success('Mentor successfully forked. Switching to new mentor...');
+      toast.success('Agent successfully forked. Switching to new agent...');
       const newStack = getUpdatedModalStack(
         MODALS.EDIT_MENTOR.name,
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -301,7 +301,7 @@ export function NavBar() {
         `modal=${JSON.stringify(newStack)}`,
       );
     } catch (error) {
-      toast.error('Failed to modify mentor');
+      toast.error('Failed to modify agent');
       // console.error(JSON.stringify(error));;
     }
   };
@@ -481,7 +481,7 @@ export function NavBar() {
                     <Button
                       variant="ghost"
                       className="flex cursor-pointer items-center gap-1"
-                      aria-label="Selected mentor dropdown button"
+                      aria-label="Selected agent dropdown button"
                     >
                       <User className="h-4 w-4 text-[#646464]" />
                       <span className="hidden sm:block">
@@ -550,7 +550,7 @@ export function NavBar() {
                 <Button
                   variant="ghost"
                   className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label="Selected mentor"
+                  aria-label="Selected agent"
                 >
                   <User className="h-4 w-4 text-[#646464]" />
                   <span className="hidden sm:block">{selectedMentorName}</span>

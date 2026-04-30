@@ -167,7 +167,7 @@ describe('AddAccessDialog', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Create mentor role access')).toBeInTheDocument();
+    expect(screen.getByText('Create agent role access')).toBeInTheDocument();
   });
 
   it('shows available roles in select dropdown', async () => {

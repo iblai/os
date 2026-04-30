@@ -18,7 +18,7 @@ export function AuditLogTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Audit</h3>
           <p className="text-xs text-gray-700">
-            View who changed what and when for this mentor.
+            View who changed what and when for this agent.
           </p>
         </div>
       </div>

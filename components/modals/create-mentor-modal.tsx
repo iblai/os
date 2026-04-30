@@ -104,14 +104,12 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="mx-auto max-h-[85vh] w-full max-w-5xl overflow-y-auto">
         <DialogDescription className="sr-only">
-          Create a new mentor by filling out the required information and
+          Create a new agent by filling out the required information and
           customizing prompts
         </DialogDescription>
         <div className="space-y-6">
           <DialogHeader>
-            <DialogTitle className="ibl-dialog-title">
-              Create Mentor
-            </DialogTitle>
+            <DialogTitle className="ibl-dialog-title">Create Agent</DialogTitle>
           </DialogHeader>
 
           <Tabs
@@ -152,7 +150,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               <span className="ml-1 text-red-500">*</span>
                             </label>
                             <Input
-                              placeholder="Mentor Name"
+                              placeholder="Agent Name"
                               value={field.state.value}
                               onChange={(e) =>
                                 field.handleChange(e.target.value)
@@ -162,7 +160,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             />
                             {hasNoValueAndIsDirty && (
                               <p className="text-xs text-red-500">
-                                Mentor name is required
+                                Agent name is required
                               </p>
                             )}
                           </div>
@@ -183,7 +181,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               <span className="ml-1 text-red-500">*</span>
                             </label>
                             <Textarea
-                              placeholder="Mentor Description"
+                              placeholder="Agent Description"
                               value={field.state.value}
                               onChange={(e) =>
                                 field.handleChange(e.target.value)
@@ -193,7 +191,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             />
                             {hasNoValueAndIsDirty && (
                               <p className="text-xs text-red-500">
-                                Mentor description is required
+                                Agent description is required
                               </p>
                             )}
                           </div>
@@ -276,7 +274,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                       {(field) => (
                         <div className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            Mentor Visibility
+                            Agent Visibility
                             <span className="ml-1 text-red-500">*</span>
                           </label>
                           <Select
@@ -285,7 +283,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             required
                             disabled={isDisabled}
                           >
-                            <SelectTrigger aria-label="Select mentor visibility">
+                            <SelectTrigger aria-label="Select agent visibility">
                               <SelectValue placeholder="Select a visibility" />
                             </SelectTrigger>
                             <SelectContent>
@@ -353,7 +351,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                             }}
                             role="button"
                             tabIndex={0}
-                            aria-label="Upload mentor image"
+                            aria-label="Upload agent image"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
@@ -367,7 +365,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               <div className="relative h-full w-full">
                                 <Image
                                   src={URL.createObjectURL(file)}
-                                  alt="Mentor Image"
+                                  alt="Agent Image"
                                   className="h-full w-full object-cover"
                                   width={200}
                                   height={200}
@@ -407,7 +405,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                                 field.handleChange(file);
                               }
                             }}
-                            aria-label="Select mentor image file"
+                            aria-label="Select agent image file"
                           />
                         </div>
                       </>
@@ -517,7 +515,7 @@ export function CreateMentorModal({ isOpen, onClose }: CreateMentorModalProps) {
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
-                                  The system prompt defines the mentor&apos;s
+                                  The system prompt defines the agent&apos;s
                                   behavior
                                 </p>
                               </TooltipContent>

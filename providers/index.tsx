@@ -607,7 +607,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   router.replace(`?${params.toString()}`);
 
                   setTimeout(() => {
-                    toast.success('Mentor switched successfully');
+                    toast.success('Agent switched successfully');
                   }, 1000);
                 }
               }}

@@ -164,7 +164,7 @@ describe('WorkflowsPage', () => {
       render(<WorkflowsPage />);
       expect(
         screen.getByText(
-          'Create and manage automated workflows for your mentors and learning experiences',
+          'Create and manage automated workflows for your agents and learning experiences',
         ),
       ).toBeInTheDocument();
     });

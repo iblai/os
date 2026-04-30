@@ -882,7 +882,7 @@ export function ConnectorManagementContent({
         canUseTools?: boolean;
       },
     ) => {
-      if (!mentorId) throw new Error('Invalid mentor ID');
+      if (!mentorId) throw new Error('Invalid agent ID');
       const uniqueIds = [
         ...new Set(serverIds.filter((id) => Number.isFinite(id) && id > 0)),
       ];
@@ -1563,7 +1563,7 @@ export function ConnectorManagementContent({
                 {server.auth_scope === 'user'
                   ? 'User'
                   : server.auth_scope === 'mentor'
-                    ? 'Mentor'
+                    ? 'Agent'
                     : 'Tenant'}
               </span>
             )}

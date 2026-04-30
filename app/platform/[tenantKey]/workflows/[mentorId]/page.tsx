@@ -89,8 +89,8 @@ export default function WorkflowsPage() {
         type: 'mentor',
         position: { x: 350, y: 250 },
         data: {
-          label: 'Mentor',
-          subtitle: 'Mentor',
+          label: 'Agent',
+          subtitle: 'Agent',
           mentor_id: params.mentorId,
         },
         draggable: true,
@@ -145,8 +145,8 @@ export default function WorkflowsPage() {
               Workflows
             </h1>
             <p className="text-sm text-gray-600">
-              Create and manage automated workflows for your mentors and
-              learning experiences
+              Create and manage automated workflows for your agents and learning
+              experiences
             </p>
           </div>
 
