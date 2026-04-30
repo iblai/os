@@ -95,7 +95,7 @@ export function AdvancedSettingsModal({
         <Textarea
           placeholder="Enter welcome email template"
           className="min-h-[150px]"
-          defaultValue="Welcome to our platform! We're excited to have you join us. Your mentor is now ready to assist you with any questions you might have."
+          defaultValue="Welcome to our platform! We're excited to have you join us. Your agent is now ready to assist you with any questions you might have."
         />
       </div>
 
@@ -104,7 +104,7 @@ export function AdvancedSettingsModal({
         <Textarea
           placeholder="Enter follow-up email template"
           className="min-h-[150px]"
-          defaultValue="How has your experience been with your mentor? We'd love to hear your feedback to help improve our service."
+          defaultValue="How has your experience been with your agent? We'd love to hear your feedback to help improve our service."
         />
       </div>
 
@@ -128,7 +128,7 @@ export function AdvancedSettingsModal({
                 <Info className="h-4 w-4 text-gray-400" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Allow mentor to assign tasks to users</p>
+                <p>Allow agent to assign tasks to users</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -172,7 +172,7 @@ export function AdvancedSettingsModal({
                 <Info className="h-4 w-4 text-gray-400" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Allow users to interact with mentor using voice</p>
+                <p>Allow users to interact with agent using voice</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -242,7 +242,7 @@ export function AdvancedSettingsModal({
                 <Info className="h-4 w-4 text-gray-400" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Require payment for access to this mentor</p>
+                <p>Require payment for access to this agent</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

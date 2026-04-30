@@ -12,9 +12,9 @@ export class CopyMentorPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /Copy Mentor/i });
+    this.dialog = page.getByRole('dialog', { name: /Copy Agent/i });
     this.nameInput = this.dialog.getByRole('textbox', {
-      name: 'Mentor Name',
+      name: 'Agent Name',
     });
     this.trainingDataToggle = this.dialog.locator('button[role="switch"]');
     this.destinationCombobox = this.dialog.getByRole('combobox', {

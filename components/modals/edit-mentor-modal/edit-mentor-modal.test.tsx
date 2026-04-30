@@ -274,7 +274,7 @@ describe('EditMentorModal', () => {
       await waitFor(() => {
         const h = screen
           .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Mentor'));
+          .find((el) => el.textContent?.includes('Edit Agent'));
         expect(h).toBeTruthy();
       });
     });
@@ -285,7 +285,7 @@ describe('EditMentorModal', () => {
       await waitFor(() => {
         const h = screen
           .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Mentor'));
+          .find((el) => el.textContent?.includes('Edit Agent'));
         expect(h).toBeTruthy();
       });
     });
@@ -294,7 +294,7 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() => {
         const d = screen.getByText(
-          /Edit Mentor settings, prompts, tools, safety/i,
+          /Edit Agent settings, prompts, tools, safety/i,
         );
         expect(d).toHaveClass('sr-only');
       });
@@ -371,7 +371,7 @@ describe('EditMentorModal', () => {
           screen
             .getAllByRole('tablist')
             .find(
-              (t) => t.getAttribute('aria-label') === 'Mentor settings tabs',
+              (t) => t.getAttribute('aria-label') === 'Agent settings tabs',
             ),
         ).toBeTruthy();
       });
@@ -629,7 +629,7 @@ describe('EditMentorModal', () => {
         expect(
           screen
             .getAllByRole('heading')
-            .find((h) => h.textContent?.includes('Edit Mentor')),
+            .find((h) => h.textContent?.includes('Edit Agent')),
         ).toBeTruthy(),
       );
     });
@@ -641,7 +641,7 @@ describe('EditMentorModal', () => {
         expect(
           screen
             .getAllByRole('heading')
-            .find((h) => h.textContent?.includes('Edit Mentor')),
+            .find((h) => h.textContent?.includes('Edit Agent')),
         ).toBeTruthy(),
       );
     });

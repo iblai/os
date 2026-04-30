@@ -61,7 +61,7 @@ describe('MemoryTab', () => {
 
       expect(screen.getByText('Memory')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure memory settings for your mentor.'),
+        screen.getByText('Configure memory settings for your agent.'),
       ).toBeInTheDocument();
     });
 

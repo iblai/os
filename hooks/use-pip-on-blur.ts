@@ -203,7 +203,7 @@ const createAudioStatusBar = (
     overflow: hidden;
     text-overflow: ellipsis;
   `;
-  mentorSpeakingLabel.textContent = 'Mentor';
+  mentorSpeakingLabel.textContent = 'Agent';
 
   mentorSpeakingContainer.appendChild(mentorSpeakingIndicator);
   mentorSpeakingContainer.appendChild(mentorSpeakingLabel);
@@ -276,8 +276,8 @@ const createAudioStatusBar = (
 
   // ── Mentor mute button (speaker icon – controls incoming audio) ──
   const mentorMuteButton = createIconButton(
-    'Click to mute/unmute mentor audio',
-    'Toggle mentor audio',
+    'Click to mute/unmute agent audio',
+    'Toggle agent audio',
   );
 
   // Speaker on icon SVG (unmuted state)
@@ -339,7 +339,7 @@ const createAudioStatusBar = (
         '0 0 8px #22c55e, 0 0 16px rgba(34, 197, 94, 0.6)';
       mentorSpeakingIndicator.style.transform = 'scale(1.2)';
       mentorSpeakingLabel.style.color = '#22c55e';
-      mentorSpeakingLabel.textContent = 'Mentor speaking';
+      mentorSpeakingLabel.textContent = 'Agent speaking';
     } else if (!isMentorMuted) {
       // Mentor audio on but not speaking - subtle blue
       mentorSpeakingIndicator.style.background = '#3b82f6';
@@ -347,7 +347,7 @@ const createAudioStatusBar = (
       mentorSpeakingIndicator.style.boxShadow = 'none';
       mentorSpeakingIndicator.style.transform = 'scale(1)';
       mentorSpeakingLabel.style.color = '#9ca3af';
-      mentorSpeakingLabel.textContent = 'Mentor audio on';
+      mentorSpeakingLabel.textContent = 'Agent audio on';
     } else {
       // Mentor muted - red indicator
       mentorSpeakingIndicator.style.background = '#dc2626';
@@ -355,7 +355,7 @@ const createAudioStatusBar = (
       mentorSpeakingIndicator.style.boxShadow = 'none';
       mentorSpeakingIndicator.style.transform = 'scale(1)';
       mentorSpeakingLabel.style.color = '#dc2626';
-      mentorSpeakingLabel.textContent = 'Mentor muted';
+      mentorSpeakingLabel.textContent = 'Agent muted';
     }
   };
 

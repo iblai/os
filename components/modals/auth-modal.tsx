@@ -20,7 +20,7 @@ export function AuthModal({ isOpen, onClose, tenantKey }: Props) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Welcome to mentorAI</DialogTitle>
+          <DialogTitle>Welcome to Agentic OS</DialogTitle>
         </DialogHeader>
         <DialogDescription className="sr-only">
           Please login to continue using the chat.

@@ -96,7 +96,7 @@ export function CustomMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="custom-mentors-card-list"
             role="list"
-            aria-label="Custom mentors"
+            aria-label="Custom agents"
           >
             {customMentors.map((mentor) => (
               <div key={mentor.id} role="listitem">
@@ -114,7 +114,7 @@ export function CustomMentorsSection() {
                   )
                 }
                 disabled={customMentorsFetching}
-                aria-label="Load more custom mentors"
+                aria-label="Load more custom agents"
               >
                 {customMentorsFetching ? (
                   <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export function CustomMentorsSection() {
                         handleCreateMentor();
                       }
                     }}
-                    aria-label="Create Custom Mentor"
+                    aria-label="Create Custom Agent"
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
@@ -155,10 +155,10 @@ export function CustomMentorsSection() {
                             role="heading"
                             aria-level={3}
                           >
-                            Create Custom Mentor
+                            Create Custom Agent
                           </h3>
                           <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                            Build your own custom mentor tailored to your
+                            Build your own custom agent tailored to your
                             specific learning needs
                           </p>
                           <p className="text-xs text-gray-500">
@@ -189,7 +189,7 @@ export function CustomMentorsSection() {
                       handleCreateMentor();
                     }
                   }}
-                  aria-label="Create Custom Mentor"
+                  aria-label="Create Custom Agent"
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
@@ -202,10 +202,10 @@ export function CustomMentorsSection() {
                           role="heading"
                           aria-level={3}
                         >
-                          Create Custom Mentor
+                          Create Custom Agent
                         </h3>
                         <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                          Build your own custom mentor tailored to your specific
+                          Build your own custom agent tailored to your specific
                           learning needs
                         </p>
                         <p className="text-xs text-gray-500">

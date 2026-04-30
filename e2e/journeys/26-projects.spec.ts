@@ -64,7 +64,7 @@ test.describe('Journey 26: Projects', () => {
       .catch(() => false);
     if (!visible) return;
     await addMentorBtn.click();
-    const dialog = page.getByRole('dialog', { name: /add mentor/i });
+    const dialog = page.getByRole('dialog', { name: /add agent/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     const mentorCard = dialog
       .locator('button')
@@ -72,7 +72,7 @@ test.describe('Journey 26: Projects', () => {
       .first();
     if (await mentorCard.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await mentorCard.click();
-      await expect(page.getByText('Mentor added to project')).toBeVisible({
+      await expect(page.getByText('Agent added to project')).toBeVisible({
         timeout: 10_000,
       });
       const closeBtn = dialog.getByRole('button', { name: /close|cancel/i });

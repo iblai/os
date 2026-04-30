@@ -549,7 +549,7 @@ describe('NavBar', () => {
       );
 
       expect(
-        screen.getByLabelText('Selected mentor dropdown button'),
+        screen.getByLabelText('Selected agent dropdown button'),
       ).toBeInTheDocument();
     });
 
@@ -563,7 +563,7 @@ describe('NavBar', () => {
       );
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeEnabled();
       // Clicking should not throw
@@ -703,7 +703,7 @@ describe('NavBar', () => {
       expect(llmButton).toBeInTheDocument();
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeInTheDocument();
     });

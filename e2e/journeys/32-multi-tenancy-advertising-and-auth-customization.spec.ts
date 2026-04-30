@@ -75,17 +75,17 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
     const newMentorBtn = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     if (!(await newMentorBtn.isVisible().catch(() => false))) return;
     await newMentorBtn.click();
     const dialog = page.getByRole('dialog', {
-      name: /create.*mentor|new mentor/i,
+      name: /create.*agent|new agent/i,
     });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     // Fill the mentor creation form
-    const nameInput = dialog.getByPlaceholder(/mentor name|name/i).first();
+    const nameInput = dialog.getByPlaceholder(/agent name|name/i).first();
     if (await nameInput.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await nameInput.fill(`E2E Enterprise Test ${Date.now()}`);
       const createBtn = dialog
@@ -116,22 +116,22 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
       await settingsBtn.click();
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 10_000 });
-      // H28 fix: find and click "Create Mentor" inside the Settings dialog
+      // H28 fix: find and click "Create Agent" inside the Settings dialog
       const createMentorBtn = dialog.getByRole('button', {
-        name: 'Create Mentor',
+        name: 'Create Agent',
       });
       if (
         await createMentorBtn.isVisible({ timeout: 5_000 }).catch(() => false)
       ) {
         await createMentorBtn.click();
         const createDialog = page.getByRole('dialog', {
-          name: /create.*mentor|new mentor/i,
+          name: /create.*agent|new agent/i,
         });
         if (
           await createDialog.isVisible({ timeout: 5_000 }).catch(() => false)
         ) {
           const nameInput = createDialog
-            .getByPlaceholder(/mentor name|name/i)
+            .getByPlaceholder(/agent name|name/i)
             .first();
           if (
             await nameInput.isVisible({ timeout: 3_000 }).catch(() => false)

@@ -3543,7 +3543,7 @@ describe('ConnectorManagementContent', () => {
       });
       render(<ConnectorManagementContent {...defaultProps} />);
 
-      expect(screen.getAllByText('Mentor').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Agent').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders Tenant badge for OAuth server with tenant auth_scope', () => {

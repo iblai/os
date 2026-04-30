@@ -243,7 +243,7 @@ describe('useCreateMentor', () => {
         await result.current.form.handleSubmit();
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Mentor created successfully');
+      expect(toast.success).toHaveBeenCalledWith('Agent created successfully');
     });
 
     it('shows error toast on failed creation', async () => {
@@ -284,7 +284,7 @@ describe('useCreateMentor', () => {
         await result.current.form.handleSubmit();
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Failed to create mentor');
+      expect(toast.error).toHaveBeenCalledWith('Failed to create agent');
       consoleSpy.mockRestore();
     });
   });

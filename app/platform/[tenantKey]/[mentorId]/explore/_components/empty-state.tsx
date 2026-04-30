@@ -1,5 +1,5 @@
 export function EmptyState({
-  message = 'Sorry, no mentors found!',
+  message = 'Sorry, no agents found!',
 }: {
   message?: string;
 }) {

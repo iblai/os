@@ -130,9 +130,11 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E prompt for run visibility',
     );
+    // 2-min ceiling: prompt list refresh after POST can take 30s+ when the
+    // backing mentor data is mid-fetch (same abort+retry race as explore).
     await expect
       .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
-        timeout: 10_000,
+        timeout: 120_000,
       })
       .toBeGreaterThan(0);
 

@@ -68,24 +68,24 @@ export function DefaultMentorsSection() {
     if (filters.subjects) {
       return {
         title: filters.subjects,
-        subtext: `Explore ${filters.subjects.toLowerCase()} mentors and specialized learning assistants.`,
+        subtext: `Explore ${filters.subjects.toLowerCase()} agents and specialized learning assistants.`,
       };
     }
     if (filters.categories) {
       return {
         title: filters.categories,
-        subtext: `Explore ${filters.categories.toLowerCase()} mentors and specialized learning assistants.`,
+        subtext: `Explore ${filters.categories.toLowerCase()} agents and specialized learning assistants.`,
       };
     }
     if (filters.llm_providers) {
       return {
-        title: `${filters.llm_providers} Mentors`,
-        subtext: `Explore mentors powered by ${filters.llm_providers}.`,
+        title: `${filters.llm_providers} Agents`,
+        subtext: `Explore agents powered by ${filters.llm_providers}.`,
       };
     }
     return {
-      title: 'All Mentors',
-      subtext: 'Explore mentors and specialized learning assistants.',
+      title: 'All Agents',
+      subtext: 'Explore agents and specialized learning assistants.',
     };
   };
 
@@ -103,7 +103,7 @@ export function DefaultMentorsSection() {
     return (
       <div role="status" aria-live="polite">
         <Spinner className="h-60" />
-        <span className="sr-only">Loading mentors...</span>
+        <span className="sr-only">Loading agents...</span>
       </div>
     );
   }
@@ -133,9 +133,9 @@ export function DefaultMentorsSection() {
                 <Button
                   className="rounded-lg bg-gradient-to-r from-[#38A1E5] to-[#7284FF] px-6 py-2 text-white hover:from-[#2E8BD1] hover:to-[#5F6FE8]"
                   onClick={handleCreateMentor}
-                  aria-label="Create new mentor"
+                  aria-label="Create new agent"
                 >
-                  Create Mentor
+                  Create Agent
                 </Button>
               )}
             </>
@@ -149,13 +149,13 @@ export function DefaultMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="all-mentors-card-list"
             role="list"
-            aria-label="All mentors"
+            aria-label="All agents"
           >
             {allMentorsToShow.map((mentor) => (
               <div
                 key={mentor.id}
                 role="listitem"
-                aria-label={`Explore mentor: ${mentor.name}`}
+                aria-label={`Explore agent: ${mentor.name}`}
               >
                 <MentorCardWithStar mentor={mentor} />
               </div>
@@ -169,7 +169,7 @@ export function DefaultMentorsSection() {
                   setNumberOfMentors(numberOfMentors + DEFAULT_MENTORS_LIMIT)
                 }
                 disabled={mentorsFetching}
-                aria-label="Load more mentors"
+                aria-label="Load more agents"
                 role="button"
               >
                 {mentorsFetching ? (

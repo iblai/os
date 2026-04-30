@@ -45,7 +45,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
       // avoid race conditions
       await new Promise((resolve) => setTimeout(resolve, 10));
       closeEditMentorModal();
-      toast.success('Mentor deleted successfully');
+      toast.success('Agent deleted successfully');
 
       if (activeMentorId === mentorId) {
         router.replace(urlRoutes.platform.explore(tenantKey));
@@ -57,7 +57,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
       }
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to delete mentor');
+      toast.error('Failed to delete agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -66,9 +66,9 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Mentor</AlertDialogTitle>
+          <AlertDialogTitle>Delete Agent</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this mentor? This action cannot be
+            Are you sure you want to delete this agent? This action cannot be
             undone and will permanently remove all associated data.
           </AlertDialogDescription>
         </AlertDialogHeader>

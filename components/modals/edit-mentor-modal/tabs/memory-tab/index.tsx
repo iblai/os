@@ -19,7 +19,7 @@ export function MemoryTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Memory</h3>
           <p className="text-xs text-gray-600">
-            Configure memory settings for your mentor.
+            Configure memory settings for your agent.
           </p>
         </div>
       </div>

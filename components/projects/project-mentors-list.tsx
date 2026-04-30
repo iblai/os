@@ -75,7 +75,7 @@ export function ProjectMentorsList({
         },
       }).unwrap();
 
-      toast.success('Mentor removed from project');
+      toast.success('Agent removed from project');
 
       // If the removed mentor is the currently active one, navigate to the first remaining mentor
       if (mentorId === mentorUniqueId) {
@@ -91,7 +91,7 @@ export function ProjectMentorsList({
       onMentorRemoved?.();
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to remove mentor');
+      toast.error('Failed to remove agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -100,10 +100,10 @@ export function ProjectMentorsList({
     return (
       <div className="py-8 text-center">
         <p className="mb-4 text-gray-600">
-          No mentors assigned to this project yet.
+          No agents assigned to this project yet.
         </p>
         <p className="text-sm text-gray-500">
-          Select mentors below to add them to your project.
+          Select agents below to add them to your project.
         </p>
       </div>
     );
@@ -115,13 +115,13 @@ export function ProjectMentorsList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Project Mentors
+              Project Agents
             </h2>
           </div>
           {onAddMentorClick && (
             <Button onClick={onAddMentorClick} className="ibl-button-primary">
               <Plus className="mr-2 h-4 w-4" />
-              Add Mentor
+              Add Agent
             </Button>
           )}
         </div>
@@ -156,7 +156,7 @@ export function ProjectMentorsList({
               onKeyDown={handleKeyDown}
               tabIndex={0}
               role="button"
-              aria-label={`Select mentor ${mentor.name}`}
+              aria-label={`Select agent ${mentor.name}`}
             >
               <div className="flex h-full items-start gap-3">
                 <Avatar className="h-12 w-12 flex-shrink-0">
