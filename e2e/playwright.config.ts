@@ -6,6 +6,8 @@ const root = path.resolve(__dirname, '.');
 dotenv.config({ path: path.join(root, '.env.local'), override: true });
 dotenv.config({ path: path.join(root, '.env') });
 
+console.log('##################### E2E TESTS #####################');
+
 const testTimeout = process.env.TEST_TIMEOUT
   ? parseInt(process.env.TEST_TIMEOUT, 10)
   : process.env.CI

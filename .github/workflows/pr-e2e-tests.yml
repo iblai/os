@@ -24,7 +24,7 @@ on:
       - 'vitest.config.*'
       - 'playwright.config.*'
 
-run-name: "PR E2E Tests — stg1 (firefox,chrome,safari,edge)"
+run-name: 'PR E2E Tests — stg1 (firefox,chrome,safari,edge)'
 
 permissions:
   contents: read
