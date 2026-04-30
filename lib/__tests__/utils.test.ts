@@ -1407,6 +1407,38 @@ describe('getLLMProviderDetails function', () => {
     });
   });
 
+  it('should return Amazon details for bedrock', () => {
+    const result = getLLMProviderDetails('bedrock');
+    expect(result).toEqual({
+      logo: '/llm-amazon-provider.png',
+      name: 'Amazon',
+    });
+  });
+
+  it('should return Amazon details for amazon-bedrock', () => {
+    const result = getLLMProviderDetails('amazon-bedrock');
+    expect(result).toEqual({
+      logo: '/llm-amazon-provider.png',
+      name: 'Amazon',
+    });
+  });
+
+  it('should return Amazon details for amazon_bedrock', () => {
+    const result = getLLMProviderDetails('amazon_bedrock');
+    expect(result).toEqual({
+      logo: '/llm-amazon-provider.png',
+      name: 'Amazon',
+    });
+  });
+
+  it('should return Amazon details for IBLChatBedrock', () => {
+    const result = getLLMProviderDetails('IBLChatBedrock');
+    expect(result).toEqual({
+      logo: '/llm-amazon-provider.png',
+      name: 'Amazon',
+    });
+  });
+
   it('should return generic details for unknown provider', () => {
     const result = getLLMProviderDetails('unknown-provider');
     expect(result).toEqual({
