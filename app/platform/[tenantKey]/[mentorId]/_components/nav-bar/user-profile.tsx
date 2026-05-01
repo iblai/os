@@ -43,6 +43,7 @@ import { useModelDownload } from '@/hooks/use-model-download';
 
 export function UserProfile() {
   const username = useUsername();
+  const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
   const userIsVisiting = useIsVisiting();
@@ -257,15 +258,6 @@ export function UserProfile() {
 
   const handleGetSubscriptionRelatedData = async () => {
     if (isStripeActivated(currentTenant as Tenant) && currentTenant?.is_admin) {
-      getBillingURL({
-        returnURL: window.location.href,
-        includeSubscriptionIdIfNeeded: false,
-      }).then((url) => {
-        setBillingURL(url || '');
-      });
-      getTopUpURL(false).then((url) => {
-        setTopUpURL(url || '');
-      });
       getUserActiveAppLegacy().then((app) => {
         setUserActiveApp(app as unknown as UserApp);
       });
@@ -309,6 +301,8 @@ export function UserProfile() {
 
   return (
     <UserProfileDropdown
+      email={email}
+      mainPlatformKey={config.mainTenantKey()}
       // User data
       username={username || undefined}
       userIsAdmin={userIsAdmin}
@@ -335,16 +329,11 @@ export function UserProfile() {
       // Callbacks
       onProfileClick={handleProfileClick}
       onTabChange={handleTabChange}
-      onUpgradeClick={handleUpgradeClick}
       onBillingTabRequest={handleGetSubscriptionRelatedData}
       onLogout={handleLogout}
       onTenantChange={handleTenantChange}
       onHelpClick={handleHelpClick}
       // Modal props
-      billingEnabled={!!billingURL}
-      billingURL={billingURL}
-      topUpEnabled={!!topUpURL}
-      topUpURL={topUpURL}
       currentPlan={currentPlan}
       userActiveApp={userActiveApp}
       // Custom components

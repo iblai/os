@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 325 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-01 | 336 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -312,19 +312,38 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 21: Billing & Subscription (9 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`, `app/provider-association/stripe/callback/[launch_id]/page.tsx`, `hooks/subscription/use-subscription-v2.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
 
-- [x] Billing tab is visible in account settings
-- [x] Billing main card shows credits information
-- [x] Correct buttons are shown based on payment method status
-- [x] Subscription renewal information is shown when applicable
-- [x] Usage card is visible when topUpURL is configured
-- [x] Plan info and upgrade button display when applicable
-- [x] Auto Recharge modal opens, shows all elements, enable toggle and threshold/amount inputs work, and Cancel closes it _(payment-gated — skipped gracefully when no payment method)_
-- [x] Add Credits modal opens correctly _(payment-gated)_
-- [x] New user without subscription sees Stripe pricing modal when attempting to create a mentor
+Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
+
+**A. CreditBalance dropdown (nav-bar)**
+
+- [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
+- [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
+- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
+- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
+- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
+- [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
+- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
+- [x] Add Credits opens the Add Credits modal _(payment-gated)_
+- [x] Escape closes the dropdown
+
+**B. Billing tab (User Profile dialog)**
+
+- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
+- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
+- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
+- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
+- [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
+
+**C. Non-admin pricing**
+
+- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
 
 ---
 

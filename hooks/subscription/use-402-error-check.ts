@@ -1,17 +1,22 @@
 import { useAppDispatch } from '@/lib/hooks';
 import { toast } from 'sonner';
 import {
-  setError402Detected,
   setPricingModalData,
   setOpenPricingModal,
   setOpenAppleRestrictionModal,
 } from '@/features/subscription/subscription-slice';
-import { Error402MessageData } from '@iblai/iblai-js/web-utils';
+import {
+  Error402MessageData,
+  SUBSCRIPTION_MESSAGES,
+  SUBSCRIPTION_V2_TRIGGERS,
+} from '@iblai/iblai-js/web-utils';
+import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
 import { getUserEmail } from '@/features/utils';
 import { useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
 import { useOS } from '../use-os';
+import { useFreeTrial } from '../use-free-trial';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -64,7 +69,16 @@ export const use402ErrorCheck = () => {
         return;
       } else {
         //students use case
-        dispatch(setError402Detected(new Date().toISOString()));
+        dispatch(
+          setTopBannerOptions({
+            enabled: true,
+            loading: false,
+            bannerText: SUBSCRIPTION_MESSAGES.CREDIT_EXHAUSTED.STUDENT,
+            buttonLabel: SUBSCRIPTION_MESSAGES.ACTION_BUTTONS.CONTACT_ADMIN,
+            onUpgrade: SUBSCRIPTION_V2_TRIGGERS.CONTACT_ADMIN,
+            parentContainerSelector: '.mentor-parent-container',
+          }),
+        );
       }
     },
     [dispatch, pathname, router, searchParams, isAppleDevice],

@@ -97,6 +97,7 @@ import {
   isOfflineServerOrigin,
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
+import { useFreeTrial } from '@/hooks/use-free-trial';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -141,7 +142,10 @@ export function NavBar() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
+  const userEmail = getUserEmail();
   const userIsStudent = useUserIsStudent();
+  const { userOnFreeTrial } = useFreeTrial();
+  const canViewCreditCoinComponent = isAdmin || userOnFreeTrial();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
 
@@ -265,33 +269,6 @@ export function NavBar() {
   }, [isUserProfileOpen, foundryStatus, foundryStatusLoaded, isUsingFoundry]);
 
   const { currentTenant } = useCurrentTenant();
-  const { userTenants = [] } = useUserTenants();
-  const topBannerOptions = useAppSelector(
-    (state) => state.topBanner.topBannerOptions,
-  );
-
-  const subscriptionFlow = new MentorSubscriptionFlowV2({
-    platformName: config.iblPlatform(),
-    currentTenantKey: currentTenant?.key || '',
-    username: getUserName(),
-    currentTenantOrg: currentTenant?.org || '',
-    userTenants,
-    isAdmin: currentTenant?.is_admin || false,
-    mainTenantKey: config.mainTenantKey(),
-    userEmail: getUserEmail(),
-    dispatch,
-    topBannerOptions,
-    mentorUrl: config.mentorUrl(),
-  });
-  const { bannerButtonTriggerCallback } =
-    useSubscriptionHandlerV2(subscriptionFlow);
-
-  const handleCreditBalanceUpgradeClick = React.useCallback(() => {
-    const triggerPricingModal = bannerButtonTriggerCallback(
-      SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
-    );
-    triggerPricingModal();
-  }, [bannerButtonTriggerCallback]);
 
   const [forkMentor, { isLoading: isForkingMentor }] = useForkMentorMutation();
 
@@ -681,12 +658,15 @@ export function NavBar() {
           {!embedMode &&
             visibleToLoggedInUsersOnly &&
             currentTenant?.show_paywall &&
+            canViewCreditCoinComponent &&
             isLoggedIn() && (
               <CreditBalance
                 tenant={tenantKey}
-                platformName={config.iblPlatform() || 'mentor'}
-                onUpgradeClick={handleCreditBalanceUpgradeClick}
                 enabled={true}
+                redirectUrl={window.location.origin}
+                mainPlatformKey={config.mainTenantKey()}
+                currentUserEmail={getUserEmail()}
+                username={getUserName()}
               />
             )}
           {!embedMode && visibleToLoggedInUsersOnly && (
@@ -747,6 +727,8 @@ export function NavBar() {
             mentorId,
             isAdmin,
           }}
+          email={userEmail}
+          mainPlatformKey={config.mainTenantKey()}
           useGravatarPicFallback={
             config.enableGravatarOnProfilePic() !== 'false'
           }
