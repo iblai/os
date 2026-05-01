@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.59.2](https://github.com/iblai/mentorai/compare/v0.59.1...v0.59.2) (2026-05-01)
+
+### Bug Fixes
+
+* **public:** add Amazon provider logo asset ([5066a84](https://github.com/iblai/mentorai/commit/5066a84086a5e913e76c1e09b9d5634c6afa658f))
+
+### Chores
+
+* update iblai-js to 1.5.1 ([160095c](https://github.com/iblai/mentorai/commit/160095c77b1f25457850ac0a3985023aeef558c2))
+* update pnpm-lock.yaml file ([978f3e9](https://github.com/iblai/mentorai/commit/978f3e919a600a6bc948b00260b7ca53e026f21e))
+* updated pnpm-lock file ([276cf2d](https://github.com/iblai/mentorai/commit/276cf2d05fcd7f5c30995483d834617c436c8e41))
+
+### Tests
+
+* **utils:** cover isLoggedIn missing-localStorage and KaTeX annotation paths ([e5a6bba](https://github.com/iblai/mentorai/commit/e5a6bbacf5ffb8e1b5aaa2fb5e9cde53eae3b285))
+
 ## [0.59.1](https://github.com/iblai/mentorai/compare/v0.59.0...v0.59.1) (2026-05-01)
 
 ### Chores
