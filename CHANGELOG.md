@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.59.1](https://github.com/iblai/mentorai/compare/v0.59.0...v0.59.1) (2026-05-01)
+
+### Chores
+
+* **security:** add pnpm supply chain protections ([055e263](https://github.com/iblai/mentorai/commit/055e263bda4d371b8a547ed51871a58d753f1b0e))
+
 ## [0.59.0](https://github.com/iblai/mentorai/compare/v0.58.1...v0.59.0) (2026-05-01)
 
 ### Features
