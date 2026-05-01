@@ -285,7 +285,7 @@ importers:
         specifier: 10.1.0
         version: 10.1.0(@types/react@19.1.17)(react@19.1.0)
       react-paginate:
-        specifier: ^8.3.0
+        specifier: 8.3.0
         version: 8.3.0(react@19.1.0)
       react-redux:
         specifier: 9.2.0
