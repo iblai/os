@@ -46,7 +46,14 @@ vi.mock('@/lib/config', () => ({
   config: {
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    mainTenantKey: () => 'main',
   },
+}));
+
+// Mock getUserEmail
+vi.mock('@/features/utils', () => ({
+  getUserEmail: () => 'test@example.com',
+  getUserName: () => 'testuser',
 }));
 
 // Mock use-user hooks

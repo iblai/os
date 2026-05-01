@@ -193,8 +193,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const showingSharedChat = useSelector(selectShowingSharedChat);
 
   const email = searchParams.get('email');
+  const stripeCheckoutID = searchParams.get('stripe_checkout_id');
 
-  if (email && typeof window !== 'undefined') {
+  //don't logout user when coming back stripe. explain the presence of !stripeCheckoutID
+  if (email && typeof window !== 'undefined' && !stripeCheckoutID) {
     window.location.href = `${config.authUrl()}/login?enforce_logout=1&logout=1&email=${encodeURIComponent(email)}&app=mentor&redirect-to=${window.location.origin}`;
     return;
   }

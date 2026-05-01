@@ -48,6 +48,7 @@ import {
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
   isSafariBrowser,
+  onAccountDeleted,
 } from '@/lib/utils';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
@@ -2311,17 +2312,17 @@ describe('isStripeActivated function', () => {
     vi.clearAllMocks();
   });
 
-  it('should return true when stripe is enabled and tenant is main and not enterprise', () => {
+  it('should return true when stripe is enabled and tenant is main and paywall is hidden', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+    const tenant = { key: 'main', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
   });
 
-  it('should return true when stripe is enabled and tenant is main even if enterprise', () => {
+  it('should return true when stripe is enabled and tenant is main even if paywall is shown', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: true } as Parameters<
+    const tenant = { key: 'main', show_paywall: true } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
@@ -2329,23 +2330,23 @@ describe('isStripeActivated function', () => {
 
   it('should return false when stripe is disabled', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('false');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+    const tenant = { key: 'main', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
-  it('should return false for enterprise tenant that is not main', () => {
+  it('should return false for tenant without paywall that is not main', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'other', is_enterprise: true } as Parameters<
+    const tenant = { key: 'other', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
-  it('should return true for non-enterprise tenant that is not main', () => {
+  it('should return true for tenant with paywall that is not main', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'other', is_enterprise: false } as Parameters<
+    const tenant = { key: 'other', show_paywall: true } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
@@ -3109,5 +3110,158 @@ describe('isSafariBrowser function', () => {
       configurable: true,
     });
     expect(isSafariBrowser()).toBe(false);
+  });
+});
+
+describe('onAccountDeleted function', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: {
+        origin: 'https://example.com',
+        hostname: 'example.com',
+        href: 'https://example.com',
+      },
+      writable: true,
+      configurable: true,
+    });
+    localStorageMock.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should call handleLogout after a 3 second delay', () => {
+    onAccountDeleted();
+
+    // Nothing happens before the timer fires
+    expect(localStorageMock.getItem('axd_token')).toBeNull();
+
+    localStorageMock.setItem('axd_token', 'token');
+    localStorageMock.setItem('tenant', 'my-tenant');
+
+    vi.advanceTimersByTime(3000);
+
+    // handleLogout clears localStorage (except tenant) on its way to the redirect
+    expect(localStorageMock.getItem('axd_token')).toBeNull();
+    expect(localStorageMock.getItem('tenant')).toBe('my-tenant');
+  });
+});
+
+describe('isLoggedIn function - environment guards', () => {
+  it('should return false when localStorage.getItem is not a function', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {},
+      writable: true,
+      configurable: true,
+    });
+    expect(isLoggedIn()).toBe(false);
+  });
+});
+
+describe('preprocessLaTeX function - tabular and array environments', () => {
+  it('converts tabular wrapped in $$...$$ to a markdown table', () => {
+    const input =
+      '$$\\begin{tabular}{cc}\\hline\nName & Age \\\\\nAlice & 30 \\\\\n\\hline\\end{tabular}$$';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('| Name | Age |');
+    expect(result).toContain('| --- | --- |');
+    expect(result).toContain('| Alice | 30 |');
+  });
+
+  it('converts standalone tabular blocks to a markdown table', () => {
+    const input = '\\begin{tabular}{cc}\nA & B \\\\\nC & D\\end{tabular}';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('| A | B |');
+    expect(result).toContain('| C | D |');
+  });
+
+  it('converts array wrapped in \\[...\\] to a markdown table', () => {
+    const input = '\\[\\begin{array}{cc}1 & 2 \\\\ 3 & 4\\end{array}\\]';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('| 1 | 2 |');
+    expect(result).toContain('| 3 | 4 |');
+  });
+
+  it('converts array wrapped in $$...$$ to a markdown table', () => {
+    const input = '$$\\begin{array}{cc}5 & 6 \\\\ 7 & 8\\end{array}$$';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('| 5 | 6 |');
+    expect(result).toContain('| 7 | 8 |');
+  });
+
+  it('converts standalone array blocks to a markdown table', () => {
+    const input = '\\begin{array}{cc}9 & 10 \\\\ 11 & 12\\end{array}';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('| 9 | 10 |');
+    expect(result).toContain('| 11 | 12 |');
+  });
+});
+
+describe('htmlToMarkdown function - KaTeX restoration', () => {
+  it('restores inline math from KaTeX annotation spans', () => {
+    const html =
+      '<p>Equation: <span class="katex"><span>x^2</span><annotation encoding="application/x-tex">x^2</annotation></span></p>';
+    const result = htmlToMarkdown(html);
+    expect(result).toContain('$x^2$');
+  });
+
+  it('restores display math from KaTeX display spans', () => {
+    const html =
+      '<p><span class="katex-display"><span>e^{i\\pi}+1=0</span><annotation encoding="application/x-tex">e^{i\\pi}+1=0</annotation></span></p>';
+    const result = htmlToMarkdown(html);
+    expect(result).toContain('$$e^{i\\pi}+1=0$$');
+  });
+});
+
+describe('getCurrentArtifactTitle function - reduce ternary fallback', () => {
+  it('keeps the higher version_number when later versions are smaller', () => {
+    const messages = [
+      {
+        artifact_versions: [
+          {
+            id: 1,
+            title: 'Highest',
+            version_number: 5,
+          },
+          {
+            id: 2,
+            title: 'Lower',
+            version_number: 2,
+          },
+          {
+            id: 3,
+            title: 'Equal',
+            version_number: 5,
+          },
+        ],
+      },
+    ];
+
+    expect(getCurrentArtifactTitle(messages)).toBe('Highest');
+  });
+});
+
+describe('markdownToHtml function - preprocess paths', () => {
+  it('extracts content from ```markdown fenced blocks', () => {
+    const md = '```markdown\n## Heading\nbody text\n```';
+    const html = markdownToHtml(md);
+    expect(html).toContain('<h2');
+    expect(html).toContain('Heading');
+    expect(html).toContain('body text');
+  });
+
+  it('does not unescape markdown links when href is not a URL', () => {
+    const md = '\\[label\\](not-a-url)';
+    const html = markdownToHtml(md);
+    // href is invalid → preprocessor never produces an <a> tag for it
+    expect(html).not.toContain('href="not-a-url"');
+    expect(html).not.toContain('<a ');
   });
 });

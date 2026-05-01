@@ -56,10 +56,6 @@ vi.mock('@tanstack/react-form', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-user', () => ({
-  useUsername: vi.fn(() => 'test-user'),
-}));
-
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -108,8 +104,10 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/platform/test-tenant/test-mentor'),
 }));
 
-const mockCreateMentorWithSettings = vi.fn();
-const mockUnwrap = vi.fn();
+const { mockCreateMentorWithSettings, mockUnwrap } = vi.hoisted(() => ({
+  mockCreateMentorWithSettings: vi.fn(),
+  mockUnwrap: vi.fn(),
+}));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useCreateMentorMutation: () => [
