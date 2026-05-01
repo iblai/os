@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.58.1](https://github.com/iblai/mentorai/compare/v0.58.0...v0.58.1) (2026-05-01)
+
+### Bug Fixes
+
+- **mentor:** adding fixed for the memory tab ([1930322](https://github.com/iblai/mentorai/commit/1930322c8e0dc75afc8f02991b2a790b6ac5fa1f))
+
 ## [0.58.0](https://github.com/iblai/mentorai/compare/v0.57.2...v0.58.0) (2026-04-30)
 
 ### Features

@@ -77,6 +77,12 @@ vi.mock('@/hooks/user-navigate', () => ({
   })),
 }));
 
+// Note: a second `vi.mock('@iblai/iblai-js/data-layer', ...)` exists below
+// that wires up controllable `mockCreateMentorWithSettings` / `mockUnwrap`
+// references — that one is the source of truth. A duplicate factory was
+// removed here to keep the active mock unambiguous (which factory "wins" can
+// flip when the underlying package version changes the hoist order).
+
 vi.mock('@/lib/constants', () => ({
   DEFAULT_PROMPTS: {
     DEFAULT_SYSTEM_PROMPT: 'System prompt',

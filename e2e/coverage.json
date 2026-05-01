@@ -1255,7 +1255,10 @@
       "name": "Mentor Memory Tab",
       "spec": "24-mentor-memory-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx"
+        "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx",
+        "components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -1265,7 +1268,7 @@
         },
         {
           "id": "mem-02",
-          "description": "Reference saved memories toggle can be enabled and disabled",
+          "description": "Memory toggle in Settings tab can be enabled and disabled (sends enable_memory_component on Save)",
           "status": "covered"
         },
         {
@@ -1295,7 +1298,7 @@
         },
         {
           "id": "mem-08",
-          "description": "Memory button visibility in chat input reflects mentor memory setting",
+          "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
         }
       ]
