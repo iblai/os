@@ -87,6 +87,11 @@ vi.mock('@/hooks/use-user', () => ({
   useIsVisiting: () => mockIsVisiting,
   useUserIsStudent: () => mockUserIsStudent,
   useUsername: () => 'testuser',
+  useCurrentTenant: () => ({
+    currentTenant: { key: 'test-tenant', is_admin: true, show_paywall: false },
+    saveCurrentTenant: vi.fn(),
+  }),
+  useGetAllTenants: () => [{ key: 'test-tenant' }],
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({

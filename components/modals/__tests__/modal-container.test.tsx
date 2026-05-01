@@ -128,21 +128,6 @@ vi.mock('@/components/modals/apple-restriction-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/external-pricing-modal', () => ({
-  ExternalPricingModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
-        <button onClick={onClose}>Close Pricing</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@/components/modals/shortcuts-modal', () => ({
   ShortcutsModal: ({
     isOpen,
@@ -219,6 +204,18 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       <button onClick={onClose}>Close Invited</button>
     </div>
   ),
+  UpgradePackageModal: ({
+    open,
+    onClose,
+  }: {
+    open: boolean;
+    onClose: () => void;
+  }) =>
+    open ? (
+      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
+        <button onClick={onClose}>Close Pricing</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/custom-alert-dialog', () => ({

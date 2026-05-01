@@ -2311,17 +2311,17 @@ describe('isStripeActivated function', () => {
     vi.clearAllMocks();
   });
 
-  it('should return true when stripe is enabled and tenant is main and not enterprise', () => {
+  it('should return true when stripe is enabled and tenant is main and paywall is hidden', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+    const tenant = { key: 'main', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
   });
 
-  it('should return true when stripe is enabled and tenant is main even if enterprise', () => {
+  it('should return true when stripe is enabled and tenant is main even if paywall is shown', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'main', is_enterprise: true } as Parameters<
+    const tenant = { key: 'main', show_paywall: true } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
@@ -2329,23 +2329,23 @@ describe('isStripeActivated function', () => {
 
   it('should return false when stripe is disabled', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('false');
-    const tenant = { key: 'main', is_enterprise: false } as Parameters<
+    const tenant = { key: 'main', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
-  it('should return false for enterprise tenant that is not main', () => {
+  it('should return false for tenant without paywall that is not main', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'other', is_enterprise: true } as Parameters<
+    const tenant = { key: 'other', show_paywall: false } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(false);
   });
 
-  it('should return true for non-enterprise tenant that is not main', () => {
+  it('should return true for tenant with paywall that is not main', () => {
     vi.mocked(config.stripeEnabled).mockReturnValue('true');
-    const tenant = { key: 'other', is_enterprise: false } as Parameters<
+    const tenant = { key: 'other', show_paywall: true } as Parameters<
       typeof isStripeActivated
     >[0];
     expect(isStripeActivated(tenant)).toBe(true);
