@@ -279,7 +279,7 @@ export const MemoryMenu = ({
         </div>
 
         <p className="mt-2 text-sm text-gray-500">
-          Your saved memories for this mentor
+          Your saved memories for this agent
         </p>
       </div>
 

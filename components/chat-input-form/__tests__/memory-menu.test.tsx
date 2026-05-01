@@ -551,4 +551,149 @@ describe('MemoryMenu', () => {
     render(<MemoryMenu {...defaultProps} />);
     expect(screen.getByText('No date')).toBeInTheDocument();
   });
+
+  describe('infinite-scroll pagination', () => {
+    const setScrollMetrics = (
+      el: HTMLElement,
+      scrollHeight: number,
+      clientHeight: number,
+      scrollTop: number,
+    ) => {
+      Object.defineProperty(el, 'scrollHeight', {
+        value: scrollHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'clientHeight', {
+        value: clientHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'scrollTop', {
+        value: scrollTop,
+        configurable: true,
+      });
+    };
+
+    it('fetches and appends a second page when scrolled near the bottom', async () => {
+      const page1Response = {
+        count: 7,
+        next: 'next-url',
+        previous: null,
+        results: baseResults.slice(0, 5),
+      };
+      const page2Response = {
+        count: 7,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 30,
+            content: 'Second page item',
+            category: { id: 1, name: 'General', slug: 'general' },
+          },
+          {
+            id: 31,
+            content: 'Another second page item',
+            category: { id: 2, name: 'Work', slug: 'work' },
+          },
+        ],
+      };
+      mockGetMentorMemoriesListQuery.mockImplementation((args: any) => {
+        if (args?.params?.page === 1)
+          return { data: page1Response, isFetching: false };
+        if (args?.params?.page === 2)
+          return { data: page2Response, isFetching: false };
+        return { data: undefined, isFetching: false };
+      });
+
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      expect(screen.queryByText('Second page item')).not.toBeInTheDocument();
+
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      await waitFor(() => {
+        expect(screen.getByText('Second page item')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Another second page item')).toBeInTheDocument();
+      // Original page-1 items are still rendered alongside the appended page.
+      expect(screen.getByText('Likes tea')).toBeInTheDocument();
+    });
+
+    it('does not load more when there is no next page', () => {
+      // baseResponse already has next: null.
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('does not load more while a fetch is already in flight', () => {
+      mockGetMentorMemoriesListQuery.mockReturnValue({
+        data: { ...baseResponse, next: 'next-url' },
+        isFetching: true,
+      });
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('does not load more when not scrolled near the bottom', () => {
+      mockGetMentorMemoriesListQuery.mockReturnValue({
+        data: { ...baseResponse, next: 'next-url' },
+        isFetching: false,
+      });
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 100);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('dedupes when a subsequent page only returns ids already seen', async () => {
+      const page1Response = {
+        count: 7,
+        next: 'next-url',
+        previous: null,
+        results: baseResults.slice(0, 5),
+      };
+      // Page 2 returns ids that are already in the accumulated list.
+      const page2Response = {
+        count: 7,
+        next: null,
+        previous: null,
+        results: baseResults.slice(0, 2),
+      };
+      mockGetMentorMemoriesListQuery.mockImplementation((args: any) => {
+        if (args?.params?.page === 1)
+          return { data: page1Response, isFetching: false };
+        if (args?.params?.page === 2)
+          return { data: page2Response, isFetching: false };
+        return { data: undefined, isFetching: false };
+      });
+
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      await waitFor(() => {
+        const calls = mockGetMentorMemoriesListQuery.mock.calls;
+        expect(calls.some((c: any[]) => c[0]?.params?.page === 2)).toBe(true);
+      });
+
+      // The 5 originals remain; the duplicate page-2 results were filtered out.
+      expect(screen.getAllByText('Likes tea').length).toBe(1);
+      expect(screen.getAllByText('Loves hiking').length).toBe(1);
+    });
+  });
 });

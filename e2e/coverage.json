@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-30",
+  "lastUpdated": "2026-05-01",
   "summary": {
     "totalCheckpoints": 339,
     "coveredCheckpoints": 330,
@@ -1032,52 +1032,100 @@
       "name": "Billing & Subscription",
       "spec": "21-billing-and-subscription.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx"
       ],
       "checkpoints": [
         {
           "id": "bill-01",
-          "description": "Billing tab is visible in account settings",
+          "description": "CreditBalance trigger visibility matches current_tenant.show_paywall",
           "status": "covered"
         },
         {
           "id": "bill-02",
-          "description": "Billing main card shows credits info",
+          "description": "CreditBalance trigger exposes accessible label with credits info",
           "status": "covered"
         },
         {
           "id": "bill-03",
-          "description": "Correct buttons shown based on payment method status",
+          "description": "CreditBalance dropdown shows the plan badge (Free/Trial/Premium)",
           "status": "covered"
         },
         {
           "id": "bill-04",
-          "description": "Subscription renewal info shown when applicable",
+          "description": "CreditBalance dropdown footer matches active plan (Upgrade Plan / Manage Usage + Add Credits / Manage Billing)",
           "status": "covered"
         },
         {
           "id": "bill-05",
-          "description": "Usage card visible when topUpURL configured",
+          "description": "Premium + payment method shows Manage Usage, Add Credits, and inline Auto Recharge section",
           "status": "covered"
         },
         {
           "id": "bill-06",
-          "description": "Plan info and upgrade button display when applicable",
+          "description": "CreditBalance dropdown shows the Remaining credits row",
           "status": "covered"
         },
         {
           "id": "bill-07",
-          "description": "Auto Recharge modal opens with all elements and Cancel closes it",
+          "description": "Manage Usage in dropdown opens the Auto Recharge modal (payment-gated)",
           "status": "covered"
         },
         {
           "id": "bill-08",
-          "description": "Add Credits modal opens correctly",
+          "description": "Add Credits in dropdown opens the Add Credits modal (payment-gated)",
           "status": "covered"
         },
         {
           "id": "bill-09",
-          "description": "New user sees Stripe pricing modal when creating a mentor",
+          "description": "Escape closes the CreditBalance dropdown",
+          "status": "covered"
+        },
+        {
+          "id": "bill-10",
+          "description": "Billing tab opens via ?profileTab=billing and the Plan section mounts",
+          "status": "covered"
+        },
+        {
+          "id": "bill-11",
+          "description": "Billing tab Plan / Credits / Auto Recharge sections match the active plan",
+          "status": "covered"
+        },
+        {
+          "id": "bill-12",
+          "description": "Billing tab Auto Recharge section is hidden on Free plan and shown on non-Free + payment method",
+          "status": "covered"
+        },
+        {
+          "id": "bill-13",
+          "description": "Billing tab Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-14",
+          "description": "Billing tab Auto Recharge toggle inverts on click and restores on second click (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-15",
+          "description": "Billing tab Auto Recharge threshold and amount inputs accept values (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-16",
+          "description": "Billing tab Add Credits button opens the Add Credits modal (non-Free + payment method)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-17",
+          "description": "Plan label is consistent between CreditBalance dropdown and Billing tab",
+          "status": "covered"
+        },
+        {
+          "id": "bill-18",
+          "description": "Non-admin without subscription sees Stripe pricing modal when creating a mentor",
           "status": "covered"
         }
       ]
