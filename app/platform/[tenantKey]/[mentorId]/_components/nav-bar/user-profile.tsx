@@ -23,10 +23,7 @@ import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import {
-  useSubscriptionHandlerV2,
-  SUBSCRIPTION_V2_TRIGGERS,
-} from '@iblai/iblai-js/web-utils';
+import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
 import {
   handleLogout,
   handleTenantSwitch,
@@ -138,25 +135,9 @@ export function UserProfile() {
     topBannerOptions,
     mentorUrl: config.mentorUrl(),
   });
-  const {
-    getBillingURL,
-    getTopUpURL,
-    getUserSubscriptionPackage,
-    getUserActiveAppLegacy,
-    bannerButtonTriggerCallback,
-  } = useSubscriptionHandlerV2(subscriptionFlow);
+  const { getUserSubscriptionPackage, getUserActiveAppLegacy } =
+    useSubscriptionHandlerV2(subscriptionFlow);
 
-  // Handle upgrade click - triggers the pricing modal
-  const handleUpgradeClick = useCallback(() => {
-    const triggerPricingModal = bannerButtonTriggerCallback(
-      SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
-    );
-    triggerPricingModal();
-    handleModalOpenChange(false);
-  }, [bannerButtonTriggerCallback]);
-
-  const [billingURL, setBillingURL] = useState<string>('');
-  const [topUpURL, setTopUpURL] = useState<string>('');
   const [currentPlan, setCurrentPlan] = useState<string>('');
   const [userActiveApp, setUserActiveApp] = useState<UserApp | null>(null);
 

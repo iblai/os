@@ -52,6 +52,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
+import { getUserEmail } from '@/features/utils';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ANONYMOUS_USERNAME, MODALS } from '@/lib/constants';
 
@@ -637,6 +638,8 @@ export function Header({
       <UserProfileModal
         isOpen={isUserProfileOpen}
         onClose={() => setIsUserProfileOpen(false)}
+        email={getUserEmail()}
+        mainPlatformKey={config.mainTenantKey()}
         params={{
           tenantKey,
           mentorId,

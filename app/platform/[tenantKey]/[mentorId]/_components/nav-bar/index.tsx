@@ -50,14 +50,8 @@ import {
   useIsVisiting,
   useUserIsStudent,
   useUsername,
-  useUserTenants,
 } from '@/hooks/use-user';
 import { getUserEmail, getUserName } from '@/features/utils';
-import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
-import {
-  useSubscriptionHandlerV2,
-  SUBSCRIPTION_V2_TRIGGERS,
-} from '@iblai/iblai-js/web-utils';
 import { MODALS, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';

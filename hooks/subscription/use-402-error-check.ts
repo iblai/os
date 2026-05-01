@@ -16,7 +16,6 @@ import { useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
 import { useOS } from '../use-os';
-import { useFreeTrial } from '../use-free-trial';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();

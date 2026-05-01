@@ -18,7 +18,6 @@ import { SettingsModal } from '@/components/modals/settings-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
-import { ExternalPricingModal } from './external-pricing-modal';
 import {
   setOpenPricingModal,
   setOpenAppleRestrictionModal,
