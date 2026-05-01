@@ -59,7 +59,7 @@ describe('ProjectInstructionsModal', () => {
       expect(dialog).toBeInTheDocument();
       expect(screen.getByText('Instructions')).toBeInTheDocument();
       expect(
-        screen.getByText(/You can ask mentorAI to focus on certain topics/),
+        screen.getByText(/You can ask agent to focus on certain topics/),
       ).toBeInTheDocument();
     });
 

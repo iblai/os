@@ -29,7 +29,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import {
   CreditBalance,
@@ -205,10 +204,7 @@ export function NavBar() {
 
   const { toggleSidebar, open: openSidebar, isMobile } = useSidebar();
 
-  const [, setIsMentorListOpen] = React.useState(false);
-
   const [isUserProfileOpen, setIsUserProfileOpen] = React.useState(false);
-  const [isMyMentorsModalOpen, setIsMyMentorsModalOpen] = React.useState(false);
   const embedMode = useEmbedMode();
 
   // Local LLM download hook for Tauri app
@@ -273,7 +269,7 @@ export function NavBar() {
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
-      toast.error('Unable to modify mentor. Missing context.');
+      toast.error('Unable to modify agent. Missing context.');
       return;
     }
     try {
@@ -304,7 +300,7 @@ export function NavBar() {
         }).unwrap();
       }
       //REDIRECT TO THE NEW MENTOR
-      toast.success('Mentor successfully forked. Switching to new mentor...');
+      toast.success('Agent successfully forked. Switching to new agent...');
       const newStack = getUpdatedModalStack(
         MODALS.EDIT_MENTOR.name,
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -316,7 +312,7 @@ export function NavBar() {
         `modal=${JSON.stringify(newStack)}`,
       );
     } catch (error) {
-      toast.error('Failed to modify mentor');
+      toast.error('Failed to modify agent');
       // console.error(JSON.stringify(error));;
     }
   };
@@ -371,11 +367,6 @@ export function NavBar() {
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore') &&
     !isWorkflowsPage;
-
-  const handleAvatarClick = () => {
-    // Open the mentor menu instead of the profile
-    setIsMentorListOpen(true);
-  };
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -480,38 +471,18 @@ export function NavBar() {
               !isWorkflowsPage &&
               mentorId &&
               (isPromptGalleryOrAnalytics ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                        onClick={() => setIsMyMentorsModalOpen(true)}
-                      >
-                        <Avatar className="mr-1 h-5 w-5">
-                          <AvatarImage
-                            src={selectedAnalyticsMentor?.profileImage ?? ''}
-                            alt={selectedAnalyticsMentor?.name ?? ''}
-                            onClick={handleAvatarClick}
-                          />
-                          <AvatarFallback>
-                            {selectedAnalyticsMentor?.name?.substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{selectedAnalyticsMentor?.name}</span>
-                        {!userIsStudent && (
-                          <ChevronDown className="h-4 w-4 text-gray-500" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      className="ibl-tooltip-content"
-                      side="bottom"
-                    >
-                      Select Mentor
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
+                  <Avatar className="mr-1 h-5 w-5">
+                    <AvatarImage
+                      src={selectedAnalyticsMentor?.profileImage ?? ''}
+                      alt={selectedAnalyticsMentor?.name ?? ''}
+                    />
+                    <AvatarFallback>
+                      {selectedAnalyticsMentor?.name?.substring(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{selectedAnalyticsMentor?.name}</span>
+                </div>
               ) : hasDropdownItems ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -521,7 +492,7 @@ export function NavBar() {
                     <Button
                       variant="ghost"
                       className="flex cursor-pointer items-center gap-1"
-                      aria-label="Selected mentor dropdown button"
+                      aria-label="Selected agent dropdown button"
                     >
                       <User className="h-4 w-4 text-[#646464]" />
                       <span className="hidden sm:block">
@@ -590,40 +561,12 @@ export function NavBar() {
                 <Button
                   variant="ghost"
                   className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label="Selected mentor"
+                  aria-label="Selected agent"
                 >
                   <User className="h-4 w-4 text-[#646464]" />
                   <span className="hidden sm:block">{selectedMentorName}</span>
                 </Button>
               ))}
-
-            <>
-              {isOnChatPage && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="hidden cursor-pointer items-center gap-2 text-sm font-medium whitespace-nowrap text-[#646464] transition-colors hover:text-[#484848] md:flex"
-                      onClick={() => setIsMyMentorsModalOpen(true)}
-                    >
-                      <Image
-                        src="/icons/my-mentors.svg"
-                        alt=""
-                        width={20}
-                        height={20}
-                        className="text-gray-500"
-                      />
-                      <span className="hidden whitespace-nowrap lg:flex">
-                        My Mentors
-                      </span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    View My Mentors
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </>
           </div>
         </div>
 
@@ -703,13 +646,6 @@ export function NavBar() {
         <CreateMentorModal
           isOpen={showCreateMentorModal}
           onClose={closeCreateMentorModal}
-        />
-      )}
-      {isMyMentorsModalOpen && (
-        <MyMentorsModal
-          isOpen={isMyMentorsModalOpen}
-          onClose={() => setIsMyMentorsModalOpen(false)}
-          hideCreateButton={isPromptGalleryOrAnalytics}
         />
       )}
       {isUserProfileOpen && (

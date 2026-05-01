@@ -86,13 +86,26 @@ export class MemoryTab {
 
     // Always pick a concrete category — the modal pre-fills the current
     // filter (often "All"), which gets filtered out of the dropdown and
-    // falls back to a non-existent slug server-side. Picking the first
-    // real option keeps the create request valid.
+    // falls back to a non-existent slug server-side. Picking a stable
+    // server-seeded option keeps the create request valid even when the
+    // categories list still contains stale entries from a sibling test
+    // (e.g. an "E2E Cat …" leftover whose slug 404s).
     const selectTrigger = addDialog.getByRole('combobox').first();
     await selectTrigger.click();
-    const option = category
+    let option = category
       ? this.page.getByRole('option', { name: category, exact: true })
-      : this.page.getByRole('option').first();
+      : this.page
+          .getByRole('option')
+          .filter({ hasNotText: /^E2E /i })
+          .filter({ hasNotText: /^All$/i })
+          .first();
+    try {
+      await option.waitFor({ state: 'visible', timeout: 3_000 });
+    } catch {
+      // Fall back to whatever option is available — the test can still proceed
+      // even if no "stable" category exists in this tenant's seed data.
+      option = this.page.getByRole('option').first();
+    }
     await expect(option).toBeVisible({ timeout: 5_000 });
     await option.click();
 
@@ -103,7 +116,142 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory created/i).first()).toBeVisible({
+    // Treat either the success toast or the dialog closing as success — Sonner
+    // toasts can disappear before the assertion polls, so dialog-hidden is the
+    // most reliable signal that the create mutation completed. Surface the
+    // error toast explicitly so a 4xx from a stale category slug is obvious.
+    const successToast = this.page.getByText(/Memory created/i).first();
+    const errorToast = this.page.getByText(/Failed to create memory/i).first();
+    const completed = await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      addDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      errorToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'timeout' as const),
+    ]);
+    if (completed === 'error') {
+      throw new Error(
+        'createMemory failed: backend rejected the request (saw "Failed to create memory" toast)',
+      );
+    }
+    if (completed === 'timeout') {
+      throw new Error(
+        'createMemory timed out: no success toast, no error toast, dialog still open',
+      );
+    }
+  }
+
+  /**
+   * Locator for a memory entry card containing the given content. Use this
+   * (not "first") when tests run in parallel — multiple specs may be
+   * adding/removing entries concurrently, so positional selectors race.
+   */
+  entryByContent(content: string): Locator {
+    return this.dialog.locator('.space-y-3 > div').filter({ hasText: content });
+  }
+
+  /**
+   * Returns true if a memory entry with the given content becomes visible
+   * within `timeout` ms. Uses waitFor (auto-retry) — `Locator.isVisible()`
+   * does not actually wait, so it would race with RTK Query refetches that
+   * fire after create/update mutations.
+   */
+  async hasMemoryWithContent(
+    content: string,
+    timeout = 10_000,
+  ): Promise<boolean> {
+    return this.entryByContent(content)
+      .first()
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  /**
+   * Opens the action menu (MoreHorizontal) for the entry whose content
+   * matches `content`. Throws if no such entry is visible.
+   */
+  private async openActionMenuForContent(content: string): Promise<void> {
+    const entry = this.entryByContent(content).first();
+    await expect(entry).toBeVisible({ timeout: 10_000 });
+    const actionBtn = entry
+      .locator('button:not([aria-label]):not([name])')
+      .or(entry.locator('button[class*="ghost"][class*="h-6"]'))
+      .first();
+    await expect(actionBtn).toBeVisible({ timeout: 10_000 });
+    await actionBtn.click();
+  }
+
+  /**
+   * Edits a memory entry identified by its current content. Prefer this over
+   * editFirst for parallel-safe tests.
+   */
+  async editByContent(
+    currentContent: string,
+    newContent: string,
+  ): Promise<void> {
+    await this.openActionMenuForContent(currentContent);
+
+    const editMenuItem = this.page
+      .getByRole('menuitem', { name: /edit/i })
+      .last();
+    await expect(editMenuItem).toBeVisible({ timeout: 5_000 });
+    await editMenuItem.click();
+
+    const editDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /edit memory/i })
+      .last();
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+
+    const textarea = editDialog.locator('textarea');
+    await textarea.clear();
+    await textarea.fill(newContent);
+
+    const saveButton = editDialog.getByRole('button', { name: /save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Deletes a memory entry identified by its content. Prefer this over
+   * deleteFirst for parallel-safe tests.
+   */
+  async deleteByContent(content: string): Promise<void> {
+    await this.openActionMenuForContent(content);
+
+    const deleteMenuItem = this.page
+      .getByRole('menuitem', { name: /delete/i })
+      .last();
+    await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
+    await deleteMenuItem.click();
+
+    const confirmDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /delete|confirm/i })
+      .last();
+    const confirmVisible = await confirmDialog
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (confirmVisible) {
+      await confirmDialog
+        .getByRole('button', { name: /delete|confirm/i })
+        .last()
+        .click();
+    }
+
+    await expect(this.entryByContent(content).first()).toHaveCount(0, {
       timeout: 10_000,
     });
   }
@@ -111,6 +259,7 @@ export class MemoryTab {
   /**
    * Edits the first memory entry by clicking its action menu and selecting "Edit".
    * @param newContent - The updated memory content.
+   * @deprecated Positional — races with parallel tests. Use editByContent.
    */
   async editFirst(newContent: string): Promise<void> {
     const firstActionBtn = this.memoryActionButtons.first();
@@ -145,6 +294,7 @@ export class MemoryTab {
   /**
    * Deletes the first memory entry by clicking its action menu (MoreHorizontal)
    * and selecting "Delete" from the dropdown, then confirming if a dialog appears.
+   * @deprecated Positional — races with parallel tests. Use deleteByContent.
    */
   async deleteFirst(): Promise<void> {
     // Click the MoreHorizontal icon button for the first memory entry.

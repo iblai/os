@@ -506,6 +506,26 @@ describe('Providers', () => {
       expect(mockRedirectToAuthSpa).not.toHaveBeenCalled();
     });
 
+    it('401 handler skips redirect when token search param is present (shareable link)', () => {
+      // Use history.pushState to set the search param without replacing
+      // window.location entirely (which breaks subsequent tests).
+      const origUrl = window.location.href;
+      window.history.pushState({}, '', '/?token=share-abc');
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      renderProviders();
+      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
+      errorHandlers?.['401']();
+      expect(mockRedirectToAuthSpa).not.toHaveBeenCalled();
+      const skipLog = consoleSpy.mock.calls.find(
+        (call) =>
+          typeof call[0] === 'string' &&
+          call[0].includes('Skipping 401 redirect - shareable link'),
+      );
+      expect(skipLog).toBeDefined();
+      consoleSpy.mockRestore();
+      window.history.pushState({}, '', origUrl);
+    });
+
     it('402 handler calls handle402Error', () => {
       renderProviders();
       const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
@@ -827,6 +847,22 @@ describe('Providers', () => {
       expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('r', 'p', true, false);
     });
 
+    it('onAuthFailure logs the reason and routes to /error/403', () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      renderProviders();
+      const onAuthFailure =
+        capturedTenantProviderProps.onAuthFailure as Function;
+      onAuthFailure('forbidden');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[TenantProvider] Auth failure:',
+        'forbidden',
+      );
+      expect(mockPush).toHaveBeenCalledWith('/error/403');
+      consoleSpy.mockRestore();
+    });
+
     it('passes correct currentTenant', () => {
       renderProviders();
       expect(capturedTenantProviderProps.currentTenant).toBe('test-tenant');
@@ -960,9 +996,7 @@ describe('Providers', () => {
       fn();
       expect(mockReplace).toHaveBeenCalled();
       vi.advanceTimersByTime(1100);
-      expect(toast.success).toHaveBeenCalledWith(
-        'Mentor switched successfully',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Agent switched successfully');
       vi.useRealTimers();
     });
 
@@ -976,6 +1010,25 @@ describe('Providers', () => {
       mockIsPreviewMode = false;
       renderProviders();
       expect(capturedMentorProviderProps.fallback).not.toBeNull();
+    });
+  });
+
+  // ── workflow page short-circuits in MentorProvider callbacks ──────────
+
+  describe('workflow page MentorProvider callbacks', () => {
+    beforeEach(() => {
+      mockPathname = '/workflows/abc/run';
+    });
+
+    // One workflow-page test is enough to satisfy the 95% branch threshold
+    // for this file; the remaining isWorkflowPage short-circuits are
+    // structurally identical (same predicate, same early `return`).
+    it('redirectToNoMentorsPage no-ops on workflow pages', () => {
+      renderProviders();
+      const fn =
+        capturedMentorProviderProps.redirectToNoMentorsPage as Function;
+      fn();
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 
@@ -1194,6 +1247,34 @@ describe('Providers', () => {
         renderProviders();
         const fn = getMiddlewareFn('platform');
         expect(await fn!()).toBe(false);
+        consoleSpy.mockRestore();
+      });
+
+      // Regression coverage for issue #343 — `[ERROR] {}` Sentry events.
+      // The .catch on getMentorPublicSettings used to JSON.stringify the
+      // error, which produced "{}" for Error instances. The fix passes the
+      // Error directly to console.error; Sentry's captureConsoleIntegration
+      // (wired up in sentry.{client,server,edge}.config.ts) auto-promotes
+      // the call into a Sentry event with the full stack preserved.
+      it('logs Error directly to console.error on rejection (#343)', async () => {
+        const fetchErr = new TypeError('Failed to fetch');
+        mockUnwrap.mockRejectedValueOnce(fetchErr);
+        const consoleSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
+        renderProviders();
+        const fn = getMiddlewareFn('platform');
+        const result = await fn!();
+        expect(result).toBe(false);
+        // console.error must be called with a descriptive label AND the raw
+        // Error — not a pre-stringified payload that would lose the stack.
+        const matchingCall = consoleSpy.mock.calls.find(
+          (call) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('getMentorPublicSettings failed'),
+        );
+        expect(matchingCall).toBeDefined();
+        expect(matchingCall?.[1]).toBe(fetchErr);
         consoleSpy.mockRestore();
       });
     });

@@ -279,22 +279,6 @@ vi.mock('@/components/modals/create-mentor-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    hideCreateButton: boolean;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal">
-        <button onClick={onClose}>Close My Mentors</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileModal: ({
     isOpen,
@@ -464,13 +448,12 @@ describe('Header component', () => {
       expect(toggleButton).toBeInTheDocument();
     });
 
-    it('should render My Mentors button in mobile view', () => {
+    it('should not render My Mentors button in mobile view', () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', {
-        name: /my mentors/i,
-      });
-      expect(myMentorsButton).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /my mentors/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('should open LLM modal when LLM button is clicked in mobile view', async () => {
@@ -484,19 +467,6 @@ describe('Header component', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('llm-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('should open My Mentors modal when My Mentors button is clicked in mobile view', async () => {
-      render(<Header />);
-
-      const myMentorsButton = screen.getByRole('button', {
-        name: /my mentors/i,
-      });
-      fireEvent.click(myMentorsButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
       });
     });
 
@@ -530,30 +500,6 @@ describe('Header component', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('llm-modal')).not.toBeInTheDocument();
-      });
-    });
-
-    it('should close My Mentors modal when close button is clicked in mobile view', async () => {
-      render(<Header />);
-
-      // Open the modal
-      const myMentorsButton = screen.getByRole('button', {
-        name: /my mentors/i,
-      });
-      fireEvent.click(myMentorsButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-      });
-
-      // Close the modal
-      const closeButton = screen.getByText('Close My Mentors');
-      fireEvent.click(closeButton);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByTestId('my-mentors-modal'),
-        ).not.toBeInTheDocument();
       });
     });
 
@@ -636,10 +582,10 @@ describe('Header component', () => {
       expect(clickButton).toBeInTheDocument();
     });
 
-    it('should render My Mentors text on desktop', () => {
+    it('should not render My Mentors text on desktop', () => {
       render(<Header />);
 
-      expect(screen.getByText('My Mentors')).toBeInTheDocument();
+      expect(screen.queryByText('My Mentors')).not.toBeInTheDocument();
     });
 
     it('should render Create button for admin users on desktop', () => {
@@ -733,40 +679,14 @@ describe('Header component', () => {
     });
   });
 
-  describe('My Mentors modal', () => {
-    it('should open My Mentors modal when button is clicked', async () => {
+  describe('My Mentors removal', () => {
+    it('should not render any My Mentors trigger anywhere', () => {
       render(<Header />);
 
-      const myMentorsButton = screen.getByRole('button', {
-        name: /my mentors/i,
-      });
-      fireEvent.click(myMentorsButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('should close My Mentors modal when close button is clicked', async () => {
-      render(<Header />);
-
-      const myMentorsButton = screen.getByRole('button', {
-        name: /my mentors/i,
-      });
-      fireEvent.click(myMentorsButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-      });
-
-      const closeButton = screen.getByText('Close My Mentors');
-      fireEvent.click(closeButton);
-
-      await waitFor(() => {
-        expect(
-          screen.queryByTestId('my-mentors-modal'),
-        ).not.toBeInTheDocument();
-      });
+      expect(
+        screen.queryByRole('button', { name: /my mentors/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^My Mentors$/)).not.toBeInTheDocument();
     });
   });
 
@@ -1115,45 +1035,27 @@ describe('Header component', () => {
   });
 
   describe('prompt gallery and analytics page interactions', () => {
-    it('should open My Mentors modal when mentor selector is clicked on prompt-gallery page', async () => {
+    it('should render mentor selector as a non-clickable label on prompt-gallery page', () => {
       mockUsePathname.mockReturnValue('/tenant-1/mentor-1/prompt-gallery');
       render(<Header />);
 
-      // On prompt-gallery, clicking mentor name should open My Mentors modal
-      // The button contains an avatar and mentor name
-      const mentorButtons = screen.getAllByRole('button');
-      const mentorButton = mentorButtons.find((btn) =>
-        btn.textContent?.includes('Test Mentor'),
-      );
-      expect(mentorButton).toBeDefined();
-
-      if (mentorButton) {
-        fireEvent.click(mentorButton);
-
-        await waitFor(() => {
-          expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-        });
-      }
+      // Mentor name is shown as plain text (no surrounding button/role)
+      expect(screen.getByText('Test Mentor')).toBeInTheDocument();
+      const mentorButtons = screen
+        .getAllByRole('button')
+        .filter((btn) => btn.textContent?.includes('Test Mentor'));
+      expect(mentorButtons).toHaveLength(0);
     });
 
-    it('should open My Mentors modal when mentor selector is clicked on analytics page', async () => {
+    it('should render mentor selector as a non-clickable label on analytics page', () => {
       mockUsePathname.mockReturnValue('/tenant-1/mentor-1/analytics');
       render(<Header />);
 
-      // On analytics, clicking mentor name should open My Mentors modal
-      const mentorButtons = screen.getAllByRole('button');
-      const mentorButton = mentorButtons.find((btn) =>
-        btn.textContent?.includes('Test Mentor'),
-      );
-      expect(mentorButton).toBeDefined();
-
-      if (mentorButton) {
-        fireEvent.click(mentorButton);
-
-        await waitFor(() => {
-          expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-        });
-      }
+      expect(screen.getByText('Test Mentor')).toBeInTheDocument();
+      const mentorButtons = screen
+        .getAllByRole('button')
+        .filter((btn) => btn.textContent?.includes('Test Mentor'));
+      expect(mentorButtons).toHaveLength(0);
     });
   });
 
@@ -1397,100 +1299,27 @@ describe('Header component', () => {
     });
   });
 
-  describe('handleAvatarClick and handleMentorSelect', () => {
-    it('should open MentorListModal when avatar image is clicked on prompt-gallery page', async () => {
-      mockUsePathname.mockReturnValue('/tenant-1/mentor-1/prompt-gallery');
-      render(<Header />);
-
-      // Find all avatar images - the one with alt="mentorAI" in the tooltip trigger has handleAvatarClick
-      const avatarImages = screen.getAllByTestId('avatar-image');
-      // Click on avatar images to find the one with handleAvatarClick
-      for (const img of avatarImages) {
-        if (img.getAttribute('alt') === 'mentorAI') {
-          fireEvent.click(img);
-          break;
-        }
-      }
-
-      // Check if MentorListModal opened
-      await waitFor(() => {
-        const mentorListModal = screen.queryByTestId('mentor-list-modal');
-        if (mentorListModal) {
-          expect(mentorListModal).toBeInTheDocument();
-        }
-      });
-    });
-
-    it('should call handleMentorSelect when mentor is selected from MentorListModal', async () => {
+  describe('handleMentorSelect', () => {
+    it('should log the selected mentor when invoked through MentorListModal onSelect', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      mockUsePathname.mockReturnValue('/tenant-1/mentor-1/prompt-gallery');
       render(<Header />);
 
-      // Click on the mentorAI avatar to trigger handleAvatarClick
-      const avatarImages = screen.getAllByTestId('avatar-image');
-      for (const img of avatarImages) {
-        if (img.getAttribute('alt') === 'mentorAI') {
-          fireEvent.click(img);
-          break;
-        }
-      }
+      // The MentorListModal is mounted (closed by default); our mock captured onSelect.
+      expect(capturedMentorListOnSelect.current).not.toBeNull();
+      capturedMentorListOnSelect.current!({ id: 'test-mentor' });
 
-      // Wait for MentorListModal to appear
-      const mentorListModal = await screen
-        .findByTestId('mentor-list-modal')
-        .catch(() => null);
-
-      if (mentorListModal) {
-        // Click on "Select Mentor" button to trigger handleMentorSelect
-        const selectButton = screen.getByTestId('select-mentor');
-        fireEvent.click(selectButton);
-
-        // Verify handleMentorSelect was called (it logs to console)
-        expect(consoleSpy).toHaveBeenCalledWith('Selected mentor:', {
-          id: 'test-mentor',
-        });
-
-        // Modal should close after selection
-        await waitFor(() => {
-          expect(
-            screen.queryByTestId('mentor-list-modal'),
-          ).not.toBeInTheDocument();
-        });
-      }
-
+      expect(consoleSpy).toHaveBeenCalledWith('Selected mentor:', {
+        id: 'test-mentor',
+      });
       consoleSpy.mockRestore();
     });
 
-    it('should close MentorListModal when close button is clicked', async () => {
-      mockUsePathname.mockReturnValue('/tenant-1/mentor-1/prompt-gallery');
+    it('should not throw when MentorListModal onClose is invoked', () => {
       render(<Header />);
 
-      // Click on the mentorAI avatar to trigger handleAvatarClick
-      const avatarImages = screen.getAllByTestId('avatar-image');
-      for (const img of avatarImages) {
-        if (img.getAttribute('alt') === 'mentorAI') {
-          fireEvent.click(img);
-          break;
-        }
-      }
-
-      // Wait for MentorListModal to appear
-      const mentorListModal = await screen
-        .findByTestId('mentor-list-modal')
-        .catch(() => null);
-
-      if (mentorListModal) {
-        // Click close button
-        const closeButton = screen.getByText('Close Mentor List');
-        fireEvent.click(closeButton);
-
-        // Modal should close
-        await waitFor(() => {
-          expect(
-            screen.queryByTestId('mentor-list-modal'),
-          ).not.toBeInTheDocument();
-        });
-      }
+      expect(capturedMentorListOnClose.current).not.toBeNull();
+      // Should not throw — internally clears the mentor list state
+      capturedMentorListOnClose.current!();
     });
   });
 });

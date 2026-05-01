@@ -86,7 +86,7 @@ test.describe('Journey 31: Mobile View', () => {
     'non-admin on mobile goes to datasets tab and performs upload and untrain/delete flow',
     async ({ nonadminPage, nonadminEditMentorPage }) => {
       const dropdown = nonadminPage.getByRole('button', {
-        name: 'Selected mentor dropdown button',
+        name: 'Selected agent dropdown button',
       });
       if (!(await dropdown.isVisible({ timeout: 10_000 }).catch(() => false)))
         return;

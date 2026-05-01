@@ -266,8 +266,8 @@ export const MemoryMenu = ({
 
         <p className="mt-2 text-sm text-gray-500">
           {isStudent
-            ? 'Your saved memories for this mentor'
-            : 'Memories for this mentor'}
+            ? 'Your saved memories for this agent'
+            : 'Memories for this agent'}
         </p>
       </div>
 

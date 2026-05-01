@@ -238,13 +238,13 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
           className="scrollbar-hide flex-1 overflow-y-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           id="main-content"
-          aria-label="Mentor exploration page"
+          aria-label="Agent exploration page"
         >
           <div className="mx-auto max-w-[920px] px-3 py-6 md:px-6 md:py-8">
             <div className="mb-6 text-center">
               <div className="mx-auto w-full">
                 <h1 className="mb-6 text-lg leading-relaxed font-medium text-gray-600 md:text-xl">
-                  Discover and create academic mentors that combine{' '}
+                  Discover and create academic agents that combine{' '}
                   <br className="hidden md:block" />
                   subject expertise, educational resources, and teaching skills
                 </h1>
@@ -253,7 +253,7 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
               <div className="mb-6 w-full">
                 <div className="relative">
                   <label htmlFor="mentor-search" className="sr-only">
-                    Search mentors
+                    Search agents
                   </label>
                   {searchQuery &&
                   (starredMentorsLoading ||
@@ -276,7 +276,7 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full rounded-lg border-gray-300 py-3 pr-4 pl-12 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    aria-label="Search mentors"
+                    aria-label="Search agents"
                   />
                 </div>
               </div>

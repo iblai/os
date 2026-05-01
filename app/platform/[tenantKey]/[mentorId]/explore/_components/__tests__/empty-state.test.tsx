@@ -7,7 +7,7 @@ describe('EmptyState component', () => {
   it('should render with default message', () => {
     render(<EmptyState />);
 
-    expect(screen.getByText('Sorry, no mentors found!')).toBeInTheDocument();
+    expect(screen.getByText('Sorry, no agents found!')).toBeInTheDocument();
   });
 
   it('should render with custom message', () => {

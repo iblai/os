@@ -159,7 +159,7 @@ export function AccessTab() {
             </h3>
           </div>
           <p className="mt-1 text-xs text-gray-700">
-            Manage which users can view or edit this mentor by role.
+            Manage which users can view or edit this agent by role.
           </p>
         </div>
       </div>
@@ -190,7 +190,7 @@ export function AccessTab() {
               Access management is unavailable.
             </p>
             <p className="mt-1 text-sm text-gray-600">
-              We could not determine the mentor context. Close the modal and try
+              We could not determine the agent context. Close the modal and try
               again.
             </p>
           </div>
@@ -220,12 +220,12 @@ export function AccessTab() {
               />
               <div className="space-y-2">
                 <p className="text-sm font-medium text-red-700">
-                  Unable to load mentor access.
+                  Unable to load agent access.
                 </p>
                 <p className="text-sm text-red-600">
                   {getErrorMessage(
                     accessError,
-                    'You may not have permission to manage access for this mentor.',
+                    'You may not have permission to manage access for this agent.',
                   )}
                 </p>
                 <div>
@@ -248,10 +248,10 @@ export function AccessTab() {
                 aria-hidden="true"
               />
               <p className="font-medium text-gray-900">
-                No roles available for this mentor.
+                No roles available for this agent.
               </p>
               <p className="mt-1 text-sm text-gray-600">
-                Create a role in the admin console to start managing mentor
+                Create a role in the admin console to start managing agent
                 access.
               </p>
             </div>
@@ -277,7 +277,7 @@ export function AccessTab() {
                     const policyKey = String(policy.id ?? policy.role);
                     const description =
                       roleDescriptions[policy.role] ??
-                      `Manage who has ${formatRoleName(policy.role)} permissions for this mentor.`;
+                      `Manage who has ${formatRoleName(policy.role)} permissions for this agent.`;
 
                     return (
                       <TableRow key={policyKey}>
@@ -344,7 +344,7 @@ export function AccessTab() {
               </DialogTitle>
               <DialogDescription>
                 {roleDescriptions[editingPolicy.role] ??
-                  `Add or remove users who should have ${formatRoleName(editingPolicy.role)} permissions for this mentor.`}
+                  `Add or remove users who should have ${formatRoleName(editingPolicy.role)} permissions for this agent.`}
               </DialogDescription>
             </DialogHeader>
             <RoleAccessPanel

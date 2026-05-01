@@ -64,7 +64,7 @@ export function MemoryTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Memory</h3>
           <p className="text-xs text-gray-600">
-            Configure memory settings for your mentor.
+            Configure memory settings for your agent.
           </p>
         </div>
       </div>
@@ -76,8 +76,8 @@ export function MemoryTab() {
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-900">Enable Memory</p>
               <p className="text-xs text-gray-600">
-                Allow this mentor to remember and reference information from
-                past conversations.
+                Allow this agent to remember and reference information from past
+                conversations.
               </p>
             </div>
             <Switch

@@ -349,7 +349,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             return true;
           }
         } catch (error) {
-          console.error(JSON.stringify(error));
+          console.error('getMentorPublicSettings failed', error);
           return false;
         }
       },
@@ -609,7 +609,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   router.replace(`?${params.toString()}`);
 
                   setTimeout(() => {
-                    toast.success('Mentor switched successfully');
+                    toast.success('Agent switched successfully');
                   }, 1000);
                 }
               }}

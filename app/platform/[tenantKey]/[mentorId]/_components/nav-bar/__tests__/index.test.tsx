@@ -312,21 +312,6 @@ vi.mock('../embed-nav-bar', () => ({
   EmbedNavBar: () => <div data-testid="embed-nav-bar">Embed NavBar</div>,
 }));
 
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal">
-        My Mentors <button onClick={onClose}>Close</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
   EditMentorModal: ({
     isOpen,
@@ -586,7 +571,7 @@ describe('NavBar', () => {
       );
 
       expect(
-        screen.getByLabelText('Selected mentor dropdown button'),
+        screen.getByLabelText('Selected agent dropdown button'),
       ).toBeInTheDocument();
     });
 
@@ -600,7 +585,7 @@ describe('NavBar', () => {
       );
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeEnabled();
       // Clicking should not throw
@@ -688,11 +673,11 @@ describe('NavBar', () => {
   });
 
   // --------------------------------------------------------------------------
-  // My Mentors Modal Tests
+  // My Mentors removal — issue #1431
   // --------------------------------------------------------------------------
 
-  describe('My Mentors Modal', () => {
-    it('opens My Mentors modal when clicking My Mentors button', async () => {
+  describe('My Mentors removed from navbar', () => {
+    it('does not render any "My Mentors" or "Explore" trigger in the navbar', () => {
       const store = createTestStore();
 
       render(
@@ -701,14 +686,12 @@ describe('NavBar', () => {
         </Provider>,
       );
 
-      // Find and click My Mentors button (contains "My Mentors" text)
-      const myMentorsButton = screen.getByText(/My Mentors/i).closest('button');
-      expect(myMentorsButton).toBeInTheDocument();
-      fireEvent.click(myMentorsButton!);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/^My Mentors$/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Explore mentors'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Explore$/)).not.toBeInTheDocument();
     });
   });
 
@@ -742,7 +725,7 @@ describe('NavBar', () => {
       expect(llmButton).toBeInTheDocument();
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeInTheDocument();
     });

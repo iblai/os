@@ -75,6 +75,11 @@ export function EditMemoryModal({
               placeholder="Enter memory content..."
               className="mt-1"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              {editContent.trim().length < 10
+                ? `${editContent.trim().length}/10 characters minimum`
+                : `${editContent.trim().length} characters`}
+            </p>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onCancel}>
@@ -83,7 +88,7 @@ export function EditMemoryModal({
             <Button
               onClick={onSave}
               className="ibl-button-primary"
-              disabled={!editContent.trim() || isSaving}
+              disabled={editContent.trim().length < 10 || isSaving}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </Button>

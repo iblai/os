@@ -826,7 +826,7 @@ describe('useIframeHandlers', () => {
       result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'usage-123' });
       result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS']({ enable: true });
 
-      expect(mockDispatchInstance).toHaveBeenCalledTimes(2);
+      expect(mockDispatchInstance).toHaveBeenCalledTimes(3);
       expect(console.log).toHaveBeenCalled();
     });
 

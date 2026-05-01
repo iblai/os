@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react';
 const mockUseParams = vi.fn();
 const mockUseSelector = vi.fn();
 const mockUseUsername = vi.fn();
+const mockUseGetMentorPublicSettingsQuery = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -31,8 +32,22 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   ),
 }));
 
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorPublicSettingsQuery: (...args: any[]) =>
+    mockUseGetMentorPublicSettingsQuery(...args),
+}));
+
 vi.mock('@/features/analytics/slice', () => ({
   selectSelectedMentor: vi.fn(),
+}));
+
+vi.mock('@/hoc/withPermissions', () => ({
+  WithPermissions: ({
+    children,
+  }: {
+    rbacResource: string;
+    children: (props: { hasPermission: boolean }) => React.ReactNode;
+  }) => <>{children({ hasPermission: true })}</>,
 }));
 
 // Import after mocks
@@ -51,6 +66,9 @@ describe('analytics audit page', () => {
     });
     mockUseSelector.mockReturnValue(null);
     mockUseUsername.mockReturnValue('testuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
@@ -64,6 +82,9 @@ describe('analytics audit page', () => {
     });
     mockUseSelector.mockReturnValue(null);
     mockUseUsername.mockReturnValue('myuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
@@ -82,6 +103,9 @@ describe('analytics audit page', () => {
       name: 'Selected Mentor',
     });
     mockUseUsername.mockReturnValue('testuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
@@ -97,6 +121,9 @@ describe('analytics audit page', () => {
     });
     mockUseSelector.mockReturnValue(null);
     mockUseUsername.mockReturnValue('testuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
@@ -114,6 +141,9 @@ describe('analytics audit page', () => {
       name: 'Mentor Without ID',
     });
     mockUseUsername.mockReturnValue('testuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
@@ -129,9 +159,26 @@ describe('analytics audit page', () => {
     });
     mockUseSelector.mockReturnValue(null);
     mockUseUsername.mockReturnValue(null);
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
 
     render(<AuditLogPage />);
 
     expect(screen.getByTestId('user-id')).toHaveTextContent('');
+  });
+
+  it('should render nothing while mentor public settings have not loaded', () => {
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
+    mockUseSelector.mockReturnValue(null);
+    mockUseUsername.mockReturnValue('testuser');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({ data: undefined });
+
+    const { container } = render(<AuditLogPage />);
+
+    expect(container.firstChild).toBeNull();
   });
 });

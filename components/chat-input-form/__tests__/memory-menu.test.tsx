@@ -204,7 +204,7 @@ describe('MemoryMenu', () => {
     render(<MemoryMenu {...defaultProps} />);
 
     expect(
-      screen.getByText('Your saved memories for this mentor'),
+      screen.getByText('Your saved memories for this agent'),
     ).toBeInTheDocument();
   });
 

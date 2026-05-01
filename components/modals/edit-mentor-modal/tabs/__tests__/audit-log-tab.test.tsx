@@ -51,7 +51,7 @@ describe('AuditLogTab', () => {
 
     expect(screen.getByText('Audit')).toBeInTheDocument();
     expect(
-      screen.getByText('View who changed what and when for this mentor.'),
+      screen.getByText('View who changed what and when for this agent.'),
     ).toBeInTheDocument();
   });
 

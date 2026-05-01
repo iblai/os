@@ -3,20 +3,31 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 test.describe('Journey 24: Mentor Memory Tab', () => {
-  test.beforeEach(async ({ page, editMentorPage }) => {
+  test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Memory tab requires admin access');
       return;
     }
-    await editMentorPage.open('Memory');
-    await waitForPageReady(page);
   });
 
+  // Each test owns its own mentor — the memory tab tests share categories
+  // and entries server-side, so without isolation parallel workers race
+  // (e.g. one worker's category cleanup 404s another worker's create POST).
+  // The mentor-creation + memory-tab-open setup lives inside each test
+  // (not in beforeEach) so flakes in the Create Agent dialog surface on the
+  // owning test rather than collapsing the whole describe block.
+
   test('admin goes to edit mentor modal and verifies the Memory tab label is visible', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
     const memoryTab = editMentorPage.dialog.getByRole('tab', {
       name: 'Memory',
     });
@@ -25,8 +36,14 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   });
 
   test('admin goes to memory tab and enables then disables the Enable Memory toggle', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
     const wasEnabled = await editMentorPage.memory.isEnableMemoryChecked();
     await editMentorPage.memory.toggleEnableMemory();
     await editMentorPage.memory.toggleEnableMemory();
@@ -39,63 +56,94 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   });
 
   test('admin goes to memory tab and verifies user memories list shows entries or empty state and can delete an entry', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
     await expect(editMentorPage.memory.addMemoryButton).toBeVisible({
       timeout: 10_000,
     });
-    const hasMemories = await editMentorPage.memory.hasMemories();
-    if (!hasMemories) {
-      await expect(editMentorPage.memory.emptyState).toBeVisible({
-        timeout: 5_000,
-      });
-      await editMentorPage.close();
-      return;
-    }
-    const initialCount = await editMentorPage.memory.getMemoryCount();
-    await editMentorPage.memory.deleteFirst();
-    await editMentorPage.page.waitForTimeout(2_000);
-    const finalCount = await editMentorPage.memory.getMemoryCount();
-    expect(finalCount).toBeLessThan(initialCount);
+    // Seed our own entry so we can delete it without racing other parallel
+    // specs that may be adding/removing entries concurrently.
+    const seedContent = `Delete-target memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await editMentorPage.memory.createMemory(seedContent);
+    await expect(
+      editMentorPage.memory.entryByContent(seedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // deleteByContent already asserts the entry is gone; no extra check needed.
+    await editMentorPage.memory.deleteByContent(seedContent);
     await editMentorPage.close();
   });
 
   test('admin creates a new memory from the memory tab', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
-    const testContent = `E2E test memory ${Date.now()}`;
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const testContent = `E2E test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await editMentorPage.memory.createMemory(testContent);
-    // Verify the new memory appears in the list
-    await editMentorPage.page.waitForTimeout(2_000);
-    const hasMemories = await editMentorPage.memory.hasMemories();
-    expect(hasMemories).toBe(true);
+    // Auto-retrying expect rides out the brief RTK Query refetch window
+    // that follows the "Memory created" toast.
+    await expect(
+      editMentorPage.memory.entryByContent(testContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
     await editMentorPage.close();
   });
 
-  test('admin edits the first memory entry from the memory tab', async ({
+  test('admin edits a memory entry from the memory tab', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
-    // Ensure there is at least one memory to edit
-    const hasMemories = await editMentorPage.memory.hasMemories();
-    if (!hasMemories) {
-      // Create a memory first so we have something to edit
-      await editMentorPage.memory.createMemory(`Seed memory ${Date.now()}`);
-      await editMentorPage.page.waitForTimeout(2_000);
-    }
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
 
-    const updatedContent = `Updated memory ${Date.now()}`;
-    await editMentorPage.memory.editFirst(updatedContent);
+    // Always seed our own memory so the edit targets a known entry. Do NOT
+    // edit the "first" entry — parallel specs may insert/remove entries and
+    // shift positions mid-test.
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const seedContent = `Seed memory ${suffix}`;
+    const updatedContent = `Updated memory ${suffix}`;
 
-    // Verify the memory was updated
-    await editMentorPage.page.waitForTimeout(2_000);
-    const firstContent = await editMentorPage.memory.getFirstMemoryContent();
-    expect(firstContent).toContain('Updated memory');
+    await editMentorPage.memory.createMemory(seedContent);
+    await expect(
+      editMentorPage.memory.entryByContent(seedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await editMentorPage.memory.editByContent(seedContent, updatedContent);
+
+    // After save, the list refetches; use auto-retrying assertions so we
+    // wait for the DOM to settle into the post-update state instead of
+    // snapshotting it mid-refetch.
+    await expect(
+      editMentorPage.memory.entryByContent(updatedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.memory.entryByContent(seedContent)).toHaveCount(
+      0,
+      { timeout: 10_000 },
+    );
     await editMentorPage.close();
   });
 
   test('admin manages memory categories (create, rename, delete)', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
     const suffix = Date.now();
     const created = `E2E Cat ${suffix}`;
     const renamed = `E2E Cat Renamed ${suffix}`;
@@ -128,21 +176,23 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   });
 
   test('admin creates then deletes a memory to verify full CRUD cycle', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
-    const testContent = `CRUD test memory ${Date.now()}`;
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const testContent = `CRUD test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await editMentorPage.memory.createMemory(testContent);
-    await editMentorPage.page.waitForTimeout(2_000);
+    await expect(
+      editMentorPage.memory.entryByContent(testContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
-    const countAfterCreate = await editMentorPage.memory.getMemoryCount();
-    expect(countAfterCreate).toBeGreaterThan(0);
-
-    // Delete the memory we just created
-    await editMentorPage.memory.deleteFirst();
-    await editMentorPage.page.waitForTimeout(2_000);
-
-    const countAfterDelete = await editMentorPage.memory.getMemoryCount();
-    expect(countAfterDelete).toBeLessThan(countAfterCreate);
+    // Delete by content, not position — parallel specs mutate the list.
+    // deleteByContent has its own auto-retrying detached assertion.
+    await editMentorPage.memory.deleteByContent(testContent);
     await editMentorPage.close();
   });
 });
@@ -151,6 +201,7 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
   test('Memory button visibility in chat input reflects mentor memory setting', async ({
     page,
     chatPage,
+    createMentorPage,
     editMentorPage,
   }) => {
     await navigateToMentorApp(page);
@@ -159,6 +210,8 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
       test.skip(true, 'Requires admin access');
       return;
     }
+    // Own mentor per test — see Journey 24 describe block above for rationale.
+    await createMentorPage.openAndCreate();
 
     // First ensure memory is enabled on the mentor
     await editMentorPage.open('Memory');
