@@ -104,6 +104,7 @@ const setupDefaults = () => {
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     mentor_id: 42,
     permissions: { field: {} },
+    enable_memory_component: true,
   });
   mockCheckRbacPermission.mockReturnValue(true);
 };
@@ -150,6 +151,24 @@ describe('useMentorSegments', () => {
 
     const labels = result.current.filteredSegments.map((s) => s.label);
     expect(labels).toContain('Memory');
+  });
+
+  it('hides the Memory segment when enable_memory_component is false on the mentor', () => {
+    mockMemsearchEnabled.mockReturnValue(true);
+    mockMentorSettings.mockReturnValue({
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+      enable_memory_component: false,
+    });
+
+    const { result } = renderHook(() => useMentorSegments());
+
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).not.toContain('Memory');
+    // Other segments are unaffected by the mentor-level memory gate.
+    expect(labels).toContain('Settings');
   });
 
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {

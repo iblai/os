@@ -81,14 +81,11 @@ vi.mock('@/hooks/user-navigate', () => ({
   })),
 }));
 
-vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useCreateMentorMutation: vi.fn(() => [
-    vi.fn().mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({ unique_id: 'new-mentor-id' }),
-    }),
-    { isLoading: false },
-  ]),
-}));
+// Note: a second `vi.mock('@iblai/iblai-js/data-layer', ...)` exists below
+// that wires up controllable `mockCreateMentorWithSettings` / `mockUnwrap`
+// references — that one is the source of truth. A duplicate factory was
+// removed here to keep the active mock unambiguous (which factory "wins" can
+// flip when the underlying package version changes the hoist order).
 
 vi.mock('@/lib/constants', () => ({
   DEFAULT_PROMPTS: {
