@@ -33,7 +33,7 @@
   "dependencies": {
     "@iblai/data-layer": "file:.yalc/@iblai/data-layer",
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "file:.yalc/@iblai/iblai-js",
+    "@iblai/iblai-js": "1.1.9",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@iblai/web-containers": "file:.yalc/@iblai/web-containers",
     "@iblai/web-utils": "file:.yalc/@iblai/web-utils",
