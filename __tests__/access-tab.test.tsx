@@ -242,7 +242,7 @@ describe('AccessTab', () => {
 
     expect(screen.getByText('Analytics Viewer')).toBeInTheDocument();
     expect(
-      screen.getByText(/view analytics data for this mentor/i),
+      screen.getByText(/view analytics data for this agent/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Edit Analytics Viewer access' }),
@@ -263,7 +263,7 @@ describe('AccessTab', () => {
     render(<AccessTab />);
 
     expect(
-      screen.getByText('No roles available for this mentor.'),
+      screen.getByText('No roles available for this agent.'),
     ).toBeInTheDocument();
   });
 
@@ -312,7 +312,7 @@ describe('AccessTab', () => {
     render(<AccessTab />);
 
     expect(
-      screen.getByText('Unable to load mentor access.'),
+      screen.getByText('Unable to load agent access.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });

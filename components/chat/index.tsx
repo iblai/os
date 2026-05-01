@@ -2204,7 +2204,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Voice Call</DialogTitle>
             <DialogDescription>
-              Would you like to start a voice call with your mentor?
+              Would you like to start a voice call with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2254,7 +2254,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Screen Sharing</DialogTitle>
             <DialogDescription>
-              Would you like to start a screen sharing with your mentor?
+              Would you like to start a screen sharing with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

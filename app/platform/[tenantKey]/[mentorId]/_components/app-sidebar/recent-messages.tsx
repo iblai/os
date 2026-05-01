@@ -281,7 +281,7 @@ export function RecentMessages({
                         {result?.mentor?.profile_image ? (
                           <Image
                             src={result?.mentor?.profile_image}
-                            alt="Mentor avatar"
+                            alt="Agent avatar"
                             className="h-full w-full object-cover"
                             width={20}
                             height={20}

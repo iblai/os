@@ -91,7 +91,7 @@ export function StarredMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="favorites-card-list"
             role="list"
-            aria-label="Favorite mentors"
+            aria-label="Favorite agents"
           >
             {favoriteMentors.map((mentor) => (
               <div key={mentor.id} role="listitem">
@@ -109,7 +109,7 @@ export function StarredMentorsSection() {
                   )
                 }
                 disabled={starredMentorsFetching}
-                aria-label="Load more favorite mentors"
+                aria-label="Load more favorite agents"
                 role="button"
               >
                 {starredMentorsFetching ? (
@@ -138,7 +138,7 @@ export function StarredMentorsSection() {
                 handleFavoriteCardClick();
               }
             }}
-            aria-label="Add to Favorites - Sign up to star mentors"
+            aria-label="Add to Favorites - Sign up to star agents"
           >
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
@@ -150,7 +150,7 @@ export function StarredMentorsSection() {
                     Add to Favorites
                   </h3>
                   <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    Star your favorite mentors to quickly access them here
+                    Star your favorite agents to quickly access them here
                   </p>
                   <p className="text-xs text-gray-500">No favorites yet</p>
                 </div>

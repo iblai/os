@@ -194,9 +194,7 @@ export function RoleAccessPanel({
       successMessage: string,
     ) => {
       if (!tenantKey || !mentorSettings?.mentor_id) {
-        toast.error(
-          'Mentor context is missing. Close the modal and try again.',
-        );
+        toast.error('Agent context is missing. Close the modal and try again.');
         resetPendingState();
         return;
       }
@@ -217,7 +215,7 @@ export function RoleAccessPanel({
         toast.success(successMessage);
         await onAccessUpdated();
       } catch (error) {
-        toast.error(getErrorMessage(error, 'Unable to update mentor access.'));
+        toast.error(getErrorMessage(error, 'Unable to update agent access.'));
       } finally {
         resetPendingState();
       }
@@ -350,7 +348,7 @@ export function RoleAccessPanel({
         : [...manualEntries];
     if (allEntries.length === 0) return;
     if (!tenantKey || !mentorSettings?.mentor_id) {
-      toast.error('Mentor context is missing. Close the modal and try again.');
+      toast.error('Agent context is missing. Close the modal and try again.');
       return;
     }
     setIsAddingManual(true);

@@ -19,7 +19,7 @@ const mentors: Mentor[] = [
     id: '1',
     name: 'Abilene Christian University',
     description:
-      'Abilene Christian University | ibl.ai AI Mentor Trained on Public University Data',
+      'Abilene Christian University | ibl.ai AI Agent Trained on Public University Data',
     avatar: '/placeholder.svg',
     fallback: 'ACU',
   },
@@ -27,7 +27,7 @@ const mentors: Mentor[] = [
     id: '2',
     name: 'Accelerated Computing Agent',
     description:
-      'Mentor trained on academic papers, technical blogs, and online courses on accelerated computing.',
+      'Agent trained on academic papers, technical blogs, and online courses on accelerated computing.',
     avatar: '/placeholder.svg',
     fallback: 'AC',
   },
@@ -35,7 +35,7 @@ const mentors: Mentor[] = [
     id: '3',
     name: 'Adelphi University',
     description:
-      'Adelphi University | ibl.ai AI Mentor Trained on Public University Data',
+      'Adelphi University | ibl.ai AI Agent Trained on Public University Data',
     avatar: '/placeholder.svg',
     fallback: 'AU',
   },

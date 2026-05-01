@@ -57,7 +57,7 @@ export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
       onClick={handleCardClick}
       tabIndex={0}
       onKeyDown={handleCardKeyDown}
-      aria-label={`Explore mentor: ${mentor.name}. ${mentor.description || ''}`}
+      aria-label={`Explore agent: ${mentor.name}. ${mentor.description || ''}`}
     >
       <CardContent className="p-6 md:h-full">
         <div className="flex items-start gap-4 md:h-full">

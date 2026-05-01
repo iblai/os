@@ -106,10 +106,10 @@ export function PromptGalleryModal({
             prompt_visibility: value.promptVisibility,
           },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update mentor');
+        toast.error('Failed to update agent');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     }
@@ -144,7 +144,7 @@ export function PromptGalleryModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="h-[90vh] w-full max-w-7xl overflow-hidden sm:w-[calc(100vw-2rem)]">
           <DialogDescription className="sr-only">
-            View and edit custom prompts for your mentor.
+            View and edit custom prompts for your agent.
           </DialogDescription>
           <div className="flex h-full w-full max-w-full flex-col overflow-hidden p-6">
             <DialogHeader>

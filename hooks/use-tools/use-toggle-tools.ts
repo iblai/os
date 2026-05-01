@@ -34,7 +34,7 @@ export function useToggleTools({
         // @ts-ignore
         userId: username ?? '',
       }).unwrap();
-      toast.success('Mentor updated successfully');
+      toast.success('Agent updated successfully');
       callback?.();
     } catch (error: any) {
       console.error(JSON.stringify(error));

@@ -28,7 +28,7 @@ export class AccessTab {
     this.dialog = dialog;
     this.heading = dialog.getByRole('heading', { name: 'Access control' });
     this.description = dialog.getByText(
-      /Manage which users can view or edit this mentor by role\./i,
+      /Manage which users can view or edit this agent by role\./i,
     );
     this.createRoleAccessButton = dialog.getByRole('button', {
       name: /create role access/i,
@@ -39,9 +39,9 @@ export class AccessTab {
       .getByRole('row')
       .filter({ hasNot: dialog.getByRole('columnheader') });
     this.noPoliciesEmptyState = dialog.getByText(
-      /No roles available for this mentor\./i,
+      /No roles available for this agent\./i,
     );
-    this.errorState = dialog.getByText(/Unable to load mentor access\./i);
+    this.errorState = dialog.getByText(/Unable to load agent access\./i);
     this.tryAgainButton = dialog.getByRole('button', { name: /try again/i });
     this.unavailableState = dialog.getByText(
       /Access management is unavailable\./i,
@@ -76,7 +76,7 @@ export class AccessTab {
     await this.createRoleAccessButton.click();
     const createDialog = this.page
       .getByRole('dialog')
-      .filter({ hasText: /Create mentor role access/i })
+      .filter({ hasText: /Create agent role access/i })
       .last();
     await expect(createDialog).toBeVisible({ timeout: 10_000 });
     return createDialog;

@@ -1,0 +1,99 @@
+name: PR E2E Tests (Required)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [labeled, synchronize]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'store/**'
+      - 'styles/**'
+      - 'public/**'
+      - 'e2e/**'
+      - 'src-tauri/**'
+      - '__tests__/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'next.config.*'
+      - 'tsconfig*.json'
+      - 'tailwind.config.*'
+      - 'postcss.config.*'
+      - 'vitest.config.*'
+      - 'playwright.config.*'
+
+run-name: "PR E2E Tests — stg1 (firefox,chrome,safari,edge)"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-e2e-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # GATE — only run when the `run-tests` label is present
+  # ============================================================
+  gate:
+    if: contains(github.event.pull_request.labels.*.name, 'run-tests')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run-tests label detected — proceeding"
+
+  # ============================================================
+  # BUILD PLAYWRIGHT IMAGE
+  # ============================================================
+  build-playwright-image:
+    needs: gate
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: e2e/Dockerfile
+      build-context: .
+      image-name: ibl-mentor-playwright
+      registry-type: ocir
+      image-tag: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+      event-name: pull_request
+      pr-number: ${{ github.event.pull_request.number }}
+
+  # ============================================================
+  # RUN PLAYWRIGHT TESTS ON OCI
+  # ============================================================
+  run-tests:
+    needs: build-playwright-image
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    secrets: inherit
+    with:
+      domain-number: '1'
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      max-wait: 10800
+      total-shards: 1
+      run-type: main
+      browsers: 'firefox,chrome,safari,edge'
+      workers: '3'
+
+  # ============================================================
+  # SUMMARY
+  # ============================================================
+  summary:
+    needs: [build-playwright-image, run-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Results
+        run: |
+          echo "# PR E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run Tests (firefox,chrome,safari,edge) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Mode: skip-infra-launch — tests ran against the pre-existing stg1 instance." >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if tests did not pass
+        if: needs.run-tests.result != 'success'
+        run: exit 1

@@ -92,7 +92,14 @@ interface NodeConfigPanelProps {
 }
 
 const DEFAULT_INSTRUCTIONS = 'You are a helpful assistant.';
-const DEFAULT_MENTOR_LABELS = new Set(['my mentor', 'mentor', 'mentor node']);
+const DEFAULT_MENTOR_LABELS = new Set([
+  'my agent',
+  'agent',
+  'agent node',
+  'my mentor',
+  'mentor',
+  'mentor node',
+]);
 
 const isDefaultMentorLabel = (label?: string) => {
   if (!label) return true;
@@ -751,7 +758,7 @@ export function NodeConfigPanel({
                   {nodeData.label}
                 </h3>
                 <p className="text-muted-foreground text-[11px]">
-                  Configure the mentor instructions, model, and tools
+                  Configure the agent instructions, model, and tools
                 </p>
               </div>
               <div className="flex items-center gap-0.5">
@@ -791,7 +798,7 @@ export function NodeConfigPanel({
               />
               {!selectedMentorId && (
                 <p className="text-muted-foreground text-[10px]">
-                  Select a mentor to load configuration.
+                  Select an agent to load configuration.
                 </p>
               )}
             </div>
@@ -821,7 +828,7 @@ export function NodeConfigPanel({
                     ? isMentorSettingsLoading
                       ? 'Loading model...'
                       : 'No model configured'
-                    : 'Select a mentor to load model'
+                    : 'Select an agent to load model'
                 }
                 className="bg-muted border-border h-8 text-sm"
               />
@@ -834,7 +841,7 @@ export function NodeConfigPanel({
               </Label>
               {!selectedMentorId && (
                 <p className="text-muted-foreground text-[10px]">
-                  Select a mentor to configure tools.
+                  Select an agent to configure tools.
                 </p>
               )}
               {selectedMentorId &&
@@ -923,7 +930,7 @@ export function NodeConfigPanel({
           >
             <DialogHeader className="border-b border-gray-200 bg-white px-6 py-4">
               <DialogTitle className="text-lg font-semibold text-gray-900">
-                Select Mentor
+                Select Agent
               </DialogTitle>
             </DialogHeader>
             <div className="px-6 py-4">

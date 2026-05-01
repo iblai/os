@@ -326,7 +326,7 @@ describe('CreateMentorModal Singleton Behavior', () => {
         // Verify we have exactly one "Create Mentor" dialog
         const createMentorDialogs = Array.from(dialogs).filter((dialog) => {
           const title = dialog.querySelector('.ibl-dialog-title');
-          return title?.textContent === 'Create Mentor';
+          return title?.textContent === 'Create Agent';
         });
         expect(createMentorDialogs.length).toBe(1);
 
@@ -393,7 +393,7 @@ describe('CreateMentorModal Singleton Behavior', () => {
         const createMentorDialogCount = Array.from(allDialogs).filter(
           (dialog) => {
             const title = dialog.querySelector('.ibl-dialog-title');
-            return title?.textContent === 'Create Mentor';
+            return title?.textContent === 'Create Agent';
           },
         ).length;
 

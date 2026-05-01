@@ -143,7 +143,7 @@ describe('ToolsTab', () => {
       render(<ToolsTab />);
       expect(screen.getByText('Tools')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure tools and integrations for your mentor.'),
+        screen.getByText('Configure tools and integrations for your agent.'),
       ).toBeInTheDocument();
     });
 
