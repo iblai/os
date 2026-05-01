@@ -43,6 +43,12 @@ let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockIsVisiting = false;
 let mockIsAccessingPublicRoute = false;
+let mockCurrentTenant: any = {
+  key: 'test-tenant',
+  is_admin: true,
+  show_paywall: false,
+};
+let mockAllTenants: Array<{ key: string }> = [{ key: 'test-tenant' }];
 let mockMentorSettings: any = {
   mentor: 'Test Mentor',
   mentor_id: 123,
@@ -88,10 +94,15 @@ vi.mock('@/hooks/use-user', () => ({
   useUserIsStudent: () => mockUserIsStudent,
   useUsername: () => 'testuser',
   useCurrentTenant: () => ({
-    currentTenant: { key: 'test-tenant', is_admin: true, show_paywall: false },
+    currentTenant: mockCurrentTenant,
     saveCurrentTenant: vi.fn(),
   }),
-  useGetAllTenants: () => [{ key: 'test-tenant' }],
+  useGetAllTenants: () => mockAllTenants,
+}));
+
+vi.mock('@/features/utils', () => ({
+  getUserEmail: () => 'student@example.com',
+  getUserName: () => 'student-user',
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({
@@ -370,23 +381,22 @@ vi.mock('@/components/modals/auth-modal', () => ({
     ) : null,
 }));
 
+let lastCreditBalanceProps: any = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
+  CreditBalance: (props: any) => {
+    lastCreditBalanceProps = props;
+    return <div data-testid="credit-balance">CreditBalance</div>;
+  },
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  UserProfileModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
+  UserProfileModal: (props: any) =>
+    props.isOpen ? (
       <div data-testid="user-profile-modal">
-        User Profile Modal <button onClick={onClose}>Close</button>
+        User Profile Modal <button onClick={props.onClose}>Close</button>
       </div>
     ) : null,
 }));
@@ -474,6 +484,13 @@ describe('NavBar', () => {
       },
       forkable: false,
     };
+    mockCurrentTenant = {
+      key: 'test-tenant',
+      is_admin: true,
+      show_paywall: false,
+    };
+    mockAllTenants = [{ key: 'test-tenant' }];
+    lastCreditBalanceProps = null;
     // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -1206,6 +1223,84 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       // mentorNotOnMainTenant is true (custom-tenant !== 'main'), so the
       // visibility filter passes.
       expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // CreditBalance — paywall + permission gating
+  // --------------------------------------------------------------------------
+
+  describe('CreditBalance gating', () => {
+    function renderNav() {
+      const store = createTestStore();
+      return render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+    }
+
+    it('renders CreditBalance when tenant.show_paywall is true and user is admin', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+
+      renderNav();
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+      expect(lastCreditBalanceProps).toMatchObject({
+        tenant: 'tenant123',
+        enabled: true,
+        mainPlatformKey: 'main',
+        currentUserEmail: 'student@example.com',
+        username: 'student-user',
+      });
+      expect(typeof lastCreditBalanceProps.redirectUrl).toBe('string');
+    });
+
+    it('renders CreditBalance for free-trial users (non-admin on main with one tenant) when paywall is on', () => {
+      mockIsAdmin = false;
+      mockCurrentTenant = {
+        key: 'main',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'main' }];
+
+      renderNav();
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+    });
+
+    it('does NOT render CreditBalance when tenant.show_paywall is false', () => {
+      mockIsAdmin = true;
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+
+      renderNav();
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render CreditBalance for non-admin users without free-trial eligibility', () => {
+      mockIsAdmin = false;
+      // Non-admin on a non-main tenant → not free trial
+      mockCurrentTenant = {
+        key: 'org-tenant',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'org-tenant' }, { key: 'other-tenant' }];
+
+      renderNav();
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
     });
   });
 });
