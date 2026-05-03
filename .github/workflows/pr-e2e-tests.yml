@@ -44,6 +44,22 @@ jobs:
       - run: echo "run-tests label detected — proceeding"
 
   # ============================================================
+  # BUILD APP IMAGE
+  # ============================================================
+  build-app-image:
+    needs: gate
+    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      build-context: .
+      image-name: iblai-mentor-spa-pro
+      registry-type: ocir
+      image-tag: pr-${{ github.event.pull_request.number }}
+      event-name: pull_request
+      pr-number: ${{ github.event.pull_request.number }}
+
+  # ============================================================
   # BUILD PLAYWRIGHT IMAGE
   # ============================================================
   build-playwright-image:
@@ -63,7 +79,7 @@ jobs:
   # RUN PLAYWRIGHT TESTS ON OCI
   # ============================================================
   run-tests:
-    needs: build-playwright-image
+    needs: [build-app-image, build-playwright-image]
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
@@ -74,13 +90,22 @@ jobs:
       total-shards: 1
       run-type: main
       browsers: 'firefox,chrome,safari,edge'
-      workers: '3'
+      workers: '3',
+      ec2-host: '32.196.111.179',
+      ec2-user: 'ubuntu',
+      ec2-ssh-key: ${{ secrets.STG1_SSH_KEY }}
+      ec2-command: >-
+        cd /ibl/app/ibl-spa/mentor &&
+        sed -i 's|image: 765174860755.dkr.ecr.us-east-1.amazonaws.com/iblai-mentor-spa-pro:[^ ]*|image: 765174860755.dkr.ecr.us-east-1.amazonaws.com/iblai-mentor-spa-pro:pr-${{ github.event.pull_request.number }}|' docker-compose.yml &&
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 765174860755.dkr.ecr.us-east-1.amazonaws.com &&
+        docker compose down &&
+        docker compose up -d
 
   # ============================================================
   # SUMMARY
   # ============================================================
   summary:
-    needs: [build-playwright-image, run-tests]
+    needs: [build-app-image, build-playwright-image, run-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -89,6 +114,7 @@ jobs:
           echo "# PR E2E Test Results" >> $GITHUB_STEP_SUMMARY
           echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build App | ${{ needs.build-app-image.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Run Tests (firefox,chrome,safari,edge) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
