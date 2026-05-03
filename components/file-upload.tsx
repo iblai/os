@@ -12,6 +12,8 @@ interface FileUploadProps {
   acceptedFileTypes?: Record<string, string[]>;
 }
 
+console.log('############### FILE UPLOAD ###############');
+
 export function FileUpload({
   onFilesUploaded,
   maxFiles = 5,
