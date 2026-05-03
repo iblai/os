@@ -22,9 +22,9 @@ export class SidebarPage {
     this.toggleButton = page
       .getByRole('button', { name: /toggle sidebar/i })
       .or(page.locator('[data-testid="sidebar-toggle"]'));
-    // H26 fix: sidebar button is labeled "Mentors" not "Explore"
+    // H26 fix: sidebar button is labeled "Agents" not "Explore"
     this.exploreLink = page
-      .getByRole('button', { name: 'Mentors', exact: true })
+      .getByRole('button', { name: 'Agents', exact: true })
       .or(page.getByRole('button', { name: 'Explore', exact: true }));
     this.notificationsLink = page.getByRole('button', {
       name: 'Notifications',
@@ -39,7 +39,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newMentorButton = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     this.newChatButton = page.getByRole('button', {

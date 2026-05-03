@@ -81,7 +81,7 @@ export function ProjectActionButtons({
               <p className="line-clamp-2 text-sm text-gray-600">
                 {instructions
                   ? instructions
-                  : 'Tailor the way the mentor responds in this project'}
+                  : 'Tailor the way the agent responds in this project'}
               </p>
             </div>
           </div>

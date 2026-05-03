@@ -971,7 +971,7 @@ export function ConnectorDialogs({
                     htmlFor="scope-tenant"
                     className="cursor-pointer font-normal"
                   >
-                    All Mentors
+                    All Agents
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -980,18 +980,18 @@ export function ConnectorDialogs({
                     htmlFor="scope-this-mentor"
                     className="cursor-pointer font-normal"
                   >
-                    This Mentor
+                    This Agent
                   </Label>
                 </div>
               </RadioGroup>
               {connectorScope === 'tenant' && (
                 <p className="text-muted-foreground text-xs">
-                  This MCP will be available for all mentors.
+                  This MCP will be available for all agents.
                 </p>
               )}
               {connectorScope === 'this-mentor' && (
                 <p className="text-muted-foreground text-xs">
-                  This MCP will only be available for this mentor.
+                  This MCP will only be available for this agent.
                 </p>
               )}
             </div>
@@ -1057,20 +1057,20 @@ export function ConnectorDialogs({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={AUTH_SCOPE.TENANT}>Tenant</SelectItem>
-                    <SelectItem value={AUTH_SCOPE.MENTOR}>Mentor</SelectItem>
+                    <SelectItem value={AUTH_SCOPE.MENTOR}>Agent</SelectItem>
                     <SelectItem value={AUTH_SCOPE.USER}>User</SelectItem>
                   </SelectContent>
                 </Select>
                 {authScope === AUTH_SCOPE.TENANT && (
                   <p className="text-muted-foreground text-xs">
-                    OAuth connection will be available for all mentors in this
+                    OAuth connection will be available for all agents in this
                     tenant.
                   </p>
                 )}
                 {authScope === AUTH_SCOPE.MENTOR && (
                   <div className="flex items-center gap-1.5">
                     <p className="text-muted-foreground text-xs">
-                      OAuth connection will only be available for this mentor.
+                      OAuth connection will only be available for this agent.
                     </p>
                   </div>
                 )}

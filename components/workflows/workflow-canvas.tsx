@@ -75,7 +75,14 @@ interface McpConnector {
   icon?: string;
 }
 
-const DEFAULT_MENTOR_LABELS = new Set(['my mentor', 'mentor', 'mentor node']);
+const DEFAULT_MENTOR_LABELS = new Set([
+  'my agent',
+  'agent',
+  'agent node',
+  'my mentor',
+  'mentor',
+  'mentor node',
+]);
 
 const isDefaultMentorLabel = (label?: string) => {
   if (!label) return true;
@@ -203,7 +210,7 @@ const DEFAULT_NODES: Node[] = [
     id: 'mentor-1',
     type: 'mentor',
     position: { x: 550, y: 250 },
-    data: { label: 'My mentor', subtitle: 'Mentor', color: 'chart-1' },
+    data: { label: 'My agent', subtitle: 'Agent', color: 'chart-1' },
     draggable: true,
     selectable: true,
     connectable: true,
@@ -492,7 +499,7 @@ export function WorkflowCanvas({
       let updates: Partial<NodeConfig> = {
         entry_mentor_id: mentorId,
         mentor_id: mentorId,
-        subtitle: currentData?.subtitle ?? 'Mentor',
+        subtitle: currentData?.subtitle ?? 'Agent',
       };
 
       try {
@@ -509,7 +516,7 @@ export function WorkflowCanvas({
               (settings.mentor_name as string) ||
               mentor.name ||
               currentData?.label ||
-              'Mentor',
+              'Agent',
             instructions:
               (settings.system_prompt as string) || currentData?.instructions,
             model: (settings.llm_name as string) || currentData?.model,
@@ -673,7 +680,7 @@ export function WorkflowCanvas({
         data: {
           label: onClickedItem.label,
           ...(onClickedItem.id === 'mentor' && {
-            subtitle: 'Mentor',
+            subtitle: 'Agent',
             color: 'chart-1',
             entry_mentor_id: defaultMentorId,
             mentor_id: defaultMentorId,
@@ -1016,7 +1023,7 @@ export function WorkflowCanvas({
         data: {
           label: data.label,
           ...(data.id === 'mentor' && {
-            subtitle: 'Mentor',
+            subtitle: 'Agent',
             color: 'chart-1',
             entry_mentor_id: defaultMentorId,
             mentor_id: defaultMentorId,
@@ -1617,7 +1624,7 @@ export function WorkflowCanvas({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              aria-label="Change mentor"
+                              aria-label="Change agent"
                               className="text-muted-foreground hover:text-foreground hover:bg-muted/60 ml-auto cursor-pointer rounded-full p-1 transition-colors"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
@@ -1628,7 +1635,7 @@ export function WorkflowCanvas({
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Change mentor</TooltipContent>
+                          <TooltipContent>Change agent</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     )}
@@ -1703,7 +1710,7 @@ export function WorkflowCanvas({
           >
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Change mentor</DialogTitle>
+                <DialogTitle>Change agent</DialogTitle>
               </DialogHeader>
               <MentorSelectionGrid
                 selectedMentorIds={selectedMentorIds}

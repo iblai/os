@@ -18,6 +18,7 @@ export class SettingsTab {
   readonly copyMentorButton: Locator;
   readonly showVoiceCallToggle: Locator;
   readonly chatAccessCombobox: Locator;
+  readonly memoryToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -65,6 +66,9 @@ export class SettingsTab {
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
     });
+    // The Memory toggle lives in the Settings tab form; aria-label is
+    // "Memory enabled" or "Memory disabled" depending on current state.
+    this.memoryToggle = dialog.getByRole('switch', { name: /^Memory /i });
   }
 
   async copyUniqueId(): Promise<void> {
@@ -160,7 +164,7 @@ export class SettingsTab {
     // the app fires a periodic analytics heartbeat (~every 30s) so networkidle
     // can hang indefinitely in steady state.
     await expect(
-      this.page.getByText(/Mentor updated successfully/i).first(),
+      this.page.getByText(/Agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
     // Small buffer to let the post-mutation refetch land and React re-render
     // with fresh mentor data before the caller closes/reopens the dialog.
@@ -191,11 +195,55 @@ export class SettingsTab {
     }
   }
 
+  /**
+   * Returns true if the Memory toggle is currently checked.
+   * The Memory toggle moved from the Memory tab to the Settings tab in fix/1584.
+   * It is a form-driven switch — changes only persist after Save is clicked.
+   */
+  async isMemoryEnabled(): Promise<boolean> {
+    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.memoryToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Memory toggle to the desired state and saves the form.
+   * A no-op if the toggle is already in the desired state.
+   *
+   * Design note: Save is called internally (same as enableVoiceCall /
+   * setAllowCopies) so callers don't need to know about the form lifecycle.
+   */
+  async setMemoryEnabled(target: boolean): Promise<void> {
+    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.memoryToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked === target) {
+      return;
+    }
+    await this.memoryToggle.click();
+    await expect(this.memoryToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Mentor updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer for RTK Query cache invalidation before the caller
+    // closes or re-opens the dialog.
+    await this.page.waitForTimeout(500);
+  }
+
   async deleteMentor(): Promise<void> {
     await expect(this.deleteButton).toBeVisible({ timeout: 10_000 });
     await this.deleteButton.click();
     const confirmDialog = this.page.getByRole('alertdialog', {
-      name: /delete mentor/i,
+      name: /delete agent/i,
     });
     await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
     const confirmButton = confirmDialog.getByRole('button', {

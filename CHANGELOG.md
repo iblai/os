@@ -1,5 +1,77 @@
 # Changelog
 
+## [0.59.2](https://github.com/iblai/mentorai/compare/v0.59.1...v0.59.2) (2026-05-01)
+
+### Bug Fixes
+
+* **public:** add Amazon provider logo asset ([5066a84](https://github.com/iblai/mentorai/commit/5066a84086a5e913e76c1e09b9d5634c6afa658f))
+
+### Chores
+
+* update iblai-js to 1.5.1 ([160095c](https://github.com/iblai/mentorai/commit/160095c77b1f25457850ac0a3985023aeef558c2))
+* update pnpm-lock.yaml file ([978f3e9](https://github.com/iblai/mentorai/commit/978f3e919a600a6bc948b00260b7ca53e026f21e))
+* updated pnpm-lock file ([276cf2d](https://github.com/iblai/mentorai/commit/276cf2d05fcd7f5c30995483d834617c436c8e41))
+
+### Tests
+
+* **utils:** cover isLoggedIn missing-localStorage and KaTeX annotation paths ([e5a6bba](https://github.com/iblai/mentorai/commit/e5a6bbacf5ffb8e1b5aaa2fb5e9cde53eae3b285))
+
+## [0.59.1](https://github.com/iblai/mentorai/compare/v0.59.0...v0.59.1) (2026-05-01)
+
+### Chores
+
+* **security:** add pnpm supply chain protections ([055e263](https://github.com/iblai/mentorai/commit/055e263bda4d371b8a547ed51871a58d753f1b0e))
+
+## [0.59.0](https://github.com/iblai/mentorai/compare/v0.58.1...v0.59.0) (2026-05-01)
+
+### Features
+
+* credit coin component integration on header navbar on progress ([585a3f9](https://github.com/iblai/mentorai/commit/585a3f9c836c5e5e8e331fd3e360eaedf39390d4))
+* integrating credit balance component + ecommerce update ([ec350f6](https://github.com/iblai/mentorai/commit/ec350f6e4914543fc3eddc85abe2d818d5d70ca3))
+* integrating credit balance component + ecommerce update > lint & typechecks issue fixed ([4a447cd](https://github.com/iblai/mentorai/commit/4a447cdc6d5e4666c33e1963f341063b6a3c5725))
+* integrating credit balance component + ecommerce update > test issues fixed ([bc065a5](https://github.com/iblai/mentorai/commit/bc065a5ae1565f9f1642532d511f375caa76c428))
+* integrating credit balance component + ecommerce update > test issues fixed ([c7a7c28](https://github.com/iblai/mentorai/commit/c7a7c28333d3e4e4ad067931ead172fffbffb1dd))
+* integrating credit balance component + ecommerce update > test issues fixed ([fbf6da2](https://github.com/iblai/mentorai/commit/fbf6da2c66dedd09281f4ebf38e3f1401eb30c57))
+* integrating credit balance component + ecommerce update > test issues fixed ([958ff1c](https://github.com/iblai/mentorai/commit/958ff1c69203a0eee30558a0556e4efdb544475c))
+* integrating credit balance component + ecommerce update > tests coverage included ([545402d](https://github.com/iblai/mentorai/commit/545402d0b2cba3029c3e1558e38ffef67f861254))
+
+### Bug Fixes
+
+* is_enterprise flag replaced to show_paywall ([7e56cd2](https://github.com/iblai/mentorai/commit/7e56cd2ef9413dd9f45ea5c03ea1f38159415c05))
+* replace yalc @iblai/iblai-js with registry version 1.1.9 ([d9329eb](https://github.com/iblai/mentorai/commit/d9329ebb87f15f272426ca2594c242d99fde2878))
+
+### Chores
+
+* iblai-js package version bump ([e7ba803](https://github.com/iblai/mentorai/commit/e7ba80395ec896a01831dcda471171a4cc9d9be6))
+* pnpm lock update ([eb14c33](https://github.com/iblai/mentorai/commit/eb14c33bf0c0da475a3aaf80272fe2003126e18b))
+* pnpm lock updated ([5e0048b](https://github.com/iblai/mentorai/commit/5e0048b922d0d2eddc5682cffb5d942a7204640d))
+
+## [0.58.1](https://github.com/iblai/mentorai/compare/v0.58.0...v0.58.1) (2026-05-01)
+
+### Bug Fixes
+
+- **mentor:** adding fixed for the memory tab ([1930322](https://github.com/iblai/mentorai/commit/1930322c8e0dc75afc8f02991b2a790b6ac5fa1f))
+
+## [0.58.0](https://github.com/iblai/mentorai/compare/v0.57.2...v0.58.0) (2026-04-30)
+
+### Features
+
+- polish "mentorAI" brand mentions in user-visible copy ([ab8ea4e](https://github.com/iblai/mentorai/commit/ab8ea4e5a1781078d2e5f1dae79f1fb80d617652))
+- replace "Mentor" with "Agent" across the SPA UI ([f26db9b](https://github.com/iblai/mentorai/commit/f26db9b8f74d8442c079a8b6070e2c01bc051aed))
+
+### Tests
+
+- **e2e:** align Playwright assertions with the Mentor → Agent rename ([ca99a93](https://github.com/iblai/mentorai/commit/ca99a93e1f86cba48bdc263514eea351d7a06570))
+- **e2e:** extend explore-page wait timeouts to 2 min for cold-load race ([4fd87c8](https://github.com/iblai/mentorai/commit/4fd87c8dca4bf6bdcdf9706ace5f162db22e31e4))
+- **e2e:** mark non-admin "no Audit tab" test as fixme ([55889a0](https://github.com/iblai/mentorai/commit/55889a0aaefe3449612221d2b6657548b35b7c13))
+- **e2e:** restructure memory-tab tests to isolate per-test setup ([9931bb0](https://github.com/iblai/mentorai/commit/9931bb06dbcecb88bf5336ba4da0c19a996e939e))
+
+## [0.57.2](https://github.com/iblai/mentorai/compare/v0.57.1...v0.57.2) (2026-04-30)
+
+### CI
+
+- add PR E2E pipeline and make legacy SPA validations dispatch-only ([99d3454](https://github.com/iblai/mentorai/commit/99d3454cc80a60400769d7e52dcb29569c50837d))
+
 ## [0.57.1](https://github.com/iblai/mentorai/compare/v0.57.0...v0.57.1) (2026-04-29)
 
 ### Bug Fixes

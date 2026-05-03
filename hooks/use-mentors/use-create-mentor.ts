@@ -77,7 +77,7 @@ export function useCreateMentor() {
           userId: username ?? '',
         }).unwrap();
 
-        toast.success('Mentor created successfully');
+        toast.success('Agent created successfully');
         if (mentor?.unique_id) {
           navigateToMentor(
             mentor?.unique_id,
@@ -86,7 +86,7 @@ export function useCreateMentor() {
           );
         }
       } catch (error: any) {
-        const errorMessage = error?.error?.error || 'Failed to create mentor';
+        const errorMessage = error?.error?.error || 'Failed to create agent';
         toast.error(errorMessage);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }

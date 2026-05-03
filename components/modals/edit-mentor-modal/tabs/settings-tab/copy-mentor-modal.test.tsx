@@ -294,14 +294,14 @@ describe('CopyMentorModal', () => {
     it('renders the copy mentor dialog with title', () => {
       render(<CopyMentorModal onClose={mockOnClose} />);
 
-      expect(screen.getByText('Copy Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Copy Agent')).toBeInTheDocument();
     });
 
     it('renders description', () => {
       render(<CopyMentorModal onClose={mockOnClose} />);
 
       expect(
-        screen.getByText(/Create a copy of this mentor/),
+        screen.getByText(/Create a copy of this agent/),
       ).toBeInTheDocument();
     });
 
@@ -611,7 +611,7 @@ describe('CopyMentorModal', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor copied successfully. Switching to new mentor',
+          'Agent copied successfully. Switching to new agent',
         );
       });
     });
@@ -676,7 +676,7 @@ describe('CopyMentorModal', () => {
       fireEvent.click(screen.getByText('Copy'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to copy mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to copy agent');
       });
     });
 
@@ -716,7 +716,7 @@ describe('CopyMentorModal', () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          'Unable to copy mentor. Missing context.',
+          'Unable to copy agent. Missing context.',
         );
       });
     });
@@ -746,7 +746,7 @@ describe('CopyMentorModal', () => {
       });
     });
 
-    it('defaults name to Copy of Mentor when mentor settings are not loaded', () => {
+    it('defaults name to Copy of Agent when mentor settings are not loaded', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: undefined,
         isLoading: true,
@@ -754,7 +754,7 @@ describe('CopyMentorModal', () => {
 
       render(<CopyMentorModal onClose={mockOnClose} />);
 
-      expect(screen.getByDisplayValue('Copy of Mentor')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Copy of Agent')).toBeInTheDocument();
     });
   });
 
@@ -788,7 +788,7 @@ describe('CopyMentorModal', () => {
 
       render(<CopyMentorModal onClose={mockOnClose} />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -860,7 +860,7 @@ describe('CopyMentorModal', () => {
 
       render(<CopyMentorModal onClose={mockOnClose} />);
 
-      expect(screen.getByText('Copy Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Copy Agent')).toBeInTheDocument();
     });
 
     it('handles tenants loading state', () => {
@@ -871,7 +871,7 @@ describe('CopyMentorModal', () => {
 
       render(<CopyMentorModal onClose={mockOnClose} />);
 
-      expect(screen.getByText('Copy Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Copy Agent')).toBeInTheDocument();
     });
   });
 });

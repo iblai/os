@@ -37,7 +37,7 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     // fixme: The homepage currently has accessibility violations that are app-level issues
     test.fixme();
     const mentorButton = nonadminPage
-      .getByRole('button', { name: 'Mentors', exact: true })
+      .getByRole('button', { name: 'Agents', exact: true })
       .or(nonadminPage.getByRole('button', { name: /explore/i }));
     await expect(mentorButton).toBeVisible({ timeout: 120_000 });
     await expectNoViolations(nonadminPage);
@@ -52,7 +52,7 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     // trace shows the page often still renders "Loading mentors…" at 15s
     // when the backend is under load.
     await expect(
-      nonadminPage.getByRole('heading', { name: /all mentors/i }),
+      nonadminPage.getByRole('heading', { name: /all agents/i }),
     ).toBeVisible({ timeout: 60_000 });
     await expectNoViolations(nonadminPage);
   });
@@ -69,7 +69,7 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
     const newMentorBtn = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     if (await newMentorBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {

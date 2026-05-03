@@ -74,11 +74,9 @@ test.describe('Journey 36: Copy Mentor', () => {
     const { copyMentorDialog } = editMentorPage;
     await copyMentorDialog.waitForOpen();
 
+    await expect(copyMentorDialog.dialog.getByText('Copy Agent')).toBeVisible();
     await expect(
-      copyMentorDialog.dialog.getByText('Copy Mentor'),
-    ).toBeVisible();
-    await expect(
-      copyMentorDialog.dialog.getByText(/Create a copy of this mentor/),
+      copyMentorDialog.dialog.getByText(/Create a copy of this agent/),
     ).toBeVisible();
 
     const nameValue = await copyMentorDialog.getName();

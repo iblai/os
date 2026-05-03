@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -8,10 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/components/ui/popover';
 import { X, BookOpen, Archive, Check, Terminal } from 'lucide-react';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
 import { MemoryButton } from './memory-button';
+import { MemoryMenu } from './memory-menu';
 
 interface InsideButtonsProps {
   activeOptions: string[];
@@ -116,6 +123,8 @@ export const InsideButtons = ({
   const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } =
     getVisibleInsideButtons();
 
+  const [hiddenMemoryPopoverOpen, setHiddenMemoryPopoverOpen] = useState(false);
+
   return (
     <div className="relative flex items-center gap-1.5">
       {/* Responsive Inside Buttons */}
@@ -170,52 +179,81 @@ export const InsideButtons = ({
 
       {/* Hidden inside buttons dropdown if needed */}
       {hiddenInsideButtons.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild disabled={disabled}>
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              disabled={disabled}
-              className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="text-xs">•••</span>
-              <span className="sr-only">More options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            {/* Hidden buttons are always inactive based on current logic, so isActive branches are defensive */}
-            {hiddenInsideButtons.map((button) => (
-              <DropdownMenuItem
-                key={button.name}
-                onClick={button.action}
-                className={
-                  /* istanbul ignore next */ button.isActive
-                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
-                    : ''
-                }
-              >
-                <div className="flex w-full items-center gap-2">
-                  <span
-                    className={
-                      /* istanbul ignore next */ button.isActive
-                        ? 'text-[#38A1E5]'
-                        : 'text-gray-600'
-                    }
-                  >
-                    {button.icon}
-                  </span>
-                  <span className="flex-1">{button.name}</span>
-                  {
-                    /* istanbul ignore next */ button.isActive && (
-                      <Check className="h-4 w-4 text-[#38A1E5]" />
-                    )
-                  }
-                </div>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Popover
+          open={hiddenMemoryPopoverOpen}
+          onOpenChange={setHiddenMemoryPopoverOpen}
+        >
+          <PopoverAnchor>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={disabled}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  disabled={disabled}
+                  className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="text-xs">•••</span>
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {/* Hidden buttons are always inactive based on current logic, so isActive branches are defensive */}
+                {hiddenInsideButtons.map((button) => {
+                  const isMemory = button.name === 'Memory';
+                  return (
+                    <DropdownMenuItem
+                      key={button.name}
+                      onClick={
+                        isMemory
+                          ? (e) => {
+                              e.preventDefault();
+                              setHiddenMemoryPopoverOpen(true);
+                            }
+                          : button.action
+                      }
+                      className={
+                        /* istanbul ignore next */ button.isActive
+                          ? 'bg-[#F5F8FF] text-[#38A1E5]'
+                          : ''
+                      }
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <span
+                          className={
+                            /* istanbul ignore next */ button.isActive
+                              ? 'text-[#38A1E5]'
+                              : 'text-gray-600'
+                          }
+                        >
+                          {button.icon}
+                        </span>
+                        <span className="flex-1">{button.name}</span>
+                        {
+                          /* istanbul ignore next */ button.isActive && (
+                            <Check className="h-4 w-4 text-[#38A1E5]" />
+                          )
+                        }
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </PopoverAnchor>
+          <PopoverContent
+            align="start"
+            className="w-96 rounded-lg border border-gray-200 bg-white p-0 shadow-xl"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onFocusOutside={(e) => e.preventDefault()}
+          >
+            <MemoryMenu
+              onClose={() => setHiddenMemoryPopoverOpen(false)}
+              tenantKey={tenantKey}
+              username={username}
+            />
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );

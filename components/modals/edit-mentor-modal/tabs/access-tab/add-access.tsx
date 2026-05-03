@@ -325,14 +325,14 @@ export function AddAccessDialog({
 
     /* istanbul ignore if -- defensive: Create button is disabled when mentor context missing */
     if (!mentorDbId || !tenantKey) {
-      toast.error('Mentor context is missing. Close the modal and try again.');
+      toast.error('Agent context is missing. Close the modal and try again.');
       return;
     }
 
     /* istanbul ignore if -- defensive: role selection only allows valid availableRoles */
     if (!availableRoles.includes(selectedRole)) {
       toast.error(
-        `${formatRoleName(selectedRole)} already exists for this mentor.`,
+        `${formatRoleName(selectedRole)} already exists for this agent.`,
       );
       return;
     }
@@ -385,7 +385,7 @@ export function AddAccessDialog({
       await onAccessCreated();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, 'Unable to create mentor role access.'),
+        getErrorMessage(error, 'Unable to create agent role access.'),
       );
     }
   }, [
@@ -431,9 +431,9 @@ export function AddAccessDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create mentor role access</DialogTitle>
+          <DialogTitle>Create agent role access</DialogTitle>
           <DialogDescription>
-            Create a mentor access policy for a new role. You can add users to
+            Create an agent access policy for a new role. You can add users to
             it afterward.
           </DialogDescription>
         </DialogHeader>

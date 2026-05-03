@@ -76,9 +76,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           is_featured: checked,
         },
       }).unwrap();
-      toast.success('Mentor featured status updated');
+      toast.success('Agent featured status updated');
     } catch (error) {
-      toast.error('Failed to update mentor featured status');
+      toast.error('Failed to update agent featured status');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -90,7 +90,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-h-[90vh] max-w-7xl px-4 py-6 sm:p-6">
           <DialogDescription className="sr-only">
-            Showing list of mentors used with the mentorAI
+            Showing the list of agents available in your tenant
           </DialogDescription>
           <DialogHeader>
             <DialogTitle className="ibl-dialog-title">Settings</DialogTitle>
@@ -98,7 +98,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="space-y-6 overflow-hidden px-[2px]">
             <div className="mb-4">
               <p className="mt-2 pt-[10px] text-sm text-gray-700">
-                Showing list of mentors used with the mentorAI
+                Showing the list of agents available in your tenant
               </p>
             </div>
 
@@ -107,7 +107,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   type="search"
-                  placeholder="Search mentors"
+                  placeholder="Search agents"
                   className="w-full pl-9"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -120,7 +120,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   onClick={() => openCreateMentorModal()}
                 >
                   <Plus className="h-4 w-4" />
-                  Create Mentor
+                  Create Agent
                 </Button>
               )}
             </div>
@@ -226,7 +226,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   )
                                 }
                                 disabled={isDisabled}
-                                aria-label={`Toggle featured status for ${mentor?.name || 'mentor'}`}
+                                aria-label={`Toggle featured status for ${mentor?.name || 'agent'}`}
                               />
                             </TableCell>
                           </TableRow>

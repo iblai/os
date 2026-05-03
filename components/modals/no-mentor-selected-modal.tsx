@@ -32,10 +32,10 @@ export function NoMentorSelectedModal({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>No Mentor Selected</AlertDialogTitle>
+          <AlertDialogTitle>No Agent Selected</AlertDialogTitle>
           <AlertDialogDescription>
-            You need to select a mentor before starting a new chat. Would you
-            like to explore available mentors?
+            You need to select an agent before starting a new chat. Would you
+            like to explore available agents?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -46,7 +46,7 @@ export function NoMentorSelectedModal({
             onClick={handleExplore}
             className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
-            Explore Mentors
+            Explore Agents
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

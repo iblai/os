@@ -539,7 +539,7 @@ export function useSidebarNavigation() {
       hasBorder: true,
     },
     {
-      label: 'Mentors',
+      label: 'Agents',
       icon: Globe2,
       onClick: navigateToExplore,
       userTypes: [
@@ -552,7 +552,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: false,
     },
     {
-      label: 'New Mentor',
+      label: 'New Agent',
       icon: CirclePlus,
       onClick: () => {
         executeWithTrialCheck(openCreateMentorModal);

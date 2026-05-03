@@ -16,7 +16,7 @@ export class NavbarPage {
   constructor(page: Page) {
     this.page = page;
     this.mentorDropdown = page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: 'Selected agent dropdown button',
     });
     this.mentorDropdownNewChatItem = page.getByRole('menuitem', {
       name: 'New Chat',

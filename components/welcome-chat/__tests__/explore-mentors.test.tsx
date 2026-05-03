@@ -97,7 +97,7 @@ describe('ExploreMentors', () => {
     it('renders the section title', () => {
       render(<ExploreMentors />);
 
-      expect(screen.getByText('Explore Mentors')).toBeInTheDocument();
+      expect(screen.getByText('Explore Agents')).toBeInTheDocument();
     });
 
     it('renders the Browse All button', () => {
@@ -183,7 +183,7 @@ describe('ExploreMentors', () => {
       render(<ExploreMentors />);
 
       const mentorCard = screen.getByLabelText(
-        /Explore mentor: Test Mentor 1\. A helpful AI mentor for testing/,
+        /Explore agent: Test Mentor 1\. A helpful AI mentor for testing/,
       );
       fireEvent.click(mentorCard);
 
@@ -206,7 +206,7 @@ describe('ExploreMentors', () => {
 
       render(<ExploreMentors />);
 
-      const mentorCard = screen.getByLabelText(/Explore mentor: No ID Mentor/);
+      const mentorCard = screen.getByLabelText(/Explore agent: No ID Mentor/);
       fireEvent.click(mentorCard);
 
       expect(mockNavigateToMentor).toHaveBeenCalledWith('');
@@ -218,7 +218,7 @@ describe('ExploreMentors', () => {
       render(<ExploreMentors />);
 
       const mentorCard = screen.getByLabelText(
-        /Explore mentor: Test Mentor 1\. A helpful AI mentor for testing/,
+        /Explore agent: Test Mentor 1\. A helpful AI mentor for testing/,
       );
       fireEvent.keyDown(mentorCard, { key: 'Enter' });
 
@@ -229,7 +229,7 @@ describe('ExploreMentors', () => {
       render(<ExploreMentors />);
 
       const mentorCard = screen.getByLabelText(
-        /Explore mentor: Test Mentor 1\. A helpful AI mentor for testing/,
+        /Explore agent: Test Mentor 1\. A helpful AI mentor for testing/,
       );
       fireEvent.keyDown(mentorCard, { key: ' ' });
 
@@ -240,7 +240,7 @@ describe('ExploreMentors', () => {
       render(<ExploreMentors />);
 
       const mentorCard = screen.getByLabelText(
-        /Explore mentor: Test Mentor 1\. A helpful AI mentor for testing/,
+        /Explore agent: Test Mentor 1\. A helpful AI mentor for testing/,
       );
       fireEvent.keyDown(mentorCard, { key: 'Tab' });
 
@@ -251,7 +251,7 @@ describe('ExploreMentors', () => {
       render(<ExploreMentors />);
 
       const mentorCard = screen.getByLabelText(
-        /Explore mentor: Test Mentor 1\. A helpful AI mentor for testing/,
+        /Explore agent: Test Mentor 1\. A helpful AI mentor for testing/,
       );
       expect(mentorCard).toHaveAttribute('role', 'button');
       expect(mentorCard).toHaveAttribute('tabIndex', '0');
@@ -273,7 +273,7 @@ describe('ExploreMentors', () => {
 
       render(<ExploreMentors />);
 
-      const mentorCard = screen.getByLabelText(/Explore mentor: No ID Mentor/);
+      const mentorCard = screen.getByLabelText(/Explore agent: No ID Mentor/);
       fireEvent.keyDown(mentorCard, { key: 'Enter' });
 
       expect(mockNavigateToMentor).toHaveBeenCalledWith('');
@@ -295,7 +295,7 @@ describe('ExploreMentors', () => {
 
       render(<ExploreMentors />);
 
-      const mentorCard = screen.getByLabelText(/Explore mentor: No ID Mentor/);
+      const mentorCard = screen.getByLabelText(/Explore agent: No ID Mentor/);
       fireEvent.keyDown(mentorCard, { key: ' ' });
 
       expect(mockNavigateToMentor).toHaveBeenCalledWith('');
