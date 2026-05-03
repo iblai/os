@@ -90,9 +90,9 @@ jobs:
       total-shards: 1
       run-type: main
       browsers: 'firefox,chrome,safari,edge'
-      workers: '3',
-      ec2-host: '32.196.111.179',
-      ec2-user: 'ubuntu',
+      workers: '3'
+      ec2-host: '32.196.111.179'
+      ec2-user: 'ubuntu'
       ec2-ssh-key: ${{ secrets.STG1_SSH_KEY }}
       ec2-command: >-
         cd /ibl/app/ibl-spa/mentor &&
