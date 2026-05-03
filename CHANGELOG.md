@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.59.5](https://github.com/iblai/mentorai/compare/v0.59.4...v0.59.5) (2026-05-03)
+
+### CI
+
+* **pr-e2e:** rename ec2-command to ec2-commands to match reusable workflow ([7a9ceb7](https://github.com/iblai/mentorai/commit/7a9ceb7f544da405b90de453086874157d235ccb))
+
 ## [0.59.4](https://github.com/iblai/mentorai/compare/v0.59.3...v0.59.4) (2026-05-03)
 
 ### CI
