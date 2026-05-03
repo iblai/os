@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.59.3](https://github.com/iblai/mentorai/compare/v0.59.2...v0.59.3) (2026-05-03)
+
+### CI
+
+- **pr-e2e:** add app image build job and EC2 deploy step ([8ad671c](https://github.com/iblai/mentorai/commit/8ad671c7571d9ca22a8d690cb9af6f24b5b08527))
+
 ## [0.59.2](https://github.com/iblai/mentorai/compare/v0.59.1...v0.59.2) (2026-05-01)
 
 ### Bug Fixes
