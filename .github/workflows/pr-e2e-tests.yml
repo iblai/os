@@ -93,7 +93,7 @@ jobs:
       workers: '3'
       ec2-host: '32.196.111.179'
       ec2-user: 'ubuntu'
-      ec2-command: >-
+      ec2-commands: >-
         cd /ibl/app/ibl-spa/mentor &&
         sed -i 's|image: 765174860755.dkr.ecr.us-east-1.amazonaws.com/iblai-mentor-spa-pro:[^ ]*|image: 765174860755.dkr.ecr.us-east-1.amazonaws.com/iblai-mentor-spa-pro:pr-${{ github.event.pull_request.number }}|' docker-compose.yml &&
         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 765174860755.dkr.ecr.us-east-1.amazonaws.com &&

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.59.4](https://github.com/iblai/mentorai/compare/v0.59.3...v0.59.4) (2026-05-03)
+
+### CI
+
+* fix pr-e2e-tests ([7365aae](https://github.com/iblai/mentorai/commit/7365aae1ee38c8ee8f94d5065b00b6269d986ae4))
+* **pr-e2e:** fix secrets handling and add EC2 deploy step ([e4c85f2](https://github.com/iblai/mentorai/commit/e4c85f24d3ab4a516e4e1ff098625a03515f2036))
+
 ## [0.59.3](https://github.com/iblai/mentorai/compare/v0.59.2...v0.59.3) (2026-05-03)
 
 ### CI
