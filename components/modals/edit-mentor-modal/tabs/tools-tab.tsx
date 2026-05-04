@@ -63,7 +63,7 @@ export function ToolsTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Tools</h3>
           <p className="text-xs text-gray-700">
-            Configure tools and integrations for your mentor.
+            Configure tools and integrations for your agent.
           </p>
         </div>
       </div>

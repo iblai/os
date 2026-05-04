@@ -21,7 +21,6 @@ import {
   LineChart,
   ChevronDown,
   Plus,
-  Users,
   Menu,
 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
@@ -42,7 +41,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { HelpModal } from '@/components/modals/help-modal';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
-import { MyMentorsModal } from '@/components/modals/my-mentors-modal';
 import {
   Tooltip,
   TooltipContent,
@@ -52,6 +50,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
+import { getUserEmail } from '@/features/utils';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ANONYMOUS_USERNAME, MODALS } from '@/lib/constants';
 
@@ -180,7 +179,6 @@ export function Header({
   const [isHelpOpen, setIsHelpOpen] = React.useState(false);
 
   const [isUserProfileOpen, setIsUserProfileOpen] = React.useState(false);
-  const [isMyMentorsModalOpen, setIsMyMentorsModalOpen] = React.useState(false);
 
   // Model download state for Local LLM support
   const {
@@ -217,11 +215,6 @@ export function Header({
   const handleMentorSelect = (mentor: unknown) => {
     console.log('Selected mentor:', mentor);
     setIsMentorListOpen(false);
-  };
-
-  const handleAvatarClick = () => {
-    // Open the mentor menu instead of the profile
-    setIsMentorListOpen(true);
   };
 
   if (isMobile) {
@@ -286,7 +279,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -317,28 +310,6 @@ export function Header({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-
-            {isOnChatPage && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      className="flex items-center gap-2 text-sm font-medium whitespace-nowrap text-[#646464] transition-colors hover:text-[#484848]"
-                      onClick={() => setIsMyMentorsModalOpen(true)}
-                    >
-                      <Users className="h-4 w-4 text-[#646464]" />
-                      <span className="hidden whitespace-nowrap md:inline">
-                        My Mentors
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-gray-500 md:hidden" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    View My Mentors
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             )}
           </div>
         </div>
@@ -401,11 +372,6 @@ export function Header({
             onSelectFoundryModel,
           }}
         /> */}
-        <MyMentorsModal
-          isOpen={isMyMentorsModalOpen}
-          onClose={() => setIsMyMentorsModalOpen(false)}
-          hideCreateButton={isPromptGalleryOrAnalytics}
-        />
       </header>
     );
   }
@@ -475,39 +441,25 @@ export function Header({
 
           {!pathname.includes('/explore') &&
             (isPromptGalleryOrAnalytics ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      className="flex items-center space-x-2 text-sm font-medium text-[#646464]"
-                      onClick={() => setIsMyMentorsModalOpen(true)}
-                    >
-                      <Avatar className="mr-1 h-5 w-5">
-                        <AvatarImage
-                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                          alt="mentorAI"
-                          onClick={handleAvatarClick}
-                        />
-                        <AvatarFallback>
-                          {selectedMentorName.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{selectedMentorName}</span>
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Select Mentor
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center space-x-2 text-sm font-medium text-[#646464]">
+                <Avatar className="mr-1 h-5 w-5">
+                  <AvatarImage
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
+                    alt="Agentic OS"
+                  />
+                  <AvatarFallback>
+                    {selectedMentorName.substring(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{selectedMentorName}</span>
+              </div>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]">
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -545,23 +497,6 @@ export function Header({
             ))}
 
           <>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="flex items-center gap-2 text-sm font-medium whitespace-nowrap text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() => setIsMyMentorsModalOpen(true)}
-                  >
-                    <Users className="h-4 w-4 text-[#646464]" />
-                    <span className="whitespace-nowrap">My Mentors</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  View My Mentors
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
             {isOnChatPage && isAdmin && (
               <TooltipProvider>
                 <Tooltip>
@@ -575,7 +510,7 @@ export function Header({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Create New Mentor
+                    Create New Agent
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -629,14 +564,11 @@ export function Header({
           onClose={closeCreateMentorModal}
         />
       )}
-      <MyMentorsModal
-        isOpen={isMyMentorsModalOpen}
-        onClose={() => setIsMyMentorsModalOpen(false)}
-        hideCreateButton={isPromptGalleryOrAnalytics}
-      />
       <UserProfileModal
         isOpen={isUserProfileOpen}
         onClose={() => setIsUserProfileOpen(false)}
+        email={getUserEmail()}
+        mainPlatformKey={config.mainTenantKey()}
         params={{
           tenantKey,
           mentorId,

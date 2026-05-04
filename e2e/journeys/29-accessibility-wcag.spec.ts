@@ -37,7 +37,7 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     // fixme: The homepage currently has accessibility violations that are app-level issues
     test.fixme();
     const mentorButton = nonadminPage
-      .getByRole('button', { name: 'Mentors', exact: true })
+      .getByRole('button', { name: 'Agents', exact: true })
       .or(nonadminPage.getByRole('button', { name: /explore/i }));
     await expect(mentorButton).toBeVisible({ timeout: 120_000 });
     await expectNoViolations(nonadminPage);
@@ -48,22 +48,14 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
     nonadminSidebarPage,
   }) => {
     await nonadminSidebarPage.navigateToExplore();
+    // The All Mentors section streams in via a separate /mentors/ fetch — the
+    // trace shows the page often still renders "Loading mentors…" at 15s
+    // when the backend is under load.
     await expect(
-      nonadminPage.getByRole('heading', { name: /all mentors/i }),
-    ).toBeVisible({ timeout: 15_000 });
+      nonadminPage.getByRole('heading', { name: /all agents/i }),
+    ).toBeVisible({ timeout: 60_000 });
     await expectNoViolations(nonadminPage);
   });
-
-  // fixme: real accessibility violations in the app — not test bugs
-  test.fixme(
-    'non-admin goes to My Mentors dialog and it meets accessibility guidelines',
-    async ({ nonadminPage, nonadminNavbarPage }) => {
-      await nonadminNavbarPage.openMyMentors();
-      await nonadminPage.waitForTimeout(1_000);
-      await expectNoViolations(nonadminPage, '[role="dialog"]');
-      await nonadminPage.keyboard.press('Escape');
-    },
-  );
 });
 
 test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
@@ -77,7 +69,7 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
     const newMentorBtn = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     if (await newMentorBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {

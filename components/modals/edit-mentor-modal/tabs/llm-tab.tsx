@@ -100,7 +100,7 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
               LLM Configuration
             </h3>
             <p className="text-xs text-gray-700">
-              Configure the language model settings for your mentor.
+              Configure the language model settings for your agent.
             </p>
           </div>
         </div>

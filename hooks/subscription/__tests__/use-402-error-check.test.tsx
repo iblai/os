@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { use402ErrorCheck } from '../use-402-error-check';
 import subscriptionSlice from '@/features/subscription/subscription-slice';
+import topBannerSlice from '@/features/top-banner/top-banner-slice';
 import { toast } from 'sonner';
 
 // Mock sonner toast
@@ -53,6 +54,7 @@ vi.mock('@/hooks/use-os', () => ({
 describe('use402ErrorCheck', () => {
   type TestState = {
     subscription: ReturnType<typeof subscriptionSlice.reducer>;
+    topBanner: ReturnType<typeof topBannerSlice.reducer>;
   };
 
   let store: ReturnType<typeof configureStore<TestState>>;
@@ -61,6 +63,7 @@ describe('use402ErrorCheck', () => {
     configureStore({
       reducer: {
         subscription: subscriptionSlice.reducer,
+        topBanner: topBannerSlice.reducer,
       },
     });
 
@@ -90,10 +93,8 @@ describe('use402ErrorCheck', () => {
   });
 
   describe('handle402Error', () => {
-    it('should dispatch setError402Detected with ISO string timestamp for non-admin without pricing_table', async () => {
+    it('should dispatch setTopBannerOptions for non-admin without pricing_table', async () => {
       mockIsAdmin = false;
-      const mockDate = new Date('2024-01-15T10:30:00.000Z');
-      vi.setSystemTime(mockDate);
 
       const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
 
@@ -102,8 +103,10 @@ describe('use402ErrorCheck', () => {
       });
 
       const state = store.getState();
-      expect(state.subscription.error402Detected).toBe(
-        '2024-01-15T10:30:00.000Z',
+      expect(state.topBanner.topBannerOptions.enabled).toBe(true);
+      expect(state.topBanner.topBannerOptions.bannerText).toBeTruthy();
+      expect(state.topBanner.topBannerOptions.parentContainerSelector).toBe(
+        '.mentor-parent-container',
       );
     });
 
@@ -222,33 +225,23 @@ describe('use402ErrorCheck', () => {
       expect(returnValue).toBeUndefined();
     });
 
-    it('should update timestamp on each call for non-admin users', async () => {
+    it('should re-enable the top banner on each call for non-admin users', async () => {
       mockIsAdmin = false;
       const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
-
-      const mockDate1 = new Date('2024-01-15T10:00:00.000Z');
-      vi.setSystemTime(mockDate1);
 
       await act(async () => {
         await result.current.handle402Error({ error: 'First error' });
       });
 
       const state1 = store.getState();
-      expect(state1.subscription.error402Detected).toBe(
-        '2024-01-15T10:00:00.000Z',
-      );
-
-      const mockDate2 = new Date('2024-01-15T11:00:00.000Z');
-      vi.setSystemTime(mockDate2);
+      expect(state1.topBanner.topBannerOptions.enabled).toBe(true);
 
       await act(async () => {
         await result.current.handle402Error({ error: 'Second error' });
       });
 
       const state2 = store.getState();
-      expect(state2.subscription.error402Detected).toBe(
-        '2024-01-15T11:00:00.000Z',
-      );
+      expect(state2.topBanner.topBannerOptions.enabled).toBe(true);
     });
 
     it('should open pricing modal when non-admin and pricing_table data is available', async () => {
@@ -399,39 +392,40 @@ describe('use402ErrorCheck', () => {
   });
 
   describe('integration with Redux store', () => {
-    it('should correctly integrate with subscription slice for non-admin', async () => {
+    it('should correctly integrate with top banner slice for non-admin', async () => {
       mockIsAdmin = false;
       const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
 
-      // Initial state should have empty error402Detected
+      // Initial state should have the top banner disabled
       const initialState = store.getState();
-      expect(initialState.subscription.error402Detected).toBe('');
+      expect(initialState.topBanner.topBannerOptions.enabled).toBe(false);
 
       await act(async () => {
         await result.current.handle402Error({ error: 'Test error' });
       });
 
-      // After calling handle402Error, state should be updated
+      // After calling handle402Error, the top banner should be enabled
       const updatedState = store.getState();
-      expect(updatedState.subscription.error402Detected).not.toBe('');
-      expect(typeof updatedState.subscription.error402Detected).toBe('string');
+      expect(updatedState.topBanner.topBannerOptions.enabled).toBe(true);
+      expect(typeof updatedState.topBanner.topBannerOptions.bannerText).toBe(
+        'string',
+      );
     });
 
-    it('should not update error402Detected for admin users', async () => {
+    it('should not enable top banner for admin users', async () => {
       mockIsAdmin = true;
       const { result } = renderHook(() => use402ErrorCheck(), { wrapper });
 
-      // Initial state should have empty error402Detected
       const initialState = store.getState();
-      expect(initialState.subscription.error402Detected).toBe('');
+      expect(initialState.topBanner.topBannerOptions.enabled).toBe(false);
 
       await act(async () => {
         await result.current.handle402Error({ error: 'Test error' });
       });
 
-      // Admin users get redirected, not error state updated
+      // Admin users get redirected, not the banner shown
       const updatedState = store.getState();
-      expect(updatedState.subscription.error402Detected).toBe('');
+      expect(updatedState.topBanner.topBannerOptions.enabled).toBe(false);
       expect(mockRouterPush).toHaveBeenCalled();
     });
   });

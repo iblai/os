@@ -36,7 +36,6 @@ export const MODALS = {
   SETTINGS: { name: 'settings' },
   CREATE_MENTOR: { name: 'create_mentor' },
   INVITE_USER: { name: 'invite_user' },
-  MY_MENTORS: { name: 'my_mentors' },
   LLM_PROVIDERS: { name: 'llm_providers' },
   EDIT_MENTOR: {
     name: 'edit_mentor',

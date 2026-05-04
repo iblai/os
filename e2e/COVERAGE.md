@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 333 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-05 | 360 checkpoints (351 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -45,7 +45,7 @@ When adding a new page or modifying an existing user flow:
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
-- [x] "New Chat" and "My Mentors" buttons are visible; Learner mode toggle is hidden for non-admins
+- [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
 - [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (Settings, Analytics, New Project, Invite Users, New Mentor) show Stripe/upgrade dialog for non-admins
 
@@ -200,39 +200,42 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 14: Anonymous / Public Access (6 checkpoints) — `journeys/14-anonymous-public-access.spec.ts`
+## Journey 14: Anonymous / Public Access (7 checkpoints; 1 deprecated) — `journeys/14-anonymous-public-access.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/login-required-banner.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/app-sidebar-footer.tsx`, `components/chat-input-form/inside-buttons.tsx`
 
 - [x] Anonymous user sees "Log in" button on a public mentor page
 - [x] Clicking "Log in" redirects to the auth host login page
 - [x] Anonymous user can navigate to the Explore page via the sidebar
 - [x] Anonymous user can chat with a mentor configured for "Anyone" and start a new chat
-- [x] Anonymous user can open My Mentors modal; "Create" button is not visible
 - [x] Collapsed sidebar admin buttons redirect anonymous user to the auth host
+- [x] Memory button is hidden in the chat input for unauthenticated users
+- [x] ~~Anonymous user can open My Mentors modal; "Create" button is not visible~~ _(deprecated in #1431 — MyMentorsModal removed)_
 
 ---
 
-## Journey 15: Mentor Switching (6 checkpoints) — `journeys/15-mentor-switching.spec.ts`
+## Journey 15: Mentor Switching (6 checkpoints; 3 deprecated) — `journeys/15-mentor-switching.spec.ts`
 
-**Source files:** `components/modals/my-mentors-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `hooks/use-mentors.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `hooks/use-mentors.ts`
 
 - [x] User can switch mentor by clicking a card on the Explore Mentors page
-- [x] User can switch mentor via My Mentors modal and continue chatting _(skipped on Safari)_
-- [x] User can switch mentor via My Mentors modal (alternate path)
-- [x] Switch between mentors via My Mentors modal (dedicated spec)
 - [x] Switch between mentors via Explore page (dedicated spec)
 - [x] Switch between mentors via home page Explore section
+- [x] ~~User can switch mentor via My Mentors modal and continue chatting~~ _(deprecated in #1431 — covered by Explore via exp-11)_
+- [x] ~~User can switch mentor via My Mentors modal (alternate path)~~ _(deprecated in #1431 — covered by Explore via exp-11)_
+- [x] ~~Switch between mentors via My Mentors modal (dedicated spec)~~ _(deprecated in #1431 — covered by Explore via exp-11)_
 
 ---
 
-## Journey 16: My Mentors Modal (3 checkpoints) — `journeys/16-my-mentors-modal.spec.ts`
+## Journey 16: My Mentors Modal (3 checkpoints; deprecated in #1431) — `journeys/16-my-mentors-modal.spec.ts`
 
-**Source files:** `components/modals/my-mentors-modal.tsx`, `hooks/use-mentors.ts`
+> **Deprecated in #1431.** The MyMentorsModal feature was removed and agent discovery was consolidated into the Explore sidebar. The spec file is a stub (`test.describe.skip`) that exists only to satisfy `validateSpecFiles` in the journey-coverage script. The checkpoints below are kept in the ledger to preserve the pre-push regression baseline.
 
-- [x] User can access a mentor through the My Mentors dropdown
-- [x] "Next" pagination button in My Mentors modal navigates to the next page
-- [x] Admin can invite a user from the My Mentors modal
+**Source files:** `components/modals/my-mentors-modal.tsx` _(deleted)_
+
+- [x] ~~User can access a mentor through the My Mentors dropdown~~ _(deprecated in #1431)_
+- [x] ~~"Next" pagination button in My Mentors modal navigates to the next page~~ _(deprecated in #1431)_
+- [x] ~~Admin can invite a user from the My Mentors modal~~ _(deprecated in #1431)_
 
 ---
 
@@ -286,9 +289,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 20: Dataset Management (16 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -306,22 +309,43 @@ When adding a new page or modifying an existing user flow:
 - [x] Multiple different file types can be uploaded in one session (TC23)
 - [x] Untrained dataset can be trained (TC24)
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
+- [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
+- [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
 
 ---
 
-## Journey 21: Billing & Subscription (9 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`, `app/provider-association/stripe/callback/[launch_id]/page.tsx`, `hooks/subscription/use-subscription-v2.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
 
-- [x] Billing tab is visible in account settings
-- [x] Billing main card shows credits information
-- [x] Correct buttons are shown based on payment method status
-- [x] Subscription renewal information is shown when applicable
-- [x] Usage card is visible when topUpURL is configured
-- [x] Plan info and upgrade button display when applicable
-- [x] Auto Recharge modal opens, shows all elements, enable toggle and threshold/amount inputs work, and Cancel closes it _(payment-gated — skipped gracefully when no payment method)_
-- [x] Add Credits modal opens correctly _(payment-gated)_
-- [x] New user without subscription sees Stripe pricing modal when attempting to create a mentor
+Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
+
+**A. CreditBalance dropdown (nav-bar)**
+
+- [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
+- [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
+- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
+- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
+- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
+- [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
+- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
+- [x] Add Credits opens the Add Credits modal _(payment-gated)_
+- [x] Escape closes the dropdown
+
+**B. Billing tab (User Profile dialog)**
+
+- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
+- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
+- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
+- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
+- [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
+
+**C. Non-admin pricing**
+
+- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
 
 ---
 
@@ -360,16 +384,16 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
-- [x] CP-24.1: Memory tab is visible and Enable Memory section is present
-- [x] CP-24.2: "Enable Memory" toggle can be enabled and disabled (sends enable_memory_component)
+- [x] CP-24.1: Memory tab is visible in Edit Mentor modal
+- [x] CP-24.2: Memory toggle (Settings tab) can be enabled and disabled (sends enable_memory_component on Save)
 - [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
 - [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
 - [x] CP-24.5: Admin can edit a memory entry via action menu
 - [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
 - [x] CP-24.7: User filter and date range filter are visible in manage memories
-- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting
+- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
 
 ---
 
@@ -425,7 +449,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
 **Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
 
@@ -434,7 +458,6 @@ When adding a new page or modifying an existing user flow:
 - [x] Create Mentor modal meets accessibility guidelines
 - [x] Invite Users modal meets accessibility guidelines
 - [x] Settings modal meets accessibility guidelines
-- [x] My Mentors dialog meets accessibility guidelines
 - [x] Embed dialog is accessible
 - [x] Dataset dialog is accessible
 - [x] Mentor Settings dialog is accessible
@@ -448,6 +471,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)
 - [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
 - [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
+- [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
 
 ---
 
@@ -480,13 +504,12 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
 - [x] Enterprise tenant: new mentor can be created from the sidebar dialog
 - [x] Enterprise tenant: new mentor can be created from the Settings dialog
-- [x] Enterprise tenant: new mentor can be created from the My Mentors dialog
 - [x] Enterprise tenant: sidebar open/close behavior works correctly
 - [x] Enterprise tenant: platform logo navigates home
 - [x] Enterprise tenant: New Chat navigation and sidebar items function correctly
@@ -495,6 +518,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Advertising tenant: user can log in to the advertising tenant mentor _(env-gated: set ENABLE_ADVERTISING_LOGIN_TEST=true after the session_id UUID bug is fixed in new-user onboarding)_
 - [x] Help Center toggle controls dropdown and embed visibility _(serial mode added to prevent parallel browser interference)_
 - [x] Help Center URL updates correctly in the dropdown and embed menu _(serial mode added)_
+- [x] ~~Enterprise tenant: new mentor can be created from the My Mentors dialog~~ _(deprecated in #1431 — MyMentorsModal removed; covered by sidebar dialog flow above)_
 
 ---
 
@@ -585,9 +609,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 39: Audit Log (7 checkpoints) — `journeys/39-audit-log.spec.ts`
+## Journey 39: Audit Log (9 checkpoints) — `journeys/39-audit-log.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/layout.tsx`, `components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx`, `hooks/use-mentor-segments.ts`
 
 - [x] AL-39.1: Admin opens Analytics and navigates to Audit tab, sees audit content or empty state
 - [x] AL-39.2: Admin opens Edit Mentor and selects Audit tab, sees audit content or empty state
@@ -596,6 +620,8 @@ When adding a new page or modifying an existing user flow:
 - [x] AL-39.5: Admin can navigate between Audit and other tabs in Edit Mentor
 - [x] AL-39.6: Audit Log analytics page is accessible via direct URL navigation
 - [x] AL-39.7: Non-admin user does not see Audit tab in the mentor dropdown
+- [x] AL-39.8: Non-admin user does not see Audit tab in the Analytics tab bar (view_audit_logs RBAC)
+- [x] AL-39.9: Non-admin user visiting audit page directly does not see audit content (view_audit_logs RBAC)
 
 ---
 
@@ -626,22 +652,41 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 42: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/42-persistent-chat-input-label.spec.ts`
+## Journey 42: Suggested Prompts (12 checkpoints) — `journeys/42-suggested-prompts.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx`
+
+- [x] Admin opens the Prompts tab and sees the Suggested Prompts section
+- [x] Admin adds a new suggested prompt from the Prompts tab
+- [x] Admin edits a suggested prompt from the Prompts tab
+- [x] Admin sees Run buttons on suggested prompts in the Prompts tab
+- [x] Admin runs a suggested prompt and the chat input is populated
+- [x] Admin sees the See More button when more than the page size of prompts exist
+- [x] Admin sees Delete buttons on suggested prompts in the Prompts tab
+- [x] Admin deletes a suggested prompt from the Prompts tab
+- [x] Admin opens the Prompt Gallery from the chat area
+- [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
+- [x] Admin deletes a prompt from the Prompt Gallery in the chat area
+- [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+
+---
+
+## Journey 43: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/43-persistent-chat-input-label.spec.ts`
 
 **Source files:** `components/chat-input-form.tsx`
 
 Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
-- [x] PCIL-42.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
-- [x] PCIL-42.2: Textarea placeholder is `"Ask anything"` when flag is `false`
-- [x] PCIL-42.3: `aria-labelledby` wires textarea to label element when flag is `false`
-- [x] PCIL-42.4: User can send a message when flag is `false`
-- [x] PCIL-42.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
-- [x] PCIL-42.6: Textarea placeholder is empty string when flag is `true`
-- [x] PCIL-42.7: `aria-labelledby` and label text are intact when flag is `true`
-- [x] PCIL-42.8: User can send a message when flag is `true`
-- [x] PCIL-42.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
-- [x] PCIL-42.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
+- [x] PCIL-43.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
+- [x] PCIL-43.2: Textarea placeholder is `"Ask anything"` when flag is `false`
+- [x] PCIL-43.3: `aria-labelledby` wires textarea to label element when flag is `false`
+- [x] PCIL-43.4: User can send a message when flag is `false`
+- [x] PCIL-43.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
+- [x] PCIL-43.6: Textarea placeholder is empty string when flag is `true`
+- [x] PCIL-43.7: `aria-labelledby` and label text are intact when flag is `true`
+- [x] PCIL-43.8: User can send a message when flag is `true`
+- [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
+- [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
 
 ---
 

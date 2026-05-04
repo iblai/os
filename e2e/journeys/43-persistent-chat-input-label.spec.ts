@@ -1,5 +1,5 @@
 /**
- * Journey 42: Persistent Chat Input Label (WCAG 3.3.2 — LEARN-41466)
+ * Journey 43: Persistent Chat Input Label (WCAG 3.3.2 — LEARN-41466)
  *
  * The `persistent_chat_input_label` tenant-metadata flag controls whether the
  * "Ask anything" label above the chat textarea is visually visible or
@@ -46,10 +46,10 @@ function chatTextarea(page: import('@playwright/test').Page) {
 }
 
 // ---------------------------------------------------------------------------
-// Journey 42: Flag OFF (default behaviour)
+// Journey 43: Flag OFF (default behaviour)
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 42: Persistent Chat Input Label — flag OFF (default)', () => {
+test.describe('Journey 43: Persistent Chat Input Label — flag OFF (default)', () => {
   let tenantKey = '';
   let originalFlagValue: boolean | undefined;
 
@@ -155,10 +155,10 @@ test.describe('Journey 42: Persistent Chat Input Label — flag OFF (default)', 
 });
 
 // ---------------------------------------------------------------------------
-// Journey 42: Flag ON
+// Journey 43: Flag ON
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 42: Persistent Chat Input Label — flag ON', () => {
+test.describe('Journey 43: Persistent Chat Input Label — flag ON', () => {
   let tenantKey = '';
   let originalFlagValue: boolean | undefined;
 

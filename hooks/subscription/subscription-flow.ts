@@ -98,7 +98,7 @@ export class mentorSubscriptionFlow extends IblSubscriptionFlow {
    * Updates banner and clears any existing trial interval
    */
   public handleTrialEndedFlow(freeTrialIntervalID?: number): void {
-    const tooltipText = `Your free trial has ended. Please upgrade to continue using mentorAI 😎.`;
+    const tooltipText = `Your free trial has ended. Please upgrade to continue using Agentic OS 😎.`;
     const updatedBannerOptions = {
       ...this.bannerOptions,
       tooltipText,

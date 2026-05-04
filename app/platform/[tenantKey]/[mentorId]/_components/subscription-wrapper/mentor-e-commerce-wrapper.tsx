@@ -1,41 +1,19 @@
 'use client';
 
 import { TopBanner } from '@iblai/iblai-js/web-containers';
-import { useSubscriptionV2 } from '@/hooks/subscription/use-subscription-v2';
-import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
-import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { useAppSelector } from '@/lib/hooks';
 import { useState, useEffect } from 'react';
-import { getUserEmail, getUserName } from '@/features/utils';
-import { config } from '@/lib/config';
-import { useUserTenants } from '@/hooks/use-user';
-import { useCurrentTenant } from '@/hooks/use-user';
-import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
+import { useTopBannerButtonHandler } from '@/hooks/subscription/use-top-banner-button-handler';
 
 export function MentorECommerceWrapper() {
   const isPreviewMode = useIsPreviewMode();
-  useSubscriptionV2();
-  const { currentTenant } = useCurrentTenant();
-  const { userTenants } = useUserTenants();
-  const dispatch = useAppDispatch();
+
   const topBannerOptions = useAppSelector(
     (state) => state.topBanner.topBannerOptions,
   );
-  const subscriptionFlow = new MentorSubscriptionFlowV2({
-    platformName: config.iblPlatform(),
-    currentTenantKey: currentTenant?.key || '',
-    username: getUserName(),
-    currentTenantOrg: currentTenant?.org || '',
-    userTenants,
-    isAdmin: currentTenant?.is_admin || false,
-    mainTenantKey: config.mainTenantKey(),
-    userEmail: getUserEmail(),
-    dispatch,
-    topBannerOptions,
-    mentorUrl: config.mentorUrl(),
-  });
-  const { bannerButtonTriggerCallback } =
-    useSubscriptionHandlerV2(subscriptionFlow);
+  const getTopBannerButtonHandler = useTopBannerButtonHandler();
+
   const [initialStyles, setInitialStyles] = useState<{
     sideBarWrapper?: { maxHeight: string; top: string; position: string };
     mainContentContainer?: { position: string; top: string };
@@ -177,9 +155,7 @@ export function MentorECommerceWrapper() {
         <TopBanner
           parentContainerSelector=".mentor-parent-container"
           bannerText={topBannerOptions.bannerText}
-          buttonHandler={bannerButtonTriggerCallback(
-            topBannerOptions?.onUpgrade || '',
-          )}
+          buttonHandler={getTopBannerButtonHandler(topBannerOptions.onUpgrade)}
           buttonLabel={topBannerOptions?.buttonLabel || 'Upgrade'}
           loading={topBannerOptions.loading}
           tooltipText={topBannerOptions.tooltipText}

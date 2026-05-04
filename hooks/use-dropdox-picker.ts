@@ -66,7 +66,7 @@ const useDropboxPicker = ({
   // Handle successful file selection from Dropbox
   const handleSuccess = async (files) => {
     if (!mentorId) {
-      toast.error('Mentor not found');
+      toast.error('Agent not found');
       return;
     }
 

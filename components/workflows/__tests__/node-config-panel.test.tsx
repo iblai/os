@@ -404,7 +404,7 @@ describe('NodeConfigPanel', () => {
 
       expect(screen.getByText('My Mentor')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure the mentor instructions, model, and tools'),
+        screen.getByText('Configure the agent instructions, model, and tools'),
       ).toBeInTheDocument();
     });
 
@@ -2934,10 +2934,10 @@ describe('NodeConfigPanel', () => {
       );
 
       expect(
-        screen.getByText('Select a mentor to configure tools.'),
+        screen.getByText('Select an agent to configure tools.'),
       ).toBeInTheDocument();
       expect(
-        screen.getByText('Select a mentor to load configuration.'),
+        screen.getByText('Select an agent to load configuration.'),
       ).toBeInTheDocument();
     });
   });
@@ -3729,7 +3729,7 @@ describe('NodeConfigPanel', () => {
       );
 
       expect(
-        screen.getByPlaceholderText('Select a mentor to load model'),
+        screen.getByPlaceholderText('Select an agent to load model'),
       ).toBeInTheDocument();
     });
   });

@@ -80,6 +80,8 @@ vi.mock('@/hoc/withPermissions', () => ({
 }));
 
 // ---- Test Data ----
+// The backend now omits the memory tool from this endpoint (its toggle lives
+// in the Settings tab), so the mock mirrors that contract.
 const mockTools = [
   {
     slug: 'web-search',
@@ -92,12 +94,6 @@ const mockTools = [
     name: 'Code Interpreter',
     display_name: 'Code Interpreter',
     description: 'Run code in a sandbox',
-  },
-  {
-    slug: 'memory-tool',
-    name: 'Memory Tool',
-    display_name: 'Memory Tool',
-    description: 'Store and recall information',
   },
 ];
 
@@ -143,7 +139,7 @@ describe('ToolsTab', () => {
       render(<ToolsTab />);
       expect(screen.getByText('Tools')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure tools and integrations for your mentor.'),
+        screen.getByText('Configure tools and integrations for your agent.'),
       ).toBeInTheDocument();
     });
 
@@ -151,7 +147,6 @@ describe('ToolsTab', () => {
       render(<ToolsTab />);
       expect(screen.getByText('Web Search')).toBeInTheDocument();
       expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
-      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
 
       expect(
         screen.getByText('Search the web for information'),
@@ -159,10 +154,10 @@ describe('ToolsTab', () => {
       expect(screen.getByText('Run code in a sandbox')).toBeInTheDocument();
     });
 
-    it('renders switches for each tool', () => {
+    it('renders one switch per returned tool', () => {
       render(<ToolsTab />);
       const switches = screen.getAllByRole('switch');
-      expect(switches.length).toBe(3);
+      expect(switches.length).toBe(mockTools.length);
     });
 
     it('shows enabled state for active tools', () => {
@@ -204,47 +199,6 @@ describe('ToolsTab', () => {
       await waitFor(() => {
         expect(mockToggleTools).toHaveBeenCalledWith('web-search');
       });
-    });
-  });
-
-  // Historical note: earlier tests here asserted that the Memory tool was
-  // hidden when the `enable_memsearch` config flag was false. `tools-tab.tsx`
-  // currently has no memsearch gating — it renders every tool returned by
-  // `useGetToolsQuery` regardless of `useGetMemsearchStatusQuery`, which the
-  // source does not even import. The tests below instead pin the actual
-  // current invariant: memory-tool visibility is decoupled from the memsearch
-  // config flag. If gating is later re-introduced into this component, these
-  // tests will fail and the new gating tests should replace them.
-  describe('Memory Tools Rendering (memsearch-independent)', () => {
-    it('renders the Memory tool when enable_memsearch is true', () => {
-      mockGetMemsearchStatusQuery.mockReturnValue({
-        data: { enable_memsearch: true },
-      });
-
-      render(<ToolsTab />);
-      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
-      expect(screen.getByText('Web Search')).toBeInTheDocument();
-      expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
-    });
-
-    it('still renders the Memory tool when enable_memsearch is false (no gating in this component)', () => {
-      mockGetMemsearchStatusQuery.mockReturnValue({
-        data: { enable_memsearch: false },
-      });
-
-      render(<ToolsTab />);
-      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
-      expect(screen.getByText('Web Search')).toBeInTheDocument();
-      expect(screen.getByText('Code Interpreter')).toBeInTheDocument();
-    });
-
-    it('still renders the Memory tool when the memsearch config is undefined', () => {
-      mockGetMemsearchStatusQuery.mockReturnValue({
-        data: undefined,
-      });
-
-      render(<ToolsTab />);
-      expect(screen.getByText('Memory Tool')).toBeInTheDocument();
     });
   });
 

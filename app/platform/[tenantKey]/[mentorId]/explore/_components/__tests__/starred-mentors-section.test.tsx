@@ -189,7 +189,7 @@ describe('StarredMentorsSection', () => {
       expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Star your favorite mentors to quickly access them here',
+          'Star your favorite agents to quickly access them here',
         ),
       ).toBeInTheDocument();
       expect(screen.getByText('No favorites yet')).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe('StarredMentorsSection', () => {
       expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Star your favorite mentors to quickly access them here',
+          'Star your favorite agents to quickly access them here',
         ),
       ).toBeInTheDocument();
       expect(screen.getByText('No favorites yet')).toBeInTheDocument();
@@ -216,7 +216,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('list', { name: /Favorite mentors/i }),
+        screen.getByRole('list', { name: /Favorite agents/i }),
       ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
@@ -341,7 +341,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       const button = screen.getByRole('button', {
-        name: /load more favorite mentors/i,
+        name: /load more favorite agents/i,
       });
       expect(button).toBeDisabled();
     });
@@ -357,7 +357,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Load more favorite mentors/i }),
+        screen.getByRole('button', { name: /Load more favorite agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -381,7 +381,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.queryByRole('button', { name: /Load more favorite mentors/i }),
+        screen.queryByRole('button', { name: /Load more favorite agents/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -413,7 +413,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more favorite mentors/i,
+        name: /Load more favorite agents/i,
       });
       await user.click(seeMoreButton);
 
@@ -463,7 +463,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more favorite mentors/i,
+        name: /Load more favorite agents/i,
       });
       expect(seeMoreButton).toBeDisabled();
     });
@@ -575,7 +575,7 @@ describe('StarredMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('list', { name: /Favorite mentors/i }),
+        screen.getByRole('list', { name: /Favorite agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -600,7 +600,7 @@ describe('StarredMentorsSection', () => {
       expect(favoritesCard).toHaveAttribute('tabIndex', '0');
       expect(favoritesCard).toHaveAttribute(
         'aria-label',
-        'Add to Favorites - Sign up to star mentors',
+        'Add to Favorites - Sign up to star agents',
       );
     });
   });

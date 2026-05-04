@@ -1,81 +1,80 @@
 import { Page, Locator, expect } from '@playwright/test';
+import {
+  billingAutoRechargeSection,
+  billingPlanSection,
+  getCurrentTenantShowPaywall,
+  waitForBillingTabReady,
+} from '@iblai/iblai-js/playwright';
 
+/**
+ * Page object for the Billing tab inside the User Profile dialog and the
+ * inline Auto Recharge / Add Credits modals it opens. The Billing tab is only
+ * reachable on tenants where `current_tenant.show_paywall` is true; the mentor
+ * app opens it via the `?profileTab=billing` URL param (see
+ * `app/.../nav-bar/user-profile.tsx`).
+ */
 export class BillingPage {
   readonly page: Page;
 
-  readonly billingTab: Locator;
-  readonly mainCard: Locator;
+  readonly accountDialog: Locator;
+  readonly billingPlanSection: Locator;
+  readonly autoRechargeSection: Locator;
   readonly autoRechargeModal: Locator;
   readonly addCreditsModal: Locator;
   readonly rechargeToggle: Locator;
   readonly thresholdInput: Locator;
   readonly amountInput: Locator;
   readonly cancelButton: Locator;
+  readonly saveSettingsButton: Locator;
   readonly manageUsageButton: Locator;
   readonly addCreditsButton: Locator;
 
-  private accountDialog: Locator;
-
   constructor(page: Page) {
     this.page = page;
-    this.accountDialog = page.getByRole('dialog', { name: 'User Profile' });
-    this.billingTab = this.accountDialog.getByRole('button', {
-      name: /billing/i,
-    });
-    this.mainCard = this.accountDialog.locator(
-      '[data-testid="billing-card"], [class*="billing-card"]',
-    );
+    this.accountDialog = page.getByRole('dialog');
+    this.billingPlanSection = billingPlanSection(page);
+    this.autoRechargeSection = billingAutoRechargeSection(page);
     this.autoRechargeModal = page
       .getByRole('dialog')
       .filter({ hasText: /auto recharge/i });
     this.addCreditsModal = page
       .getByRole('dialog')
       .filter({ hasText: /add credits/i });
-    this.rechargeToggle = page.getByRole('switch', {
-      name: /auto recharge/i,
+    this.rechargeToggle = this.autoRechargeModal.getByRole('switch', {
+      name: /enable auto recharge/i,
     });
-    this.thresholdInput = page.locator('input#threshold');
-    this.amountInput = page.locator('input#amount');
+    this.thresholdInput = this.autoRechargeModal.locator('input#threshold');
+    this.amountInput = this.autoRechargeModal.locator('input#amount');
     this.cancelButton = this.autoRechargeModal.getByRole('button', {
       name: /cancel/i,
     });
-    this.manageUsageButton = page.getByRole('button', {
-      name: /manage usage/i,
+    this.saveSettingsButton = this.autoRechargeModal.getByRole('button', {
+      name: /save settings/i,
     });
-    this.addCreditsButton = page.getByRole('button', { name: /add credits/i });
+    this.manageUsageButton = this.autoRechargeSection.getByRole('button', {
+      name: /^manage usage$/i,
+    });
+    this.addCreditsButton = page
+      .getByTestId('billing-credits-section')
+      .getByRole('button', { name: /^add credits$/i });
   }
 
-  // Navigate via More options dropdown → profile/account dialog → Billing tab
+  /** True iff the current tenant has `show_paywall=true` in localStorage. */
+  async isPaywallEnabled(): Promise<boolean> {
+    return getCurrentTenantShowPaywall(this.page);
+  }
+
+  /**
+   * Opens the Billing tab inside the User Profile dialog by appending
+   * `?profileTab=billing` to the current URL. Waits for the Plan section card
+   * to mount before returning. Throws if the tenant has paywall disabled
+   * (callers should guard with `isPaywallEnabled()` first).
+   */
   async openBillingTab(): Promise<void> {
-    const profileDropdown = this.page.getByRole('button', {
-      name: 'More options',
-    });
-    await expect(profileDropdown).toBeVisible({ timeout: 15_000 });
-    await profileDropdown.click();
-
-    // Try Profile menuitem first
-    const profileItem = this.page.getByRole('menuitem', { name: /profile/i });
-    const profileVisible = await profileItem
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-    if (profileVisible) {
-      await profileItem.click();
-    } else {
-      // Fallback: try clicking first available menuitem to open the dialog
-      const menu = this.page.getByRole('menu', { name: 'More options' });
-      await expect(menu).toBeVisible({ timeout: 5_000 });
-      const menuItems = menu.getByRole('menuitem');
-      await menuItems.first().click();
-    }
-
-    await expect(this.accountDialog).toBeVisible({ timeout: 10_000 });
-
-    // Look for Billing button/tab inside the dialog
-    const billingButton = this.accountDialog
-      .getByRole('button', { name: 'Billing' })
-      .or(this.accountDialog.getByRole('tab', { name: /billing/i }));
-    await expect(billingButton).toBeVisible({ timeout: 10_000 });
-    await billingButton.click();
+    const url = new URL(this.page.url());
+    url.searchParams.set('profileTab', 'billing');
+    await this.page.goto(url.toString(), { waitUntil: 'domcontentloaded' });
+    await waitForBillingTabReady(this.page);
   }
 
   async openAutoRechargeModal(): Promise<void> {
@@ -90,12 +89,19 @@ export class BillingPage {
     await expect(this.autoRechargeModal).not.toBeVisible({ timeout: 10_000 });
   }
 
+  async openAddCreditsModal(): Promise<void> {
+    await expect(this.addCreditsButton).toBeVisible({ timeout: 10_000 });
+    await this.addCreditsButton.click();
+    await expect(this.addCreditsModal).toBeVisible({ timeout: 10_000 });
+  }
+
+  async closeAddCreditsModal(): Promise<void> {
+    await this.page.keyboard.press('Escape');
+    await expect(this.addCreditsModal).not.toBeVisible({ timeout: 10_000 });
+  }
+
   async closeAccountDialog(): Promise<void> {
-    const closeButton = this.accountDialog.getByRole('button', {
-      name: 'Close',
-    });
-    await expect(closeButton).toBeVisible({ timeout: 5_000 });
-    await closeButton.click();
-    await expect(this.accountDialog).not.toBeVisible({ timeout: 5_000 });
+    await this.page.keyboard.press('Escape');
+    await expect(this.billingPlanSection).not.toBeVisible({ timeout: 10_000 });
   }
 }

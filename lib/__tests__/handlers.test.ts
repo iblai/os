@@ -37,6 +37,7 @@ vi.mock('@/features/chat/chatSlice', () => ({
 }));
 
 import { useIframeHandlers } from '../handlers';
+import eventBus, { RemoteEvents } from '../eventBus';
 import { darkModeUpdated } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import { enableChatActionsPopup } from '@/features/chat/chatSlice';
@@ -118,6 +119,7 @@ describe('useIframeHandlers', () => {
       expect(result.current).toHaveProperty('MENTOR:IFRAME_CLOSE_BUTTON');
       expect(result.current).toHaveProperty('MENTOR:MENTOR_PREVIEW');
       expect(result.current).toHaveProperty('MENTOR:ENABLE_CHAT_ACTION_POPUPS');
+      expect(result.current).toHaveProperty('MENTOR:CHAT_ACTION_ADD_MESSAGE');
     });
 
     it('should have all handlers as functions', () => {
@@ -756,6 +758,55 @@ describe('useIframeHandlers', () => {
     });
   });
 
+  describe('MENTOR:CHAT_ACTION_ADD_MESSAGE handler', () => {
+    it('emits sendChatMessage event with content and visible=false', () => {
+      const emitSpy = vi.spyOn(eventBus, 'emit');
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { message: 'Hello mentor' },
+      } as MessageEvent;
+
+      result.current['MENTOR:CHAT_ACTION_ADD_MESSAGE'](undefined, mockEvent);
+
+      expect(emitSpy).toHaveBeenCalledWith(RemoteEvents.sendChatMessage, {
+        content: 'Hello mentor',
+        visible: false,
+      });
+    });
+
+    it('forwards undefined content when event has no message field', () => {
+      const emitSpy = vi.spyOn(eventBus, 'emit');
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = { data: {} } as MessageEvent;
+
+      result.current['MENTOR:CHAT_ACTION_ADD_MESSAGE'](undefined, mockEvent);
+
+      expect(emitSpy).toHaveBeenCalledWith(RemoteEvents.sendChatMessage, {
+        content: undefined,
+        visible: false,
+      });
+    });
+
+    it('notifies a live eventBus subscriber with the payload', () => {
+      const subscriber = vi.fn();
+      eventBus.on(RemoteEvents.sendChatMessage, subscriber);
+
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { message: 'ping' },
+      } as MessageEvent;
+
+      result.current['MENTOR:CHAT_ACTION_ADD_MESSAGE'](undefined, mockEvent);
+
+      expect(subscriber).toHaveBeenCalledWith({
+        content: 'ping',
+        visible: false,
+      });
+
+      eventBus.off(RemoteEvents.sendChatMessage, subscriber);
+    });
+  });
+
   describe('edge cases and integration', () => {
     it('should handle rapid successive handler calls', () => {
       const { result } = renderHook(() => useIframeHandlers());
@@ -775,7 +826,7 @@ describe('useIframeHandlers', () => {
       result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'usage-123' });
       result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS']({ enable: true });
 
-      expect(mockDispatchInstance).toHaveBeenCalledTimes(2);
+      expect(mockDispatchInstance).toHaveBeenCalledTimes(3);
       expect(console.log).toHaveBeenCalled();
     });
 

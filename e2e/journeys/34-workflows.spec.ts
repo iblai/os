@@ -34,7 +34,7 @@ test.describe('Journey 34: Workflows', () => {
       page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText('Create and manage automated workflows for your mentors'),
+      page.getByText('Create and manage automated workflows for your agents'),
     ).toBeVisible();
 
     const createButton = page.getByRole('button', { name: 'Create Workflow' });
@@ -194,7 +194,7 @@ test.describe('Journey 34: Workflows', () => {
     const startNode = canvas.locator('span').filter({ hasText: 'Start' });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
-    const mentorNode = canvas.locator('span').filter({ hasText: 'Mentor' });
+    const mentorNode = canvas.locator('p').filter({ hasText: 'Agent' });
     await expect(mentorNode).toBeVisible({ timeout: 15_000 });
 
     const edges = canvas.locator(
@@ -247,7 +247,9 @@ test.describe('Journey 34: Workflows', () => {
     await expect(
       page.getByRole('button', { name: 'Close preview' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'New Chat' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'New chat for workflow preview' }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
 
     await exitPreviewMode(page);

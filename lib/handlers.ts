@@ -7,6 +7,7 @@ import {
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import eventBus, { RemoteEvents } from './eventBus';
 
 export function useIframeHandlers() {
   const dispatch = useAppDispatch();
@@ -103,10 +104,20 @@ export function useIframeHandlers() {
     // EDX integration handlers
     'MENTOR:EDX_USAGE_ID': (payload: { edxUsageId: string }) => {
       console.log('EDX Usage ID updated:', payload.edxUsageId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxUsageId: payload.edxUsageId },
+        }),
+      );
     },
 
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxCourseId: payload.edxCourseId },
+        }),
+      );
     },
 
     // Safety disclaimer handler
@@ -147,6 +158,16 @@ export function useIframeHandlers() {
     },
     'MENTOR:ENABLE_CHAT_ACTION_POPUPS': (payload: { enable: boolean }) => {
       dispatch(enableChatActionsPopup(payload.enable));
+    },
+    'MENTOR:CHAT_ACTION_ADD_MESSAGE': (
+      _payload: unknown,
+      event: MessageEvent,
+    ) => {
+      const { message } = event.data;
+      eventBus.emit(RemoteEvents.sendChatMessage, {
+        content: message,
+        visible: false,
+      });
     },
   };
 
