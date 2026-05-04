@@ -169,6 +169,9 @@ export function useIframeHandlers() {
         visible: false,
       });
     },
+    'MENTOR:NEW_CHAT': () => {
+      eventBus.emit(RemoteEvents.newChat);
+    },
   };
 
   return handlers;
