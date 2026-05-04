@@ -85,6 +85,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  enable_memory_component: boolean;
 }
 
 export function SettingsTab() {
@@ -114,6 +115,11 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+
+  // @ts-ignore - enable_memory_component exists on API but not typed
+  const initialMemoryEnabled: boolean =
+    // @ts-ignore - enable_memory_component exists on API but not typed
+    mentor?.enable_memory_component ?? false;
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -171,6 +177,7 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      enable_memory_component: initialMemoryEnabled,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -224,6 +231,11 @@ export function SettingsTab() {
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
+      }
+
+      // Only send enable_memory_component if the user actually changed it.
+      if (value.enable_memory_component !== initialMemoryEnabled) {
+        values.enable_memory_component = value.enable_memory_component;
       }
 
       try {
@@ -768,6 +780,40 @@ export function SettingsTab() {
                   </form.Field>
                 )}
               </WithFormPermissions>
+
+              <form.Field name="enable_memory_component">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Memory
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about memory"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              Allow this mentor to remember and reference
+                              information from past conversations.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Memory ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
 
               <form.Field name="forkable">
                 {(field) => (

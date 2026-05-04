@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { X, Search, Edit3, Trash2, Plus, Loader2 } from 'lucide-react';
 import {
-  useGetMentorMemoriesQuery,
+  useGetMentorMemoriesListQuery,
   useDeleteMentorMemoryMutation,
   useUpdateMentorMemoryMutation,
   useCreateMentorMemoryMutation,
@@ -25,7 +25,6 @@ import {
   type MentorMemoryCategory,
 } from '@iblai/iblai-js/data-layer';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUserIsStudent } from '@/hooks/use-user';
 import { toast } from 'sonner';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
@@ -47,6 +46,8 @@ interface FlatMemory {
   createdAt?: string;
 }
 
+const PAGE_SIZE = 10;
+
 export const MemoryMenu = ({
   onClose,
   tenantKey,
@@ -55,9 +56,9 @@ export const MemoryMenu = ({
   const { mentorId: mentorIdFromParams } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const mentorId = getMentorId() ?? mentorIdFromParams ?? '';
-  const isStudent = useUserIsStudent();
 
-  const [showAllMemories, setShowAllMemories] = useState(false);
+  const [page, setPage] = useState(1);
+  const [accumulated, setAccumulated] = useState<MentorMemory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingMemory, setIsAddingMemory] = useState(false);
   const [editingMemoryId, setEditingMemoryId] = useState<number | null>(null);
@@ -66,28 +67,39 @@ export const MemoryMenu = ({
   const [newMemory, setNewMemory] = useState({ content: '', categorySlug: '' });
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Build query params - add my_memory=true for students
-  const queryParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    if (isStudent) {
-      params.my_memory = 'true';
-    }
-    return Object.keys(params).length > 0 ? params : undefined;
-  }, [isStudent]);
+  const { data: response, isFetching } = useGetMentorMemoriesListQuery(
+    {
+      org: tenantKey ?? '',
+      userId: username ?? '',
+      mentorId,
+      params: {
+        page,
+        page_size: PAGE_SIZE,
+        my_memory: true,
+      },
+    },
+    {
+      skip: !tenantKey || !username || !mentorId,
+    },
+  );
 
-  const { data: memoriesByCategoryResponse, isLoading } =
-    useGetMentorMemoriesQuery(
-      {
-        org: tenantKey ?? '',
-        userId: username ?? '',
-        mentorId,
-        // @ts-ignore - my_memory param exists on API but not typed
-        ...(queryParams ? { params: queryParams } : {}),
-      },
-      {
-        skip: !tenantKey || !username || !mentorId,
-      },
-    );
+  // Append each new page to the accumulated list. Page 1 always replaces
+  // (refetch after a mutation re-runs page 1 and we want the fresh state).
+  useEffect(() => {
+    if (!response?.results) return;
+    if (page === 1) {
+      setAccumulated(response.results);
+    } else {
+      setAccumulated((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        const next = response.results.filter((m) => !seen.has(m.id));
+        return next.length > 0 ? [...prev, ...next] : prev;
+      });
+    }
+  }, [response, page]);
+
+  const isInitialLoading = isFetching && accumulated.length === 0;
+  const hasMore = !!response?.next;
 
   const { data: adminCategories } = useGetMemoryCategoriesAdminQuery(
     {
@@ -105,46 +117,45 @@ export const MemoryMenu = ({
   const [createMentorMemory, { isLoading: isCreating }] =
     useCreateMentorMemoryMutation();
 
-  // Flatten the by-category response into a flat list
-  const memories: FlatMemory[] = useMemo(() => {
-    if (!memoriesByCategoryResponse) return [];
-    return memoriesByCategoryResponse.flatMap((item) =>
-      item.memories.map((memory: MentorMemory) => ({
-        id: memory.id,
-        content: memory.content,
-        category: {
-          id: memory.category.id,
-          name: memory.category.name,
-          slug: memory.category.slug,
-        },
-        username: memory.username,
-        createdAt: memory.created_at,
-      })),
-    );
-  }, [memoriesByCategoryResponse]);
+  const memories: FlatMemory[] = accumulated.map((memory) => ({
+    id: memory.id,
+    content: memory.content,
+    category: {
+      id: memory.category.id,
+      name: memory.category.name,
+      slug: memory.category.slug,
+    },
+    username: memory.username,
+    createdAt: memory.created_at,
+  }));
 
-  // Build category list
-  const categories = useMemo(() => {
-    if (adminCategories && adminCategories.length > 0) {
-      return adminCategories.map((cat: MentorMemoryCategory) => ({
-        id: cat.id,
-        name: cat.name,
-        slug: cat.slug,
-      }));
-    }
-    if (!memoriesByCategoryResponse) return [];
-    return memoriesByCategoryResponse.map((item) => ({
-      id: item.category.id,
-      name: item.category.name,
-      slug: item.category.slug,
-    }));
-  }, [adminCategories, memoriesByCategoryResponse]);
+  const categories = (adminCategories ?? []).map(
+    (cat: MentorMemoryCategory) => ({
+      id: cat.id,
+      name: cat.name,
+      slug: cat.slug,
+    }),
+  );
 
   const filteredMemories = memories.filter(
     (memory) =>
       memory.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       memory.category.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const resetPagination = () => {
+    setPage(1);
+    setAccumulated([]);
+  };
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!hasMore || isFetching) return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+      setPage((p) => p + 1);
+    }
+  };
 
   const handleDeleteMemory = async (memoryId: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -158,6 +169,7 @@ export const MemoryMenu = ({
         mentorId,
         memoryId,
       }).unwrap();
+      resetPagination();
       toast.success('Memory deleted');
     } catch {
       toast.error('Failed to delete memory');
@@ -181,6 +193,7 @@ export const MemoryMenu = ({
       }).unwrap();
       setNewMemory({ content: '', categorySlug: '' });
       setIsAddingMemory(false);
+      resetPagination();
       toast.success('Memory created');
     } catch {
       toast.error('Failed to create memory');
@@ -214,6 +227,7 @@ export const MemoryMenu = ({
       setEditingMemoryId(null);
       setEditContent('');
       setEditCategorySlug('');
+      resetPagination();
       toast.success('Memory updated');
     } catch {
       toast.error('Failed to update memory');
@@ -265,9 +279,7 @@ export const MemoryMenu = ({
         </div>
 
         <p className="mt-2 text-sm text-gray-500">
-          {isStudent
-            ? 'Your saved memories for this agent'
-            : 'Memories for this agent'}
+          Your saved memories for this agent
         </p>
       </div>
 
@@ -331,145 +343,136 @@ export const MemoryMenu = ({
       )}
 
       <div
-        className={`${showAllMemories ? 'max-h-80' : 'max-h-64'} overflow-y-auto`}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="max-h-80 overflow-y-auto"
       >
-        {isLoading ? (
+        {isInitialLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           </div>
         ) : (
           <>
-            {filteredMemories
-              .slice(0, showAllMemories ? filteredMemories.length : 4)
-              .map((memory) => {
-                const isEditing = editingMemoryId === memory.id;
+            {filteredMemories.map((memory) => {
+              const isEditing = editingMemoryId === memory.id;
 
-                return (
-                  <div
-                    key={memory.id}
-                    className="border-b border-gray-50 p-3 transition-colors last:border-b-0 hover:bg-gray-50"
-                  >
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <Textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="min-h-[60px] resize-none rounded-md border border-gray-300 text-sm"
-                          placeholder="Memory content..."
-                        />
-                        {categories.length > 0 && (
-                          <Select
-                            value={editCategorySlug}
-                            onValueChange={setEditCategorySlug}
-                          >
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((cat) => (
-                                <SelectItem key={cat.slug} value={cat.slug}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <div className="flex gap-2">
+              return (
+                <div
+                  key={memory.id}
+                  className="border-b border-gray-50 p-3 transition-colors last:border-b-0 hover:bg-gray-50"
+                >
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="min-h-[60px] resize-none rounded-md border border-gray-300 text-sm"
+                        placeholder="Memory content..."
+                      />
+                      {categories.length > 0 && (
+                        <Select
+                          value={editCategorySlug}
+                          onValueChange={setEditCategorySlug}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.slug} value={cat.slug}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          disabled={!editContent.trim() || isUpdating}
+                          className="bg-[#38A1E5] text-white hover:bg-[#2891D5]"
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : null}
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingMemoryId(null);
+                            setEditContent('');
+                            setEditCategorySlug('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                              {memory.category.name}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs text-gray-600">
+                            {memory.content}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            {formatTimestamp(memory.createdAt)}
+                          </p>
+                        </div>
+                        <div className="ml-2 flex items-center gap-1">
                           <Button
-                            size="sm"
-                            onClick={handleSaveEdit}
-                            disabled={!editContent.trim() || isUpdating}
-                            className="bg-[#38A1E5] text-white hover:bg-[#2891D5]"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-blue-100"
+                            onClick={(e) => startEdit(memory, e)}
                           >
-                            {isUpdating ? (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            ) : null}
-                            Save
+                            <Edit3 className="h-3 w-3 text-blue-500" />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingMemoryId(null);
-                              setEditContent('');
-                              setEditCategorySlug('');
-                            }}
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-red-100"
+                            disabled={deletingId === memory.id}
+                            onClick={(e) => handleDeleteMemory(memory.id, e)}
                           >
-                            Cancel
+                            {deletingId === memory.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin text-red-500" />
+                            ) : (
+                              <Trash2 className="h-3 w-3 text-red-500" />
+                            )}
                           </Button>
                         </div>
                       </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                                {memory.category.name}
-                              </span>
-                            </div>
-                            <p className="mt-1 line-clamp-2 text-xs text-gray-600">
-                              {memory.content}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                              {formatTimestamp(memory.createdAt)}
-                            </p>
-                          </div>
-                          <div className="ml-2 flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 rounded-full hover:bg-blue-100"
-                              onClick={(e) => startEdit(memory, e)}
-                            >
-                              <Edit3 className="h-3 w-3 text-blue-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 rounded-full hover:bg-red-100"
-                              disabled={deletingId === memory.id}
-                              onClick={(e) => handleDeleteMemory(memory.id, e)}
-                            >
-                              {deletingId === memory.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin text-red-500" />
-                              ) : (
-                                <Trash2 className="h-3 w-3 text-red-500" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
-            {filteredMemories.length === 0 && !isLoading && (
+            {filteredMemories.length === 0 && !isInitialLoading && (
               <div className="p-4 text-center text-sm text-gray-500">
                 {searchQuery
                   ? 'No memories found matching your search.'
                   : 'No memories yet.'}
               </div>
             )}
+
+            {isFetching && accumulated.length > 0 && (
+              <div className="flex items-center justify-center p-3">
+                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+              </div>
+            )}
           </>
         )}
       </div>
-
-      {filteredMemories.length > 4 && (
-        <div className="border-t border-gray-100 p-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full bg-transparent text-xs"
-            onClick={() => setShowAllMemories(!showAllMemories)}
-          >
-            {showAllMemories
-              ? 'Show Less'
-              : `View All Memories (${filteredMemories.length})`}
-          </Button>
-        </div>
-      )}
     </>
   );
 };

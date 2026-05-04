@@ -35,23 +35,17 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to memory tab and enables then disables the Enable Memory toggle', async ({
-    page,
-    createMentorPage,
+  test('admin goes to settings tab and enables then disables the Memory toggle', async ({
     editMentorPage,
   }) => {
-    await createMentorPage.openAndCreate();
-    await editMentorPage.open('Memory');
-    await waitForPageReady(page);
-
-    const wasEnabled = await editMentorPage.memory.isEnableMemoryChecked();
-    await editMentorPage.memory.toggleEnableMemory();
-    await editMentorPage.memory.toggleEnableMemory();
-    // Restore original state
-    const currentState = await editMentorPage.memory.isEnableMemoryChecked();
-    if (currentState !== wasEnabled) {
-      await editMentorPage.memory.toggleEnableMemory();
-    }
+    // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
+    // It is now a form-driven field — changes persist only on Save.
+    await editMentorPage.close();
+    await editMentorPage.open('Settings');
+    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
+    // Toggle to the opposite state, then toggle back to restore.
+    await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
+    await editMentorPage.settings.setMemoryEnabled(wasEnabled);
     await editMentorPage.close();
   });
 
@@ -213,39 +207,40 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     // Own mentor per test — see Journey 24 describe block above for rationale.
     await createMentorPage.openAndCreate();
 
-    // First ensure memory is enabled on the mentor
-    await editMentorPage.open('Memory');
+    // The Memory toggle is now in the Settings tab (fix/1584).
+    // First ensure memory is enabled on the mentor.
+    await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.memory.isEnableMemoryChecked();
+    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
     if (!wasEnabled) {
-      await editMentorPage.memory.toggleEnableMemory();
+      await editMentorPage.settings.setMemoryEnabled(true);
     }
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
-    // Check if Memory button is visible in the chat input area
-    // Note: visibility also depends on tenant-level memsearch config
+    // Check if Memory button is visible in the chat input area.
+    // Note: visibility also depends on tenant-level memsearch config.
     const memoryBtnVisible = await chatPage.memoryButton
       .isVisible({ timeout: 5_000 })
       .catch(() => false);
 
     if (memoryBtnVisible) {
-      // If visible, clicking it should open the memory popover
+      // If visible, clicking it should open the memory popover.
+      // The popover always renders the "Your Memory" heading; targeting the
+      // heading role keeps this stable even though the popup also includes a
+      // separate "Your saved memories for this mentor" paragraph (a previous
+      // `.or()` fallback against both texts tripped strict mode).
       await chatPage.memoryButton.click();
       await expect(
-        page.getByText('Your Memory').or(page.getByText('Your saved memories')),
+        page.getByRole('heading', { name: 'Your Memory' }),
       ).toBeVisible({ timeout: 10_000 });
     }
 
-    // Now disable memory on the mentor and verify button disappears
-    await editMentorPage.open('Memory');
+    // Now disable memory on the mentor and verify button disappears.
+    await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    const isCurrentlyEnabled =
-      await editMentorPage.memory.isEnableMemoryChecked();
-    if (isCurrentlyEnabled) {
-      await editMentorPage.memory.toggleEnableMemory();
-    }
+    await editMentorPage.settings.setMemoryEnabled(false);
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
@@ -254,9 +249,9 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
 
     // Restore original state
     if (wasEnabled) {
-      await editMentorPage.open('Memory');
+      await editMentorPage.open('Settings');
       await waitForPageReady(page);
-      await editMentorPage.memory.toggleEnableMemory();
+      await editMentorPage.settings.setMemoryEnabled(true);
       await editMentorPage.close();
     }
   });

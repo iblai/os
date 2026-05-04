@@ -336,3 +336,6 @@ release:
 	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make release VERSION=0.40.0"; exit 1; fi
 	git tag -a v$(VERSION) -m 'chore: release v$(VERSION)'
 	git push origin v$(VERSION) --no-verify
+
+yalc-refresh:
+	yalc remove @iblai/iblai-js @iblai/data-layer @iblai/web-utils @iblai/web-containers && yalc add @iblai/iblai-js @iblai/data-layer @iblai/web-utils @iblai/web-containers 

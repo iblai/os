@@ -56,10 +56,6 @@ vi.mock('@tanstack/react-form', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-user', () => ({
-  useUsername: vi.fn(() => 'test-user'),
-}));
-
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -81,14 +77,11 @@ vi.mock('@/hooks/user-navigate', () => ({
   })),
 }));
 
-vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useCreateMentorMutation: vi.fn(() => [
-    vi.fn().mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({ unique_id: 'new-mentor-id' }),
-    }),
-    { isLoading: false },
-  ]),
-}));
+// Note: a second `vi.mock('@iblai/iblai-js/data-layer', ...)` exists below
+// that wires up controllable `mockCreateMentorWithSettings` / `mockUnwrap`
+// references — that one is the source of truth. A duplicate factory was
+// removed here to keep the active mock unambiguous (which factory "wins" can
+// flip when the underlying package version changes the hoist order).
 
 vi.mock('@/lib/constants', () => ({
   DEFAULT_PROMPTS: {
@@ -111,8 +104,10 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/platform/test-tenant/test-mentor'),
 }));
 
-const mockCreateMentorWithSettings = vi.fn();
-const mockUnwrap = vi.fn();
+const { mockCreateMentorWithSettings, mockUnwrap } = vi.hoisted(() => ({
+  mockCreateMentorWithSettings: vi.fn(),
+  mockUnwrap: vi.fn(),
+}));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useCreateMentorMutation: () => [
