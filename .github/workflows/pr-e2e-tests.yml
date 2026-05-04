@@ -3,7 +3,7 @@ name: PR E2E Tests (Required)
 on:
   pull_request:
     branches: [main]
-    types: [labeled, synchronize]
+    types: [labeled, unlabeled, synchronize]
     paths:
       - 'app/**'
       - 'components/**'
