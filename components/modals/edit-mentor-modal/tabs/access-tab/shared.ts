@@ -25,14 +25,19 @@ export type UpdateAction = 'add' | 'remove';
 export const roleDescriptions: Record<string, string> = {
   // Temporarily commented out - not yet functional backend wise
   // viewer: 'Users with viewer access can chat with the mentor but cannot edit settings.',
-  editor: 'Editors can update mentor configuration, prompts, and tools.',
+  editor: 'Editors can update agent configuration, prompts, and tools.',
   // Temporarily commented out - not yet functional backend wise.
   chat: 'Chat access limits users to conversations without editing capabilities.',
+  analytics_viewer: 'Allows the user to view analytics data for this agent.',
 };
 
 // Temporarily commented out viewer & chat roles - not yet functional backend wise
 // export const DEFAULT_MENTOR_ROLES = ['viewer', 'editor', 'chat'] as const;
-export const DEFAULT_MENTOR_ROLES = ['editor', 'chat'] as const;
+export const DEFAULT_MENTOR_ROLES = [
+  'editor',
+  'chat',
+  'analytics_viewer',
+] as const;
 export type DefaultMentorRole = (typeof DEFAULT_MENTOR_ROLES)[number];
 
 export const formatRoleName = (role: string) =>

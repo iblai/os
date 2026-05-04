@@ -746,6 +746,11 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
     case 'nvidia':
       return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
+    case 'bedrock':
+    case 'amazon-bedrock':
+    case 'amazon_bedrock':
+    case 'IBLChatBedrock':
+      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
     default:
       return { logo: '/llm-generic-provider.png', name: llmProvider };
   }
@@ -824,12 +829,12 @@ function decodeHtmlEntities(text: string): string {
   if (typeof document === 'undefined') {
     // Server-side fallback - decode common entities manually
     return text
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ');
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
   }
   const textarea = document.createElement('textarea');
   textarea.innerHTML = text;
@@ -1658,7 +1663,7 @@ export function getTenantKeyFromUrl() {
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    (currentTenant?.show_paywall || currentTenant?.key === 'main')
   );
 }
 

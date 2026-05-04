@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-20",
+  "lastUpdated": "2026-05-04",
   "summary": {
-    "totalCheckpoints": 302,
-    "coveredCheckpoints": 302,
+    "totalCheckpoints": 351,
+    "coveredCheckpoints": 342,
+    "deprecatedCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 39
+    "totalJourneys": 42,
+    "activeJourneys": 41
   },
   "journeys": [
     {
@@ -103,7 +105,7 @@
         },
         {
           "id": "ui-02",
-          "description": "Non-admin sees at most 2 menu items in mentor dropdown",
+          "description": "My Mentors button is NOT present in the header; mentor dropdown still shows New Chat item",
           "status": "covered"
         },
         {
@@ -201,7 +203,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery — Explore Page",
+      "name": "Mentor Discovery \u2014 Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -277,7 +279,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management — Admin",
+      "name": "Mentor Management \u2014 Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -338,7 +340,7 @@
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab — Unique ID",
+      "name": "Mentor Settings Tab \u2014 Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
@@ -463,14 +465,14 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
           "status": "covered"
         }
       ]
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas — AI Document Editor",
+      "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": ["components/canvas/canvas-component.tsx"],
       "checkpoints": [
@@ -533,7 +535,7 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas — Embed",
+      "name": "Canvas \u2014 Embed",
       "spec": "11-canvas-embed.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
@@ -589,7 +591,10 @@
       "id": "shareable-links-and-embed-integration",
       "name": "Shareable Links & Embed Integration",
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+      ],
       "checkpoints": [
         {
           "id": "emb-01",
@@ -610,6 +615,11 @@
           "id": "emb-04",
           "description": "Advanced anonymous embed with context awareness configured",
           "status": "covered"
+        },
+        {
+          "id": "emb-05",
+          "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
         }
       ]
     },
@@ -617,7 +627,10 @@
       "id": "anonymous-public-access",
       "name": "Anonymous / Public Access",
       "spec": "14-anonymous-public-access.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
       "checkpoints": [
         {
           "id": "anon-01",
@@ -640,14 +653,21 @@
           "status": "covered"
         },
         {
-          "id": "anon-05",
-          "description": "Anonymous user can open My Mentors modal without Create button",
-          "status": "covered"
-        },
-        {
           "id": "anon-06",
           "description": "Sidebar admin buttons redirect anonymous user to auth",
           "status": "covered"
+        },
+        {
+          "id": "anon-07",
+          "description": "Memory button is hidden in the chat input for unauthenticated users",
+          "status": "covered"
+        },
+        {
+          "id": "anon-05",
+          "description": "Anonymous user can open My Mentors modal without Create button",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; no anonymous-Explore equivalent to substitute"
         }
       ]
     },
@@ -655,26 +675,14 @@
       "id": "mentor-switching",
       "name": "Mentor Switching",
       "spec": "15-mentor-switching.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
+        "hooks/use-mentors.ts"
+      ],
       "checkpoints": [
         {
           "id": "sw-01",
           "description": "User can switch mentor via Explore Mentors page",
-          "status": "covered"
-        },
-        {
-          "id": "sw-02",
-          "description": "User can switch mentor via My Mentors modal and continue chatting",
-          "status": "covered"
-        },
-        {
-          "id": "sw-03",
-          "description": "User can switch mentor via My Mentors modal",
-          "status": "covered"
-        },
-        {
-          "id": "sw-04",
-          "description": "Switch between mentors via My Mentors modal (dedicated spec)",
           "status": "covered"
         },
         {
@@ -686,6 +694,27 @@
           "id": "sw-06",
           "description": "Switch between mentors via home page Explore section",
           "status": "covered"
+        },
+        {
+          "id": "sw-02",
+          "description": "User can switch mentor via My Mentors modal and continue chatting",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
+        },
+        {
+          "id": "sw-03",
+          "description": "User can switch mentor via My Mentors modal",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
+        },
+        {
+          "id": "sw-04",
+          "description": "Switch between mentors via My Mentors modal (dedicated spec)",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore-based switching covered by exp-11 in journey 5"
         }
       ]
     },
@@ -694,21 +723,30 @@
       "name": "My Mentors Modal",
       "spec": "16-my-mentors-modal.spec.ts",
       "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "status": "deprecated",
+      "deprecatedIn": "#1431",
+      "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
       "checkpoints": [
         {
           "id": "mm-01",
           "description": "User can access a mentor through the My Mentors dropdown",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
         },
         {
           "id": "mm-02",
           "description": "Next pagination button in My Mentors modal navigates correctly",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
         },
         {
           "id": "mm-03",
           "description": "Admin can invite a user from the My Mentors modal",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed in #1431"
         }
       ]
     },
@@ -983,6 +1021,16 @@
           "id": "ds-16",
           "description": "File upload cancellation is handled gracefully",
           "status": "covered"
+        },
+        {
+          "id": "ds-17",
+          "description": "Markdown resource type is available in the Add Resources modal (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-18",
+          "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
+          "status": "covered"
         }
       ]
     },
@@ -991,52 +1039,100 @@
       "name": "Billing & Subscription",
       "spec": "21-billing-and-subscription.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx"
       ],
       "checkpoints": [
         {
           "id": "bill-01",
-          "description": "Billing tab is visible in account settings",
+          "description": "CreditBalance trigger visibility matches current_tenant.show_paywall",
           "status": "covered"
         },
         {
           "id": "bill-02",
-          "description": "Billing main card shows credits info",
+          "description": "CreditBalance trigger exposes accessible label with credits info",
           "status": "covered"
         },
         {
           "id": "bill-03",
-          "description": "Correct buttons shown based on payment method status",
+          "description": "CreditBalance dropdown shows the plan badge (Free/Trial/Premium)",
           "status": "covered"
         },
         {
           "id": "bill-04",
-          "description": "Subscription renewal info shown when applicable",
+          "description": "CreditBalance dropdown footer matches active plan (Upgrade Plan / Manage Usage + Add Credits / Manage Billing)",
           "status": "covered"
         },
         {
           "id": "bill-05",
-          "description": "Usage card visible when topUpURL configured",
+          "description": "Premium + payment method shows Manage Usage, Add Credits, and inline Auto Recharge section",
           "status": "covered"
         },
         {
           "id": "bill-06",
-          "description": "Plan info and upgrade button display when applicable",
+          "description": "CreditBalance dropdown shows the Remaining credits row",
           "status": "covered"
         },
         {
           "id": "bill-07",
-          "description": "Auto Recharge modal opens with all elements and Cancel closes it",
+          "description": "Manage Usage in dropdown opens the Auto Recharge modal (payment-gated)",
           "status": "covered"
         },
         {
           "id": "bill-08",
-          "description": "Add Credits modal opens correctly",
+          "description": "Add Credits in dropdown opens the Add Credits modal (payment-gated)",
           "status": "covered"
         },
         {
           "id": "bill-09",
-          "description": "New user sees Stripe pricing modal when creating a mentor",
+          "description": "Escape closes the CreditBalance dropdown",
+          "status": "covered"
+        },
+        {
+          "id": "bill-10",
+          "description": "Billing tab opens via ?profileTab=billing and the Plan section mounts",
+          "status": "covered"
+        },
+        {
+          "id": "bill-11",
+          "description": "Billing tab Plan / Credits / Auto Recharge sections match the active plan",
+          "status": "covered"
+        },
+        {
+          "id": "bill-12",
+          "description": "Billing tab Auto Recharge section is hidden on Free plan and shown on non-Free + payment method",
+          "status": "covered"
+        },
+        {
+          "id": "bill-13",
+          "description": "Billing tab Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-14",
+          "description": "Billing tab Auto Recharge toggle inverts on click and restores on second click (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-15",
+          "description": "Billing tab Auto Recharge threshold and amount inputs accept values (payment-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-16",
+          "description": "Billing tab Add Credits button opens the Add Credits modal (non-Free + payment method)",
+          "status": "covered"
+        },
+        {
+          "id": "bill-17",
+          "description": "Plan label is consistent between CreditBalance dropdown and Billing tab",
+          "status": "covered"
+        },
+        {
+          "id": "bill-18",
+          "description": "Non-admin without subscription sees Stripe pricing modal when creating a mentor",
           "status": "covered"
         }
       ]
@@ -1047,47 +1143,81 @@
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
-        "components/modals/disclaimer-modal.tsx"
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/disclaimer-modal.tsx",
+        "hooks/use-user-agreement.ts",
+        "constants/disclaimer.ts"
       ],
       "checkpoints": [
         {
           "id": "disc-01",
-          "description": "Admin toggles User Agreement on and unauthenticated user sees disclaimer modal",
+          "description": "Admin enables User Agreement toggle and sees Active status",
           "status": "covered"
         },
         {
           "id": "disc-02",
-          "description": "Admin can edit User Agreement content",
+          "description": "Admin disables User Agreement toggle and sees Inactive status",
           "status": "covered"
         },
         {
           "id": "disc-03",
-          "description": "Admin can copy User Agreement content",
+          "description": "Admin edits User Agreement content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-04",
-          "description": "Admin can edit Advisory text",
+          "description": "Admin edits Advisory content and saves successfully",
           "status": "covered"
         },
         {
           "id": "disc-05",
-          "description": "Disclaimers tab has proper WCAG accessibility",
+          "description": "Admin cancels User Agreement edit without saving",
           "status": "covered"
         },
         {
           "id": "disc-06",
-          "description": "User Agreement modal is accessible",
+          "description": "Save button is disabled when User Agreement content is empty",
           "status": "covered"
         },
         {
           "id": "disc-07",
-          "description": "Create mentor and configure all disclaimers end-to-end",
+          "description": "Admin copies User Agreement content to clipboard",
           "status": "covered"
         },
         {
           "id": "disc-08",
-          "description": "Toggle User Agreement on/off affects chat modal appearance",
+          "description": "Admin copies Advisory content to clipboard",
+          "status": "covered"
+        },
+        {
+          "id": "disc-09",
+          "description": "Non-admin must accept User Agreement modal before sending a chat message when agreement is enabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-10",
+          "description": "Non-admin sends a message without seeing agreement modal when User Agreement is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "disc-11",
+          "description": "Non-admin who accepted User Agreement is not shown the modal again on subsequent messages",
+          "status": "covered"
+        },
+        {
+          "id": "disc-12",
+          "description": "Disclaimers tab shows both User Agreement and Advisory sections with their controls",
+          "status": "covered"
+        },
+        {
+          "id": "disc-13",
+          "description": "Advisory Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-14",
+          "description": "User Agreement Edit modal opens with the correct title",
           "status": "covered"
         }
       ]
@@ -1132,7 +1262,10 @@
       "name": "Mentor Memory Tab",
       "spec": "24-mentor-memory-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx"
+        "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx",
+        "components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -1142,7 +1275,7 @@
         },
         {
           "id": "mem-02",
-          "description": "Reference saved memories toggle can be enabled and disabled",
+          "description": "Memory toggle in Settings tab can be enabled and disabled (sends enable_memory_component on Save)",
           "status": "covered"
         },
         {
@@ -1172,7 +1305,7 @@
         },
         {
           "id": "mem-08",
-          "description": "Memory button visibility in chat input reflects mentor memory setting",
+          "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
         }
       ]
@@ -1340,9 +1473,13 @@
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility — WCAG 2.1 AA",
+      "name": "Accessibility \u2014 WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
-      "sourceFiles": ["components/accessibility/accessibility-toolbar.tsx"],
+      "sourceFiles": [
+        "components/accessibility/accessibility-toolbar.tsx",
+        "components/chat/stop-streaming-button.tsx",
+        "components/chat/ai-message-copy.tsx"
+      ],
       "checkpoints": [
         {
           "id": "a11y-01",
@@ -1367,11 +1504,6 @@
         {
           "id": "a11y-05",
           "description": "Settings modal meets accessibility guidelines",
-          "status": "covered"
-        },
-        {
-          "id": "a11y-06",
-          "description": "My Mentors dialog meets accessibility guidelines",
           "status": "covered"
         },
         {
@@ -1423,6 +1555,28 @@
           "id": "a11y-16",
           "description": "API key dialog is accessible",
           "status": "covered"
+        },
+        {
+          "id": "a11y-17",
+          "description": "Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-18",
+          "description": "Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-19",
+          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-06",
+          "description": "My Mentors dialog meets accessibility guidelines",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; Explore page a11y already covered in this journey"
         }
       ]
     },
@@ -1537,11 +1691,6 @@
           "status": "covered"
         },
         {
-          "id": "mt-03",
-          "description": "Enterprise tenant: new mentor can be created from My Mentors dialog",
-          "status": "covered"
-        },
-        {
           "id": "mt-04",
           "description": "Enterprise tenant: sidebar open/close behavior works",
           "status": "covered"
@@ -1580,6 +1729,13 @@
           "id": "mt-11",
           "description": "Advertising tenant: user can log in to mentor",
           "status": "covered"
+        },
+        {
+          "id": "mt-03",
+          "description": "Enterprise tenant: new mentor can be created from My Mentors dialog",
+          "status": "deprecated",
+          "deprecatedIn": "#1431",
+          "deprecatedReason": "MyMentorsModal removed; sidebar New Mentor flow covered by mt-01"
         }
       ]
     },
@@ -1877,7 +2033,7 @@
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/analytics/audit-log/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/audit/page.tsx",
         "components/modals/edit-mentor-modal/tabs/audit-log-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/index.ts"
       ],
@@ -1915,6 +2071,177 @@
         {
           "id": "al-07",
           "description": "Non-admin user does not see Audit tab in the mentor dropdown",
+          "status": "covered"
+        },
+        {
+          "id": "al-08",
+          "description": "Non-admin user does not see Audit tab in the Analytics tab bar (view_audit_logs RBAC)",
+          "status": "covered"
+        },
+        {
+          "id": "al-09",
+          "description": "Non-admin user visiting audit page directly does not see audit content (view_audit_logs RBAC)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ai-message-read-aloud",
+      "name": "AI Message Read Aloud",
+      "spec": "40-ai-message-read-aloud.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/ai-message-speak.tsx",
+        "components/chat/chat-messages/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "speak-01",
+          "description": "Read Aloud button is visible on an AI response with aria-pressed=false",
+          "status": "covered"
+        },
+        {
+          "id": "speak-02",
+          "description": "Clicking Read Aloud toggles label to Stop Reading Aloud with aria-pressed=true and triggers speechSynthesis.speak",
+          "status": "covered"
+        },
+        {
+          "id": "speak-03",
+          "description": "Clicking Stop Reading Aloud resets to Read Aloud with aria-pressed=false and calls speechSynthesis.cancel",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-access-tab",
+      "name": "Mentor Access Tab",
+      "spec": "41-mentor-access-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/access-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx",
+        "components/modals/edit-mentor-modal/tabs/access-tab/shared.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ac-01",
+          "description": "Access tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ac-02",
+          "description": "Access control heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ac-03",
+          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
+          "status": "covered"
+        },
+        {
+          "id": "ac-04",
+          "description": "Each policy row shows role name, user count badge, and edit button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-05",
+          "description": "Create role access dialog opens with role selector and can be cancelled",
+          "status": "covered"
+        },
+        {
+          "id": "ac-06",
+          "description": "Pencil edit button opens Manage <Role> access dialog with RoleAccessPanel",
+          "status": "covered"
+        },
+        {
+          "id": "ac-07",
+          "description": "Selecting a role in Create dialog enables the Create button",
+          "status": "covered"
+        },
+        {
+          "id": "ac-08",
+          "description": "Manage access dialog shows assigned users section or no-users placeholder",
+          "status": "covered"
+        },
+        {
+          "id": "ac-09",
+          "description": "Error state Try again button is present when the error banner renders",
+          "status": "covered"
+        },
+        {
+          "id": "ac-10",
+          "description": "Closing the manage dialog via Escape or click-outside clears editing state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "suggested-prompts",
+      "name": "Suggested Prompts",
+      "spec": "42-suggested-prompts.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sp-01",
+          "description": "Admin opens the Prompts tab and sees the Suggested Prompts section",
+          "status": "covered"
+        },
+        {
+          "id": "sp-02",
+          "description": "Admin adds a new suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-03",
+          "description": "Admin edits a suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-04",
+          "description": "Admin sees Run buttons on suggested prompts in the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-05",
+          "description": "Admin runs a suggested prompt and the chat input is populated",
+          "status": "covered"
+        },
+        {
+          "id": "sp-06",
+          "description": "Admin sees the See More button when more than the page size of prompts exist",
+          "status": "covered"
+        },
+        {
+          "id": "sp-07",
+          "description": "Admin sees Delete buttons on suggested prompts in the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-08",
+          "description": "Admin deletes a suggested prompt from the Prompts tab",
+          "status": "covered"
+        },
+        {
+          "id": "sp-09",
+          "description": "Admin opens the Prompt Gallery from the chat area",
+          "status": "covered"
+        },
+        {
+          "id": "sp-10",
+          "description": "Admin sees prompt cards with Delete buttons in the Prompt Gallery",
+          "status": "covered"
+        },
+        {
+          "id": "sp-11",
+          "description": "Admin deletes a prompt from the Prompt Gallery in the chat area",
+          "status": "covered"
+        },
+        {
+          "id": "sp-12",
+          "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
           "status": "covered"
         }
       ]

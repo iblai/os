@@ -20,9 +20,7 @@ describe('VoiceTermsModal', () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByText('Voice Terms and Conditions')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'Review and accept the terms for using voice-powered mentorAI',
-      ),
+      screen.getByText('Review and accept the terms for voice-powered chat'),
     ).toBeInTheDocument();
   });
 
@@ -30,7 +28,7 @@ describe('VoiceTermsModal', () => {
     render(<VoiceTermsModal {...defaultProps} />);
 
     expect(
-      screen.getByText('Creating a mentorAI powered with voice'),
+      screen.getByText('Creating a voice-powered agent'),
     ).toBeInTheDocument();
   });
 

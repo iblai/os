@@ -127,7 +127,7 @@ describe('mentorSubscriptionFlow', () => {
       subscriptionFlow.handleTrialEndedFlow();
 
       expect(toast.error).toHaveBeenCalledWith(
-        'Your free trial has ended. Please upgrade to continue using mentorAI 😎.',
+        'Your free trial has ended. Please upgrade to continue using Agentic OS 😎.',
       );
       expect(mockDispatch).toHaveBeenCalled();
       expect(setTopBannerOptions).toHaveBeenCalledWith(

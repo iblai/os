@@ -20,5 +20,5 @@ export default function AppVersion() {
     hideInitialLoader();
   }, []);
 
-  return <Version appName="Mentor" appVersion={appVersion} poweredBy={logo} />;
+  return <Version appName="Agent" appVersion={appVersion} poweredBy={logo} />;
 }

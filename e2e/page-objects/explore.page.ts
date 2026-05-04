@@ -18,10 +18,10 @@ export class ExplorePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /all mentors/i });
+    this.heading = page.getByRole('heading', { name: /all agents/i });
     this.searchInput = page.getByPlaceholder(/search/i);
     this.mentorCards = page.getByRole('listitem', {
-      name: /^explore mentor:/i,
+      name: /^explore agent:/i,
     });
     this.seeMoreButton = page
       .getByRole('button', { name: /load more|see more/i })
@@ -33,7 +33,7 @@ export class ExplorePage {
         .locator('..'),
     );
     this.favoritesSection = page
-      .getByRole('list', { name: 'Favorite mentors', exact: true })
+      .getByRole('list', { name: 'Favorite agents', exact: true })
       .or(
         page
           .getByText(/favorites/i)
@@ -41,8 +41,8 @@ export class ExplorePage {
           .locator('..'),
       );
     this.createCustomMentorButton = page
-      .getByRole('button', { name: 'Create Custom Mentor', exact: true })
-      .or(page.getByRole('button', { name: /^create\s+custom\s+mentor$/i }));
+      .getByRole('button', { name: 'Create Custom Agent', exact: true })
+      .or(page.getByRole('button', { name: /^create\s+custom\s+agent$/i }));
     this.llmFilterTrigger = page
       .getByRole('button', { name: /llm.*provider|provider/i })
       .first();

@@ -89,18 +89,6 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the modal modules that are dynamically imported
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: (props: any) => {
-    if (!props.isOpen) return null;
-    return (
-      <div data-testid="my-mentors-modal">
-        <button onClick={props.onClose}>Close My Mentors</button>
-        {!props.hideCreateButton && <div>Create Button Visible</div>}
-      </div>
-    );
-  },
-}));
-
 vi.mock('@/components/projects/project-instructions-modal', () => ({
   ProjectInstructionsModal: (props: any) => {
     if (!props.isOpen) return null;
@@ -158,31 +146,24 @@ vi.mock('next/dynamic', () => ({
     });
 
     // Return mock component based on call order (matching order in project-landing-page.tsx)
-    // Order: MyMentorsModal (0), ProjectInstructionsModal (1), ProjectFilesModal (2), AddMentorToProjectModal (3)
+    // Order: ProjectInstructionsModal (0), ProjectFilesModal (1), AddMentorToProjectModal (2)
     const DynamicComponent = (props: any) => {
       if (!props.isOpen) return null;
 
       switch (currentIndex) {
-        case 0: // MyMentorsModal
-          return (
-            <div data-testid="my-mentors-modal">
-              <button onClick={props.onClose}>Close My Mentors</button>
-              {!props.hideCreateButton && <div>Create Button Visible</div>}
-            </div>
-          );
-        case 1: // ProjectInstructionsModal
+        case 0: // ProjectInstructionsModal
           return (
             <div data-testid="project-instructions-modal">
               <button onClick={props.onClose}>Close Instructions</button>
             </div>
           );
-        case 2: // ProjectFilesModal
+        case 1: // ProjectFilesModal
           return (
             <div data-testid="project-files-modal">
               <button onClick={props.onClose}>Close Files</button>
             </div>
           );
-        case 3: // AddMentorToProjectModal
+        case 2: // AddMentorToProjectModal
           return (
             <div data-testid="add-mentor-to-project-modal">
               <div data-testid="project-name">{props.projectName}</div>

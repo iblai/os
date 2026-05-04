@@ -379,7 +379,6 @@ export function ChatInputForm({
                   promptsIsEnabled={promptsIsEnabled}
                   studyMode={studyMode}
                   memoryEnabled={mentorSettings.data.memoryEnabled}
-                  isAnonymousMentor={!!mentorSettings.data.allowAnonymous}
                   tenantKey={tenantKey}
                   username={username}
                 />

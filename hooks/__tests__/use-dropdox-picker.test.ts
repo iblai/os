@@ -371,7 +371,7 @@ describe('useDropboxPicker', () => {
         await successCallback([{ link: 'https://dropbox.com/file1' }]);
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Mentor not found');
+      expect(toast.error).toHaveBeenCalledWith('Agent not found');
     });
   });
 

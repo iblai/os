@@ -10,6 +10,7 @@ import { MemoryTab } from './memory.tab';
 import { McpTab } from './mcp.tab';
 import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
+import { AccessTab } from './access.tab';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -27,11 +28,12 @@ export class EditMentorPage {
   readonly memory: MemoryTab;
   readonly mcp: McpTab;
   readonly embed: EmbedTab;
+  readonly access: AccessTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Mentor' });
+    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Agent' });
     this.closeButton = this.dialog.getByRole('button', {
       name: 'Close',
       exact: true,
@@ -47,6 +49,7 @@ export class EditMentorPage {
     this.memory = new MemoryTab(page, this.dialog);
     this.mcp = new McpTab(page, this.dialog);
     this.embed = new EmbedTab(page, this.dialog);
+    this.access = new AccessTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
@@ -56,7 +59,7 @@ export class EditMentorPage {
    */
   async open(tabName?: string): Promise<void> {
     const dropdown = this.page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: 'Selected agent dropdown button',
     });
     await expect(dropdown).toBeVisible({ timeout: 15_000 });
     await dropdown.click();

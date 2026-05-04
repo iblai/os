@@ -96,7 +96,6 @@ vi.mock('@/lib/constants', () => ({
     CREATE_MENTOR: { name: 'create_mentor' },
     INVITE_USER: { name: 'invite_user' },
     SETTINGS: { name: 'settings' },
-    MY_MENTORS: { name: 'my_mentors' },
     LLM_PROVIDERS: { name: 'llm_providers' },
     EDIT_MENTOR: {
       name: 'edit_mentor',
@@ -750,12 +749,12 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalled();
       });
 
-      it('openMyMentorsModal - should open my mentors modal', () => {
+      it('should not expose openMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        result.current.openMyMentorsModal();
-
-        expect(mocked.push).toHaveBeenCalled();
+        expect(
+          (result.current as Record<string, unknown>).openMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('openLLMProvidersModal - should open LLM providers modal', () => {
@@ -874,15 +873,12 @@ describe('user-navigate', () => {
         );
       });
 
-      it('closeMyMentorsModal - should close modal', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'my_mentors' }]);
+      it('should not expose closeMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        result.current.closeMyMentorsModal();
-
-        expect(mocked.push).toHaveBeenCalledWith(
-          '/platform/test-tenant/mentor-123',
-        );
+        expect(
+          (result.current as Record<string, unknown>).closeMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('closeLLMProvidersModal - should close modal', () => {
@@ -972,11 +968,12 @@ describe('user-navigate', () => {
         expect(result.current.showSettingsModal).toBe(true);
       });
 
-      it('showMyMentorsModal - should return correct state', () => {
-        mocked.selectModalStack.mockReturnValue([{ name: 'my_mentors' }]);
+      it('should not expose showMyMentorsModal', () => {
         const { result } = renderHook(() => useNavigate());
 
-        expect(result.current.showMyMentorsModal).toBe(true);
+        expect(
+          (result.current as Record<string, unknown>).showMyMentorsModal,
+        ).toBeUndefined();
       });
 
       it('showLLMProvidersModal - should return correct state', () => {
@@ -1063,13 +1060,12 @@ describe('user-navigate', () => {
         expect(result.current.getSettingsTab()).toBe('profile');
       });
 
-      it('getMyMentorsTab - should return tab for my mentors modal', () => {
-        mocked.selectModalStack.mockReturnValue([
-          { name: 'my_mentors', tab: 'favorites' },
-        ]);
+      it('should not expose getMyMentorsTab', () => {
         const { result } = renderHook(() => useNavigate());
 
-        expect(result.current.getMyMentorsTab()).toBe('favorites');
+        expect(
+          (result.current as Record<string, unknown>).getMyMentorsTab,
+        ).toBeUndefined();
       });
 
       it('getLLMProvidersTab - should return tab for LLM providers modal', () => {
@@ -1290,20 +1286,20 @@ describe('user-navigate', () => {
       expect(newChatItem).toBeDefined();
     });
 
-    it('should have Mentors in content items', () => {
+    it('should have Agents in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       expect(mentorsItem).toBeDefined();
     });
 
-    it('should have New Mentor in content items', () => {
+    it('should have New Agent in content items', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem).toBeDefined();
     });
@@ -1396,11 +1392,11 @@ describe('user-navigate', () => {
       );
     });
 
-    it('Mentors onClick - should navigate to explore', () => {
+    it('Agents onClick - should navigate to explore', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       mentorsItem?.onClick();
 
@@ -1409,7 +1405,7 @@ describe('user-navigate', () => {
       );
     });
 
-    it('New Mentor onClick - should execute with trial check', () => {
+    it('New Agent onClick - should execute with trial check', () => {
       const executeWithTrialCheck = vi.fn((fn) => fn());
       mocked.useShowFreeTrialDialog.mockReturnValue({
         executeWithTrialCheck,
@@ -1419,7 +1415,7 @@ describe('user-navigate', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       newMentorItem?.onClick();
 
@@ -1544,11 +1540,11 @@ describe('user-navigate', () => {
       expect(newChatItem?.userTypes).toContain('anonymous');
     });
 
-    it('should have correct user types for Mentors', () => {
+    it('should have correct user types for Agents', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const mentorsItem = result.current.contentItems.find(
-        (item) => item.label === 'Mentors',
+        (item) => item.label === 'Agents',
       );
       expect(mentorsItem?.userTypes).toContain('student');
       expect(mentorsItem?.userTypes).toContain('visiting');
@@ -1558,7 +1554,7 @@ describe('user-navigate', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem?.userTypes).toContain('admin');
       expect(newMentorItem?.isAnAdminAction).toBe(true);
@@ -1570,11 +1566,11 @@ describe('user-navigate', () => {
       expect(inviteUsersItem?.isAnAdminAction).toBe(true);
     });
 
-    it('should have rbacResource for New Mentor', () => {
+    it('should have rbacResource for New Agent', () => {
       const { result } = renderHook(() => useSidebarNavigation());
 
       const newMentorItem = result.current.contentItems.find(
-        (item) => item.label === 'New Mentor',
+        (item) => item.label === 'New Agent',
       );
       expect(newMentorItem?.rbacResource).toBeDefined();
       expect(newMentorItem?.rbacResource?.(1)).toBe('/mentors/#create');
@@ -1614,6 +1610,50 @@ describe('user-navigate', () => {
       expect(mocked.push).toHaveBeenCalledWith(
         '/platform/test-tenant/workflows/mentor-123',
       );
+    });
+
+    it('Workflows onClick - should open no mentor selected modal when no mentorId', () => {
+      mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      mocked.push.mockClear();
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const workflowsItem = result.current.contentItems.find(
+        (item) => item.label === 'Workflows',
+      );
+      workflowsItem?.onClick();
+
+      // The no-mentorId branch opens the "no mentor selected" modal and
+      // returns early — it does NOT navigate to /workflows.
+      expect(mocked.push).toHaveBeenCalledTimes(1);
+      const calledWith = mocked.push.mock.calls[0]![0] as string;
+      expect(calledWith).toContain('modal=');
+      expect(calledWith).not.toContain('/workflows');
+    });
+
+    it('New Chat rbacResource - returns chat resource path when mentorId is present', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
+      // mentorPublicSettings comes back undefined from the mocked query,
+      // so the path interpolates the optional-chained id as "undefined"
+      // — what matters here is that the rbacResource function exists and
+      // is callable when mentorId is present (covering line 536).
+      expect(typeof newChatItem?.rbacResource).toBe('function');
+      const path = newChatItem?.rbacResource?.(0);
+      expect(path).toContain('/mentors/');
+      expect(path).toContain('/#chat');
+    });
+
+    it('New Chat rbacResource - is undefined when mentorId is missing', () => {
+      mocked.useParams.mockReturnValue({ tenantKey: 'test-tenant' });
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const newChatItem = result.current.contentItems.find(
+        (item) => item.label === 'New Chat',
+      );
+      expect(newChatItem?.rbacResource).toBeUndefined();
     });
 
     it('should have hasBorder flag for New Chat', () => {

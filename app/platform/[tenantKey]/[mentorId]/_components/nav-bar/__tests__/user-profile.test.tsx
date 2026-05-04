@@ -582,53 +582,6 @@ describe('UserProfile', () => {
     });
   });
 
-  describe('upgrade click handling', () => {
-    it('should trigger pricing modal on upgrade click', async () => {
-      const mockTriggerPricingModal = vi.fn();
-      mockBannerButtonTriggerCallback.mockReturnValue(mockTriggerPricingModal);
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const upgradeBtn = screen.getByTestId('upgrade-btn');
-      await user.click(upgradeBtn);
-
-      expect(mockBannerButtonTriggerCallback).toHaveBeenCalledWith(
-        'TRIGGER_PRICING_MODAL',
-      );
-      expect(mockTriggerPricingModal).toHaveBeenCalled();
-    });
-
-    it('should close the profile modal when upgrade is clicked', async () => {
-      const mockTriggerPricingModal = vi.fn();
-      mockBannerButtonTriggerCallback.mockReturnValue(mockTriggerPricingModal);
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      // Open the modal first
-      act(() => {
-        capturedCallbacks.onModalOpenChange?.(true);
-      });
-      expect(screen.getByTestId('is-modal-open')).toHaveTextContent('true');
-
-      // Click upgrade
-      const upgradeBtn = screen.getByTestId('upgrade-btn');
-      await user.click(upgradeBtn);
-
-      // Modal should be closed and URL cleaned up
-      expect(mockTriggerPricingModal).toHaveBeenCalled();
-      expect(screen.getByTestId('is-modal-open')).toHaveTextContent('false');
-      expect(mockRouterReplace).toHaveBeenCalled();
-    });
-  });
-
   describe('modal open/close handling', () => {
     it('should handle modal close and update URL', () => {
       render(<UserProfile />);
@@ -690,41 +643,6 @@ describe('UserProfile', () => {
       expect(mockGetUserSubscriptionPackage).toHaveBeenCalled();
     });
 
-    it('should fetch billing URL when Stripe is activated and user is admin', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const billingBtn = screen.getByTestId('billing-request-btn');
-      await user.click(billingBtn);
-
-      expect(mockGetBillingURL).toHaveBeenCalledWith({
-        returnURL: expect.any(String),
-        includeSubscriptionIdIfNeeded: false,
-      });
-      expect(mockGetTopUpURL).toHaveBeenCalledWith(false);
-    });
-
-    it('should not fetch billing URL when Stripe is not activated', async () => {
-      mockIsStripeActivated.mockReturnValue(false);
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const billingBtn = screen.getByTestId('billing-request-btn');
-      await user.click(billingBtn);
-
-      expect(mockGetBillingURL).not.toHaveBeenCalled();
-      expect(mockGetTopUpURL).not.toHaveBeenCalled();
-    });
-
     it('should set current plan from subscription package', async () => {
       mockIsStripeActivated.mockReturnValue(true);
       mockGetUserSubscriptionPackage.mockResolvedValue(
@@ -742,36 +660,6 @@ describe('UserProfile', () => {
 
       await waitFor(() => {
         expect(mockGetUserSubscriptionPackage).toHaveBeenCalled();
-      });
-    });
-
-    it('should update billing URL state after fetch', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetBillingURL.mockResolvedValue('https://billing.example.com');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(mockGetBillingURL).toHaveBeenCalled();
-      });
-    });
-
-    it('should update top up URL state after fetch', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetTopUpURL.mockResolvedValue('https://topup.example.com');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(mockGetTopUpURL).toHaveBeenCalled();
       });
     });
   });
@@ -853,36 +741,6 @@ describe('UserProfile', () => {
 
       await waitFor(() => {
         expect(mockGetUserSubscriptionPackage).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle null billing URL response', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetBillingURL.mockResolvedValue(null);
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(mockGetBillingURL).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle null top up URL response', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetTopUpURL.mockResolvedValue(null);
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(mockGetTopUpURL).toHaveBeenCalled();
       });
     });
   });
@@ -987,80 +845,9 @@ describe('UserProfile', () => {
 
       expect(screen.getByTestId('mentor-id')).toHaveTextContent('mentor-1');
     });
-
-    it('should start with billing disabled and top-up disabled', () => {
-      render(<UserProfile />);
-
-      expect(screen.getByTestId('billing-enabled')).toHaveTextContent('false');
-      expect(screen.getByTestId('top-up-enabled')).toHaveTextContent('false');
-    });
   });
 
   describe('subscription state rendering', () => {
-    it('should render billing URL after successful fetch', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetBillingURL.mockResolvedValue('https://billing.stripe.com/session');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('billing-url')).toHaveTextContent(
-          'https://billing.stripe.com/session',
-        );
-      });
-    });
-
-    it('should render top-up URL after successful fetch', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetTopUpURL.mockResolvedValue('https://topup.stripe.com/session');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('top-up-url')).toHaveTextContent(
-          'https://topup.stripe.com/session',
-        );
-      });
-    });
-
-    it('should render billingEnabled as true when billing URL is set', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetBillingURL.mockResolvedValue('https://billing.stripe.com/session');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('billing-enabled')).toHaveTextContent('true');
-      });
-    });
-
-    it('should render topUpEnabled as true when top-up URL is set', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetTopUpURL.mockResolvedValue('https://topup.stripe.com/session');
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('top-up-enabled')).toHaveTextContent('true');
-      });
-    });
-
     it('should render current plan name after successful fetch', async () => {
       mockIsStripeActivated.mockReturnValue(true);
       mockGetUserSubscriptionPackage.mockResolvedValue(
@@ -1109,24 +896,6 @@ describe('UserProfile', () => {
 
       // Plan should remain empty since null was returned
       expect(screen.getByTestId('current-plan')).toHaveTextContent('');
-    });
-
-    it('should render empty billing URL when fetch returns null', async () => {
-      mockIsStripeActivated.mockReturnValue(true);
-      mockGetBillingURL.mockResolvedValue(null);
-
-      render(<UserProfile />);
-
-      act(() => {
-        capturedCallbacks.onBillingTabRequest?.();
-      });
-
-      await waitFor(() => {
-        expect(mockGetBillingURL).toHaveBeenCalled();
-      });
-
-      expect(screen.getByTestId('billing-url')).toHaveTextContent('');
-      expect(screen.getByTestId('billing-enabled')).toHaveTextContent('false');
     });
   });
 

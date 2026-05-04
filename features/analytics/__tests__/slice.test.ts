@@ -76,6 +76,66 @@ describe('analytics slice', () => {
       state = analyticsReducer(state, analyticsActions.setSelectedMentor(null));
       expect(state.selectedMentor).toBeNull();
     });
+
+    it('should store optional db id when provided', () => {
+      const mentor: SelectedMentor = {
+        slug: 'math-tutor',
+        name: 'Math Tutor',
+        profileImage: 'https://example.com/avatar.jpg',
+        unique_id: 'mentor-123',
+        id: 'db-id-42',
+      };
+
+      const state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor),
+      );
+      expect(state.selectedMentor).toEqual(mentor);
+      expect(state.selectedMentor?.id).toBe('db-id-42');
+    });
+
+    it('should leave id undefined when omitted (id is optional)', () => {
+      const mentor: SelectedMentor = {
+        slug: 'math-tutor',
+        name: 'Math Tutor',
+        profileImage: 'https://example.com/avatar.jpg',
+        unique_id: 'mentor-123',
+      };
+
+      const state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor),
+      );
+      expect(state.selectedMentor?.id).toBeUndefined();
+    });
+
+    it('should overwrite id when selecting a new mentor', () => {
+      const mentor1: SelectedMentor = {
+        slug: 'math-tutor',
+        name: 'Math Tutor',
+        profileImage: 'https://example.com/avatar1.jpg',
+        unique_id: 'mentor-123',
+        id: 'db-id-1',
+      };
+
+      const mentor2: SelectedMentor = {
+        slug: 'science-tutor',
+        name: 'Science Tutor',
+        profileImage: 'https://example.com/avatar2.jpg',
+        unique_id: 'mentor-456',
+        id: 'db-id-2',
+      };
+
+      let state = analyticsReducer(
+        initialState,
+        analyticsActions.setSelectedMentor(mentor1),
+      );
+      state = analyticsReducer(
+        state,
+        analyticsActions.setSelectedMentor(mentor2),
+      );
+      expect(state.selectedMentor?.id).toBe('db-id-2');
+    });
   });
 
   describe('selectSelectedMentor', () => {

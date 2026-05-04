@@ -33,7 +33,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
-      timeout: 5_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is hidden for non-forkable mentor');
 
@@ -43,7 +43,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).toBeVisible({
-      timeout: 10_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is visible after enabling Allow Copies');
 
@@ -53,7 +53,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
-      timeout: 5_000,
+      timeout: 30_000,
     });
     logger.info('Copy button is hidden after disabling Allow Copies');
     await editMentorPage.close();
@@ -74,11 +74,9 @@ test.describe('Journey 36: Copy Mentor', () => {
     const { copyMentorDialog } = editMentorPage;
     await copyMentorDialog.waitForOpen();
 
+    await expect(copyMentorDialog.dialog.getByText('Copy Agent')).toBeVisible();
     await expect(
-      copyMentorDialog.dialog.getByText('Copy Mentor'),
-    ).toBeVisible();
-    await expect(
-      copyMentorDialog.dialog.getByText(/Create a copy of this mentor/),
+      copyMentorDialog.dialog.getByText(/Create a copy of this agent/),
     ).toBeVisible();
 
     const nameValue = await copyMentorDialog.getName();

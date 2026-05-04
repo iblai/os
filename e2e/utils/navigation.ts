@@ -19,7 +19,8 @@ function isNavigationAbortedError(error: unknown): boolean {
   const message = (error as Error)?.message ?? '';
   return (
     message.includes('NS_BINDING_ABORTED') ||
-    message.includes('Navigation interrupted')
+    message.includes('Navigation interrupted') ||
+    message.includes('net::ERR_ABORTED')
   );
 }
 
@@ -148,7 +149,7 @@ export async function navigateToTenantExplorePage(page: Page): Promise<string> {
   });
 
   // Wait for explore heading to confirm the page is stable
-  const heading = page.getByRole('heading', { name: /all mentors/i });
+  const heading = page.getByRole('heading', { name: /all agents/i });
   await expect(heading).toBeVisible({ timeout: 60_000 });
 
   return tenantKey;

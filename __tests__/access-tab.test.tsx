@@ -217,6 +217,38 @@ describe('AccessTab', () => {
       screen.getByText('1 user assigned to this role'),
     ).toBeInTheDocument();
     expect(screen.getByTestId('add-access-dialog')).toHaveTextContent(
+      'add-access-editor,chat,analytics_viewer-ready',
+    );
+  });
+
+  it('renders analytics_viewer policy with formatted name and description', () => {
+    const policies = [
+      {
+        id: 3,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'analytics_viewer',
+        users: [],
+      },
+    ];
+
+    mockUseGetRbacMentorAccessListQuery.mockReturnValue(
+      createAccessQueryState({
+        data: { policies },
+      }),
+    );
+
+    render(<AccessTab />);
+
+    expect(screen.getByText('Analytics Viewer')).toBeInTheDocument();
+    expect(
+      screen.getByText(/view analytics data for this agent/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Edit Analytics Viewer access' }),
+    ).toBeInTheDocument();
+    // analytics_viewer is one of three defaults; two remain available
+    expect(screen.getByTestId('add-access-dialog')).toHaveTextContent(
       'add-access-editor,chat-ready',
     );
   });
@@ -231,7 +263,7 @@ describe('AccessTab', () => {
     render(<AccessTab />);
 
     expect(
-      screen.getByText('No roles available for this mentor.'),
+      screen.getByText('No roles available for this agent.'),
     ).toBeInTheDocument();
   });
 
@@ -248,6 +280,12 @@ describe('AccessTab', () => {
         mentor_id: 101,
         platform_key: 'tenant-1',
         role: 'chat',
+      },
+      {
+        id: 3,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'analytics_viewer',
       },
     ];
 
@@ -274,7 +312,7 @@ describe('AccessTab', () => {
     render(<AccessTab />);
 
     expect(
-      screen.getByText('Unable to load mentor access.'),
+      screen.getByText('Unable to load agent access.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });

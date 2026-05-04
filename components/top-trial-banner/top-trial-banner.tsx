@@ -4,10 +4,10 @@ import React from 'react';
 
 export function TopTrialBanner({
   parentContainer,
-  bannerText = 'Upgrade to create your own mentors. No credit card required 😎',
+  bannerText = 'Upgrade to create your own agents. No credit card required 😎',
   onUpgrade,
   loading = false,
-  tooltipText = 'Upgrade to create your own mentors. No credit card required 😎',
+  tooltipText = 'Upgrade to create your own agents. No credit card required 😎',
 }: TopTrialBannerProps) {
   const {
     visible,

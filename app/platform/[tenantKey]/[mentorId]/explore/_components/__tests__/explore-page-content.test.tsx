@@ -220,7 +220,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       expect(
-        screen.getByText(/Discover and create academic mentors/i),
+        screen.getByText(/Discover and create academic agents/i),
       ).toBeInTheDocument();
     });
 
@@ -228,7 +228,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       expect(
-        screen.getByRole('textbox', { name: /Search mentors/i }),
+        screen.getByRole('textbox', { name: /Search agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -406,7 +406,7 @@ describe('ExplorePageContent', () => {
 
       // Enter search query
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       await user.type(searchInput, 'test search');
 
@@ -446,7 +446,7 @@ describe('ExplorePageContent', () => {
 
       // Enter search query
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       await user.type(searchInput, 'test');
 
@@ -484,7 +484,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       await userEvent.type(searchInput, 'mathematics');
 
@@ -495,7 +495,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       fireEvent.change(searchInput, { target: { value: 'm' } });
       fireEvent.change(searchInput, { target: { value: 'ma' } });
@@ -675,7 +675,7 @@ describe('ExplorePageContent', () => {
 
       // Search icon should be visible (no animate-spin class)
       const searchContainer = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       }).parentElement;
       expect(
         searchContainer?.querySelector('.animate-spin'),
@@ -694,7 +694,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       await user.type(searchInput, 'test');
 
@@ -706,7 +706,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const searchInput = screen.getByRole('textbox', {
-        name: /Search mentors/i,
+        name: /Search agents/i,
       });
       expect(searchInput).toHaveAttribute('placeholder', 'Search');
     });
@@ -753,14 +753,14 @@ describe('ExplorePageContent', () => {
       expect(mainContent).toBeInTheDocument();
       expect(mainContent).toHaveAttribute(
         'aria-label',
-        'Mentor exploration page',
+        'Agent exploration page',
       );
     });
 
     it('search input has proper label', () => {
       renderComponent();
 
-      expect(screen.getByLabelText(/Search mentors/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Search agents/i)).toBeInTheDocument();
     });
 
     it('page has proper heading structure', () => {

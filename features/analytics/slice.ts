@@ -5,6 +5,7 @@ export type SelectedMentor = {
   name: string;
   profileImage: string;
   unique_id: string;
+  id?: string;
 } | null;
 
 export interface AnalyticsState {

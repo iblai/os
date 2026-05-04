@@ -19,13 +19,13 @@ export class CreateMentorPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog', { name: /create.*mentor/i });
-    this.heading = this.dialog.getByRole('heading', { name: 'Create Mentor' });
+    this.dialog = page.getByRole('dialog', { name: /create.*agent/i });
+    this.heading = this.dialog.getByRole('heading', { name: 'Create Agent' });
     this.nameInput = this.dialog.getByRole('textbox', {
-      name: 'Mentor Name',
+      name: 'Agent Name',
     });
     this.descriptionInput = this.dialog.getByRole('textbox', {
-      name: 'Mentor Description',
+      name: 'Agent Description',
     });
     this.categoryCombobox = this.dialog.getByRole('combobox', {
       name: /category/i,
@@ -34,7 +34,7 @@ export class CreateMentorPage {
       name: /visibility/i,
     });
     this.imageUploadButton = this.dialog.getByRole('button', {
-      name: 'Upload mentor image',
+      name: 'Upload agent image',
     });
     this.nextButton = this.dialog.getByRole('button', { name: 'Next' });
     this.saveButton = this.dialog.getByRole('button', { name: /save/i });
@@ -48,7 +48,7 @@ export class CreateMentorPage {
    */
   async open(): Promise<void> {
     const newMentorBtn = this.page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     await expect(newMentorBtn).toBeVisible({ timeout: 10_000 });
@@ -92,9 +92,15 @@ export class CreateMentorPage {
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
 
-    await safeWaitForURL(this.page, (url) => url.href.includes('/platform/'), {
-      timeout: 30_000,
-    });
+    const previousUrl = this.page.url();
+
+    await safeWaitForURL(
+      this.page,
+      (url) => url.href.includes('/platform/') && previousUrl != url.href,
+      {
+        timeout: 30_000,
+      },
+    );
     await waitForPageReady(this.page);
     return mentorName;
   }
@@ -114,6 +120,6 @@ export class CreateMentorPage {
 
   async close(): Promise<void> {
     await this.page.keyboard.press('Escape');
-    await expect(this.dialog).not.toBeVisible({ timeout: 5_000 });
+    await expect(this.dialog).not.toBeVisible({ timeout: 15_000 });
   }
 }

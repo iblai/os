@@ -4,14 +4,12 @@ import { useShortcuts } from '../use-shortcuts';
 
 // Mock dependencies
 const mockNavigateToHome = vi.fn();
-const mockOpenMyMentorsModal = vi.fn();
 const mockToggleSidebar = vi.fn();
 const mockDispatch = vi.fn();
 
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     navigateToHome: mockNavigateToHome,
-    openMyMentorsModal: mockOpenMyMentorsModal,
   }),
 }));
 
@@ -44,8 +42,13 @@ describe('useShortcuts', () => {
       expect(result.current).toHaveProperty('startNewChat');
       expect(result.current).toHaveProperty('focusInput');
       expect(result.current).toHaveProperty('toggleSidebar');
-      expect(result.current).toHaveProperty('openMyMentorsModal');
       expect(result.current).toHaveProperty('openShortcutsModal');
+    });
+
+    it('should not register an openMyMentorsModal shortcut', () => {
+      const { result } = renderHook(() => useShortcuts());
+
+      expect(result.current).not.toHaveProperty('openMyMentorsModal');
     });
 
     it('should have correct labels for all shortcuts', () => {
@@ -54,7 +57,6 @@ describe('useShortcuts', () => {
       expect(result.current.startNewChat.label).toBe('Start New Chat');
       expect(result.current.focusInput.label).toBe('Focus Input');
       expect(result.current.toggleSidebar.label).toBe('Toggle Sidebar');
-      expect(result.current.openMyMentorsModal.label).toBe('Open My Mentors');
       expect(result.current.openShortcutsModal.label).toBe('Open Shortcuts');
     });
 
@@ -64,7 +66,6 @@ describe('useShortcuts', () => {
       expect(result.current.startNewChat.keys).toBe('meta+shift+o');
       expect(result.current.focusInput.keys).toBe('shift+esc');
       expect(result.current.toggleSidebar.keys).toBe('meta+shift+s');
-      expect(result.current.openMyMentorsModal.keys).toBe('meta+shift+e');
       expect(result.current.openShortcutsModal.keys).toBe('meta+y');
     });
   });
@@ -88,16 +89,6 @@ describe('useShortcuts', () => {
       });
 
       expect(mockToggleSidebar).toHaveBeenCalledTimes(1);
-    });
-
-    it('openMyMentorsModal should call openMyMentorsModal', () => {
-      const { result } = renderHook(() => useShortcuts());
-
-      act(() => {
-        result.current.openMyMentorsModal.callback();
-      });
-
-      expect(mockOpenMyMentorsModal).toHaveBeenCalledTimes(1);
     });
 
     it('openShortcutsModal should dispatch shortcutsModalUpdated action', () => {

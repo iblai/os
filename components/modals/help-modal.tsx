@@ -11,11 +11,11 @@ interface HelpModalProps {
 
 const helpResources = [
   {
-    title: 'Create A Study Buddy Mentor',
+    title: 'Create A Study Buddy Agent',
     icon: PlayCircle,
   },
   {
-    title: 'Teaching Assistant Mentor',
+    title: 'Teaching Assistant Agent',
     icon: PlayCircle,
   },
   {

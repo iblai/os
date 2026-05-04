@@ -56,7 +56,7 @@ export function MentorSelectionGrid({
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           )}
           <Input
-            placeholder="Search Mentors"
+            placeholder="Search Agents"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="h-10 border-gray-200 pl-10 focus:border-blue-500 focus:ring-0"
@@ -71,11 +71,11 @@ export function MentorSelectionGrid({
         >
           {isMentorsLoading ? (
             <div className="col-span-full py-8 text-center text-gray-500">
-              Loading mentors...
+              Loading agents...
             </div>
           ) : mentors.length === 0 ? (
             <div className="col-span-full py-8 text-center text-gray-500">
-              No mentors found matching your search.
+              No agents found matching your search.
             </div>
           ) : (
             mentors.map((mentor) => {

@@ -85,6 +85,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  enable_memory_component: boolean;
 }
 
 export function SettingsTab() {
@@ -114,6 +115,11 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+
+  // @ts-ignore - enable_memory_component exists on API but not typed
+  const initialMemoryEnabled: boolean =
+    // @ts-ignore - enable_memory_component exists on API but not typed
+    mentor?.enable_memory_component ?? false;
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -171,6 +177,7 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      enable_memory_component: initialMemoryEnabled,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -226,6 +233,11 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
+      // Only send enable_memory_component if the user actually changed it.
+      if (value.enable_memory_component !== initialMemoryEnabled) {
+        values.enable_memory_component = value.enable_memory_component;
+      }
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -237,10 +249,10 @@ export function SettingsTab() {
           },
         }).unwrap();
 
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update mentor');
+        toast.error('Failed to update agent');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -252,7 +264,7 @@ export function SettingsTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Settings</h3>
           <p className="text-xs text-gray-600">
-            Configure your mentor's basic settings and preferences.
+            Configure your agent's basic settings and preferences.
           </p>
         </div>
       </div>
@@ -295,12 +307,12 @@ export function SettingsTab() {
                           <Input
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Mentor Name"
+                            placeholder="Agent Name"
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
                             <p className="text-xs text-red-500">
-                              Mentor name is required
+                              Agent name is required
                             </p>
                           )}
                         </div>
@@ -364,13 +376,13 @@ export function SettingsTab() {
                           <Textarea
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Mentor Description"
+                            placeholder="Agent Description"
                             className="min-h-[150px]"
                             disabled={isDisabled || disabled}
                           />
                           {hasNoValueAndIsDirty && (
                             <p className="text-xs text-red-500">
-                              Mentor description is required
+                              Agent description is required
                             </p>
                           )}
                         </div>
@@ -476,7 +488,7 @@ export function SettingsTab() {
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Control who can view this mentor.</p>
+                                <p>Control who can view this agent.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -531,7 +543,7 @@ export function SettingsTab() {
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Control who can chat with this mentor.</p>
+                                <p>Control who can chat with this agent.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -578,7 +590,7 @@ export function SettingsTab() {
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
                                 <p>
-                                  Feature this mentor to highlight it in
+                                  Feature this agent to highlight it in
                                   listings.
                                 </p>
                               </TooltipContent>
@@ -621,7 +633,7 @@ export function SettingsTab() {
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
                                 <p>
-                                  Allows this mentor to be accessible via LTI
+                                  Allows this agent to be accessible via LTI
                                   launches. Unselecting this will immediately
                                   remove access for any users users that have
                                   launched this via LTI.
@@ -769,6 +781,40 @@ export function SettingsTab() {
                 )}
               </WithFormPermissions>
 
+              <form.Field name="enable_memory_component">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Memory
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about memory"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              Allow this mentor to remember and reference
+                              information from past conversations.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Memory ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
+
               <form.Field name="forkable">
                 {(field) => (
                   <div className="flex items-center justify-between">
@@ -786,8 +832,7 @@ export function SettingsTab() {
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
                             <p>
-                              Allow other admins to create a copy of this
-                              mentor.
+                              Allow other admins to create a copy of this agent.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -833,7 +878,7 @@ export function SettingsTab() {
                                   ? field.state.value
                                   : URL.createObjectURL(field.state.value)
                               }
-                              alt="Mentor"
+                              alt="Agent"
                               className="h-full w-full rounded-lg object-cover"
                               height={200}
                               width={200}

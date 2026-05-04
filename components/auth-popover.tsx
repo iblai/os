@@ -114,7 +114,7 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
               Try advanced features for free
             </h3>
             <p className="text-sm text-gray-600">
-              Get better responses, create mentors with your data, and more by
+              Get better responses, create agents with your data, and more by
               logging in.
             </p>
             <div className="mt-4 flex space-x-2">

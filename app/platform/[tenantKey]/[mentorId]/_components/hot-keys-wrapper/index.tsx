@@ -10,10 +10,6 @@ export function HotKeysWrapper() {
   useHotkeys(shortcuts.focusInput.keys, shortcuts.focusInput.callback);
   useHotkeys(shortcuts.toggleSidebar.keys, shortcuts.toggleSidebar.callback);
   useHotkeys(
-    shortcuts.openMyMentorsModal.keys,
-    shortcuts.openMyMentorsModal.callback,
-  );
-  useHotkeys(
     shortcuts.openShortcutsModal.keys,
     shortcuts.openShortcutsModal.callback,
   );
