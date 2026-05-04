@@ -36,12 +36,17 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
   });
 
   test('admin goes to settings tab and enables then disables the Memory toggle', async ({
+    page,
+    createMentorPage,
     editMentorPage,
   }) => {
     // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
     // It is now a form-driven field — changes persist only on Save.
-    await editMentorPage.close();
+    // Own mentor per test (see describe-block note above) so parallel workers
+    // don't fight over the toggle state of a shared mentor.
+    await createMentorPage.openAndCreate();
     await editMentorPage.open('Settings');
+    await waitForPageReady(page);
     const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
     // Toggle to the opposite state, then toggle back to restore.
     await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
