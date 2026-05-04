@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-04-28",
+  "lastUpdated": "2026-05-01",
   "summary": {
-    "totalCheckpoints": 339,
-    "coveredCheckpoints": 330,
+    "totalCheckpoints": 343,
+    "coveredCheckpoints": 334,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 42,
@@ -1420,7 +1420,12 @@
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
         "components/chat/stop-streaming-button.tsx",
-        "components/chat/ai-message-copy.tsx"
+        "components/chat/ai-message-copy.tsx",
+        "components/chat/index.tsx",
+        "components/chat-input-form.tsx",
+        "components/chat-input-form/voice-chat-button.tsx",
+        "components/chat-input-form/voice-call-button.tsx",
+        "components/chat-input-form/upload-menu.tsx"
       ],
       "checkpoints": [
         {
@@ -1519,6 +1524,30 @@
           "status": "deprecated",
           "deprecatedIn": "#1431",
           "deprecatedReason": "MyMentorsModal removed; Explore page a11y already covered in this journey"
+        },
+        {
+          "id": "a11y-20",
+          "description": "Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has aria-label=\"Chat composer\" (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-21",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-22",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-23",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
         }
       ]
     },

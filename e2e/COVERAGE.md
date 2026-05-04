@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-29 | 339 checkpoints (330 active, 9 deprecated in #1431) | 42 journeys (41 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-01 | 343 checkpoints (334 active, 9 deprecated in #1431) | 42 journeys (41 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -430,9 +430,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat/index.tsx`, `components/chat-input-form.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -453,6 +453,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
 - [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
+- [x] Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has `aria-label="Chat composer"` (issue #1596)
+- [x] Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)
+- [x] Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)
+- [x] Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)
 
 ---
 
