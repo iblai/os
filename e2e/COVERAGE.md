@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-23 | 323 checkpoints | 41 journeys | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-04-23 | 333 checkpoints | 42 journeys | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -623,6 +623,25 @@ When adding a new page or modifying an existing user flow:
 - [x] AC-41.8: Manage access dialog shows assigned users section or no-users placeholder
 - [x] AC-41.9: Error state Try again button is present when the error banner renders
 - [x] AC-41.10: Closing the manage dialog via Escape or click-outside clears editing state
+
+---
+
+## Journey 42: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/42-persistent-chat-input-label.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`
+
+Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
+
+- [x] PCIL-42.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
+- [x] PCIL-42.2: Textarea placeholder is `"Ask anything"` when flag is `false`
+- [x] PCIL-42.3: `aria-labelledby` wires textarea to label element when flag is `false`
+- [x] PCIL-42.4: User can send a message when flag is `false`
+- [x] PCIL-42.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
+- [x] PCIL-42.6: Textarea placeholder is empty string when flag is `true`
+- [x] PCIL-42.7: `aria-labelledby` and label text are intact when flag is `true`
+- [x] PCIL-42.8: User can send a message when flag is `true`
+- [x] PCIL-42.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
+- [x] PCIL-42.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
 
 ---
 

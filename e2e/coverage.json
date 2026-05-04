@@ -2,10 +2,10 @@
   "version": 2,
   "lastUpdated": "2026-04-23",
   "summary": {
-    "totalCheckpoints": 323,
-    "coveredCheckpoints": 323,
+    "totalCheckpoints": 333,
+    "coveredCheckpoints": 333,
     "percent": 100,
-    "totalJourneys": 41
+    "totalJourneys": 42
   },
   "journeys": [
     {
@@ -2059,6 +2059,64 @@
         {
           "id": "ac-10",
           "description": "Closing the manage dialog via Escape or click-outside clears editing state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "persistent-chat-input-label",
+      "name": "Persistent Chat Input Label (WCAG 3.3.2)",
+      "spec": "42-persistent-chat-input-label.spec.ts",
+      "sourceFiles": ["components/chat-input-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "pcil-01",
+          "description": "Label has sr-only class when persistent_chat_input_label flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-02",
+          "description": "Textarea placeholder is \"Ask anything\" when persistent_chat_input_label flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-03",
+          "description": "aria-labelledby wires textarea to label element when flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-04",
+          "description": "User can send a message when persistent_chat_input_label is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-05",
+          "description": "Label is visually visible (has block class, not sr-only) when persistent_chat_input_label flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-06",
+          "description": "Textarea placeholder is empty string when persistent_chat_input_label flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-07",
+          "description": "aria wiring is intact (aria-labelledby, label text) when flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-08",
+          "description": "User can send a message when persistent_chat_input_label is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-09",
+          "description": "setTenantMetadataFlag helper reads dm_token from localStorage and PATCHes the DM API",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-10",
+          "description": "Flag is restored to its original value in afterEach to avoid contaminating subsequent runs",
           "status": "covered"
         }
       ]
