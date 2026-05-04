@@ -807,6 +807,29 @@ describe('useIframeHandlers', () => {
     });
   });
 
+  describe('MENTOR:NEW_CHAT handler', () => {
+    it('emits newChat event without payload', () => {
+      const emitSpy = vi.spyOn(eventBus, 'emit');
+      const { result } = renderHook(() => useIframeHandlers());
+
+      result.current['MENTOR:NEW_CHAT']();
+
+      expect(emitSpy).toHaveBeenCalledWith(RemoteEvents.newChat);
+    });
+
+    it('notifies a live eventBus subscriber', () => {
+      const subscriber = vi.fn();
+      eventBus.on(RemoteEvents.newChat, subscriber);
+
+      const { result } = renderHook(() => useIframeHandlers());
+      result.current['MENTOR:NEW_CHAT']();
+
+      expect(subscriber).toHaveBeenCalledTimes(1);
+
+      eventBus.off(RemoteEvents.newChat, subscriber);
+    });
+  });
+
   describe('edge cases and integration', () => {
     it('should handle rapid successive handler calls', () => {
       const { result } = renderHook(() => useIframeHandlers());
