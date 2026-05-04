@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.59.6](https://github.com/iblai/mentorai/compare/v0.59.5...v0.59.6) (2026-05-04)
+
+### CI
+
+* **pr-e2e:** add unlabeled trigger to allow re-running via label toggle ([3e2ac89](https://github.com/iblai/mentorai/commit/3e2ac8980a3c0eb0b1c24a990a064fb807b4ebcb))
+
 ## [0.59.5](https://github.com/iblai/mentorai/compare/v0.59.4...v0.59.5) (2026-05-03)
 
 ### CI
