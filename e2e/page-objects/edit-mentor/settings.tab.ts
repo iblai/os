@@ -232,7 +232,7 @@ export class SettingsTab {
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
     await expect(
-      this.page.getByText(/Mentor updated successfully/i).first(),
+      this.page.getByText(/Agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
     // Small buffer for RTK Query cache invalidation before the caller
     // closes or re-opens the dialog.
