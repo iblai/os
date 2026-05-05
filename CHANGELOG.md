@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.62.0](https://github.com/iblai/mentorai/compare/v0.61.2...v0.62.0) (2026-05-05)
+
+### Features
+
+* **settings:** add Enhance Document Retrieval toggle ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([0f22af5](https://github.com/iblai/mentorai/commit/0f22af58d18ffea15d1713f9a69b3a9d27225890))
+
+### Tests
+
+* **e2e:** cover Enhance Document Retrieval toggle in Journey 7 ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([2d629d9](https://github.com/iblai/mentorai/commit/2d629d9300591b5cd440ea9c4890af89b9a7159c))
+
+## [0.61.2](https://github.com/iblai/mentorai/compare/v0.61.1...v0.61.2) (2026-05-05)
+
+### Bug Fixes
+
+- render suggested prompts as Markdown in welcome and advanced chat ([e2393d5](https://github.com/iblai/mentorai/commit/e2393d53bf152e916533f8fc056c87fadeb0d06f))
+
+### Tests
+
+- **mentor:** cover Markdown rendering in suggested prompts ([#1179](https://github.com/iblai/mentorai/issues/1179)) ([a3acfbf](https://github.com/iblai/mentorai/commit/a3acfbf717a2253f5ab1e8e5f6d4fb3c05b69aec))
+
+## [0.61.1](https://github.com/iblai/mentorai/compare/v0.61.0...v0.61.1) (2026-05-05)
+
+### Bug Fixes
+
+- **a11y:** add aria-labels to icon-only composer buttons ([93d0f90](https://github.com/iblai/mentorai/commit/93d0f90a5c14ef5b02c375f2090385e2f3abbabe)), closes [#778](https://github.com/iblai/mentorai/issues/778)
+- **a11y:** reflow chat composer at narrow viewport and add skip link ([df46180](https://github.com/iblai/mentorai/commit/df46180dc493d9351e0ac0d7c704f75dd51a13c6))
+
+### Chores
+
+- apply prettier formatting drift in unrelated files ([d273263](https://github.com/iblai/mentorai/commit/d27326369dab2221a134b47ef60a6a396a36c57c))
+
+### Tests
+
+- **e2e:** cover composer a11y, reflow, and skip-link journey ([15fe71a](https://github.com/iblai/mentorai/commit/15fe71a6cb251d029cbc8d7bb84d8f58f7bfa3b5)), closes [#chat-input-textarea](https://github.com/iblai/mentorai/issues/chat-input-textarea)
+
+## [0.61.0](https://github.com/iblai/mentorai/compare/v0.60.0...v0.61.0) (2026-05-05)
+
+### Features
+
+- add label to chat input textarea ([b9ac136](https://github.com/iblai/mentorai/commit/b9ac136be241d81cd924547fd38e7abc6c47ca35))
+
+### Bug Fixes
+
+- mark test for flag OFF as FIXME in persistent chat input label journey ([0eeb1dd](https://github.com/iblai/mentorai/commit/0eeb1dd602e1062c945f21e5348427f1d8357ec5))
+
+### Chores
+
+- add playwright tests for chat input label ([ff189d7](https://github.com/iblai/mentorai/commit/ff189d7fbc4e02090ee63deabbe8d7f6615d768a))
+- update iblai-js to 1.6.2 ([e59739c](https://github.com/iblai/mentorai/commit/e59739c1d2415f0ecc50a0c4cc47a626b16609c5))
+- update unit tests ([6cf1190](https://github.com/iblai/mentorai/commit/6cf11909434705e43ea4db1efcba639f8dc82782))
+
 ## [0.60.0](https://github.com/iblai/mentorai/compare/v0.59.6...v0.60.0) (2026-05-04)
 
 ### Features

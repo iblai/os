@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-29 | 339 checkpoints (330 active, 9 deprecated in #1431) | 42 journeys (41 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-05 | 368 checkpoints (359 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -27,9 +27,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (6 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (7 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
 - [x] Newly created user can send a message and receive an AI response
 - [x] Newly created user can start a new chat session after chatting
@@ -37,6 +37,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs link in a new tab
+- [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 
 ---
 
@@ -109,7 +110,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (5 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (8 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -118,6 +119,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
+- [x] Enhance Document Retrieval toggle is visible with correct label and defaults to OFF
+- [x] Enhance Document Retrieval tooltip contains wording about multiple search queries
+- [x] Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles
 
 ---
 
@@ -449,9 +453,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat/index.tsx`, `components/chat-input-form.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -472,6 +476,10 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
 - [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
+- [x] Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has `aria-label="Chat composer"` (issue #1596)
+- [x] Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)
+- [x] Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)
+- [x] Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)
 
 ---
 
@@ -668,6 +676,25 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
 - [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+
+---
+
+## Journey 43: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/43-persistent-chat-input-label.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`
+
+Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
+
+- [x] PCIL-43.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
+- [x] PCIL-43.2: Textarea placeholder is `"Ask anything"` when flag is `false`
+- [x] PCIL-43.3: `aria-labelledby` wires textarea to label element when flag is `false`
+- [x] PCIL-43.4: User can send a message when flag is `false`
+- [x] PCIL-43.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
+- [x] PCIL-43.6: Textarea placeholder is empty string when flag is `true`
+- [x] PCIL-43.7: `aria-labelledby` and label text are intact when flag is `true`
+- [x] PCIL-43.8: User can send a message when flag is `true`
+- [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
+- [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
 
 ---
 

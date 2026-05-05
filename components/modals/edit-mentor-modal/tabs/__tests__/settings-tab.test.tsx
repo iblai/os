@@ -463,6 +463,32 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
     });
 
+    it('renders Enhance Document Retrieval toggle', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText('Enhance Document Retrieval'),
+      ).toBeInTheDocument();
+    });
+
+    it('renders Enhance Document Retrieval tooltip text', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(
+          /Generates multiple search queries from a single user question/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('renders tooltip trigger for Enhance Document Retrieval', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enhance document retrieval'),
+      ).toBeInTheDocument();
+    });
+
     it('renders the Image upload section', () => {
       render(<SettingsTab />);
 
@@ -653,6 +679,19 @@ describe('SettingsTab', () => {
 
       expect(voiceRecordSwitch).toBeChecked();
     });
+
+    it('toggles enhance document retrieval switch', () => {
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval disabled',
+      );
+      expect(ragSwitch).not.toBeChecked();
+
+      fireEvent.click(ragSwitch);
+
+      expect(ragSwitch).toBeChecked();
+    });
   });
 
   // ==========================================================================
@@ -840,6 +879,60 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               allow_anonymous: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_multi_query_rag as true after toggling ON', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval disabled',
+      );
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_multi_query_rag as false after toggling OFF', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval enabled',
+      );
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: false,
             }),
           }),
         );
@@ -1367,6 +1460,45 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByLabelText('Is lti accessible disabled'),
+      ).not.toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag true in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval enabled'),
+      ).toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag false in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval disabled'),
+      ).not.toBeChecked();
+    });
+
+    it('defaults enable_multi_query_rag to false when undefined', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: undefined },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval disabled'),
       ).not.toBeChecked();
     });
   });

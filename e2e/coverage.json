@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-01",
+  "lastUpdated": "2026-05-05",
   "summary": {
-    "totalCheckpoints": 339,
-    "coveredCheckpoints": 330,
+    "totalCheckpoints": 368,
+    "coveredCheckpoints": 359,
     "deprecatedCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 42,
-    "activeJourneys": 41
+    "totalJourneys": 43,
+    "activeJourneys": 42
   },
   "journeys": [
     {
@@ -48,7 +48,9 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/page.tsx",
         "components/chat/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/welcome-chat.tsx",
+        "components/advanced-chat/ui-tags/default-tag.tsx"
       ],
       "checkpoints": [
         {
@@ -79,6 +81,11 @@
         {
           "id": "nav-06",
           "description": "Help button opens the docs link in a new tab",
+          "status": "covered"
+        },
+        {
+          "id": "nav-07",
+          "description": "Suggested prompts authored with Markdown (links, bold, etc.) render via the Markdown component, not as literal text (issue #1179, fixme until a seeded mentor fixture is available)",
           "status": "covered"
         }
       ]
@@ -362,6 +369,21 @@
         {
           "id": "uid-05",
           "description": "Tooltip info icons have type=button and do not submit the form",
+          "status": "covered"
+        },
+        {
+          "id": "uid-06",
+          "description": "Enhance Document Retrieval toggle is visible with correct label and defaults to OFF",
+          "status": "covered"
+        },
+        {
+          "id": "uid-07",
+          "description": "Enhance Document Retrieval tooltip contains wording about multiple search queries",
+          "status": "covered"
+        },
+        {
+          "id": "uid-08",
+          "description": "Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
         }
       ]
@@ -1471,7 +1493,12 @@
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
         "components/chat/stop-streaming-button.tsx",
-        "components/chat/ai-message-copy.tsx"
+        "components/chat/ai-message-copy.tsx",
+        "components/chat/index.tsx",
+        "components/chat-input-form.tsx",
+        "components/chat-input-form/voice-chat-button.tsx",
+        "components/chat-input-form/voice-call-button.tsx",
+        "components/chat-input-form/upload-menu.tsx"
       ],
       "checkpoints": [
         {
@@ -1570,6 +1597,30 @@
           "status": "deprecated",
           "deprecatedIn": "#1431",
           "deprecatedReason": "MyMentorsModal removed; Explore page a11y already covered in this journey"
+        },
+        {
+          "id": "a11y-20",
+          "description": "Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has aria-label=\"Chat composer\" (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-21",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-22",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-23",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
+          "status": "covered",
+          "specFile": "journeys/29-accessibility-wcag.spec.ts"
         }
       ]
     },
@@ -2235,6 +2286,64 @@
         {
           "id": "sp-12",
           "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "persistent-chat-input-label",
+      "name": "Persistent Chat Input Label (WCAG 3.3.2)",
+      "spec": "43-persistent-chat-input-label.spec.ts",
+      "sourceFiles": ["components/chat-input-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "pcil-01",
+          "description": "Label has sr-only class when persistent_chat_input_label flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-02",
+          "description": "Textarea placeholder is \"Ask anything\" when persistent_chat_input_label flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-03",
+          "description": "aria-labelledby wires textarea to label element when flag is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-04",
+          "description": "User can send a message when persistent_chat_input_label is false",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-05",
+          "description": "Label is visually visible (has block class, not sr-only) when persistent_chat_input_label flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-06",
+          "description": "Textarea placeholder is empty string when persistent_chat_input_label flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-07",
+          "description": "aria wiring is intact (aria-labelledby, label text) when flag is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-08",
+          "description": "User can send a message when persistent_chat_input_label is true",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-09",
+          "description": "setTenantMetadataFlag helper reads dm_token from localStorage and PATCHes the DM API",
+          "status": "covered"
+        },
+        {
+          "id": "pcil-10",
+          "description": "Flag is restored to its original value in afterEach to avoid contaminating subsequent runs",
           "status": "covered"
         }
       ]
