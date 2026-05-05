@@ -4,15 +4,15 @@
 
 ### Features
 
-* new chat post message event added to iframe handlers ([761db2a](https://github.com/iblai/mentorai/commit/761db2ad13ac9f1ae9774d0193cb264018f04d2c))
+- new chat post message event added to iframe handlers ([761db2a](https://github.com/iblai/mentorai/commit/761db2ad13ac9f1ae9774d0193cb264018f04d2c))
 
 ### Bug Fixes
 
-* setting tab playwright test updated and memory tab fixme added for later ([c52f709](https://github.com/iblai/mentorai/commit/c52f70938d4561cdf4622579ed4d69a9f2fab674))
+- setting tab playwright test updated and memory tab fixme added for later ([c52f709](https://github.com/iblai/mentorai/commit/c52f70938d4561cdf4622579ed4d69a9f2fab674))
 
 ### Chores
 
-* bump iblai-js version to 1.6.1 & pnpm lock updated ([6893d6a](https://github.com/iblai/mentorai/commit/6893d6a441eb5358a4ef00a7dbfed7e04d25bb46))
+- bump iblai-js version to 1.6.1 & pnpm lock updated ([6893d6a](https://github.com/iblai/mentorai/commit/6893d6a441eb5358a4ef00a7dbfed7e04d25bb46))
 
 ## [0.59.6](https://github.com/iblai/mentorai/compare/v0.59.5...v0.59.6) (2026-05-04)
 

@@ -13,6 +13,8 @@ import {
   useSubscriptionHandlerV2,
 } from '@iblai/iblai-js/web-utils';
 import { useOS } from '@/hooks/use-os';
+import { isStripeActivated } from '@/lib/utils';
+import { Tenant } from '@iblai/iblai-js/web-utils';
 
 // Custom hook to handle trial user actions
 export const useShowFreeTrialDialog = (
@@ -59,7 +61,10 @@ export const useShowFreeTrialDialog = (
     isAdminAction: boolean = true,
   ) => {
     if (
-      (subscriptionStatus.creditExhausted && subscriptionStatus.callToAction) ||
+      (currentTenant &&
+        isStripeActivated(currentTenant as Tenant) &&
+        subscriptionStatus.creditExhausted &&
+        subscriptionStatus.callToAction) ||
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
       if (isAppleDevice) {
