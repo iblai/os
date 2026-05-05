@@ -51,6 +51,8 @@ export const useShowFreeTrialDialog = (
     (options.enableFallbackModal ? IblFreeTrialDialog : null);
 
   const isNewlyUserOnPreFreeOrAdvertisingMode = (isAdminAction: boolean) =>
+    currentTenant &&
+    isStripeActivated(currentTenant as Tenant) &&
     (currentTenant?.key === config.mainTenantKey() ||
       currentTenant?.is_advertising) &&
     isAdminAction &&
@@ -61,10 +63,7 @@ export const useShowFreeTrialDialog = (
     isAdminAction: boolean = true,
   ) => {
     if (
-      (currentTenant &&
-        isStripeActivated(currentTenant as Tenant) &&
-        subscriptionStatus.creditExhausted &&
-        subscriptionStatus.callToAction) ||
+      (subscriptionStatus.creditExhausted && subscriptionStatus.callToAction) ||
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
       if (isAppleDevice) {
