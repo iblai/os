@@ -73,6 +73,7 @@ vi.mock('@/hooks/user-user-actions', () => ({
 // Mock data-layer
 const mockEditMentorLoading = vi.fn();
 const mockUpdatePromptLoading = vi.fn();
+const mockGetClawMentorConfigQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useDeletePromptMutation: () => [mockDeletePrompt],
@@ -82,6 +83,8 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   ],
   useGetMentorSettingsQuery: (...args: unknown[]) =>
     mockGetMentorSettingsQuery(...args),
+  useGetClawMentorConfigQuery: (...args: unknown[]) =>
+    mockGetClawMentorConfigQuery(...args),
   useGetPromptsSearchQuery: (...args: unknown[]) => {
     const result = mockGetPromptsSearchQuery(...args) ?? {};
     const data = result.data
@@ -321,6 +324,10 @@ describe('PromptsTab', () => {
       data: defaultMentorSettings,
       isLoading: false,
     });
+
+    // Default: no claw-config wired (404 → null). Tests that need a wired
+    // sandbox override this in their own arrangement.
+    mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
 
     mockGetPromptsSearchQuery.mockReturnValue({
       data: defaultPromptsData,
@@ -2410,11 +2417,14 @@ describe('PromptsTab', () => {
   // ==========================================================================
 
   describe('Agent Configuration (CLAW)', () => {
+    const wiredClawConfig = { id: 1, enabled: true, server: 7 };
+
     it('does not render the Agent Configuration section when enable_claw is false', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: false },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 
@@ -2433,11 +2443,27 @@ describe('PromptsTab', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('renders the Agent Configuration section when enable_claw is true', () => {
+    it('does not render the Agent Configuration section when enable_claw is true but no claw-config exists (sandbox not wired)', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+
+      render(<PromptsTab />);
+
+      expect(screen.queryByText('Agent Configuration')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('agent-config-prompts'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the Agent Configuration section when enable_claw is true AND claw-config is wired', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 
@@ -2450,6 +2476,7 @@ describe('PromptsTab', () => {
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 
@@ -2465,6 +2492,7 @@ describe('PromptsTab', () => {
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 
@@ -2483,6 +2511,7 @@ describe('PromptsTab', () => {
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 
@@ -2501,6 +2530,7 @@ describe('PromptsTab', () => {
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
       });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
 
       render(<PromptsTab />);
 

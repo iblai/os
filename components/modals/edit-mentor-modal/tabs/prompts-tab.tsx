@@ -11,6 +11,7 @@ import {
   useGetMentorSettingsQuery,
   useGetPromptsSearchQuery,
   useUpdatePromptMutation,
+  useGetClawMentorConfigQuery,
 } from '@iblai/iblai-js/data-layer';
 import { PromptVisibilityEnum } from '@iblai/iblai-api';
 
@@ -73,6 +74,18 @@ export function PromptsTab() {
         skip: !activeMentorId || !tenantKey || !username,
       },
     );
+
+  // @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type
+  const isClawEnabled: boolean = mentorSettings?.enable_claw ?? false;
+  const mentorUuid: string | undefined = mentorSettings?.mentor_unique_id;
+
+  // The Agent Configuration section only makes sense when a sandbox is wired
+  // to a Claw instance (claw-config exists). The data-layer normalises 404 →
+  // null, so a non-null result means the mentor is connected.
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
+  );
 
   const promptsQuery = useGetPromptsSearchQuery(
     {
@@ -701,8 +714,10 @@ export function PromptsTab() {
             )}
           </WithFormPermissions>
 
-          {/* @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type */}
-          {mentorSettings?.enable_claw && tenantKey && activeMentorId && (
+          {/* Agent Configuration only renders when claw is enabled AND the
+           * sandbox is wired to a Claw instance (claw-config exists, i.e.
+           * useGetClawMentorConfigQuery returned non-null). */}
+          {isClawEnabled && clawMentorConfig && tenantKey && activeMentorId && (
             <div className="mt-8">
               <div className="mb-4 flex items-center gap-2">
                 <h3 className="text-sm font-medium text-gray-900">

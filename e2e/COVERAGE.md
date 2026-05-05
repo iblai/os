@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-29 | 339 checkpoints (330 active, 9 deprecated in #1431) | 42 journeys (41 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-05 | 356 checkpoints (347 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -652,18 +652,25 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 43: CLAW Advanced Sandbox (8 checkpoints) — `journeys/43-claw-advanced-sandbox.spec.ts`
+## Journey 43: CLAW Advanced Sandbox (15 checkpoints) — `journeys/43-claw-advanced-sandbox.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
 - [x] Admin opens Settings tab and Advanced Sandbox toggle is present
 - [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
 - [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Advanced Sandbox and saving causes Sandbox tab (after Settings) and Skills tab (after Prompts) to appear
-- [x] Enabling Advanced Sandbox and saving shows Agent Configuration section in Prompts tab
-- [x] Sandbox and Skills tabs are ordered correctly (Sandbox immediately after Settings, Skills immediately after Prompts)
+- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
+- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
+- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
 - [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
 - [x] Admin navigates to Sandbox tab and the sandbox config container renders
+- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
+- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
+- [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
+- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
+- [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
+- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
+- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
 
 ---
 

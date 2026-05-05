@@ -27,6 +27,8 @@ import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
+  useGetClawMentorConfigQuery,
+  useUpdateClawMentorConfigMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 
@@ -115,6 +117,24 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+
+  // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
+  // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
+  // (which may already be a UUID when navigating directly).
+  // @ts-ignore mentor_unique_id is on the API response but not the public type
+  const mentorUuid: string | undefined =
+    // @ts-ignore mentor_unique_id is on the API response but not the public type
+    mentor?.mentor_unique_id ?? activeMentorId;
+
+  // Fetch the claw-config for this mentor. Returns null when no config exists
+  // (the data-layer normalises 404 → null) — that's how we know the mentor is
+  // not yet wired to a Claw instance.
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !tenantKey || !mentorUuid },
+  );
+
+  const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -233,6 +253,17 @@ export function SettingsTab() {
         values.enable_claw = value.enable_claw;
       }
 
+      // Detect whether the Advanced Sandbox toggle changed. If it did AND the
+      // mentor is wired to a Claw instance (clawMentorConfig exists), we also
+      // PATCH the claw-config so its `enabled` flag stays in sync with the
+      // mentor-settings intent. When no claw-config exists (404 → null) we
+      // simply skip this — the mentor isn't connected to an instance yet.
+      // @ts-ignore enable_claw exists in API response but not in type
+      const previousEnableClaw: boolean = mentor?.enable_claw ?? false;
+      const enableClawChanged =
+        value.enable_claw !== undefined &&
+        value.enable_claw !== previousEnableClaw;
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -243,6 +274,21 @@ export function SettingsTab() {
             ...values,
           },
         }).unwrap();
+
+        if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
+          try {
+            await updateClawConfig({
+              org: tenantKey,
+              mentorUniqueId: mentorUuid,
+              enabled: value.enable_claw,
+            }).unwrap();
+          } catch (clawError) {
+            // Don't fail the whole save flow if syncing the claw-config
+            // fails — the mentor-settings update already succeeded. Log
+            // for diagnostics; the next reload will reflect the truth.
+            console.error(JSON.stringify({ tenant: tenantKey, clawError }));
+          }
+        }
 
         toast.success('Mentor updated successfully');
       } catch (error) {
@@ -605,6 +651,41 @@ export function SettingsTab() {
                   </form.Field>
                 )}
               </WithFormPermissions>
+
+              <form.Field name="enable_claw">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Advanced Sandbox
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about advanced sandbox mode"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              Sandbox mode for configuring agent settings,
+                              prompts, and skills.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
+
               <WithFormPermissions
                 name="is_lti_accessible"
                 // @ts-ignore
@@ -805,40 +886,6 @@ export function SettingsTab() {
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
                       aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
-                    />
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="enable_claw">
-                {(field) => (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[#646464]">
-                        Advanced Sandbox
-                      </span>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            type="button"
-                            aria-label="More info about advanced sandbox mode"
-                          >
-                            <Info className="h-4 w-4 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent className="ibl-tooltip-content">
-                            <p>
-                              Sandbox mode for configuring agent settings,
-                              prompts, and skills.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Switch
-                      checked={field.state.value}
-                      onCheckedChange={(checked) => field.handleChange(checked)}
-                      disabled={isDisabled}
-                      aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}

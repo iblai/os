@@ -857,7 +857,11 @@ const buildContext = (
   tenantKey: undefined,
   mentorSettings: undefined,
   rbacPermissions: {},
-  flags: { isMemsearchEnabled: true, isClawEnabled: false },
+  flags: {
+    isMemsearchEnabled: true,
+    isClawEnabled: false,
+    clawConfigExists: false,
+  },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
   ...overrides,
@@ -1098,7 +1102,11 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false, isClawEnabled: false },
+          flags: {
+            isMemsearchEnabled: false,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1113,7 +1121,11 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true, isClawEnabled: false },
+          flags: {
+            isMemsearchEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1128,7 +1140,11 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true, isClawEnabled: false },
+          flags: {
+            isMemsearchEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
       const disabled = filterMentorSegments(
@@ -1138,7 +1154,11 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false, isClawEnabled: false },
+          flags: {
+            isMemsearchEnabled: false,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 

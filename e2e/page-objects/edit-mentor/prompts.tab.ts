@@ -10,6 +10,11 @@ export class PromptsTab {
   readonly suggestedPromptsSection: Locator;
   readonly seeMoreButton: Locator;
 
+  // ── Agent Configuration section (only visible when claw is enabled + wired) ──
+  readonly agentConfigSection: Locator;
+  readonly createAgentConfigButton: Locator;
+  readonly noAgentConfigMessage: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -28,6 +33,17 @@ export class PromptsTab {
     this.seeMoreButton = dialog.getByRole('button', {
       name: /see more/i,
     });
+
+    // Agent Configuration section
+    this.agentConfigSection = dialog.getByRole('heading', {
+      name: /agent configuration/i,
+    });
+    this.createAgentConfigButton = dialog.getByRole('button', {
+      name: /create agent config/i,
+    });
+    this.noAgentConfigMessage = dialog.getByText(
+      /no agent configuration exists for this mentor yet/i,
+    );
   }
 
   async setSystemPrompt(content: string): Promise<void> {
@@ -198,5 +214,114 @@ export class PromptsTab {
   async save(): Promise<void> {
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
+  }
+
+  // ── Agent Configuration helpers ────────────────────────────────────────────
+
+  /**
+   * Returns true when the Agent Configuration section heading is visible.
+   */
+  async hasAgentConfigSection(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.agentConfigSection.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true when the "no agent config" message is shown (config not yet
+   * created for this mentor).
+   */
+  async isAgentConfigEmpty(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.noAgentConfigMessage.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clicks the Create Agent Config button and waits for the workspace fields
+   * to appear (i.e. the "no config" message disappears).
+   */
+  async createAgentConfig(): Promise<void> {
+    await expect(this.createAgentConfigButton).toBeVisible({
+      timeout: 10_000,
+    });
+    await this.createAgentConfigButton.click();
+    // Wait for the "no agent configuration" message to disappear — that signals
+    // the POST completed and the workspace field cards are now rendering.
+    await expect(this.noAgentConfigMessage).not.toBeVisible({
+      timeout: 20_000,
+    });
+  }
+
+  /**
+   * Returns the row/card locator for an agent config field by its label.
+   * The AgentConfigPrompts component renders each field as a card whose
+   * visible text includes the label string.
+   */
+  agentConfigFieldRowByLabel(label: string): Locator {
+    return this.dialog.locator('[class*="card"], [class*="field"]').filter({
+      hasText: new RegExp(label, 'i'),
+    });
+  }
+
+  /**
+   * Returns the first agent config field card in the section.
+   * Useful when the caller does not know the field names upfront.
+   */
+  firstAgentConfigField(): Locator {
+    // Each workspace field is rendered with an Edit button alongside the label.
+    // Filter for cards that have an Edit button to avoid matching the section
+    // header itself.
+    return this.dialog
+      .locator('[class*="card"], [class*="field"]')
+      .filter({
+        has: this.dialog.getByRole('button', { name: /^edit$/i }),
+      })
+      .first();
+  }
+
+  /**
+   * Opens the Edit modal for an agent config field identified by `label`,
+   * replaces the textarea content with `newValue`, and clicks Save.
+   *
+   * Returns the original textarea content so callers can restore it.
+   */
+  async editAgentConfigField(label: string, newValue: string): Promise<string> {
+    const row = this.agentConfigFieldRowByLabel(label);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    const editBtn = row.getByRole('button', { name: /^edit$/i }).first();
+    await expect(editBtn).toBeVisible({ timeout: 5_000 });
+    await editBtn.click();
+
+    // The edit modal title equals the field label
+    const editDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: new RegExp(label, 'i') });
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+
+    const textarea = editDialog.getByRole('textbox').first();
+    await expect(textarea).toBeVisible({ timeout: 5_000 });
+
+    // Capture original value before overwriting
+    const original = await textarea.inputValue();
+
+    await textarea.clear();
+    await textarea.fill(newValue);
+
+    const saveBtn = editDialog.getByRole('button', { name: /^save$/i }).first();
+    await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+    await saveBtn.click();
+
+    // Wait for the modal to close
+    await expect(editDialog).not.toBeVisible({ timeout: 15_000 });
+
+    return original;
   }
 }

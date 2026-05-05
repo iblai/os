@@ -110,6 +110,10 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: true },
     }),
+    // The mentor-segments hook now queries the claw-config to gate the Skills
+    // segment. We don't add the clawApiSlice middleware to the test store, so
+    // mock the hook to return `null` (no wired config) — Skills stays hidden.
+    useGetClawMentorConfigQuery: () => ({ data: null }),
   };
 });
 
