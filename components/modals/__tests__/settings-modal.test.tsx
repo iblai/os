@@ -238,7 +238,7 @@ describe('SettingsModal', () => {
       );
 
       expect(
-        screen.getByRole('button', { name: /create mentor/i }),
+        screen.getByRole('button', { name: /create agent/i }),
       ).toBeInTheDocument();
     });
 
@@ -300,7 +300,7 @@ describe('SettingsModal', () => {
 
       // Click Create Mentor button
       const createButton = screen.getByRole('button', {
-        name: /create mentor/i,
+        name: /create agent/i,
       });
       fireEvent.click(createButton);
 
@@ -319,7 +319,7 @@ describe('SettingsModal', () => {
       // Query specifically for a Create Mentor dialog title within a dialog
       // This should NOT exist because SettingsModal doesn't render it
       const createMentorDialogTitle = screen.queryByRole('dialog', {
-        name: /create mentor/i,
+        name: /create agent/i,
       });
       expect(createMentorDialogTitle).toBeNull();
     });
@@ -409,7 +409,7 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      expect(screen.getByPlaceholderText('Search mentors')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search agents')).toBeInTheDocument();
     });
   });
 
@@ -429,7 +429,7 @@ describe('SettingsModal', () => {
 
       // The sr-only description should be present (there are 2 - one sr-only and one visible)
       const descriptions = screen.getAllByText(
-        'Showing list of mentors used with the mentorAI',
+        'Showing the list of agents available in your tenant',
       );
       expect(descriptions.length).toBeGreaterThan(0);
 
@@ -449,7 +449,7 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      const button = screen.getByRole('button', { name: /create mentor/i });
+      const button = screen.getByRole('button', { name: /create agent/i });
       expect(button).toBeEnabled();
     });
   });
@@ -555,7 +555,7 @@ describe('SettingsModal', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor featured status updated',
+          'Agent featured status updated',
         );
       });
     });
@@ -581,7 +581,7 @@ describe('SettingsModal', () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          'Failed to update mentor featured status',
+          'Failed to update agent featured status',
         );
       });
     });
@@ -622,7 +622,7 @@ describe('SettingsModal', () => {
       );
 
       expect(
-        screen.queryByRole('button', { name: /create mentor/i }),
+        screen.queryByRole('button', { name: /create agent/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -704,9 +704,9 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      // The switch should use 'mentor' as fallback in aria-label
+      // The switch should use 'agent' as fallback in aria-label
       const toggleSwitch = screen.getByRole('switch', {
-        name: /Toggle featured status for mentor/i,
+        name: /Toggle featured status for agent/i,
       });
       expect(toggleSwitch).toBeInTheDocument();
     });
@@ -748,7 +748,7 @@ describe('SettingsModal', () => {
         </Provider>,
       );
 
-      const searchInput = screen.getByPlaceholderText('Search mentors');
+      const searchInput = screen.getByPlaceholderText('Search agents');
       fireEvent.change(searchInput, { target: { value: 'test search' } });
 
       // Verify input accepts the value

@@ -312,7 +312,7 @@ describe('useOneDrivePicker', () => {
         });
       });
 
-      expect(toast.error).toHaveBeenCalledWith('Mentor not found');
+      expect(toast.error).toHaveBeenCalledWith('Agent not found');
 
       consoleSpy.mockRestore();
     });

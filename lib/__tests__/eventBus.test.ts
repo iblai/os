@@ -13,8 +13,12 @@ describe('lib/eventBus', () => {
       );
     });
 
-    it('should have exactly 2 remote events defined', () => {
-      expect(Object.keys(RemoteEvents)).toHaveLength(2);
+    it('should have sendChatMessage event', () => {
+      expect(RemoteEvents.sendChatMessage).toBe('MENTOR:SEND_CHAT_MESSAGE');
+    });
+
+    it('should have exactly 3 remote events defined', () => {
+      expect(Object.keys(RemoteEvents)).toHaveLength(3);
     });
   });
 

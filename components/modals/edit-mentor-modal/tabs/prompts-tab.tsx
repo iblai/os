@@ -3,8 +3,9 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 
-import { Edit, Info, Plus } from 'lucide-react';
+import { Edit, Info, Loader2, Play, Plus, Trash2 } from 'lucide-react';
 import {
+  useDeletePromptMutation,
   useEditMentorMutation,
   useGetMentorSettingsQuery,
   useGetPromptsSearchQuery,
@@ -34,21 +35,32 @@ import { toast } from 'sonner';
 import { CopyButton } from './prompts-tab/copy-button';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import WithFormPermissions from '@/hoc/withPermissions';
+import { useAppDispatch } from '@/lib/hooks';
+import { chatInputSliceActions } from '@/features/chat-input/api-slice';
 import { parsePrompt } from '@/lib/utils';
 import Markdown from '@/components/markdown';
 
+const SUGGESTED_PROMPTS_PAGE_SIZE = 6;
+
 export function PromptsTab() {
-  const { showAddPromptModal, closeAddPromptModal, openAddPromptModal } =
-    useNavigate();
+  const {
+    showAddPromptModal,
+    closeAddPromptModal,
+    openAddPromptModal,
+    closeEditMentorModal,
+  } = useNavigate();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
+  const dispatch = useAppDispatch();
   const activeMentorId = getMentorId() || mentorId;
 
   const [selectedPrompt, setSelectedPrompt] =
     React.useState<SelectedPrompt | null>(null);
+  const [offset, setOffset] = React.useState(0);
+  const [accumulatedPrompts, setAccumulatedPrompts] = React.useState<any[]>([]);
 
   const isOpen = !!selectedPrompt;
 
@@ -61,25 +73,53 @@ export function PromptsTab() {
       },
     );
 
-  const { data: prompts, isLoading: isLoadingPrompts } =
-    useGetPromptsSearchQuery(
-      {
-        org: tenantKey,
-        username: username ?? '',
-        category: '',
-        limit: 10,
-        offset: 0,
-        mentor: mentorId,
-        orderDirection: 'asc',
-      },
-      {
-        skip: !tenantKey || !username || !mentorId,
-      },
-    );
+  const promptsQuery = useGetPromptsSearchQuery(
+    {
+      org: tenantKey,
+      username: username ?? '',
+      category: '',
+      limit: SUGGESTED_PROMPTS_PAGE_SIZE,
+      offset,
+      mentor: mentorId,
+      orderDirection: 'asc',
+    },
+    {
+      skip: !tenantKey || !username || !mentorId,
+    },
+  );
+  const {
+    data: prompts,
+    isLoading: isLoadingPrompts,
+    isFetching: isFetchingPrompts,
+  } = promptsQuery;
+
+  const totalPromptCount = prompts?.count ?? 0;
+  const hasMorePrompts = accumulatedPrompts.length < totalPromptCount;
+
+  React.useEffect(() => {
+    if (promptsQuery.status === 'fulfilled') {
+      const newResults = prompts?.results ?? [];
+      if (offset === 0) {
+        setAccumulatedPrompts([...newResults]);
+      } else {
+        setAccumulatedPrompts((prev) => [...prev, ...newResults]);
+      }
+    }
+  }, [offset, promptsQuery.status, prompts?.results]);
+
+  const loadMorePrompts = () => {
+    if (hasMorePrompts && !isFetchingPrompts) {
+      setOffset((prev) => prev + SUGGESTED_PROMPTS_PAGE_SIZE);
+    }
+  };
 
   const [editMentor, { isLoading: isEditingMentor }] = useEditMentorMutation();
   const [updatePrompt, { isLoading: isUpdatingPrompt }] =
     useUpdatePromptMutation();
+  const [deletePromptMutation] = useDeletePromptMutation();
+  const [deletingPromptId, setDeletingPromptId] = React.useState<number | null>(
+    null,
+  );
 
   const isLoading = isLoadingMentor || isLoadingPrompts;
 
@@ -97,12 +137,12 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [tool]: value },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
         callback?.();
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update mentor');
+      toast.error('Failed to update agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -120,10 +160,10 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [selectedPrompt.name]: value.prompt },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update mentor');
+        toast.error('Failed to update agent');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     } else {
@@ -152,6 +192,32 @@ export function PromptsTab() {
     }
   }
 
+  function handleRunPrompt(promptText: string) {
+    executeWithTrialCheck(() => {
+      dispatch(chatInputSliceActions.setTextareaInput(promptText));
+      closeEditMentorModal();
+    });
+  }
+
+  async function handleDeletePrompt(promptId: number) {
+    setDeletingPromptId(promptId);
+    try {
+      await executeWithTrialCheck(async () => {
+        await deletePromptMutation({
+          id: promptId,
+          org: tenantKey,
+        }).unwrap();
+        toast.success('Prompt deleted successfully');
+      });
+    } catch (error) {
+      console.error(JSON.stringify(error));
+      toast.error('Failed to delete prompt');
+      console.error(JSON.stringify({ tenant: tenantKey, error }));
+    } finally {
+      setDeletingPromptId(null);
+    }
+  }
+
   const isEditing = isUpdatingPrompt || isEditingMentor;
 
   return (
@@ -160,7 +226,7 @@ export function PromptsTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Prompts</h3>
           <p className="text-xs text-gray-700">
-            Manage and configure prompts for your mentor.
+            Manage and configure prompts for your agent.
           </p>
         </div>
       </div>
@@ -192,7 +258,7 @@ export function PromptsTab() {
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Define the mentor&apos;s behavior</p>
+                            <p>Define the agent&apos;s behavior</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -529,7 +595,7 @@ export function PromptsTab() {
 
                 {/* list of prompts */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {prompts?.results.map((prompt, index) => (
+                  {accumulatedPrompts.map((prompt, index) => (
                     <div
                       className="overflow-hidden rounded-lg bg-gray-50"
                       key={prompt.id}
@@ -553,8 +619,8 @@ export function PromptsTab() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 flex-1 py-5"
-                          disabled={disabled}
+                          className="flex h-8 flex-1 items-center justify-center gap-2 py-5"
+                          disabled={disabled || deletingPromptId === prompt.id}
                           onClick={() => {
                             setSelectedPrompt({
                               label: 'Suggested Prompt',
@@ -562,7 +628,6 @@ export function PromptsTab() {
                               isSystem: false,
                               name: 'prompt',
                               prompt: prompt?.prompt ?? '',
-                              // @ts-expect-error - name property does not exist on string type (category might be string instead of object)
                               category: prompt?.category?.name ?? '',
                               promptVisibility:
                                 prompt?.prompt_visibility &&
@@ -572,14 +637,56 @@ export function PromptsTab() {
                             });
                           }}
                         >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
+                          <Edit className="h-4 w-4" />
+                          <span>Edit</span>
                         </Button>
-                        <CopyButton text={prompt?.prompt ?? ''} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex h-8 flex-1 items-center justify-center gap-2 py-5"
+                          disabled={disabled || deletingPromptId === prompt.id}
+                          onClick={() => handleRunPrompt(prompt?.prompt ?? '')}
+                          aria-label={`Run suggested prompt ${prompt?.prompt ?? ''}`}
+                        >
+                          <Play className="h-4 w-4" />
+                          <span>Run</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex h-8 flex-1 items-center justify-center gap-2 py-5"
+                          disabled={disabled || deletingPromptId === prompt.id}
+                          onClick={() => {
+                            if (prompt.id) {
+                              handleDeletePrompt(prompt.id);
+                            }
+                          }}
+                          aria-label={`Delete suggested prompt ${prompt?.prompt ?? ''}`}
+                        >
+                          {deletingPromptId === prompt.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          <span>Delete</span>
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
+                {hasMorePrompts && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex h-7 items-center border-gray-200 px-3 text-xs font-normal text-gray-600"
+                      onClick={loadMorePrompts}
+                      disabled={isFetchingPrompts}
+                    >
+                      {isFetchingPrompts ? 'Loading...' : 'See More'}
+                    </Button>
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   className="mt-5 h-24 w-full border-dashed"

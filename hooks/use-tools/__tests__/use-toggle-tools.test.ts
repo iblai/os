@@ -85,7 +85,7 @@ describe('useToggleTools', () => {
         await result.current.toggleTools('new-tool');
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+      expect(toast.success).toHaveBeenCalledWith('Agent updated successfully');
     });
 
     it('calls callback after successful tool addition', async () => {
@@ -257,7 +257,7 @@ describe('useToggleTools', () => {
         await result.current.toggleTools('new-tool');
       });
 
-      expect(toast.success).toHaveBeenCalledWith('Mentor updated successfully');
+      expect(toast.success).toHaveBeenCalledWith('Agent updated successfully');
     });
   });
 });

@@ -40,6 +40,14 @@ vi.mock('@/components/chat/ai-message-copy', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/ai-message-speak', () => ({
+  AIMessageSpeak: ({ content }: { content: string }) => (
+    <button data-testid="ai-message-speak">
+      Speak: {content.slice(0, 10)}
+    </button>
+  ),
+}));
+
 vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
@@ -95,7 +103,6 @@ const createMockStore = (showingSharedChat = false) =>
 
 describe('AIMessageBubble', () => {
   const mockOnRetry = vi.fn();
-  const mockOnSpeak = vi.fn();
   const mockOnReply = vi.fn();
   const mockOnOpenCanvas = vi.fn();
 
@@ -126,7 +133,6 @@ describe('AIMessageBubble', () => {
     tenantKey: 'test-tenant',
     mentorId: 'mentor-123',
     onRetry: mockOnRetry,
-    onSpeak: mockOnSpeak,
     onReply: mockOnReply,
     onOpenCanvas: mockOnOpenCanvas,
   };
@@ -217,6 +223,11 @@ describe('AIMessageBubble', () => {
     it('should render retry button when logged in and not shared chat', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByText('Retry for a new response')).toBeInTheDocument();
+    });
+
+    it('should render speak button', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-speak')).toBeInTheDocument();
     });
   });
 

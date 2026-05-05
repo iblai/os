@@ -4,6 +4,7 @@ import {
   type Prompt,
 } from '@iblai/iblai-js/web-utils';
 import { useSelector } from 'react-redux';
+import Markdown from '@/components/markdown';
 
 type Props = {
   onPromptSelect: (tab: AdvancedTab, prompt: string) => void;
@@ -29,9 +30,9 @@ export function DefaultTag({ onPromptSelect, prompts = [] }: Props) {
             >
               <div className="flex items-start gap-3">
                 {/* {renderIcon({ icon: prompt.icon })} */}
-                <span className="text-sm leading-relaxed text-gray-700">
+                <Markdown className="text-sm leading-relaxed text-gray-700">
                   {prompt.content}
-                </span>
+                </Markdown>
               </div>
             </div>
           ))}

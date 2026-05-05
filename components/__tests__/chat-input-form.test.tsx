@@ -195,6 +195,10 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     ...actual,
     selectShowingSharedChat: (state: any) =>
       state.chatSliceShared?.showingSharedChat ?? false,
+    useTenantMetadata: () => ({
+      metadata: {},
+      metadataLoaded: true,
+    }),
   };
 });
 
@@ -242,6 +246,7 @@ vi.mock('@/components/chat-input-form/screen-sharing-button', () => ({
 
 vi.mock('@/components/auto-resize-text-area', () => ({
   default: ({
+    id,
     value,
     onChange,
     onSubmit,
@@ -251,6 +256,7 @@ vi.mock('@/components/auto-resize-text-area', () => ({
     allowEmptySubmit,
   }: any) => (
     <textarea
+      id={id}
       data-testid="auto-resize-textarea"
       data-allow-anon={allowAnonymousAccess ? 'true' : 'false'}
       data-allow-empty={allowEmptySubmit ? 'true' : 'false'}
@@ -1276,6 +1282,24 @@ describe('ChatInputForm', () => {
         .getByText('Test disclaimer')
         .closest('div.mt-1');
       expect(disclaimerSection).toHaveStyle({ maxWidth: '800px' });
+    });
+  });
+
+  describe('accessibility (issue #1596)', () => {
+    it('should expose the form as a "Chat composer" landmark via aria-label', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const form = screen.getByRole('form', { name: 'Chat composer' });
+      expect(form).toBeInTheDocument();
+    });
+
+    it('should expose the textarea via the existing chat-input-textarea id (skip link target)', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      // The Skip-to-chat-input link in components/chat/index.tsx uses this id
+      // as its href fragment. Guard against accidental rename.
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      expect(textarea).toHaveAttribute('id', 'chat-input-textarea');
     });
   });
 });

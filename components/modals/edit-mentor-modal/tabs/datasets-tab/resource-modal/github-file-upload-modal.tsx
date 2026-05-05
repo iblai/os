@@ -78,7 +78,7 @@ export function GithubFileUploadModal() {
   const handleSubmit = async () => {
     try {
       if (!activeMentorId) {
-        toast.error('Mentor not found');
+        toast.error('Agent not found');
         return;
       }
       await addTrainingDocument({

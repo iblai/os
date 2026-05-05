@@ -165,7 +165,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('heading', { name: /All Mentors/i }),
+        screen.getByRole('heading', { name: /All Agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -173,9 +173,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByText(
-          'Explore mentors and specialized learning assistants.',
-        ),
+        screen.getByText('Explore agents and specialized learning assistants.'),
       ).toBeInTheDocument();
     });
 
@@ -190,7 +188,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('list', { name: /All mentors/i }),
+        screen.getByRole('list', { name: /All agents/i }),
       ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
@@ -199,7 +197,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Create new mentor/i }),
+        screen.getByRole('button', { name: /Create new agent/i }),
       ).toBeInTheDocument();
     });
   });
@@ -221,7 +219,7 @@ describe('DefaultMentorsSection', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Explore mathematics mentors and specialized learning assistants.',
+          'Explore mathematics agents and specialized learning assistants.',
         ),
       ).toBeInTheDocument();
     });
@@ -242,7 +240,7 @@ describe('DefaultMentorsSection', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Explore science mentors and specialized learning assistants.',
+          'Explore science agents and specialized learning assistants.',
         ),
       ).toBeInTheDocument();
     });
@@ -259,10 +257,10 @@ describe('DefaultMentorsSection', () => {
       });
 
       expect(
-        screen.getByRole('heading', { name: /OpenAI Mentors/i }),
+        screen.getByRole('heading', { name: /OpenAI Agents/i }),
       ).toBeInTheDocument();
       expect(
-        screen.getByText('Explore mentors powered by OpenAI.'),
+        screen.getByText('Explore agents powered by OpenAI.'),
       ).toBeInTheDocument();
     });
 
@@ -294,7 +292,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByRole('status')).toBeInTheDocument();
-      expect(screen.getByText('Loading mentors...')).toBeInTheDocument();
+      expect(screen.getByText('Loading agents...')).toBeInTheDocument();
     });
 
     it('calls setDefaultMentorsLoading when fetching state changes', () => {
@@ -391,7 +389,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       const createButton = screen.getByRole('button', {
-        name: /Create new mentor/i,
+        name: /Create new agent/i,
       });
       await user.click(createButton);
 
@@ -405,7 +403,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       const createButton = screen.getByRole('button', {
-        name: /Create new mentor/i,
+        name: /Create new agent/i,
       });
       await user.click(createButton);
 
@@ -427,7 +425,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Load more mentors/i }),
+        screen.getByRole('button', { name: /Load more agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -441,7 +439,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.queryByRole('button', { name: /Load more mentors/i }),
+        screen.queryByRole('button', { name: /Load more agents/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -456,7 +454,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more mentors/i,
+        name: /Load more agents/i,
       });
       await user.click(seeMoreButton);
 
@@ -492,7 +490,7 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more mentors/i,
+        name: /Load more agents/i,
       });
       expect(seeMoreButton).toBeDisabled();
     });
@@ -533,7 +531,7 @@ describe('DefaultMentorsSection', () => {
     it('has proper heading structure', () => {
       renderWithContext();
 
-      const heading = screen.getByRole('heading', { name: /All Mentors/i });
+      const heading = screen.getByRole('heading', { name: /All Agents/i });
       expect(heading).toHaveAttribute('aria-level', '2');
     });
 

@@ -798,7 +798,7 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
       expect(screen.getByText('Embed')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure embedding options for your mentor.'),
+        screen.getByText('Configure embedding options for your agent.'),
       ).toBeInTheDocument();
     });
 

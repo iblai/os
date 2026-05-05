@@ -230,7 +230,7 @@ describe('DisclaimersTab', () => {
       render(<DisclaimersTab />);
       expect(screen.getByText('Disclaimers')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure disclaimer settings for your mentor.'),
+        screen.getByText('Configure disclaimer settings for your agent.'),
       ).toBeInTheDocument();
     });
 
@@ -495,7 +495,7 @@ describe('DisclaimersTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
     });
   });

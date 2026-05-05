@@ -24,7 +24,7 @@ export function McpTab({ onSelect }: McpTabProps = {}) {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">MCP</h3>
           <p className="text-xs text-gray-700">
-            Manage Model Context Protocol connectors for your mentor.
+            Manage Model Context Protocol connectors for your agent.
           </p>
         </div>
       </div>

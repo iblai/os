@@ -18,8 +18,14 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
     timeout: 60_000,
   });
 
-  const heading = page.getByRole('heading', { name: 'Workflows' });
-  await expect(heading).toBeVisible({ timeout: 30_000 });
+  const heading = page.getByRole('heading', {
+    name: 'Workflows',
+    level: 1,
+    exact: true,
+  });
+  // The workflows page hydration can stall behind a slow backend response;
+  // a generous ceiling keeps the happy path fast and avoids spurious flakes.
+  await expect(heading).toBeVisible({ timeout: 60_000 });
   logger.info('Navigated to workflows list page');
 }
 
@@ -79,7 +85,11 @@ export async function navigateBackToWorkflowsList(page: Page): Promise<void> {
   await expect(backButton).toBeVisible({ timeout: 10_000 });
   await backButton.click();
 
-  const heading = page.getByRole('heading', { name: 'Workflows' });
+  const heading = page.getByRole('heading', {
+    name: 'Workflows',
+    level: 1,
+    exact: true,
+  });
   await expect(heading).toBeVisible({ timeout: 30_000 });
 
   logger.info('Navigated back to workflows list');
@@ -136,7 +146,11 @@ export async function deleteCurrentWorkflow(page: Page): Promise<void> {
   await expect(confirmButton).toBeVisible({ timeout: 5_000 });
   await confirmButton.click();
 
-  const heading = page.getByRole('heading', { name: 'Workflows' });
+  const heading = page.getByRole('heading', {
+    name: 'Workflows',
+    level: 1,
+    exact: true,
+  });
   await expect(heading).toBeVisible({ timeout: 30_000 });
 
   logger.info('Deleted workflow');
