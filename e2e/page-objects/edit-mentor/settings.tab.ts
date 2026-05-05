@@ -19,6 +19,8 @@ export class SettingsTab {
   readonly showVoiceCallToggle: Locator;
   readonly chatAccessCombobox: Locator;
   readonly memoryToggle: Locator;
+  readonly enhanceDocumentRetrievalToggle: Locator;
+  readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -69,6 +71,12 @@ export class SettingsTab {
     // The Memory toggle lives in the Settings tab form; aria-label is
     // "Memory enabled" or "Memory disabled" depending on current state.
     this.memoryToggle = dialog.getByRole('switch', { name: /^Memory /i });
+    this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
+      name: /enhance document retrieval/i,
+    });
+    this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
+      name: 'More info about enhance document retrieval',
+    });
   }
 
   async copyUniqueId(): Promise<void> {
@@ -237,6 +245,45 @@ export class SettingsTab {
     // Small buffer for RTK Query cache invalidation before the caller
     // closes or re-opens the dialog.
     await this.page.waitForTimeout(500);
+  }
+
+  async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.enhanceDocumentRetrievalToggle.getAttribute(
+        'aria-checked',
+      )) === 'true'
+    );
+  }
+
+  async enableEnhanceDocumentRetrieval(): Promise<void> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
+    if (!isChecked) {
+      await this.enhanceDocumentRetrievalToggle.click();
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1_000);
+  }
+
+  async disableEnhanceDocumentRetrieval(): Promise<void> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
+    if (isChecked) {
+      await this.enhanceDocumentRetrievalToggle.click();
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1_000);
   }
 
   async deleteMentor(): Promise<void> {
