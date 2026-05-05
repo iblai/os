@@ -636,6 +636,9 @@ export const handleTenantSwitch = async (
   saveRedirect = false,
   redirectUrl?: string,
 ) => {
+  console.log('############### HANDLE TENANT SWITCH ###############');
+  // Signal to the app that a tenant switch is in progress
+  setCookieForAuth('ibl_tenant_switching', 'true');
   // Clear current tenant cookie before switching
   const { clearCurrentTenantCookie } = await import(
     '@iblai/iblai-js/web-utils'
