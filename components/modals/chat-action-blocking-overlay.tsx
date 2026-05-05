@@ -47,7 +47,7 @@ export function ChatActionBlockingOverlay({
         {/* Description */}
         <p id="blocking-overlay-description" className="mb-6 text-gray-600">
           Your {actionLabel} session is now active. Please return to the
-          original window to continue your conversation with your mentor.
+          original window to continue your conversation with your agent.
         </p>
 
         {/* Action Buttons */}

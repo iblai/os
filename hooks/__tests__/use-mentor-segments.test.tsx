@@ -23,6 +23,7 @@ const mockIsAdmin = vi.fn();
 const mockUsername = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockIsUserTypeAllowed = vi.fn();
+const mockCheckRbacPermission = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({
@@ -80,7 +81,7 @@ vi.mock('@/hoc/utils', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
 // ----------------------------------------------------------------------------
@@ -103,7 +104,9 @@ const setupDefaults = () => {
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     mentor_id: 42,
     permissions: { field: {} },
+    enable_memory_component: true,
   });
+  mockCheckRbacPermission.mockReturnValue(true);
 };
 
 describe('useMentorSegments', () => {
@@ -150,6 +153,24 @@ describe('useMentorSegments', () => {
     expect(labels).toContain('Memory');
   });
 
+  it('hides the Memory segment when enable_memory_component is false on the mentor', () => {
+    mockMemsearchEnabled.mockReturnValue(true);
+    mockMentorSettings.mockReturnValue({
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+      enable_memory_component: false,
+    });
+
+    const { result } = renderHook(() => useMentorSegments());
+
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).not.toContain('Memory');
+    // Other segments are unaffected by the mentor-level memory gate.
+    expect(labels).toContain('Settings');
+  });
+
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {
     const { result } = renderHook(() => useMentorSegments());
 
@@ -172,6 +193,40 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     const labels = result.current.filteredSegments.map((s) => s.label);
     expect(labels).not.toContain('Access');
+  });
+
+  describe('Audit segment RBAC gating', () => {
+    it('declares the view_audit_logs rbac resource on the Audit segment', () => {
+      const auditSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Audit');
+      expect(auditSegment).toBeDefined();
+      expect(auditSegment!.rbacResource).toBeDefined();
+      expect(auditSegment!.rbacResource!(42)).toBe(
+        '/mentors/42/#view_audit_logs',
+      );
+    });
+
+    it('hides the Audit segment when checkRbacPermission denies view_audit_logs', () => {
+      mockCheckRbacPermission.mockImplementation(
+        (_permissions: unknown, resource: string) =>
+          resource !== '/mentors/42/#view_audit_logs',
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Audit');
+      // Other segments still pass
+      expect(labels).toContain('Settings');
+    });
+
+    it('shows the Audit segment when checkRbacPermission grants view_audit_logs', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Audit');
+    });
   });
 
   describe('preferModalMentorId option', () => {

@@ -318,7 +318,7 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Configure your mentor's basic settings and preferences.",
+          "Configure your agent's basic settings and preferences.",
         ),
       ).toBeInTheDocument();
     });
@@ -518,7 +518,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -537,7 +537,7 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -622,6 +622,85 @@ describe('SettingsTab', () => {
     });
   });
 
+  describe('Memory toggle', () => {
+    it('renders the Memory switch as disabled when enable_memory_component is unset', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory disabled')).not.toBeChecked();
+    });
+
+    it('renders the Memory switch as enabled when enable_memory_component is true', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory enabled')).toBeChecked();
+    });
+
+    it('does not call editMentor immediately when the Memory toggle is clicked', () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+
+      expect(mockEditMentor).not.toHaveBeenCalled();
+    });
+
+    it('submits enable_memory_component: true on Save when the user enabled it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_memory_component: false on Save when the user disabled it', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('omits enable_memory_component on Save when the user did not change it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const submittedFormData = mockEditMentor.mock.calls[0][0].formData;
+      expect(submittedFormData).not.toHaveProperty('enable_memory_component');
+    });
+  });
+
   describe('Form Field Changes', () => {
     it('updates mentor name when input changes', () => {
       render(<SettingsTab />);
@@ -647,7 +726,7 @@ describe('SettingsTab', () => {
       const nameInput = screen.getByDisplayValue('Test Mentor');
       fireEvent.change(nameInput, { target: { value: '' } });
 
-      expect(screen.getByText('Mentor name is required')).toBeInTheDocument();
+      expect(screen.getByText('Agent name is required')).toBeInTheDocument();
     });
 
     it('shows validation error when mentor description is cleared', () => {
@@ -657,7 +736,7 @@ describe('SettingsTab', () => {
       fireEvent.change(descInput, { target: { value: '' } });
 
       expect(
-        screen.getByText('Mentor description is required'),
+        screen.getByText('Agent description is required'),
       ).toBeInTheDocument();
     });
   });
@@ -671,7 +750,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -683,7 +762,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -961,7 +1040,7 @@ describe('SettingsTab', () => {
     it('displays profile image when present', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByRole('img', { name: 'Mentor' });
+      const img = screen.getByRole('img', { name: 'Agent' });
       expect(img).toBeInTheDocument();
     });
 
@@ -1023,7 +1102,7 @@ describe('SettingsTab', () => {
     it('clicking on the image stops propagation', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByRole('img', { name: 'Mentor' });
+      const img = screen.getByRole('img', { name: 'Agent' });
       // Click should not throw and should not open file dialog
       fireEvent.click(img);
     });

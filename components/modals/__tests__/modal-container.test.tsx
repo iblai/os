@@ -128,21 +128,6 @@ vi.mock('@/components/modals/apple-restriction-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/external-pricing-modal', () => ({
-  ExternalPricingModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
-        <button onClick={onClose}>Close Pricing</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@/components/modals/shortcuts-modal', () => ({
   ShortcutsModal: ({
     isOpen,
@@ -154,21 +139,6 @@ vi.mock('@/components/modals/shortcuts-modal', () => ({
     isOpen ? (
       <div data-testid="shortcuts-modal" role="dialog" aria-label="Shortcuts">
         <button onClick={onClose}>Close Shortcuts</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal" role="dialog" aria-label="My Mentors">
-        <button onClick={onClose}>Close My Mentors</button>
       </div>
     ) : null,
 }));
@@ -219,6 +189,18 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       <button onClick={onClose}>Close Invited</button>
     </div>
   ),
+  UpgradePackageModal: ({
+    open,
+    onClose,
+  }: {
+    open: boolean;
+    onClose: () => void;
+  }) =>
+    open ? (
+      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
+        <button onClick={onClose}>Close Pricing</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/custom-alert-dialog', () => ({
@@ -490,9 +472,9 @@ describe('ModalContainer', () => {
     });
   });
 
-  describe('MyMentorsModal', () => {
-    it('renders when my_mentors modal is in the stack', () => {
-      const modalStack: ModalInfo[] = [{ name: MODALS.MY_MENTORS.name }];
+  describe('MyMentorsModal removal', () => {
+    it('does not render anything for a stale my_mentors modal entry', () => {
+      const modalStack: ModalInfo[] = [{ name: 'my_mentors' }];
       mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
       const store = createTestStore({ modalStack });
 
@@ -502,7 +484,7 @@ describe('ModalContainer', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
     });
   });
 

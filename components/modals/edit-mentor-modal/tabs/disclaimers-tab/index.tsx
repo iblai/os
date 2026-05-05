@@ -113,12 +113,12 @@ export function DisclaimersTab() {
   //         userId: username ?? '',
   //         formData: { metadata: { safety_disclaimer: value } },
   //       }).unwrap();
-  //       toast.success('Mentor updated successfully');
+  //       toast.success('Agent updated successfully');
   //       callback?.();
   //     });
   //   } catch (error) {
   //     console.error(JSON.stringify(error));;
-  //     toast.error('Failed to update mentor');
+  //     toast.error('Failed to update agent');
   //     Sentry.captureException(String(error));
   //   }
   // }
@@ -131,10 +131,10 @@ export function DisclaimersTab() {
         // @ts-ignore disclaimer not in type of MentorSettingsPublic
         formData: { disclaimer: content },
       }).unwrap();
-      toast.success('Mentor updated successfully');
+      toast.success('Agent updated successfully');
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update mentor');
+      toast.error('Failed to update agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -220,7 +220,7 @@ export function DisclaimersTab() {
             Disclaimers
           </h3>
           <p className="text-xs text-gray-600">
-            Configure disclaimer settings for your mentor.
+            Configure disclaimer settings for your agent.
           </p>
         </div>
       </div>

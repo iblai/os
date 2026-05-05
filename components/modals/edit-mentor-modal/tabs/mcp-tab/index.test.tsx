@@ -97,7 +97,7 @@ describe('McpTab', () => {
       expect(screen.getByText('MCP')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Manage Model Context Protocol connectors for your mentor.',
+          'Manage Model Context Protocol connectors for your agent.',
         ),
       ).toBeInTheDocument();
     });
@@ -439,7 +439,7 @@ describe('McpTab', () => {
       render(<McpTab />);
 
       const description = screen.getByText(
-        'Manage Model Context Protocol connectors for your mentor.',
+        'Manage Model Context Protocol connectors for your agent.',
       );
       expect(description).toHaveClass('text-gray-700', 'text-xs');
     });
@@ -546,7 +546,7 @@ describe('McpTab', () => {
       expect(screen.getByText('MCP')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Manage Model Context Protocol connectors for your mentor.',
+          'Manage Model Context Protocol connectors for your agent.',
         ),
       ).toBeInTheDocument();
 

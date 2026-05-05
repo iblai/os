@@ -8,7 +8,6 @@ export class NavbarPage {
   readonly profileDropdown: Locator;
   readonly notificationBell: Locator;
   readonly newChatItem: Locator;
-  readonly myMentorsItem: Locator;
   readonly profileItem: Locator;
   readonly helpItem: Locator;
   readonly logoutItem: Locator;
@@ -17,7 +16,7 @@ export class NavbarPage {
   constructor(page: Page) {
     this.page = page;
     this.mentorDropdown = page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: 'Selected agent dropdown button',
     });
     this.mentorDropdownNewChatItem = page.getByRole('menuitem', {
       name: 'New Chat',
@@ -32,10 +31,6 @@ export class NavbarPage {
     this.newChatItem = page
       .getByRole('menuitem', { name: /new chat/i })
       .or(page.getByRole('button', { name: /new chat/i }));
-    // "My Mentors" is a standalone button in the navbar, not a dropdown menuitem
-    this.myMentorsItem = page.getByRole('button', {
-      name: /my mentors/i,
-    });
     this.profileItem = page.getByRole('menuitem', { name: /profile/i });
     this.helpItem = page.getByRole('menuitem', { name: /help/i });
     this.logoutItem = page.getByRole('menuitem', { name: /log out/i });
@@ -52,11 +47,6 @@ export class NavbarPage {
   async openProfileDropdown(): Promise<void> {
     await expect(this.profileDropdown).toBeVisible({ timeout: 10_000 });
     await this.profileDropdown.click();
-  }
-
-  async openMyMentors(): Promise<void> {
-    await expect(this.myMentorsItem).toBeVisible({ timeout: 10_000 });
-    await this.myMentorsItem.click();
   }
 
   async logout(): Promise<void> {

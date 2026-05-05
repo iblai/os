@@ -22,8 +22,8 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'mentorAI',
-  description: 'mentorAI',
+  title: 'ibl.ai | Agentic OS',
+  description: 'ibl.ai | Agentic OS',
 };
 
 export default function RootLayout({

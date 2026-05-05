@@ -65,7 +65,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
   const hasMultipleAdminTenants = adminTenants.length > 1;
 
-  const defaultName = `Copy of ${mentor?.mentor_name ?? 'Mentor'}`;
+  const defaultName = `Copy of ${mentor?.mentor_name ?? 'Agent'}`;
   const [newMentorName, setNewMentorName] = React.useState(defaultName);
   const [destinationTenantKey, setDestinationTenantKey] =
     React.useState<string>(tenantKey ?? '');
@@ -89,7 +89,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
       !destinationTenantKey ||
       !newMentorName.trim()
     ) {
-      toast.error('Unable to copy mentor. Missing context.');
+      toast.error('Unable to copy agent. Missing context.');
       return;
     }
     try {
@@ -122,7 +122,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         }).unwrap();
       }
 
-      toast.success('Mentor copied successfully. Switching to new mentor');
+      toast.success('Agent copied successfully. Switching to new agent');
       onClose();
 
       const isCrossTenantCopy = destinationTenantKey !== tenantKey;
@@ -151,7 +151,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         );
       }
     } catch {
-      toast.error('Failed to copy mentor');
+      toast.error('Failed to copy agent');
     }
   };
 
@@ -159,8 +159,8 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Copy Mentor</DialogTitle>
-          <DialogDescription>Create a copy of this mentor.</DialogDescription>
+          <DialogTitle>Copy Agent</DialogTitle>
+          <DialogDescription>Create a copy of this agent.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -172,7 +172,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
             <Input
               value={newMentorName}
               onChange={(e) => setNewMentorName(e.target.value)}
-              placeholder="Mentor Name"
+              placeholder="Agent Name"
               disabled={isCopying}
             />
           </div>

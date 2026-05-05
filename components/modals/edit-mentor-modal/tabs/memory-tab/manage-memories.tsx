@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { DateRange } from 'react-day-picker';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/command';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
-  useGetMentorMemoriesQuery,
+  useGetMentorMemoriesListQuery,
   useDeleteMentorMemoryMutation,
   useUpdateMentorMemoryMutation,
   useCreateMentorMemoryMutation,
@@ -45,6 +45,7 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import IblPagination from '@/components/ibl-pagination';
 
 const EditMemoryModal = dynamic(
   () =>
@@ -104,6 +105,9 @@ interface ManageMemoriesProps {
   mentorId: string;
 }
 
+const PAGE_SIZE = 20;
+const SNAPSHOT_PAGE_SIZE = 1000;
+
 export function ManageMemories({
   tenantKey,
   username,
@@ -111,36 +115,49 @@ export function ManageMemories({
 }: ManageMemoriesProps) {
   const [selectedLearner, setSelectedLearner] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState('all');
+  const [page, setPage] = useState(1);
 
-  // Build query params for server-side filtering
-  const queryParams = useMemo(() => {
-    const params: { start_date?: string; end_date?: string; email?: string } =
-      {};
-    if (selectedLearner) {
-      params.email = selectedLearner;
-    }
-    if (dateRange?.from) {
+  // Reset to page 1 whenever any filter changes — otherwise we could land on a
+  // page index that no longer exists in the new result set.
+  useEffect(() => {
+    setPage(1);
+  }, [selectedLearner, dateRange, selectedCategorySlug]);
+
+  const listParams = useMemo(() => {
+    const params: {
+      page: number;
+      page_size: number;
+      category?: string;
+      email?: string;
+      start_date?: string;
+      end_date?: string;
+    } = { page, page_size: PAGE_SIZE };
+    if (selectedLearner) params.email = selectedLearner;
+    if (selectedCategorySlug !== 'all') params.category = selectedCategorySlug;
+    if (dateRange?.from)
       params.start_date = format(dateRange.from, 'yyyy-MM-dd');
-    }
-    if (dateRange?.to) {
-      params.end_date = format(dateRange.to, 'yyyy-MM-dd');
-    }
-    return Object.keys(params).length > 0 ? params : undefined;
-  }, [selectedLearner, dateRange]);
+    if (dateRange?.to) params.end_date = format(dateRange.to, 'yyyy-MM-dd');
+    return params;
+  }, [page, selectedLearner, selectedCategorySlug, dateRange]);
 
-  // API hooks - use new memsearch endpoints
-  const { data: memoriesByCategoryResponse, isLoading: isLoadingMemories } =
-    useGetMentorMemoriesQuery(
+  const { data: listResponse, isLoading: isLoadingMemories } =
+    useGetMentorMemoriesListQuery(
       {
         org: tenantKey,
         userId: username ?? '',
         mentorId,
-        ...(queryParams ? { params: queryParams } : {}),
+        params: listParams,
       },
       {
         skip: !tenantKey || !username || !mentorId,
       },
     );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil((listResponse?.count ?? 0) / PAGE_SIZE),
+  );
 
   const { data: adminCategories } = useGetMemoryCategoriesAdminQuery(
     {
@@ -159,52 +176,47 @@ export function ManageMemories({
   const [createMentorMemory, { isLoading: isSaving }] =
     useCreateMentorMemoryMutation();
 
-  // Flatten the by-category response into a flat list of memories
+  // Flat list of memories on the current page, mapped into the local `Memory`
+  // shape used by the rest of this component.
   const memories: Memory[] = useMemo(() => {
-    if (!memoriesByCategoryResponse) return [];
+    if (!listResponse?.results) return [];
+    return listResponse.results.map((memory: MentorMemory) => ({
+      id: memory.id,
+      content: memory.content,
+      category: {
+        id: memory.category.id,
+        name: memory.category.name,
+        slug: memory.category.slug,
+      },
+      email: memory.email,
+      createdAt: memory.created_at,
+    }));
+  }, [listResponse]);
 
-    return memoriesByCategoryResponse.flatMap((item) =>
-      item.memories.map((memory: MentorMemory) => ({
-        id: memory.id,
-        content: memory.content,
-        category: {
-          id: memory.category.id,
-          name: memory.category.name,
-          slug: memory.category.slug,
-        },
-        email: memory.email,
-        createdAt: memory.created_at,
-      })),
-    );
-  }, [memoriesByCategoryResponse]);
-
-  // Fetch unfiltered memories to derive learner list for the dropdown
-  const { data: unfilteredResponse } = useGetMentorMemoriesQuery(
+  // Unfiltered snapshot used to derive the learner dropdown and to source the
+  // bulk-delete operation, which needs the full set of memories — not just the
+  // current page.
+  const { data: snapshotResponse } = useGetMentorMemoriesListQuery(
     {
       org: tenantKey,
       userId: username ?? '',
       mentorId,
+      params: { page: 1, page_size: SNAPSHOT_PAGE_SIZE },
     },
     {
       skip: !tenantKey || !username || !mentorId,
     },
   );
 
-  // Derive unique learners from all (unfiltered) memories for the filter dropdown
   const learners = useMemo(() => {
-    if (!unfilteredResponse) return [];
+    if (!snapshotResponse?.results) return [];
     const emailSet = new Set<string>();
-    unfilteredResponse.forEach((item) =>
-      item.memories.forEach((m: MentorMemory) => {
-        if (m.email) {
-          emailSet.add(m.email);
-        }
-      }),
-    );
+    snapshotResponse.results.forEach((m: MentorMemory) => {
+      if (m.email) emailSet.add(m.email);
+    });
     return Array.from(emailSet).map((email) => ({ email }));
-  }, [unfilteredResponse]);
+  }, [snapshotResponse]);
 
-  // Build category list from admin categories or from the response
   const categories = useMemo(() => {
     if (adminCategories && adminCategories.length > 0) {
       return [
@@ -216,21 +228,8 @@ export function ManageMemories({
         })),
       ];
     }
-
-    // Fallback: derive from response
-    if (!memoriesByCategoryResponse)
-      return [{ id: 0, name: 'All', slug: 'all' }];
-
-    const responseCats = memoriesByCategoryResponse.map((item) => ({
-      id: item.category.id,
-      name: item.category.name,
-      slug: item.category.slug,
-    }));
-
-    return [{ id: 0, name: 'All', slug: 'all' }, ...responseCats];
-  }, [adminCategories, memoriesByCategoryResponse]);
-
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState('all');
+    return [{ id: 0, name: 'All', slug: 'all' }];
+  }, [adminCategories]);
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
@@ -248,12 +247,16 @@ export function ManageMemories({
   const selectedCategoryName =
     categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
 
-  const filteredMemories =
-    selectedCategorySlug === 'all'
-      ? memories
-      : memories.filter(
-          (memory) => memory.category.slug === selectedCategorySlug,
-        );
+  const VISIBLE_CATEGORY_LIMIT = 6;
+  const visibleCategories = categories.slice(0, VISIBLE_CATEGORY_LIMIT);
+  const overflowCategories = categories.slice(VISIBLE_CATEGORY_LIMIT);
+  const overflowSelected = overflowCategories.find(
+    (c) => c.slug === selectedCategorySlug,
+  );
+
+  // Category is filtered server-side via the `category` query param now, so
+  // `memories` already contains only the relevant entries for the page.
+  const filteredMemories = memories;
 
   const handleDeleteMemory = async (id: number) => {
     if (!tenantKey || !username) return;
@@ -278,7 +281,10 @@ export function ManageMemories({
 
     setIsBulkDeleting(true);
     try {
-      const memoriesToDelete = memories.filter(
+      // Source bulk-delete from the unfiltered snapshot — `memories` only holds
+      // the current page, while bulk delete must remove every entry in the
+      // selected category.
+      const memoriesToDelete = (snapshotResponse?.results ?? []).filter(
         (memory) => memory.category.slug === selectedCategorySlug,
       );
       await Promise.all(
@@ -314,6 +320,8 @@ export function ManageMemories({
 
     try {
       const selectedCat = categories.find((c) => c.name === editCategory);
+      const categoryChanged =
+        !!selectedCat && selectedCat.slug !== editingMemory.category.slug;
       await updateMentorMemory({
         org: tenantKey,
         userId: username,
@@ -321,12 +329,16 @@ export function ManageMemories({
         memoryId: editingMemory.id,
         data: {
           content: editContent,
-          ...(selectedCat && selectedCat.slug !== editingMemory.category.slug
-            ? { category_slug: selectedCat.slug }
-            : {}),
+          ...(categoryChanged ? { category_slug: selectedCat.slug } : {}),
         },
       }).unwrap();
       toast.success('Memory updated successfully');
+
+      // Follow the entry to its new category tab so the user doesn't lose
+      // sight of it. Skip when viewing "All" — the entry is still visible.
+      if (categoryChanged && selectedCategorySlug !== 'all') {
+        setSelectedCategorySlug(selectedCat.slug);
+      }
 
       setEditingMemory(null);
       setEditContent('');
@@ -486,8 +498,8 @@ export function ManageMemories({
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <div className="scrollbar-none hidden flex-1 space-x-8 overflow-x-auto sm:flex">
-              {categories.map((category) => (
+            <div className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex">
+              {visibleCategories.map((category) => (
                 <button
                   key={category.slug}
                   onClick={() => setSelectedCategorySlug(category.slug)}
@@ -506,6 +518,47 @@ export function ManageMemories({
                   )}
                 </button>
               ))}
+              {overflowCategories.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        'relative flex items-center gap-1 px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                        overflowSelected
+                          ? 'text-[#38A1E5]'
+                          : 'text-gray-600 hover:text-gray-900',
+                      )}
+                      aria-label="More categories"
+                    >
+                      {overflowSelected ? overflowSelected.name : 'More'}
+                      <ChevronDown className="h-3.5 w-3.5" />
+                      {overflowSelected && (
+                        <div
+                          className="absolute bottom-0 left-0 h-0.5 bg-[#38A1E5] transition-all duration-200"
+                          style={{
+                            width: `${overflowSelected.name.length * 0.55}em`,
+                          }}
+                        />
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {overflowCategories.map((category) => (
+                      <DropdownMenuItem
+                        key={category.slug}
+                        onClick={() => setSelectedCategorySlug(category.slug)}
+                        className={
+                          selectedCategorySlug === category.slug
+                            ? 'bg-gray-100'
+                            : ''
+                        }
+                      >
+                        {category.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             <div className="w-full py-2 sm:hidden">
@@ -645,6 +698,17 @@ export function ManageMemories({
         {filteredMemories.length === 0 && !isLoadingMemories && (
           <div className="py-8 text-center text-gray-600">
             <p>No saved memories yet.</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center pt-2">
+            <IblPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              disabled={isLoadingMemories}
+            />
           </div>
         )}
       </div>

@@ -746,6 +746,11 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
     case 'nvidia':
       return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
+    case 'bedrock':
+    case 'amazon-bedrock':
+    case 'amazon_bedrock':
+    case 'IBLChatBedrock':
+      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
     default:
       return { logo: '/llm-generic-provider.png', name: llmProvider };
   }
@@ -1658,7 +1663,7 @@ export function getTenantKeyFromUrl() {
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    (currentTenant?.show_paywall || currentTenant?.key === 'main')
   );
 }
 

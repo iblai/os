@@ -218,7 +218,7 @@ export function PipChat({
               {currentTranscription.participantIdentity ===
               localParticipantIdentity
                 ? 'You are speaking'
-                : `${mentorName || currentTranscription.participantName || currentTranscription.participantIdentity || 'Mentor'} is speaking`}
+                : `${mentorName || currentTranscription.participantName || currentTranscription.participantIdentity || 'Agent'} is speaking`}
             </span>
           </div>
           <div className="pip-transcription-text">
@@ -233,7 +233,7 @@ export function PipChat({
           <div className="pip-chat-empty">
             <p>No messages yet</p>
             <p className="pip-chat-empty-subtitle">
-              Start chatting with the mentor
+              Start chatting with the agent
             </p>
           </div>
         ) : (
@@ -251,7 +251,7 @@ export function PipChat({
                       : mentorName ||
                         msg.from?.name ||
                         msg.from?.identity ||
-                        'Mentor'}
+                        'Agent'}
                   </span>
                   <span className="pip-chat-message-time">
                     {formatTime(msg.timestamp)}

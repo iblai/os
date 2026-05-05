@@ -175,7 +175,7 @@ describe('WorkflowCanvas', () => {
     it('should render default nodes (Start and Mentor)', () => {
       render(<WorkflowCanvas {...defaultProps} />);
       expect(screen.getByText('Start')).toBeInTheDocument();
-      expect(screen.getByText('My mentor')).toBeInTheDocument();
+      expect(screen.getByText('My agent')).toBeInTheDocument();
     });
 
     it('should render toolbar in non-preview mode', () => {
@@ -216,7 +216,7 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
       expect(screen.getByText('Start')).toBeInTheDocument();
-      expect(screen.getByText('My mentor')).toBeInTheDocument();
+      expect(screen.getByText('My agent')).toBeInTheDocument();
     });
 
     it('should use initial edges if provided', () => {
@@ -424,7 +424,7 @@ describe('WorkflowCanvas', () => {
 
       // Initially only Start and My mentor
       expect(screen.getByText('Start')).toBeInTheDocument();
-      expect(screen.getByText('My mentor')).toBeInTheDocument();
+      expect(screen.getByText('My agent')).toBeInTheDocument();
 
       // Add new end node
       rerender(
@@ -495,7 +495,7 @@ describe('WorkflowCanvas', () => {
       const user = userEvent.setup();
       render(<WorkflowCanvas {...defaultProps} />);
 
-      const mentorNode = screen.getByText('My mentor').closest('.absolute');
+      const mentorNode = screen.getByText('My agent').closest('.absolute');
       if (mentorNode) {
         await user.click(mentorNode);
         // Config panel should not be shown for mentor nodes
@@ -661,8 +661,8 @@ describe('WorkflowCanvas', () => {
     it('should render mentor node with subtitle', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
-      expect(screen.getByText('My mentor')).toBeInTheDocument();
-      expect(screen.getByText('Mentor')).toBeInTheDocument();
+      expect(screen.getByText('My agent')).toBeInTheDocument();
+      expect(screen.getByText('Agent')).toBeInTheDocument();
     });
 
     it('should show change mentor button on mentor node', () => {
@@ -670,7 +670,7 @@ describe('WorkflowCanvas', () => {
 
       // Change mentor button should be visible
       const changeButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       expect(changeButton).toBeInTheDocument();
     });
@@ -680,7 +680,7 @@ describe('WorkflowCanvas', () => {
 
       // Change mentor button should not be visible
       expect(
-        screen.queryByRole('button', { name: 'Change mentor' }),
+        screen.queryByRole('button', { name: 'Change agent' }),
       ).not.toBeInTheDocument();
     });
   });
@@ -1971,7 +1971,7 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -1985,7 +1985,7 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} />);
 
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -2003,7 +2003,7 @@ describe('WorkflowCanvas', () => {
       render(<WorkflowCanvas {...defaultProps} org="test-org" />);
 
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -2772,7 +2772,7 @@ describe('WorkflowCanvas', () => {
 
       // Open mentor modal
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -2803,7 +2803,7 @@ describe('WorkflowCanvas', () => {
 
       // Open mentor modal
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -2837,7 +2837,7 @@ describe('WorkflowCanvas', () => {
 
       // Open mentor modal
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -2986,7 +2986,7 @@ describe('WorkflowCanvas', () => {
 
       // Open mentor modal
       const changeMentorButton = screen.getByRole('button', {
-        name: 'Change mentor',
+        name: 'Change agent',
       });
       await user.click(changeMentorButton);
 
@@ -3155,7 +3155,7 @@ describe('WorkflowCanvas', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getAllByText(/Mentor/i).length).toBeGreaterThan(1);
+        expect(screen.getAllByText(/Mentor|Agent/i).length).toBeGreaterThan(1);
       });
     });
   });
