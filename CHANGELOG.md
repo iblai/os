@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.61.0](https://github.com/iblai/mentorai/compare/v0.60.0...v0.61.0) (2026-05-05)
+
+### Features
+
+* add label to chat input textarea ([b9ac136](https://github.com/iblai/mentorai/commit/b9ac136be241d81cd924547fd38e7abc6c47ca35))
+
+### Bug Fixes
+
+* mark test for flag OFF as FIXME in persistent chat input label journey ([0eeb1dd](https://github.com/iblai/mentorai/commit/0eeb1dd602e1062c945f21e5348427f1d8357ec5))
+
+### Chores
+
+* add playwright tests for chat input label ([ff189d7](https://github.com/iblai/mentorai/commit/ff189d7fbc4e02090ee63deabbe8d7f6615d768a))
+* update iblai-js to 1.6.2 ([e59739c](https://github.com/iblai/mentorai/commit/e59739c1d2415f0ecc50a0c4cc47a626b16609c5))
+* update unit tests ([6cf1190](https://github.com/iblai/mentorai/commit/6cf11909434705e43ea4db1efcba639f8dc82782))
+
 ## [0.60.0](https://github.com/iblai/mentorai/compare/v0.59.6...v0.60.0) (2026-05-04)
 
 ### Features
