@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.61.2](https://github.com/iblai/mentorai/compare/v0.61.1...v0.61.2) (2026-05-05)
+
+### Bug Fixes
+
+- render suggested prompts as Markdown in welcome and advanced chat ([e2393d5](https://github.com/iblai/mentorai/commit/e2393d53bf152e916533f8fc056c87fadeb0d06f))
+
+### Tests
+
+- **mentor:** cover Markdown rendering in suggested prompts ([#1179](https://github.com/iblai/mentorai/issues/1179)) ([a3acfbf](https://github.com/iblai/mentorai/commit/a3acfbf717a2253f5ab1e8e5f6d4fb3c05b69aec))
+
 ## [0.61.1](https://github.com/iblai/mentorai/compare/v0.61.0...v0.61.1) (2026-05-05)
 
 ### Bug Fixes
