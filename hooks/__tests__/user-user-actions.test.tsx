@@ -10,6 +10,12 @@ let mockSubscriptionState = {
   callToAction: null as string | null,
 };
 
+let mockIsStripeActivated = true;
+
+vi.mock('@/lib/utils', () => ({
+  isStripeActivated: vi.fn(() => mockIsStripeActivated),
+}));
+
 vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => mockDispatch,
   useAppSelector: vi.fn((selector) => {
@@ -86,6 +92,7 @@ describe('useShowFreeTrialDialog', () => {
     vi.clearAllMocks();
     mockIsAppleDevice = false;
     mockSubscriptionState = { creditExhausted: false, callToAction: null };
+    mockIsStripeActivated = true;
   });
 
   describe('initial state', () => {
@@ -218,6 +225,49 @@ describe('useShowFreeTrialDialog', () => {
           type: 'subscription/setOpenAppleRestrictionModal',
         }),
       );
+    });
+
+    it('should run action and skip subscription path when stripe is not activated even if credit is exhausted', () => {
+      mockIsStripeActivated = false;
+      mockIsAppleDevice = true;
+      mockSubscriptionState = {
+        creditExhausted: true,
+        callToAction: 'PRICING_MODAL',
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+      const mockAction = vi.fn().mockReturnValue('ran');
+
+      let actionResult: unknown;
+      act(() => {
+        actionResult = result.current.executeWithTrialCheck(mockAction, false);
+      });
+
+      expect(mockAction).toHaveBeenCalled();
+      expect(actionResult).toBe('ran');
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'subscription/setOpenAppleRestrictionModal',
+        }),
+      );
+    });
+
+    it('should block action and trigger subscription path on non-Apple when stripe is activated and credit exhausted', () => {
+      mockIsStripeActivated = true;
+      mockIsAppleDevice = false;
+      mockSubscriptionState = {
+        creditExhausted: true,
+        callToAction: 'PRICING_MODAL',
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+      const mockAction = vi.fn();
+
+      let actionResult: unknown;
+      act(() => {
+        actionResult = result.current.executeWithTrialCheck(mockAction, false);
+      });
+
+      expect(mockAction).not.toHaveBeenCalled();
+      expect(actionResult).toBeNull();
     });
   });
 });
