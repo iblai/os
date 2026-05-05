@@ -296,6 +296,48 @@ describe('VoiceChatButton', () => {
       expect(screen.getByText('Voice input')).toHaveClass('sr-only');
     });
 
+    it('should expose accessible name "Voice input" via aria-label when idle', () => {
+      renderWithRedux(
+        <VoiceChatButton
+          handleMicrophoneBtnClick={mockHandleMicrophoneBtnClick}
+          processing={false}
+          recording={false}
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Voice input' }),
+      ).toBeInTheDocument();
+    });
+
+    it('should expose accessible name "Stop voice input" while recording', () => {
+      renderWithRedux(
+        <VoiceChatButton
+          handleMicrophoneBtnClick={mockHandleMicrophoneBtnClick}
+          processing={false}
+          recording={true}
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Stop voice input' }),
+      ).toBeInTheDocument();
+    });
+
+    it('should expose accessible name "Processing voice input" while processing', () => {
+      renderWithRedux(
+        <VoiceChatButton
+          handleMicrophoneBtnClick={mockHandleMicrophoneBtnClick}
+          processing={true}
+          recording={false}
+        />,
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Processing voice input' }),
+      ).toBeInTheDocument();
+    });
+
     it('should have button type="button" to prevent form submission', () => {
       renderWithRedux(
         <VoiceChatButton

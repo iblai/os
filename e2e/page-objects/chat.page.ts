@@ -35,7 +35,7 @@ export class ChatPage {
       name: /create.*mentor/i,
     });
     this.loginBanner = page.getByRole('button', { name: /log in/i });
-    this.uploadButton = page.getByRole('button', { name: 'Attach File' });
+    this.uploadButton = page.getByRole('button', { name: 'Attach file' });
     this.voiceCallButton = page.getByRole('button', { name: 'Voice call' });
     this.voiceInputButton = page.getByRole('button', { name: 'Voice input' });
     this.dragOverlay = page.locator(
