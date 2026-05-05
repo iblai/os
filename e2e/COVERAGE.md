@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-04-29 | 339 checkpoints (330 active, 9 deprecated in #1431) | 42 journeys (41 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-05 | 360 checkpoints (351 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -668,6 +668,25 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
 - [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+
+---
+
+## Journey 43: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/43-persistent-chat-input-label.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`
+
+Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
+
+- [x] PCIL-43.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
+- [x] PCIL-43.2: Textarea placeholder is `"Ask anything"` when flag is `false`
+- [x] PCIL-43.3: `aria-labelledby` wires textarea to label element when flag is `false`
+- [x] PCIL-43.4: User can send a message when flag is `false`
+- [x] PCIL-43.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
+- [x] PCIL-43.6: Textarea placeholder is empty string when flag is `true`
+- [x] PCIL-43.7: `aria-labelledby` and label text are intact when flag is `true`
+- [x] PCIL-43.8: User can send a message when flag is `true`
+- [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
+- [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
 
 ---
 
