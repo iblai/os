@@ -13,6 +13,7 @@ import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import Markdown from '@/components/markdown';
 
 interface Props {
   onPromptSelect: (prompt: string) => void;
@@ -129,7 +130,7 @@ export function WelcomeChat({
               )}
               onClick={() => onPromptSelect(prompt)}
             >
-              <p className="text-sm text-gray-700">{prompt}</p>
+              <Markdown className="text-sm text-gray-700">{prompt}</Markdown>
             </button>
           ))}
         {isSuggestedPrompts &&
@@ -143,7 +144,9 @@ export function WelcomeChat({
               )}
               onClick={() => onPromptSelect(item.prompt)}
             >
-              <p className="text-sm text-gray-700">{item.prompt}</p>
+              <Markdown className="text-sm text-gray-700">
+                {item.prompt}
+              </Markdown>
             </button>
           ))}
       </div>

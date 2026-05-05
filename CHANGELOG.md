@@ -4,16 +4,16 @@
 
 ### Bug Fixes
 
-* **a11y:** add aria-labels to icon-only composer buttons ([93d0f90](https://github.com/iblai/mentorai/commit/93d0f90a5c14ef5b02c375f2090385e2f3abbabe)), closes [#778](https://github.com/iblai/mentorai/issues/778)
-* **a11y:** reflow chat composer at narrow viewport and add skip link ([df46180](https://github.com/iblai/mentorai/commit/df46180dc493d9351e0ac0d7c704f75dd51a13c6))
+- **a11y:** add aria-labels to icon-only composer buttons ([93d0f90](https://github.com/iblai/mentorai/commit/93d0f90a5c14ef5b02c375f2090385e2f3abbabe)), closes [#778](https://github.com/iblai/mentorai/issues/778)
+- **a11y:** reflow chat composer at narrow viewport and add skip link ([df46180](https://github.com/iblai/mentorai/commit/df46180dc493d9351e0ac0d7c704f75dd51a13c6))
 
 ### Chores
 
-* apply prettier formatting drift in unrelated files ([d273263](https://github.com/iblai/mentorai/commit/d27326369dab2221a134b47ef60a6a396a36c57c))
+- apply prettier formatting drift in unrelated files ([d273263](https://github.com/iblai/mentorai/commit/d27326369dab2221a134b47ef60a6a396a36c57c))
 
 ### Tests
 
-* **e2e:** cover composer a11y, reflow, and skip-link journey ([15fe71a](https://github.com/iblai/mentorai/commit/15fe71a6cb251d029cbc8d7bb84d8f58f7bfa3b5)), closes [#chat-input-textarea](https://github.com/iblai/mentorai/issues/chat-input-textarea)
+- **e2e:** cover composer a11y, reflow, and skip-link journey ([15fe71a](https://github.com/iblai/mentorai/commit/15fe71a6cb251d029cbc8d7bb84d8f58f7bfa3b5)), closes [#chat-input-textarea](https://github.com/iblai/mentorai/issues/chat-input-textarea)
 
 ## [0.61.0](https://github.com/iblai/mentorai/compare/v0.60.0...v0.61.0) (2026-05-05)
 

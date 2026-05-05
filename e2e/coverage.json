@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-05",
   "summary": {
-    "totalCheckpoints": 364,
-    "coveredCheckpoints": 355,
+    "totalCheckpoints": 365,
+    "coveredCheckpoints": 356,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 43,
@@ -48,7 +48,9 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/page.tsx",
         "components/chat/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/welcome-chat.tsx",
+        "components/advanced-chat/ui-tags/default-tag.tsx"
       ],
       "checkpoints": [
         {
@@ -79,6 +81,11 @@
         {
           "id": "nav-06",
           "description": "Help button opens the docs link in a new tab",
+          "status": "covered"
+        },
+        {
+          "id": "nav-07",
+          "description": "Suggested prompts authored with Markdown (links, bold, etc.) render via the Markdown component, not as literal text (issue #1179, fixme until a seeded mentor fixture is available)",
           "status": "covered"
         }
       ]
