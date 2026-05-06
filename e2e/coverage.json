@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-05",
   "summary": {
-    "totalCheckpoints": 368,
-    "coveredCheckpoints": 359,
+    "totalCheckpoints": 370,
+    "coveredCheckpoints": 361,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 43,
@@ -567,7 +567,9 @@
       "spec": "12-chat-sharing.spec.ts",
       "sourceFiles": [
         "app/share/chat/[sessionId]/page.tsx",
-        "app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx"
+        "app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat/ai-message-share.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -598,6 +600,16 @@
         {
           "id": "sh-06",
           "description": "Chat textarea is not shown for unauthenticated users on shared chat",
+          "status": "covered"
+        },
+        {
+          "id": "sh-07",
+          "description": "Share button is rendered exactly once per session in the navbar, not per AI message (issue #645)",
+          "status": "covered"
+        },
+        {
+          "id": "sh-08",
+          "description": "Share button is hidden on non-chat pages like /explore (issue #645)",
           "status": "covered"
         }
       ]

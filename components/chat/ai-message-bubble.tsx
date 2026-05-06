@@ -11,7 +11,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AIMessageCopy } from './ai-message-copy';
-import { AIMessageShare } from './ai-message-share';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
   selectShowingSharedChat,
@@ -149,10 +148,6 @@ export const AIMessageBubble = forwardRef<
                   mentorId={mentorId}
                   tenantKey={tenantKey}
                 />
-              )}
-
-              {isLoggedIn() && !showingSharedChat && (
-                <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
               )}
 
               {isLoggedIn() &&

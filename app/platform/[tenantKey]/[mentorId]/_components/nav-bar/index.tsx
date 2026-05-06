@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
+import { AIMessageShare } from '@/components/chat/ai-message-share';
 import {
   CreditBalance,
   NotificationDropdown,
@@ -67,7 +68,11 @@ import { UserProfile } from './user-profile';
 import { useSidebar } from '@/components/ui/sidebar';
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
-// import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
+import {
+  selectActiveChatMessages,
+  selectSessionId,
+  selectShowingSharedChat,
+} from '@iblai/iblai-js/web-utils';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { EmbedNavBar } from './embed-nav-bar';
@@ -133,6 +138,9 @@ export function NavBar() {
   const [openModal, setOpenModal] = React.useState(false);
   const dispatch = useAppDispatch();
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
+  const sessionId = useAppSelector(selectSessionId);
+  const showingSharedChat = useAppSelector(selectShowingSharedChat);
+  const activeChatMessages = useAppSelector(selectActiveChatMessages);
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
@@ -369,6 +377,22 @@ export function NavBar() {
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore') &&
     !isWorkflowsPage;
+
+  // Session-level share button (issue #645).
+  // Match the chat's own "is there a real conversation?" rule — if the first
+  // message is the AI welcome, skip it so an empty session (welcome only,
+  // or just streaming) can't be shared. Sharing a shared chat or an
+  // anonymous session doesn't make sense either.
+  const conversationMessages =
+    activeChatMessages[0]?.role === 'assistant'
+      ? activeChatMessages.slice(1)
+      : activeChatMessages;
+  const canShareSession =
+    isOnChatPage &&
+    isLoggedIn() &&
+    !showingSharedChat &&
+    !!sessionId &&
+    conversationMessages.length > 0;
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -608,6 +632,11 @@ export function NavBar() {
                 username={getUserName()}
               />
             )}
+          {canShareSession && (
+            <TooltipProvider>
+              <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
+            </TooltipProvider>
+          )}
           {!embedMode && visibleToLoggedInUsersOnly && (
             <NotificationDropdown
               org={tenantKey}
