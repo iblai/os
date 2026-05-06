@@ -13,6 +13,8 @@ import {
   useSubscriptionHandlerV2,
 } from '@iblai/iblai-js/web-utils';
 import { useOS } from '@/hooks/use-os';
+import { isStripeActivated } from '@/lib/utils';
+import { Tenant } from '@iblai/iblai-js/web-utils';
 
 // Custom hook to handle trial user actions
 export const useShowFreeTrialDialog = (
@@ -49,6 +51,8 @@ export const useShowFreeTrialDialog = (
     (options.enableFallbackModal ? IblFreeTrialDialog : null);
 
   const isNewlyUserOnPreFreeOrAdvertisingMode = (isAdminAction: boolean) =>
+    currentTenant &&
+    isStripeActivated(currentTenant as Tenant) &&
     (currentTenant?.key === config.mainTenantKey() ||
       currentTenant?.is_advertising) &&
     isAdminAction &&
