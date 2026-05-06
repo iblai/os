@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.62.1](https://github.com/iblai/mentorai/compare/v0.62.0...v0.62.1) (2026-05-06)
+
+### Bug Fixes
+
+* ecommerce main tenant update ([87c6ff0](https://github.com/iblai/mentorai/commit/87c6ff012a5631133155c476732848332ea98f9c))
+* ecommerce main tenant update ([f401333](https://github.com/iblai/mentorai/commit/f401333e48c31ff5f5c197e5c5d6ca1785f02c36))
+* ecommerce main tenant update > test coverage ([a36869c](https://github.com/iblai/mentorai/commit/a36869c8590d9b5ea6c33e48f039328cdd8e7b4a))
+* ecommerce main tenant update > test coverage ([7bf86bf](https://github.com/iblai/mentorai/commit/7bf86bf3f10165f882017be3c7294e73dbe6dda3))
+* ecommerce main tenant update > test coverage ([df6fcaa](https://github.com/iblai/mentorai/commit/df6fcaa8291ca9c82571e879e1a2c1e7231a9553))
+
 ## [0.62.0](https://github.com/iblai/mentorai/compare/v0.61.2...v0.62.0) (2026-05-05)
 
 ### Features
