@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.63.0](https://github.com/iblai/mentorai/compare/v0.62.1...v0.63.0) (2026-05-07)
+
+### Features
+
+* add BroadcastChannel for cross-tab tenant switch sync & update CI runner ([1471104](https://github.com/iblai/mentorai/commit/1471104ed78e71476ede15593c610b3241c78f3f))
+* set ibl_tenant_switching cookie during tenant switch ([0bc909e](https://github.com/iblai/mentorai/commit/0bc909ec9be65f9a3f4635dbefa0c35c125345b8))
+
 ## [0.62.1](https://github.com/iblai/mentorai/compare/v0.62.0...v0.62.1) (2026-05-06)
 
 ### Bug Fixes
