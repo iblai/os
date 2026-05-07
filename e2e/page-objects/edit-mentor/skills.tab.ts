@@ -58,7 +58,8 @@ export class SkillsTab {
       .getByRole('button', { name: /new skill/i })
       .first();
 
-    // New skill dialog — rendered outside the Edit Mentor dialog via a Radix portal
+    // New skill dialog — rendered outside the Edit Mentor dialog via a Radix portal.
+    // OverlayModal portals to document.body so scope to page, not dialog.
     this.newSkillDialog = page
       .getByRole('dialog')
       .filter({ hasText: /new skill/i });
@@ -70,9 +71,12 @@ export class SkillsTab {
     this.skillVersionInput = this.newSkillDialog.locator(
       '[name="skill-version"]',
     );
-    this.skillInstructionInput = this.newSkillDialog.locator(
-      '[name="skill-instruction"]',
-    );
+    // The instruction field is a RichTextEditor (TipTap EditorContent).
+    // It has no `name` attribute — target the div[role="textbox"] contenteditable
+    // scoped within the instruction label area.
+    this.skillInstructionInput = this.newSkillDialog
+      .locator('#skill-instruction')
+      .or(this.newSkillDialog.getByRole('textbox').last());
     this.saveSkillButton = this.newSkillDialog
       .getByRole('button', { name: /^(save|create)$/i })
       .first();
@@ -97,9 +101,10 @@ export class SkillsTab {
     this.editSkillVersionInput = this.editSkillDialog.locator(
       '[name="skill-version"]',
     );
-    this.editSkillInstructionInput = this.editSkillDialog.locator(
-      '[name="skill-instruction"]',
-    );
+    // The instruction field uses RichTextEditor — no name attribute.
+    this.editSkillInstructionInput = this.editSkillDialog
+      .locator('#skill-instruction')
+      .or(this.editSkillDialog.getByRole('textbox').last());
     this.saveEditSkillButton = this.editSkillDialog
       .getByRole('button', { name: /^save$/i })
       .first();
@@ -135,11 +140,18 @@ export class SkillsTab {
   // ── Skill row operations ─────────────────────────────────────────────────
 
   /**
-   * Returns the row locator for a skill identified by `name`.
-   * Uses `getByRole('row')` filtered by text rather than xpath.
+   * Returns the card locator for a skill identified by `name`.
+   *
+   * The AgentSkills component from @iblai/web-containers renders each skill as
+   * a `div.flex.items-center.justify-between.rounded-lg.border.p-6` — NOT a
+   * table row. Filter by text so we don't pick up the "New Skill" dialog or
+   * unrelated elements.
    */
   getSkillRowByName(name: string): Locator {
-    return this.dialog.getByRole('row').filter({ hasText: name }).first();
+    return this.dialog
+      .locator('div.flex.items-center.justify-between.rounded-lg.border')
+      .filter({ hasText: name })
+      .first();
   }
 
   /**
@@ -208,6 +220,8 @@ export class SkillsTab {
       await this.skillVersionInput.fill(version);
     }
     if (instruction !== undefined) {
+      // The instruction field is a RichTextEditor (TipTap contenteditable).
+      // fill() works on contenteditable elements in Playwright.
       await expect(this.skillInstructionInput).toBeVisible({ timeout: 5_000 });
       await this.skillInstructionInput.fill(instruction);
     }
@@ -228,35 +242,41 @@ export class SkillsTab {
 
   /**
    * Opens the Edit Skill dialog for the skill with `skillName`.
-   * Prefers a per-row Edit button; falls back to a row dropdown.
+   *
+   * The AgentSkills component renders each skill with a DropdownMenu whose
+   * trigger has `aria-label="${skillName} actions"`. The Edit menu item has
+   * text "Edit". There is no separate direct Edit button in the row.
    */
   async openEditSkillDialog(skillName: string): Promise<void> {
     const row = this.getSkillRowByName(skillName);
     await expect(row).toBeVisible({ timeout: 10_000 });
 
-    // Try a direct Edit button in the row first
-    const editBtn = row.getByRole('button', { name: /^edit$/i });
-    let hasDirectEdit = false;
+    // The dropdown trigger aria-label is "<skill name> actions"
+    const menuBtn = row.getByRole('button', {
+      name: new RegExp(`${skillName}\\s+actions`, 'i'),
+    });
+    let menuBtnVisible = false;
     try {
-      await editBtn.waitFor({ state: 'visible', timeout: 3_000 });
-      hasDirectEdit = true;
+      await menuBtn.waitFor({ state: 'visible', timeout: 3_000 });
+      menuBtnVisible = true;
     } catch {
-      hasDirectEdit = false;
+      menuBtnVisible = false;
     }
 
-    if (hasDirectEdit) {
-      await editBtn.click();
-    } else {
-      // Fall back to dropdown menu
-      const menuBtn = row.getByRole('button', {
+    if (!menuBtnVisible) {
+      // Fallback: any button in the row that looks like an actions trigger
+      const anyMenuBtn = row.getByRole('button', {
         name: /actions|options|more/i,
       });
-      await expect(menuBtn).toBeVisible({ timeout: 5_000 });
+      await expect(anyMenuBtn).toBeVisible({ timeout: 5_000 });
+      await anyMenuBtn.click();
+    } else {
       await menuBtn.click();
-      const editItem = this.page.getByRole('menuitem', { name: /^edit$/i });
-      await expect(editItem).toBeVisible({ timeout: 5_000 });
-      await editItem.click();
     }
+
+    const editItem = this.page.getByRole('menuitem', { name: /^edit$/i });
+    await expect(editItem).toBeVisible({ timeout: 5_000 });
+    await editItem.click();
 
     await expect(this.editSkillDialog).toBeVisible({ timeout: 10_000 });
   }
@@ -273,6 +293,9 @@ export class SkillsTab {
   /**
    * Deletes a skill via its row dropdown (best-effort — does not fail if
    * the Delete affordance is absent).
+   *
+   * The AgentSkills component shows a "Delete Skill" confirmation modal before
+   * deleting. The DropdownMenu trigger has `aria-label="${skillName} actions"`.
    */
   async deleteSkill(skillName: string): Promise<void> {
     const row = this.getSkillRowByName(skillName);
@@ -285,57 +308,62 @@ export class SkillsTab {
     }
     if (!rowVisible) return;
 
-    // Try direct Delete button first
-    const directDelete = row.getByRole('button', { name: /^delete$/i });
-    let hasDirectDelete = false;
+    // Open dropdown: aria-label is "<skill name> actions"
+    const menuBtn = row.getByRole('button', {
+      name: new RegExp(`${skillName}\\s+actions`, 'i'),
+    });
+    let menuVisible = false;
     try {
-      await directDelete.waitFor({ state: 'visible', timeout: 2_000 });
-      hasDirectDelete = true;
+      await menuBtn.waitFor({ state: 'visible', timeout: 3_000 });
+      menuVisible = true;
     } catch {
-      hasDirectDelete = false;
-    }
-
-    if (hasDirectDelete) {
-      await directDelete.click();
-    } else {
-      const menuBtn = row.getByRole('button', {
+      // Fallback to any button in the row
+      const anyMenuBtn = row.getByRole('button', {
         name: /actions|options|more/i,
       });
-      let menuVisible = false;
       try {
-        await menuBtn.waitFor({ state: 'visible', timeout: 3_000 });
+        await anyMenuBtn.waitFor({ state: 'visible', timeout: 3_000 });
         menuVisible = true;
+        await anyMenuBtn.click();
       } catch {
         menuVisible = false;
       }
-      if (!menuVisible) return;
-      await menuBtn.click();
-      const deleteItem = this.page.getByRole('menuitem', { name: /^delete$/i });
-      let deleteItemVisible = false;
+    }
+    if (!menuVisible) return;
+
+    if (menuVisible) {
       try {
-        await deleteItem.waitFor({ state: 'visible', timeout: 3_000 });
-        deleteItemVisible = true;
+        await menuBtn.click();
       } catch {
-        deleteItemVisible = false;
+        // Already clicked in fallback branch above
       }
-      if (!deleteItemVisible) return;
-      await deleteItem.click();
     }
 
-    // Confirm if prompted
+    const deleteItem = this.page.getByRole('menuitem', { name: /^delete$/i });
+    let deleteItemVisible = false;
+    try {
+      await deleteItem.waitFor({ state: 'visible', timeout: 3_000 });
+      deleteItemVisible = true;
+    } catch {
+      deleteItemVisible = false;
+    }
+    if (!deleteItemVisible) return;
+    await deleteItem.click();
+
+    // "Delete Skill" confirmation modal from AgentSkills
     const confirmDialog = this.page
-      .getByRole('alertdialog')
-      .or(this.page.getByRole('dialog').filter({ hasText: /confirm|delete/i }));
+      .getByRole('dialog')
+      .filter({ hasText: /delete skill/i });
     let hasConfirm = false;
     try {
-      await confirmDialog.waitFor({ state: 'visible', timeout: 3_000 });
+      await confirmDialog.waitFor({ state: 'visible', timeout: 5_000 });
       hasConfirm = true;
     } catch {
       hasConfirm = false;
     }
     if (hasConfirm) {
       const confirmBtn = confirmDialog.getByRole('button', {
-        name: /confirm|delete|yes/i,
+        name: /^delete$/i,
       });
       await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
       await confirmBtn.click();

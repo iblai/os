@@ -261,25 +261,31 @@ export class PromptsTab {
 
   /**
    * Returns the row/card locator for an agent config field by its label.
-   * The AgentConfigPrompts component renders each field as a card whose
-   * visible text includes the label string.
+   *
+   * AgentConfigPrompts from @iblai/web-containers renders each field as:
+   *   div.flex.items-center.justify-between.rounded-lg.border.p-6
+   * There are no `card` or `field` class names on the wrapper divs.
    */
   agentConfigFieldRowByLabel(label: string): Locator {
-    return this.dialog.locator('[class*="card"], [class*="field"]').filter({
-      hasText: new RegExp(label, 'i'),
-    });
+    return this.dialog
+      .locator('div.flex.items-center.justify-between.rounded-lg.border')
+      .filter({
+        hasText: new RegExp(label, 'i'),
+      });
   }
 
   /**
    * Returns the first agent config field card in the section.
    * Useful when the caller does not know the field names upfront.
+   *
+   * AgentConfigPrompts from @iblai/web-containers renders each field as:
+   *   div.flex.items-center.justify-between.rounded-lg.border.p-6
+   * with an "Edit" button (variant="outline"). There are no `card` or `field`
+   * class names on the wrapper divs.
    */
   firstAgentConfigField(): Locator {
-    // Each workspace field is rendered with an Edit button alongside the label.
-    // Filter for cards that have an Edit button to avoid matching the section
-    // header itself.
     return this.dialog
-      .locator('[class*="card"], [class*="field"]')
+      .locator('div.flex.items-center.justify-between.rounded-lg.border')
       .filter({
         has: this.dialog.getByRole('button', { name: /^edit$/i }),
       })
