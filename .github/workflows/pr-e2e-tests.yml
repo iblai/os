@@ -88,10 +88,11 @@ jobs:
       playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
       max-wait: 10800
       total-shards: 1
-      run-type: main
+      run-type: mainR E2E Tests (Required)
       browsers: 'firefox,chrome,safari,edge'
       workers: '3'
       ec2-host: '32.196.111.179'
+      runs-on: iblai-stg-runner
       ec2-user: 'ubuntu'
       ec2-commands: >-
         cd /ibl/app/ibl-spa/mentor &&
