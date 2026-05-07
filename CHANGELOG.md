@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.2](https://github.com/iblai/mentorai/compare/v0.63.1...v0.63.2) (2026-05-07)
+
+### CI
+
+* **pr-e2e:** update sed replacement to use OCIR registry for PR image ([14f2b70](https://github.com/iblai/mentorai/commit/14f2b701e7378f4751dde3770582e61c1ae7f70c))
+
 ## [0.63.1](https://github.com/iblai/mentorai/compare/v0.63.0...v0.63.1) (2026-05-07)
 
 ### CI
