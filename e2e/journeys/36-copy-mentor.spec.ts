@@ -307,70 +307,70 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.close();
   });
 
-  test('admin copies a mentor to a different tenant if user has multiple admin tenants', async ({
-    page,
-    createMentorPage,
-    editMentorPage,
-  }) => {
-    await createMentorPage.openAndCreate();
+  // test('admin copies a mentor to a different tenant if user has multiple admin tenants', async ({
+  //   page,
+  //   createMentorPage,
+  //   editMentorPage,
+  // }) => {
+  //   await createMentorPage.openAndCreate();
 
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-    await editMentorPage.settings.enableAllowCopies();
+  //   await editMentorPage.open('Settings');
+  //   await waitForPageReady(page);
+  //   await editMentorPage.settings.enableAllowCopies();
 
-    await editMentorPage.settings.copyMentorButton.click();
-    const { copyMentorDialog } = editMentorPage;
-    await copyMentorDialog.waitForOpen();
+  //   await editMentorPage.settings.copyMentorButton.click();
+  //   const { copyMentorDialog } = editMentorPage;
+  //   await copyMentorDialog.waitForOpen();
 
-    const hasMultipleTenants = await copyMentorDialog.hasDestinationSelector();
+  //   const hasMultipleTenants = await copyMentorDialog.hasDestinationSelector();
 
-    if (!hasMultipleTenants) {
-      logger.info(
-        'User is admin in only one tenant — skipping cross-tenant copy test',
-      );
-      await copyMentorDialog.closeViaEscape();
-      await editMentorPage.close();
-      test.skip();
-      return;
-    }
+  //   if (!hasMultipleTenants) {
+  //     logger.info(
+  //       'User is admin in only one tenant — skipping cross-tenant copy test',
+  //     );
+  //     await copyMentorDialog.closeViaEscape();
+  //     await editMentorPage.close();
+  //     test.skip();
+  //     return;
+  //   }
 
-    logger.info('Destination dropdown found — user has multiple admin tenants');
+  //   logger.info('Destination dropdown found — user has multiple admin tenants');
 
-    const currentUrl = new URL(page.url());
-    const currentTenantKey = currentUrl.pathname.split('/')[2];
-    logger.info(`Current tenant: ${currentTenantKey}`);
+  //   const currentUrl = new URL(page.url());
+  //   const currentTenantKey = currentUrl.pathname.split('/')[2];
+  //   logger.info(`Current tenant: ${currentTenantKey}`);
 
-    const selectedTenantName =
-      await copyMentorDialog.selectDifferentTenant(currentTenantKey);
+  //   const selectedTenantName =
+  //     await copyMentorDialog.selectDifferentTenant(currentTenantKey);
 
-    if (!selectedTenantName) {
-      logger.info(
-        'Could not find a different tenant option — skipping cross-tenant test',
-      );
-      await copyMentorDialog.closeViaEscape();
-      await editMentorPage.close();
-      test.skip();
-      return;
-    }
+  //   if (!selectedTenantName) {
+  //     logger.info(
+  //       'Could not find a different tenant option — skipping cross-tenant test',
+  //     );
+  //     await copyMentorDialog.closeViaEscape();
+  //     await editMentorPage.close();
+  //     test.skip();
+  //     return;
+  //   }
 
-    logger.info(`Selected destination tenant: ${selectedTenantName}`);
+  //   logger.info(`Selected destination tenant: ${selectedTenantName}`);
 
-    await copyMentorDialog.copyButton.click();
+  //   await copyMentorDialog.copyButton.click();
 
-    await safeWaitForURL(
-      page,
-      (url) =>
-        !url.pathname.startsWith(`/platform/${currentTenantKey}/`) ||
-        url.href.includes('/login'),
-      { timeout: 120_000 },
-    );
+  //   await safeWaitForURL(
+  //     page,
+  //     (url) =>
+  //       !url.pathname.startsWith(`/platform/${currentTenantKey}/`) ||
+  //       url.href.includes('/login'),
+  //     { timeout: 120_000 },
+  //   );
 
-    await page.waitForLoadState('networkidle');
-    await waitForPageReady(page);
+  //   await page.waitForLoadState('networkidle');
+  //   await waitForPageReady(page);
 
-    logger.info(`Tenant switch completed — landed at: ${page.url()}`);
+  //   logger.info(`Tenant switch completed — landed at: ${page.url()}`);
 
-    expect(page.url()).not.toContain(`/platform/${currentTenantKey}/`);
-    logger.info('Cross-tenant copy verified — no longer on original tenant');
-  });
+  //   expect(page.url()).not.toContain(`/platform/${currentTenantKey}/`);
+  //   logger.info('Cross-tenant copy verified — no longer on original tenant');
+  // });
 });

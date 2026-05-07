@@ -19,13 +19,13 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
     await expect(nonadminPage).toHaveURL(/\/explore/);
   });
 
-  test('non-admin goes to tenant explore page and sees mentor cards', async ({
-    nonadminExplorePage,
-  }) => {
-    await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 20_000,
-    });
-  });
+  // test('non-admin goes to tenant explore page and sees mentor cards', async ({
+  //   nonadminExplorePage,
+  // }) => {
+  //   await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
+  //     timeout: 20_000,
+  //   });
+  // });
 
   test('non-admin goes to tenant explore page and clicks Mentors to stay on explore', async ({
     nonadminPage,

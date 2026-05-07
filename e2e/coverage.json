@@ -2,12 +2,12 @@
   "version": 2,
   "lastUpdated": "2026-05-05",
   "summary": {
-    "totalCheckpoints": 368,
-    "coveredCheckpoints": 359,
+    "totalCheckpoints": 383,
+    "coveredCheckpoints": 374,
     "deprecatedCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 43,
-    "activeJourneys": 42
+    "totalJourneys": 44,
+    "activeJourneys": 43
   },
   "journeys": [
     {
@@ -2075,7 +2075,7 @@
     {
       "id": "claw-advanced-sandbox",
       "name": "CLAW Advanced Sandbox",
-      "spec": "43-claw-advanced-sandbox.spec.ts",
+      "spec": "44-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
