@@ -39,7 +39,7 @@ jobs:
   # ============================================================
   gate:
     if: contains(github.event.pull_request.labels.*.name, 'run-tests')
-    runs-on: blai-stg-runner
+    runs-on: iblai-stg-runner
     steps:
       - run: echo "run-tests label detected — proceeding"
 
@@ -106,7 +106,7 @@ jobs:
   summary:
     needs: [build-app-image, build-playwright-image, run-tests]
     if: always()
-    runs-on: blai-stg-runner
+    runs-on: iblai-stg-runner
     steps:
       - name: Results
         run: |
