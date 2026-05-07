@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.1](https://github.com/iblai/mentorai/compare/v0.63.0...v0.63.1) (2026-05-07)
+
+### CI
+
+* **pr-e2e:** rename runner to iblai-stg-runner ([bda9d2f](https://github.com/iblai/mentorai/commit/bda9d2f58f9167bff3c72620b67a39541e66217e))
+
 ## [0.63.0](https://github.com/iblai/mentorai/compare/v0.62.1...v0.63.0) (2026-05-07)
 
 ### Features
