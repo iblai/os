@@ -59,6 +59,7 @@ import {
   cn,
   getLLMProviderDetails,
   isLoggedIn,
+  isStripeActivated,
   redirectToAuthSpa,
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
@@ -91,6 +92,7 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { useFreeTrial } from '@/hooks/use-free-trial';
+import { Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -594,7 +596,7 @@ export function NavBar() {
           )}
           {!embedMode &&
             visibleToLoggedInUsersOnly &&
-            currentTenant?.show_paywall &&
+            isStripeActivated(currentTenant as Tenant) &&
             canViewCreditCoinComponent &&
             isLoggedIn() && (
               <CreditBalance

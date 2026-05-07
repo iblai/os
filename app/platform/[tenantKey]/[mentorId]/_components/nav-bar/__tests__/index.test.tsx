@@ -267,6 +267,8 @@ vi.mock('@/lib/utils', () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
   getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
   isLoggedIn: () => true,
+  isStripeActivated: (tenant: { show_paywall?: boolean; key?: string }) =>
+    Boolean(tenant?.show_paywall || tenant?.key === 'main'),
   redirectToAuthSpa: vi.fn(),
   redirectToAuthSpaJoinTenant: vi.fn(),
 }));
