@@ -91,6 +91,7 @@ jobs:
       run-type: main
       browsers: 'chrome'
       workers: '3'
+      registry-type: 'ocir'
       ec2-host: '32.196.111.179'
       runs-on: iblai-stg-runner
       ec2-user: 'ubuntu'
