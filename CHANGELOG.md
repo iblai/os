@@ -1,10 +1,16 @@
 # Changelog
 
+## [0.63.4](https://github.com/iblai/mentorai/compare/v0.63.3...v0.63.4) (2026-05-07)
+
+### CI
+
+* remove aws ecr docker login from pr-e2e-tests.yml ([7e9eb0d](https://github.com/iblai/mentorai/commit/7e9eb0d014cbad1b2e381a884c0f89629c97401d))
+
 ## [0.63.3](https://github.com/iblai/mentorai/compare/v0.63.2...v0.63.3) (2026-05-07)
 
 ### CI
 
-* use only chrome browser for tests ([4a350a9](https://github.com/iblai/mentorai/commit/4a350a9741de9d61a75bae578953e32bf2a24b7e))
+- use only chrome browser for tests ([4a350a9](https://github.com/iblai/mentorai/commit/4a350a9741de9d61a75bae578953e32bf2a24b7e))
 
 ## [0.63.2](https://github.com/iblai/mentorai/compare/v0.63.1...v0.63.2) (2026-05-07)
 
