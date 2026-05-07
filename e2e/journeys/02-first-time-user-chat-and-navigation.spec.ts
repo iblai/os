@@ -78,4 +78,24 @@ test.describe('Journey 2: First-Time User Chat & Navigation', () => {
     expect(newPage.url()).toMatch(/ibl|docs|help/i);
     await newPage.close();
   });
+
+  // Issue #1179 — suggested prompts authored in the Prompts editor contain
+  // Markdown (links, bold, etc.). They must render through the Markdown
+  // component so that formatting survives into the welcome screen and
+  // embeds.
+  //
+  // Fixme: needs a tenant whose suggested-prompt list includes a Markdown
+  // link — we don't have a deterministic fixture yet. Flip to `test(...)`
+  // once a seeded mentor is available.
+  test.fixme(
+    'newly registered user sees suggested prompts rendered as Markdown (issue #1179)',
+    async ({ nonadminPage }) => {
+      // A suggested prompt authored as "See [docs](https://…)" should
+      // render an anchor tag, not literal brackets.
+      const promptLink = nonadminPage
+        .locator('button[type="button"] a[href^="http"]')
+        .first();
+      await expect(promptLink).toBeVisible({ timeout: 10_000 });
+    },
+  );
 });

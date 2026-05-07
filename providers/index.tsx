@@ -24,6 +24,7 @@ import {
   LocalStorageService,
   saveUserObjectToLocalStorage,
   sendMessageToParentWebsite,
+  deleteCookieOnAllDomains,
 } from '@/lib/utils';
 import {
   initializeDataLayer,
@@ -74,11 +75,32 @@ import { hideInitialLoader } from '@/lib/initial-loader';
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
+    deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);
     sendMessageToParentWebsite({
       loaded: true,
       auth: { ...localStorage },
     });
+  }, []);
+
+  // Listen for tenant switch events from other tabs/windows via BroadcastChannel
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel('ibl-tenant-switch');
+
+    channel.onmessage = (event) => {
+      const { type, tenant } = event.data ?? {};
+      if (type === 'TENANT_SWITCHING') {
+        console.log(
+          '[Providers] Received TENANT_SWITCHING from another tab, target:',
+          tenant,
+        );
+        handleTenantSwitch(tenant, false, undefined, false);
+      }
+    };
+
+    return () => channel.close();
   }, []);
 
   const handlers = useIframeHandlers();
@@ -530,6 +552,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           setUseMentorProvider={setUseMentorProvider}
           onLoadPlatformPermissions={onLoadPlatformpermissions}
           skipCustomDomainCheck={window.location.origin === config.mentorUrl()}
+          onTenantMismatch={() => {
+            console.log(
+              '[TenantProvider] Tenant mismatch - redirecting to home',
+            );
+            window.location.href = '/';
+          }}
         >
           {useMentorProvider ? (
             <MentorProvider

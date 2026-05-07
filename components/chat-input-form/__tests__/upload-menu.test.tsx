@@ -51,11 +51,19 @@ describe('UploadMenu', () => {
       expect(plusIcon).toBeInTheDocument();
     });
 
-    it('should have screen reader text "Attach File"', () => {
+    it('should have screen reader text "Attach file"', () => {
       render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
 
-      expect(screen.getByText('Attach File')).toBeInTheDocument();
-      expect(screen.getByText('Attach File')).toHaveClass('sr-only');
+      expect(screen.getByText('Attach file')).toBeInTheDocument();
+      expect(screen.getByText('Attach file')).toHaveClass('sr-only');
+    });
+
+    it('should expose accessible name "Attach file" via aria-label', () => {
+      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+
+      expect(
+        screen.getByRole('button', { name: 'Attach file' }),
+      ).toBeInTheDocument();
     });
 
     it('should have correct styling classes on trigger button', () => {

@@ -41,7 +41,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return true;
+    return false;
   }
 
   const tokenExpiry = window.localStorage.getItem(
@@ -83,6 +83,44 @@ export async function redirectToAuthSpa(
   logout?: boolean,
   saveRedirect = true,
 ) {
+  console.log(
+    '[redirectToAuthSpa] starting redirect to auth spa',
+    redirectTo,
+    platformKey,
+    logout,
+    saveRedirect,
+  );
+  // Skip if a tenant switch is already in progress
+  if (document.cookie.includes('ibl_tenant_switching')) {
+    console.log('[AuthProvider] Tenant switch in progress, skipping redirect');
+    return;
+  }
+
+  // Skip if a login occurred after the last logout (login takes precedence)
+  // but only if this app actually has a valid auth token — otherwise the login
+  // cookie may have been set by a different app on the same domain.
+  const loginTs = getCookieValue('ibl_login_timestamp');
+  const logoutTs = getCookieValue('ibl_logout_timestamp');
+  const hasValidToken = hasNonExpiredAuthToken();
+  console.log('[AuthProvider] Login/logout timestamp check', {
+    loginTs,
+    logoutTs,
+    hasValidToken,
+    loginAhead:
+      loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
+  });
+  if (
+    hasValidToken &&
+    loginTs &&
+    logoutTs &&
+    Number(loginTs) > Number(logoutTs)
+  ) {
+    console.log(
+      '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
+      { loginTs, logoutTs },
+    );
+    return;
+  }
   // Don't redirect to auth when in Tauri offline mode
   // Check origin first (most reliable) or Tauri offline flags
   if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
@@ -96,7 +134,7 @@ export async function redirectToAuthSpa(
 
   // Save JWT token before clearing localStorage (needed for Tauri mode)
   const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-
+  console.log('[redirectToAuthSpa] clearing local storage');
   localStorage.clear();
 
   if (logout || isInIframe()) {
@@ -545,6 +583,15 @@ export function isInIframe() {
   return window?.self !== window?.top;
 }
 
+export function getCookieValue(name: string): string | null {
+  const match = document.cookie.match(
+    new RegExp(
+      '(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)',
+    ),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function deleteCookie(name: string, path: string, domain: string) {
   // Set the cookie expiration date to the past
   const expires = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
@@ -608,6 +655,7 @@ export const handleLogout = (
   callback?: () => void,
 ) => {
   const tenant = window.localStorage.getItem('tenant');
+  console.log('[handleLogout] clearing localstorage');
   window.localStorage.clear();
   window.localStorage.setItem('tenant', tenant ?? '');
 
@@ -635,18 +683,56 @@ export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
+  broadcastTenantSwitching = true,
 ) => {
-  // Clear current tenant cookie before switching
-  const { clearCurrentTenantCookie } = await import(
-    '@iblai/iblai-js/web-utils'
-  );
-  clearCurrentTenantCookie();
+  console.log('############### HANDLE TENANT SWITCHING ###############', {
+    broadcastTenantSwitching,
+  });
+  // Signal to the app that a tenant switch is in progress
+  if (
+    document.cookie.includes('ibl_tenant_switching') &&
+    broadcastTenantSwitching
+  ) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
+    );
+    return;
+  }
+  if (tenant === localStorage.getItem('tenant')) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
+    );
+    return;
+  }
+
+  if (broadcastTenantSwitching) {
+    setCookieForAuth('ibl_tenant_switching', 'true');
+  }
+  // Notify other tabs/windows that a tenant switch is starting
+  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
+    const channel = new BroadcastChannel('ibl-tenant-switch');
+    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
+    channel.close();
+  }
+  if (broadcastTenantSwitching) {
+    // Clear current tenant cookie before switching
+    const { clearCurrentTenantCookie } = await import(
+      '@iblai/iblai-js/web-utils'
+    );
+    clearCurrentTenantCookie();
+  }
   // Preserve the current path before clearing localStorage
   const currentPath = `${window.location.pathname}${window.location.search}`;
   // Get JWT token before clearing localStorage
   const jwtToken = localStorage.getItem('edx_jwt_token');
-  localStorage.clear();
-
+  console.log('[handleTenantSwitch] clearing local storage', {
+    tenant,
+    currentTenant: localStorage.getItem('tenant'),
+  });
+  if (broadcastTenantSwitching) {
+    console.log('[handleTenantSwitch] clearing local storage');
+    localStorage.clear();
+  }
   const url = `${config.authUrl()}/login/complete`;
   const params: Record<string, string> = {
     tenant,
@@ -1531,6 +1617,7 @@ function syncAuthDataToCookies(userObject: Record<string, any>): void {
 }
 
 export function saveUserObjectToLocalStorage(userObject: object) {
+  console.log('[saveUserObjectToLocalStorage] clearing local storage');
   localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;
