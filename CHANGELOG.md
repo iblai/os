@@ -4,34 +4,34 @@
 
 ### CI
 
-* **pr-e2e:** rename runner to iblai-stg-runner ([bda9d2f](https://github.com/iblai/mentorai/commit/bda9d2f58f9167bff3c72620b67a39541e66217e))
+- **pr-e2e:** rename runner to iblai-stg-runner ([bda9d2f](https://github.com/iblai/mentorai/commit/bda9d2f58f9167bff3c72620b67a39541e66217e))
 
 ## [0.63.0](https://github.com/iblai/mentorai/compare/v0.62.1...v0.63.0) (2026-05-07)
 
 ### Features
 
-* add BroadcastChannel for cross-tab tenant switch sync & update CI runner ([1471104](https://github.com/iblai/mentorai/commit/1471104ed78e71476ede15593c610b3241c78f3f))
-* set ibl_tenant_switching cookie during tenant switch ([0bc909e](https://github.com/iblai/mentorai/commit/0bc909ec9be65f9a3f4635dbefa0c35c125345b8))
+- add BroadcastChannel for cross-tab tenant switch sync & update CI runner ([1471104](https://github.com/iblai/mentorai/commit/1471104ed78e71476ede15593c610b3241c78f3f))
+- set ibl_tenant_switching cookie during tenant switch ([0bc909e](https://github.com/iblai/mentorai/commit/0bc909ec9be65f9a3f4635dbefa0c35c125345b8))
 
 ## [0.62.1](https://github.com/iblai/mentorai/compare/v0.62.0...v0.62.1) (2026-05-06)
 
 ### Bug Fixes
 
-* ecommerce main tenant update ([87c6ff0](https://github.com/iblai/mentorai/commit/87c6ff012a5631133155c476732848332ea98f9c))
-* ecommerce main tenant update ([f401333](https://github.com/iblai/mentorai/commit/f401333e48c31ff5f5c197e5c5d6ca1785f02c36))
-* ecommerce main tenant update > test coverage ([a36869c](https://github.com/iblai/mentorai/commit/a36869c8590d9b5ea6c33e48f039328cdd8e7b4a))
-* ecommerce main tenant update > test coverage ([7bf86bf](https://github.com/iblai/mentorai/commit/7bf86bf3f10165f882017be3c7294e73dbe6dda3))
-* ecommerce main tenant update > test coverage ([df6fcaa](https://github.com/iblai/mentorai/commit/df6fcaa8291ca9c82571e879e1a2c1e7231a9553))
+- ecommerce main tenant update ([87c6ff0](https://github.com/iblai/mentorai/commit/87c6ff012a5631133155c476732848332ea98f9c))
+- ecommerce main tenant update ([f401333](https://github.com/iblai/mentorai/commit/f401333e48c31ff5f5c197e5c5d6ca1785f02c36))
+- ecommerce main tenant update > test coverage ([a36869c](https://github.com/iblai/mentorai/commit/a36869c8590d9b5ea6c33e48f039328cdd8e7b4a))
+- ecommerce main tenant update > test coverage ([7bf86bf](https://github.com/iblai/mentorai/commit/7bf86bf3f10165f882017be3c7294e73dbe6dda3))
+- ecommerce main tenant update > test coverage ([df6fcaa](https://github.com/iblai/mentorai/commit/df6fcaa8291ca9c82571e879e1a2c1e7231a9553))
 
 ## [0.62.0](https://github.com/iblai/mentorai/compare/v0.61.2...v0.62.0) (2026-05-05)
 
 ### Features
 
-* **settings:** add Enhance Document Retrieval toggle ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([0f22af5](https://github.com/iblai/mentorai/commit/0f22af58d18ffea15d1713f9a69b3a9d27225890))
+- **settings:** add Enhance Document Retrieval toggle ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([0f22af5](https://github.com/iblai/mentorai/commit/0f22af58d18ffea15d1713f9a69b3a9d27225890))
 
 ### Tests
 
-* **e2e:** cover Enhance Document Retrieval toggle in Journey 7 ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([2d629d9](https://github.com/iblai/mentorai/commit/2d629d9300591b5cd440ea9c4890af89b9a7159c))
+- **e2e:** cover Enhance Document Retrieval toggle in Journey 7 ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([2d629d9](https://github.com/iblai/mentorai/commit/2d629d9300591b5cd440ea9c4890af89b9a7159c))
 
 ## [0.61.2](https://github.com/iblai/mentorai/compare/v0.61.1...v0.61.2) (2026-05-05)
 

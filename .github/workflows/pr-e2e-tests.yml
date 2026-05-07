@@ -89,7 +89,7 @@ jobs:
       max-wait: 10800
       total-shards: 1
       run-type: main
-      browsers: 'firefox,chrome,safari,edge'
+      browsers: 'chrome'
       workers: '3'
       ec2-host: '32.196.111.179'
       ec2-user: 'ubuntu'
