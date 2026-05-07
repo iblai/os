@@ -23,10 +23,7 @@ import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import {
-  useSubscriptionHandlerV2,
-  SUBSCRIPTION_V2_TRIGGERS,
-} from '@iblai/iblai-js/web-utils';
+import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
 import {
   handleLogout,
   handleTenantSwitch,
@@ -43,6 +40,7 @@ import { useModelDownload } from '@/hooks/use-model-download';
 
 export function UserProfile() {
   const username = useUsername();
+  const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
   const userIsVisiting = useIsVisiting();
@@ -137,25 +135,9 @@ export function UserProfile() {
     topBannerOptions,
     mentorUrl: config.mentorUrl(),
   });
-  const {
-    getBillingURL,
-    getTopUpURL,
-    getUserSubscriptionPackage,
-    getUserActiveAppLegacy,
-    bannerButtonTriggerCallback,
-  } = useSubscriptionHandlerV2(subscriptionFlow);
+  const { getUserSubscriptionPackage, getUserActiveAppLegacy } =
+    useSubscriptionHandlerV2(subscriptionFlow);
 
-  // Handle upgrade click - triggers the pricing modal
-  const handleUpgradeClick = useCallback(() => {
-    const triggerPricingModal = bannerButtonTriggerCallback(
-      SUBSCRIPTION_V2_TRIGGERS.PRICING_MODAL,
-    );
-    triggerPricingModal();
-    handleModalOpenChange(false);
-  }, [bannerButtonTriggerCallback]);
-
-  const [billingURL, setBillingURL] = useState<string>('');
-  const [topUpURL, setTopUpURL] = useState<string>('');
   const [currentPlan, setCurrentPlan] = useState<string>('');
   const [userActiveApp, setUserActiveApp] = useState<UserApp | null>(null);
 
@@ -257,15 +239,6 @@ export function UserProfile() {
 
   const handleGetSubscriptionRelatedData = async () => {
     if (isStripeActivated(currentTenant as Tenant) && currentTenant?.is_admin) {
-      getBillingURL({
-        returnURL: window.location.href,
-        includeSubscriptionIdIfNeeded: false,
-      }).then((url) => {
-        setBillingURL(url || '');
-      });
-      getTopUpURL(false).then((url) => {
-        setTopUpURL(url || '');
-      });
       getUserActiveAppLegacy().then((app) => {
         setUserActiveApp(app as unknown as UserApp);
       });
@@ -309,6 +282,8 @@ export function UserProfile() {
 
   return (
     <UserProfileDropdown
+      email={email}
+      mainPlatformKey={config.mainTenantKey()}
       // User data
       username={username || undefined}
       userIsAdmin={userIsAdmin}
@@ -335,16 +310,11 @@ export function UserProfile() {
       // Callbacks
       onProfileClick={handleProfileClick}
       onTabChange={handleTabChange}
-      onUpgradeClick={handleUpgradeClick}
       onBillingTabRequest={handleGetSubscriptionRelatedData}
       onLogout={handleLogout}
       onTenantChange={handleTenantChange}
       onHelpClick={handleHelpClick}
       // Modal props
-      billingEnabled={!!billingURL}
-      billingURL={billingURL}
-      topUpEnabled={!!topUpURL}
-      topUpURL={topUpURL}
       currentPlan={currentPlan}
       userActiveApp={userActiveApp}
       // Custom components

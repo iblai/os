@@ -582,6 +582,56 @@ describe('Providers', () => {
       // The component should redirect via window.location.href
       hrefSpy.mockRestore();
     });
+
+    it('does NOT redirect when both email and stripe_checkout_id are present (Stripe return)', () => {
+      mockSearchParams = new URLSearchParams(
+        'email=test@example.com&stripe_checkout_id=cs_test_123',
+      );
+      let capturedHref: string | undefined;
+      const hrefSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+        ...window.location,
+        origin: 'https://mentor.test',
+        set href(value: string) {
+          capturedHref = value;
+        },
+        get href() {
+          return capturedHref ?? 'https://mentor.test/';
+        },
+      } as Location);
+
+      // Should mount the full provider tree (no early return / no logout redirect)
+      const { getByText } = renderProviders(<div>Stripe Return Child</div>);
+
+      expect(getByText('Stripe Return Child')).toBeInTheDocument();
+      expect(capturedHref).toBeUndefined();
+
+      hrefSpy.mockRestore();
+    });
+
+    it('still redirects when stripe_checkout_id is empty/missing alongside email', () => {
+      mockSearchParams = new URLSearchParams(
+        'email=test@example.com&stripe_checkout_id=',
+      );
+      let capturedHref: string | undefined;
+      const hrefSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+        ...window.location,
+        origin: 'https://mentor.test',
+        set href(value: string) {
+          capturedHref = value;
+        },
+        get href() {
+          return capturedHref ?? 'https://mentor.test/';
+        },
+      } as Location);
+
+      renderProviders();
+
+      // Empty stripe_checkout_id is falsy → redirect should still fire
+      expect(capturedHref).toBeDefined();
+      expect(capturedHref).toContain('email=test%40example.com');
+
+      hrefSpy.mockRestore();
+    });
   });
 
   // ── Tauri offline mode ────────────────────────────────────────────────
@@ -946,9 +996,7 @@ describe('Providers', () => {
       fn();
       expect(mockReplace).toHaveBeenCalled();
       vi.advanceTimersByTime(1100);
-      expect(toast.success).toHaveBeenCalledWith(
-        'Mentor switched successfully',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Agent switched successfully');
       vi.useRealTimers();
     });
 

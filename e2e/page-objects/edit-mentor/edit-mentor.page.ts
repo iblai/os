@@ -33,7 +33,7 @@ export class EditMentorPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Mentor' });
+    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Agent' });
     this.closeButton = this.dialog.getByRole('button', {
       name: 'Close',
       exact: true,
@@ -59,7 +59,7 @@ export class EditMentorPage {
    */
   async open(tabName?: string): Promise<void> {
     const dropdown = this.page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: 'Selected agent dropdown button',
     });
     await expect(dropdown).toBeVisible({ timeout: 15_000 });
     await dropdown.click();

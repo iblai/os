@@ -78,7 +78,7 @@ export function LLMProviderModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl space-y-6 p-4">
         <DialogDescription className="sr-only">
-          Select select on of the mentors provided by {llmProvider.name}
+          Select select on of the agents provided by {llmProvider.name}
         </DialogDescription>
         <DialogHeader>
           <DialogTitle className="ibl-dialog-title">LLM Selection</DialogTitle>

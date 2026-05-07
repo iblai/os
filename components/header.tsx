@@ -50,6 +50,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
+import { getUserEmail } from '@/features/utils';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ANONYMOUS_USERNAME, MODALS } from '@/lib/constants';
 
@@ -278,7 +279,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -444,7 +445,7 @@ export function Header({
                 <Avatar className="mr-1 h-5 w-5">
                   <AvatarImage
                     src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                    alt="mentorAI"
+                    alt="Agentic OS"
                   />
                   <AvatarFallback>
                     {selectedMentorName.substring(0, 2)}
@@ -458,7 +459,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="mentorAI"
+                      alt="Agentic OS"
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -509,7 +510,7 @@ export function Header({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Create New Mentor
+                    Create New Agent
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -566,6 +567,8 @@ export function Header({
       <UserProfileModal
         isOpen={isUserProfileOpen}
         onClose={() => setIsUserProfileOpen(false)}
+        email={getUserEmail()}
+        mainPlatformKey={config.mainTenantKey()}
         params={{
           tenantKey,
           mentorId,

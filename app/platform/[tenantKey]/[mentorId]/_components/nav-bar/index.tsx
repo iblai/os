@@ -30,7 +30,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
-import { NotificationDropdown } from '@iblai/iblai-js/web-containers';
+import {
+  CreditBalance,
+  NotificationDropdown,
+} from '@iblai/iblai-js/web-containers';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,11 +44,13 @@ import {
   useEditMentorMutation,
 } from '@iblai/iblai-js/data-layer';
 import {
+  useCurrentTenant,
   useIsAdmin,
   useIsVisiting,
   useUserIsStudent,
   useUsername,
 } from '@/hooks/use-user';
+import { getUserEmail, getUserName } from '@/features/utils';
 import { MODALS, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
@@ -85,6 +90,7 @@ import {
   isOfflineServerOrigin,
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
+import { useFreeTrial } from '@/hooks/use-free-trial';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -129,7 +135,10 @@ export function NavBar() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
+  const userEmail = getUserEmail();
   const userIsStudent = useUserIsStudent();
+  const { userOnFreeTrial } = useFreeTrial();
+  const canViewCreditCoinComponent = isAdmin || userOnFreeTrial();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
 
@@ -249,6 +258,8 @@ export function NavBar() {
     }
   }, [isUserProfileOpen, foundryStatus, foundryStatusLoaded, isUsingFoundry]);
 
+  const { currentTenant } = useCurrentTenant();
+
   const [forkMentor, { isLoading: isForkingMentor }] = useForkMentorMutation();
 
   const [editMentor] = useEditMentorMutation();
@@ -258,7 +269,7 @@ export function NavBar() {
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
-      toast.error('Unable to modify mentor. Missing context.');
+      toast.error('Unable to modify agent. Missing context.');
       return;
     }
     try {
@@ -289,7 +300,7 @@ export function NavBar() {
         }).unwrap();
       }
       //REDIRECT TO THE NEW MENTOR
-      toast.success('Mentor successfully forked. Switching to new mentor...');
+      toast.success('Agent successfully forked. Switching to new agent...');
       const newStack = getUpdatedModalStack(
         MODALS.EDIT_MENTOR.name,
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -301,7 +312,7 @@ export function NavBar() {
         `modal=${JSON.stringify(newStack)}`,
       );
     } catch (error) {
-      toast.error('Failed to modify mentor');
+      toast.error('Failed to modify agent');
       // console.error(JSON.stringify(error));;
     }
   };
@@ -481,7 +492,7 @@ export function NavBar() {
                     <Button
                       variant="ghost"
                       className="flex cursor-pointer items-center gap-1"
-                      aria-label="Selected mentor dropdown button"
+                      aria-label="Selected agent dropdown button"
                     >
                       <User className="h-4 w-4 text-[#646464]" />
                       <span className="hidden sm:block">
@@ -550,7 +561,7 @@ export function NavBar() {
                 <Button
                   variant="ghost"
                   className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label="Selected mentor"
+                  aria-label="Selected agent"
                 >
                   <User className="h-4 w-4 text-[#646464]" />
                   <span className="hidden sm:block">{selectedMentorName}</span>
@@ -581,6 +592,20 @@ export function NavBar() {
               </span>
             </div>
           )}
+          {!embedMode &&
+            visibleToLoggedInUsersOnly &&
+            currentTenant?.show_paywall &&
+            canViewCreditCoinComponent &&
+            isLoggedIn() && (
+              <CreditBalance
+                tenant={tenantKey}
+                enabled={true}
+                redirectUrl={window.location.origin}
+                mainPlatformKey={config.mainTenantKey()}
+                currentUserEmail={getUserEmail()}
+                username={getUserName()}
+              />
+            )}
           {!embedMode && visibleToLoggedInUsersOnly && (
             <NotificationDropdown
               org={tenantKey}
@@ -632,6 +657,8 @@ export function NavBar() {
             mentorId,
             isAdmin,
           }}
+          email={userEmail}
+          mainPlatformKey={config.mainTenantKey()}
           useGravatarPicFallback={
             config.enableGravatarOnProfilePic() !== 'false'
           }

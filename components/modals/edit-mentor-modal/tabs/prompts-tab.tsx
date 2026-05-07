@@ -151,12 +151,12 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [tool]: value },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
         callback?.();
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update mentor');
+      toast.error('Failed to update agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -174,10 +174,10 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [selectedPrompt.name]: value.prompt },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update mentor');
+        toast.error('Failed to update agent');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     } else {
@@ -240,7 +240,7 @@ export function PromptsTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Prompts</h3>
           <p className="text-xs text-gray-700">
-            Manage and configure prompts for your mentor.
+            Manage and configure prompts for your agent.
           </p>
         </div>
       </div>
@@ -272,7 +272,7 @@ export function PromptsTab() {
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Define the mentor&apos;s behavior</p>
+                            <p>Define the agent&apos;s behavior</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

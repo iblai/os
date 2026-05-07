@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { ManageMemories } from '../manage-memories';
 
 // ---- Query hook mocks ----
-const mockGetMentorMemoriesQuery = vi.fn();
+const mockGetMentorMemoriesListQuery = vi.fn();
 const mockGetMemoryCategoriesAdminQuery = vi.fn();
 
 const mockDeleteMentorMemory = vi.fn();
@@ -24,8 +24,8 @@ const mockUpdateMentorMemoryLoading = vi.fn(() => false);
 const mockCreateMentorMemoryLoading = vi.fn(() => false);
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorMemoriesQuery: (...args: unknown[]) =>
-    mockGetMentorMemoriesQuery(...args),
+  useGetMentorMemoriesListQuery: (...args: unknown[]) =>
+    mockGetMentorMemoriesListQuery(...args),
   useGetMemoryCategoriesAdminQuery: (...args: unknown[]) =>
     mockGetMemoryCategoriesAdminQuery(...args),
   useDeleteMentorMemoryMutation: () => [
@@ -265,35 +265,25 @@ const mockMemory = (overrides: Partial<any> = {}) => ({
   created_at: overrides.created_at ?? '2024-01-15T10:30:00.000Z',
 });
 
-const defaultResponse = [
-  {
+const defaultResults = [
+  mockMemory({
+    id: 1,
+    content: 'Loves dark mode',
     category: mockCategory(1, 'Preferences', 'preferences'),
-    memories: [
-      mockMemory({
-        id: 1,
-        content: 'Loves dark mode',
-        category: mockCategory(1, 'Preferences', 'preferences'),
-        email: 'alice@example.com',
-      }),
-      mockMemory({
-        id: 2,
-        content: 'Prefers vim keybindings',
-        category: mockCategory(1, 'Preferences', 'preferences'),
-        email: 'bob@example.com',
-      }),
-    ],
-  },
-  {
+    email: 'alice@example.com',
+  }),
+  mockMemory({
+    id: 2,
+    content: 'Prefers vim keybindings',
+    category: mockCategory(1, 'Preferences', 'preferences'),
+    email: 'bob@example.com',
+  }),
+  mockMemory({
+    id: 3,
+    content: 'Former backend dev',
     category: mockCategory(2, 'Background', 'background'),
-    memories: [
-      mockMemory({
-        id: 3,
-        content: 'Former backend dev',
-        category: mockCategory(2, 'Background', 'background'),
-        email: 'alice@example.com',
-      }),
-    ],
-  },
+    email: 'alice@example.com',
+  }),
 ];
 
 const defaultAdminCategories = [
@@ -319,7 +309,7 @@ const clickCategoryTab = (categoryName: string) => {
 describe('ManageMemories', () => {
   beforeEach(() => {
     cleanup();
-    mockGetMentorMemoriesQuery.mockReset();
+    mockGetMentorMemoriesListQuery.mockReset();
     mockGetMemoryCategoriesAdminQuery.mockReset();
     mockDeleteMentorMemory.mockReset();
     mockUpdateMentorMemory.mockReset();
@@ -330,10 +320,35 @@ describe('ManageMemories', () => {
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
 
-    mockGetMentorMemoriesQuery.mockReturnValue({
-      data: defaultResponse,
-      isLoading: false,
-    });
+    // Default mock applies the same server-side filtering the real endpoint
+    // does (category + email), so user-facing tests can still observe
+    // tab/learner filtering through the rendered list.
+    mockGetMentorMemoriesListQuery.mockImplementation(
+      (args: { params?: any } = {}) => {
+        const params = args.params ?? {};
+        const isSnapshot = params.page_size === 1000;
+        let results = defaultResults;
+        if (!isSnapshot) {
+          if (params.category) {
+            results = results.filter(
+              (m) => m.category.slug === params.category,
+            );
+          }
+          if (params.email) {
+            results = results.filter((m) => m.email === params.email);
+          }
+        }
+        return {
+          data: {
+            count: results.length,
+            next: null,
+            previous: null,
+            results,
+          },
+          isLoading: false,
+        };
+      },
+    );
     mockGetMemoryCategoriesAdminQuery.mockReturnValue({
       data: defaultAdminCategories,
     });
@@ -397,7 +412,7 @@ describe('ManageMemories', () => {
 
   describe('Loading state', () => {
     it('shows the loading message when memories are loading', () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
+      mockGetMentorMemoriesListQuery.mockReturnValue({
         data: undefined,
         isLoading: true,
       });
@@ -408,8 +423,8 @@ describe('ManageMemories', () => {
 
   describe('Empty state', () => {
     it('shows "No saved memories yet." when the response is an empty list', () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
-        data: [],
+      mockGetMentorMemoriesListQuery.mockReturnValue({
+        data: { count: 0, next: null, previous: null, results: [] },
         isLoading: false,
       });
       render(<ManageMemories {...defaultProps} />);
@@ -417,7 +432,7 @@ describe('ManageMemories', () => {
     });
 
     it('shows "No saved memories yet." when the response is undefined', () => {
-      mockGetMentorMemoriesQuery.mockReturnValue({
+      mockGetMentorMemoriesListQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
       });
@@ -956,7 +971,7 @@ describe('ManageMemories', () => {
 
     it('selects a learner from the user dropdown and re-queries with email', () => {
       render(<ManageMemories {...defaultProps} />);
-      const callsBefore = mockGetMentorMemoriesQuery.mock.calls.length;
+      const callsBefore = mockGetMentorMemoriesListQuery.mock.calls.length;
 
       // CommandItems render inside the user combobox; the learner items
       // come after the "All Users" item. Click the first learner item
@@ -967,7 +982,8 @@ describe('ManageMemories', () => {
 
       // After selecting a learner, the filtered query re-runs — at
       // least one of the new calls should carry email in params.
-      const newCalls = mockGetMentorMemoriesQuery.mock.calls.slice(callsBefore);
+      const newCalls =
+        mockGetMentorMemoriesListQuery.mock.calls.slice(callsBefore);
       const withEmail = newCalls.find(
         (call) => call[0]?.params && 'email' in call[0].params,
       );
@@ -976,19 +992,20 @@ describe('ManageMemories', () => {
   });
 
   describe('Category fallback when admin categories are unavailable', () => {
-    it('derives category tabs from the memories response when admin categories are empty', () => {
+    it('shows just "All" when admin categories are empty', () => {
       mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
       render(<ManageMemories {...defaultProps} />);
 
-      // The derived categories include the seed "All" plus those found on
-      // the response payload — Preferences and Background.
-      expect(screen.getAllByText('Preferences').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Background').length).toBeGreaterThan(0);
+      // With no admin categories the derived list is just the synthetic "All".
+      expect(screen.getAllByText('All').length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: /^Preferences$/ })).toBe(
+        null,
+      );
     });
 
     it('falls back to just "All" when the memories response is undefined', () => {
       mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
-      mockGetMentorMemoriesQuery.mockReturnValue({
+      mockGetMentorMemoriesListQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
       });
@@ -1019,25 +1036,25 @@ describe('ManageMemories', () => {
   describe('Query skip logic', () => {
     it('skips the memories query when tenantKey is missing', () => {
       render(<ManageMemories {...defaultProps} tenantKey={''} />);
-      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      const firstCall = mockGetMentorMemoriesListQuery.mock.calls[0];
       expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
     });
 
     it('skips the memories query when username is null', () => {
       render(<ManageMemories {...defaultProps} username={null} />);
-      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      const firstCall = mockGetMentorMemoriesListQuery.mock.calls[0];
       expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
     });
 
     it('skips the memories query when mentorId is missing', () => {
       render(<ManageMemories {...defaultProps} mentorId={''} />);
-      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      const firstCall = mockGetMentorMemoriesListQuery.mock.calls[0];
       expect(firstCall[1]).toEqual(expect.objectContaining({ skip: true }));
     });
 
     it('passes tenantKey, username, and mentorId to the memories query', () => {
       render(<ManageMemories {...defaultProps} />);
-      const firstCall = mockGetMentorMemoriesQuery.mock.calls[0];
+      const firstCall = mockGetMentorMemoriesListQuery.mock.calls[0];
       expect(firstCall[0]).toEqual(
         expect.objectContaining({
           org: 'test-tenant',
@@ -1052,19 +1069,20 @@ describe('ManageMemories', () => {
     it('builds start_date and end_date params once a range is picked', () => {
       render(<ManageMemories {...defaultProps} />);
 
-      // Initially no params are sent.
-      const initialCall = mockGetMentorMemoriesQuery.mock.calls[0][0];
-      expect(initialCall).not.toHaveProperty('params');
+      // Initial params carry pagination but no date filters.
+      const initialCall = mockGetMentorMemoriesListQuery.mock.calls[0][0];
+      expect(initialCall.params).not.toHaveProperty('start_date');
+      expect(initialCall.params).not.toHaveProperty('end_date');
 
       // Trigger the calendar's onSelect.
       fireEvent.click(screen.getByTestId('calendar-select'));
 
-      // Find the most-recent call that has a params argument.
-      const lastWithParams = mockGetMentorMemoriesQuery.mock.calls
+      // Find the most-recent call that includes the date filters.
+      const lastWithDates = mockGetMentorMemoriesListQuery.mock.calls
         .map((c) => c[0])
         .reverse()
-        .find((arg) => arg?.params);
-      expect(lastWithParams?.params).toEqual(
+        .find((arg) => arg?.params?.start_date);
+      expect(lastWithDates?.params).toEqual(
         expect.objectContaining({
           start_date: '2024-01-01',
           end_date: '2024-01-31',

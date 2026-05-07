@@ -308,7 +308,7 @@ describe('RoleAccessPanel', () => {
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith(
-        'Mentor context is missing. Close the modal and try again.',
+        'Agent context is missing. Close the modal and try again.',
       );
     });
   });
@@ -1003,7 +1003,7 @@ describe('RoleAccessPanel', () => {
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith(
-        'Mentor context is missing. Close the modal and try again.',
+        'Agent context is missing. Close the modal and try again.',
       );
     });
   });

@@ -621,16 +621,16 @@ describe('ConnectorDialogs', () => {
       expect(authScopeSelect).toHaveValue('tenant');
     });
 
-    it('shows Tenant, Mentor, and User options', () => {
+    it('shows Tenant, Agent, and User options', () => {
       expect(screen.getByText('Tenant')).toBeInTheDocument();
-      expect(screen.getByText('Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Agent')).toBeInTheDocument();
       expect(screen.getByText('User')).toBeInTheDocument();
     });
 
     it('shows description for tenant scope', () => {
       expect(
         screen.getByText(
-          'OAuth connection will be available for all mentors in this tenant.',
+          'OAuth connection will be available for all agents in this tenant.',
         ),
       ).toBeInTheDocument();
     });
@@ -642,7 +642,7 @@ describe('ConnectorDialogs', () => {
 
       expect(
         screen.getByText(
-          'OAuth connection will only be available for this mentor.',
+          'OAuth connection will only be available for this agent.',
         ),
       ).toBeInTheDocument();
     });
@@ -5706,8 +5706,8 @@ describe('ConnectorDialogs', () => {
     it('renders connector scope radio group', () => {
       render(<ConnectorDialogs {...defaultProps} />);
       expect(screen.getByText('Connector Scope')).toBeInTheDocument();
-      expect(screen.getByText('All Mentors')).toBeInTheDocument();
-      expect(screen.getByText('This Mentor')).toBeInTheDocument();
+      expect(screen.getByText('All Agents')).toBeInTheDocument();
+      expect(screen.getByText('This Agent')).toBeInTheDocument();
     });
 
     it('defaults to tenant scope', () => {
@@ -5719,7 +5719,7 @@ describe('ConnectorDialogs', () => {
     it('shows tenant helper text by default', () => {
       render(<ConnectorDialogs {...defaultProps} />);
       expect(
-        screen.getByText('This MCP will be available for all mentors.'),
+        screen.getByText('This MCP will be available for all agents.'),
       ).toBeInTheDocument();
     });
 

@@ -143,7 +143,7 @@ export function CreateProjectModal({
 
           <div>
             <label className="mb-3 block text-sm font-medium text-gray-700">
-              Select Mentors <span className="text-red-500">*</span>
+              Select Agents <span className="text-red-500">*</span>
               {selectedMentors.length > 0 && (
                 <span className="ml-2 font-normal text-blue-600">
                   ({selectedMentors.length} selected)

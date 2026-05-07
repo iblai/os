@@ -361,7 +361,7 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Configure your mentor's basic settings and preferences.",
+          "Configure your agent's basic settings and preferences.",
         ),
       ).toBeInTheDocument();
     });
@@ -463,6 +463,32 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
     });
 
+    it('renders Enhance Document Retrieval toggle', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText('Enhance Document Retrieval'),
+      ).toBeInTheDocument();
+    });
+
+    it('renders Enhance Document Retrieval tooltip text', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(
+          /Generates multiple search queries from a single user question/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('renders tooltip trigger for Enhance Document Retrieval', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enhance document retrieval'),
+      ).toBeInTheDocument();
+    });
+
     it('renders the Image upload section', () => {
       render(<SettingsTab />);
 
@@ -472,7 +498,7 @@ describe('SettingsTab', () => {
     it('renders mentor image when profile_image is a URL', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByAltText('Mentor');
+      const img = screen.getByAltText('Agent');
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', 'https://example.com/avatar.jpg');
     });
@@ -578,7 +604,7 @@ describe('SettingsTab', () => {
       await user.clear(input);
 
       await waitFor(() => {
-        expect(screen.getByText('Mentor name is required')).toBeInTheDocument();
+        expect(screen.getByText('Agent name is required')).toBeInTheDocument();
       });
     });
 
@@ -593,7 +619,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText('Mentor description is required'),
+          screen.getByText('Agent description is required'),
         ).toBeInTheDocument();
       });
     });
@@ -652,6 +678,19 @@ describe('SettingsTab', () => {
       fireEvent.click(voiceRecordSwitch);
 
       expect(voiceRecordSwitch).toBeChecked();
+    });
+
+    it('toggles enhance document retrieval switch', () => {
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval disabled',
+      );
+      expect(ragSwitch).not.toBeChecked();
+
+      fireEvent.click(ragSwitch);
+
+      expect(ragSwitch).toBeChecked();
     });
   });
 
@@ -729,7 +768,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -748,7 +787,7 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -845,6 +884,60 @@ describe('SettingsTab', () => {
         );
       });
     });
+
+    it('submits enable_multi_query_rag as true after toggling ON', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval disabled',
+      );
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_multi_query_rag as false after toggling OFF', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText(
+        'Enhance document retrieval enabled',
+      );
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: false,
+            }),
+          }),
+        );
+      });
+    });
   });
 
   // ==========================================================================
@@ -872,7 +965,7 @@ describe('SettingsTab', () => {
 
       // After uploading, the image should be displayed
       await waitFor(() => {
-        expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+        expect(screen.getByAltText('Agent')).toBeInTheDocument();
       });
     });
 
@@ -880,7 +973,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Image should be displayed
-      expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+      expect(screen.getByAltText('Agent')).toBeInTheDocument();
 
       const removeButton = screen.getByLabelText('Remove image');
       fireEvent.click(removeButton);
@@ -948,7 +1041,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -960,7 +1053,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -969,7 +1062,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -994,7 +1087,7 @@ describe('SettingsTab', () => {
     it('enables fields when nothing is loading', () => {
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).not.toBeDisabled();
     });
   });
@@ -1367,6 +1460,45 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByLabelText('Is lti accessible disabled'),
+      ).not.toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag true in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval enabled'),
+      ).toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag false in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval disabled'),
+      ).not.toBeChecked();
+    });
+
+    it('defaults enable_multi_query_rag to false when undefined', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: undefined },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enhance document retrieval disabled'),
       ).not.toBeChecked();
     });
   });

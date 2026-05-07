@@ -1586,6 +1586,14 @@ export function Chat({
       onDragLeave={handleChatDragLeave}
       onDrop={handleChatDrop}
     >
+      {/* Skip link for keyboard users (WCAG 2.4.1). Bypasses the chat header
+       * and message history to land directly on the composer textarea. */}
+      <a
+        href="#chat-input-textarea"
+        className="sr-only z-50 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-md focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-blue-600"
+      >
+        Skip to chat input
+      </a>
       {/* Full-chat file drop overlay */}
       {isDraggingFile && (
         <div className="animate-in fade-in absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-50/70 backdrop-blur-sm transition-all duration-300">
@@ -1739,16 +1747,21 @@ export function Chat({
 
       {/* Messages and Canvas - handle layout based on canvas state */}
       {isCanvasOpen && !isInCanvasView ? (
-        /* Split layout when canvas is open */
+        /* Split layout when canvas is open. Stacks vertically below md so the
+         * chat panel stays visible at high zoom (WCAG 1.4.10 Reflow). */
         <div
-          className="relative flex flex-1 overflow-hidden"
+          className="relative flex flex-1 flex-col overflow-hidden md:flex-row"
           ref={resizeRef}
           style={{ minHeight: 0, maxHeight: '100%', height: '100%' }}
         >
-          {/* Chat section on left - hidden on mobile */}
+          {/* Chat section on left at md+, top half when stacked */}
           <div
-            className="hidden flex-shrink-0 flex-col overflow-hidden border-r border-gray-200 md:flex"
-            style={{ width: `${chatWidth}%`, minHeight: 0, maxHeight: '100%' }}
+            className="flex min-h-0 flex-1 flex-shrink-0 flex-col overflow-hidden border-b border-gray-200 md:flex-none md:border-r md:border-b-0"
+            style={{
+              width: isMdUp ? `${chatWidth}%` : '100%',
+              minHeight: 0,
+              maxHeight: '100%',
+            }}
           >
             {/* Chat messages */}
             <div
@@ -1876,8 +1889,9 @@ export function Chat({
             </div>
           </div>
 
-          {/* Resize handle */}
+          {/* Resize handle - only meaningful in horizontal split (md+) */}
           <div
+            aria-hidden="true"
             className="group relative z-10 hidden w-1 flex-shrink-0 cursor-col-resize bg-gray-300 transition-colors duration-200 hover:bg-blue-500 md:flex"
             onMouseDown={handleResizeStart}
           >
@@ -1890,14 +1904,14 @@ export function Chat({
             </div>
           </div>
 
-          {/* Canvas section on right - full width on mobile */}
+          {/* Canvas section on right at md+, bottom half when stacked */}
           <div
-            className="flex flex-1 flex-col overflow-hidden bg-white"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
             style={{
               width: isMdUp ? `${100 - chatWidth}%` : '100%',
               minHeight: 0,
               maxHeight: '100%',
-              height: '100%',
+              height: isMdUp ? '100%' : 'auto',
             }}
           >
             <CanvasView
@@ -1918,62 +1932,6 @@ export function Chat({
               }}
               onClose={handleCloseCanvas}
             />
-
-            {/* Mobile prompt box - only show on mobile */}
-            <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3 md:hidden">
-              <ChatInputForm
-                sessionId={sessionId}
-                onSubmit={handleSubmit}
-                stopGenerating={stopGenerating}
-                onScreenSharingClick={() => {
-                  if (enableChatPopupActions && isInIframe()) {
-                    sendMessageToParentWebsite({
-                      type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
-                    });
-                    return;
-                  }
-                  if (isScreenSharingModalOpen) {
-                    setIsScreenSharingModalOpen(false);
-                  } else {
-                    setIsScreenSharingModalOpen(true);
-                  }
-                }}
-                isScreenSharingModalOpen={isScreenSharingModalOpen}
-                onPhoneCallClick={() => {
-                  if (enableChatPopupActions && isInIframe()) {
-                    sendMessageToParentWebsite({
-                      type: 'MENTOR:CHAT_ACTION_VOICECALL',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
-                    });
-                    return;
-                  }
-                  setIsPhoneCallModalOpen(true);
-                }}
-                tenantKey={tenantKey}
-                username={username ?? ''}
-                setMessage={setMessage}
-                enableSafetyDisclaimer={enableSafetyDisclaimer}
-                isPreviewMode={isPreviewMode}
-                enableWebBrowsing={enableWebBrowsing}
-                isStreaming={isStreaming}
-                updateSessionTools={updateSessionTools}
-                setSessionTools={setSessionTools}
-                activeTools={activeTools}
-                screenSharing={screenSharing}
-                deepResearch={deepResearch}
-                studyMode={studyMode}
-                imageGeneration={imageGeneration}
-                codeInterpreter={codeInterpreter}
-                promptsIsEnabled={promptsIsEnabled}
-                googleSlidesIsEnabled={googleSlidesIsEnabled}
-                googleDocumentIsEnabled={googleDocumentIsEnabled}
-                artifactsEnabled={artifactsEnabled}
-                compactMode={isCompactMode}
-                isConnecting={!isConnected}
-                stopStreamingButtonRef={stopStreamingButtonRef}
-              />
-            </div>
           </div>
         </div>
       ) : (
@@ -2204,7 +2162,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Voice Call</DialogTitle>
             <DialogDescription>
-              Would you like to start a voice call with your mentor?
+              Would you like to start a voice call with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2254,7 +2212,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Screen Sharing</DialogTitle>
             <DialogDescription>
-              Would you like to start a screen sharing with your mentor?
+              Would you like to start a screen sharing with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

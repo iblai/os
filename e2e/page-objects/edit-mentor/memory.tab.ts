@@ -4,7 +4,6 @@ export class MemoryTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  readonly enableMemoryToggle: Locator;
   readonly addMemoryButton: Locator;
   readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
@@ -23,11 +22,6 @@ export class MemoryTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.enableMemoryToggle = dialog
-      .getByText('Enable Memory')
-      .locator('..')
-      .locator('..')
-      .getByRole('switch');
     this.addMemoryButton = dialog
       .locator('button')
       .filter({ hasText: /add memory/i });
@@ -41,25 +35,6 @@ export class MemoryTab {
     this.memoryActionButtons = dialog
       .locator('.space-y-3 button:not([aria-label]):not([name])')
       .or(dialog.locator('button[class*="ghost"][class*="h-6"]'));
-  }
-
-  async isEnableMemoryChecked(): Promise<boolean> {
-    return (
-      (await this.enableMemoryToggle
-        .getAttribute('aria-checked')
-        .catch(() => 'false')) === 'true'
-    );
-  }
-
-  async toggleEnableMemory(): Promise<void> {
-    await expect(this.enableMemoryToggle).toBeVisible({ timeout: 10_000 });
-    await this.enableMemoryToggle.click();
-    // Toast says "Memory enabled" or "Memory disabled". Use .first() to
-    // avoid strict-mode violations when a prior toggle's toast is still
-    // fading out in the Sonner stack.
-    await expect(
-      this.page.getByText(/Memory enabled|Memory disabled/).first(),
-    ).toBeVisible({ timeout: 10_000 });
   }
 
   async hasMemories(): Promise<boolean> {

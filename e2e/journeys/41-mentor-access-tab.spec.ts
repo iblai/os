@@ -135,7 +135,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
 
     // Dialog title must be visible
     await expect(
-      createDialog.getByRole('heading', { name: /Create mentor role access/i }),
+      createDialog.getByRole('heading', { name: /Create agent role access/i }),
     ).toBeVisible({ timeout: 5_000 });
 
     // Role selector must be present

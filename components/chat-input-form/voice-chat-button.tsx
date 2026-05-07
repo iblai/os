@@ -52,6 +52,13 @@ export function VoiceChatButton({
             className="h-9 w-9 text-gray-400"
             disabled={disabled || isPreviewMode || processing}
             type="button"
+            aria-label={
+              processing
+                ? 'Processing voice input'
+                : recording
+                  ? 'Stop voice input'
+                  : 'Voice input'
+            }
             onClick={handleMicrophoneBtnClick}
           >
             <Icon processing={processing} recording={recording} />

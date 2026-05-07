@@ -364,7 +364,7 @@ describe('EditMentorModal', () => {
 
       await waitFor(() => {
         const description = screen.getByText(
-          /Edit Mentor settings, prompts, tools, safety, flow, history, datasets, and API keys/i,
+          /Edit Agent settings, prompts, tools, safety, flow, history, datasets, and API keys/i,
         );
         expect(description).toBeInTheDocument();
         expect(description).toHaveClass('sr-only');

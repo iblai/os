@@ -351,7 +351,7 @@ describe('PromptsTab', () => {
 
       expect(screen.getByText('Prompts')).toBeInTheDocument();
       expect(
-        screen.getByText('Manage and configure prompts for your mentor.'),
+        screen.getByText('Manage and configure prompts for your agent.'),
       ).toBeInTheDocument();
     });
 
@@ -450,7 +450,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       expect(
-        screen.getByText("Define the mentor's behavior"),
+        screen.getByText("Define the agent's behavior"),
       ).toBeInTheDocument();
       expect(
         screen.getByText('Guide the conversation flow'),
@@ -573,7 +573,7 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -592,7 +592,7 @@ describe('PromptsTab', () => {
       fireEvent.click(switches[0]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -701,7 +701,7 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -720,7 +720,7 @@ describe('PromptsTab', () => {
       fireEvent.click(switches[1]);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -879,7 +879,7 @@ describe('PromptsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -904,7 +904,7 @@ describe('PromptsTab', () => {
       fireEvent.click(screen.getByTestId('save-prompt'));
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -2406,7 +2406,7 @@ describe('PromptsTab', () => {
       await waitFor(() => {
         expect(mockEditMentor).toHaveBeenCalled();
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });

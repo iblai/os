@@ -63,11 +63,10 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
 
       // Enable memory on the mentor so the auth-gate assertion below is
       // meaningful (the Memory button also requires mentor memory to be on).
-      await editMentorPage.open('Memory');
+      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
+      await editMentorPage.open('Settings');
       await waitForPageReady(setupPage);
-      if (!(await editMentorPage.memory.isEnableMemoryChecked())) {
-        await editMentorPage.memory.toggleEnableMemory();
-      }
+      await editMentorPage.settings.setMemoryEnabled(true);
       await editMentorPage.close();
     } finally {
       await setupPage.close();
@@ -206,7 +205,7 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
     await goToAnonymousMentor(page);
     const mentorsButton = page.getByRole('button', {
-      name: 'Mentors',
+      name: 'Agents',
       exact: true,
     });
     await expect(mentorsButton).toBeVisible({ timeout: 10_000 });

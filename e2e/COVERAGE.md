@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-05 | 356 checkpoints (347 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-05 | 368 checkpoints (359 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -27,9 +27,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (6 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (7 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
 - [x] Newly created user can send a message and receive an AI response
 - [x] Newly created user can start a new chat session after chatting
@@ -37,6 +37,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs link in a new tab
+- [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 
 ---
 
@@ -109,7 +110,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (5 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (8 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -118,6 +119,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
+- [x] Enhance Document Retrieval toggle is visible with correct label and defaults to OFF
+- [x] Enhance Document Retrieval tooltip contains wording about multiple search queries
+- [x] Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles
 
 ---
 
@@ -314,19 +318,38 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 21: Billing & Subscription (9 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`, `app/provider-association/stripe/callback/[launch_id]/page.tsx`, `hooks/subscription/use-subscription-v2.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
 
-- [x] Billing tab is visible in account settings
-- [x] Billing main card shows credits information
-- [x] Correct buttons are shown based on payment method status
-- [x] Subscription renewal information is shown when applicable
-- [x] Usage card is visible when topUpURL is configured
-- [x] Plan info and upgrade button display when applicable
-- [x] Auto Recharge modal opens, shows all elements, enable toggle and threshold/amount inputs work, and Cancel closes it _(payment-gated — skipped gracefully when no payment method)_
-- [x] Add Credits modal opens correctly _(payment-gated)_
-- [x] New user without subscription sees Stripe pricing modal when attempting to create a mentor
+Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
+
+**A. CreditBalance dropdown (nav-bar)**
+
+- [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
+- [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
+- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
+- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
+- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
+- [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
+- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
+- [x] Add Credits opens the Add Credits modal _(payment-gated)_
+- [x] Escape closes the dropdown
+
+**B. Billing tab (User Profile dialog)**
+
+- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
+- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
+- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
+- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
+- [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
+
+**C. Non-admin pricing**
+
+- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
 
 ---
 
@@ -365,16 +388,16 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
-- [x] CP-24.1: Memory tab is visible and Enable Memory section is present
-- [x] CP-24.2: "Enable Memory" toggle can be enabled and disabled (sends enable_memory_component)
+- [x] CP-24.1: Memory tab is visible in Edit Mentor modal
+- [x] CP-24.2: Memory toggle (Settings tab) can be enabled and disabled (sends enable_memory_component on Save)
 - [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
 - [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
 - [x] CP-24.5: Admin can edit a memory entry via action menu
 - [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
 - [x] CP-24.7: User filter and date range filter are visible in manage memories
-- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting
+- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
 
 ---
 
@@ -430,9 +453,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (19 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat/index.tsx`, `components/chat-input-form.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -453,6 +476,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
 - [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
+- [x] Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has `aria-label="Chat composer"` (issue #1596)
+- [x] Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)
+- [x] Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)
+- [x] Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)
 
 ---
 
@@ -652,25 +679,22 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 43: CLAW Advanced Sandbox (15 checkpoints) — `journeys/43-claw-advanced-sandbox.spec.ts`
+## Journey 43: Persistent Chat Input Label — WCAG 3.3.2 (10 checkpoints) — `journeys/43-persistent-chat-input-label.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/chat-input-form.tsx`
 
-- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
-- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
-- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
-- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
-- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
-- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders
-- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
-- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
-- [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
-- [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
-- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
+Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
+
+- [x] PCIL-43.1: Label has `sr-only` class when `persistent_chat_input_label` flag is `false`
+- [x] PCIL-43.2: Textarea placeholder is `"Ask anything"` when flag is `false`
+- [x] PCIL-43.3: `aria-labelledby` wires textarea to label element when flag is `false`
+- [x] PCIL-43.4: User can send a message when flag is `false`
+- [x] PCIL-43.5: Label is visually visible (`block`, not `sr-only`) when flag is `true`
+- [x] PCIL-43.6: Textarea placeholder is empty string when flag is `true`
+- [x] PCIL-43.7: `aria-labelledby` and label text are intact when flag is `true`
+- [x] PCIL-43.8: User can send a message when flag is `true`
+- [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
+- [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
 
 ---
 

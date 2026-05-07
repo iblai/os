@@ -104,10 +104,20 @@ export function useIframeHandlers() {
     // EDX integration handlers
     'MENTOR:EDX_USAGE_ID': (payload: { edxUsageId: string }) => {
       console.log('EDX Usage ID updated:', payload.edxUsageId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxUsageId: payload.edxUsageId },
+        }),
+      );
     },
 
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxCourseId: payload.edxCourseId },
+        }),
+      );
     },
 
     // Safety disclaimer handler
@@ -158,6 +168,9 @@ export function useIframeHandlers() {
         content: message,
         visible: false,
       });
+    },
+    'MENTOR:NEW_CHAT': () => {
+      eventBus.emit(RemoteEvents.newChat);
     },
   };
 
