@@ -4,7 +4,7 @@
 
 ### CI
 
-* use only chrome browser for tests ([4a350a9](https://github.com/iblai/mentorai/commit/4a350a9741de9d61a75bae578953e32bf2a24b7e))
+- use only chrome browser for tests ([4a350a9](https://github.com/iblai/mentorai/commit/4a350a9741de9d61a75bae578953e32bf2a24b7e))
 
 ## [0.63.2](https://github.com/iblai/mentorai/compare/v0.63.1...v0.63.2) (2026-05-07)
 
