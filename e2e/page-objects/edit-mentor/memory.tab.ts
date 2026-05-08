@@ -29,18 +29,12 @@ export class MemoryTab {
       name: 'Manage categories',
     });
     this.emptyState = dialog.getByText('No saved memories yet.');
-    // The per-memory action button is an unnamed icon-only button (MoreHorizontal).
-    // It lives inside each memory entry card alongside the memory content text.
-    // We identify it as buttons inside the memory list that have no accessible name.
-    this.memoryActionButtons = dialog
-      .locator(
-        '[data-testid="memory-list"] button:not([aria-label]):not([name])',
-      )
-      .or(
-        dialog.locator(
-          '[data-testid="memory-entry"] button[class*="ghost"][class*="h-6"]',
-        ),
-      );
+    // Per-memory MoreHorizontal action trigger. Identified by a stable
+    // data-testid added to the DropdownMenuTrigger's <Button> in the
+    // ManageMemories component — no class-based selectors.
+    this.memoryActionButtons = dialog.locator(
+      '[data-testid="memory-entry-action-menu"]',
+    );
   }
 
   async hasMemories(): Promise<boolean> {
@@ -218,8 +212,7 @@ export class MemoryTab {
     const entry = this.entryByContent(content).first();
     await expect(entry).toBeVisible({ timeout: 10_000 });
     const actionBtn = entry
-      .locator('button:not([aria-label]):not([name])')
-      .or(entry.locator('button[class*="ghost"][class*="h-6"]'))
+      .locator('[data-testid="memory-entry-action-menu"]')
       .first();
     await expect(actionBtn).toBeVisible({ timeout: 10_000 });
     await actionBtn.click();
@@ -478,11 +471,12 @@ export class MemoryTab {
    * Returns the text content of the first memory entry.
    */
   async getFirstMemoryContent(): Promise<string> {
-    // Memory content is rendered inside a div with text-sm class within the entry card
+    // Content is targeted by its data-testid on the inner content div, not
+    // by Tailwind utility classes which can change without notice.
     const firstEntry = this.dialog
       .locator('[data-testid="memory-entry"]')
       .first()
-      .locator('.text-sm.leading-relaxed');
+      .locator('[data-testid="memory-entry-content"]');
     return (await firstEntry.textContent().catch(() => '')) ?? '';
   }
 }

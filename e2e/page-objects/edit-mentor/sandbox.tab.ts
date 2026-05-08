@@ -323,16 +323,21 @@ export class SandboxTab {
 
   /**
    * Reads the currently-connected instance name from the connected-state
-   * UI (label "Name" sibling). Returns null when not connected.
+   * UI. The bundle renders the connected panel as
+   *   <p>Name</p><p>{instanceName}</p>
+   * one per column (Name / URL / Status / Health / Last Check). Anchor
+   * on the "Name" label paragraph by exact text and walk to the value
+   * paragraph immediately after it.
+   *
+   * Returns null when not connected or when the value cannot be parsed.
    */
   async getConnectedInstanceName(): Promise<string | null> {
     if (!(await this.isConnected())) return null;
-    const nameCell = this.dialog
-      .locator('p')
-      .filter({ hasText: /^Name$/ })
+    const valueParagraph = this.dialog
+      .getByText('Name', { exact: true })
       .first()
       .locator('xpath=following-sibling::p[1]');
-    return nameCell
+    return valueParagraph
       .innerText()
       .then((t) => t.trim() || null)
       .catch(() => null);

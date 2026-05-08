@@ -655,7 +655,10 @@ export function ManageMemories({
                         )}
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed text-gray-900">
+                    <div
+                      data-testid="memory-entry-content"
+                      className="text-sm leading-relaxed text-gray-900"
+                    >
                       {memory.content}
                     </div>
                   </div>
@@ -664,6 +667,8 @@ export function ManageMemories({
                       <Button
                         variant="ghost"
                         size="sm"
+                        data-testid="memory-entry-action-menu"
+                        aria-label="Memory actions"
                         className="h-6 w-6 flex-shrink-0 p-0 text-gray-600 hover:text-gray-900"
                       >
                         <MoreHorizontal className="h-4 w-4" />

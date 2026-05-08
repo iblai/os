@@ -143,15 +143,25 @@ export class SkillsTab {
   /**
    * Returns the card locator for a skill identified by `name`.
    *
-   * AgentSkills renders each skill as a
-   * `div.flex.items-center.justify-between.rounded-lg.border.p-6` —
-   * NOT a table row. Filter by text.
+   * AgentSkills renders each skill row with two unique accessible
+   * elements: a Switch with `aria-label="${name} enabled|disabled"` and
+   * a DropdownMenu trigger with `aria-label="${name} actions"`. We
+   * anchor on the Switch (always present) and walk up to the innermost
+   * enclosing div that also contains the actions trigger — that's the
+   * card. No coupling to Tailwind class signatures.
    */
   getSkillRowByName(name: string): Locator {
+    const toggle = this.getSkillToggle(name);
+    const actionsBtn = this.dialog.getByRole('button', {
+      name: new RegExp(`^${escapeRegex(name)}\\s+actions$`, 'i'),
+    });
+    // `.last()` resolves to the innermost ancestor div that contains
+    // both — i.e. the row card itself, not the panel/wrapper above it.
     return this.dialog
-      .locator('div.flex.items-center.justify-between.rounded-lg.border')
-      .filter({ hasText: name })
-      .first();
+      .locator('div')
+      .filter({ has: toggle })
+      .filter({ has: actionsBtn })
+      .last();
   }
 
   /**

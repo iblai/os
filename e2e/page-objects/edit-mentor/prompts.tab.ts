@@ -262,34 +262,25 @@ export class PromptsTab {
   /**
    * Returns the row/card locator for an agent config field by its label.
    *
-   * AgentConfigPrompts from @iblai/web-containers renders each field as:
-   *   div.flex.items-center.justify-between.rounded-lg.border.p-6
-   * There are no `card` or `field` class names on the wrapper divs.
+   * AgentConfigPrompts in @iblai/web-containers exposes two stable
+   * accessible markers per card:
+   *   - a TooltipTrigger button with aria-label="More info about ${label}"
+   *   - an "Edit" button next to it (plain text label)
+   *
+   * Anchor on the unique TooltipTrigger and walk up to the innermost
+   * div that also contains the Edit button — that's the card. No
+   * coupling to Tailwind class signatures.
    */
   agentConfigFieldRowByLabel(label: string): Locator {
+    const tooltipBtn = this.dialog.getByRole('button', {
+      name: `More info about ${label}`,
+    });
+    const editBtn = this.dialog.getByRole('button', { name: /^edit$/i });
     return this.dialog
-      .locator('div.flex.items-center.justify-between.rounded-lg.border')
-      .filter({
-        hasText: new RegExp(label, 'i'),
-      });
-  }
-
-  /**
-   * Returns the first agent config field card in the section.
-   * Useful when the caller does not know the field names upfront.
-   *
-   * AgentConfigPrompts from @iblai/web-containers renders each field as:
-   *   div.flex.items-center.justify-between.rounded-lg.border.p-6
-   * with an "Edit" button (variant="outline"). There are no `card` or `field`
-   * class names on the wrapper divs.
-   */
-  firstAgentConfigField(): Locator {
-    return this.dialog
-      .locator('div.flex.items-center.justify-between.rounded-lg.border')
-      .filter({
-        has: this.dialog.getByRole('button', { name: /^edit$/i }),
-      })
-      .first();
+      .locator('div')
+      .filter({ has: tooltipBtn })
+      .filter({ has: editBtn })
+      .last();
   }
 
   /**
