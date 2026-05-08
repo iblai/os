@@ -97,7 +97,7 @@ jobs:
       ec2-user: 'ubuntu'
       ec2-commands: >-
         cd /ibl/app/ibl-spa/mentor &&
-        sed -i 's|image: 765174860755.dkr.ecr.us-east-1.amazonaws.com/iblai-mentor-spa-pro:[^ ]*|image: iad.ocir.io/idcwyla5j5cr/iblai-mentor-spa-pro:pr-${{ github.event.pull_request.number }}|' docker-compose.yml &&
+        sed -i 's|image: .*|image: ${{ needs.build-app-image.outputs.image-uri }}|' docker-compose.yml &&
         docker compose down &&
         docker compose up -d
 

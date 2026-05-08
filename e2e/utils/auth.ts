@@ -2,6 +2,11 @@ import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from './navigation';
 import { waitForPageReady } from './resilient';
 import { logger } from '@iblai/iblai-js/playwright';
+import {
+  CANVAS_EMAIL,
+  CANVAS_PASSWORD,
+  CANVAS_URL,
+} from '../fixtures/test-data';
 
 const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
 const AUTH_HOST = process.env.AUTH_HOST || '';
@@ -168,4 +173,16 @@ export async function getPlatformContext(
     throw new Error(`Not on a platform URL: ${url}`);
   }
   return { tenantKey: parts[1], mentorId: parts[2] };
+}
+
+/**
+ * Authenticates to Canvas LMS.
+ * @param page
+ */
+export async function authenticateToCanvas(page: Page): Promise<void> {
+  await page.goto(CANVAS_URL);
+  await page.fill('input[name="pseudonym_session[unique_id]"]', CANVAS_EMAIL);
+  await page.fill('input[name="pseudonym_session[password]"]', CANVAS_PASSWORD);
+  await page.click('input[type="submit"]');
+  await safeWaitForURL(page, '**/?login_success=1', { timeout: 60_000 });
 }

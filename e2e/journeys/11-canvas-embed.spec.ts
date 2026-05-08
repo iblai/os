@@ -5,8 +5,7 @@ import {
   CANVAS_PASSWORD,
   hasCanvasEnv,
 } from '../fixtures/test-data';
-import { authenticate } from '../utils/auth';
-import { safeWaitForURL } from '../utils/navigation';
+import { authenticateToCanvas } from '../utils/auth';
 
 test.describe('Journey 11: Canvas — Embed', () => {
   // fixme: authenticate() uses the mentor app auth flow (IBL SSO) which does not work
@@ -21,7 +20,7 @@ test.describe('Journey 11: Canvas — Embed', () => {
       );
 
       // Authenticate to Canvas LMS
-      await authenticate(page, CANVAS_URL, CANVAS_EMAIL, CANVAS_PASSWORD);
+      await authenticateToCanvas(page);
 
       // Navigate to the Canvas LMS page that contains the embedded mentor
       await page.goto(CANVAS_URL, {
