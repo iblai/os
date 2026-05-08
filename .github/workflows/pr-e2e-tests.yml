@@ -57,6 +57,7 @@ jobs:
       registry-type: ocir
       image-tag: pr-${{ github.event.pull_request.number }}
       event-name: pull_request
+      runs-on: iblai-stg-runner
       pr-number: ${{ github.event.pull_request.number }}
 
   # ============================================================
@@ -73,6 +74,7 @@ jobs:
       registry-type: ocir
       image-tag: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
       event-name: pull_request
+      runs-on: iblai-stg-runner
       pr-number: ${{ github.event.pull_request.number }}
 
   # ============================================================
@@ -94,6 +96,7 @@ jobs:
       registry-type: 'ocir'
       ec2-host: '32.196.111.179'
       ec2-user: 'ubuntu'
+      runs-on: iblai-stg-runner
       ec2-commands: >-
         cd /ibl/app/ibl-spa/mentor &&
         sed -i 's|image: .*|image: ${{ needs.build-app-image.outputs.image-uri }}|' docker-compose.yml &&
