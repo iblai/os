@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.63.13](https://github.com/iblai/mentorai/compare/v0.63.12...v0.63.13) (2026-05-08)
+
+### Reverts
+
+* drop out-of-scope reflow + skip-link + voice-call work from [#1596](https://github.com/iblai/mentorai/issues/1596) ([dbce21b](https://github.com/iblai/mentorai/commit/dbce21b519cda83a26b718123111ea9d1a638c8f))
+
+### Chores
+
+* **e2e:** map voice-call-button.tsx to journey 37 sourceFiles ([e1dd9a1](https://github.com/iblai/mentorai/commit/e1dd9a10f2ebf428e744b2a01fc9c7eedb22b4e0))
+
 ## [0.63.12](https://github.com/iblai/mentorai/compare/v0.63.11...v0.63.12) (2026-05-08)
 
 ### Bug Fixes
