@@ -58,6 +58,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     reducer: (state = {}, _action: any) => state,
     middleware: vi.fn(),
   },
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('@/hooks/use-welcome-message', () => ({

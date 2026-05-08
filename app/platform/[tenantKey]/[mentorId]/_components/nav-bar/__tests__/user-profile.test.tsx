@@ -147,6 +147,15 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 // Mock data layer query
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: () => ({ data: null }),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock tenant metadata query

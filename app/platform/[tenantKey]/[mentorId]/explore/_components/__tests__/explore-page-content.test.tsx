@@ -74,6 +74,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetPersonnalizedMentorsQuery(...args),
   useStarMentorMutation: () => [mockStarMentor, { isLoading: false }],
   useUnstarMentorMutation: () => [mockUnstarMentor, { isLoading: false }],
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock section components - capture context for testing

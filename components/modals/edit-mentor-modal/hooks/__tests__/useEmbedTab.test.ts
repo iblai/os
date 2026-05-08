@@ -24,6 +24,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       mentor_unique_id: 'mentor-123',
     },
   })),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('@/features/auth/api-slice', () => ({

@@ -32,6 +32,15 @@ const mockUseGetTrainingDocumentsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetTrainingDocumentsQuery: (...args: unknown[]) =>
     mockUseGetTrainingDocumentsQuery(...args),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 describe('useDatasetsWithPagination', () => {

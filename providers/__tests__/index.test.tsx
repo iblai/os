@@ -203,6 +203,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     isLoading: false,
     isError: false,
   }),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // ── tenant metadata ─────────────────────────────────────────────────────────

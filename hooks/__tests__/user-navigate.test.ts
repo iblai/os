@@ -141,6 +141,15 @@ vi.mock('../use-user', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorSettingsQuery: mocked.useGetMentorSettingsQuery,
   useGetMentorPublicSettingsQuery: mocked.useGetMentorPublicSettingsQuery,
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('@iblai/iblai-api', () => ({

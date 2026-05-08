@@ -38,6 +38,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetMentorMemoriesQuery(...args),
   useGetMemoryCategoriesAdminQuery: (...args: unknown[]) =>
     mockGetMemoryCategoriesAdminQuery(...args),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // ---- UI primitive stubs ----
