@@ -144,6 +144,7 @@ vi.mock('@/lib/utils', () => ({
   hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
+  deleteCookieOnAllDomains: vi.fn(),
 }));
 
 vi.mock('@/lib/config', () => ({
