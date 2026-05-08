@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-08",
   "summary": {
-    "totalCheckpoints": 373,
-    "coveredCheckpoints": 364,
+    "totalCheckpoints": 388,
+    "coveredCheckpoints": 379,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 44,
