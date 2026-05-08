@@ -180,7 +180,7 @@ export async function getPlatformContext(
  * @param page
  */
 export async function authenticateToCanvas(page: Page): Promise<void> {
-  await page.goto(CANVAS_URL);
+  await page.goto(`${CANVAS_URL}/login/canvas`);
   await page.fill('input[name="pseudonym_session[unique_id]"]', CANVAS_EMAIL);
   await page.fill('input[name="pseudonym_session[password]"]', CANVAS_PASSWORD);
   await page.click('input[type="submit"]');

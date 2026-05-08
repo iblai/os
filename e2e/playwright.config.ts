@@ -21,6 +21,7 @@ const testRetries = process.env.TEST_RETRIES
     : 1;
 
 const config = defineConfig({
+  globalSetup: require.resolve('./global-setup'),
   testDir: './journeys',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
