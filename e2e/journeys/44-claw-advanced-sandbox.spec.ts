@@ -115,8 +115,18 @@ test.describe('Journey 43: CLAW Advanced Sandbox', () => {
   });
 
   // ── TC03: Pre-save state — toggled but not yet saved ─────────────────────
+  //
+  // Tab visibility is gated on the *persisted* `enable_claw` flag from
+  // mentor-settings, so flipping the toggle in the form (without clicking
+  // Save) must NOT change which tabs are visible — regardless of which
+  // state the persisted flag was already in.
+  //
+  // Snapshot tab counts BEFORE flipping and assert they're unchanged AFTER.
+  // This works for both directions (off→on and on→off) and for any starting
+  // tab state, so it doesn't depend on the test environment having CLAW
+  // disabled.
 
-  test('admin flips Advanced Sandbox toggle but does not save — Sandbox and Skills tabs do not appear', async ({
+  test('admin flips Advanced Sandbox toggle but does not save — tab visibility is unchanged', async ({
     page,
     editMentorPage,
   }) => {
@@ -126,42 +136,48 @@ test.describe('Journey 43: CLAW Advanced Sandbox', () => {
     const toggle = editMentorPage.settings.advancedSandboxToggle;
     await expect(toggle).toBeVisible({ timeout: 10_000 });
 
-    // Snapshot current state so we can leave the form unchanged
     const wasClaw = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
-    // This test only makes sense when CLAW is currently OFF (persisted as
-    // disabled). If CLAW is ON, the Sandbox tab is already visible from the
-    // persisted enabled state; flipping the toggle to OFF in-form (without
-    // saving) does NOT hide the tab — that would only happen after Save.
-    // Skip rather than produce a misleading failure.
-    if (wasClaw) {
-      await editMentorPage.close();
-      test.skip(
-        true,
-        'CLAW is already enabled — the Sandbox tab is already visible. ' +
-          'TC03 only tests the unsaved OFF→ON direction to confirm tabs stay hidden.',
-      );
-      return;
-    }
+    // Snapshot tab visibility BEFORE flipping — this is the ground truth we
+    // want to preserve after the in-form-only toggle change.
+    const sandboxBefore = await getTab(
+      editMentorPage.dialog,
+      'Sandbox',
+    ).count();
+    const skillsBefore = await getTab(editMentorPage.dialog, 'Skills').count();
 
-    // CLAW is currently OFF (persisted). Flip the toggle ON in-form but do NOT
-    // save. The Sandbox and Skills tabs must NOT appear before Save is clicked.
+    // Flip the toggle (don't click Save)
     await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'true', {
-      timeout: 5_000,
-    });
+    await expect(toggle).toHaveAttribute(
+      'aria-checked',
+      wasClaw ? 'false' : 'true',
+      { timeout: 5_000 },
+    );
 
-    // Tabs are driven by the persisted backend value, not the in-form state.
-    // Even though the toggle now shows checked, no save was issued — tabs must
-    // remain absent.
-    await expectTabHidden(editMentorPage.dialog, 'Sandbox');
-    await expectTabHidden(editMentorPage.dialog, 'Skills');
+    // Give the UI a moment to react to the form change. If anything were
+    // going to update tab visibility based on the in-form value, it would
+    // happen by now.
+    await page.waitForTimeout(500);
+
+    // Tab visibility must not have changed: the persisted enable_claw value
+    // hasn't been updated yet (no Save click), so the Sandbox/Skills tabs
+    // must remain in whatever state they were before the flip.
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toHaveCount(
+      sandboxBefore,
+      { timeout: 5_000 },
+    );
+    await expect(getTab(editMentorPage.dialog, 'Skills')).toHaveCount(
+      skillsBefore,
+      { timeout: 5_000 },
+    );
 
     // Restore by flipping back, then close without saving
     await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-checked', 'false', {
-      timeout: 5_000,
-    });
+    await expect(toggle).toHaveAttribute(
+      'aria-checked',
+      wasClaw ? 'true' : 'false',
+      { timeout: 5_000 },
+    );
     await editMentorPage.close();
   });
 
@@ -529,6 +545,11 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         name: instanceName,
         url: instanceUrl,
         type: 'OpenClaw',
+        // Gateway Token is required by the form — Create button stays
+        // disabled without it. The token won't be valid for a real claw
+        // backend but that's fine for this UI flow test; we delete the
+        // instance afterwards.
+        token: `e2e-fake-token-${ts}`,
       });
       await sandbox.submitNewInstance(instanceName);
 
@@ -559,9 +580,18 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
     }
   });
 
-  // ── TC11: Sandbox tab — Edit existing instance ────────────────────────────
+  // ── TC11: Sandbox tab — Edit instance dialog opens with current values ────
+  //
+  // The Edit Instance form initialises `gateway_token` to '' for security
+  // (the real token is not echoed back from the server). The form's Save
+  // button is gated on `name && server_url && gateway_token` so persisting
+  // an edit always requires re-entering the token — and we don't have the
+  // real token in tests. To avoid corrupting an existing instance's token,
+  // we don't actually save here; we create a throwaway instance, edit its
+  // name (re-providing the same fake token we used to create it), confirm
+  // the rename round-trips, then delete the instance.
 
-  test('admin edits an existing sandbox instance name and the updated name appears in the table', async ({
+  test('admin edits a sandbox instance name and the renamed row appears in the table', async ({
     page,
     editMentorPage,
   }) => {
@@ -570,6 +600,11 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+
+    const ts = Date.now();
+    const fakeToken = `e2e-fake-token-${ts}`;
+    const instanceName = `e2e-edit-instance-${ts}`;
+    const renamed = `${instanceName}-renamed`;
 
     try {
       if (!wasEnabled) {
@@ -591,55 +626,71 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         return;
       }
 
-      // Skip if no instances exist in the table
-      const instanceCount = await sandbox.getInstanceCount();
-      if (instanceCount === 0) {
-        test.skip(
-          true,
-          'No instances exist in this env — cannot test Edit Instance flow',
-        );
-        return;
-      }
+      // Create a throwaway instance we can safely edit + delete.
+      await sandbox.openAddInstanceDialog();
+      await sandbox.fillNewInstance({
+        name: instanceName,
+        url: `https://e2e-edit-${ts}.example.com`,
+        type: 'OpenClaw',
+        token: fakeToken,
+      });
+      await sandbox.submitNewInstance(instanceName);
 
-      // Pick the first row
-      const firstRow = sandbox.instanceTable.getByRole('row').nth(1); // nth(0) is the header row
-      await expect(firstRow).toBeVisible({ timeout: 10_000 });
+      const row = sandbox.getInstanceRowByName(instanceName);
+      await expect(row).toBeVisible({ timeout: 15_000 });
 
-      // Capture original name from the first cell (NAME column)
-      const originalName = await firstRow.getByRole('cell').first().innerText();
-      const ts = Date.now();
-      const editedName = `${originalName} (edited ${ts})`;
+      await sandbox.clickEditInRow(row);
 
-      await sandbox.clickEditInRow(firstRow);
-
-      // Clear the name field and type the new name
       await expect(sandbox.editInstanceNameInput).toBeVisible({
         timeout: 10_000,
       });
       await sandbox.editInstanceNameInput.clear();
-      await sandbox.editInstanceNameInput.fill(editedName);
+      await sandbox.editInstanceNameInput.fill(renamed);
+
+      // Save requires re-entering the token (form initialises it to '').
+      await expect(sandbox.editInstanceDialog).toBeVisible({ timeout: 5_000 });
+      const editTokenInput = sandbox.editInstanceDialog.locator(
+        '#edit-instance-token',
+      );
+      await expect(editTokenInput).toBeVisible({ timeout: 5_000 });
+      await editTokenInput.fill(fakeToken);
 
       await sandbox.saveInstanceEdit();
 
-      // Assert: row with the new name is visible
-      await expect(sandbox.getInstanceRowByName(editedName)).toBeVisible({
+      // Assert: renamed row is visible
+      await expect(sandbox.getInstanceRowByName(renamed)).toBeVisible({
         timeout: 15_000,
       });
 
-      // Restore: edit back to the original name
+      // Cleanup: delete the renamed instance
       try {
-        const editedRow = sandbox.getInstanceRowByName(editedName);
-        await sandbox.clickEditInRow(editedRow);
-        await expect(sandbox.editInstanceNameInput).toBeVisible({
+        const renamedRow = sandbox.getInstanceRowByName(renamed);
+        await sandbox.clickDeleteInRow(renamedRow);
+        await expect(sandbox.getInstanceRowByName(renamed)).toHaveCount(0, {
           timeout: 10_000,
         });
-        await sandbox.editInstanceNameInput.clear();
-        await sandbox.editInstanceNameInput.fill(originalName);
-        await sandbox.saveInstanceEdit();
       } catch {
-        // Best-effort restore
+        // Best-effort
       }
     } finally {
+      // Final fallback cleanup — try to delete by either name in case an
+      // earlier step threw before completion.
+      try {
+        const sandbox = new SandboxTab(page, editMentorPage.dialog);
+        for (const name of [renamed, instanceName]) {
+          const r = sandbox.getInstanceRowByName(name);
+          if (
+            await r
+              .first()
+              .isVisible()
+              .catch(() => false)
+          ) {
+            await sandbox.clickDeleteInRow(r).catch(() => {});
+          }
+        }
+      } catch {
+        // Best-effort
+      }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
         await waitForPageReady(page);
@@ -690,7 +741,10 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
       }
 
       // Ensure there is at least one instance to connect to. If the table is
-      // empty, create one inline.
+      // empty, create one inline. The Create button requires a gateway_token
+      // — the token need not be valid for the UI flow, since the real claw
+      // backend isn't reached during this test (the API call is what's
+      // exercised); we delete the throwaway instance afterwards.
       let instanceCount = await sandbox.getInstanceCount();
       if (instanceCount === 0) {
         const ts = Date.now();
@@ -700,6 +754,7 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
           name: createdInstanceName,
           url: `https://e2e-connect-${ts}.example.com`,
           type: 'OpenClaw',
+          token: `e2e-fake-token-${ts}`,
         });
         await sandbox.submitNewInstance(createdInstanceName);
         instanceCount = 1;
@@ -820,93 +875,54 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         return;
       }
 
-      // Get the field label so we can locate the modal by title ("Edit ${label}")
-      const fieldLabel = await firstField
-        .locator('span.text-sm.font-medium')
-        .first()
-        .innerText()
-        .catch(() => '');
+      // Read the field label so we can locate the modal by its accessible
+      // name (DialogPrimitive.Title="Edit ${label}").
+      const fieldLabel = (
+        await firstField
+          .locator('span.text-sm.font-medium')
+          .first()
+          .innerText()
+          .catch(() => '')
+      ).trim();
 
-      const editBtn = firstField
-        .getByRole('button', { name: /^edit$/i })
-        .first();
-      await expect(editBtn).toBeVisible({ timeout: 5_000 });
-      await editBtn.click();
-
-      // The EditFieldModal has title "Edit ${label}" and uses a RichTextEditor
-      // (TipTap EditorContent with role="textbox" on a contenteditable div).
-      // Locate by title text when we have it, otherwise fall back to textbox filter.
-      const editDialog = fieldLabel
-        ? page.getByRole('dialog').filter({ hasText: `Edit ${fieldLabel}` })
-        : page
-            .getByRole('dialog')
-            .filter({ has: page.getByRole('textbox') })
-            .last();
-      await expect(editDialog).toBeVisible({ timeout: 10_000 });
-
-      // RichTextEditor renders a contenteditable div[role="textbox"], not an
-      // <input>/<textarea>. Use innerText() to read and fill() to write.
-      const richEditor = editDialog.getByRole('textbox').first();
-      await expect(richEditor).toBeVisible({ timeout: 5_000 });
-      const originalValue = await richEditor.innerText().catch(() => '');
+      if (!fieldLabel) {
+        test.skip(
+          true,
+          'Could not read agent config field label — bundled component may have changed',
+        );
+        return;
+      }
 
       const ts = Date.now();
       const newValue = `e2e-test-marker-${ts}`;
-      await richEditor.fill(newValue);
 
-      const saveBtn = editDialog
-        .getByRole('button', { name: /^save$/i })
-        .first();
-      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
-      await saveBtn.click();
+      // editAgentConfigField encapsulates the OverlayModal flow: it opens the
+      // edit dialog (matched by name="Edit ${label}"), drives the TipTap
+      // contenteditable via real keyboard events, clicks Save, and waits for
+      // the modal to close. It returns the original textContent so we can
+      // restore it afterwards.
+      const originalValue = await editMentorPage.prompts.editAgentConfigField(
+        fieldLabel,
+        newValue,
+      );
 
-      // Assert: modal closes — success toast fires with "${label} updated successfully"
-      await expect(editDialog).not.toBeVisible({ timeout: 15_000 });
-
-      // Assert: success toast confirms the PATCH resolved
+      // Assert: success toast confirms the PATCH resolved.
+      // The component shows `${label} updated successfully` via sonner.
       const toast = page.getByText(/updated successfully/i).first();
-      let toastVisible = false;
       try {
         await toast.waitFor({ state: 'visible', timeout: 10_000 });
-        toastVisible = true;
       } catch {
-        toastVisible = false;
+        // Toast is best-effort — the primary assertion is that the modal
+        // closed, which already happened inside editAgentConfigField.
       }
 
-      if (!toastVisible) {
-        // Fallback: any toast-like element
-        const anyToast = page
-          .getByRole('status')
-          .or(page.getByRole('alert'))
-          .first();
-        try {
-          await anyToast.waitFor({ state: 'visible', timeout: 5_000 });
-        } catch {
-          // Best-effort — modal already closed which is the primary assertion
-        }
-      }
-
-      // Restore original value (best-effort)
+      // Restore original value (best-effort) so re-running the test against
+      // the same env doesn't accumulate marker text.
       try {
-        const restoreField = editMentorPage.prompts.firstAgentConfigField();
-        await restoreField
-          .getByRole('button', { name: /^edit$/i })
-          .first()
-          .click();
-        const restoreDialog = fieldLabel
-          ? page.getByRole('dialog').filter({ hasText: `Edit ${fieldLabel}` })
-          : page
-              .getByRole('dialog')
-              .filter({ has: page.getByRole('textbox') })
-              .last();
-        await expect(restoreDialog).toBeVisible({ timeout: 10_000 });
-        const restoreEditor = restoreDialog.getByRole('textbox').first();
-        await restoreEditor.fill(originalValue);
-        await restoreDialog
-          .getByRole('button', { name: /^save$/i })
-          .first()
-          .click();
-        await expect(restoreDialog).not.toBeVisible({ timeout: 15_000 });
+        await editMentorPage.prompts.editAgentConfigField(
+          fieldLabel,
+          originalValue,
+        );
       } catch {
         // Best-effort restore
       }

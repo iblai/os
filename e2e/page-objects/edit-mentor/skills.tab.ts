@@ -60,9 +60,13 @@ export class SkillsTab {
 
     // New skill dialog — rendered outside the Edit Mentor dialog via a Radix portal.
     // OverlayModal portals to document.body so scope to page, not dialog.
-    this.newSkillDialog = page
-      .getByRole('dialog')
-      .filter({ hasText: /new skill/i });
+    // Use the dialog accessible name (set by DialogPrimitive.Title="New Skill")
+    // rather than hasText, because the parent Edit Mentor dialog also contains
+    // the "New Skill" trigger button text and hasText would match both.
+    this.newSkillDialog = page.getByRole('dialog', {
+      name: 'New Skill',
+      exact: true,
+    });
     this.skillNameInput = this.newSkillDialog.locator('[name="skill-name"]');
     this.skillSlugInput = this.newSkillDialog.locator('[name="skill-slug"]');
     this.skillDescriptionInput = this.newSkillDialog.locator(
@@ -85,10 +89,11 @@ export class SkillsTab {
       exact: true,
     });
 
-    // Edit skill dialog
-    this.editSkillDialog = page
-      .getByRole('dialog')
-      .filter({ hasText: /edit skill/i });
+    // Edit skill dialog — same OverlayModal pattern; match by accessible name.
+    this.editSkillDialog = page.getByRole('dialog', {
+      name: 'Edit Skill',
+      exact: true,
+    });
     this.editSkillNameInput = this.editSkillDialog.locator(
       '[name="skill-name"]',
     );
@@ -350,10 +355,11 @@ export class SkillsTab {
     if (!deleteItemVisible) return;
     await deleteItem.click();
 
-    // "Delete Skill" confirmation modal from AgentSkills
-    const confirmDialog = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /delete skill/i });
+    // "Delete Skill" confirmation modal from AgentSkills — match by name.
+    const confirmDialog = this.page.getByRole('dialog', {
+      name: 'Delete Skill',
+      exact: true,
+    });
     let hasConfirm = false;
     try {
       await confirmDialog.waitFor({ state: 'visible', timeout: 5_000 });

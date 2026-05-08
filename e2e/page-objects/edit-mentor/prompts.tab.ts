@@ -293,10 +293,28 @@ export class PromptsTab {
   }
 
   /**
+   * Returns the EditFieldModal locator for an agent config field by label.
+   * The OverlayModal in @iblai/web-containers sets the dialog title to
+   * `Edit ${label}` (e.g. "Edit Identity"). We match by accessible name
+   * (DialogPrimitive.Title) so we don't accidentally match the parent Edit
+   * Mentor dialog when its content contains the label text.
+   */
+  agentConfigEditDialog(label: string): Locator {
+    return this.page.getByRole('dialog', {
+      name: `Edit ${label}`,
+      exact: true,
+    });
+  }
+
+  /**
    * Opens the Edit modal for an agent config field identified by `label`,
-   * replaces the textarea content with `newValue`, and clicks Save.
+   * replaces the editor content with `newValue`, and clicks Save.
    *
-   * Returns the original textarea content so callers can restore it.
+   * The editor is a RichTextEditor (TipTap contenteditable), NOT an <input>
+   * or <textarea> — so we use textContent() rather than inputValue() and
+   * fill via the contenteditable directly.
+   *
+   * Returns the original editor text so callers can restore it.
    */
   async editAgentConfigField(label: string, newValue: string): Promise<string> {
     const row = this.agentConfigFieldRowByLabel(label);
@@ -306,26 +324,26 @@ export class PromptsTab {
     await expect(editBtn).toBeVisible({ timeout: 5_000 });
     await editBtn.click();
 
-    // The edit modal title equals the field label
-    const editDialog = this.page
-      .getByRole('dialog')
-      .filter({ hasText: new RegExp(label, 'i') });
+    const editDialog = this.agentConfigEditDialog(label);
     await expect(editDialog).toBeVisible({ timeout: 10_000 });
 
-    const textarea = editDialog.getByRole('textbox').first();
-    await expect(textarea).toBeVisible({ timeout: 5_000 });
+    const editor = editDialog.getByRole('textbox').first();
+    await expect(editor).toBeVisible({ timeout: 5_000 });
 
-    // Capture original value before overwriting
-    const original = await textarea.inputValue();
+    const original = (await editor.textContent()) ?? '';
 
-    await textarea.clear();
-    await textarea.fill(newValue);
+    // contenteditable: select all + delete, then type the new value so TipTap
+    // observes the keyboard input events and updates its internal state.
+    await editor.click();
+    const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+    await this.page.keyboard.press(selectAll);
+    await this.page.keyboard.press('Delete');
+    await this.page.keyboard.type(newValue);
 
     const saveBtn = editDialog.getByRole('button', { name: /^save$/i }).first();
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    // Wait for the modal to close
     await expect(editDialog).not.toBeVisible({ timeout: 15_000 });
 
     return original;

@@ -59,10 +59,13 @@ export class SandboxTab {
     this.instanceTable = dialog.getByRole('table');
 
     // New Instance dialog — scoped to the page (modal is rendered outside the
-    // Edit Mentor dialog in a separate Radix portal)
-    this.newInstanceDialog = page
-      .getByRole('dialog')
-      .filter({ hasText: 'New Instance' });
+    // Edit Mentor dialog in a separate Radix portal). Match by accessible name
+    // (DialogPrimitive.Title="New Instance") because the parent Edit Mentor
+    // dialog can also contain "New Instance" text in row dropdowns/menus.
+    this.newInstanceDialog = page.getByRole('dialog', {
+      name: 'New Instance',
+      exact: true,
+    });
     this.newInstanceNameInput =
       this.newInstanceDialog.locator('#new-instance-name');
     this.newInstanceTypeSelect =
@@ -80,10 +83,11 @@ export class SandboxTab {
       exact: true,
     });
 
-    // Edit Instance dialog
-    this.editInstanceDialog = page
-      .getByRole('dialog')
-      .filter({ hasText: 'Edit Instance' });
+    // Edit Instance dialog — match by accessible name.
+    this.editInstanceDialog = page.getByRole('dialog', {
+      name: 'Edit Instance',
+      exact: true,
+    });
     this.editInstanceNameInput = this.editInstanceDialog.locator(
       '#edit-instance-name',
     );
