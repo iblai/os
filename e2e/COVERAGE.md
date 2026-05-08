@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-08 | 388 checkpoints (379 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-08 | 385 checkpoints (376 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -386,18 +386,15 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (5 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
 - [x] CP-24.1: Memory tab is visible in Edit Mentor modal
 - [x] CP-24.2: Memory toggle (Settings tab) can be enabled and disabled (sends enable_memory_component on Save)
-- [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
-- [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
-- [x] CP-24.5: Admin can edit a memory entry via action menu
-- [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
-- [x] CP-24.7: User filter and date range filter are visible in manage memories
-- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
+- [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
+- [x] CP-24.4: Admin manages memory categories (create, rename, delete)
+- [x] CP-24.5: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
 
 ---
 

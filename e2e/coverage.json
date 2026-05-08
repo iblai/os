@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-08",
   "summary": {
-    "totalCheckpoints": 388,
-    "coveredCheckpoints": 379,
+    "totalCheckpoints": 385,
+    "coveredCheckpoints": 376,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 44,
@@ -1295,31 +1295,16 @@
         },
         {
           "id": "mem-03",
-          "description": "User memories list shows entries or empty state and entry can be deleted",
+          "description": "Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it",
           "status": "covered"
         },
         {
           "id": "mem-04",
-          "description": "Admin creates a new memory from the memory tab",
-          "status": "covered"
-        },
-        {
-          "id": "mem-05",
-          "description": "Admin edits the first memory entry from the memory tab",
-          "status": "covered"
-        },
-        {
-          "id": "mem-06",
           "description": "Admin manages memory categories (create, rename, delete)",
           "status": "covered"
         },
         {
-          "id": "mem-07",
-          "description": "Admin creates then deletes a memory to verify full CRUD cycle",
-          "status": "covered"
-        },
-        {
-          "id": "mem-08",
+          "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
         }
