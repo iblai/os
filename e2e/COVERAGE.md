@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-07 | 383 checkpoints (374 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-08 | 373 checkpoints (364 active, 9 deprecated in #1431) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -439,7 +439,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 28: App Overview & Navigation UI (7 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (12 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -450,6 +450,11 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Vector document button is visible in the sidebar
 - [x] LLM provider modal opened from the navbar hides the configuration header
 - [x] LLM provider modal inside Edit Mentor retains the configuration header
+- [x] Admin: LLM name span on desktop has `overflow:hidden`, `text-overflow:ellipsis`, `whitespace:nowrap` _(navbar overflow fix: ov-08)_
+- [x] Admin: nav element does not overflow the viewport width on desktop _(navbar overflow fix: ov-09)_
+- [x] Admin: LLM name span `max-width` is at most 150 px on desktop _(navbar overflow fix: ov-10)_
+- [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
+- [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
 
 ---
 

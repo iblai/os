@@ -1328,4 +1328,69 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
     });
   });
+
+  // --------------------------------------------------------------------------
+  // LLM name responsive width — fix/nav-bar-header-overflowing-when-llm-name-long
+  //
+  // When CreditBalance is rendered alongside the LLM-name span, the span
+  // shrinks to max-w-[100px] on small screens and stays max-w-[150px] on md+
+  // so the header does not overflow horizontally when the LLM name is long.
+  // When CreditBalance is hidden, no responsive override is applied.
+  // --------------------------------------------------------------------------
+
+  describe('LLM name span responsive width vs CreditBalance', () => {
+    function getLlmNameSpan() {
+      const llmButton = screen.getByLabelText('LLM Model Selector');
+      // Span is the element holding the LLM name text ("GPT-4" per mocks)
+      return llmButton.querySelector('span');
+    }
+
+    it('applies the tighter responsive max-width when CreditBalance is displayed', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('max-w-[100px]');
+      expect(span!.className).toContain('md:max-w-[150px]');
+    });
+
+    it('does not apply the responsive override when CreditBalance is hidden', () => {
+      // Stripe disabled on tenant → CreditBalance does not render
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      // Base class always present; the conditional override must NOT be added
+      expect(span!.className).toContain('max-w-[150px]');
+      expect(span!.className).not.toContain('max-w-[100px]');
+    });
+  });
 });

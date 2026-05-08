@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-05",
+  "lastUpdated": "2026-05-08",
   "summary": {
-    "totalCheckpoints": 383,
-    "coveredCheckpoints": 374,
+    "totalCheckpoints": 373,
+    "coveredCheckpoints": 364,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 44,
@@ -1482,6 +1482,31 @@
         {
           "id": "ov-07",
           "description": "LLM provider modal inside Edit Mentor retains configuration header",
+          "status": "covered"
+        },
+        {
+          "id": "ov-08",
+          "description": "Admin: LLM name span on desktop has overflow:hidden, text-overflow:ellipsis, whitespace:nowrap",
+          "status": "covered"
+        },
+        {
+          "id": "ov-09",
+          "description": "Admin: nav element does not overflow viewport width on desktop",
+          "status": "covered"
+        },
+        {
+          "id": "ov-10",
+          "description": "Admin: LLM name span max-width is at most 150px on desktop",
+          "status": "covered"
+        },
+        {
+          "id": "ov-11",
+          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to ≤100px",
+          "status": "covered"
+        },
+        {
+          "id": "ov-12",
+          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
           "status": "covered"
         }
       ]
