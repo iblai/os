@@ -175,8 +175,8 @@ describe('hasNonExpiredAuthToken function', () => {
     localStorageMock.clear();
   });
 
-  it('should return true when no token exists', () => {
-    expect(hasNonExpiredAuthToken()).toBe(true);
+  it('should return false when no token exists', () => {
+    expect(hasNonExpiredAuthToken()).toBe(false);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -2280,6 +2280,13 @@ describe('handleTenantSwitch function', () => {
 
   beforeEach(() => {
     locationHrefSpy = '';
+    // Clear cookies from previous tests
+    document.cookie =
+      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
       writable: true,
@@ -2288,6 +2295,7 @@ describe('handleTenantSwitch function', () => {
     Object.defineProperty(window, 'location', {
       value: {
         origin: 'https://example.com',
+        hostname: 'example.com',
         pathname: '/current-path',
         search: '?query=value',
         set href(value: string) {
@@ -2464,6 +2472,13 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
 
   beforeEach(() => {
     locationHrefSpy = '';
+    // Clear cookies from previous tests
+    document.cookie =
+      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
 
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
