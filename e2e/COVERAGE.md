@@ -600,7 +600,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
 
-**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat/index.tsx`
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/index.tsx`
 
 - [x] Non-admin screen share button has `type="button"` and does not submit the chat form
 - [x] Non-admin clicking screen share activates screen sharing, not form submit

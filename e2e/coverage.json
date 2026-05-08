@@ -2034,6 +2034,7 @@
       "spec": "37-voice-call-and-screen-share-in-canvas.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/screen-sharing-button.tsx",
+        "components/chat-input-form/voice-call-button.tsx",
         "components/chat/index.tsx"
       ],
       "checkpoints": [
