@@ -383,6 +383,13 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
+  const creditBalanceComponentIsDisplayed =
+    !embedMode &&
+    visibleToLoggedInUsersOnly &&
+    isStripeActivated(currentTenant as Tenant) &&
+    canViewCreditCoinComponent &&
+    isLoggedIn();
+
   if (hideNavbar) {
     return <></>;
   }
@@ -455,7 +462,14 @@ export function NavBar() {
                         <Bot />
                       )}
                     </div>
-                    <span className="max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap">
+                    <span
+                      className={cn(
+                        'max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap',
+                        creditBalanceComponentIsDisplayed
+                          ? 'max-w-[100px] md:max-w-[150px]'
+                          : '',
+                      )}
+                    >
                       {selectedMentorCategory}
                     </span>
                     {!userIsStudent && (
@@ -594,20 +608,16 @@ export function NavBar() {
               </span>
             </div>
           )}
-          {!embedMode &&
-            visibleToLoggedInUsersOnly &&
-            isStripeActivated(currentTenant as Tenant) &&
-            canViewCreditCoinComponent &&
-            isLoggedIn() && (
-              <CreditBalance
-                tenant={tenantKey}
-                enabled={true}
-                redirectUrl={window.location.origin}
-                mainPlatformKey={config.mainTenantKey()}
-                currentUserEmail={getUserEmail()}
-                username={getUserName()}
-              />
-            )}
+          {creditBalanceComponentIsDisplayed && (
+            <CreditBalance
+              tenant={tenantKey}
+              enabled={true}
+              redirectUrl={window.location.origin}
+              mainPlatformKey={config.mainTenantKey()}
+              currentUserEmail={getUserEmail()}
+              username={getUserName()}
+            />
+          )}
           {!embedMode && visibleToLoggedInUsersOnly && (
             <NotificationDropdown
               org={tenantKey}
