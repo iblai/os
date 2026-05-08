@@ -108,7 +108,7 @@ test.describe('Journey 35: Tenant Explore Page — Admin', () => {
     await expect(modal).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test('admin goes to tenant explore page and clicks Explore Mentors in No Mentor Selected modal', async ({
+  test('admin goes to tenant explore page and clicks Explore Agents in No Agent Selected modal', async ({
     page,
     sidebarPage,
   }) => {
@@ -120,11 +120,12 @@ test.describe('Journey 35: Tenant Explore Page — Admin', () => {
     const modal = page.getByRole('alertdialog');
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
-    const exploreMentorsButton = modal.getByRole('button', {
-      name: /explore mentors/i,
+    // Modal action button was renamed Mentor → Agent in main.
+    const exploreAgentsButton = modal.getByRole('button', {
+      name: /explore agents/i,
     });
-    await expect(exploreMentorsButton).toBeVisible();
-    await exploreMentorsButton.click();
+    await expect(exploreAgentsButton).toBeVisible();
+    await exploreAgentsButton.click();
 
     await expect(modal).not.toBeVisible({ timeout: 5_000 });
     await expect(page).toHaveURL(/\/explore/, { timeout: 10_000 });

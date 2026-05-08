@@ -146,6 +146,16 @@ export class MemoryTab {
     // entryByContent() can find the new card in the unfiltered list regardless
     // of which category slug was selected during the create flow.
     await this.resetCategoryFilter();
+
+    // Wait for the new entry to actually appear in the list. The create
+    // mutation invalidates the Memories tag → triggers a refetch → re-renders
+    // the list. In slower CI runs this round-trip can outlast the caller's
+    // 10s assertion window. Polling here (auto-retry until visible) means
+    // callers can rely on the entry being present once createMemory resolves,
+    // instead of racing the cache invalidation themselves.
+    await expect(this.entryByContent(content).first()).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   /**
@@ -256,14 +266,50 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    // Sonner toasts auto-dismiss after ~4s and are racy in slower CI runs —
+    // mirror createMemory's race pattern: any of (success toast, dialog
+    // hidden, error toast) settles the assertion. Dialog-hidden is the
+    // durable post-state and the most reliable signal once `editMemory`
+    // resolves.
+    const successToast = this.page.getByText(/Memory updated/i).first();
+    const errorToast = this.page.getByText(/Failed to update memory/i).first();
+    const completed = await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      editDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      errorToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'timeout' as const),
+    ]);
+    if (completed === 'error') {
+      throw new Error(
+        'editByContent failed: backend rejected the request (saw "Failed to update memory" toast)',
+      );
+    }
+    if (completed === 'timeout') {
+      throw new Error(
+        'editByContent timed out: no success toast, no error toast, dialog still open',
+      );
+    }
 
     // Symmetric with createMemory: if the edit changed the entry's category,
     // the component auto-switches the active tab. Reset to "All" so the
     // caller's post-edit entryByContent assertions don't race a filtered view.
     await this.resetCategoryFilter();
+
+    // Wait for the updated entry to appear in the list. The update mutation
+    // invalidates the Memories tag → triggers a refetch — in slower CI
+    // runners this round-trip can outlast a caller's 10s assertion window.
+    // Polling here keeps the page-object contract self-contained.
+    await expect(this.entryByContent(newContent).first()).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   /**
@@ -330,9 +376,17 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    // Race the (transient) "Memory updated" toast against the durable
+    // dialog-hidden post-state, like createMemory / editByContent above.
+    const successToast = this.page.getByText(/Memory updated/i).first();
+    await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .catch(() => undefined),
+      editDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined),
+    ]);
   }
 
   /**

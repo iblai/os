@@ -243,17 +243,15 @@ export class SkillsTab {
   }
 
   /**
-   * Clicks Create and asserts the bundle's success signals: "Skill created"
-   * toast, dialog closed, and the new row in the list.
+   * Clicks Create and asserts the durable post-state: dialog closed and the
+   * new row in the list. We don't wait for the "Skill created" sonner toast
+   * — it auto-dismisses after ~4s and is racy in slower CI runs.
    */
   async submitNewSkill(name: string): Promise<void> {
     await expect(this.saveSkillButton).toBeEnabled();
     await this.saveSkillButton.click();
-    await expect(
-      this.page.getByText('Skill created', { exact: true }),
-    ).toBeVisible();
-    await expect(this.newSkillDialog).toBeHidden();
-    await expect(this.getSkillRowByName(name)).toBeVisible();
+    await expect(this.newSkillDialog).toBeHidden({ timeout: 10_000 });
+    await expect(this.getSkillRowByName(name)).toBeVisible({ timeout: 10_000 });
   }
 
   // ── Edit skill dialog ────────────────────────────────────────────────────
@@ -273,16 +271,14 @@ export class SkillsTab {
   }
 
   /**
-   * Clicks Save in the Edit Skill dialog and waits for the "Skill
-   * updated" toast + dialog close.
+   * Clicks Save in the Edit Skill dialog and waits for the dialog to close —
+   * the durable post-state once `updateSkill` resolves. We don't wait for
+   * the "Skill updated" sonner toast (auto-dismisses after ~4s, racy in CI).
    */
   async submitSkillEdit(): Promise<void> {
     await expect(this.saveEditSkillButton).toBeEnabled();
     await this.saveEditSkillButton.click();
-    await expect(
-      this.page.getByText('Skill updated', { exact: true }),
-    ).toBeVisible();
-    await expect(this.editSkillDialog).toBeHidden();
+    await expect(this.editSkillDialog).toBeHidden({ timeout: 10_000 });
   }
 
   /**
@@ -316,14 +312,13 @@ export class SkillsTab {
       .first()
       .click();
 
-    // Success path: "Skill deleted" toast + modal closes. If the delete
-    // mutation rejects the modal stays open — dismiss it explicitly so
-    // a leftover overlay doesn't intercept clicks on the parent dialog.
+    // Success path: the confirm modal closes after `deleteSkill` resolves.
+    // We don't wait for the "Skill deleted" sonner toast (auto-dismisses
+    // after ~4s, racy in CI). If the delete mutation rejects, the modal
+    // stays open — dismiss it explicitly so a leftover overlay doesn't
+    // intercept clicks on the parent dialog.
     try {
-      await expect(
-        this.page.getByText('Skill deleted', { exact: true }),
-      ).toBeVisible();
-      await expect(confirmDialog).toBeHidden();
+      await expect(confirmDialog).toBeHidden({ timeout: 10_000 });
     } catch {
       const cancel = confirmDialog.getByRole('button', {
         name: 'Cancel',

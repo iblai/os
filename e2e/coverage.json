@@ -1942,17 +1942,17 @@
         },
         {
           "id": "tep-05",
-          "description": "New Chat button shows No Mentor Selected modal on tenant explore page (admin)",
+          "description": "New Chat button shows No Agent Selected modal on tenant explore page (admin)",
           "status": "covered"
         },
         {
           "id": "tep-06",
-          "description": "Workflows button shows No Mentor Selected modal on tenant explore page (admin)",
+          "description": "Workflows button shows No Agent Selected modal on tenant explore page (admin)",
           "status": "covered"
         },
         {
           "id": "tep-07",
-          "description": "Explore Mentors button in No Mentor Selected modal navigates to explore",
+          "description": "Explore Agents button in No Agent Selected modal navigates to explore",
           "status": "covered"
         },
         {

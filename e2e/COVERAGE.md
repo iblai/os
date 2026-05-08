@@ -573,9 +573,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Mentor cards render on tenant explore page
 - [x] Mentors button stays on explore page
 - [x] Clicking a mentor card navigates to that mentor from tenant explore page
-- [x] New Chat button shows "No Mentor Selected" modal on tenant explore page (admin)
-- [x] Workflows button shows "No Mentor Selected" modal on tenant explore page (admin)
-- [x] "Explore Mentors" button in No Mentor Selected modal navigates to explore
+- [x] New Chat button shows "No Agent Selected" modal on tenant explore page (admin)
+- [x] Workflows button shows "No Agent Selected" modal on tenant explore page (admin)
+- [x] "Explore Agents" button in No Agent Selected modal navigates to explore
 - [x] Notifications button navigates to notifications page with sidebar and navbar
 - [x] No 404 API calls for mentor public settings when mentorId is undefined
 

@@ -197,18 +197,19 @@ export class SandboxTab {
 
   /**
    * Clicks the Connect item in the open row dropdown and waits for the
-   * "Instance connected" toast — the bundle's authoritative signal that
-   * `createConfig.unwrap()` resolved.
+   * connected-state UI to render. We deliberately do NOT wait for the
+   * "Instance connected" sonner toast: it auto-dismisses after ~4s and is
+   * racy in slower CI runners (it can disappear before Playwright's first
+   * retry poll). The "Connected Instance" heading is the durable post-state
+   * — its appearance is the authoritative signal that `createConfig`
+   * resolved and RTK cache invalidated.
    */
   async clickConnect(row: Locator): Promise<void> {
     await this.openRowMenu(row);
     await this.page.getByRole('menuitem', { name: /^connect$/i }).click();
-    await expect(
-      this.page.getByText('Instance connected', { exact: true }),
-    ).toBeVisible();
-    // Belt + braces: the connected state UI must also reflect the wiring
-    // before the next test step runs.
-    await expect(this.connectedHeading.first()).toBeVisible();
+    await expect(this.connectedHeading.first()).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
   /**
@@ -223,9 +224,10 @@ export class SandboxTab {
   }
 
   /**
-   * Clicks the Delete item, confirms in the "Delete Instance" modal
-   * (`OverlayModal title="Delete Instance"`), and waits for the
-   * "Instance deleted" toast.
+   * Clicks the Delete item and confirms in the "Delete Instance" modal.
+   * We deliberately do NOT wait for the "Instance deleted" sonner toast —
+   * it auto-dismisses after ~4s and is racy in slower CI runs. The
+   * confirm modal disappearing is the durable success signal.
    */
   async clickDeleteInRow(row: Locator): Promise<void> {
     await this.openRowMenu(row);
@@ -240,10 +242,7 @@ export class SandboxTab {
       .getByRole('button', { name: /^delete$/i })
       .first()
       .click();
-    await expect(confirmDialog).toBeHidden();
-    await expect(
-      this.page.getByText('Instance deleted', { exact: true }),
-    ).toBeVisible();
+    await expect(confirmDialog).toBeHidden({ timeout: 10_000 });
   }
 
   // ── Add Instance dialog ──────────────────────────────────────────────────
@@ -290,33 +289,32 @@ export class SandboxTab {
   }
 
   /**
-   * Clicks Create and waits for the "Instance created" toast (bundle
-   * fires this after `createInstance.unwrap()` resolves), then asserts
-   * the dialog closed and the row appeared in the table.
+   * Clicks Create and waits for the durable post-state: dialog closes and
+   * the new row appears in the instance table. We don't wait for the
+   * "Instance created" sonner toast — it auto-dismisses after ~4s and is
+   * racy in slower CI runs.
    */
   async submitNewInstance(name: string): Promise<void> {
     await expect(this.createInstanceButton).toBeEnabled();
     await this.createInstanceButton.click();
-    await expect(
-      this.page.getByText('Instance created', { exact: true }),
-    ).toBeVisible();
-    await expect(this.newInstanceDialog).toBeHidden();
-    await expect(this.getInstanceRowByName(name)).toBeVisible();
+    await expect(this.newInstanceDialog).toBeHidden({ timeout: 10_000 });
+    await expect(this.getInstanceRowByName(name)).toBeVisible({
+      timeout: 10_000,
+    });
   }
 
   // ── Edit Instance dialog ─────────────────────────────────────────────────
 
   /**
-   * Clicks Save in the Edit Instance dialog. Bundle fires "Instance
-   * updated" via `updateInstance.unwrap()` then closes the modal.
+   * Clicks Save in the Edit Instance dialog and waits for the dialog to
+   * close — the durable post-state once `updateInstance` resolves.
+   * We don't wait for the "Instance updated" sonner toast (auto-dismisses
+   * after ~4s, racy in slower CI).
    */
   async saveInstanceEdit(): Promise<void> {
     await expect(this.saveInstanceButton).toBeEnabled();
     await this.saveInstanceButton.click();
-    await expect(
-      this.page.getByText('Instance updated', { exact: true }),
-    ).toBeVisible();
-    await expect(this.editInstanceDialog).toBeHidden();
+    await expect(this.editInstanceDialog).toBeHidden({ timeout: 10_000 });
   }
 
   // ── Disconnect ───────────────────────────────────────────────────────────
@@ -362,11 +360,10 @@ export class SandboxTab {
       .first()
       .click();
 
-    await expect(
-      this.page.getByText('Instance disconnected', { exact: true }),
-    ).toBeVisible();
-    // Not-connected UI restored.
-    await expect(this.addInstanceButton).toBeVisible();
+    // Don't wait for the "Instance disconnected" sonner toast (auto-dismisses
+    // after ~4s, racy in slower CI). The Add Instance button reappearing is
+    // the durable signal that the not-connected UI has been restored.
+    await expect(this.addInstanceButton).toBeVisible({ timeout: 15_000 });
   }
 
   /**
