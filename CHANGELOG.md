@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.7](https://github.com/iblai/mentorai/compare/v0.63.6...v0.63.7) (2026-05-08)
+
+### Bug Fixes
+
+* unit test failures from tenant switching cookie and missing mock ([5429638](https://github.com/iblai/mentorai/commit/54296385f1ee3d0252601e135ad3d2cfbaa3f855))
+
 ## [0.63.6](https://github.com/iblai/mentorai/compare/v0.63.5...v0.63.6) (2026-05-07)
 
 ### CI
