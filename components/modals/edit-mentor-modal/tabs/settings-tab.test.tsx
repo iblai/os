@@ -1543,7 +1543,10 @@ describe('SettingsTab', () => {
       });
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          // mentor → agent rename: settings-tab.tsx now emits "Agent
+          // updated successfully" via the toast.success call after the
+          // editMentor mutation resolves.
+          'Agent updated successfully',
         );
       });
 

@@ -22,7 +22,10 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+// SandboxTab imports from `@iblai/iblai-js/web-containers` (the unified
+// SDK barrel that re-exports `@iblai/web-containers`). Vitest keys mocks
+// by module specifier, so we must mock the exact path the source uses.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: (props: any) => {
     mockSandboxConfig(props);
     return (

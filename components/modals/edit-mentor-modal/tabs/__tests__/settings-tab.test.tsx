@@ -87,6 +87,19 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetMentorSettingsQuery(...args),
   useGetMentorCategoriesQuery: (...args: unknown[]) =>
     mockGetMentorCategoriesQuery(...args),
+  // settings-tab.tsx renders `useGetClawMentorConfigQuery` /
+  // `useUpdateClawMentorConfigMutation` for the Advanced Sandbox toggle's
+  // claw-config sync. Stub them so this test (which doesn't exercise that
+  // branch) doesn't crash with "No 'X' export defined on the mock".
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock sonner
