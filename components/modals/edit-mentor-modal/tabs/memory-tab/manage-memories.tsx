@@ -502,6 +502,7 @@ export function ManageMemories({
               {visibleCategories.map((category) => (
                 <button
                   key={category.slug}
+                  data-testid={`memory-category-tab-${category.slug}`}
                   onClick={() => setSelectedCategorySlug(category.slug)}
                   className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategorySlug === category.slug
@@ -619,7 +620,7 @@ export function ManageMemories({
           </div>
         </div>
 
-        <div className="space-y-3 px-1 sm:px-0">
+        <div className="space-y-3 px-1 sm:px-0" data-testid="memory-list">
           {isLoadingMemories ? (
             <div className="py-8 text-center text-gray-600">
               <p>Loading memories...</p>
@@ -636,6 +637,7 @@ export function ManageMemories({
               return (
                 <div
                   key={memory.id}
+                  data-testid="memory-entry"
                   className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3"
                 >
                   <div className="flex-1">

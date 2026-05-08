@@ -95,21 +95,21 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
     }
   });
 
-  // test('admin goes to settings and verifies the accepted invite is reflected', async ({
-  //   page,
-  // }) => {
-  //   const settingsBtn = page.getByRole('button', {
-  //     name: 'Settings',
-  //     exact: true,
-  //   });
-  //   if (await settingsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-  //     await settingsBtn.click();
-  //     const dialog = page.getByRole('dialog');
-  //     await expect(dialog).toBeVisible({ timeout: 10_000 });
-  //     await page.keyboard.press('Escape');
-  //   }
-  //   expect(true).toBe(true); // Invite verification is env-dependent
-  // });
+  test('admin goes to settings and verifies the accepted invite is reflected', async ({
+    page,
+  }) => {
+    const settingsBtn = page.getByRole('button', {
+      name: 'Settings',
+      exact: true,
+    });
+    if (await settingsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await settingsBtn.click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 10_000 });
+      await page.keyboard.press('Escape');
+    }
+    expect(true).toBe(true); // Invite verification is env-dependent
+  });
 
   test('admin goes to Advanced settings and sets a default mentor', async ({
     page,
@@ -127,7 +127,7 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
     if (await advancedTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await advancedTab.click();
       const defaultMentorCombobox = dialog.getByRole('combobox', {
-        name: /default agent/i,
+        name: /default mentor/i,
       });
       if (
         await defaultMentorCombobox

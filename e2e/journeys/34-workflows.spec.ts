@@ -25,22 +25,22 @@ test.describe('Journey 34: Workflows', () => {
 
   // ── Workflows List Page ───────────────────────────────────────────────────
 
-  // test('admin goes to workflows page and sees heading and create button', async ({
-  //   page,
-  // }) => {
-  //   await navigateToWorkflowsPage(page);
+  test('admin goes to workflows page and sees heading and create button', async ({
+    page,
+  }) => {
+    await navigateToWorkflowsPage(page);
 
-  //   await expect(
-  //     page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
-  //   ).toBeVisible();
-  //   await expect(
-  //     page.getByText('Create and manage automated workflows for your agents'),
-  //   ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Workflows' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Create and manage automated workflows for your mentors'),
+    ).toBeVisible();
 
-  //   const createButton = page.getByRole('button', { name: 'Create Workflow' });
-  //   await expect(createButton).toBeVisible();
-  //   await expect(createButton).toBeEnabled();
-  // });
+    const createButton = page.getByRole('button', { name: 'Create Workflow' });
+    await expect(createButton).toBeVisible();
+    await expect(createButton).toBeEnabled();
+  });
 
   test('admin goes to workflows page and sees the search input', async ({
     page,
@@ -71,22 +71,22 @@ test.describe('Journey 34: Workflows', () => {
 
   // ── Workflow CRUD Operations ──────────────────────────────────────────────
 
-  // test('admin goes to workflows page and creates a new workflow', async ({
-  //   page,
-  // }) => {
-  //   await navigateToWorkflowsPage(page);
+  test('admin goes to workflows page and creates a new workflow', async ({
+    page,
+  }) => {
+    await navigateToWorkflowsPage(page);
 
-  //   await createWorkflow(page);
-  //   await waitForWorkflowEditorReady(page);
+    await createWorkflow(page);
+    await waitForWorkflowEditorReady(page);
 
-  //   const canvas = page.locator('[data-testid="workflow-canvas"]');
-  //   await expect(canvas).toBeVisible();
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
+    await expect(canvas).toBeVisible();
 
-  //   const startNode = canvas.locator('span').filter({ hasText: 'Start' });
-  //   await expect(startNode).toBeVisible({ timeout: 15_000 });
+    const startNode = canvas.locator('span').filter({ hasText: 'Start' });
+    await expect(startNode).toBeVisible({ timeout: 15_000 });
 
-  //   await deleteCurrentWorkflow(page);
-  // });
+    await deleteCurrentWorkflow(page);
+  });
 
   test('admin goes to workflows page and opens an existing workflow from the list', async ({
     page,
@@ -114,7 +114,7 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
 
     await expect(
-      page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
+      page.getByRole('heading', { name: 'Workflows' }),
     ).toBeVisible();
 
     await searchWorkflow(page, workflowName);
@@ -194,7 +194,7 @@ test.describe('Journey 34: Workflows', () => {
     const startNode = canvas.locator('span').filter({ hasText: 'Start' });
     await expect(startNode).toBeVisible({ timeout: 15_000 });
 
-    const mentorNode = canvas.locator('p').filter({ hasText: 'Agent' });
+    const mentorNode = canvas.locator('span').filter({ hasText: 'Mentor' });
     await expect(mentorNode).toBeVisible({ timeout: 15_000 });
 
     const edges = canvas.locator(
@@ -247,9 +247,7 @@ test.describe('Journey 34: Workflows', () => {
     await expect(
       page.getByRole('button', { name: 'Close preview' }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'New chat for workflow preview' }),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New Chat' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
 
     await exitPreviewMode(page);

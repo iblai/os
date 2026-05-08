@@ -3,15 +3,31 @@ import { Page, Locator, expect } from '@playwright/test';
 /**
  * Page object for the Sandbox tab inside the Edit Mentor dialog.
  *
- * The tab renders the SandboxConfig component from @iblai/web-containers.
- * It has two distinct states:
+ * Renders the SandboxConfig component from @iblai/web-containers. The
+ * component has two distinct states keyed off `mentorConfig`:
  *
- *  - NOT CONNECTED: shows an instance table with search + Add Instance button.
- *  - CONNECTED: shows a "Connected Instance" heading + Disconnect button and
- *    a grid of read-only fields plus configuration switches.
+ *  - NOT CONNECTED: instance picker (search input + Add Instance + table).
+ *  - CONNECTED: "Connected Instance" panel + Disconnect + config switches.
+ *
+ * The component fires sonner toasts as the externally observable success
+ * signal for every mutation. We key off those rather than DOM transitions
+ * where possible — they're the contract between the SDK and consumers.
+ *
+ * Toasts (from @iblai/web-containers/dist):
+ *   "Instance created"      — handleCreateInstance success
+ *   "Instance updated"      — EditInstanceDialog save success
+ *   "Instance connected"    — handleConnect success
+ *   "Instance disconnected" — handleDisconnect success
+ *   "Instance deleted"      — handleDeleteInstance success
+ *   "Configuration updated" — auto_push toggle success
  *
  * All locators are scoped to the parent `dialog` Locator so they cannot
  * accidentally match elements outside the Edit Mentor modal.
+ *
+ * Web-first assertions: methods rely on Playwright's auto-retry and the
+ * suite-level expect timeout — no hand-tuned `{ timeout }` values inside
+ * the page object. The only exception is `isConnected(timeout)` which is
+ * intentionally a timed probe used to branch between states.
  */
 export class SandboxTab {
   readonly page: Page;
@@ -36,13 +52,13 @@ export class SandboxTab {
   readonly editInstanceNameInput: Locator;
   readonly editInstanceTypeSelect: Locator;
   readonly editInstanceUrlInput: Locator;
+  readonly editInstanceTokenInput: Locator;
   readonly saveInstanceButton: Locator;
   readonly cancelEditInstanceButton: Locator;
 
   // ── Connected state ──────────────────────────────────────────────────────
   readonly connectedHeading: Locator;
   readonly disconnectButton: Locator;
-  readonly enabledToggle: Locator;
   readonly autoPushToggle: Locator;
   readonly pushButton: Locator;
 
@@ -58,10 +74,10 @@ export class SandboxTab {
     });
     this.instanceTable = dialog.getByRole('table');
 
-    // New Instance dialog — scoped to the page (modal is rendered outside the
-    // Edit Mentor dialog in a separate Radix portal). Match by accessible name
-    // (DialogPrimitive.Title="New Instance") because the parent Edit Mentor
-    // dialog can also contain "New Instance" text in row dropdowns/menus.
+    // New Instance dialog — OverlayModal portals to document.body so scope
+    // to `page`. Match by accessible name (DialogPrimitive.Title="New
+    // Instance") rather than `hasText` because the parent Edit Mentor
+    // dialog can also contain "New Instance" trigger text.
     this.newInstanceDialog = page.getByRole('dialog', {
       name: 'New Instance',
       exact: true,
@@ -75,6 +91,8 @@ export class SandboxTab {
     this.newInstanceTokenInput = this.newInstanceDialog.locator(
       '#new-instance-token',
     );
+    // The Create button text is "Create" (or "Creating..." while saving).
+    // Match the leading "Creat" so both states resolve the same locator.
     this.createInstanceButton = this.newInstanceDialog.getByRole('button', {
       name: /^Creat/i,
     });
@@ -83,7 +101,7 @@ export class SandboxTab {
       exact: true,
     });
 
-    // Edit Instance dialog — match by accessible name.
+    // Edit Instance dialog
     this.editInstanceDialog = page.getByRole('dialog', {
       name: 'Edit Instance',
       exact: true,
@@ -96,26 +114,27 @@ export class SandboxTab {
     );
     this.editInstanceUrlInput =
       this.editInstanceDialog.locator('#edit-instance-url');
+    this.editInstanceTokenInput = this.editInstanceDialog.locator(
+      '#edit-instance-token',
+    );
     this.saveInstanceButton = this.editInstanceDialog.getByRole('button', {
-      name: 'Save',
-      exact: true,
+      name: /^Sav/i,
     });
     this.cancelEditInstanceButton = this.editInstanceDialog.getByRole(
       'button',
-      {
-        name: 'Cancel',
-        exact: true,
-      },
+      { name: 'Cancel', exact: true },
     );
 
-    // Connected state
-    this.connectedHeading = dialog.getByText(/connected instance/i);
+    // Connected state — the bundle renders <h4>Connected Instance</h4>.
+    this.connectedHeading = dialog.getByRole('heading', {
+      name: 'Connected Instance',
+      exact: true,
+    });
     this.disconnectButton = dialog.getByRole('button', {
       name: /disconnect/i,
     });
-    this.enabledToggle = dialog.getByRole('switch', { name: /^enabled$/i });
     this.autoPushToggle = dialog.getByRole('switch', {
-      name: /auto push on save/i,
+      name: /auto push/i,
     });
     this.pushButton = dialog.getByRole('button', { name: /^push$/i });
   }
@@ -123,137 +142,120 @@ export class SandboxTab {
   // ── State detection ──────────────────────────────────────────────────────
 
   /**
-   * Returns true when the sandbox is in "connected" state (i.e. a
-   * ClawMentorConfig is wired to a Claw instance for this mentor).
-   * Uses a 4-second probe so callers never hang on networkidle.
+   * Returns true when the sandbox is in "connected" state. This is a timed
+   * probe so callers can branch between connected/not-connected flows; the
+   * default is generous enough to ride out the initial settings refetch
+   * but still fail fast on truly not-connected envs.
    */
-  async isConnected(timeout = 4_000): Promise<boolean> {
-    try {
-      await this.connectedHeading.first().waitFor({
-        state: 'visible',
-        timeout,
-      });
-      return true;
-    } catch {
-      return false;
-    }
+  async isConnected(timeout = 5_000): Promise<boolean> {
+    return this.connectedHeading
+      .first()
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
   }
 
-  /**
-   * Returns the number of rows in the instance table (0 when the table is
-   * absent or empty).
-   */
+  /** Returns the number of data rows in the instance table (0 if absent). */
   async getInstanceCount(): Promise<number> {
-    try {
-      await this.instanceTable.waitFor({ state: 'visible', timeout: 5_000 });
-      // Subtract 1 for the header row
-      const rows = await this.instanceTable.getByRole('row').count();
-      return Math.max(0, rows - 1);
-    } catch {
+    if (
+      !(await this.instanceTable
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       return 0;
     }
+    const rows = await this.instanceTable.getByRole('row').count();
+    return Math.max(0, rows - 1); // header row
   }
 
   // ── Instance table operations ────────────────────────────────────────────
 
   /** Types into the search input and waits for the table to settle. */
   async searchInstances(query: string): Promise<void> {
-    await expect(this.searchInput).toBeVisible({ timeout: 10_000 });
     await this.searchInput.fill(query);
-    // Web-first: wait for at least one row change or empty-state to appear
-    await expect(this.instanceTable.getByRole('row').first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(this.instanceTable.getByRole('row').first()).toBeVisible();
   }
 
   /**
-   * Returns the table row locator whose NAME cell contains `name`.
-   * Uses exact text within a cell so partial-name collisions are avoided.
+   * Returns the table row locator whose text contains `name`. Names are
+   * timestamp-suffixed in tests (e.g. `e2e-instance-1779…`) so substring
+   * matching is collision-free.
    */
   getInstanceRowByName(name: string): Locator {
     return this.instanceTable.getByRole('row').filter({ hasText: name });
   }
 
   /**
-   * Opens the per-row dropdown menu (ellipsis / Actions button) for `row`.
+   * Opens the per-row dropdown menu. The SandboxConfig dropdown trigger
+   * uses `aria-label="Actions"` (or "Connecting instance" while a connect
+   * mutation is in flight) — match the leading "Action" prefix.
    */
   async openRowMenu(row: Locator): Promise<void> {
-    const menuButton = row.getByRole('button', { name: /actions/i });
-    await expect(menuButton).toBeVisible({ timeout: 10_000 });
-    await menuButton.click();
+    await row.getByRole('button', { name: /actions/i }).click();
   }
 
   /**
-   * Clicks the Connect item in the open row dropdown.
-   * Waits for the connected-state heading to appear as the success signal.
+   * Clicks the Connect item in the open row dropdown and waits for the
+   * "Instance connected" toast — the bundle's authoritative signal that
+   * `createConfig.unwrap()` resolved.
    */
   async clickConnect(row: Locator): Promise<void> {
     await this.openRowMenu(row);
-    const connectItem = this.page.getByRole('menuitem', {
-      name: /^connect$/i,
-    });
-    await expect(connectItem).toBeVisible({ timeout: 5_000 });
-    await connectItem.click();
-    // Success signal: "Connected Instance" heading appears
-    await expect(this.connectedHeading.first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await this.page.getByRole('menuitem', { name: /^connect$/i }).click();
+    await expect(
+      this.page.getByText('Instance connected', { exact: true }),
+    ).toBeVisible();
+    // Belt + braces: the connected state UI must also reflect the wiring
+    // before the next test step runs.
+    await expect(this.connectedHeading.first()).toBeVisible();
   }
 
   /**
-   * Clicks the Edit item in the open row dropdown and waits for the
-   * Edit Instance dialog to appear.
+   * Clicks the Edit item in the open row dropdown. The Edit Instance
+   * dialog is rendered conditionally via `editingInstance && (...)` —
+   * waiting for its accessible name asserts mount + visibility.
    */
   async clickEditInRow(row: Locator): Promise<void> {
     await this.openRowMenu(row);
-    const editItem = this.page.getByRole('menuitem', { name: /^edit$/i });
-    await expect(editItem).toBeVisible({ timeout: 5_000 });
-    await editItem.click();
-    await expect(this.editInstanceDialog).toBeVisible({ timeout: 10_000 });
+    await this.page.getByRole('menuitem', { name: /^edit$/i }).click();
+    await expect(this.editInstanceDialog).toBeVisible();
   }
 
   /**
-   * Clicks the Delete item in the open row dropdown and confirms if a
-   * confirmation dialog appears.
+   * Clicks the Delete item, confirms in the "Delete Instance" modal
+   * (`OverlayModal title="Delete Instance"`), and waits for the
+   * "Instance deleted" toast.
    */
   async clickDeleteInRow(row: Locator): Promise<void> {
     await this.openRowMenu(row);
-    const deleteItem = this.page.getByRole('menuitem', { name: /^delete$/i });
-    await expect(deleteItem).toBeVisible({ timeout: 5_000 });
-    await deleteItem.click();
-    // Some implementations show an alertdialog confirm step
-    const confirmDialog = this.page
-      .getByRole('alertdialog')
-      .or(this.page.getByRole('dialog').filter({ hasText: /confirm|delete/i }));
-    let hasConfirm = false;
-    try {
-      await confirmDialog.waitFor({ state: 'visible', timeout: 3_000 });
-      hasConfirm = true;
-    } catch {
-      hasConfirm = false;
-    }
-    if (hasConfirm) {
-      const confirmBtn = confirmDialog.getByRole('button', {
-        name: /confirm|delete|yes/i,
-      });
-      await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
-      await confirmBtn.click();
-      await expect(confirmDialog).not.toBeVisible({ timeout: 10_000 });
-    }
+    await this.page.getByRole('menuitem', { name: /^delete$/i }).click();
+
+    const confirmDialog = this.page.getByRole('dialog', {
+      name: 'Delete Instance',
+      exact: true,
+    });
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog
+      .getByRole('button', { name: /^delete$/i })
+      .first()
+      .click();
+    await expect(confirmDialog).toBeHidden();
+    await expect(
+      this.page.getByText('Instance deleted', { exact: true }),
+    ).toBeVisible();
   }
 
   // ── Add Instance dialog ──────────────────────────────────────────────────
 
-  /** Clicks Add Instance and waits for the New Instance dialog to appear. */
   async openAddInstanceDialog(): Promise<void> {
-    await expect(this.addInstanceButton).toBeVisible({ timeout: 10_000 });
     await this.addInstanceButton.click();
-    await expect(this.newInstanceDialog).toBeVisible({ timeout: 10_000 });
+    await expect(this.newInstanceDialog).toBeVisible();
   }
 
   /**
-   * Fills the New Instance form fields.
-   * `type` defaults to "OpenClaw" when omitted.
+   * Fills the New Instance form. `type` defaults to "OpenClaw" when omitted.
+   * The Type field is a Radix Select — we click + pick by option role.
    */
   async fillNewInstance(opts: {
     name: string;
@@ -263,10 +265,10 @@ export class SandboxTab {
   }): Promise<void> {
     const { name, url, type = 'OpenClaw', token } = opts;
 
-    await expect(this.newInstanceNameInput).toBeVisible({ timeout: 10_000 });
     await this.newInstanceNameInput.fill(name);
 
-    // The type select may be a native <select> or a Radix combobox
+    // The type is a Radix Select (combobox). Native <select> behaviour was
+    // never an option in the bundle but the legacy fallback is harmless.
     const isNativeSelect =
       (await this.newInstanceTypeSelect
         .evaluate((el) => el.tagName.toLowerCase())
@@ -275,98 +277,205 @@ export class SandboxTab {
       await this.newInstanceTypeSelect.selectOption(type);
     } else {
       await this.newInstanceTypeSelect.click();
-      const option = this.page.getByRole('option', {
-        name: new RegExp(type, 'i'),
-      });
-      await expect(option.first()).toBeVisible({ timeout: 5_000 });
-      await option.first().click();
+      await this.page
+        .getByRole('option', { name: new RegExp(type, 'i') })
+        .first()
+        .click();
     }
 
-    await expect(this.newInstanceUrlInput).toBeVisible({ timeout: 5_000 });
     await this.newInstanceUrlInput.fill(url);
-
     if (token) {
-      await expect(this.newInstanceTokenInput).toBeVisible({ timeout: 5_000 });
       await this.newInstanceTokenInput.fill(token);
     }
   }
 
   /**
-   * Clicks Create and waits for the dialog to close and the new row to appear
-   * in the instance table (using `name` as the success signal).
+   * Clicks Create and waits for the "Instance created" toast (bundle
+   * fires this after `createInstance.unwrap()` resolves), then asserts
+   * the dialog closed and the row appeared in the table.
    */
   async submitNewInstance(name: string): Promise<void> {
-    await expect(this.createInstanceButton).toBeEnabled({ timeout: 5_000 });
+    await expect(this.createInstanceButton).toBeEnabled();
     await this.createInstanceButton.click();
-    // Dialog must close
-    await expect(this.newInstanceDialog).not.toBeVisible({ timeout: 15_000 });
-    // New row with that name must appear
-    await expect(this.getInstanceRowByName(name)).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(
+      this.page.getByText('Instance created', { exact: true }),
+    ).toBeVisible();
+    await expect(this.newInstanceDialog).toBeHidden();
+    await expect(this.getInstanceRowByName(name)).toBeVisible();
   }
 
   // ── Edit Instance dialog ─────────────────────────────────────────────────
 
   /**
-   * Clicks Save in the Edit Instance dialog and waits for it to close.
+   * Clicks Save in the Edit Instance dialog. Bundle fires "Instance
+   * updated" via `updateInstance.unwrap()` then closes the modal.
    */
   async saveInstanceEdit(): Promise<void> {
-    await expect(this.saveInstanceButton).toBeEnabled({ timeout: 5_000 });
+    await expect(this.saveInstanceButton).toBeEnabled();
     await this.saveInstanceButton.click();
-    await expect(this.editInstanceDialog).not.toBeVisible({ timeout: 15_000 });
+    await expect(
+      this.page.getByText('Instance updated', { exact: true }),
+    ).toBeVisible();
+    await expect(this.editInstanceDialog).toBeHidden();
   }
 
   // ── Disconnect ───────────────────────────────────────────────────────────
 
   /**
-   * Clicks Disconnect, confirms in the confirmation dialog, and waits for
-   * the instance picker UI (the search input or table) to reappear.
+   * Reads the currently-connected instance name from the connected-state
+   * UI (label "Name" sibling). Returns null when not connected.
+   */
+  async getConnectedInstanceName(): Promise<string | null> {
+    if (!(await this.isConnected())) return null;
+    const nameCell = this.dialog
+      .locator('p')
+      .filter({ hasText: /^Name$/ })
+      .first()
+      .locator('xpath=following-sibling::p[1]');
+    return nameCell
+      .innerText()
+      .then((t) => t.trim() || null)
+      .catch(() => null);
+  }
+
+  /**
+   * Clicks Disconnect, confirms in the "Disconnect Instance" modal, and
+   * waits for the "Instance disconnected" toast (bundle's success signal).
+   * The bundle closes the confirm modal up front via `setShowDisconnectConfirm(false)`,
+   * so we don't need to wait for the modal to disappear.
    */
   async disconnect(): Promise<void> {
-    await expect(this.disconnectButton).toBeVisible({ timeout: 10_000 });
     await this.disconnectButton.click();
 
-    // Confirmation dialog for disconnect
-    const confirmDialog = this.page
-      .getByRole('alertdialog')
-      .or(
-        this.page
-          .getByRole('dialog')
-          .filter({ hasText: /disconnect|confirm/i }),
-      );
-    let hasConfirm = false;
+    const confirmDialog = this.page.getByRole('dialog', {
+      name: 'Disconnect Instance',
+      exact: true,
+    });
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog
+      .getByRole('button', { name: /^disconnect$/i })
+      .first()
+      .click();
+
+    await expect(
+      this.page.getByText('Instance disconnected', { exact: true }),
+    ).toBeVisible();
+    // Not-connected UI restored.
+    await expect(this.addInstanceButton).toBeVisible();
+  }
+
+  /**
+   * Reconnects to a known instance by name. Best-effort: returns false if
+   * the named row isn't found or if Connect doesn't wire the mentor.
+   */
+  async reconnectByName(name: string): Promise<boolean> {
     try {
-      await confirmDialog.waitFor({ state: 'visible', timeout: 5_000 });
-      hasConfirm = true;
+      await expect(this.addInstanceButton).toBeVisible();
+      const row = this.getInstanceRowByName(name);
+      await expect(row).toBeVisible();
+      await this.clickConnect(row);
+      return true;
     } catch {
-      hasConfirm = false;
+      return false;
     }
+  }
 
-    if (hasConfirm) {
-      const confirmBtn = confirmDialog.getByRole('button', {
-        name: /confirm|disconnect|yes/i,
-      });
-      await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
-      await confirmBtn.click();
-      await expect(confirmDialog).not.toBeVisible({ timeout: 10_000 });
+  /**
+   * Walks the instance table and returns the name of the first OpenClaw
+   * instance whose STATUS is *not* "Error" — the SandboxConfig Connect
+   * menu item is dimmed (`opacity-50 cursor-not-allowed`) and its
+   * `onSelect` short-circuits via `e.preventDefault()` when
+   * `isInstanceUnhealthy(status)` is true.
+   *
+   * `isInstanceUnhealthy(s)` returns true only when status is set AND not
+   * one of HEALTHY_STATUS_VALUES (`active|running|connected|ok|ready`).
+   * Null/empty status is treated as connectable; StatusDot renders that as
+   * "—". Anything else (e.g. "Error") is unconnectable.
+   *
+   * Returns null when no connectable OpenClaw instance exists.
+   */
+  async findConnectableOpenClawInstance(): Promise<string | null> {
+    if (
+      !(await this.instanceTable
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
+      return null;
     }
+    const rows = this.instanceTable.getByRole('row');
+    const rowCount = await rows.count();
+    // nth(0) is the header row.
+    for (let i = 1; i < rowCount; i++) {
+      const cells = rows.nth(i).getByRole('cell');
+      // Columns: NAME(0) URL(1) TYPE(2) STATUS(3) HEALTH(4) VERSION(5) LAST CHECK(6) ACTIONS(7)
+      const typeText = (
+        await cells
+          .nth(2)
+          .innerText()
+          .catch(() => '')
+      )
+        .trim()
+        .toLowerCase();
+      if (!typeText.includes('openclaw')) continue;
+      const statusText = (
+        await cells
+          .nth(3)
+          .innerText()
+          .catch(() => '')
+      )
+        .trim()
+        .toLowerCase();
+      if (statusText === 'error') continue;
+      const name = (
+        await cells
+          .nth(0)
+          .innerText()
+          .catch(() => '')
+      ).trim();
+      if (name) return name;
+    }
+    return null;
+  }
 
-    // Wait for the instance picker to reappear (not-connected state restored)
-    await expect(this.addInstanceButton).toBeVisible({ timeout: 15_000 });
+  /**
+   * Ensures the mentor's sandbox is wired to a Claw instance. If already
+   * connected, returns the connected instance name without changing state.
+   * If not connected, finds a healthy OpenClaw instance and connects to it.
+   *
+   * `createdConnection: true` signals the caller that THEY connected the
+   * mentor (and may want to disconnect afterwards to restore env state).
+   * Returns `instanceName: null` when no connectable instance exists.
+   */
+  async ensureConnected(): Promise<{
+    instanceName: string | null;
+    createdConnection: boolean;
+  }> {
+    if (await this.isConnected()) {
+      return {
+        instanceName: await this.getConnectedInstanceName(),
+        createdConnection: false,
+      };
+    }
+    const targetName = await this.findConnectableOpenClawInstance();
+    if (!targetName) {
+      return { instanceName: null, createdConnection: false };
+    }
+    try {
+      await this.clickConnect(this.getInstanceRowByName(targetName));
+      return { instanceName: targetName, createdConnection: true };
+    } catch {
+      return { instanceName: null, createdConnection: false };
+    }
   }
 
   // ── Connected-state operations ───────────────────────────────────────────
 
-  /** Clicks Push and waits for any toast to confirm the action completed. */
+  /** Clicks Push and waits for the "Configuration push queued" toast. */
   async pushConfiguration(): Promise<void> {
-    await expect(this.pushButton).toBeVisible({ timeout: 10_000 });
     await this.pushButton.click();
-    // Any visible toast is the success signal
-    const toast = this.page
-      .getByRole('status')
-      .or(this.page.getByRole('alert'))
-      .first();
-    await expect(toast).toBeVisible({ timeout: 15_000 });
+    await expect(
+      this.page.getByText('Configuration push queued', { exact: true }),
+    ).toBeVisible();
   }
 }

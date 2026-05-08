@@ -19,13 +19,13 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
     await expect(nonadminPage).toHaveURL(/\/explore/);
   });
 
-  // test('non-admin goes to tenant explore page and sees mentor cards', async ({
-  //   nonadminExplorePage,
-  // }) => {
-  //   await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-  //     timeout: 20_000,
-  //   });
-  // });
+  test('non-admin goes to tenant explore page and sees mentor cards', async ({
+    nonadminExplorePage,
+  }) => {
+    await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
+      timeout: 20_000,
+    });
+  });
 
   test('non-admin goes to tenant explore page and clicks Mentors to stay on explore', async ({
     nonadminPage,
@@ -38,9 +38,7 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
     await nonadminPage.waitForTimeout(5_000);
     await nonadminSidebarPage.exploreLink.click();
     await expect(nonadminPage).toHaveURL(/\/explore/, { timeout: 10_000 });
-    // 2-min ceiling: explore page initial load can take ~30s when the
-    // ?limit=8 mentors query gets aborted+retried during component mount.
-    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 120_000 });
+    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 20_000 });
   });
 
   test('non-admin goes to tenant explore page and clicks a mentor card to navigate to that mentor', async ({
@@ -78,7 +76,7 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
 
 //     const modal = page.getByRole('alertdialog');
 //     await expect(modal).toBeVisible({ timeout: 10_000 });
-//     await expect(page.getByText('No Agent Selected')).toBeVisible();
+//     await expect(page.getByText('No Mentor Selected')).toBeVisible();
 
 //     const cancelButton = modal.getByRole('button', { name: /cancel/i });
 //     await expect(cancelButton).toBeVisible();
@@ -100,7 +98,7 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
 
 //     const modal = page.getByRole('alertdialog');
 //     await expect(modal).toBeVisible({ timeout: 10_000 });
-//     await expect(page.getByText('No Agent Selected')).toBeVisible();
+//     await expect(page.getByText('No Mentor Selected')).toBeVisible();
 
 //     const cancelButton = modal.getByRole('button', { name: /cancel/i });
 //     await expect(cancelButton).toBeVisible();

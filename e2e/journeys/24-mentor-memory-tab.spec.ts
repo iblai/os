@@ -35,65 +35,66 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.close();
   });
 
-  test.fixme(
-    'admin goes to settings tab and enables then disables the Memory toggle',
-    async ({ editMentorPage, page }) => {
-      await waitForPageReady(page);
-      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-      // It is now a form-driven field — changes persist only on Save.
-      //await editMentorPage.close();
-      await editMentorPage.open('Settings');
-      const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
-      // Toggle to the opposite state, then toggle back to restore.
-      await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
-      await editMentorPage.settings.setMemoryEnabled(wasEnabled);
-      await editMentorPage.close();
-    },
-  );
+  test('admin goes to settings tab and enables then disables the Memory toggle', async ({
+    createMentorPage,
+    editMentorPage,
+    page,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
+    // It is now a form-driven field — changes persist only on Save.
+    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
+    // Toggle to the opposite state, then toggle back to restore.
+    await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
+    await editMentorPage.settings.setMemoryEnabled(wasEnabled);
+    await editMentorPage.close();
+  });
 
-  // test('admin goes to memory tab and verifies user memories list shows entries or empty state and can delete an entry', async ({
-  //   page,
-  //   createMentorPage,
-  //   editMentorPage,
-  // }) => {
-  //   await createMentorPage.openAndCreate();
-  //   await editMentorPage.open('Memory');
-  //   await waitForPageReady(page);
+  test('admin goes to memory tab and verifies user memories list shows entries or empty state and can delete an entry', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
 
-  //   await expect(editMentorPage.memory.addMemoryButton).toBeVisible({
-  //     timeout: 10_000,
-  //   });
-  //   // Seed our own entry so we can delete it without racing other parallel
-  //   // specs that may be adding/removing entries concurrently.
-  //   const seedContent = `Delete-target memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  //   await editMentorPage.memory.createMemory(seedContent);
-  //   await expect(
-  //     editMentorPage.memory.entryByContent(seedContent).first(),
-  //   ).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.memory.addMemoryButton).toBeVisible({
+      timeout: 10_000,
+    });
+    // Seed our own entry so we can delete it without racing other parallel
+    // specs that may be adding/removing entries concurrently.
+    const seedContent = `Delete-target memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await editMentorPage.memory.createMemory(seedContent);
+    await expect(
+      editMentorPage.memory.entryByContent(seedContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
-  //   // deleteByContent already asserts the entry is gone; no extra check needed.
-  //   await editMentorPage.memory.deleteByContent(seedContent);
-  //   await editMentorPage.close();
-  // });
+    // deleteByContent already asserts the entry is gone; no extra check needed.
+    await editMentorPage.memory.deleteByContent(seedContent);
+    await editMentorPage.close();
+  });
 
-  // test('admin creates a new memory from the memory tab', async ({
-  //   page,
-  //   createMentorPage,
-  //   editMentorPage,
-  // }) => {
-  //   await createMentorPage.openAndCreate();
-  //   await editMentorPage.open('Memory');
-  //   await waitForPageReady(page);
+  test('admin creates a new memory from the memory tab', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
 
-  //   const testContent = `E2E test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  //   await editMentorPage.memory.createMemory(testContent);
-  //   // Auto-retrying expect rides out the brief RTK Query refetch window
-  //   // that follows the "Memory created" toast.
-  //   await expect(
-  //     editMentorPage.memory.entryByContent(testContent).first(),
-  //   ).toBeVisible({ timeout: 10_000 });
-  //   await editMentorPage.close();
-  // });
+    const testContent = `E2E test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await editMentorPage.memory.createMemory(testContent);
+    // Auto-retrying expect rides out the brief RTK Query refetch window
+    // that follows the "Memory created" toast.
+    await expect(
+      editMentorPage.memory.entryByContent(testContent).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await editMentorPage.close();
+  });
 
   test('admin edits a memory entry from the memory tab', async ({
     page,
@@ -140,7 +141,9 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
 
-    const suffix = Date.now();
+    // Random suffix (not just Date.now()) so category names cannot collide
+    // when two parallel workers reach this test in the same millisecond.
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const created = `E2E Cat ${suffix}`;
     const renamed = `E2E Cat Renamed ${suffix}`;
 

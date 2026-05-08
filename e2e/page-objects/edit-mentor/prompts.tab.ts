@@ -310,30 +310,31 @@ export class PromptsTab {
    * Opens the Edit modal for an agent config field identified by `label`,
    * replaces the editor content with `newValue`, and clicks Save.
    *
-   * The editor is a RichTextEditor (TipTap contenteditable), NOT an <input>
-   * or <textarea> — so we use textContent() rather than inputValue() and
-   * fill via the contenteditable directly.
+   * The editor is a RichTextEditor (TipTap/ProseMirror). The OUTER
+   * `<div role="textbox">` wrapper is NOT contenteditable — Playwright's
+   * `fill()` rejects it. The actual editable element is the inner
+   * `[contenteditable="true"]` div, which ProseMirror's input plugins
+   * listen to. Drive it via real keyboard events.
    *
    * Returns the original editor text so callers can restore it.
    */
   async editAgentConfigField(label: string, newValue: string): Promise<string> {
-    const row = this.agentConfigFieldRowByLabel(label);
-    await expect(row).toBeVisible({ timeout: 10_000 });
+    const row = this.agentConfigFieldRowByLabel(label).first();
+    await expect(row).toBeVisible();
 
     const editBtn = row.getByRole('button', { name: /^edit$/i }).first();
-    await expect(editBtn).toBeVisible({ timeout: 5_000 });
     await editBtn.click();
 
     const editDialog = this.agentConfigEditDialog(label);
-    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+    await expect(editDialog).toBeVisible();
 
-    const editor = editDialog.getByRole('textbox').first();
-    await expect(editor).toBeVisible({ timeout: 5_000 });
+    // Target the ProseMirror contenteditable directly — the role="textbox"
+    // wrapper around it is not editable.
+    const editor = editDialog.locator('[contenteditable="true"]').last();
+    await expect(editor).toBeVisible();
 
     const original = (await editor.textContent()) ?? '';
 
-    // contenteditable: select all + delete, then type the new value so TipTap
-    // observes the keyboard input events and updates its internal state.
     await editor.click();
     const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
     await this.page.keyboard.press(selectAll);
@@ -341,10 +342,10 @@ export class PromptsTab {
     await this.page.keyboard.type(newValue);
 
     const saveBtn = editDialog.getByRole('button', { name: /^save$/i }).first();
-    await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+    await expect(saveBtn).toBeEnabled();
     await saveBtn.click();
 
-    await expect(editDialog).not.toBeVisible({ timeout: 15_000 });
+    await expect(editDialog).toBeHidden();
 
     return original;
   }

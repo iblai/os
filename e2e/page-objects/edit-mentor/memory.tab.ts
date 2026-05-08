@@ -33,8 +33,14 @@ export class MemoryTab {
     // It lives inside each memory entry card alongside the memory content text.
     // We identify it as buttons inside the memory list that have no accessible name.
     this.memoryActionButtons = dialog
-      .locator('.space-y-3 button:not([aria-label]):not([name])')
-      .or(dialog.locator('button[class*="ghost"][class*="h-6"]'));
+      .locator(
+        '[data-testid="memory-list"] button:not([aria-label]):not([name])',
+      )
+      .or(
+        dialog.locator(
+          '[data-testid="memory-entry"] button[class*="ghost"][class*="h-6"]',
+        ),
+      );
   }
 
   async hasMemories(): Promise<boolean> {
@@ -45,11 +51,26 @@ export class MemoryTab {
   }
 
   /**
+   * Waits for the "Loading memories..." placeholder to disappear, signalling
+   * that any in-flight memory list fetch (initial load, category switch, or
+   * post-mutation refetch) has settled. No-op when the placeholder is absent.
+   */
+  async waitForMemoriesSettled(timeout = 15_000): Promise<void> {
+    await this.dialog
+      .getByText('Loading memories...')
+      .waitFor({ state: 'hidden', timeout })
+      .catch(() => undefined);
+  }
+
+  /**
    * Creates a new memory via the Add Memory button + dialog.
    * @param content - The memory content text.
    * @param category - Optional category to select from the dropdown.
    */
   async createMemory(content: string, category?: string): Promise<void> {
+    // Pre-settle the list so the dialog opens against a stable state and the
+    // post-create assertion isn't racing an in-flight initial fetch.
+    await this.waitForMemoriesSettled();
     await expect(this.addMemoryButton).toBeVisible({ timeout: 10_000 });
     await this.addMemoryButton.click();
 
@@ -121,15 +142,55 @@ export class MemoryTab {
         'createMemory timed out: no success toast, no error toast, dialog still open',
       );
     }
+
+    // After a successful create the UI switches the active category tab to the
+    // one the new memory was placed in. Reset it back to "All" so that
+    // entryByContent() can find the new card in the unfiltered list regardless
+    // of which category slug was selected during the create flow.
+    await this.resetCategoryFilter();
   }
 
   /**
    * Locator for a memory entry card containing the given content. Use this
    * (not "first") when tests run in parallel — multiple specs may be
    * adding/removing entries concurrently, so positional selectors race.
+   *
+   * Uses data-testid="memory-entry" so the locator stays stable when the
+   * list container's utility classes change, and works regardless of the
+   * active category-filter tab (the "All" view must be active for the entry
+   * to appear — callers should reset to "All" before asserting if they are
+   * not certain which category view is currently shown).
    */
   entryByContent(content: string): Locator {
-    return this.dialog.locator('.space-y-3 > div').filter({ hasText: content });
+    return this.dialog
+      .locator('[data-testid="memory-entry"]')
+      .filter({ hasText: content });
+  }
+
+  /**
+   * Clicks the "All" category tab so that all memory entries are visible
+   * regardless of which category was last active. Should be called after
+   * createMemory / editByContent to ensure the assertion list is unfiltered.
+   *
+   * After clicking "All", waits for the loading spinner text to disappear so
+   * the caller can immediately assert on the list contents.
+   */
+  async resetCategoryFilter(): Promise<void> {
+    const allTab = this.dialog.locator(
+      '[data-testid="memory-category-tab-all"]',
+    );
+    // Categories are fetched alongside the memory list and may not be in the
+    // DOM the instant the dialog mounts. 15s gives the admin-categories query
+    // time to populate without blocking forever on tenants where the tab
+    // genuinely isn't rendered.
+    const tabExists = await allTab
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (tabExists) {
+      await allTab.click();
+      await this.waitForMemoriesSettled();
+    }
   }
 
   /**
@@ -172,6 +233,9 @@ export class MemoryTab {
     currentContent: string,
     newContent: string,
   ): Promise<void> {
+    // Pre-settle so the action menu we click stays attached through the click
+    // (a mid-flight list refetch can detach the row's MoreHorizontal button).
+    await this.waitForMemoriesSettled();
     await this.openActionMenuForContent(currentContent);
 
     const editMenuItem = this.page
@@ -197,6 +261,11 @@ export class MemoryTab {
     await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
       timeout: 10_000,
     });
+
+    // Symmetric with createMemory: if the edit changed the entry's category,
+    // the component auto-switches the active tab. Reset to "All" so the
+    // caller's post-edit entryByContent assertions don't race a filtered view.
+    await this.resetCategoryFilter();
   }
 
   /**
@@ -204,6 +273,8 @@ export class MemoryTab {
    * deleteFirst for parallel-safe tests.
    */
   async deleteByContent(content: string): Promise<void> {
+    // Pre-settle so the action menu we click stays attached through the click.
+    await this.waitForMemoriesSettled();
     await this.openActionMenuForContent(content);
 
     const deleteMenuItem = this.page
@@ -409,7 +480,7 @@ export class MemoryTab {
   async getFirstMemoryContent(): Promise<string> {
     // Memory content is rendered inside a div with text-sm class within the entry card
     const firstEntry = this.dialog
-      .locator('.space-y-3 > div')
+      .locator('[data-testid="memory-entry"]')
       .first()
       .locator('.text-sm.leading-relaxed');
     return (await firstEntry.textContent().catch(() => '')) ?? '';

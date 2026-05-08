@@ -146,29 +146,24 @@ test.describe('Journey 43: CLAW Advanced Sandbox', () => {
     ).count();
     const skillsBefore = await getTab(editMentorPage.dialog, 'Skills').count();
 
-    // Flip the toggle (don't click Save)
+    // Flip the toggle (don't click Save). Waiting for `aria-checked` to
+    // flip is a deterministic signal that React has applied the form-state
+    // change — no need for a static settle delay.
     await toggle.click();
     await expect(toggle).toHaveAttribute(
       'aria-checked',
       wasClaw ? 'false' : 'true',
-      { timeout: 5_000 },
     );
-
-    // Give the UI a moment to react to the form change. If anything were
-    // going to update tab visibility based on the in-form value, it would
-    // happen by now.
-    await page.waitForTimeout(500);
 
     // Tab visibility must not have changed: the persisted enable_claw value
     // hasn't been updated yet (no Save click), so the Sandbox/Skills tabs
-    // must remain in whatever state they were before the flip.
+    // must remain in whatever state they were before the flip. toHaveCount
+    // is a web-first assertion that retries.
     await expect(getTab(editMentorPage.dialog, 'Sandbox')).toHaveCount(
       sandboxBefore,
-      { timeout: 5_000 },
     );
     await expect(getTab(editMentorPage.dialog, 'Skills')).toHaveCount(
       skillsBefore,
-      { timeout: 5_000 },
     );
 
     // Restore by flipping back, then close without saving
@@ -515,6 +510,11 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
+    // Add Instance UI lives only in the not-connected state. If env has a
+    // wired sandbox we capture the instance name, disconnect to reach the
+    // picker, then reconnect at the end to restore the env.
+    let priorConnectedInstance: string | null = null;
+
     try {
       if (!wasEnabled) {
         await editMentorPage.settings.setAdvancedSandbox(true);
@@ -526,14 +526,9 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
       const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
-      // Skip this test if the sandbox is already connected — we want the
-      // unwired (instance picker) flow.
       if (await sandbox.isConnected()) {
-        test.skip(
-          true,
-          'Sandbox is already connected — skipping Add Instance flow',
-        );
-        return;
+        priorConnectedInstance = await sandbox.getConnectedInstanceName();
+        await sandbox.disconnect();
       }
 
       const ts = Date.now();
@@ -551,26 +546,32 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         // instance afterwards.
         token: `e2e-fake-token-${ts}`,
       });
+      // submitNewInstance waits for the "Instance created" toast, the
+      // dialog close, and the new row appearing in the table — those are
+      // the test's assertions for the happy path.
       await sandbox.submitNewInstance(instanceName);
 
-      // Assert: new row is visible with the given name
-      await expect(sandbox.getInstanceRowByName(instanceName)).toBeVisible({
-        timeout: 15_000,
-      });
-
-      // Cleanup: delete the instance we created
+      // Cleanup: delete the throwaway instance. clickDeleteInRow waits
+      // for the "Instance deleted" toast internally.
       try {
-        const row = sandbox.getInstanceRowByName(instanceName);
-        await sandbox.clickDeleteInRow(row);
-        // Wait for row to disappear
-        await expect(sandbox.getInstanceRowByName(instanceName)).toHaveCount(
-          0,
-          { timeout: 10_000 },
+        await sandbox.clickDeleteInRow(
+          sandbox.getInstanceRowByName(instanceName),
         );
       } catch {
         // Best-effort — don't fail teardown
       }
     } finally {
+      // Restore the env's original connection (best-effort).
+      if (priorConnectedInstance) {
+        try {
+          const sandbox = new SandboxTab(page, editMentorPage.dialog);
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          await sandbox.reconnectByName(priorConnectedInstance);
+        } catch {
+          // Best-effort — env may be left disconnected if reconnect fails
+        }
+      }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
         await waitForPageReady(page);
@@ -606,6 +607,8 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
     const instanceName = `e2e-edit-instance-${ts}`;
     const renamed = `${instanceName}-renamed`;
 
+    let priorConnectedInstance: string | null = null;
+
     try {
       if (!wasEnabled) {
         await editMentorPage.settings.setAdvancedSandbox(true);
@@ -617,13 +620,12 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
       const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
-      // Skip if already connected (would disrupt the wired state)
+      // Edit Instance UI is only in the not-connected state. If env has a
+      // wired sandbox we capture the connected instance name, disconnect,
+      // and reconnect afterwards to restore the env.
       if (await sandbox.isConnected()) {
-        test.skip(
-          true,
-          'Sandbox is connected — skipping Edit Instance flow to avoid disruption',
-        );
-        return;
+        priorConnectedInstance = await sandbox.getConnectedInstanceName();
+        await sandbox.disconnect();
       }
 
       // Create a throwaway instance we can safely edit + delete.
@@ -636,39 +638,21 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
       });
       await sandbox.submitNewInstance(instanceName);
 
-      const row = sandbox.getInstanceRowByName(instanceName);
-      await expect(row).toBeVisible({ timeout: 15_000 });
-
-      await sandbox.clickEditInRow(row);
-
-      await expect(sandbox.editInstanceNameInput).toBeVisible({
-        timeout: 10_000,
-      });
-      await sandbox.editInstanceNameInput.clear();
+      await sandbox.clickEditInRow(sandbox.getInstanceRowByName(instanceName));
       await sandbox.editInstanceNameInput.fill(renamed);
 
-      // Save requires re-entering the token (form initialises it to '').
-      await expect(sandbox.editInstanceDialog).toBeVisible({ timeout: 5_000 });
-      const editTokenInput = sandbox.editInstanceDialog.locator(
-        '#edit-instance-token',
-      );
-      await expect(editTokenInput).toBeVisible({ timeout: 5_000 });
-      await editTokenInput.fill(fakeToken);
+      // Save requires re-entering the token — the bundle's EditInstanceDialog
+      // initialises `gateway_token` to '' for security and gates Save on
+      // `name && server_url && gateway_token`.
+      await sandbox.editInstanceTokenInput.fill(fakeToken);
 
+      // saveInstanceEdit waits for "Instance updated" toast + dialog close.
       await sandbox.saveInstanceEdit();
+      await expect(sandbox.getInstanceRowByName(renamed)).toBeVisible();
 
-      // Assert: renamed row is visible
-      await expect(sandbox.getInstanceRowByName(renamed)).toBeVisible({
-        timeout: 15_000,
-      });
-
-      // Cleanup: delete the renamed instance
+      // Cleanup: delete the renamed instance.
       try {
-        const renamedRow = sandbox.getInstanceRowByName(renamed);
-        await sandbox.clickDeleteInRow(renamedRow);
-        await expect(sandbox.getInstanceRowByName(renamed)).toHaveCount(0, {
-          timeout: 10_000,
-        });
+        await sandbox.clickDeleteInRow(sandbox.getInstanceRowByName(renamed));
       } catch {
         // Best-effort
       }
@@ -690,6 +674,17 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         }
       } catch {
         // Best-effort
+      }
+      // Restore the env's original wired connection (best-effort).
+      if (priorConnectedInstance) {
+        try {
+          const sandbox = new SandboxTab(page, editMentorPage.dialog);
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          await sandbox.reconnectByName(priorConnectedInstance);
+        } catch {
+          // Best-effort — env may be left disconnected if reconnect fails
+        }
       }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
@@ -716,7 +711,7 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
-    let createdInstanceName: string | null = null;
+    let priorConnectedInstance: string | null = null;
 
     try {
       if (!wasEnabled) {
@@ -729,41 +724,37 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
       const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
-      // Skip if already connected — the test asserts the NOT-connected → connected
-      // transition. If already connected we'd have to disconnect first which risks
-      // data loss in a shared env.
+      // The Connect flow asserts the NOT-connected → connected transition.
+      // If env is already wired, capture the connected instance name and
+      // disconnect — we'll then re-use the connect flow to restore it.
       if (await sandbox.isConnected()) {
+        priorConnectedInstance = await sandbox.getConnectedInstanceName();
+        await sandbox.disconnect();
+      }
+
+      // Pick a connectable target. Prefer the env's prior-wired instance
+      // (it was healthy enough to be wired before) so reconnecting also
+      // restores the env. Otherwise find any healthy OpenClaw instance.
+      // Connect is disabled in the dropdown for instances with status
+      // "Error" — picking the first row blindly can land on an unhealthy
+      // row and the onSelect handler will short-circuit, leaving the test
+      // hung waiting for `connectedHeading`.
+      let targetName = priorConnectedInstance;
+      if (!targetName) {
+        targetName = await sandbox.findConnectableOpenClawInstance();
+      }
+
+      if (!targetName) {
         test.skip(
           true,
-          'Sandbox is already connected — skipping Connect flow to avoid disrupting the existing connection',
+          'No connectable OpenClaw instance available — Connect requires a healthy instance (status not "Error")',
         );
         return;
       }
 
-      // Ensure there is at least one instance to connect to. If the table is
-      // empty, create one inline. The Create button requires a gateway_token
-      // — the token need not be valid for the UI flow, since the real claw
-      // backend isn't reached during this test (the API call is what's
-      // exercised); we delete the throwaway instance afterwards.
-      let instanceCount = await sandbox.getInstanceCount();
-      if (instanceCount === 0) {
-        const ts = Date.now();
-        createdInstanceName = `e2e-connect-${ts}`;
-        await sandbox.openAddInstanceDialog();
-        await sandbox.fillNewInstance({
-          name: createdInstanceName,
-          url: `https://e2e-connect-${ts}.example.com`,
-          type: 'OpenClaw',
-          token: `e2e-fake-token-${ts}`,
-        });
-        await sandbox.submitNewInstance(createdInstanceName);
-        instanceCount = 1;
-      }
-
-      // Connect using the first available row
-      const firstRow = sandbox.instanceTable.getByRole('row').nth(1);
-      await expect(firstRow).toBeVisible({ timeout: 10_000 });
-      await sandbox.clickConnect(firstRow);
+      const targetRow = sandbox.getInstanceRowByName(targetName);
+      await expect(targetRow).toBeVisible({ timeout: 10_000 });
+      await sandbox.clickConnect(targetRow);
 
       // Assert: "Connected Instance" heading appeared
       await expect(sandbox.connectedHeading.first()).toBeVisible({
@@ -773,33 +764,28 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Assert: Skills tab is now visible (wired → Skills-visible transition)
       await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
 
-      // Cleanup: disconnect to restore the not-connected state
-      await sandbox.disconnect();
-
-      // Delete the instance we created (if applicable) — best-effort
-      if (createdInstanceName !== null) {
-        try {
-          const row = sandbox.getInstanceRowByName(createdInstanceName);
-          await sandbox.clickDeleteInRow(row);
-        } catch {
-          // Best-effort
-        }
-        createdInstanceName = null;
+      if (priorConnectedInstance === null) {
+        // We connected to an existing healthy instance — disconnect to
+        // restore the env's not-connected state. The instance row stays
+        // in the table because it's not ours.
+        await sandbox.disconnect();
+      } else {
+        // We reconnected the env's original instance — env is restored,
+        // clear marker so finally doesn't try a second reconnect.
+        priorConnectedInstance = null;
       }
     } finally {
-      // If teardown above didn't run (e.g. an assertion threw before disconnect)
-      // we still try to clean up the created instance.
-      if (createdInstanceName !== null) {
-        try {
+      // Final fallback: if anything threw mid-test, attempt to restore
+      // the env's original wired connection (best-effort).
+      try {
+        if (priorConnectedInstance) {
           const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          if (await sandbox.isConnected()) {
-            await sandbox.disconnect();
-          }
-          const row = sandbox.getInstanceRowByName(createdInstanceName);
-          await sandbox.clickDeleteInRow(row);
-        } catch {
-          // Best-effort
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          await sandbox.reconnectByName(priorConnectedInstance);
         }
+      } catch {
+        // Best-effort — env may be left in not-connected state if reconnect fails
       }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
@@ -822,102 +808,70 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
+    // Agent Configuration is gated on a wired sandbox. If env isn't
+    // already connected, attempt to wire a healthy OpenClaw instance so
+    // the test can actually exercise the edit flow. We track whether WE
+    // connected so the finally can restore the env's not-connected state.
+    let createdConnectionHere = false;
+
     try {
       if (!wasEnabled) {
         await editMentorPage.settings.setAdvancedSandbox(true);
         await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
       }
 
-      // Check if wired — Agent Configuration only appears when wired
       await editMentorPage.navigateToTab('Sandbox');
       await waitForPageReady(page);
 
       const sandbox = new SandboxTab(page, editMentorPage.dialog);
-      if (!(await sandbox.isConnected())) {
+      const connected = await sandbox.ensureConnected();
+      if (!connected.instanceName) {
         test.skip(
           true,
-          'Sandbox not wired — Agent Configuration section is only available when connected',
+          'No connectable OpenClaw instance available — Agent Configuration requires a wired sandbox',
         );
         return;
       }
+      createdConnectionHere = connected.createdConnection;
 
-      // Navigate to Prompts tab and verify Agent Configuration section exists
+      // Navigate to Prompts tab. The Agent Configuration section lives at
+      // the bottom of the panel; AgentConfigPrompts shows a loading spinner
+      // until `useGetClawMentorConfigQuery` and `useGetAgentConfigQuery`
+      // resolve, then renders the 8 field cards from AGENT_WORKSPACE_FIELDS
+      // in this fixed order: Identity, Soul, User Context, Tools, Agents,
+      // Bootstrap, Heartbeat, Memory.
       await editMentorPage.navigateToTab('Prompts');
-      await waitForPageReady(page);
 
-      const hasSection =
-        await editMentorPage.prompts.hasAgentConfigSection(10_000);
-      if (!hasSection) {
-        test.skip(
-          true,
-          'Agent Configuration section not visible — sandbox may not be fully wired',
-        );
-        return;
-      }
+      // Wait for the FIRST field's card by its known label. This ride out
+      // the loading spinner without a hand-tuned timeout — Playwright's
+      // auto-retrying expect polls until the element is visible or the
+      // suite-level expect timeout elapses. Click() also auto-scrolls so
+      // we don't need scrollIntoViewIfNeeded.
+      const fieldLabel = 'Identity';
+      const fieldCard = editMentorPage.prompts
+        .agentConfigFieldRowByLabel(fieldLabel)
+        .first();
+      await expect(fieldCard).toBeVisible();
 
-      // Find the first editable field.
-      // AgentConfigPrompts always renders all field cards (no empty-state
-      // create-config flow) — fields start with empty values.
-      const firstField = editMentorPage.prompts.firstAgentConfigField();
-      let firstFieldVisible = false;
-      try {
-        await firstField.waitFor({ state: 'visible', timeout: 10_000 });
-        firstFieldVisible = true;
-      } catch {
-        firstFieldVisible = false;
-      }
+      const newValue = `e2e-test-marker-${Date.now()}`;
 
-      if (!firstFieldVisible) {
-        test.skip(
-          true,
-          'No editable agent config fields found — skipping edit assertion',
-        );
-        return;
-      }
-
-      // Read the field label so we can locate the modal by its accessible
-      // name (DialogPrimitive.Title="Edit ${label}").
-      const fieldLabel = (
-        await firstField
-          .locator('span.text-sm.font-medium')
-          .first()
-          .innerText()
-          .catch(() => '')
-      ).trim();
-
-      if (!fieldLabel) {
-        test.skip(
-          true,
-          'Could not read agent config field label — bundled component may have changed',
-        );
-        return;
-      }
-
-      const ts = Date.now();
-      const newValue = `e2e-test-marker-${ts}`;
-
-      // editAgentConfigField encapsulates the OverlayModal flow: it opens the
-      // edit dialog (matched by name="Edit ${label}"), drives the TipTap
-      // contenteditable via real keyboard events, clicks Save, and waits for
-      // the modal to close. It returns the original textContent so we can
-      // restore it afterwards.
+      // editAgentConfigField opens the OverlayModal (matched by accessible
+      // name "Edit Identity"), drives the TipTap contenteditable via real
+      // keyboard events, clicks Save, and waits for the modal to close.
       const originalValue = await editMentorPage.prompts.editAgentConfigField(
         fieldLabel,
         newValue,
       );
 
-      // Assert: success toast confirms the PATCH resolved.
-      // The component shows `${label} updated successfully` via sonner.
-      const toast = page.getByText(/updated successfully/i).first();
-      try {
-        await toast.waitFor({ state: 'visible', timeout: 10_000 });
-      } catch {
-        // Toast is best-effort — the primary assertion is that the modal
-        // closed, which already happened inside editAgentConfigField.
-      }
+      // The component shows `${label} updated successfully` via sonner —
+      // this is the only externally observable signal that the PATCH
+      // resolved successfully.
+      await expect(
+        page.getByText(`${fieldLabel} updated successfully`).first(),
+      ).toBeVisible();
 
-      // Restore original value (best-effort) so re-running the test against
-      // the same env doesn't accumulate marker text.
+      // Restore original value so re-runs on the same env don't accumulate
+      // marker text. Best-effort — never fails the test.
       try {
         await editMentorPage.prompts.editAgentConfigField(
           fieldLabel,
@@ -927,6 +881,20 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         // Best-effort restore
       }
     } finally {
+      // If WE created the connection (env was not connected at start),
+      // disconnect to restore the not-connected state.
+      if (createdConnectionHere) {
+        try {
+          const sandbox = new SandboxTab(page, editMentorPage.dialog);
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          if (await sandbox.isConnected(5_000)) {
+            await sandbox.disconnect();
+          }
+        } catch {
+          // Best-effort
+        }
+      }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
         await waitForPageReady(page);
@@ -948,29 +916,32 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
     const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
 
+    // Skills tab is gated on a wired sandbox. If env isn't connected,
+    // wire a healthy OpenClaw instance up-front so the tab is reachable.
+    let createdConnectionHere = false;
+
     try {
       if (!wasEnabled) {
         await editMentorPage.settings.setAdvancedSandbox(true);
         await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
       }
 
-      // Skills tab only shows when wired
-      const skillsTab = getTab(editMentorPage.dialog, 'Skills');
-      let skillsAvailable = false;
-      try {
-        await skillsTab.waitFor({ state: 'visible', timeout: 4_000 });
-        skillsAvailable = true;
-      } catch {
-        skillsAvailable = false;
-      }
+      await editMentorPage.navigateToTab('Sandbox');
+      await waitForPageReady(page);
 
-      if (!skillsAvailable) {
+      const sandbox = new SandboxTab(page, editMentorPage.dialog);
+      const connected = await sandbox.ensureConnected();
+      if (!connected.instanceName) {
         test.skip(
           true,
-          'Skills tab not visible — sandbox not wired in this env',
+          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
         );
         return;
       }
+      createdConnectionHere = connected.createdConnection;
+
+      // After a fresh Connect, Skills tab needs a moment to render.
+      await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
 
       await editMentorPage.navigateToTab('Skills');
       await waitForPageReady(page);
@@ -1010,6 +981,19 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         { timeout: 10_000 },
       );
     } finally {
+      // If WE wired the sandbox, disconnect to restore not-connected state.
+      if (createdConnectionHere) {
+        try {
+          const sandbox = new SandboxTab(page, editMentorPage.dialog);
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          if (await sandbox.isConnected(5_000)) {
+            await sandbox.disconnect();
+          }
+        } catch {
+          // Best-effort
+        }
+      }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
         await waitForPageReady(page);
@@ -1037,29 +1021,33 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
     const skillDescription = `E2E test skill created at ${ts}`;
     const updatedDescription = `E2E updated description ${ts}`;
 
+    // Skills tab is gated on a wired sandbox. If env isn't connected,
+    // wire a healthy OpenClaw instance first; we'll disconnect after the
+    // test if WE were the ones that connected it.
+    let createdConnectionHere = false;
+
     try {
       if (!wasEnabled) {
         await editMentorPage.settings.setAdvancedSandbox(true);
         await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
       }
 
-      // Skills tab only shows when wired
-      const skillsTab = getTab(editMentorPage.dialog, 'Skills');
-      let skillsAvailable = false;
-      try {
-        await skillsTab.waitFor({ state: 'visible', timeout: 4_000 });
-        skillsAvailable = true;
-      } catch {
-        skillsAvailable = false;
-      }
+      await editMentorPage.navigateToTab('Sandbox');
+      await waitForPageReady(page);
 
-      if (!skillsAvailable) {
+      const sandbox = new SandboxTab(page, editMentorPage.dialog);
+      const connected = await sandbox.ensureConnected();
+      if (!connected.instanceName) {
         test.skip(
           true,
-          'Skills tab not visible — sandbox not wired in this env',
+          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
         );
         return;
       }
+      createdConnectionHere = connected.createdConnection;
+
+      // After Connect, Skills tab needs a moment to render.
+      await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
 
       await editMentorPage.navigateToTab('Skills');
       await waitForPageReady(page);
@@ -1075,31 +1063,22 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         version: '1.0.0',
         instruction: `Instruction for ${skillName}`,
       });
+      // submitNewSkill already waits for the "Skill created" toast, the
+      // dialog close, and the new row to appear in the list.
       await skills.submitNewSkill(skillName);
-
-      // Assert: new row appears with the entered name
-      await expect(skills.getSkillRowByName(skillName)).toBeVisible({
-        timeout: 15_000,
-      });
 
       // ── Edit ───────────────────────────────────────────────────────────
       await skills.openEditSkillDialog(skillName);
 
-      // Update the description field in the edit dialog
-      const descField = skills.editSkillDialog.locator(
-        '[name="skill-description"]',
-      );
-      await expect(descField).toBeVisible({ timeout: 10_000 });
-      await descField.clear();
-      await descField.fill(updatedDescription);
+      // Update the description field. The bundle renders this as a regular
+      // <input name="skill-description"> so .fill() works directly.
+      await skills.editSkillDescriptionInput.fill(updatedDescription);
 
       await skills.submitSkillEdit();
 
-      // Assert: dialog closed (already asserted inside submitSkillEdit) and
-      // the skill row is still visible (it wasn't accidentally deleted)
-      await expect(skills.getSkillRowByName(skillName)).toBeVisible({
-        timeout: 10_000,
-      });
+      // submitSkillEdit already waits for the "Skill updated" toast and
+      // dialog close. Verify the row wasn't accidentally deleted.
+      await expect(skills.getSkillRowByName(skillName)).toBeVisible();
 
       // Cleanup: delete the skill
       await skills.deleteSkill(skillName);
@@ -1120,6 +1099,19 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
         }
       } catch {
         // Best-effort
+      }
+      // If WE wired the sandbox, disconnect to restore not-connected state.
+      if (createdConnectionHere) {
+        try {
+          const sandbox = new SandboxTab(page, editMentorPage.dialog);
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          if (await sandbox.isConnected(5_000)) {
+            await sandbox.disconnect();
+          }
+        } catch {
+          // Best-effort
+        }
       }
       if (!wasEnabled) {
         await editMentorPage.navigateToTab('Settings');
@@ -1142,9 +1134,12 @@ test.describe('Journey 43: CLAW Advanced Sandbox — Non-Admin', () => {
 
     // Non-admin cannot open the edit mentor modal via the mentor dropdown
     // (the Settings menu item is hidden). We assert the tabs are absent by
-    // checking the mentor dropdown does not expose a Modify / Settings option.
+    // checking the mentor dropdown does not expose a Modify / Settings
+    // option. The mentor → agent rename moved this button's accessible
+    // name to "Selected agent dropdown button"; accept either label so the
+    // test is resilient to further renames.
     const dropdown = nonadminPage.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: /^Selected (agent|mentor) dropdown button$/,
     });
     await expect(dropdown).toBeVisible({ timeout: 15_000 });
     await dropdown.click();
