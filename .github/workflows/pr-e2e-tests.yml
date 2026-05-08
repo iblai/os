@@ -55,7 +55,6 @@ jobs:
       build-context: .
       image-name: iblai-mentor-spa-pro
       registry-type: ocir
-      image-tag: pr-${{ github.event.pull_request.number }}
       event-name: pull_request
       pr-number: ${{ github.event.pull_request.number }}
 
