@@ -108,15 +108,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetConnectedServicesQuery(params, options),
   useGetMCPServerConnectionsQuery: (params: any, options: any) =>
     mockUseGetMCPServerConnectionsQuery(params, options),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 /**

@@ -34,15 +34,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetRbacMentorAccessListQuery: (...args: unknown[]) =>
     mockUseGetRbacMentorAccessListQuery(...args),
   useGetRbacPermissionsMutation: () => [mockGetRbacPermissions],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/lib/hooks', () => ({

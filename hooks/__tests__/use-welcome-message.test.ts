@@ -5,15 +5,6 @@ import { renderHook, act } from '@testing-library/react';
 const mockLoadGuidedPrompts = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetGuidedPromptsQuery: () => [mockLoadGuidedPrompts],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock useMentorSettings

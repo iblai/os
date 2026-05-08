@@ -37,15 +37,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     data: [],
     isLoading: false,
   })),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock user hooks

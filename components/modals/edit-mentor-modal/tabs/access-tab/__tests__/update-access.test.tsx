@@ -41,15 +41,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetMentorSettingsQuery(...args),
   isPoliciesResponse: (results: unknown) =>
     results && typeof results === 'object' && 'data' in (results as object),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/lib/hooks', () => ({

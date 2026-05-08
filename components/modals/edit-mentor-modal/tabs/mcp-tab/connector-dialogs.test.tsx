@@ -71,15 +71,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     error: null,
     refetch: mockRefetchConnected,
   }),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 /**

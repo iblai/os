@@ -15,15 +15,6 @@ const mockUseGetPersonnalizedMentorsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetPersonnalizedMentorsQuery: (...args: unknown[]) =>
     mockUseGetPersonnalizedMentorsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock useNavigate hook

@@ -28,15 +28,6 @@ const mockAddTrainingDocument = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetCredentialsQuery: () => [mockGetCredentials],
   useAddTrainingDocumentMutation: () => [mockAddTrainingDocument],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock useUsername

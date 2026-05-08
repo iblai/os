@@ -43,15 +43,6 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetGuidedPromptsQuery: (...args: unknown[]) =>
     mockUseGetGuidedPromptsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock the UI components

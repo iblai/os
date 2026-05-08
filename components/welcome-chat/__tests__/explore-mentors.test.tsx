@@ -45,15 +45,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetAiSearchMentorsQuery(...args),
   useGetPublicMentorsQuery: (...args: unknown[]) =>
     mockUseGetPublicMentorsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock date-fns

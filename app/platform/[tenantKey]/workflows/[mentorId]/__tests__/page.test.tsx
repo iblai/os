@@ -22,15 +22,6 @@ const mockCreateWorkflow = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetWorkflowsQuery: () => mockUseGetWorkflowsQuery(),
   useCreateWorkflowMutation: () => [mockCreateWorkflow, { isLoading: false }],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock sonner

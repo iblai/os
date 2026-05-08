@@ -41,15 +41,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetChatHistoryQuery(...args),
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 describe('useHistoryWithPagination', () => {

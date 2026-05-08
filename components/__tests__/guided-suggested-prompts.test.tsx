@@ -8,15 +8,6 @@ const mockUseGetGuidedPromptsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetGuidedPromptsQuery: (...args: unknown[]) =>
     mockUseGetGuidedPromptsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/lib/utils', async () => {

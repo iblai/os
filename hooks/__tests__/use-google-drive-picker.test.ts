@@ -32,15 +32,6 @@ vi.mock('google-drive-picker', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetCredentialsQuery: mocked.useLazyGetCredentialsQuery,
   useAddTrainingDocumentMutation: mocked.useAddTrainingDocumentMutation,
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('../use-user', () => ({

@@ -43,15 +43,6 @@ vi.mock('@/hooks/use-chat-mode', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: vi.fn(() => ({ data: null })),
   useLazyGetShareableLinkPublicQuery: vi.fn(() => [vi.fn(), { data: null }]),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('next/navigation', () => ({

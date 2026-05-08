@@ -144,15 +144,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       mentor_visibility: 'VIEWABLE_BY_ANYONE',
     },
   }),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock tenant metadata query

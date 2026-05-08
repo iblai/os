@@ -37,15 +37,6 @@ vi.mock('@/lib/hooks', () => ({
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetFileUploadUrlMutation: () => [mocked.getFileUploadUrl],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({

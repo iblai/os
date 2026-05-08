@@ -140,15 +140,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       updateQueryData: mockUpdateQueryData,
     },
   },
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/components/markdown', () => ({

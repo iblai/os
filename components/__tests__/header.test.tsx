@@ -89,15 +89,6 @@ const mockUseGetMentorPublicSettingsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: (...args: unknown[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 // Mock use-model-download

@@ -50,15 +50,6 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetPromptsSearchQuery: () => mockUseLazyGetPromptsSearchQuery(),
   useLazyGetGuidedPromptsQuery: () => mockUseLazyGetGuidedPromptsQuery(),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/hooks/use-welcome-message', () => ({

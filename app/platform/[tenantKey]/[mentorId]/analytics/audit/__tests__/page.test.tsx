@@ -35,15 +35,6 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorPublicSettingsQuery: (...args: any[]) =>
     mockUseGetMentorPublicSettingsQuery(...args),
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@/features/analytics/slice', () => ({

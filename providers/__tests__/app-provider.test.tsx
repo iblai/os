@@ -46,15 +46,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetVectorDocumentsQuery: () => [mockGetVectorDocuments],
   useLazyGetRecentMessageQuery: () => [mockGetRecentMessages],
   useLazyGetPinnedMessagesQuery: () => [mockGetPinnedMessages],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({

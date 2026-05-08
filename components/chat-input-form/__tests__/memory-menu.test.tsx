@@ -36,15 +36,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockCreateMentorMemory,
     { isLoading: false },
   ],
-  useGetClawMentorConfigQuery: () => ({
-    data: null,
-    isError: false,
-    isLoading: false,
-  }),
-  useUpdateClawMentorConfigMutation: () => [
-    () => Promise.resolve({}),
-    { isLoading: false },
-  ],
 }));
 
 vi.mock('sonner', () => ({
