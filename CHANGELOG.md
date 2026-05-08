@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.9](https://github.com/iblai/mentorai/compare/v0.63.8...v0.63.9) (2026-05-08)
+
+### Bug Fixes
+
+* **ci:** use generic sed pattern to match any image URI in docker-compose ([33d89c6](https://github.com/iblai/mentorai/commit/33d89c60d7cef4d807bf7541505cf9b1a60e5d79))
+
 ## [0.63.8](https://github.com/iblai/mentorai/compare/v0.63.7...v0.63.8) (2026-05-08)
 
 ### Tests
