@@ -4,7 +4,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import { Edit, Info, Loader2, Play, Plus, Trash2 } from 'lucide-react';
-import { AgentConfigPrompts } from '@iblai/web-containers';
+import { AgentConfigPrompts } from '@iblai/iblai-js/web-containers';
 import {
   useDeletePromptMutation,
   useEditMentorMutation,
