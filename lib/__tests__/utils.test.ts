@@ -2281,9 +2281,12 @@ describe('handleTenantSwitch function', () => {
   beforeEach(() => {
     locationHrefSpy = '';
     // Clear cookies from previous tests
-    document.cookie = 'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
       writable: true,
@@ -2470,9 +2473,12 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
   beforeEach(() => {
     locationHrefSpy = '';
     // Clear cookies from previous tests
-    document.cookie = 'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
 
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
