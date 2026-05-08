@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.8](https://github.com/iblai/mentorai/compare/v0.63.7...v0.63.8) (2026-05-08)
+
+### Tests
+
+* add unit tests for Version and FileUpload components ([a291ad0](https://github.com/iblai/mentorai/commit/a291ad0a9f5e7d0356018b1f0302e6a29df52961))
+
 ## [0.63.7](https://github.com/iblai/mentorai/compare/v0.63.6...v0.63.7) (2026-05-08)
 
 ### Bug Fixes
