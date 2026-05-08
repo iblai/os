@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.63.11](https://github.com/iblai/mentorai/compare/v0.63.10...v0.63.11) (2026-05-08)
+
+### CI
+
+* updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
+
+## [0.63.10](https://github.com/iblai/mentorai/compare/v0.63.9...v0.63.10) (2026-05-08)
+
+### CI
+
+- **pr-e2e:** add runs-on to reusable workflow calls ([52490ef](https://github.com/iblai/mentorai/commit/52490ef98a41cc04d9e2b86e626fe61068c6130d))
+
+## [0.63.9](https://github.com/iblai/mentorai/compare/v0.63.8...v0.63.9) (2026-05-08)
+
+### Bug Fixes
+
+- **ci:** use generic sed pattern to match any image URI in docker-compose ([33d89c6](https://github.com/iblai/mentorai/commit/33d89c60d7cef4d807bf7541505cf9b1a60e5d79))
+
+## [0.63.8](https://github.com/iblai/mentorai/compare/v0.63.7...v0.63.8) (2026-05-08)
+
+### Tests
+
+- add unit tests for Version and FileUpload components ([a291ad0](https://github.com/iblai/mentorai/commit/a291ad0a9f5e7d0356018b1f0302e6a29df52961))
+
+## [0.63.7](https://github.com/iblai/mentorai/compare/v0.63.6...v0.63.7) (2026-05-08)
+
+### Bug Fixes
+
+- unit test failures from tenant switching cookie and missing mock ([5429638](https://github.com/iblai/mentorai/commit/54296385f1ee3d0252601e135ad3d2cfbaa3f855))
+
 ## [0.63.6](https://github.com/iblai/mentorai/compare/v0.63.5...v0.63.6) (2026-05-07)
 
 ### CI
