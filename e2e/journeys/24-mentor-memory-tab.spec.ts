@@ -1,6 +1,65 @@
 import { test, expect } from '../fixtures/mentor-test';
+import type { Locator, Page } from '@playwright/test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+
+async function selectConcreteMemoryCategory(
+  page: Page,
+  memoryDialog: Locator,
+): Promise<void> {
+  const categoryTrigger = memoryDialog.getByRole('combobox').first();
+  await expect(categoryTrigger).toBeVisible({ timeout: 10_000 });
+  await categoryTrigger.click();
+
+  // "All" is a filter tab, not a create/edit category option. Prefer a
+  // seeded category over any E2E category left behind by a previous failed run.
+  let option = page
+    .getByRole('option')
+    .filter({ hasNotText: /^All$/i })
+    .filter({ hasNotText: /^E2E /i })
+    .first();
+
+  if (
+    !(await option
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false))
+  ) {
+    option = page.getByRole('option').filter({ hasNotText: /^All$/i }).first();
+  }
+
+  await expect(option).toBeVisible({ timeout: 10_000 });
+  const categoryName = ((await option.textContent()) ?? '').trim();
+  expect(categoryName, 'memory category option text').not.toBe('');
+  await option.click();
+  await expect(categoryTrigger).toContainText(categoryName, {
+    timeout: 5_000,
+  });
+}
+
+async function expectDialogClosedWithoutError(
+  page: Page,
+  dialog: Locator,
+  errorText: RegExp,
+  actionName: string,
+): Promise<void> {
+  const result = await Promise.race([
+    dialog
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .then(() => 'closed' as const)
+      .catch(() => 'timeout' as const),
+    page
+      .getByText(errorText)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .then(() => 'error' as const)
+      .catch(() => 'timeout' as const),
+  ]);
+
+  expect(result, `${actionName} should close without an error toast`).toBe(
+    'closed',
+  );
+}
 
 test.describe('Journey 24: Mentor Memory Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -70,9 +129,9 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
    *   - Save / Delete:   role="button" with the literal text
    *   - Categories tab:  role="tablist", aria-label="Memory categories"
    *
-   * No toast waits — sonner toasts auto-dismiss after ~4s and are racy in
-   * CI. We only wait on durable post-state UI: dialog hidden, entry visible
-   * in the list, entry detached after delete.
+   * No success-toast waits — sonner toasts auto-dismiss after ~4s and are
+   * racy in CI. We wait on durable post-state UI, but fail fast on explicit
+   * error toasts so rejected mutations don't burn the full hidden timeout.
    *
    * Save button is gated on content >= 10 chars (source: add/edit modals).
    */
@@ -131,9 +190,10 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     });
     await expect(addDialog).toBeVisible({ timeout: 10_000 });
 
-    // Fill ≥ 10 chars (source: Save is disabled below 10). Skip the category
-    // dropdown — saveNewMemory falls back to 'general' when the pre-filled
-    // category is "All", so the create POST is valid without picking one.
+    // Fill ≥ 10 chars (source: Save is disabled below 10). Pick a concrete
+    // category: "All" is only a filter, and its "general" fallback may not be
+    // a valid category slug in the E2E tenant.
+    await selectConcreteMemoryCategory(page, addDialog);
     await addDialog
       .getByPlaceholder('Enter memory content...')
       .fill(initialContent);
@@ -142,8 +202,13 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await expect(addSaveBtn).toBeEnabled({ timeout: 5_000 });
     await addSaveBtn.click();
 
-    // Dialog close = create mutation resolved. Don't wait on the toast.
-    await expect(addDialog).toBeHidden({ timeout: 30_000 });
+    // Dialog close = create mutation resolved. Don't wait on success toasts.
+    await expectDialogClosedWithoutError(
+      page,
+      addDialog,
+      /Failed to create memory/i,
+      'Add memory',
+    );
 
     await ensureAllFilter();
 
@@ -169,7 +234,12 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await expect(editSaveBtn).toBeEnabled({ timeout: 5_000 });
     await editSaveBtn.click();
 
-    await expect(editDialog).toBeHidden({ timeout: 30_000 });
+    await expectDialogClosedWithoutError(
+      page,
+      editDialog,
+      /Failed to update memory/i,
+      'Edit memory',
+    );
 
     await ensureAllFilter();
 
@@ -198,7 +268,12 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await expect(confirmDeleteBtn).toBeEnabled({ timeout: 5_000 });
     await confirmDeleteBtn.click();
 
-    await expect(deleteDialog).toBeHidden({ timeout: 30_000 });
+    await expectDialogClosedWithoutError(
+      page,
+      deleteDialog,
+      /Failed to delete memory/i,
+      'Delete memory',
+    );
 
     await expect(
       memoryList.getByRole('listitem').filter({ hasText: updatedContent }),
