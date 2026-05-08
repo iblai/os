@@ -4,19 +4,19 @@
 
 ### Bug Fixes
 
-* navbar header overflowing when llm name very long ([24f3e7e](https://github.com/iblai/mentorai/commit/24f3e7ee4be941ba0d115f05d0dee0ffbb446161))
-* navbar header overflowing when llm name very long > playwright test coverage ([daa3909](https://github.com/iblai/mentorai/commit/daa3909bd832c03c087c6cc3e2a10ee082b49850))
-* navbar header overflowing when llm name very long > test coverage ([cc11102](https://github.com/iblai/mentorai/commit/cc111026645b96677aaa39507bb8904e1e732fda))
+- navbar header overflowing when llm name very long ([24f3e7e](https://github.com/iblai/mentorai/commit/24f3e7ee4be941ba0d115f05d0dee0ffbb446161))
+- navbar header overflowing when llm name very long > playwright test coverage ([daa3909](https://github.com/iblai/mentorai/commit/daa3909bd832c03c087c6cc3e2a10ee082b49850))
+- navbar header overflowing when llm name very long > test coverage ([cc11102](https://github.com/iblai/mentorai/commit/cc111026645b96677aaa39507bb8904e1e732fda))
 
 ### Chores
 
-* bump  iblai-js version to 1.7.0 ([c85204b](https://github.com/iblai/mentorai/commit/c85204ba9fdcc96bf43be9fbd7c51f7fc3186f86))
+- bump iblai-js version to 1.7.0 ([c85204b](https://github.com/iblai/mentorai/commit/c85204ba9fdcc96bf43be9fbd7c51f7fc3186f86))
 
 ## [0.63.11](https://github.com/iblai/mentorai/compare/v0.63.10...v0.63.11) (2026-05-08)
 
 ### CI
 
-* updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
+- updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
 
 ## [0.63.10](https://github.com/iblai/mentorai/compare/v0.63.9...v0.63.10) (2026-05-08)
 

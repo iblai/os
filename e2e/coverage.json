@@ -3,8 +3,8 @@
   "lastUpdated": "2026-05-08",
   "summary": {
     "totalCheckpoints": 373,
-    "coveredCheckpoints": 364,
-    "deprecatedCheckpoints": 9,
+    "coveredCheckpoints": 361,
+    "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 43,
     "activeJourneys": 42
@@ -1519,10 +1519,7 @@
         "components/accessibility/accessibility-toolbar.tsx",
         "components/chat/stop-streaming-button.tsx",
         "components/chat/ai-message-copy.tsx",
-        "components/chat/index.tsx",
-        "components/chat-input-form.tsx",
         "components/chat-input-form/voice-chat-button.tsx",
-        "components/chat-input-form/voice-call-button.tsx",
         "components/chat-input-form/upload-menu.tsx"
       ],
       "checkpoints": [
@@ -1625,27 +1622,30 @@
         },
         {
           "id": "a11y-20",
-          "description": "Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has aria-label=\"Chat composer\" (issue #1596)",
+          "description": "Plus / Microphone / Send composer buttons expose accessible names via aria-label (WCAG 4.1.2, issue #1596)",
           "status": "covered",
           "specFile": "journeys/29-accessibility-wcag.spec.ts"
         },
         {
           "id": "a11y-21",
           "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
-          "status": "covered",
-          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+          "status": "deprecated",
+          "deprecatedIn": "scope-revert/1596",
+          "deprecatedReason": "Reflow refactor reverted as out-of-scope; only WCAG 4.1.2 (button aria-labels) is in scope for #1596. Track WCAG 1.4.10 separately."
         },
         {
           "id": "a11y-22",
           "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
-          "status": "covered",
-          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+          "status": "deprecated",
+          "deprecatedIn": "scope-revert/1596",
+          "deprecatedReason": "Duplicate-composer removal reverted with the reflow refactor; out of scope for #1596."
         },
         {
           "id": "a11y-23",
           "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
-          "status": "covered",
-          "specFile": "journeys/29-accessibility-wcag.spec.ts"
+          "status": "deprecated",
+          "deprecatedIn": "scope-revert/1596",
+          "deprecatedReason": "Skip-link added by the reflow refactor reverted as out-of-scope; track WCAG 2.4.1 separately."
         }
       ]
     },
