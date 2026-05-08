@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.6](https://github.com/iblai/mentorai/compare/v0.63.5...v0.63.6) (2026-05-07)
+
+### CI
+
+* remove aws ecr docker login from pr-e2e-tests.yml ([e56a40e](https://github.com/iblai/mentorai/commit/e56a40e215a0ebfea630ab9e56d915177628787b))
+
 ## [0.63.5](https://github.com/iblai/mentorai/compare/v0.63.4...v0.63.5) (2026-05-07)
 
 ### CI
