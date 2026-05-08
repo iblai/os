@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.10](https://github.com/iblai/mentorai/compare/v0.63.9...v0.63.10) (2026-05-08)
+
+### CI
+
+* **pr-e2e:** add runs-on to reusable workflow calls ([52490ef](https://github.com/iblai/mentorai/commit/52490ef98a41cc04d9e2b86e626fe61068c6130d))
+
 ## [0.63.9](https://github.com/iblai/mentorai/compare/v0.63.8...v0.63.9) (2026-05-08)
 
 ### Bug Fixes
