@@ -34,6 +34,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetDisclaimersQuery: (...args: unknown[]) =>
     mockUseGetDisclaimersQuery(...args),
   useAgreeToDisclaimerMutation: () => [mockAgreeToDisclaimer],
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 describe('useUserAgreement', () => {

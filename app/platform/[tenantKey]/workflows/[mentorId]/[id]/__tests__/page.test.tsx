@@ -88,6 +88,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     { isLoading: false },
   ],
   useLazyGetMentorSettingsQuery: () => [mockFetchMentorSettings],
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock UI components

@@ -22,7 +22,11 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+// SkillsTab imports from `@iblai/iblai-js/web-containers` (the unified
+// SDK barrel). Mock the exact path the source uses — Vitest keys mocks
+// by module specifier so the underlying `@iblai/web-containers` mock
+// wouldn't match.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   AgentSkills: (props: any) => {
     mockAgentSkills(props);
     return (

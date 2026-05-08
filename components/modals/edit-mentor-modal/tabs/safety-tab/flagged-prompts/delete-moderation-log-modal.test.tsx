@@ -34,6 +34,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockDeleteModerationLog,
     { isLoading: mockDeleteModerationLogLoading() },
   ],
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('sonner', () => ({

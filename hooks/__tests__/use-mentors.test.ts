@@ -26,6 +26,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorsQuery: (...args: unknown[]) => mockUseGetMentorsQuery(...args),
   useGetPublicMentorsQuery: (...args: unknown[]) =>
     mockUseGetPublicMentorsQuery(...args),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 describe('useMentorsWithPagination', () => {

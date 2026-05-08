@@ -7,8 +7,9 @@ export class MemoryTab {
   readonly addMemoryButton: Locator;
   readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
-  // Each memory entry has an unnamed icon button (MoreHorizontal) as its action trigger.
-  // We use these as a proxy for the memory entry count.
+  readonly memoryList: Locator;
+  // Per-entry action menu trigger (the MoreHorizontal icon button). Resolves
+  // to one Locator per memory card and is also used as a proxy for entry count.
   readonly memoryActionButtons: Locator;
 
   /**
@@ -22,19 +23,22 @@ export class MemoryTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.addMemoryButton = dialog
-      .locator('button')
-      .filter({ hasText: /add memory/i });
+    this.addMemoryButton = dialog.getByRole('button', { name: /add memory/i });
     this.manageCategoriesButton = dialog.getByRole('button', {
       name: 'Manage categories',
     });
     this.emptyState = dialog.getByText('No saved memories yet.');
-    // Per-memory MoreHorizontal action trigger. Identified by a stable
-    // data-testid added to the DropdownMenuTrigger's <Button> in the
-    // ManageMemories component — no class-based selectors.
-    this.memoryActionButtons = dialog.locator(
-      '[data-testid="memory-entry-action-menu"]',
-    );
+    // The memory list container has role="list" + aria-label="Saved memories"
+    // on the underlying div in ManageMemories. Scoping listitem lookups to
+    // this list prevents collisions with any other list semantics inside the
+    // Edit Mentor dialog.
+    this.memoryList = dialog.getByRole('list', { name: 'Saved memories' });
+    // Per-memory MoreHorizontal action trigger. The DropdownMenuTrigger's
+    // <Button> in ManageMemories has aria-label="Memory actions" — locate by
+    // role + accessible name (no class-based or test-id selectors).
+    this.memoryActionButtons = this.memoryList.getByRole('button', {
+      name: 'Memory actions',
+    });
   }
 
   async hasMemories(): Promise<boolean> {
@@ -149,16 +153,14 @@ export class MemoryTab {
    * (not "first") when tests run in parallel — multiple specs may be
    * adding/removing entries concurrently, so positional selectors race.
    *
-   * Uses data-testid="memory-entry" so the locator stays stable when the
-   * list container's utility classes change, and works regardless of the
-   * active category-filter tab (the "All" view must be active for the entry
-   * to appear — callers should reset to "All" before asserting if they are
-   * not certain which category view is currently shown).
+   * Each entry has role="listitem" inside the list with
+   * aria-label="Saved memories", so we resolve via ARIA semantics — no
+   * class-based or test-id selectors. Works regardless of the active
+   * category-filter tab (the "All" view must be active for a freshly-created
+   * entry to appear; callers should reset to "All" before asserting).
    */
   entryByContent(content: string): Locator {
-    return this.dialog
-      .locator('[data-testid="memory-entry"]')
-      .filter({ hasText: content });
+    return this.memoryList.getByRole('listitem').filter({ hasText: content });
   }
 
   /**
@@ -170,9 +172,12 @@ export class MemoryTab {
    * the caller can immediately assert on the list contents.
    */
   async resetCategoryFilter(): Promise<void> {
-    const allTab = this.dialog.locator(
-      '[data-testid="memory-category-tab-all"]',
-    );
+    // The category bar uses role="tablist" / role="tab" with the category
+    // names as accessible text. Scope to the tablist labelled
+    // "Memory categories" so we never match a tab from a different region.
+    const allTab = this.dialog
+      .getByRole('tablist', { name: 'Memory categories' })
+      .getByRole('tab', { name: 'All', exact: true });
     // Categories are fetched alongside the memory list and may not be in the
     // DOM the instant the dialog mounts. 15s gives the admin-categories query
     // time to populate without blocking forever on tenants where the tab
@@ -212,7 +217,7 @@ export class MemoryTab {
     const entry = this.entryByContent(content).first();
     await expect(entry).toBeVisible({ timeout: 10_000 });
     const actionBtn = entry
-      .locator('[data-testid="memory-entry-action-menu"]')
+      .getByRole('button', { name: 'Memory actions' })
       .first();
     await expect(actionBtn).toBeVisible({ timeout: 10_000 });
     await actionBtn.click();
@@ -471,12 +476,14 @@ export class MemoryTab {
    * Returns the text content of the first memory entry.
    */
   async getFirstMemoryContent(): Promise<string> {
-    // Content is targeted by its data-testid on the inner content div, not
-    // by Tailwind utility classes which can change without notice.
-    const firstEntry = this.dialog
-      .locator('[data-testid="memory-entry"]')
+    // The memory content is the only <p> inside each role="listitem" entry
+    // (metadata renders as <span>s). Targeting via the paragraph element
+    // keeps this stable when Tailwind classes change.
+    const firstEntry = this.memoryList
+      .getByRole('listitem')
       .first()
-      .locator('[data-testid="memory-entry-content"]');
+      .locator('p')
+      .first();
     return (await firstEntry.textContent().catch(() => '')) ?? '';
   }
 }

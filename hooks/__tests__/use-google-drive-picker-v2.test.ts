@@ -19,6 +19,15 @@ vi.mock('next/navigation', () => ({
 const mockGetCredentials = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetCredentialsQuery: () => [mockGetCredentials],
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock useUsername

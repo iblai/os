@@ -13,6 +13,15 @@ import { TOOLS } from '@iblai/iblai-js/web-utils';
 // Mock modules
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetConnectedServiceAuthUrlQuery: vi.fn(() => [vi.fn()]),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('sonner', () => ({
