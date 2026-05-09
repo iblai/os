@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.14](https://github.com/iblai/mentorai/compare/v0.63.13...v0.63.14) (2026-05-09)
+
+### Chores
+
+* **deps:** bump iblai-js to 1.9.0 ([cee2f56](https://github.com/iblai/mentorai/commit/cee2f56b2fe9e663911e7590ed4bf51ad48beb11))
+
 ## [0.63.13](https://github.com/iblai/mentorai/compare/v0.63.12...v0.63.13) (2026-05-08)
 
 ### Reverts
