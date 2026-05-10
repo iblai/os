@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-08",
+  "lastUpdated": "2026-05-10",
   "summary": {
-    "totalCheckpoints": 373,
-    "coveredCheckpoints": 364,
+    "totalCheckpoints": 374,
+    "coveredCheckpoints": 365,
     "deprecatedCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 43,
-    "activeJourneys": 42
+    "totalJourneys": 44,
+    "activeJourneys": 43
   },
   "journeys": [
     {
@@ -2369,6 +2369,24 @@
         {
           "id": "pcil-10",
           "description": "Flag is restored to its original value in afterEach to avoid contaminating subsequent runs",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "voice-to-text",
+      "name": "Voice-to-Text Dictation",
+      "spec": "09b-voice-to-text.spec.ts",
+      "sourceFiles": [
+        "hooks/use-voice-chat.ts",
+        "hooks/use-timer.tsx",
+        "components/chat-input-form/voice-chat-button.tsx",
+        "components/chat-input-form.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vtt-01",
+          "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
           "status": "covered"
         }
       ]
