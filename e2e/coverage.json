@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-08",
+  "lastUpdated": "2026-05-10",
   "summary": {
-    "totalCheckpoints": 373,
-    "coveredCheckpoints": 361,
+    "totalCheckpoints": 375,
+    "coveredCheckpoints": 363,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 43,
-    "activeJourneys": 42
+    "totalJourneys": 44,
+    "activeJourneys": 43
   },
   "journeys": [
     {
@@ -481,6 +481,11 @@
         {
           "id": "vc-06",
           "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
+          "status": "covered"
+        },
+        {
+          "id": "vc-07",
+          "description": "Admin creates a new mentor and completes a real LiveKit voice-call round-trip with injected fake audio: dialog opens, /create-call-credentials/ + room.connect + setMicrophoneEnabled all succeed against the real backend (mute button enabled, loading text cleared), and the end-call cleanup path closes the dialog. Regression cover for iblai-platform#1657",
           "status": "covered"
         }
       ]
@@ -2370,6 +2375,24 @@
         {
           "id": "pcil-10",
           "description": "Flag is restored to its original value in afterEach to avoid contaminating subsequent runs",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "voice-to-text",
+      "name": "Voice-to-Text Dictation",
+      "spec": "09b-voice-to-text.spec.ts",
+      "sourceFiles": [
+        "hooks/use-voice-chat.ts",
+        "hooks/use-timer.tsx",
+        "components/chat-input-form/voice-chat-button.tsx",
+        "components/chat-input-form.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vtt-01",
+          "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
           "status": "covered"
         }
       ]

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-08 | 373 checkpoints (361 active, 12 deprecated) | 43 journeys (42 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-10 | 375 checkpoints (363 active, 12 deprecated) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -141,7 +141,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 9: Voice Chat (6 checkpoints) — `journeys/09-voice-chat.spec.ts`
+## Journey 9: Voice Chat (7 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
 **Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
@@ -151,6 +151,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call button reappears after re-enabling the toggle
 - [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
 - [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
+- [x] VC-07: Admin creates a new mentor and completes a real LiveKit voice-call round-trip with `--use-file-for-fake-audio-capture=speech.wav` injected as fake mic — `/create-call-credentials/` + `room.connect` + `setMicrophoneEnabled` succeed against the real backend, and end-call cleanup closes the dialog. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657)
 
 ---
 
@@ -700,6 +701,16 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 - [x] PCIL-43.8: User can send a message when flag is `true`
 - [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
 - [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
+
+---
+
+## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
+
+**Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
+
+Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
+
+- [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
 
 ---
 
