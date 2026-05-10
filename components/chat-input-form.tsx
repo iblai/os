@@ -304,7 +304,6 @@ export function ChatInputForm({
       <form
         ref={containerRef}
         onSubmit={handleSubmit}
-        aria-label="Chat composer"
         className={cn(
           'mx-auto mt-4 w-full pb-2',
           CSS_CLASS_NAMES.CHAT.TEXTAREA,

@@ -18986,32 +18986,22 @@ describe('Chat', () => {
       });
     });
 
-    it('should render exactly one composer when canvas is open (issue #1596 reflow)', async () => {
+    it('should open phone call modal when voice call is clicked in mobile canvas view', async () => {
       await setupCanvasView();
 
-      // Before issue #1596 the split layout rendered two ChatInputForms
-      // (a `hidden md:flex` desktop one and a `md:hidden` mobile one),
-      // which produced duplicate `id="chat-input-textarea"` and broke
-      // the skip link target. After the reflow fix there is a single
-      // composer that is reachable at every viewport width.
-      expect(screen.getAllByTestId('input-phone-call-btn')).toHaveLength(1);
-      expect(screen.getAllByTestId('input-screen-sharing-btn')).toHaveLength(1);
-    });
-
-    it('should open phone call modal when voice call is clicked from the unified canvas-view composer', async () => {
-      await setupCanvasView();
-
-      fireEvent.click(screen.getByTestId('input-phone-call-btn'));
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-phone-call-btn')[1]);
 
       await waitFor(() => {
         expect(screen.getByTestId('live-kit-chat')).toBeInTheDocument();
       });
     });
 
-    it('should open screen sharing modal when screen share is clicked from the unified canvas-view composer', async () => {
+    it('should open screen sharing modal when screen share is clicked in mobile canvas view', async () => {
       await setupCanvasView();
 
-      fireEvent.click(screen.getByTestId('input-screen-sharing-btn'));
+      // Click the second instance (mobile canvas panel).
+      fireEvent.click(screen.getAllByTestId('input-screen-sharing-btn')[1]);
 
       await waitFor(() => {
         expect(
@@ -19056,139 +19046,6 @@ describe('Chat', () => {
       });
 
       mockSelectEnableChatActionsPopup.mockReturnValue(false);
-    });
-  });
-
-  describe('accessibility (issue #1596)', () => {
-    it('should expose a "Skip to chat input" link targeting the textarea id', () => {
-      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
-
-      const skipLink = screen.getByRole('link', {
-        name: 'Skip to chat input',
-      });
-      expect(skipLink).toBeInTheDocument();
-      expect(skipLink).toHaveAttribute('href', '#chat-input-textarea');
-      // Hidden until focused: sr-only baseline + focus:not-sr-only
-      expect(skipLink).toHaveClass('sr-only');
-      expect(skipLink.className).toContain('focus:not-sr-only');
-    });
-
-    describe('canvas + narrow viewport reflow (WCAG 1.4.10)', () => {
-      const openCanvasWithMessages = async () => {
-        const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
-        (useAdvancedChat as any).mockReturnValue({
-          changeTab: vi.fn(),
-          activeTab: 'chat',
-          currentStreamingMessage: null,
-          enabledGuidedPrompts: [],
-          isStreaming: false,
-          mentorName: 'Test Mentor',
-          messages: [
-            {
-              id: '1',
-              role: 'user',
-              content: 'Hello',
-              timestamp: new Date().toISOString(),
-              visible: true,
-            },
-            {
-              id: '2',
-              role: 'assistant',
-              content: 'Hi there!',
-              timestamp: new Date().toISOString(),
-              visible: true,
-            },
-          ],
-          profileImage: '/avatar.png',
-          sendMessage: vi.fn(),
-          setMessage: vi.fn(),
-          stopGenerating: vi.fn(),
-          uniqueMentorId: 'unique-mentor-123',
-          sessionId: 'session-123',
-          startNewChat: vi.fn(),
-          enableSafetyDisclaimer: false,
-          isPending: false,
-          isLoadingChats: false,
-        });
-      };
-
-      it('should keep the chat composer in the DOM when canvas is open at a narrow (<md) viewport', async () => {
-        Object.defineProperty(window, 'innerWidth', {
-          value: 500,
-          writable: true,
-          configurable: true,
-        });
-
-        await openCanvasWithMessages();
-        renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
-
-        window.dispatchEvent(new Event('resize'));
-        fireEvent.click(screen.getByTestId('open-canvas-btn'));
-
-        await waitFor(() => {
-          expect(screen.getByTestId('canvas-view')).toBeInTheDocument();
-        });
-
-        // Composer must still be reachable - reflow guard.
-        // Previously the chat panel had `hidden md:flex` which removed it
-        // from the layout at <768px viewport widths (issue #1596).
-        const composers = screen.getAllByTestId('chat-input-form');
-        expect(composers.length).toBeGreaterThan(0);
-
-        Object.defineProperty(window, 'innerWidth', {
-          value: 1024,
-          writable: true,
-          configurable: true,
-        });
-      });
-
-      it('should render exactly one composer when canvas is open (no duplicate mobile prompt)', async () => {
-        Object.defineProperty(window, 'innerWidth', {
-          value: 500,
-          writable: true,
-          configurable: true,
-        });
-
-        await openCanvasWithMessages();
-        renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
-
-        window.dispatchEvent(new Event('resize'));
-        fireEvent.click(screen.getByTestId('open-canvas-btn'));
-
-        await waitFor(() => {
-          expect(screen.getByTestId('canvas-view')).toBeInTheDocument();
-        });
-
-        // Only one composer should render. Previously the split layout
-        // rendered a second `md:hidden` composer below the canvas, which
-        // produced duplicate `id="chat-input-textarea"` and broke the
-        // skip link target.
-        expect(screen.getAllByTestId('chat-input-form')).toHaveLength(1);
-
-        Object.defineProperty(window, 'innerWidth', {
-          value: 1024,
-          writable: true,
-          configurable: true,
-        });
-      });
-
-      it('should mark the resize handle as aria-hidden (decorative)', async () => {
-        await openCanvasWithMessages();
-        const { container } = renderWithRedux(
-          <Chat mode="default" isPreviewMode={false} />,
-        );
-
-        fireEvent.click(screen.getByTestId('open-canvas-btn'));
-
-        await waitFor(() => {
-          expect(screen.getByTestId('canvas-view')).toBeInTheDocument();
-        });
-
-        const resizeHandle = container.querySelector(
-          '[aria-hidden="true"].cursor-col-resize',
-        );
-        expect(resizeHandle).toBeInTheDocument();
-      });
     });
   });
 });

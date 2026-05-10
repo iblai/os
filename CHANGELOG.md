@@ -1,22 +1,38 @@
 # Changelog
 
+## [0.63.14](https://github.com/iblai/mentorai/compare/v0.63.13...v0.63.14) (2026-05-09)
+
+### Chores
+
+* **deps:** bump iblai-js to 1.9.0 ([cee2f56](https://github.com/iblai/mentorai/commit/cee2f56b2fe9e663911e7590ed4bf51ad48beb11))
+
+## [0.63.13](https://github.com/iblai/mentorai/compare/v0.63.12...v0.63.13) (2026-05-08)
+
+### Reverts
+
+* drop out-of-scope reflow + skip-link + voice-call work from [#1596](https://github.com/iblai/mentorai/issues/1596) ([dbce21b](https://github.com/iblai/mentorai/commit/dbce21b519cda83a26b718123111ea9d1a638c8f))
+
+### Chores
+
+* **e2e:** map voice-call-button.tsx to journey 37 sourceFiles ([e1dd9a1](https://github.com/iblai/mentorai/commit/e1dd9a10f2ebf428e744b2a01fc9c7eedb22b4e0))
+
 ## [0.63.12](https://github.com/iblai/mentorai/compare/v0.63.11...v0.63.12) (2026-05-08)
 
 ### Bug Fixes
 
-* navbar header overflowing when llm name very long ([24f3e7e](https://github.com/iblai/mentorai/commit/24f3e7ee4be941ba0d115f05d0dee0ffbb446161))
-* navbar header overflowing when llm name very long > playwright test coverage ([daa3909](https://github.com/iblai/mentorai/commit/daa3909bd832c03c087c6cc3e2a10ee082b49850))
-* navbar header overflowing when llm name very long > test coverage ([cc11102](https://github.com/iblai/mentorai/commit/cc111026645b96677aaa39507bb8904e1e732fda))
+- navbar header overflowing when llm name very long ([24f3e7e](https://github.com/iblai/mentorai/commit/24f3e7ee4be941ba0d115f05d0dee0ffbb446161))
+- navbar header overflowing when llm name very long > playwright test coverage ([daa3909](https://github.com/iblai/mentorai/commit/daa3909bd832c03c087c6cc3e2a10ee082b49850))
+- navbar header overflowing when llm name very long > test coverage ([cc11102](https://github.com/iblai/mentorai/commit/cc111026645b96677aaa39507bb8904e1e732fda))
 
 ### Chores
 
-* bump  iblai-js version to 1.7.0 ([c85204b](https://github.com/iblai/mentorai/commit/c85204ba9fdcc96bf43be9fbd7c51f7fc3186f86))
+- bump iblai-js version to 1.7.0 ([c85204b](https://github.com/iblai/mentorai/commit/c85204ba9fdcc96bf43be9fbd7c51f7fc3186f86))
 
 ## [0.63.11](https://github.com/iblai/mentorai/compare/v0.63.10...v0.63.11) (2026-05-08)
 
 ### CI
 
-* updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
+- updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
 
 ## [0.63.10](https://github.com/iblai/mentorai/compare/v0.63.9...v0.63.10) (2026-05-08)
 
