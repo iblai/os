@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.63.15](https://github.com/iblai/mentorai/compare/v0.63.14...v0.63.15) (2026-05-10)
+
+### Tests
+
+* **e2e:** add real LiveKit voice-call round-trip (vc-07) ([c656273](https://github.com/iblai/mentorai/commit/c656273703267703958596d2d812a92f645f5584))
+* **e2e:** add voice-to-text dictation journey with real audio injection ([c3b444c](https://github.com/iblai/mentorai/commit/c3b444ca9a5546cd341bc4c3d05741e78224722e))
+
 ## [0.63.14](https://github.com/iblai/mentorai/compare/v0.63.13...v0.63.14) (2026-05-09)
 
 ### Chores
