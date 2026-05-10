@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-10",
   "summary": {
-    "totalCheckpoints": 374,
-    "coveredCheckpoints": 365,
+    "totalCheckpoints": 375,
+    "coveredCheckpoints": 366,
     "deprecatedCheckpoints": 9,
     "percent": 100,
     "totalJourneys": 44,
@@ -481,6 +481,11 @@
         {
           "id": "vc-06",
           "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
+          "status": "covered"
+        },
+        {
+          "id": "vc-07",
+          "description": "Admin creates a new mentor and completes a real LiveKit voice-call round-trip with injected fake audio: dialog opens, /create-call-credentials/ + room.connect + setMicrophoneEnabled all succeed against the real backend (mute button enabled, loading text cleared), and the end-call cleanup path closes the dialog. Regression cover for iblai-platform#1657",
           "status": "covered"
         }
       ]

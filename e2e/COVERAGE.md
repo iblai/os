@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-10 | 374 checkpoints (365 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-10 | 375 checkpoints (366 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -141,7 +141,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 9: Voice Chat (6 checkpoints) — `journeys/09-voice-chat.spec.ts`
+## Journey 9: Voice Chat (7 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
 **Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
@@ -151,6 +151,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call button reappears after re-enabling the toggle
 - [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
 - [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
+- [x] VC-07: Admin creates a new mentor and completes a real LiveKit voice-call round-trip with `--use-file-for-fake-audio-capture=speech.wav` injected as fake mic — `/create-call-credentials/` + `room.connect` + `setMicrophoneEnabled` succeed against the real backend, and end-call cleanup closes the dialog. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657)
 
 ---
 
