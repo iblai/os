@@ -41,7 +41,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return false;
+    return true;
   }
 
   const tokenExpiry = window.localStorage.getItem(
