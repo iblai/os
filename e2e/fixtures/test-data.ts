@@ -77,10 +77,15 @@ export const ECOMMERCE_CREDIT_CLEANUP_TOKEN =
 export const CANVAS_URL = process.env.CANVAS_URL || '';
 export const CANVAS_EMAIL = process.env.CANVAS_EMAIL || '';
 export const CANVAS_PASSWORD = process.env.CANVAS_PASSWORD || '';
-
+export const CANVAS_PATH_WITH_LTI_MENTOR =
+  CANVAS_URL + process.env.CANVAS_PATH_WITH_LTI_MENTOR || '';
 /** True only if all three Canvas env vars are set */
-export const hasCanvasEnv = !!(CANVAS_URL && CANVAS_EMAIL && CANVAS_PASSWORD);
-
+export const hasCanvasEnv = !!(
+  CANVAS_URL &&
+  CANVAS_EMAIL &&
+  CANVAS_PASSWORD &&
+  CANVAS_PATH_WITH_LTI_MENTOR
+);
 // ── Data Reports (Journey 19) ────────────────────────────────────────────────
 
 /** Tenant key for the /reports/ page. Auto-derived at runtime if empty. */
