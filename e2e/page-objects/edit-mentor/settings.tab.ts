@@ -17,6 +17,7 @@ export class SettingsTab {
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
   readonly showVoiceCallToggle: Locator;
+  readonly advancedSandboxToggle: Locator;
   readonly chatAccessCombobox: Locator;
   readonly memoryToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
@@ -64,6 +65,10 @@ export class SettingsTab {
     });
     this.showVoiceCallToggle = dialog.getByRole('switch', {
       name: /show voice call/i,
+    });
+    // The Advanced Sandbox switch — aria-label reflects its current state
+    this.advancedSandboxToggle = dialog.getByRole('switch', {
+      name: /^Advanced sandbox/i,
     });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
@@ -284,6 +289,42 @@ export class SettingsTab {
     await this.saveButton.click();
     await this.page.waitForLoadState('networkidle');
     await this.page.waitForTimeout(1_000);
+  }
+
+  /**
+   * Returns true when the Advanced Sandbox toggle is ON (aria-checked="true").
+   */
+  async isAdvancedSandboxEnabled(): Promise<boolean> {
+    const state = await this.advancedSandboxToggle
+      .getAttribute('aria-checked')
+      .catch(() => 'false');
+    return state === 'true';
+  }
+
+  /**
+   * Sets the Advanced Sandbox toggle to the desired state and clicks Save.
+   * Does nothing if the toggle is already in the desired state.
+   *
+   * Waits for the success toast to confirm the save completed before returning,
+   * so callers can immediately assert on the downstream UI changes (Sandbox tab
+   * appearing, Agent Configuration showing, etc.) without race conditions.
+   */
+  async setAdvancedSandbox(desired: boolean): Promise<void> {
+    await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
+    const current = await this.isAdvancedSandboxEnabled();
+    if (current !== desired) {
+      await this.advancedSandboxToggle.click();
+      await expect(this.advancedSandboxToggle).toHaveAttribute(
+        'aria-checked',
+        desired ? 'true' : 'false',
+        { timeout: 5_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   async deleteMentor(): Promise<void> {
