@@ -19,6 +19,7 @@ import {
   // FlowTab,
   HistoryTab,
   DatasetsTab,
+  EvaluationTab,
   ApiTab,
   EmbedTab,
   AccessTab,
@@ -61,6 +62,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
+  [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
 };

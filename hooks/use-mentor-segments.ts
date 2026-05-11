@@ -11,6 +11,7 @@ import {
   Shield,
   Clock,
   Grid,
+  FlaskConical,
   Key,
   MonitorSmartphone,
   FileWarning,
@@ -233,6 +234,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.evaluation,
+    label: 'Evals',
+    icon: FlaskConical,
+    userTypes: [UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.api,

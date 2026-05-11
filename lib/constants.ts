@@ -52,6 +52,7 @@ export const MODALS = {
       flow: 'flow',
       history: 'history',
       datasets: 'datasets',
+      evaluation: 'evaluation',
       api: 'api',
       embed: 'embed',
       advanced_css: 'advanced_css',

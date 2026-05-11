@@ -4,30 +4,30 @@
 
 ### Chores
 
-* update iblai-js version ([39bc8da](https://github.com/iblai/mentorai/commit/39bc8dac18a04e7e9a1093c080fa3915e00457f9))
+- update iblai-js version ([39bc8da](https://github.com/iblai/mentorai/commit/39bc8dac18a04e7e9a1093c080fa3915e00457f9))
 
 ## [0.63.15](https://github.com/iblai/mentorai/compare/v0.63.14...v0.63.15) (2026-05-10)
 
 ### Tests
 
-* **e2e:** add real LiveKit voice-call round-trip (vc-07) ([c656273](https://github.com/iblai/mentorai/commit/c656273703267703958596d2d812a92f645f5584))
-* **e2e:** add voice-to-text dictation journey with real audio injection ([c3b444c](https://github.com/iblai/mentorai/commit/c3b444ca9a5546cd341bc4c3d05741e78224722e))
+- **e2e:** add real LiveKit voice-call round-trip (vc-07) ([c656273](https://github.com/iblai/mentorai/commit/c656273703267703958596d2d812a92f645f5584))
+- **e2e:** add voice-to-text dictation journey with real audio injection ([c3b444c](https://github.com/iblai/mentorai/commit/c3b444ca9a5546cd341bc4c3d05741e78224722e))
 
 ## [0.63.14](https://github.com/iblai/mentorai/compare/v0.63.13...v0.63.14) (2026-05-09)
 
 ### Chores
 
-* **deps:** bump iblai-js to 1.9.0 ([cee2f56](https://github.com/iblai/mentorai/commit/cee2f56b2fe9e663911e7590ed4bf51ad48beb11))
+- **deps:** bump iblai-js to 1.9.0 ([cee2f56](https://github.com/iblai/mentorai/commit/cee2f56b2fe9e663911e7590ed4bf51ad48beb11))
 
 ## [0.63.13](https://github.com/iblai/mentorai/compare/v0.63.12...v0.63.13) (2026-05-08)
 
 ### Reverts
 
-* drop out-of-scope reflow + skip-link + voice-call work from [#1596](https://github.com/iblai/mentorai/issues/1596) ([dbce21b](https://github.com/iblai/mentorai/commit/dbce21b519cda83a26b718123111ea9d1a638c8f))
+- drop out-of-scope reflow + skip-link + voice-call work from [#1596](https://github.com/iblai/mentorai/issues/1596) ([dbce21b](https://github.com/iblai/mentorai/commit/dbce21b519cda83a26b718123111ea9d1a638c8f))
 
 ### Chores
 
-* **e2e:** map voice-call-button.tsx to journey 37 sourceFiles ([e1dd9a1](https://github.com/iblai/mentorai/commit/e1dd9a10f2ebf428e744b2a01fc9c7eedb22b4e0))
+- **e2e:** map voice-call-button.tsx to journey 37 sourceFiles ([e1dd9a1](https://github.com/iblai/mentorai/commit/e1dd9a10f2ebf428e744b2a01fc9c7eedb22b4e0))
 
 ## [0.63.12](https://github.com/iblai/mentorai/compare/v0.63.11...v0.63.12) (2026-05-08)
 
