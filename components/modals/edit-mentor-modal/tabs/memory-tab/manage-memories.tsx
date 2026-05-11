@@ -498,10 +498,16 @@ export function ManageMemories({
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <div className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex">
+            <div
+              role="tablist"
+              aria-label="Memory categories"
+              className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex"
+            >
               {visibleCategories.map((category) => (
                 <button
                   key={category.slug}
+                  role="tab"
+                  aria-selected={selectedCategorySlug === category.slug}
                   onClick={() => setSelectedCategorySlug(category.slug)}
                   className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategorySlug === category.slug
@@ -619,7 +625,11 @@ export function ManageMemories({
           </div>
         </div>
 
-        <div className="space-y-3 px-1 sm:px-0">
+        <div
+          role="list"
+          aria-label="Saved memories"
+          className="space-y-3 px-1 sm:px-0"
+        >
           {isLoadingMemories ? (
             <div className="py-8 text-center text-gray-600">
               <p>Loading memories...</p>
@@ -636,6 +646,7 @@ export function ManageMemories({
               return (
                 <div
                   key={memory.id}
+                  role="listitem"
                   className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3"
                 >
                   <div className="flex-1">
@@ -653,15 +664,16 @@ export function ManageMemories({
                         )}
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed text-gray-900">
+                    <p className="text-sm leading-relaxed text-gray-900">
                       {memory.content}
-                    </div>
+                    </p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Memory actions"
                         className="h-6 w-6 flex-shrink-0 p-0 text-gray-600 hover:text-gray-900"
                       >
                         <MoreHorizontal className="h-4 w-4" />

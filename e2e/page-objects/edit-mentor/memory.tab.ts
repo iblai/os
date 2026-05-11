@@ -7,8 +7,9 @@ export class MemoryTab {
   readonly addMemoryButton: Locator;
   readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
-  // Each memory entry has an unnamed icon button (MoreHorizontal) as its action trigger.
-  // We use these as a proxy for the memory entry count.
+  readonly memoryList: Locator;
+  // Per-entry action menu trigger (the MoreHorizontal icon button). Resolves
+  // to one Locator per memory card and is also used as a proxy for entry count.
   readonly memoryActionButtons: Locator;
 
   /**
@@ -22,19 +23,22 @@ export class MemoryTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.addMemoryButton = dialog
-      .locator('button')
-      .filter({ hasText: /add memory/i });
+    this.addMemoryButton = dialog.getByRole('button', { name: /add memory/i });
     this.manageCategoriesButton = dialog.getByRole('button', {
       name: 'Manage categories',
     });
     this.emptyState = dialog.getByText('No saved memories yet.');
-    // The per-memory action button is an unnamed icon-only button (MoreHorizontal).
-    // It lives inside each memory entry card alongside the memory content text.
-    // We identify it as buttons inside the memory list that have no accessible name.
-    this.memoryActionButtons = dialog
-      .locator('.space-y-3 button:not([aria-label]):not([name])')
-      .or(dialog.locator('button[class*="ghost"][class*="h-6"]'));
+    // The memory list container has role="list" + aria-label="Saved memories"
+    // on the underlying div in ManageMemories. Scoping listitem lookups to
+    // this list prevents collisions with any other list semantics inside the
+    // Edit Mentor dialog.
+    this.memoryList = dialog.getByRole('list', { name: 'Saved memories' });
+    // Per-memory MoreHorizontal action trigger. The DropdownMenuTrigger's
+    // <Button> in ManageMemories has aria-label="Memory actions" — locate by
+    // role + accessible name (no class-based or test-id selectors).
+    this.memoryActionButtons = this.memoryList.getByRole('button', {
+      name: 'Memory actions',
+    });
   }
 
   async hasMemories(): Promise<boolean> {
@@ -45,11 +49,26 @@ export class MemoryTab {
   }
 
   /**
+   * Waits for the "Loading memories..." placeholder to disappear, signalling
+   * that any in-flight memory list fetch (initial load, category switch, or
+   * post-mutation refetch) has settled. No-op when the placeholder is absent.
+   */
+  async waitForMemoriesSettled(timeout = 15_000): Promise<void> {
+    await this.dialog
+      .getByText('Loading memories...')
+      .waitFor({ state: 'hidden', timeout })
+      .catch(() => undefined);
+  }
+
+  /**
    * Creates a new memory via the Add Memory button + dialog.
    * @param content - The memory content text.
    * @param category - Optional category to select from the dropdown.
    */
   async createMemory(content: string, category?: string): Promise<void> {
+    // Pre-settle the list so the dialog opens against a stable state and the
+    // post-create assertion isn't racing an in-flight initial fetch.
+    await this.waitForMemoriesSettled();
     await expect(this.addMemoryButton).toBeVisible({ timeout: 10_000 });
     await this.addMemoryButton.click();
 
@@ -121,15 +140,66 @@ export class MemoryTab {
         'createMemory timed out: no success toast, no error toast, dialog still open',
       );
     }
+
+    // After a successful create the UI switches the active category tab to the
+    // one the new memory was placed in. Reset it back to "All" so that
+    // entryByContent() can find the new card in the unfiltered list regardless
+    // of which category slug was selected during the create flow.
+    await this.resetCategoryFilter();
+
+    // Wait for the new entry to actually appear in the list. The create
+    // mutation invalidates the Memories tag → triggers a refetch → re-renders
+    // the list. In slower CI runs this round-trip can outlast the caller's
+    // 10s assertion window. Polling here (auto-retry until visible) means
+    // callers can rely on the entry being present once createMemory resolves,
+    // instead of racing the cache invalidation themselves.
+    await expect(this.entryByContent(content).first()).toBeVisible({
+      timeout: 30_000,
+    });
   }
 
   /**
    * Locator for a memory entry card containing the given content. Use this
    * (not "first") when tests run in parallel — multiple specs may be
    * adding/removing entries concurrently, so positional selectors race.
+   *
+   * Each entry has role="listitem" inside the list with
+   * aria-label="Saved memories", so we resolve via ARIA semantics — no
+   * class-based or test-id selectors. Works regardless of the active
+   * category-filter tab (the "All" view must be active for a freshly-created
+   * entry to appear; callers should reset to "All" before asserting).
    */
   entryByContent(content: string): Locator {
-    return this.dialog.locator('.space-y-3 > div').filter({ hasText: content });
+    return this.memoryList.getByRole('listitem').filter({ hasText: content });
+  }
+
+  /**
+   * Clicks the "All" category tab so that all memory entries are visible
+   * regardless of which category was last active. Should be called after
+   * createMemory / editByContent to ensure the assertion list is unfiltered.
+   *
+   * After clicking "All", waits for the loading spinner text to disappear so
+   * the caller can immediately assert on the list contents.
+   */
+  async resetCategoryFilter(): Promise<void> {
+    // The category bar uses role="tablist" / role="tab" with the category
+    // names as accessible text. Scope to the tablist labelled
+    // "Memory categories" so we never match a tab from a different region.
+    const allTab = this.dialog
+      .getByRole('tablist', { name: 'Memory categories' })
+      .getByRole('tab', { name: 'All', exact: true });
+    // Categories are fetched alongside the memory list and may not be in the
+    // DOM the instant the dialog mounts. 15s gives the admin-categories query
+    // time to populate without blocking forever on tenants where the tab
+    // genuinely isn't rendered.
+    const tabExists = await allTab
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (tabExists) {
+      await allTab.click();
+      await this.waitForMemoriesSettled();
+    }
   }
 
   /**
@@ -157,8 +227,7 @@ export class MemoryTab {
     const entry = this.entryByContent(content).first();
     await expect(entry).toBeVisible({ timeout: 10_000 });
     const actionBtn = entry
-      .locator('button:not([aria-label]):not([name])')
-      .or(entry.locator('button[class*="ghost"][class*="h-6"]'))
+      .getByRole('button', { name: 'Memory actions' })
       .first();
     await expect(actionBtn).toBeVisible({ timeout: 10_000 });
     await actionBtn.click();
@@ -172,6 +241,9 @@ export class MemoryTab {
     currentContent: string,
     newContent: string,
   ): Promise<void> {
+    // Pre-settle so the action menu we click stays attached through the click
+    // (a mid-flight list refetch can detach the row's MoreHorizontal button).
+    await this.waitForMemoriesSettled();
     await this.openActionMenuForContent(currentContent);
 
     const editMenuItem = this.page
@@ -194,8 +266,49 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
-      timeout: 10_000,
+    // Sonner toasts auto-dismiss after ~4s and are racy in slower CI runs —
+    // mirror createMemory's race pattern: any of (success toast, dialog
+    // hidden, error toast) settles the assertion. Dialog-hidden is the
+    // durable post-state and the most reliable signal once `editMemory`
+    // resolves.
+    const successToast = this.page.getByText(/Memory updated/i).first();
+    const errorToast = this.page.getByText(/Failed to update memory/i).first();
+    const completed = await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      editDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .then(() => 'success' as const)
+        .catch(() => 'timeout' as const),
+      errorToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'timeout' as const),
+    ]);
+    if (completed === 'error') {
+      throw new Error(
+        'editByContent failed: backend rejected the request (saw "Failed to update memory" toast)',
+      );
+    }
+    if (completed === 'timeout') {
+      throw new Error(
+        'editByContent timed out: no success toast, no error toast, dialog still open',
+      );
+    }
+
+    // Symmetric with createMemory: if the edit changed the entry's category,
+    // the component auto-switches the active tab. Reset to "All" so the
+    // caller's post-edit entryByContent assertions don't race a filtered view.
+    await this.resetCategoryFilter();
+
+    // Wait for the updated entry to appear in the list. The update mutation
+    // invalidates the Memories tag → triggers a refetch — in slower CI
+    // runners this round-trip can outlast a caller's 10s assertion window.
+    // Polling here keeps the page-object contract self-contained.
+    await expect(this.entryByContent(newContent).first()).toBeVisible({
+      timeout: 30_000,
     });
   }
 
@@ -204,6 +317,8 @@ export class MemoryTab {
    * deleteFirst for parallel-safe tests.
    */
   async deleteByContent(content: string): Promise<void> {
+    // Pre-settle so the action menu we click stays attached through the click.
+    await this.waitForMemoriesSettled();
     await this.openActionMenuForContent(content);
 
     const deleteMenuItem = this.page
@@ -261,9 +376,17 @@ export class MemoryTab {
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
 
-    await expect(this.page.getByText(/Memory updated/i).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    // Race the (transient) "Memory updated" toast against the durable
+    // dialog-hidden post-state, like createMemory / editByContent above.
+    const successToast = this.page.getByText(/Memory updated/i).first();
+    await Promise.race([
+      successToast
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .catch(() => undefined),
+      editDialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .catch(() => undefined),
+    ]);
   }
 
   /**
@@ -407,11 +530,14 @@ export class MemoryTab {
    * Returns the text content of the first memory entry.
    */
   async getFirstMemoryContent(): Promise<string> {
-    // Memory content is rendered inside a div with text-sm class within the entry card
-    const firstEntry = this.dialog
-      .locator('.space-y-3 > div')
+    // The memory content is the only <p> inside each role="listitem" entry
+    // (metadata renders as <span>s). Targeting via the paragraph element
+    // keeps this stable when Tailwind classes change.
+    const firstEntry = this.memoryList
+      .getByRole('listitem')
       .first()
-      .locator('.text-sm.leading-relaxed');
+      .locator('p')
+      .first();
     return (await firstEntry.textContent().catch(() => '')) ?? '';
   }
 }

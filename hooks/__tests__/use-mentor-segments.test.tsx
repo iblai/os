@@ -16,6 +16,7 @@ import { EDIT_MENTOR_TAB_COMPONENTS } from '@/components/modals/edit-mentor-moda
 
 const mockMentorSettings = vi.fn();
 const mockMemsearchEnabled = vi.fn();
+const mockClawMentorConfig = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockTenantKey = vi.fn();
 const mockMentorIdParam = vi.fn();
@@ -40,6 +41,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMemsearchStatusQuery: () => ({
     data: { enable_memsearch: mockMemsearchEnabled() },
   }),
+  useGetClawMentorConfigQuery: () => ({ data: mockClawMentorConfig() }),
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -84,6 +86,14 @@ vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
+// Mocked so EDIT_MENTOR_TAB_COMPONENTS can import SandboxTab/SkillsTab without
+// pulling in @iblai/web-utils -> axios, which fails to resolve in tests.
+vi.mock('@iblai/web-containers', () => ({
+  SandboxConfig: () => null,
+  AgentSkills: () => null,
+  AgentConfigPrompts: () => null,
+}));
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
@@ -99,6 +109,10 @@ const setupDefaults = () => {
     s.userTypes.includes(UserType.ADMIN),
   );
   mockMemsearchEnabled.mockReturnValue(true);
+  // Default: a wired claw-config exists, so Skills tab gating only depends on
+  // isClawEnabled in most existing tests. Tests that need the unwired state
+  // override this in their own arrangement.
+  mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
   mockMentorSettings.mockReturnValue({
     platform_key: 'custom-tenant',
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -115,10 +129,120 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 13 mentor segments unfiltered', () => {
+  it('returns the canonical 16 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(14);
+    expect(MENTOR_SEGMENTS).toHaveLength(16);
+  });
+
+  it('places the Sandbox segment right after Settings', () => {
+    const settingsIndex = MENTOR_SEGMENTS.findIndex(
+      (s) => s.label === 'Settings',
+    );
+    expect(MENTOR_SEGMENTS[settingsIndex + 1]?.label).toBe('Sandbox');
+  });
+
+  it('places the Skills segment right after Prompts', () => {
+    const promptsIndex = MENTOR_SEGMENTS.findIndex(
+      (s) => s.label === 'Prompts',
+    );
+    expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
+  });
+
+  describe('isClawEnabled gating', () => {
+    it('hides Sandbox and Skills when enable_claw is false', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_claw: false,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('hides Sandbox and Skills when enable_claw is missing', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('shows Sandbox and Skills when enable_claw is true', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_claw: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).toContain('Sandbox');
+      expect(labels).toContain('Skills');
+    });
+
+    it('hides Sandbox and Skills from non-admin users even when claw is enabled', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_claw: true,
+      });
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.FREE_TRIAL) &&
+          !s.userTypes.includes(UserType.ADMIN),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('isSegmentVisible reflects the claw gate for Sandbox', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_claw: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const sandboxSegment = MENTOR_SEGMENTS.find(
+        (s) => s.label === 'Sandbox',
+      )!;
+      expect(result.current.isSegmentVisible(sandboxSegment)).toBe(true);
+
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_claw: false,
+      });
+      const { result: result2 } = renderHook(() => useMentorSegments());
+      expect(result2.current.isSegmentVisible(sandboxSegment)).toBe(false);
+    });
   });
 
   it('returns the filtered segment list for an admin on a non-main tenant', () => {
@@ -259,6 +383,58 @@ describe('useMentorSegments', () => {
         useMentorSegments({ preferModalMentorId: true }),
       );
       expect(result.current.filteredSegments.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ==========================================================================
+  // SKILLS GATE — additionally requires claw-config to exist (sandbox wired)
+  // ==========================================================================
+
+  describe('Skills tab — clawConfigExists gating', () => {
+    const adminClawEnabledSettings = {
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-uuid-123',
+      permissions: { field: {} },
+      enable_claw: true,
+    };
+
+    it('shows Sandbox but hides Skills when claw is enabled but no config wired', () => {
+      mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
+      mockClawMentorConfig.mockReturnValue(null); // 404 → null
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).toContain('Sandbox');
+      expect(labels).not.toContain('Skills');
+    });
+
+    it('shows both Sandbox and Skills when claw is enabled AND a config is wired', () => {
+      mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
+      mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).toContain('Sandbox');
+      expect(labels).toContain('Skills');
+    });
+
+    it('hides Skills when claw is disabled, regardless of whether a config is wired', () => {
+      mockMentorSettings.mockReturnValue({
+        ...adminClawEnabledSettings,
+        enable_claw: false,
+      });
+      mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+
+      expect(labels).not.toContain('Skills');
+      // Sandbox is also hidden because the master enable_claw is off
+      expect(labels).not.toContain('Sandbox');
     });
   });
 });

@@ -2,12 +2,12 @@
   "version": 2,
   "lastUpdated": "2026-05-10",
   "summary": {
-    "totalCheckpoints": 375,
-    "coveredCheckpoints": 363,
+    "totalCheckpoints": 387,
+    "coveredCheckpoints": 375,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 44,
-    "activeJourneys": 43
+    "totalJourneys": 45,
+    "activeJourneys": 44
   },
   "journeys": [
     {
@@ -1300,31 +1300,16 @@
         },
         {
           "id": "mem-03",
-          "description": "User memories list shows entries or empty state and entry can be deleted",
+          "description": "Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it",
           "status": "covered"
         },
         {
           "id": "mem-04",
-          "description": "Admin creates a new memory from the memory tab",
-          "status": "covered"
-        },
-        {
-          "id": "mem-05",
-          "description": "Admin edits the first memory entry from the memory tab",
-          "status": "covered"
-        },
-        {
-          "id": "mem-06",
           "description": "Admin manages memory categories (create, rename, delete)",
           "status": "covered"
         },
         {
-          "id": "mem-07",
-          "description": "Admin creates then deletes a memory to verify full CRUD cycle",
-          "status": "covered"
-        },
-        {
-          "id": "mem-08",
+          "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
         }
@@ -1947,17 +1932,17 @@
         },
         {
           "id": "tep-05",
-          "description": "New Chat button shows No Mentor Selected modal on tenant explore page (admin)",
+          "description": "New Chat button shows No Agent Selected modal on tenant explore page (admin)",
           "status": "covered"
         },
         {
           "id": "tep-06",
-          "description": "Workflows button shows No Mentor Selected modal on tenant explore page (admin)",
+          "description": "Workflows button shows No Agent Selected modal on tenant explore page (admin)",
           "status": "covered"
         },
         {
           "id": "tep-07",
-          "description": "Explore Mentors button in No Mentor Selected modal navigates to explore",
+          "description": "Explore Agents button in No Agent Selected modal navigates to explore",
           "status": "covered"
         },
         {
@@ -2099,6 +2084,95 @@
         {
           "id": "tms-01",
           "description": "Admin toggles Memory System in Advanced tab and the chat Memory button reflects it",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "claw-advanced-sandbox",
+      "name": "CLAW Advanced Sandbox",
+      "spec": "44-claw-advanced-sandbox.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "claw-01",
+          "description": "Admin opens Settings tab and Advanced Sandbox toggle is present",
+          "status": "covered"
+        },
+        {
+          "id": "claw-02",
+          "description": "Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
+          "status": "covered"
+        },
+        {
+          "id": "claw-03",
+          "description": "Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)",
+          "status": "covered"
+        },
+        {
+          "id": "claw-04",
+          "description": "Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)",
+          "status": "covered"
+        },
+        {
+          "id": "claw-05",
+          "description": "Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled",
+          "status": "covered"
+        },
+        {
+          "id": "claw-06",
+          "description": "When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list",
+          "status": "covered"
+        },
+        {
+          "id": "claw-07",
+          "description": "Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
+          "status": "covered"
+        },
+        {
+          "id": "claw-08",
+          "description": "Admin navigates to Sandbox tab and the sandbox config container renders",
+          "status": "covered"
+        },
+        {
+          "id": "claw-09",
+          "description": "Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
+          "status": "covered"
+        },
+        {
+          "id": "claw-10",
+          "description": "Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table",
+          "status": "covered"
+        },
+        {
+          "id": "claw-11",
+          "description": "Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table",
+          "status": "covered"
+        },
+        {
+          "id": "claw-12",
+          "description": "Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list",
+          "status": "covered"
+        },
+        {
+          "id": "claw-13",
+          "description": "Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted",
+          "status": "covered"
+        },
+        {
+          "id": "claw-14",
+          "description": "Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state",
+          "status": "covered"
+        },
+        {
+          "id": "claw-15",
+          "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
         }
       ]

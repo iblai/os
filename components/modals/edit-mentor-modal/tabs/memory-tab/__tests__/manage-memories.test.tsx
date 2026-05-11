@@ -48,6 +48,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useDeleteMemoryCategoryMutation: () => [vi.fn(), { isLoading: false }],
   // Pulled in transitively via use-mentor-settings on some import chains.
   useGetMemsearchStatusQuery: () => ({ data: undefined, isLoading: false }),
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 vi.mock('sonner', () => ({
@@ -298,9 +307,12 @@ const defaultProps = {
   mentorId: 'mentor-1',
 };
 
-// Helper: find the category tab button in the desktop tabs list by text.
+// Helper: find the category tab in the desktop tabs list by text.
+// The component renders each category as `<button role="tab">{name}</button>`
+// — the explicit role override means getAllByRole('button') doesn't match
+// these. Use the actual ARIA role.
 const clickCategoryTab = (categoryName: string) => {
-  const tabs = screen.getAllByRole('button');
+  const tabs = screen.getAllByRole('tab');
   const tab = tabs.find((b) => b.textContent?.trim() === categoryName);
   if (!tab) throw new Error(`Category tab "${categoryName}" not found`);
   fireEvent.click(tab);

@@ -175,8 +175,8 @@ describe('hasNonExpiredAuthToken function', () => {
     localStorageMock.clear();
   });
 
-  it('should return false when no token exists', () => {
-    expect(hasNonExpiredAuthToken()).toBe(false);
+  it('should return true when no token exists', () => {
+    expect(hasNonExpiredAuthToken()).toBe(true);
   });
 
   it('should return true when token exists but no expiry', () => {

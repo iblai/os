@@ -20,6 +20,8 @@ const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockGetMentorCategoriesQuery = vi.fn();
+const mockGetClawMentorConfigQuery = vi.fn();
+const mockUpdateClawConfig = vi.fn();
 const mockUsername = 'testuser';
 const mockExecuteWithTrialCheck = vi.fn();
 const mockCloseModal = vi.fn();
@@ -57,6 +59,9 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetMentorSettingsQuery(...args),
   useGetMentorCategoriesQuery: (...args: unknown[]) =>
     mockGetMentorCategoriesQuery(...args),
+  useGetClawMentorConfigQuery: (...args: unknown[]) =>
+    mockGetClawMentorConfigQuery(...args),
+  useUpdateClawMentorConfigMutation: () => [mockUpdateClawConfig, {}],
 }));
 
 vi.mock('@sentry/nextjs', () => ({
@@ -304,6 +309,14 @@ describe('SettingsTab', () => {
     mockGetMentorSettingsQuery.mockReturnValue({
       data: defaultMentorSettings,
       isLoading: false,
+    });
+
+    // Default: no claw-config wired (404 → null) so the save short-circuit
+    // does not call updateClawConfig. Tests that need a wired config override
+    // this in their own arrangements.
+    mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+    mockUpdateClawConfig.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
     });
   });
 
@@ -1275,6 +1288,269 @@ describe('SettingsTab', () => {
 
       const copyButton = screen.getByText('Copy');
       expect(copyButton).toBeDisabled();
+    });
+  });
+
+  // ==========================================================================
+  // ADVANCED SANDBOX (CLAW)
+  // ==========================================================================
+
+  describe('Advanced Sandbox toggle', () => {
+    it('renders the Advanced Sandbox toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Advanced Sandbox')).toBeInTheDocument();
+    });
+
+    it('reflects enable_claw=true from mentor settings as checked', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Advanced sandbox enabled')).toBeChecked();
+    });
+
+    it('reflects enable_claw=false (or missing) from mentor settings as unchecked', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Advanced sandbox disabled'),
+      ).not.toBeChecked();
+    });
+
+    it('toggle is enabled regardless of claw config state (admin intent)', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Advanced sandbox disabled');
+      expect(toggle).not.toBeDisabled();
+    });
+
+    it('flipping the toggle does not immediately call editMentor', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Advanced sandbox enabled')).toBeChecked();
+      });
+      expect(mockEditMentor).not.toHaveBeenCalled();
+    });
+
+    it('on Save, includes enable_claw=true in the editMentor formData when toggled on', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mentor: 'test-mentor',
+            org: 'test-tenant',
+            formData: expect.objectContaining({ enable_claw: true }),
+          }),
+        );
+      });
+    });
+
+    it('on Save, includes enable_claw=false when toggled off', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Advanced sandbox enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({ enable_claw: false }),
+          }),
+        );
+      });
+    });
+
+    it('on Save with no toggle change, still passes the current enable_claw value', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({ enable_claw: true }),
+          }),
+        );
+      });
+    });
+  });
+
+  // ==========================================================================
+  // CLAW CONFIG SYNC ON SAVE
+  //
+  // When the Advanced Sandbox toggle changes AND a claw-config exists for the
+  // mentor, the save must ALSO PATCH /claw-config to keep `enabled` in sync.
+  // When no claw-config exists (the data-layer normalises 404 → null), the
+  // PATCH is skipped and only mentor-settings is written.
+  // ==========================================================================
+
+  describe('Claw config sync on Save', () => {
+    const wiredClawConfig = {
+      mentor: 'mentor-uuid-123',
+      server: 7,
+      server_name: 'sandbox-1',
+      enabled: false,
+      auto_push: false,
+    };
+
+    const settingsWithUuid = {
+      ...defaultMentorSettings,
+      mentor_unique_id: 'mentor-uuid-123',
+    };
+
+    it('queries claw-config with org and mentor_unique_id from mentor settings', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(mockGetClawMentorConfigQuery).toHaveBeenCalledWith(
+        { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
+        expect.objectContaining({ skip: false }),
+      );
+    });
+
+    it('PATCHes claw-config when toggle changed AND claw-config exists', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+
+      render(<SettingsTab />);
+
+      // Flip OFF → ON, save
+      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalledWith({
+          org: 'test-tenant',
+          mentorUniqueId: 'mentor-uuid-123',
+          enabled: true,
+        });
+      });
+    });
+
+    it('PATCHes claw-config with enabled=false when toggle is flipped off', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...settingsWithUuid, enable_claw: true },
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({
+        data: { ...wiredClawConfig, enabled: true },
+      });
+
+      render(<SettingsTab />);
+
+      // Flip ON → OFF, save
+      fireEvent.click(screen.getByLabelText('Advanced sandbox enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalledWith({
+          org: 'test-tenant',
+          mentorUniqueId: 'mentor-uuid-123',
+          enabled: false,
+        });
+      });
+    });
+
+    it('does NOT PATCH claw-config when no claw-config exists (404 → null)', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      expect(mockUpdateClawConfig).not.toHaveBeenCalled();
+    });
+
+    it('does NOT PATCH claw-config when toggle value did not change, even with config wired', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+
+      render(<SettingsTab />);
+      // No toggle flip — just save other unchanged form fields
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      expect(mockUpdateClawConfig).not.toHaveBeenCalled();
+    });
+
+    it('still shows success toast when mentor-settings succeeds but claw PATCH fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+      mockUpdateClawConfig.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('claw boom')),
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith(
+          // mentor → agent rename: settings-tab.tsx now emits "Agent
+          // updated successfully" via the toast.success call after the
+          // editMentor mutation resolves.
+          'Agent updated successfully',
+        );
+      });
+
+      consoleSpy.mockRestore();
     });
   });
 });

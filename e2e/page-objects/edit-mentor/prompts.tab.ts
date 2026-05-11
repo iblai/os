@@ -10,6 +10,11 @@ export class PromptsTab {
   readonly suggestedPromptsSection: Locator;
   readonly seeMoreButton: Locator;
 
+  // ── Agent Configuration section (only visible when claw is enabled + wired) ──
+  readonly agentConfigSection: Locator;
+  readonly createAgentConfigButton: Locator;
+  readonly noAgentConfigMessage: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -28,6 +33,17 @@ export class PromptsTab {
     this.seeMoreButton = dialog.getByRole('button', {
       name: /see more/i,
     });
+
+    // Agent Configuration section
+    this.agentConfigSection = dialog.getByRole('heading', {
+      name: /agent configuration/i,
+    });
+    this.createAgentConfigButton = dialog.getByRole('button', {
+      name: /create agent config/i,
+    });
+    this.noAgentConfigMessage = dialog.getByText(
+      /no agent configuration exists for this mentor yet/i,
+    );
   }
 
   async setSystemPrompt(content: string): Promise<void> {
@@ -198,5 +214,130 @@ export class PromptsTab {
   async save(): Promise<void> {
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
+  }
+
+  // ── Agent Configuration helpers ────────────────────────────────────────────
+
+  /**
+   * Returns true when the Agent Configuration section heading is visible.
+   */
+  async hasAgentConfigSection(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.agentConfigSection.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true when the "no agent config" message is shown (config not yet
+   * created for this mentor).
+   */
+  async isAgentConfigEmpty(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.noAgentConfigMessage.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clicks the Create Agent Config button and waits for the workspace fields
+   * to appear (i.e. the "no config" message disappears).
+   */
+  async createAgentConfig(): Promise<void> {
+    await expect(this.createAgentConfigButton).toBeVisible({
+      timeout: 10_000,
+    });
+    await this.createAgentConfigButton.click();
+    // Wait for the "no agent configuration" message to disappear — that signals
+    // the POST completed and the workspace field cards are now rendering.
+    await expect(this.noAgentConfigMessage).not.toBeVisible({
+      timeout: 20_000,
+    });
+  }
+
+  /**
+   * Returns the row/card locator for an agent config field by its label.
+   *
+   * AgentConfigPrompts in @iblai/web-containers exposes two stable
+   * accessible markers per card:
+   *   - a TooltipTrigger button with aria-label="More info about ${label}"
+   *   - an "Edit" button next to it (plain text label)
+   *
+   * Anchor on the unique TooltipTrigger and walk up to the innermost
+   * div that also contains the Edit button — that's the card. No
+   * coupling to Tailwind class signatures.
+   */
+  agentConfigFieldRowByLabel(label: string): Locator {
+    const tooltipBtn = this.dialog.getByRole('button', {
+      name: `More info about ${label}`,
+    });
+    const editBtn = this.dialog.getByRole('button', { name: /^edit$/i });
+    return this.dialog
+      .locator('div')
+      .filter({ has: tooltipBtn })
+      .filter({ has: editBtn })
+      .last();
+  }
+
+  /**
+   * Returns the EditFieldModal locator for an agent config field by label.
+   * The OverlayModal in @iblai/web-containers sets the dialog title to
+   * `Edit ${label}` (e.g. "Edit Identity"). We match by accessible name
+   * (DialogPrimitive.Title) so we don't accidentally match the parent Edit
+   * Mentor dialog when its content contains the label text.
+   */
+  agentConfigEditDialog(label: string): Locator {
+    return this.page.getByRole('dialog', {
+      name: `Edit ${label}`,
+      exact: true,
+    });
+  }
+
+  /**
+   * Opens the Edit modal for an agent config field identified by `label`,
+   * replaces the editor content with `newValue`, and clicks Save.
+   *
+   * The editor is a RichTextEditor (TipTap/ProseMirror). The OUTER
+   * `<div role="textbox">` wrapper is NOT contenteditable — Playwright's
+   * `fill()` rejects it. The actual editable element is the inner
+   * `[contenteditable="true"]` div, which ProseMirror's input plugins
+   * listen to. Drive it via real keyboard events.
+   *
+   * Returns the original editor text so callers can restore it.
+   */
+  async editAgentConfigField(label: string, newValue: string): Promise<string> {
+    const row = this.agentConfigFieldRowByLabel(label).first();
+    await expect(row).toBeVisible();
+
+    const editBtn = row.getByRole('button', { name: /^edit$/i }).first();
+    await editBtn.click();
+
+    const editDialog = this.agentConfigEditDialog(label);
+    await expect(editDialog).toBeVisible();
+
+    // Target the ProseMirror contenteditable directly — the role="textbox"
+    // wrapper around it is not editable.
+    const editor = editDialog.locator('[contenteditable="true"]').last();
+    await expect(editor).toBeVisible();
+
+    const original = (await editor.textContent()) ?? '';
+
+    await editor.click();
+    const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+    await this.page.keyboard.press(selectAll);
+    await this.page.keyboard.press('Delete');
+    await this.page.keyboard.type(newValue);
+
+    const saveBtn = editDialog.getByRole('button', { name: /^save$/i }).first();
+    await expect(saveBtn).toBeEnabled();
+    await saveBtn.click();
+
+    await expect(editDialog).toBeHidden();
+
+    return original;
   }
 }
