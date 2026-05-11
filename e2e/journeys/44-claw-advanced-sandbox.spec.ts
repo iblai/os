@@ -1,5 +1,5 @@
 /**
- * Journey 43: CLAW Advanced Sandbox
+ * Journey 44: CLAW Advanced Sandbox
  *
  * Covers the full lifecycle of the "Advanced Sandbox" feature (CLAW) in
  * the Edit Mentor modal:
@@ -78,7 +78,7 @@ async function expectTabHidden(
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-test.describe('Journey 43: CLAW Advanced Sandbox', () => {
+test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -451,7 +451,7 @@ test.describe('Journey 43: CLAW Advanced Sandbox', () => {
 // Verifies that enabling claw causes Sandbox to appear and disabling it makes
 // Sandbox disappear — all within the same modal session (no reopen).
 
-test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
+test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -1125,7 +1125,7 @@ test.describe('Journey 43: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
 // ── Non-admin: Sandbox and Skills tabs invisible even when claw is enabled ───
 
-test.describe('Journey 43: CLAW Advanced Sandbox — Non-Admin', () => {
+test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
   test('non-admin does not see Sandbox or Skills tabs in the Edit Mentor modal', async ({
     nonadminPage,
     nonadminEditMentorPage,

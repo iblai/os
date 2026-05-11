@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-10 | 375 checkpoints (363 active, 12 deprecated) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-11 | 387 checkpoints (375 active, 12 deprecated) | 45 journeys (44 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -698,6 +698,28 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 - [x] PCIL-43.8: User can send a message when flag is `true`
 - [x] PCIL-43.9: `setTenantMetadataFlag` helper reads `dm_token` from localStorage and PATCHes the DM API
 - [x] PCIL-43.10: Flag is restored to its original value in `afterEach` to avoid contaminating subsequent runs
+
+---
+
+## Journey 44: CLAW Advanced Sandbox (15 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
+- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
+- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
+- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
+- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
+- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
+- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Admin navigates to Sandbox tab and the sandbox config container renders
+- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
+- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
+- [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
+- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
+- [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
+- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
+- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
 
 ---
 
