@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-08 | 385 checkpoints (376 active, 9 deprecated in #1431) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-10 | 375 checkpoints (363 active, 12 deprecated) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -141,7 +141,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 9: Voice Chat (6 checkpoints) — `journeys/09-voice-chat.spec.ts`
+## Journey 9: Voice Chat (7 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
 **Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
@@ -151,6 +151,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Voice call button reappears after re-enabling the toggle
 - [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
 - [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
+- [x] VC-07: Admin creates a new mentor and completes a real LiveKit voice-call round-trip with `--use-file-for-fake-audio-capture=speech.wav` injected as fake mic — `/create-call-credentials/` + `room.connect` + `setMicrophoneEnabled` succeed against the real backend, and end-call cleanup closes the dialog. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657)
 
 ---
 
@@ -455,9 +456,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 1 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat/index.tsx`, `components/chat-input-form.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -478,10 +479,10 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
 - [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
-- [x] Composer buttons have accessible names (Attach file, Voice input, Voice call, Send message) and form has `aria-label="Chat composer"` (issue #1596)
-- [x] Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)
-- [x] Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)
-- [x] Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)
+- [x] Plus / Microphone / Send composer buttons expose accessible names via `aria-label` (WCAG 4.1.2, issue #1596)
+- [x] ~~Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)~~ _(deprecated — reflow refactor reverted as out-of-scope; WCAG 1.4.10 tracked separately)_
+- [x] ~~Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)~~ _(deprecated — reverted with the reflow refactor)_
+- [x] ~~Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)~~ _(deprecated — skip-link reverted as out-of-scope; WCAG 2.4.1 tracked separately)_
 
 ---
 
@@ -597,7 +598,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
 
-**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat/index.tsx`
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/index.tsx`
 
 - [x] Non-admin screen share button has `type="button"` and does not submit the chat form
 - [x] Non-admin clicking screen share activates screen sharing, not form submit
@@ -700,25 +701,13 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (15 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
 
-- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
-- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
-- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
-- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
-- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
-- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders
-- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
-- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
-- [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
-- [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
-- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
+Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
+
+- [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
 
 ---
 
