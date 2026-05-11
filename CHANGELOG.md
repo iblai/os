@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.63.16](https://github.com/iblai/mentorai/compare/v0.63.15...v0.63.16) (2026-05-11)
+
+### Chores
+
+* update iblai-js version ([39bc8da](https://github.com/iblai/mentorai/commit/39bc8dac18a04e7e9a1093c080fa3915e00457f9))
+
 ## [0.63.15](https://github.com/iblai/mentorai/compare/v0.63.14...v0.63.15) (2026-05-10)
 
 ### Tests
