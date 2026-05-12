@@ -64,6 +64,30 @@ export class DatasetsTab {
   }
 
   /**
+   * Returns the "Google Drive" button inside the Add Resources modal.
+   * The button text comes from resource-types.tsx → name: 'Google Drive'.
+   */
+  googleDriveButton(modal: Locator): Locator {
+    return modal.getByRole('button', { name: /Google Drive/i });
+  }
+
+  /**
+   * Returns the "Microsoft OneDrive" button inside the Add Resources modal.
+   * The button text comes from resource-types.tsx → name: 'Microsoft OneDrive'.
+   */
+  oneDriveButton(modal: Locator): Locator {
+    return modal.getByRole('button', { name: /Microsoft OneDrive/i });
+  }
+
+  /**
+   * Returns the "Dropbox" button inside the Add Resources modal.
+   * The button text comes from resource-types.tsx → name: 'Dropbox'.
+   */
+  dropboxButton(modal: Locator): Locator {
+    return modal.getByRole('button', { name: /^Dropbox$/i });
+  }
+
+  /**
    * Upload a file via the Add Resource flow.
    * Opens Add Resources modal → clicks the resource type → sets file → clicks Submit → closes dialogs.
    */
