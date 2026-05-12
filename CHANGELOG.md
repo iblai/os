@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.64.1](https://github.com/iblai/mentorai/compare/v0.64.0...v0.64.1) (2026-05-12)
+
+### Chores
+
+* update Dockerfile to include APP_VERSION arg ([017ed8a](https://github.com/iblai/mentorai/commit/017ed8afd5db8e7f70bc40908c23783d3f76392d))
+
 ## [0.64.0](https://github.com/iblai/mentorai/compare/v0.63.16...v0.64.0) (2026-05-11)
 
 ### Features
