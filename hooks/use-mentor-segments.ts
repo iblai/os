@@ -16,6 +16,8 @@ import {
   FileWarning,
   UserCog,
   Archive,
+  Container,
+  Sparkles,
   ScrollText,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,6 +25,7 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import {
   useGetMentorSettingsQuery,
   useGetMemsearchStatusQuery,
+  useGetClawMentorConfigQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { MODALS, UserType } from '@/lib/constants';
@@ -44,6 +47,9 @@ import { config } from '@/lib/config';
  */
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
+  isClawEnabled: boolean;
+  /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
+  clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
 };
 
@@ -94,6 +100,18 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.sandbox,
+    label: 'Sandbox',
+    icon: Container,
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    enabledThroughConfig: (flags) => flags.isClawEnabled,
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.access,
     label: 'Access',
     icon: UserCog,
@@ -130,6 +148,21 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.skills,
+    label: 'Skills',
+    icon: Sparkles,
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Skills only makes sense when a sandbox is wired to a Claw instance.
+    // Sandbox tab itself is shown earlier so admins can connect first.
+    enabledThroughConfig: (flags) =>
+      flags.isClawEnabled && flags.clawConfigExists,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
@@ -377,6 +410,25 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+  // @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type
+  const isClawEnabled: boolean = mentorSettings?.enable_claw ?? false;
+
+  // The claw-config endpoint is keyed by the mentor's UUID. Use the value from
+  // mentor settings; fall back to the resolved id (which may already be a UUID
+  // when navigating directly).
+  const mentorUuid: string | undefined =
+    mentorSettings?.mentor_unique_id ?? resolvedMentorId;
+
+  // The data-layer normalises 404 → null, so a non-null result means the
+  // mentor has a wired ClawMentorConfig (sandbox connected to an instance).
+  // Skip the query until we know claw is enabled — there's no point fetching
+  // the config when we'd never gate on it.
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
+  );
+  const clawConfigExists = !!clawMentorConfig;
+
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
     mentorSettings?.enable_memory_component ?? false;
@@ -394,7 +446,12 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
-      flags: { isMemsearchEnabled, isMemoryComponentEnabled },
+      flags: {
+        isMemsearchEnabled,
+        isMemoryComponentEnabled,
+        isClawEnabled,
+        clawConfigExists,
+      },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
     [
@@ -403,6 +460,8 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       mentorSettings,
       rbacPermissions,
       isMemsearchEnabled,
+      isClawEnabled,
+      clawConfigExists,
       isMemoryComponentEnabled,
     ],
   );

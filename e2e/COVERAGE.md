@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-10 | 375 checkpoints (363 active, 12 deprecated) | 44 journeys (43 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-12 | 399 checkpoints (386 active, 13 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -387,18 +387,15 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 24: Mentor Memory Tab (8 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (5 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
 - [x] CP-24.1: Memory tab is visible in Edit Mentor modal
 - [x] CP-24.2: Memory toggle (Settings tab) can be enabled and disabled (sends enable_memory_component on Save)
-- [x] CP-24.3: Memory entries list shows entries or empty state with Add Memory button
-- [x] CP-24.4: Admin can add a new memory entry via Add Memory dialog
-- [x] CP-24.5: Admin can edit a memory entry via action menu
-- [x] CP-24.6: Admin can delete a memory entry via action menu with confirmation
-- [x] CP-24.7: User filter and date range filter are visible in manage memories
-- [x] CP-24.8: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
+- [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
+- [x] CP-24.4: Admin manages memory categories (create, rename, delete)
+- [x] CP-24.5: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
 
 ---
 
@@ -574,9 +571,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Mentor cards render on tenant explore page
 - [x] Mentors button stays on explore page
 - [x] Clicking a mentor card navigates to that mentor from tenant explore page
-- [x] New Chat button shows "No Mentor Selected" modal on tenant explore page (admin)
-- [x] Workflows button shows "No Mentor Selected" modal on tenant explore page (admin)
-- [x] "Explore Mentors" button in No Mentor Selected modal navigates to explore
+- [x] New Chat button shows "No Agent Selected" modal on tenant explore page (admin)
+- [x] Workflows button shows "No Agent Selected" modal on tenant explore page (admin)
+- [x] "Explore Agents" button in No Agent Selected modal navigates to explore
 - [x] Notifications button navigates to notifications page with sidebar and navbar
 - [x] No 404 API calls for mentor public settings when mentorId is undefined
 
@@ -704,6 +701,28 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
+## Journey 44: CLAW Advanced Sandbox (15 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
+- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
+- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
+- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
+- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
+- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
+- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Admin navigates to Sandbox tab and the sandbox config container renders
+- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
+- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
+- [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
+- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
+- [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
+- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
+- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
+
+---
+
 ## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
@@ -714,32 +733,32 @@ Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fa
 
 ---
 
-## Journey 44: Dataset Cloud Pickers (3 checkpoints) — `journeys/44-dataset-cloud-pickers.spec.ts`
+## Journey 45: Dataset Cloud Pickers (3 checkpoints) — `journeys/45-dataset-cloud-pickers.spec.ts`
 
 **Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
 
-Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 45 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 46 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
 
-- [x] DSCP-44.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
-- [x] DSCP-44.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
-- [x] DSCP-44.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
+- [x] DSCP-45.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
+- [x] DSCP-45.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
+- [x] DSCP-45.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
 
 ---
 
-## Journey 45: Dataset Upload Types (8 checkpoints) — `journeys/45-dataset-upload-types.spec.ts`
+## Journey 46: Dataset Upload Types (8 checkpoints) — `journeys/46-dataset-upload-types.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`
 
 Uploads a real fixture file for each of the 8 local file-upload resource types available in the Add Resources modal: PowerPoint, DOCX, CSV, TXT, Audio, Video, Image, and Excel. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so uploads are made against a clean dataset list — pre-existing rows from other tests can't mask a missing upload. Then uses `DatasetsTab.uploadFile()` (the same generic helper used by the CSV and Markdown tests in journey 20) to execute the full modal flow — open Add Resources, click the resource type, `setInputFiles`, Submit, wait for network idle, close dialogs — then asserts the uploaded filename appears as a row in the dataset list within 15 s. A failed upload results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
 
-- [x] DU-45.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
-- [x] DU-45.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
-- [x] DU-45.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
-- [x] DU-45.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
-- [x] DU-45.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
-- [x] DU-45.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
-- [x] DU-45.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
-- [x] DU-45.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+- [x] DU-46.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
+- [x] DU-46.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
+- [x] DU-46.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
+- [x] DU-46.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
+- [x] DU-46.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
+- [x] DU-46.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
+- [x] DU-46.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
+- [x] DU-46.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
 
 ---
 

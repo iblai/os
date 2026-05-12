@@ -56,6 +56,8 @@ export const MODALS = {
       embed: 'embed',
       advanced_css: 'advanced_css',
       advanced_js: 'advanced_js',
+      sandbox: 'sandbox',
+      skills: 'skills',
       audit_log: 'audit_log',
     },
   },

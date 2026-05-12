@@ -204,6 +204,19 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     }),
     useForkMentorMutation: () => [vi.fn(), { isLoading: false }],
     useEditMentorMutation: () => [vi.fn()],
+    // Stub the claw RTK Query hooks — the test's Redux store doesn't
+    // mount the new clawApiSlice middleware, so calling the real hooks
+    // throws "Middleware for RTK-Query API ... has not been added".
+    // useMentorSegments (used by NavBar) calls these.
+    useGetClawMentorConfigQuery: () => ({
+      data: null,
+      isError: false,
+      isLoading: false,
+    }),
+    useUpdateClawMentorConfigMutation: () => [
+      () => Promise.resolve({}),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -881,7 +894,12 @@ const buildContext = (
   tenantKey: undefined,
   mentorSettings: undefined,
   rbacPermissions: {},
-  flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
+  flags: {
+    isMemsearchEnabled: true,
+    isMemoryComponentEnabled: true,
+    isClawEnabled: false,
+    clawConfigExists: false,
+  },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
   ...overrides,
@@ -1122,7 +1140,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false, isMemoryComponentEnabled: true },
+          flags: {
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1137,7 +1160,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1152,7 +1180,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true, isMemoryComponentEnabled: true },
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
       const disabled = filterMentorSegments(
@@ -1162,7 +1195,14 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false, isMemoryComponentEnabled: true },
+          flags: {
+            // memsearch OFF — the assertion below verifies that this is
+            // the *only* difference between enabled and disabled output.
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 

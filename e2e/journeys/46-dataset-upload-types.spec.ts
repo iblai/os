@@ -1,5 +1,5 @@
 /**
- * Journey 45: Dataset Upload Types
+ * Journey 46: Dataset Upload Types
  *
  * Verifies that each of the 8 local file-upload resource types in the Add
  * Resources modal accepts a real fixture file and that the uploaded file
@@ -42,7 +42,7 @@ const MP3_FILE = path.join(FILES_DIR, 'Fally_Ipupa_-_Nous2_CeeNaija.com_.mp3');
 const MP4_FILE = path.join(FILES_DIR, 'IMG_4019.MP4');
 const PNG_FILE = path.join(FILES_DIR, 'acessibility png.png');
 
-test.describe('Journey 45: Dataset Upload Types', () => {
+test.describe('Journey 46: Dataset Upload Types', () => {
   // Each test creates a mentor + uploads a file; videos and PowerPoint
   // can be slow under load, so allow a generous per-test budget.
   test.setTimeout(200_000);

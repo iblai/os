@@ -1,5 +1,5 @@
 /**
- * Journey 44: Dataset Cloud Pickers
+ * Journey 45: Dataset Cloud Pickers
  *
  * Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox
  * buttons in the Add Resources modal opens the third-party auth/picker popup.
@@ -29,7 +29,7 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { logger } from '@iblai/iblai-js/playwright';
 
-test.describe('Journey 44: Dataset Cloud Pickers', () => {
+test.describe('Journey 45: Dataset Cloud Pickers', () => {
   test.setTimeout(200_000);
 
   test.beforeEach(async ({ page }) => {
