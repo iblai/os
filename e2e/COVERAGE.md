@@ -714,4 +714,33 @@ Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fa
 
 ---
 
+## Journey 44: Dataset Cloud Pickers (3 checkpoints) — `journeys/44-dataset-cloud-pickers.spec.ts`
+
+**Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
+
+Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 45 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+
+- [x] DSCP-44.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
+- [x] DSCP-44.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
+- [x] DSCP-44.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
+
+---
+
+## Journey 45: Dataset Upload Types (8 checkpoints) — `journeys/45-dataset-upload-types.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`
+
+Uploads a real fixture file for each of the 8 local file-upload resource types available in the Add Resources modal: PowerPoint, DOCX, CSV, TXT, Audio, Video, Image, and Excel. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so uploads are made against a clean dataset list — pre-existing rows from other tests can't mask a missing upload. Then uses `DatasetsTab.uploadFile()` (the same generic helper used by the CSV and Markdown tests in journey 20) to execute the full modal flow — open Add Resources, click the resource type, `setInputFiles`, Submit, wait for network idle, close dialogs — then asserts the uploaded filename appears as a row in the dataset list within 15 s. A failed upload results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+
+- [x] DU-45.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
+- [x] DU-45.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
+- [x] DU-45.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
+- [x] DU-45.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
+- [x] DU-45.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
+- [x] DU-45.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
+- [x] DU-45.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
+- [x] DU-45.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+
+---
+
 > **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
