@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-10",
+  "lastUpdated": "2026-05-13",
   "summary": {
-    "totalCheckpoints": 387,
-    "coveredCheckpoints": 375,
+    "totalCheckpoints": 397,
+    "coveredCheckpoints": 385,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 45,
-    "activeJourneys": 44
+    "totalJourneys": 46,
+    "activeJourneys": 45
   },
   "journeys": [
     {
@@ -2173,6 +2173,67 @@
         {
           "id": "claw-15",
           "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-evaluation-tab",
+      "name": "Mentor Evaluation Tab",
+      "spec": "45-mentor-evaluation-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "eval-01",
+          "description": "Evals tab heading and description render when the modal is opened on the Evals tab",
+          "status": "covered"
+        },
+        {
+          "id": "eval-02",
+          "description": "Dataset combobox and the New Evaluation CTA are both visible on the Evals tab",
+          "status": "covered"
+        },
+        {
+          "id": "eval-03",
+          "description": "New Evaluation CTA is disabled when no dataset is selected, and enabled when one is auto-selected",
+          "status": "covered"
+        },
+        {
+          "id": "eval-04",
+          "description": "Tenants with no eval datasets see the 'no datasets' call-to-action instead of the runs table",
+          "status": "covered"
+        },
+        {
+          "id": "eval-05",
+          "description": "With a dataset selected the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-06",
+          "description": "New Evaluation modal opens with the dataset readback plus name input and cancels cleanly",
+          "status": "covered"
+        },
+        {
+          "id": "eval-07",
+          "description": "New Evaluation modal can be dismissed via Escape (modal stack hygiene)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-08",
+          "description": "Per-run actions menu exposes View results, Evaluate, Export CSV, and Delete entries when runs exist",
+          "status": "covered"
+        },
+        {
+          "id": "eval-09",
+          "description": "Open Evals tab has no axe-core accessibility violations on visible dialogs",
+          "status": "covered"
+        },
+        {
+          "id": "eval-10",
+          "description": "Admin can navigate away to another tab and back to Evals without errors (wrapper re-mounts cleanly)",
           "status": "covered"
         }
       ]

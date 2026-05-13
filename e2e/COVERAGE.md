@@ -723,6 +723,25 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
+## Journey 45: Mentor Evaluation Tab (10 checkpoints) — `journeys/45-mentor-evaluation-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
+
+Wraps the packaged `AgentEvaluationTab` from `@iblai/web-containers` (v1.6.12+) with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. Tests are tolerant of both populated and empty tenant states because eval datasets are managed in tenant settings, not by this journey.
+
+- [x] EVAL-01: Evals tab heading and description render when the modal is opened on the Evals tab
+- [x] EVAL-02: Dataset combobox and "New Evaluation" CTA are both visible
+- [x] EVAL-03: "New Evaluation" CTA is disabled when no dataset is selected (and enabled when one is auto-selected)
+- [x] EVAL-04: Tenants with no eval datasets see the "no datasets" call-to-action instead of the runs table
+- [x] EVAL-05: With a dataset selected the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions)
+- [x] EVAL-06: "New Evaluation" modal opens with the dataset readback + name input and cancels cleanly
+- [x] EVAL-07: "New Evaluation" modal can be dismissed via Escape (modal stack hygiene)
+- [x] EVAL-08: Per-run actions menu exposes View results, Evaluate, Export CSV, and Delete entries when runs exist
+- [x] EVAL-09: Open Evals tab has no axe-core accessibility violations on visible dialogs
+- [x] EVAL-10: Admin can navigate away to another tab and back to Evals without errors (wrapper re-mounts cleanly)
+
+---
+
 ## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
