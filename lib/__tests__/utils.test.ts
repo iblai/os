@@ -176,7 +176,7 @@ describe('hasNonExpiredAuthToken function', () => {
   });
 
   it('should return true when no token exists', () => {
-    expect(hasNonExpiredAuthToken()).toBe(true);
+    expect(hasNonExpiredAuthToken()).toBe(false);
   });
 
   it('should return true when token exists but no expiry', () => {
