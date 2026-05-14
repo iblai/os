@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.64.3](https://github.com/iblai/mentorai/compare/v0.64.2...v0.64.3) (2026-05-14)
+
+### Chores
+
+* **deps:** add @iblai/agent-ai dependency ([75b245a](https://github.com/iblai/mentorai/commit/75b245a4d1e1424259ffa654ad96c3494e6b6769))
+
 ## [0.64.2](https://github.com/iblai/mentorai/compare/v0.64.1...v0.64.2) (2026-05-14)
 
 ### Bug Fixes
