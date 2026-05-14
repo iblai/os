@@ -974,7 +974,7 @@ fn offline_fallback_page() -> Response<Body> {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ibl.ai OS - Offline</title>
+    <title>ibl.ai - Offline</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1003,7 +1003,7 @@ fn offline_fallback_page() -> Response<Body> {
 </head>
 <body>
     <div class="container">
-        <h1>ibl.ai OS</h1>
+        <h1>ibl.ai</h1>
         <p>The app content hasn't been cached yet.<br>Please connect to the internet to load the app first.</p>
         <button onclick="location.reload()">Retry</button>
     </div>

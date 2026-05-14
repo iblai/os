@@ -2740,6 +2740,7 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
     expect(postMessageSpy).toHaveBeenCalledWith({ authExpired: true }, '*');
     expect(consoleSpy).toHaveBeenCalledWith(
       '[redirectToAuthSpa]: sending authExpired to parent',
+      expect.any(String),
     );
 
     // Should not redirect when in iframe

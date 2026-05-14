@@ -151,7 +151,10 @@ export async function redirectToAuthSpa(
   }
 
   if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
+    console.log(
+      '[redirectToAuthSpa]: sending authExpired to parent',
+      JSON.stringify(localStorage),
+    );
     sendMessageToParentWebsite({ authExpired: true });
     return;
   }
