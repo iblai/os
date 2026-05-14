@@ -47,7 +47,7 @@ fn is_oauth_url(url: &str) -> bool {
 /// Open OAuth URL in an in-app popup window
 /// The window monitors for callback URLs and closes automatically when auth completes
 fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> {
-    println!("[ibl.ai OS] Opening OAuth in popup window: {}", url);
+    println!("[ibl.ai] Opening OAuth in popup window: {}", url);
 
     let app_handle_clone = app_handle.clone();
 
@@ -111,13 +111,13 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> 
     .build()
     .map_err(|e| format!("Failed to create OAuth popup: {}", e))?;
 
-    println!("[ibl.ai OS] ✅ OAuth popup window created");
+    println!("[ibl.ai] ✅ OAuth popup window created");
     Ok(())
 }
 
 /// Handle deep link callback from OAuth (called when custom URL scheme is opened)
 fn handle_oauth_deep_link(app_handle: &AppHandle, url: &str) {
-    println!("[ibl.ai OS] OAuth deep link received: {}", url);
+    println!("[ibl.ai] OAuth deep link received: {}", url);
 
     // Convert custom scheme URL to app URL
     let target_url = if url.starts_with("iblai-mentor://") {
@@ -130,7 +130,7 @@ fn handle_oauth_deep_link(app_handle: &AppHandle, url: &str) {
         url.to_string()
     };
 
-    println!("[ibl.ai OS] Navigating main window to: {}", target_url);
+    println!("[ibl.ai] Navigating main window to: {}", target_url);
 
     // Navigate main window to the callback URL
     if let Some(main_win) = app_handle.get_webview_window("main") {
@@ -176,7 +176,7 @@ fn get_app_url() -> String {
 
 // Fallback internet connectivity check using multiple reliable services
 fn check_internet_fallback() -> bool {
-    println!("[ibl.ai OS] Running fallback internet connectivity check...");
+    println!("[ibl.ai] Running fallback internet connectivity check...");
 
     let client = match reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(2))
@@ -186,7 +186,7 @@ fn check_internet_fallback() -> bool {
     {
         Ok(c) => c,
         Err(e) => {
-            println!("[ibl.ai OS] Failed to create HTTP client for fallback: {}", e);
+            println!("[ibl.ai] Failed to create HTTP client for fallback: {}", e);
             return false;
         }
     };
@@ -199,22 +199,22 @@ fn check_internet_fallback() -> bool {
     ];
 
     for url in test_urls.iter() {
-        println!("[ibl.ai OS] Trying fallback connectivity check to {}...", url);
+        println!("[ibl.ai] Trying fallback connectivity check to {}...", url);
         match client.head(*url).send() {
             Ok(response) => {
                 if response.status().is_success() || response.status().is_redirection() {
-                    println!("[ibl.ai OS] Fallback check succeeded with {}", url);
+                    println!("[ibl.ai] Fallback check succeeded with {}", url);
                     return true;
                 }
-                println!("[ibl.ai OS] Fallback check to {} returned status {}", url, response.status());
+                println!("[ibl.ai] Fallback check to {} returned status {}", url, response.status());
             }
             Err(e) => {
-                println!("[ibl.ai OS] Fallback check to {} failed: {}", url, e);
+                println!("[ibl.ai] Fallback check to {} failed: {}", url, e);
             }
         }
     }
 
-    println!("[ibl.ai OS] All fallback checks failed - assuming OFFLINE");
+    println!("[ibl.ai] All fallback checks failed - assuming OFFLINE");
     false
 }
 
@@ -319,7 +319,7 @@ async fn load_foundry_local_model(model_id: String) -> Result<(), String> {
 /// Set the selected Foundry model for chat
 #[command]
 async fn set_selected_foundry_model(app: AppHandle, model_id: String) -> Result<(), String> {
-    println!("[ibl.ai OS] Setting selected Foundry model: {}", model_id);
+    println!("[ibl.ai] Setting selected Foundry model: {}", model_id);
 
     // Store in memory
     let storage = get_foundry_model_storage();
@@ -339,7 +339,7 @@ async fn set_selected_foundry_model(app: AppHandle, model_id: String) -> Result<
     std::fs::write(&file_path, model_id.as_bytes())
         .map_err(|e| format!("Failed to save selected model: {}", e))?;
 
-    println!("[ibl.ai OS] Selected Foundry model saved to: {:?}", file_path);
+    println!("[ibl.ai] Selected Foundry model saved to: {:?}", file_path);
     Ok(())
 }
 
@@ -367,11 +367,11 @@ async fn get_selected_foundry_model(app: AppHandle) -> Result<Option<String>, St
                 drop(model); // Release read lock
                 let mut model_write = storage.write().await;
                 *model_write = Some(model_id.clone());
-                println!("[ibl.ai OS] Loaded selected Foundry model from file: {}", model_id);
+                println!("[ibl.ai] Loaded selected Foundry model from file: {}", model_id);
                 Ok(Some(model_id))
             }
             Err(e) => {
-                println!("[ibl.ai OS] Failed to read selected model file: {}", e);
+                println!("[ibl.ai] Failed to read selected model file: {}", e);
                 Ok(None)
             }
         }
@@ -383,7 +383,7 @@ async fn get_selected_foundry_model(app: AppHandle) -> Result<Option<String>, St
 /// Install Foundry Local on the system
 #[command]
 async fn install_foundry() -> Result<String, String> {
-    println!("[ibl.ai OS] Starting Foundry Local installation...");
+    println!("[ibl.ai] Starting Foundry Local installation...");
 
     // Check if already installed
     if let Ok(status) = check_foundry_status().await {
@@ -404,7 +404,7 @@ async fn install_foundry() -> Result<String, String> {
 /// Download a Foundry model
 #[command]
 async fn download_foundry_model_cmd(model_id: String, window: Window) -> Result<(), String> {
-    println!("[ibl.ai OS] Downloading Foundry model: {}", model_id);
+    println!("[ibl.ai] Downloading Foundry model: {}", model_id);
     download_foundry_model(&model_id, window).await
 }
 
@@ -644,14 +644,14 @@ async fn is_offline_server_ready() -> bool {
     // Try a few times with small delays to handle startup timing
     for i in 0..5 {
         if offline_server::is_server_running().await {
-            println!("[ibl.ai OS] Offline server is ready (attempt {})", i + 1);
+            println!("[ibl.ai] Offline server is ready (attempt {})", i + 1);
             return true;
         }
         if i < 4 {
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
     }
-    println!("[ibl.ai OS] Offline server not ready after 5 attempts");
+    println!("[ibl.ai] Offline server not ready after 5 attempts");
     false
 }
 
@@ -662,7 +662,7 @@ async fn precache_app(app: AppHandle, url: String) -> Result<PrecacheResult, Str
     // URL format: https://mentorai.iblai.app/platform/<tenant>/<mentorId>
     if let Some(path_start) = url.find("/platform/") {
         let route = &url[path_start..];
-        println!("[ibl.ai OS] Extracting route from precache URL: {}", route);
+        println!("[ibl.ai] Extracting route from precache URL: {}", route);
 
         // Save to memory
         let storage = get_last_route_storage();
@@ -674,9 +674,9 @@ async fn precache_app(app: AppHandle, url: String) -> Result<PrecacheResult, Str
         if let Ok(app_data_dir) = app.path().app_data_dir() {
             let route_file = app_data_dir.join(LAST_ROUTE_FILE);
             if let Err(e) = std::fs::write(&route_file, route) {
-                println!("[ibl.ai OS] Failed to save route to file: {}", e);
+                println!("[ibl.ai] Failed to save route to file: {}", e);
             } else {
-                println!("[ibl.ai OS] Saved route from precache: {:?}", route_file);
+                println!("[ibl.ai] Saved route from precache: {:?}", route_file);
             }
         }
     }
@@ -692,7 +692,7 @@ async fn precache_app(app: AppHandle, url: String) -> Result<PrecacheResult, Str
 /// Cache images from API responses (call after precache_app)
 #[command]
 async fn cache_images() -> Result<PrecacheResult, String> {
-    println!("[ibl.ai OS] Caching images from API responses...");
+    println!("[ibl.ai] Caching images from API responses...");
 
     let cache_lock = get_web_cache().read().await;
     if let Some(cache) = cache_lock.as_ref() {
@@ -705,7 +705,7 @@ async fn cache_images() -> Result<PrecacheResult, String> {
 /// Save the last mentor route (persists across origins and app restarts)
 #[command]
 async fn save_last_mentor_route(app: AppHandle, route: String) -> Result<(), String> {
-    println!("[ibl.ai OS] Saving last mentor route: {}", route);
+    println!("[ibl.ai] Saving last mentor route: {}", route);
 
     // Save to memory
     let storage = get_last_route_storage();
@@ -718,7 +718,7 @@ async fn save_last_mentor_route(app: AppHandle, route: String) -> Result<(), Str
     let route_file = app_data_dir.join(LAST_ROUTE_FILE);
     std::fs::write(&route_file, &route).map_err(|e| e.to_string())?;
 
-    println!("[ibl.ai OS] Saved route to: {:?}", route_file);
+    println!("[ibl.ai] Saved route to: {:?}", route_file);
     Ok(())
 }
 
@@ -727,13 +727,13 @@ const OFFLINE_CONTEXT_FILE: &str = "offline_context.json";
 /// Save the full offline context (localStorage data needed for offline mode)
 #[command]
 async fn save_offline_context(app: AppHandle, context: String) -> Result<(), String> {
-    println!("[ibl.ai OS] Saving offline context ({} bytes)", context.len());
+    println!("[ibl.ai] Saving offline context ({} bytes)", context.len());
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let context_file = app_data_dir.join(OFFLINE_CONTEXT_FILE);
     std::fs::write(&context_file, &context).map_err(|e| e.to_string())?;
 
-    println!("[ibl.ai OS] Saved offline context to: {:?}", context_file);
+    println!("[ibl.ai] Saved offline context to: {:?}", context_file);
     Ok(())
 }
 
@@ -748,11 +748,11 @@ async fn get_offline_context(app: AppHandle) -> Option<String> {
 
     match std::fs::read_to_string(&context_file) {
         Ok(context) => {
-            println!("[ibl.ai OS] Loaded offline context ({} bytes)", context.len());
+            println!("[ibl.ai] Loaded offline context ({} bytes)", context.len());
             Some(context)
         }
         Err(e) => {
-            println!("[ibl.ai OS] No offline context found: {}", e);
+            println!("[ibl.ai] No offline context found: {}", e);
             None
         }
     }
@@ -782,12 +782,12 @@ fn get_os_type() -> String {
 async fn ollama_chat(messages: Vec<serde_json::Value>, model: Option<String>) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
 
-    println!("[ibl.ai OS] Proxying chat request with {} messages", messages.len());
+    println!("[ibl.ai] Proxying chat request with {} messages", messages.len());
 
     // Check if Foundry Local is available first (auto-preference)
     if let Ok(foundry_status) = check_foundry_status().await {
         if foundry_status.is_available && foundry_status.has_models {
-            println!("[ibl.ai OS] Using Foundry Local for chat");
+            println!("[ibl.ai] Using Foundry Local for chat");
             // Get selected model from storage
             let storage = get_foundry_model_storage();
             let selected_model = storage.read().await.clone();
@@ -795,7 +795,7 @@ async fn ollama_chat(messages: Vec<serde_json::Value>, model: Option<String>) ->
         }
     }
 
-    println!("[ibl.ai OS] Using Ollama for chat");
+    println!("[ibl.ai] Using Ollama for chat");
     let ollama_url = "http://localhost:11434/api/chat";
 
     let client = reqwest::Client::builder()
@@ -828,7 +828,7 @@ async fn ollama_chat(messages: Vec<serde_json::Value>, model: Option<String>) ->
         .await
         .map_err(|e| format!("Failed to read Ollama response: {}", e))?;
 
-    println!("[ibl.ai OS] Ollama chat response received");
+    println!("[ibl.ai] Ollama chat response received");
     Ok(response_body)
 }
 
@@ -844,12 +844,12 @@ async fn ollama_chat_stream(
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
 
-    println!("[ibl.ai OS] Proxying streaming chat request with {} messages", messages.len());
+    println!("[ibl.ai] Proxying streaming chat request with {} messages", messages.len());
 
     // Check if Foundry Local is available first (auto-preference)
     if let Ok(foundry_status) = check_foundry_status().await {
         if foundry_status.is_available && foundry_status.has_models {
-            println!("[ibl.ai OS] Using Foundry Local for streaming chat");
+            println!("[ibl.ai] Using Foundry Local for streaming chat");
             // Get selected model from storage
             let storage = get_foundry_model_storage();
             let selected_model = storage.read().await.clone();
@@ -857,7 +857,7 @@ async fn ollama_chat_stream(
         }
     }
 
-    println!("[ibl.ai OS] Using Ollama for streaming chat");
+    println!("[ibl.ai] Using Ollama for streaming chat");
     let ollama_url = "http://localhost:11434/api/chat";
 
     let client = reqwest::Client::builder()
@@ -947,7 +947,7 @@ async fn get_last_mentor_route(app: AppHandle) -> Option<String> {
     let storage = get_last_route_storage();
     let lock = storage.read().await;
     if let Some(route) = lock.as_ref() {
-        println!("[ibl.ai OS] Got last mentor route from memory: {}", route);
+        println!("[ibl.ai] Got last mentor route from memory: {}", route);
         return Some(route.clone());
     }
     drop(lock);
@@ -962,7 +962,7 @@ async fn get_last_mentor_route(app: AppHandle) -> Option<String> {
     if let Ok(route) = std::fs::read_to_string(&route_file) {
         let route = route.trim().to_string();
         if !route.is_empty() {
-            println!("[ibl.ai OS] Got last mentor route from file: {}", route);
+            println!("[ibl.ai] Got last mentor route from file: {}", route);
             // Store in memory for faster access next time
             let mut lock = storage.write().await;
             *lock = Some(route.clone());
@@ -970,7 +970,7 @@ async fn get_last_mentor_route(app: AppHandle) -> Option<String> {
         }
     }
 
-    println!("[ibl.ai OS] No last mentor route found");
+    println!("[ibl.ai] No last mentor route found");
     None
 }
 
@@ -1006,7 +1006,7 @@ async fn cache_api_response(
         url.clone()
     };
 
-    println!("[ibl.ai OS] Caching {} response for: {} (key: {}, base64: {})", method, url, cache_key, is_base64);
+    println!("[ibl.ai] Caching {} response for: {} (key: {}, base64: {})", method, url, cache_key, is_base64);
 
     // Decode base64 if needed (for images)
     let body_bytes = if is_base64 {
@@ -1026,7 +1026,7 @@ async fn cache_api_response(
             body: body_bytes,
         };
         cache.store_response(&cache_key, &response).await;
-        println!("[ibl.ai OS] Cached {} response for: {}", method, url);
+        println!("[ibl.ai] Cached {} response for: {}", method, url);
         Ok(())
     } else {
         Err("Cache not initialized".to_string())
@@ -1060,14 +1060,14 @@ async fn get_cached_api_response(
     };
 
     println!(
-        "[ibl.ai OS] Looking up cached {} response for: {} (key: {})",
+        "[ibl.ai] Looking up cached {} response for: {} (key: {})",
         method, url, cache_key
     );
 
     let cache_lock = get_web_cache().read().await;
     if let Some(cache) = cache_lock.as_ref() {
         if let Some(response) = cache.get_cached(&cache_key).await {
-            println!("[ibl.ai OS] Found cached {} response for: {}", method, url);
+            println!("[ibl.ai] Found cached {} response for: {}", method, url);
             return Ok(Some(String::from_utf8_lossy(&response.body).to_string()));
         }
 
@@ -1076,7 +1076,7 @@ async fn get_cached_api_response(
             let fallback_key = format!("{}#POST", url);
             if let Some(response) = cache.get_cached(&fallback_key).await {
                 println!(
-                    "[ibl.ai OS] Found cached POST response (fallback) for: {}",
+                    "[ibl.ai] Found cached POST response (fallback) for: {}",
                     url
                 );
                 return Ok(Some(String::from_utf8_lossy(&response.body).to_string()));
@@ -1084,7 +1084,7 @@ async fn get_cached_api_response(
         }
     }
 
-    println!("[ibl.ai OS] No cached {} response found for: {}", method, url);
+    println!("[ibl.ai] No cached {} response found for: {}", method, url);
     Ok(None)
 }
 
@@ -1758,7 +1758,7 @@ fn main() {
 
                 for env_path in possible_paths {
                     if env_path.exists() {
-                        println!("[ibl.ai OS] Loading .env from: {:?}", env_path);
+                        println!("[ibl.ai] Loading .env from: {:?}", env_path);
                         let _ = dotenvy::from_path(&env_path);
                         break;
                     }
@@ -1781,7 +1781,7 @@ fn main() {
 
             // Ensure app data directory exists
             if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
-                println!("[ibl.ai OS] Failed to create app data dir: {}", e);
+                println!("[ibl.ai] Failed to create app data dir: {}", e);
             }
 
             // CRITICAL FIX: Clear only the webview HTTP cache, not localStorage
@@ -1794,11 +1794,11 @@ fn main() {
                     // - EBWebView/Default/Local Storage - localStorage (MUST PRESERVE)
                     let cache_dir = webview_data_dir.join("EBWebView").join("Default").join("Cache");
                     if cache_dir.exists() {
-                        println!("[ibl.ai OS] Clearing webview HTTP cache at: {:?}", cache_dir);
+                        println!("[ibl.ai] Clearing webview HTTP cache at: {:?}", cache_dir);
                         if let Err(e) = std::fs::remove_dir_all(&cache_dir) {
-                            println!("[ibl.ai OS] Failed to clear webview cache (may be in use): {}", e);
+                            println!("[ibl.ai] Failed to clear webview cache (may be in use): {}", e);
                         } else {
-                            println!("[ibl.ai OS] Webview HTTP cache cleared successfully");
+                            println!("[ibl.ai] Webview HTTP cache cleared successfully");
                         }
                     }
                 }
@@ -1808,11 +1808,11 @@ fn main() {
                     // On macOS, clear only the Cache subdirectory
                     let cache_dir = webview_data_dir.join("WebKit").join("Cache");
                     if cache_dir.exists() {
-                        println!("[ibl.ai OS] Clearing webview HTTP cache at: {:?}", cache_dir);
+                        println!("[ibl.ai] Clearing webview HTTP cache at: {:?}", cache_dir);
                         if let Err(e) = std::fs::remove_dir_all(&cache_dir) {
-                            println!("[ibl.ai OS] Failed to clear webview cache: {}", e);
+                            println!("[ibl.ai] Failed to clear webview cache: {}", e);
                         } else {
-                            println!("[ibl.ai OS] Webview HTTP cache cleared successfully");
+                            println!("[ibl.ai] Webview HTTP cache cleared successfully");
                         }
                     }
                 }
@@ -1822,11 +1822,11 @@ fn main() {
                     // On Linux, clear only the cache subdirectory
                     let cache_dir = webview_data_dir.join("webview").join("cache");
                     if cache_dir.exists() {
-                        println!("[ibl.ai OS] Clearing webview HTTP cache at: {:?}", cache_dir);
+                        println!("[ibl.ai] Clearing webview HTTP cache at: {:?}", cache_dir);
                         if let Err(e) = std::fs::remove_dir_all(&cache_dir) {
-                            println!("[ibl.ai OS] Failed to clear webview cache: {}", e);
+                            println!("[ibl.ai] Failed to clear webview cache: {}", e);
                         } else {
-                            println!("[ibl.ai OS] Webview HTTP cache cleared successfully");
+                            println!("[ibl.ai] Webview HTTP cache cleared successfully");
                         }
                     }
                 }
@@ -1850,11 +1850,11 @@ fn main() {
                     let lock = cache_holder_clone.read().await;
                     if let Some(cache) = lock.as_ref() {
                         let stats = cache.get_stats().await;
-                        println!("[ibl.ai OS] Cache status - {} entries, {} bytes",
+                        println!("[ibl.ai] Cache status - {} entries, {} bytes",
                             stats.entry_count, stats.total_size_bytes);
 
                         if stats.entry_count == 0 {
-                            println!("[ibl.ai OS] Cache is empty - offline mode will show setup page");
+                            println!("[ibl.ai] Cache is empty - offline mode will show setup page");
                         }
                     }
                 });
@@ -1864,17 +1864,17 @@ fn main() {
             let cache_for_server = get_web_cache().clone();
             let (ready_tx, ready_rx) = std::sync::mpsc::channel();
             std::thread::spawn(move || {
-                println!("[ibl.ai OS] Starting offline server thread...");
+                println!("[ibl.ai] Starting offline server thread...");
                 match tokio::runtime::Runtime::new() {
                     Ok(rt) => {
-                        println!("[ibl.ai OS] Tokio runtime created, starting server...");
+                        println!("[ibl.ai] Tokio runtime created, starting server...");
                         rt.block_on(async {
                             start_offline_server_with_signal(cache_for_server, Some(ready_tx)).await;
                         });
-                        println!("[ibl.ai OS] Server exited");
+                        println!("[ibl.ai] Server exited");
                     }
                     Err(e) => {
-                        println!("[ibl.ai OS] Failed to create tokio runtime: {}", e);
+                        println!("[ibl.ai] Failed to create tokio runtime: {}", e);
                     }
                 }
             });
@@ -1883,25 +1883,25 @@ fn main() {
             match ready_rx.recv_timeout(std::time::Duration::from_secs(5)) {
                 Ok(is_ready) => {
                     if is_ready {
-                        println!("[ibl.ai OS] Offline server started successfully at {}", get_server_url());
+                        println!("[ibl.ai] Offline server started successfully at {}", get_server_url());
                     } else {
-                        println!("[ibl.ai OS] Offline server failed to start");
+                        println!("[ibl.ai] Offline server failed to start");
                     }
                 }
                 Err(e) => {
-                    println!("[ibl.ai OS] Timeout waiting for offline server: {}", e);
+                    println!("[ibl.ai] Timeout waiting for offline server: {}", e);
                 }
             }
 
             // Check network status to decide initial URL
             let app_url = get_app_url();
-            println!("[ibl.ai OS] App URL from config: {}", app_url);
-            println!("[ibl.ai OS] Checking network connectivity to: {}", app_url);
+            println!("[ibl.ai] App URL from config: {}", app_url);
+            println!("[ibl.ai] Checking network connectivity to: {}", app_url);
 
             // Check for TAURI_FORCE_ONLINE env var to skip network check (for debugging)
             let force_online = std::env::var("TAURI_FORCE_ONLINE").is_ok();
             if force_online {
-                println!("[ibl.ai OS] TAURI_FORCE_ONLINE is set, skipping network check");
+                println!("[ibl.ai] TAURI_FORCE_ONLINE is set, skipping network check");
             }
 
             // Quick network check - try app URL, then fallback to known services
@@ -1917,18 +1917,18 @@ fn main() {
                 {
                     Ok(c) => c,
                     Err(e) => {
-                        println!("[ibl.ai OS] Failed to create HTTP client: {}, trying fallback", e);
+                        println!("[ibl.ai] Failed to create HTTP client: {}, trying fallback", e);
                         return check_internet_fallback();
                     }
                 };
 
                 // Try HEAD request to app URL
-                println!("[ibl.ai OS] Checking connectivity to {}...", app_url);
+                println!("[ibl.ai] Checking connectivity to {}...", app_url);
                 match client.head(&app_url).send() {
                     Ok(response) => {
                         let status = response.status();
                         let is_ok = status.is_success() || status.is_redirection();
-                        println!("[ibl.ai OS] App URL check: {} - {}", status, if is_ok { "ONLINE" } else { "trying fallback" });
+                        println!("[ibl.ai] App URL check: {} - {}", status, if is_ok { "ONLINE" } else { "trying fallback" });
 
                         if is_ok {
                             true
@@ -1938,7 +1938,7 @@ fn main() {
                         }
                     }
                     Err(e) => {
-                        println!("[ibl.ai OS] App URL check failed: {}, trying fallback", e);
+                        println!("[ibl.ai] App URL check failed: {}, trying fallback", e);
                         check_internet_fallback()
                     }
                 }
@@ -1946,18 +1946,18 @@ fn main() {
 
             let is_online = check_network();
 
-            println!("[ibl.ai OS] Network check result: is_online = {} (app_url: {})", is_online, app_url);
+            println!("[ibl.ai] Network check result: is_online = {} (app_url: {})", is_online, app_url);
 
             // Determine initial URL
             let initial_url = if is_online {
                 // Online - go directly to the app
-                println!("[ibl.ai OS] ONLINE MODE: Loading from {}", app_url);
+                println!("[ibl.ai] ONLINE MODE: Loading from {}", app_url);
                 tauri::WebviewUrl::External(app_url.parse().unwrap())
             } else {
                 // Offline - use tauri://localhost to allow IPC access
                 // The offline shell will be served from the bundled assets
                 // API calls will be routed to the HTTP server (localhost:3456) via fetch intercept
-                println!("[ibl.ai OS] OFFLINE MODE: Using tauri://localhost for IPC access");
+                println!("[ibl.ai] OFFLINE MODE: Using tauri://localhost for IPC access");
 
                 // Store the last route for the initialization script to use
                 let rt = tokio::runtime::Runtime::new().unwrap();
@@ -1969,25 +1969,25 @@ fn main() {
 
                 // Try to read from file if not in memory
                 let route_file = app_data_dir.join(LAST_ROUTE_FILE);
-                println!("[ibl.ai OS] Checking for saved route at: {:?}", route_file);
+                println!("[ibl.ai] Checking for saved route at: {:?}", route_file);
 
                 let saved_route = last_route.or_else(|| {
                     std::fs::read_to_string(&route_file)
                         .ok()
                         .map(|r| {
                             let trimmed = r.trim().to_string();
-                            println!("[ibl.ai OS] Found saved route: {}", trimmed);
+                            println!("[ibl.ai] Found saved route: {}", trimmed);
                             trimmed
                         })
                         .filter(|r| !r.is_empty())
                 });
 
                 if let Some(route) = saved_route {
-                    println!("[ibl.ai OS] Will restore route: {}", route);
+                    println!("[ibl.ai] Will restore route: {}", route);
                     // Store the route in memory for the init script to access
                     // The init script will read this and navigate to it
                 } else {
-                    println!("[ibl.ai OS] No saved route, will load root");
+                    println!("[ibl.ai] No saved route, will load root");
                 }
 
                 tauri::WebviewUrl::App("index.html".into())
@@ -1995,14 +1995,14 @@ fn main() {
 
             // Create main window with appropriate URL monitoring script
             let init_script = if is_online {
-                println!("[ibl.ai OS] Using ONLINE initialization script");
+                println!("[ibl.ai] Using ONLINE initialization script");
                 URL_MONITOR_SCRIPT_ONLINE
             } else {
-                println!("[ibl.ai OS] Using OFFLINE initialization script");
+                println!("[ibl.ai] Using OFFLINE initialization script");
                 URL_MONITOR_SCRIPT_OFFLINE
             };
 
-            println!("[ibl.ai OS] Creating main window with URL: {:?}", initial_url);
+            println!("[ibl.ai] Creating main window with URL: {:?}", initial_url);
 
             // Add localStorage polyfill for offline mode to work around Tauri/WebView2 restrictions
             let storage_polyfill = r#"
@@ -2044,7 +2044,7 @@ fn main() {
                 "main",
                 initial_url.clone(),
             )
-            .title("ibl.ai OS")
+            .title("ibl.ai")
             .inner_size(1200.0, 800.0)
             .min_inner_size(800.0, 600.0)
             .maximized(true)
@@ -2055,9 +2055,9 @@ fn main() {
 
                 // Check if this is an OAuth URL - open in popup window
                 if is_oauth_url(url_str) {
-                    println!("[ibl.ai OS] OAuth URL detected, opening in popup: {}", url_str);
+                    println!("[ibl.ai] OAuth URL detected, opening in popup: {}", url_str);
                     if let Err(e) = open_oauth_in_popup(url_str, &app_handle) {
-                        println!("[ibl.ai OS] Failed to open OAuth popup: {}", e);
+                        println!("[ibl.ai] Failed to open OAuth popup: {}", e);
                         return true; // Allow navigation as last resort
                     }
                     return false; // Prevent webview navigation in main window
@@ -2079,7 +2079,7 @@ fn main() {
                     || url_str.starts_with("mentor://");
 
                 if !allowed {
-                    println!("[ibl.ai OS] Blocked external navigation to: {}", url_str);
+                    println!("[ibl.ai] Blocked external navigation to: {}", url_str);
                 }
 
                 allowed
@@ -2087,8 +2087,8 @@ fn main() {
             .build()
             .expect("Failed to create main window");
 
-            println!("[ibl.ai OS] Main window created successfully");
-            println!("[ibl.ai OS] Mode: {} | URL: {:?}", if is_online { "ONLINE" } else { "OFFLINE" }, initial_url);
+            println!("[ibl.ai] Main window created successfully");
+            println!("[ibl.ai] Mode: {} | URL: {:?}", if is_online { "ONLINE" } else { "OFFLINE" }, initial_url);
 
             // Set up deep link handler for OAuth callbacks and universal links
             // This handles iblai-mentor:// URL scheme callbacks from system browser OAuth
@@ -2098,7 +2098,7 @@ fn main() {
 
                 // Check for any pending deep links from app launch
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
-                    println!("[ibl.ai OS] Found {} current deep link(s) at launch", urls.len());
+                    println!("[ibl.ai] Found {} current deep link(s) at launch", urls.len());
                     let app_handle = app.handle().clone();
                     for url in urls {
                         handle_oauth_deep_link(&app_handle, url.as_str());
@@ -2108,20 +2108,20 @@ fn main() {
                 // Listen for deep link events (from system browser OAuth callback)
                 let app_handle_for_deep_link = app.handle().clone();
                 app.listen("deep-link://new-url", move |event: tauri::Event| {
-                    println!("[ibl.ai OS] Deep link event received: {}", event.payload());
+                    println!("[ibl.ai] Deep link event received: {}", event.payload());
 
                     if let Ok(urls) = serde_json::from_str::<Vec<String>>(event.payload()) {
-                        println!("[ibl.ai OS] Parsed {} URL(s) from deep link event", urls.len());
+                        println!("[ibl.ai] Parsed {} URL(s) from deep link event", urls.len());
                         for url in urls {
-                            println!("[ibl.ai OS] Processing OAuth callback: {}", url);
+                            println!("[ibl.ai] Processing OAuth callback: {}", url);
                             handle_oauth_deep_link(&app_handle_for_deep_link, &url);
                         }
                     } else {
-                        println!("[ibl.ai OS] Failed to parse deep link URLs from event payload");
+                        println!("[ibl.ai] Failed to parse deep link URLs from event payload");
                     }
                 });
 
-                println!("[ibl.ai OS] Deep link event listener registered for OAuth callbacks");
+                println!("[ibl.ai] Deep link event listener registered for OAuth callbacks");
             }
 
             // Keep window reference to prevent it from being dropped
