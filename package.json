@@ -31,6 +31,7 @@
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
   },
   "dependencies": {
+    "@iblai/agent-ai": "^2.5.2",
     "@iblai/iblai-api": "4.166.0-ai",
     "@iblai/iblai-js": "1.9.11",
     "@iblai/iblai-web-mentor": "1.3.4",
