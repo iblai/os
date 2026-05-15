@@ -141,24 +141,24 @@ extern "C" {}
 #[cfg(target_os = "ios")]
 #[allow(unexpected_cfgs)]
 fn open_url_via_application(ns_url: *mut Object) -> Result<(), String> {
-    println!("[ibl.ai OS] open_url_via_application called (FALLBACK - will open in Safari app)");
+    println!("[ibl.ai] open_url_via_application called (FALLBACK - will open in Safari app)");
 
     unsafe {
         if ns_url.is_null() {
-            println!("[ibl.ai OS] NSURL was null in fallback");
+            println!("[ibl.ai] NSURL was null in fallback");
             return Err("NSURL was null".to_string());
         }
 
         let app: *mut Object = msg_send![class!(UIApplication), sharedApplication];
         if app.is_null() {
-            println!("[ibl.ai OS] Failed to access UIApplication in fallback");
+            println!("[ibl.ai] Failed to access UIApplication in fallback");
             return Err("Failed to access UIApplication".to_string());
         }
 
         let responds: BOOL =
             msg_send![app, respondsToSelector: sel!(openURL:options:completionHandler:)];
         if responds == YES {
-            println!("[ibl.ai OS] Using modern openURL:options:completionHandler: API");
+            println!("[ibl.ai] Using modern openURL:options:completionHandler: API");
             let _: () = msg_send![
                 app,
                 openURL: ns_url
@@ -166,10 +166,10 @@ fn open_url_via_application(ns_url: *mut Object) -> Result<(), String> {
                 completionHandler: ptr::null::<Object>()
             ];
         } else {
-            println!("[ibl.ai OS] Using legacy openURL: API");
+            println!("[ibl.ai] Using legacy openURL: API");
             let _: BOOL = msg_send![app, openURL: ns_url];
         }
-        println!("[ibl.ai OS] URL opened via UIApplication (Safari app)");
+        println!("[ibl.ai] URL opened via UIApplication (Safari app)");
     }
 
     Ok(())
@@ -184,10 +184,10 @@ unsafe fn get_presentation_window() -> *mut Object {
 
     if window_count > 0 {
         let window: *mut Object = msg_send![windows, objectAtIndex: 0usize];
-        println!("[ibl.ai OS] Got window for presentation (count: {})", window_count);
+        println!("[ibl.ai] Got window for presentation (count: {})", window_count);
         window
     } else {
-        println!("[ibl.ai OS] ⚠️  No windows available");
+        println!("[ibl.ai] ⚠️  No windows available");
         ptr::null_mut()
     }
 }
@@ -232,13 +232,13 @@ unsafe fn get_presentation_window_macos() -> *mut Object {
     let key_window: *mut Object = msg_send![app, keyWindow];
 
     if !key_window.is_null() {
-        println!("[ibl.ai OS] Got key window for macOS presentation");
+        println!("[ibl.ai] Got key window for macOS presentation");
         key_window
     } else {
         // Try getting the main window instead
         let main_window: *mut Object = msg_send![app, mainWindow];
         if !main_window.is_null() {
-            println!("[ibl.ai OS] Got main window for macOS presentation");
+            println!("[ibl.ai] Got main window for macOS presentation");
             main_window
         } else {
             // Get first window from windows array
@@ -246,10 +246,10 @@ unsafe fn get_presentation_window_macos() -> *mut Object {
             let window_count: usize = msg_send![windows, count];
             if window_count > 0 {
                 let window: *mut Object = msg_send![windows, objectAtIndex: 0usize];
-                println!("[ibl.ai OS] Got first window for macOS presentation (count: {})", window_count);
+                println!("[ibl.ai] Got first window for macOS presentation (count: {})", window_count);
                 window
             } else {
-                println!("[ibl.ai OS] ⚠️  No windows available on macOS");
+                println!("[ibl.ai] ⚠️  No windows available on macOS");
                 ptr::null_mut()
             }
         }
@@ -290,23 +290,23 @@ unsafe fn get_context_provider_class_macos() -> &'static Class {
 #[cfg(target_os = "macos")]
 #[allow(unexpected_cfgs)]
 fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(), String> {
-    println!("[ibl.ai OS] open_with_auth_session_macos called with URL: {}", url);
+    println!("[ibl.ai] open_with_auth_session_macos called with URL: {}", url);
 
     unsafe {
         let c_url = CString::new(url).map_err(|_| {
-            "[ibl.ai OS] ❌ Failed to create CString from URL".to_string()
+            "[ibl.ai] ❌ Failed to create CString from URL".to_string()
         })?;
         let ns_string: *mut Object =
             msg_send![class!(NSString), stringWithUTF8String: c_url.as_ptr()];
         if ns_string.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create NSString".to_string());
+            return Err("[ibl.ai] ❌ Failed to create NSString".to_string());
         }
 
         let ns_url: *mut Object = msg_send![class!(NSURL), URLWithString: ns_string];
         if ns_url.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create NSURL".to_string());
+            return Err("[ibl.ai] ❌ Failed to create NSURL".to_string());
         }
-        println!("[ibl.ai OS] ✓ NSURL created successfully");
+        println!("[ibl.ai] ✓ NSURL created successfully");
 
         // Create callback URL scheme string - use custom scheme
         let scheme_c = CString::new("iblai-mentor").unwrap();
@@ -315,11 +315,11 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         // Try to get ASWebAuthenticationSession class (macOS 10.15+)
         let auth_session_class = match Class::get("ASWebAuthenticationSession") {
             Some(class) => {
-                println!("[ibl.ai OS] ✓ ASWebAuthenticationSession class found on macOS");
+                println!("[ibl.ai] ✓ ASWebAuthenticationSession class found on macOS");
                 class
             },
             None => {
-                println!("[ibl.ai OS] ❌ ASWebAuthenticationSession class NOT found on macOS");
+                println!("[ibl.ai] ❌ ASWebAuthenticationSession class NOT found on macOS");
                 return Err("ASWebAuthenticationSession not available".to_string());
             }
         };
@@ -333,7 +333,7 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
                     let url_c_str: *const i8 = msg_send![url_string_ns, UTF8String];
                     if !url_c_str.is_null() {
                         let url_str = CStr::from_ptr(url_c_str).to_string_lossy().to_string();
-                        println!("[ibl.ai OS] ✅ macOS ASWebAuthenticationSession completed with callback URL: {}", url_str);
+                        println!("[ibl.ai] ✅ macOS ASWebAuthenticationSession completed with callback URL: {}", url_str);
                         handle_auth_session_callback_macos(&app_handle_clone, &url_str);
                     }
                 } else if !error.is_null() {
@@ -341,7 +341,7 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
                     let c_str: *const i8 = msg_send![description, UTF8String];
                     if !c_str.is_null() {
                         let error_str = CStr::from_ptr(c_str);
-                        println!("[ibl.ai OS] ❌ macOS ASWebAuthenticationSession error: {:?}", error_str);
+                        println!("[ibl.ai] ❌ macOS ASWebAuthenticationSession error: {:?}", error_str);
                     }
                 }
             }
@@ -358,14 +358,14 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         ];
 
         if session.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create ASWebAuthenticationSession on macOS".to_string());
+            return Err("[ibl.ai] ❌ Failed to create ASWebAuthenticationSession on macOS".to_string());
         }
-        println!("[ibl.ai OS] ✓ ASWebAuthenticationSession created successfully on macOS");
+        println!("[ibl.ai] ✓ ASWebAuthenticationSession created successfully on macOS");
 
         // Set prefersEphemeralWebBrowserSession to YES
         let responds: BOOL = msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
         if responds == YES {
-            println!("[ibl.ai OS] Setting prefersEphemeralWebBrowserSession = YES on macOS");
+            println!("[ibl.ai] Setting prefersEphemeralWebBrowserSession = YES on macOS");
             let _: () = msg_send![session, setPrefersEphemeralWebBrowserSession: YES];
         }
 
@@ -375,7 +375,7 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         if !provider.is_null() {
             let responds_to_provider: BOOL = msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
             if responds_to_provider == YES {
-                println!("[ibl.ai OS] Setting macOS presentation context provider");
+                println!("[ibl.ai] Setting macOS presentation context provider");
                 let _: () = msg_send![session, setPresentationContextProvider: provider];
             }
         }
@@ -383,10 +383,10 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         // Start the session
         let started: BOOL = msg_send![session, start];
         if started == YES {
-            println!("[ibl.ai OS] ✅ macOS ASWebAuthenticationSession started successfully");
+            println!("[ibl.ai] ✅ macOS ASWebAuthenticationSession started successfully");
             Ok(())
         } else {
-            Err("[ibl.ai OS] ❌ Failed to start ASWebAuthenticationSession on macOS".to_string())
+            Err("[ibl.ai] ❌ Failed to start ASWebAuthenticationSession on macOS".to_string())
         }
     }
 }
@@ -394,23 +394,23 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
 #[cfg(target_os = "ios")]
 #[allow(unexpected_cfgs)]
 fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), String> {
-    println!("[ibl.ai OS] open_with_auth_session called with URL: {}", url);
+    println!("[ibl.ai] open_with_auth_session called with URL: {}", url);
 
     unsafe {
         let c_url = CString::new(url).map_err(|_| {
-            "[ibl.ai OS] ❌ Failed to create CString from URL".to_string()
+            "[ibl.ai] ❌ Failed to create CString from URL".to_string()
         })?;
         let ns_string: *mut Object =
             msg_send![class!(NSString), stringWithUTF8String: c_url.as_ptr()];
         if ns_string.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create NSString".to_string());
+            return Err("[ibl.ai] ❌ Failed to create NSString".to_string());
         }
 
         let ns_url: *mut Object = msg_send![class!(NSURL), URLWithString: ns_string];
         if ns_url.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create NSURL".to_string());
+            return Err("[ibl.ai] ❌ Failed to create NSURL".to_string());
         }
-        println!("[ibl.ai OS] ✓ NSURL created successfully");
+        println!("[ibl.ai] ✓ NSURL created successfully");
 
         // Create callback URL scheme string - use custom scheme
         let scheme_c = CString::new("iblai-mentor").unwrap();
@@ -419,11 +419,11 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
         // Try to get ASWebAuthenticationSession class (iOS 12+)
         let auth_session_class = match Class::get("ASWebAuthenticationSession") {
             Some(class) => {
-                println!("[ibl.ai OS] ✓ ASWebAuthenticationSession class found");
+                println!("[ibl.ai] ✓ ASWebAuthenticationSession class found");
                 class
             },
             None => {
-                println!("[ibl.ai OS] ❌ ASWebAuthenticationSession class NOT found, falling back to Safari app");
+                println!("[ibl.ai] ❌ ASWebAuthenticationSession class NOT found, falling back to Safari app");
                 return open_url_via_application(ns_url);
             }
         };
@@ -439,7 +439,7 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
                     let url_c_str: *const i8 = msg_send![url_string_ns, UTF8String];
                     if !url_c_str.is_null() {
                         let url_str = CStr::from_ptr(url_c_str).to_string_lossy().to_string();
-                        println!("[ibl.ai OS] ✅ ASWebAuthenticationSession completed with callback URL: {}", url_str);
+                        println!("[ibl.ai] ✅ ASWebAuthenticationSession completed with callback URL: {}", url_str);
 
                         // Process the deep link URL in the completion handler
                         handle_deep_link_url(&app_handle_clone, &url_str);
@@ -449,7 +449,7 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
                     let c_str: *const i8 = msg_send![description, UTF8String];
                     if !c_str.is_null() {
                         let error_str = CStr::from_ptr(c_str);
-                        println!("[ibl.ai OS] ❌ ASWebAuthenticationSession error: {:?}", error_str);
+                        println!("[ibl.ai] ❌ ASWebAuthenticationSession error: {:?}", error_str);
                     }
                 }
             }
@@ -467,14 +467,14 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
         ];
 
         if session.is_null() {
-            return Err("[ibl.ai OS] ❌ Failed to create ASWebAuthenticationSession".to_string());
+            return Err("[ibl.ai] ❌ Failed to create ASWebAuthenticationSession".to_string());
         }
-        println!("[ibl.ai OS] ✓ ASWebAuthenticationSession created successfully");
+        println!("[ibl.ai] ✓ ASWebAuthenticationSession created successfully");
 
         // On iOS 13+, set prefersEphemeralWebBrowserSession to YES
         let responds: BOOL = msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
         if responds == YES {
-            println!("[ibl.ai OS] Setting prefersEphemeralWebBrowserSession = YES");
+            println!("[ibl.ai] Setting prefersEphemeralWebBrowserSession = YES");
             let _: () = msg_send![session, setPrefersEphemeralWebBrowserSession: YES];
         }
 
@@ -484,22 +484,22 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
         if !provider.is_null() {
             let responds_to_provider: BOOL = msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
             if responds_to_provider == YES {
-                println!("[ibl.ai OS] Setting presentation context provider");
+                println!("[ibl.ai] Setting presentation context provider");
                 let _: () = msg_send![session, setPresentationContextProvider: provider];
             } else {
-                println!("[ibl.ai OS] ⚠️  Session doesn't respond to setPresentationContextProvider:");
+                println!("[ibl.ai] ⚠️  Session doesn't respond to setPresentationContextProvider:");
             }
         } else {
-            println!("[ibl.ai OS] ⚠️  Failed to create presentation context provider");
+            println!("[ibl.ai] ⚠️  Failed to create presentation context provider");
         }
 
         // Start the session
         let started: BOOL = msg_send![session, start];
         if started == YES {
-            println!("[ibl.ai OS] ✅ ASWebAuthenticationSession started successfully");
+            println!("[ibl.ai] ✅ ASWebAuthenticationSession started successfully");
             Ok(())
         } else {
-            Err("[ibl.ai OS] ❌ Failed to start ASWebAuthenticationSession".to_string())
+            Err("[ibl.ai] ❌ Failed to start ASWebAuthenticationSession".to_string())
         }
     }
 }
@@ -512,7 +512,7 @@ fn open_oauth_url(app: &AppHandle, url: &str) -> Result<(), String> {
 
         app.run_on_main_thread(move || {
             if let Err(err) = open_with_auth_session(&url_for_main, &app_handle) {
-                let error_msg = format!("[ibl.ai OS] ❌ Failed to open auth session: {}", err);
+                let error_msg = format!("[ibl.ai] ❌ Failed to open auth session: {}", err);
                 println!("{}", error_msg);
             }
         })
@@ -527,7 +527,7 @@ fn open_oauth_url(app: &AppHandle, url: &str) -> Result<(), String> {
         // Run on main thread for UI operations
         app.run_on_main_thread(move || {
             if let Err(err) = open_with_auth_session_macos(&url_for_main, &app_handle) {
-                let error_msg = format!("[ibl.ai OS] ❌ Failed to open auth session on macOS: {}", err);
+                let error_msg = format!("[ibl.ai] ❌ Failed to open auth session on macOS: {}", err);
                 println!("{}", error_msg);
             }
         })
@@ -545,7 +545,7 @@ fn open_oauth_url(app: &AppHandle, url: &str) -> Result<(), String> {
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
 fn show_debug_alert(window: &tauri::WebviewWindow, message: &str) {
-    println!("[ibl.ai OS] {}", message);
+    println!("[ibl.ai] {}", message);
 
     let escaped_msg = message.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n").replace('"', "\\\"");
 
@@ -557,12 +557,12 @@ fn show_debug_alert(window: &tauri::WebviewWindow, message: &str) {
 #[cfg(any(target_os = "ios", target_os = "android"))]
 fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
     let window = app_handle.get_webview_window("main");
-    println!("[ibl.ai OS] Deep link received: {}", raw_url);
+    println!("[ibl.ai] Deep link received: {}", raw_url);
 
     let parsed = match Url::parse(raw_url) {
         Ok(url) => url,
         Err(e) => {
-            println!("[ibl.ai OS] Failed to parse URL: {}", e);
+            println!("[ibl.ai] Failed to parse URL: {}", e);
             return;
         }
     };
@@ -570,15 +570,15 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
     let scheme = parsed.scheme();
     let host = parsed.host_str().unwrap_or("");
     let path = parsed.path();
-    println!("[ibl.ai OS] Parsed URL - scheme: {}, host: {}, path: {}", scheme, host, path);
+    println!("[ibl.ai] Parsed URL - scheme: {}, host: {}, path: {}", scheme, host, path);
 
     // Handle both custom URI schemes and Universal Links (https with our domain)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
     let is_universal_link = scheme == "https" && host == "mentorai.iblai.app";
-    println!("[ibl.ai OS] is_custom_scheme: {}, is_universal_link: {}", is_custom_scheme, is_universal_link);
+    println!("[ibl.ai] is_custom_scheme: {}, is_universal_link: {}", is_custom_scheme, is_universal_link);
 
     if !is_custom_scheme && !is_universal_link {
-        println!("[ibl.ai OS] URL not a custom scheme or universal link, ignoring");
+        println!("[ibl.ai] URL not a custom scheme or universal link, ignoring");
         return;
     }
 
@@ -588,15 +588,15 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
     if is_custom_scheme && (path.is_empty() || path == "/") {
         if !host.is_empty() {
             path = format!("/{}", host);
-            println!("[ibl.ai OS] Adjusted path from host: {}", path);
+            println!("[ibl.ai] Adjusted path from host: {}", path);
         }
     }
 
-    println!("[ibl.ai OS] Final path: {}", path);
+    println!("[ibl.ai] Final path: {}", path);
 
     // Only handle SSO-related paths
     if !path.starts_with("/sso-login") && !path.starts_with("/mobile-sso-login") && !path.starts_with("/sso-login-complete") {
-        println!("[ibl.ai OS] Path does not start with SSO-related paths, ignoring");
+        println!("[ibl.ai] Path does not start with SSO-related paths, ignoring");
         return;
     }
 
@@ -608,35 +608,35 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
         }
     }
 
-    println!("[ibl.ai OS] Target URL constructed: {}", target_url);
+    println!("[ibl.ai] Target URL constructed: {}", target_url);
 
     if let Some(window) = window {
-        println!("[ibl.ai OS] Main window found, attempting navigation");
+        println!("[ibl.ai] Main window found, attempting navigation");
 
         if let Ok(js_url) = serde_json::to_string(&target_url) {
             let eval_result = window.eval(&format!("window.location.href = {};", js_url));
             match eval_result {
                 Ok(_) => {
-                    println!("[ibl.ai OS] ✅ Successfully navigated to: {}", target_url);
+                    println!("[ibl.ai] ✅ Successfully navigated to: {}", target_url);
                 },
                 Err(e) => {
-                    println!("[ibl.ai OS] ❌ Failed to navigate: {}", e);
+                    println!("[ibl.ai] ❌ Failed to navigate: {}", e);
                 }
             }
         } else {
-            println!("[ibl.ai OS] ❌ Failed to serialize target URL");
+            println!("[ibl.ai] ❌ Failed to serialize target URL");
         }
     } else {
         let log_msg = "Main window not found, storing as pending deep link".to_string();
-        println!("[ibl.ai OS] {}", log_msg);
+        println!("[ibl.ai] {}", log_msg);
 
         if let Ok(mut pending) = get_pending_deep_link().lock() {
             *pending = Some(target_url.clone());
             let log_msg = format!("Stored pending deep link: {}", target_url);
-            println!("[ibl.ai OS] {}", log_msg);
+            println!("[ibl.ai] {}", log_msg);
         } else {
             let log_msg = "❌ Failed to store pending deep link".to_string();
-            println!("[ibl.ai OS] {}", log_msg);
+            println!("[ibl.ai] {}", log_msg);
         }
     }
 }
@@ -645,12 +645,12 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
 /// This is simpler than the mobile version since desktop always has the main window available
 #[cfg(target_os = "macos")]
 fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
-    println!("[ibl.ai OS] macOS auth session callback: {}", raw_url);
+    println!("[ibl.ai] macOS auth session callback: {}", raw_url);
 
     let parsed = match Url::parse(raw_url) {
         Ok(url) => url,
         Err(e) => {
-            println!("[ibl.ai OS] ❌ Failed to parse callback URL: {}", e);
+            println!("[ibl.ai] ❌ Failed to parse callback URL: {}", e);
             return;
         }
     };
@@ -658,12 +658,12 @@ fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
     let scheme = parsed.scheme();
     let host = parsed.host_str().unwrap_or("");
     let path = parsed.path();
-    println!("[ibl.ai OS] Parsed callback - scheme: {}, host: {}, path: {}", scheme, host, path);
+    println!("[ibl.ai] Parsed callback - scheme: {}, host: {}, path: {}", scheme, host, path);
 
     // Handle custom URI scheme callbacks (iblai-mentor://...)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
     if !is_custom_scheme {
-        println!("[ibl.ai OS] Not a custom scheme callback, ignoring");
+        println!("[ibl.ai] Not a custom scheme callback, ignoring");
         return;
     }
 
@@ -673,13 +673,13 @@ fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
     if final_path.is_empty() || final_path == "/" {
         if !host.is_empty() {
             final_path = format!("/{}", host);
-            println!("[ibl.ai OS] Adjusted path from host: {}", final_path);
+            println!("[ibl.ai] Adjusted path from host: {}", final_path);
         }
     }
 
     // Only handle SSO-related paths
     if !final_path.starts_with("/sso-login") && !final_path.starts_with("/mobile-sso-login") && !final_path.starts_with("/sso-login-complete") {
-        println!("[ibl.ai OS] Path '{}' not SSO-related, ignoring", final_path);
+        println!("[ibl.ai] Path '{}' not SSO-related, ignoring", final_path);
         return;
     }
 
@@ -691,18 +691,18 @@ fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
             target_url.push_str(query);
         }
     }
-    println!("[ibl.ai OS] Target URL: {}", target_url);
+    println!("[ibl.ai] Target URL: {}", target_url);
 
     // Navigate the main window
     if let Some(window) = app_handle.get_webview_window("main") {
         if let Ok(js_url) = serde_json::to_string(&target_url) {
             match window.eval(&format!("window.location.href = {};", js_url)) {
-                Ok(_) => println!("[ibl.ai OS] ✅ Successfully navigated to: {}", target_url),
-                Err(e) => println!("[ibl.ai OS] ❌ Failed to navigate: {}", e),
+                Ok(_) => println!("[ibl.ai] ✅ Successfully navigated to: {}", target_url),
+                Err(e) => println!("[ibl.ai] ❌ Failed to navigate: {}", e),
             }
         }
     } else {
-        println!("[ibl.ai OS] ❌ Main window not found for callback navigation");
+        println!("[ibl.ai] ❌ Main window not found for callback navigation");
     }
 }
 
@@ -1119,7 +1119,7 @@ fn get_os_type() -> String {
 /// This is needed for OAuth flows (like Google login) that don't work in WebViews
 #[command]
 async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
-    println!("[ibl.ai OS] Opening external URL for OAuth: {}", url);
+    println!("[ibl.ai] Opening external URL for OAuth: {}", url);
     #[cfg(target_os = "ios")]
     {
         let (tx, rx) = oneshot::channel();
@@ -1895,40 +1895,40 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .setup(|app| {
             let app_url = get_app_url();
-            println!("[ibl.ai OS] ============================================");
-            println!("[ibl.ai OS] App URL resolved to: {}", app_url);
-            println!("[ibl.ai OS] TAURI_DEV_URL at compile time: {:?}", option_env!("TAURI_DEV_URL"));
-            println!("[ibl.ai OS] ============================================");
+            println!("[ibl.ai] ============================================");
+            println!("[ibl.ai] App URL resolved to: {}", app_url);
+            println!("[ibl.ai] TAURI_DEV_URL at compile time: {:?}", option_env!("TAURI_DEV_URL"));
+            println!("[ibl.ai] ============================================");
 
             #[cfg(any(target_os = "ios", target_os = "android"))]
             {
-                println!("[ibl.ai OS] Setting up deep link handlers for mobile");
+                println!("[ibl.ai] Setting up deep link handlers for mobile");
                 let app_handle = app.handle().clone();
 
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
-                    println!("[ibl.ai OS] Found {} current deep link(s)", urls.len());
+                    println!("[ibl.ai] Found {} current deep link(s)", urls.len());
                     for url in urls {
                         handle_deep_link_url(&app_handle, url.as_str());
                     }
                 } else {
-                    println!("[ibl.ai OS] No current deep links found");
+                    println!("[ibl.ai] No current deep links found");
                 }
 
                 let app_handle = app.handle().clone();
                 app.listen("deep-link://new-url", move |event: tauri::Event| {
-                    println!("[ibl.ai OS] 🔗 Deep link event received!");
-                    println!("[ibl.ai OS] Event payload: {}", event.payload());
+                    println!("[ibl.ai] 🔗 Deep link event received!");
+                    println!("[ibl.ai] Event payload: {}", event.payload());
 
                     if let Ok(urls) = serde_json::from_str::<Vec<String>>(event.payload()) {
-                        println!("[ibl.ai OS] Parsed {} URL(s) from event", urls.len());
+                        println!("[ibl.ai] Parsed {} URL(s) from event", urls.len());
                         for url in urls {
                             handle_deep_link_url(&app_handle, &url);
                         }
                     } else {
-                        println!("[ibl.ai OS] ❌ Failed to parse URLs from event payload");
+                        println!("[ibl.ai] ❌ Failed to parse URLs from event payload");
                     }
                 });
-                println!("[ibl.ai OS] Deep link event listener registered");
+                println!("[ibl.ai] Deep link event listener registered");
             }
 
             // =====================
@@ -2047,11 +2047,11 @@ pub fn run() {
                     let url_str = url.as_str();
                     if is_oauth_url(url_str) {
                         println!(
-                            "[ibl.ai OS] OAuth navigation intercepted, opening system browser: {}",
+                            "[ibl.ai] OAuth navigation intercepted, opening system browser: {}",
                             url_str
                         );
                         if let Err(e) = open_oauth_url(&app_handle, url_str) {
-                            println!("[ibl.ai OS] Failed to open external URL: {}", e);
+                            println!("[ibl.ai] Failed to open external URL: {}", e);
                             return true;
                         }
                         return false;
@@ -2069,7 +2069,7 @@ pub fn run() {
             // =====================
             #[cfg(any(target_os = "ios", target_os = "android"))]
             {
-                println!("[ibl.ai OS] Mobile platform detected, using simplified setup");
+                println!("[ibl.ai] Mobile platform detected, using simplified setup");
 
                 // On mobile, always go to the online app URL
                 let initial_url = tauri::WebviewUrl::External(app_url.parse().unwrap());
@@ -2085,7 +2085,7 @@ pub fn run() {
 
     var appBaseUrl = __IBL_APP_BASE_URL__;
 
-    console.log('[ibl.ai OS] Setting up safe area handling...');
+    console.log('[ibl.ai] Setting up safe area handling...');
 
     // Wait for document.head to be available before DOM operations
     function waitForHead(callback) {
@@ -2103,14 +2103,14 @@ pub fn run() {
             var content = viewport.getAttribute('content') || '';
             if (!content.includes('viewport-fit=cover')) {
                 viewport.setAttribute('content', content + ', viewport-fit=cover');
-                console.log('[ibl.ai OS] Added viewport-fit=cover to viewport meta');
+                console.log('[ibl.ai] Added viewport-fit=cover to viewport meta');
             }
         } else {
             var meta = document.createElement('meta');
             meta.name = 'viewport';
             meta.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
             document.head.appendChild(meta);
-            console.log('[ibl.ai OS] Created viewport meta with viewport-fit=cover');
+            console.log('[ibl.ai] Created viewport meta with viewport-fit=cover');
         }
 
         // Add CSS for safe area handling
@@ -2162,7 +2162,7 @@ pub fn run() {
         }
     `;
         document.head.appendChild(style);
-        console.log('[ibl.ai OS] Safe area CSS applied');
+        console.log('[ibl.ai] Safe area CSS applied');
     }); // End waitForHead callback
 
     // Wait for document.body before adding event listeners
@@ -2191,7 +2191,7 @@ pub fn run() {
             e.preventDefault();
         }, { passive: false });
 
-        console.log('[ibl.ai OS] Safe area setup complete');
+        console.log('[ibl.ai] Safe area setup complete');
     }); // End waitForBody callback
 
     // =====================
@@ -2216,14 +2216,14 @@ pub fn run() {
     }
 
     function openInSystemBrowser(url) {
-        console.log('[ibl.ai OS] Opening OAuth URL in system browser:', url);
+        console.log('[ibl.ai] Opening OAuth URL in system browser:', url);
         if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
             window.__TAURI__.core.invoke('open_external_url', { url: url })
                 .then(function() {
-                    console.log('[ibl.ai OS] Successfully opened URL in system browser');
+                    console.log('[ibl.ai] Successfully opened URL in system browser');
                 })
                 .catch(function(e) {
-                    console.error('[ibl.ai OS] Failed to open URL:', e);
+                    console.error('[ibl.ai] Failed to open URL:', e);
                     alert('Please open Safari and go to:\n' + url);
                 });
             return true;
@@ -2242,9 +2242,9 @@ pub fn run() {
                 return currentHref;
             },
             set href(url) {
-                console.log('[ibl.ai OS] Intercepted location.href =', url);
+                console.log('[ibl.ai] Intercepted location.href =', url);
                 if (isOAuthUrl(url)) {
-                    console.log('[ibl.ai OS] Detected OAuth redirect, opening in system browser');
+                    console.log('[ibl.ai] Detected OAuth redirect, opening in system browser');
                     // Make URL absolute if relative
                     var absoluteUrl = url;
                     if (url.startsWith('/')) {
@@ -2267,7 +2267,7 @@ pub fn run() {
             get search() { return window.location.search; },
             get hash() { return window.location.hash; },
             assign: function(url) {
-                console.log('[ibl.ai OS] Intercepted location.assign()', url);
+                console.log('[ibl.ai] Intercepted location.assign()', url);
                 if (isOAuthUrl(url)) {
                     var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
                     openInSystemBrowser(absoluteUrl);
@@ -2276,7 +2276,7 @@ pub fn run() {
                 window.location.assign(url);
             },
             replace: function(url) {
-                console.log('[ibl.ai OS] Intercepted location.replace()', url);
+                console.log('[ibl.ai] Intercepted location.replace()', url);
                 if (isOAuthUrl(url)) {
                     var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
                     openInSystemBrowser(absoluteUrl);
@@ -2300,9 +2300,9 @@ pub fn run() {
                 Object.defineProperty(Location.prototype, 'href', {
                     get: hrefDescriptor.get,
                     set: function(url) {
-                        console.log('[ibl.ai OS] Location.href setter intercepted:', url);
+                        console.log('[ibl.ai] Location.href setter intercepted:', url);
                         if (isOAuthUrl(url)) {
-                            console.log('[ibl.ai OS] OAuth URL detected, redirecting to system browser');
+                            console.log('[ibl.ai] OAuth URL detected, redirecting to system browser');
                             var absoluteUrl = url;
                             if (url.startsWith('/')) {
                                 absoluteUrl = this.origin + url;
@@ -2317,13 +2317,13 @@ pub fn run() {
                     configurable: true,
                     enumerable: true
                 });
-                console.log('[ibl.ai OS] Location.href setter intercepted successfully');
+                console.log('[ibl.ai] Location.href setter intercepted successfully');
             }
 
             // Also intercept assign and replace
             var originalAssign = Location.prototype.assign;
             Location.prototype.assign = function(url) {
-                console.log('[ibl.ai OS] location.assign() intercepted:', url);
+                console.log('[ibl.ai] location.assign() intercepted:', url);
                 if (isOAuthUrl(url)) {
                     var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
                     if (openInSystemBrowser(absoluteUrl)) return;
@@ -2333,7 +2333,7 @@ pub fn run() {
 
             var originalReplace = Location.prototype.replace;
             Location.prototype.replace = function(url) {
-                console.log('[ibl.ai OS] location.replace() intercepted:', url);
+                console.log('[ibl.ai] location.replace() intercepted:', url);
                 if (isOAuthUrl(url)) {
                     var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
                     if (openInSystemBrowser(absoluteUrl)) return;
@@ -2342,14 +2342,14 @@ pub fn run() {
             };
 
         } catch (e) {
-            console.error('[ibl.ai OS] Failed to intercept location:', e);
+            console.error('[ibl.ai] Failed to intercept location:', e);
         }
     })();
 
     // Also intercept window.open for OAuth popups
     var originalWindowOpen = window.open;
     window.open = function(url, target, features) {
-        console.log('[ibl.ai OS] window.open() intercepted:', url);
+        console.log('[ibl.ai] window.open() intercepted:', url);
         if (url && isOAuthUrl(url)) {
             var absoluteUrl = url;
             if (url.startsWith('/')) {
@@ -2380,9 +2380,9 @@ pub fn run() {
         }
     }, true);
 
-    console.log('[ibl.ai OS] OAuth interceptor installed (location.href + window.open + click)');
+    console.log('[ibl.ai] OAuth interceptor installed (location.href + window.open + click)');
 
-    console.log('[ibl.ai OS] Mobile setup complete (safe area + OAuth)');
+    console.log('[ibl.ai] Mobile setup complete (safe area + OAuth)');
 })();
 "#;
                 let safe_area_script =
@@ -2401,30 +2401,30 @@ pub fn run() {
                 .initialization_script(&combined_script)
                 .on_navigation(move |url| {
                     let url_str = url.as_str();
-                    let log_msg = format!("[ibl.ai OS] [MOBILE] on_navigation called with URL: {}", url_str);
+                    let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
                     println!("{}", log_msg);
 
                     let is_oauth = is_oauth_url(url_str);
-                    let oauth_check_msg = format!("[ibl.ai OS] [MOBILE] is_oauth_url result: {}", is_oauth);
+                    let oauth_check_msg = format!("[ibl.ai] [MOBILE] is_oauth_url result: {}", is_oauth);
                     println!("{}", oauth_check_msg);
 
                     if is_oauth {
                         let intercept_msg = format!(
-                            "[ibl.ai OS] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
+                            "[ibl.ai] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
                             url_str
                         );
                         println!("{}", intercept_msg);
 
                         if let Err(e) = open_oauth_url(&app_handle, url_str) {
-                            let error_msg = format!("[ibl.ai OS] [MOBILE] Failed to open external URL: {}", e);
+                            let error_msg = format!("[ibl.ai] [MOBILE] Failed to open external URL: {}", e);
                             println!("{}", error_msg);
                             return true;
                         }
 
-                        println!("[ibl.ai OS] [MOBILE] Returning false to prevent webview navigation");
+                        println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
                         return false;
                     }
-                    println!("[ibl.ai OS] [MOBILE] Allowing normal navigation");
+                    println!("[ibl.ai] [MOBILE] Allowing normal navigation");
                     true
                 })
                 .build()
@@ -2438,7 +2438,7 @@ pub fn run() {
                     }
                 }
 
-                println!("[ibl.ai OS] Mobile window created with safe area support");
+                println!("[ibl.ai] Mobile window created with safe area support");
             }
 
             Ok(())

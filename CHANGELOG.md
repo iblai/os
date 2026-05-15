@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.64.3](https://github.com/iblai/mentorai/compare/v0.64.2...v0.64.3) (2026-05-14)
+
+### Chores
+
+- **deps:** add @iblai/agent-ai dependency ([75b245a](https://github.com/iblai/mentorai/commit/75b245a4d1e1424259ffa654ad96c3494e6b6769))
+
+## [0.64.2](https://github.com/iblai/mentorai/compare/v0.64.1...v0.64.2) (2026-05-14)
+
+### Bug Fixes
+
+- hasNonExpiredAuthToken returns false when no token, bump iblai-js to 1.9.11 ([7d18371](https://github.com/iblai/mentorai/commit/7d183713b142ee269ac0a30facfbee3e67342028))
+
+### Chores
+
+- add logs ([2633564](https://github.com/iblai/mentorai/commit/2633564b3d70cc80ba84658318e7c7a87a56795e))
+- **deps:** bump version of iblai-js to 1.9.4 ([c020649](https://github.com/iblai/mentorai/commit/c0206490249eec6acf2d121c61527c0d3092580d))
+- **deps:** bump version of iblai-js to 1.9.5 ([42af9ec](https://github.com/iblai/mentorai/commit/42af9ecb3200525507dcf70ad2a2e803ae143315))
+- rename app to ibl.ai, bump to 1.1.11, fix macOS entitlements ([5a7e440](https://github.com/iblai/mentorai/commit/5a7e44085effe2dc9951392d5cc943047811aa72))
+- update Dockerfile to include APP_VERSION arg ([1e04517](https://github.com/iblai/mentorai/commit/1e04517673f8f5c121673838dc6bc340d1b690ae))
+- update Dockerfile to include APP_VERSION arg ([51c5050](https://github.com/iblai/mentorai/commit/51c5050f38a2addb28b3f539df99efe96a48fbfe))
+
 ## [0.64.1](https://github.com/iblai/mentorai/compare/v0.64.0...v0.64.1) (2026-05-12)
 
 ### Chores
