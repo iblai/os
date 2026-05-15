@@ -4,47 +4,47 @@
 
 ### Chores
 
-* update Dockerfile to include APP_VERSION arg ([017ed8a](https://github.com/iblai/mentorai/commit/017ed8afd5db8e7f70bc40908c23783d3f76392d))
+- update Dockerfile to include APP_VERSION arg ([017ed8a](https://github.com/iblai/mentorai/commit/017ed8afd5db8e7f70bc40908c23783d3f76392d))
 
 ## [0.64.0](https://github.com/iblai/mentorai/compare/v0.63.16...v0.64.0) (2026-05-11)
 
 ### Features
 
-* **mentor:** adding open claw tabs for edit mentor ([1a417a8](https://github.com/iblai/mentorai/commit/1a417a8a7503133980b9eeef762990d28e834f9d))
+- **mentor:** adding open claw tabs for edit mentor ([1a417a8](https://github.com/iblai/mentorai/commit/1a417a8a7503133980b9eeef762990d28e834f9d))
 
 ### Bug Fixes
 
-* **e2e:** adding fix for the playwright and merge issues ([13e2853](https://github.com/iblai/mentorai/commit/13e285374f02a376cec942732f29c3ef0a54c5e9))
-* **e2e:** adding for the coverage ([f0409d6](https://github.com/iblai/mentorai/commit/f0409d6c6843dec1477c60d805a4e67fd7507023))
-* **e2e:** better elements capture for tests ([39b2113](https://github.com/iblai/mentorai/commit/39b21137a09e3cef27662ea20bfd3836534d3002))
-* **e2e:** fix for the memory tests ([8d70dca](https://github.com/iblai/mentorai/commit/8d70dcac1ac9b4b6aafef00bfd96b9a1ec1a473b))
-* **e2e:** more fixes for the tests ([a0f2d61](https://github.com/iblai/mentorai/commit/a0f2d61fef2c1b036972788de23da9e3a5b50eb0))
-* **e2e:** open claw test fixes ([34a745d](https://github.com/iblai/mentorai/commit/34a745d1c3a2334c91c42449f5d63ece4906ece7))
-* **e2e:** test fixes for memory and open claw ([ba2ff85](https://github.com/iblai/mentorai/commit/ba2ff8558c2594a41aab0928276ca6c6f24270f1))
-* **mentor:** e2e playwright test fixes for claw ([e72dfb5](https://github.com/iblai/mentorai/commit/e72dfb58e34e544026001a1dc1e910af1c7bff20))
-* **mentor:** fixes for e2e and unit tests ([5315c3e](https://github.com/iblai/mentorai/commit/5315c3e67cfd875f9ff71316497efcd2e92889a1))
-* **mentor:** fixes for e2e and unit tests ([e7e24dd](https://github.com/iblai/mentorai/commit/e7e24ddafb989738662e7a7cbaa12789a7b59fca))
-* **mentor:** fixing imports ([7644b2f](https://github.com/iblai/mentorai/commit/7644b2f5f18869b1003e164c10c494460996017e))
-* **mentor:** memory test fixes ([9404b7b](https://github.com/iblai/mentorai/commit/9404b7b359b02a16f2414897d5c4ef474fe0ba03))
-* **mentor:** open claw fixes ([ffc5c96](https://github.com/iblai/mentorai/commit/ffc5c96872ad6b5118a492b0001a04a9323544ef))
-* **mentor:** package version fixes ([8b0b745](https://github.com/iblai/mentorai/commit/8b0b745ba507db0e9dc55725aa12766faa84d237))
-* **mentor:** remove yalc package ([1acb196](https://github.com/iblai/mentorai/commit/1acb19653a71aa5fa32c0e360651585ee644590e))
-* **mentor:** reverting prepush hook ([030152e](https://github.com/iblai/mentorai/commit/030152e0058448e0a6430722b0f16519fb8fb087))
-* **mentor:** udpates for open claw and playwright tests ([b5f95a2](https://github.com/iblai/mentorai/commit/b5f95a2bcb8c70e6457661be344d8006348033e2))
-* replace yalc @iblai/iblai-js with registry version 1.1.9 ([1c92772](https://github.com/iblai/mentorai/commit/1c92772fbcbb1b616a5261ef143cd670bec0c766))
-* skip version.tsx from unit test coverage check (pure JSX, not instrumentable) ([478e82c](https://github.com/iblai/mentorai/commit/478e82c943ecff42a9595333d08c02b7194f2f5e))
+- **e2e:** adding fix for the playwright and merge issues ([13e2853](https://github.com/iblai/mentorai/commit/13e285374f02a376cec942732f29c3ef0a54c5e9))
+- **e2e:** adding for the coverage ([f0409d6](https://github.com/iblai/mentorai/commit/f0409d6c6843dec1477c60d805a4e67fd7507023))
+- **e2e:** better elements capture for tests ([39b2113](https://github.com/iblai/mentorai/commit/39b21137a09e3cef27662ea20bfd3836534d3002))
+- **e2e:** fix for the memory tests ([8d70dca](https://github.com/iblai/mentorai/commit/8d70dcac1ac9b4b6aafef00bfd96b9a1ec1a473b))
+- **e2e:** more fixes for the tests ([a0f2d61](https://github.com/iblai/mentorai/commit/a0f2d61fef2c1b036972788de23da9e3a5b50eb0))
+- **e2e:** open claw test fixes ([34a745d](https://github.com/iblai/mentorai/commit/34a745d1c3a2334c91c42449f5d63ece4906ece7))
+- **e2e:** test fixes for memory and open claw ([ba2ff85](https://github.com/iblai/mentorai/commit/ba2ff8558c2594a41aab0928276ca6c6f24270f1))
+- **mentor:** e2e playwright test fixes for claw ([e72dfb5](https://github.com/iblai/mentorai/commit/e72dfb58e34e544026001a1dc1e910af1c7bff20))
+- **mentor:** fixes for e2e and unit tests ([5315c3e](https://github.com/iblai/mentorai/commit/5315c3e67cfd875f9ff71316497efcd2e92889a1))
+- **mentor:** fixes for e2e and unit tests ([e7e24dd](https://github.com/iblai/mentorai/commit/e7e24ddafb989738662e7a7cbaa12789a7b59fca))
+- **mentor:** fixing imports ([7644b2f](https://github.com/iblai/mentorai/commit/7644b2f5f18869b1003e164c10c494460996017e))
+- **mentor:** memory test fixes ([9404b7b](https://github.com/iblai/mentorai/commit/9404b7b359b02a16f2414897d5c4ef474fe0ba03))
+- **mentor:** open claw fixes ([ffc5c96](https://github.com/iblai/mentorai/commit/ffc5c96872ad6b5118a492b0001a04a9323544ef))
+- **mentor:** package version fixes ([8b0b745](https://github.com/iblai/mentorai/commit/8b0b745ba507db0e9dc55725aa12766faa84d237))
+- **mentor:** remove yalc package ([1acb196](https://github.com/iblai/mentorai/commit/1acb19653a71aa5fa32c0e360651585ee644590e))
+- **mentor:** reverting prepush hook ([030152e](https://github.com/iblai/mentorai/commit/030152e0058448e0a6430722b0f16519fb8fb087))
+- **mentor:** udpates for open claw and playwright tests ([b5f95a2](https://github.com/iblai/mentorai/commit/b5f95a2bcb8c70e6457661be344d8006348033e2))
+- replace yalc @iblai/iblai-js with registry version 1.1.9 ([1c92772](https://github.com/iblai/mentorai/commit/1c92772fbcbb1b616a5261ef143cd670bec0c766))
+- skip version.tsx from unit test coverage check (pure JSX, not instrumentable) ([478e82c](https://github.com/iblai/mentorai/commit/478e82c943ecff42a9595333d08c02b7194f2f5e))
 
 ### Chores
 
-* **deps:** bump iblai-js to 1.9.3 ([2fc5648](https://github.com/iblai/mentorai/commit/2fc5648f1e93bd0d7eb4a11ef1a093e786a49e2f))
-* drop redundant claw mock entries from tests not exercising claw ([ee8516e](https://github.com/iblai/mentorai/commit/ee8516e9cc73273358040dbd8b766f43cd92e738))
-* **mentor:** adding claw updates better ui ([bf86f0e](https://github.com/iblai/mentorai/commit/bf86f0ed2269dfed01c7dd62a9876d27aeb87b8f))
-* **mentor:** fixing for skills and settings tab ([ec85a2d](https://github.com/iblai/mentorai/commit/ec85a2dc8774192fab9759b350bb3c8628e89444))
-* **mentor:** skills tab fixes and playwright tests ([223206b](https://github.com/iblai/mentorai/commit/223206b07420ca65961620fe5612d033242ab5b4))
+- **deps:** bump iblai-js to 1.9.3 ([2fc5648](https://github.com/iblai/mentorai/commit/2fc5648f1e93bd0d7eb4a11ef1a093e786a49e2f))
+- drop redundant claw mock entries from tests not exercising claw ([ee8516e](https://github.com/iblai/mentorai/commit/ee8516e9cc73273358040dbd8b766f43cd92e738))
+- **mentor:** adding claw updates better ui ([bf86f0e](https://github.com/iblai/mentorai/commit/bf86f0ed2269dfed01c7dd62a9876d27aeb87b8f))
+- **mentor:** fixing for skills and settings tab ([ec85a2d](https://github.com/iblai/mentorai/commit/ec85a2dc8774192fab9759b350bb3c8628e89444))
+- **mentor:** skills tab fixes and playwright tests ([223206b](https://github.com/iblai/mentorai/commit/223206b07420ca65961620fe5612d033242ab5b4))
 
 ### Tests
 
-* fix hasNonExpiredAuthToken ([d91a6a5](https://github.com/iblai/mentorai/commit/d91a6a510b0ab49baee1766c93bae35b6e8c33d2))
+- fix hasNonExpiredAuthToken ([d91a6a5](https://github.com/iblai/mentorai/commit/d91a6a510b0ab49baee1766c93bae35b6e8c33d2))
 
 ## [0.63.16](https://github.com/iblai/mentorai/compare/v0.63.15...v0.63.16) (2026-05-11)
 

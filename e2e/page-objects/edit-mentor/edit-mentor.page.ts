@@ -11,6 +11,7 @@ import { McpTab } from './mcp.tab';
 import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
+import { PrivacyTab } from './privacy.tab';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -29,6 +30,7 @@ export class EditMentorPage {
   readonly mcp: McpTab;
   readonly embed: EmbedTab;
   readonly access: AccessTab;
+  readonly privacy: PrivacyTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -50,6 +52,7 @@ export class EditMentorPage {
     this.mcp = new McpTab(page, this.dialog);
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
+    this.privacy = new PrivacyTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
