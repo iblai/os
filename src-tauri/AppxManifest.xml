@@ -23,7 +23,7 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>ibl.ai OS</DisplayName>
+    <DisplayName>ibl.ai</DisplayName>
     <PublisherDisplayName>ibl.ai</PublisherDisplayName>
     <Logo>icons\StoreLogo.png</Logo>
     <Description>AI-powered mentoring assistant</Description>
@@ -46,8 +46,8 @@
       EntryPoint="Windows.FullTrustApplication">
 
       <uap:VisualElements
-        DisplayName="ibl.ai OS"
-        Description="ibl.ai OS provides intelligent tutoring and learning support with offline capabilities."
+        DisplayName="ibl.ai"
+        Description="ibl.ai provides intelligent tutoring and learning support with offline capabilities."
         BackgroundColor="transparent"
         Square150x150Logo="icons\Square150x150Logo.png"
         Square44x44Logo="icons\Square44x44Logo.png">
@@ -56,7 +56,7 @@
           Square71x71Logo="icons\Square71x71Logo.png"
           Wide310x150Logo="icons\Wide310x150Logo.png"
           Square310x310Logo="icons\Square310x310Logo.png"
-          ShortName="ibl.ai OS" />
+          ShortName="ibl.ai" />
       </uap:VisualElements>
 
       <Extensions>

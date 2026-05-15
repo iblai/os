@@ -124,7 +124,7 @@ if ($RegisterOnly) {
 
     Add-AppxPackage -Register $ManifestPath
 
-    Write-Host "`nApp registered! Look for 'ibl.ai OS' in your Start menu." -ForegroundColor Green
+    Write-Host "`nApp registered! Look for 'ibl.ai' in your Start menu." -ForegroundColor Green
     Write-Host 'To unregister: Get-AppxPackage -Name ibl.ai.ibl.aiOS | Remove-AppxPackage' -ForegroundColor Gray
     exit 0
 }

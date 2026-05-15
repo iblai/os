@@ -41,7 +41,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return true;
+    return false;
   }
 
   const tokenExpiry = window.localStorage.getItem(
@@ -151,7 +151,10 @@ export async function redirectToAuthSpa(
   }
 
   if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
+    console.log(
+      '[redirectToAuthSpa]: sending authExpired to parent',
+      JSON.stringify(localStorage),
+    );
     sendMessageToParentWebsite({ authExpired: true });
     return;
   }
