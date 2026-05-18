@@ -9,7 +9,7 @@ export function LearnerModeSwitch() {
       checked={isInstructorMode}
       onCheckedChange={toggleLearnerMode}
       className="data-[state=checked]:bg-blue-500"
-      aria-label={`Learner mode ${isInstructorMode ? 'enabled' : 'disabled'}`}
+      aria-label={`User mode ${isInstructorMode ? 'enabled' : 'disabled'}`}
     />
   );
 }
