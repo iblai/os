@@ -57,18 +57,18 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     this.allowCopiesToggle = dialog.locator(
-      'button[role="switch"][aria-label*="Allow copies"]',
+      'button[role="switch"][aria-label*="Copies"]',
     );
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
       exact: true,
     });
     this.showVoiceCallToggle = dialog.getByRole('switch', {
-      name: /show voice call/i,
+      name: /voice calls/i,
     });
-    // The Advanced Sandbox switch — aria-label reflects its current state
+    // The Sandbox switch — aria-label reflects its current state
     this.advancedSandboxToggle = dialog.getByRole('switch', {
-      name: /^Advanced sandbox/i,
+      name: /^Sandbox/i,
     });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
@@ -77,10 +77,10 @@ export class SettingsTab {
     // "Memory enabled" or "Memory disabled" depending on current state.
     this.memoryToggle = dialog.getByRole('switch', { name: /^Memory /i });
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /enhance document retrieval/i,
+      name: /^enhanced rag /i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enhance document retrieval',
+      name: 'More info about enhanced rag',
     });
   }
 
@@ -150,7 +150,7 @@ export class SettingsTab {
   }
 
   /**
-   * Toggles the Allow Copies switch to the desired state and waits until the
+   * Toggles the Copies switch to the desired state and waits until the
    * mutation is fully observable — the success toast must appear AND the next
    * mentor settings refetch has to settle, otherwise the Copy button on the
    * subsequent reopen can lag behind the form's toggle state by several
@@ -292,7 +292,7 @@ export class SettingsTab {
   }
 
   /**
-   * Returns true when the Advanced Sandbox toggle is ON (aria-checked="true").
+   * Returns true when the Sandbox toggle is ON (aria-checked="true").
    */
   async isAdvancedSandboxEnabled(): Promise<boolean> {
     const state = await this.advancedSandboxToggle
@@ -302,7 +302,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the Advanced Sandbox toggle to the desired state and clicks Save.
+   * Sets the Sandbox toggle to the desired state and clicks Save.
    * Does nothing if the toggle is already in the desired state.
    *
    * Waits for the success toast to confirm the save completed before returning,

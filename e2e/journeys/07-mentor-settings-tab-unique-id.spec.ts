@@ -190,16 +190,13 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     await editMentorPage.close();
   });
 
-  // uid-06: Enhance Document Retrieval toggle is visible with correct label, default OFF
-  test('admin goes to mentor settings tab and sees the Enhance Document Retrieval toggle defaulting to OFF', async ({
+  // uid-06: Enhanced RAG toggle is visible with correct label, default OFF
+  test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
     editMentorPage,
   }) => {
-    const label = editMentorPage.dialog.getByText(
-      'Enhance Document Retrieval',
-      {
-        exact: true,
-      },
-    );
+    const label = editMentorPage.dialog.getByText('Enhanced RAG', {
+      exact: true,
+    });
     await expect(label).toBeVisible({ timeout: 10_000 });
 
     const toggle = editMentorPage.settings.enhanceDocumentRetrievalToggle;
@@ -208,15 +205,13 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     // Default value is false (mentor?.enable_multi_query_rag ?? false)
     const ariaChecked = await toggle.getAttribute('aria-checked');
     expect(ariaChecked).toBe('false');
-    logger.info(
-      `uid-06: Enhance Document Retrieval toggle aria-checked=${ariaChecked}`,
-    );
+    logger.info(`uid-06: Enhanced RAG toggle aria-checked=${ariaChecked}`);
 
     await editMentorPage.close();
   });
 
-  // uid-07: Enhance Document Retrieval tooltip contains expected wording
-  test('admin goes to mentor settings tab and sees the Enhance Document Retrieval tooltip text', async ({
+  // uid-07: Enhanced RAG tooltip contains expected wording
+  test('admin goes to mentor settings tab and sees the Enhanced RAG tooltip text', async ({
     page,
     editMentorPage,
   }) => {
@@ -230,21 +225,19 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
         name: /multiple search queries from a single user question/i,
       }),
     ).toBeVisible({ timeout: 5_000 });
-    logger.info(
-      'uid-07: Enhance Document Retrieval tooltip content is visible',
-    );
+    logger.info('uid-07: Enhanced RAG tooltip content is visible');
 
     await editMentorPage.close();
   });
 
-  // uid-08: Enhance Document Retrieval toggle persists ON then OFF across save/reopen cycles
-  test('admin goes to mentor settings tab and toggles Enhance Document Retrieval ON then OFF with persistence', async ({
+  // uid-08: Enhanced RAG toggle persists ON then OFF across save/reopen cycles
+  test('admin goes to mentor settings tab and toggles Enhanced RAG ON then OFF with persistence', async ({
     page,
     editMentorPage,
   }) => {
     // --- Turn ON ---
     await editMentorPage.settings.enableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhance Document Retrieval = ON');
+    logger.info('uid-08: Saved Enhanced RAG = ON');
 
     await editMentorPage.close();
 
@@ -261,7 +254,7 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
 
     // --- Turn OFF ---
     await editMentorPage.settings.disableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhance Document Retrieval = OFF');
+    logger.info('uid-08: Saved Enhanced RAG = OFF');
 
     await editMentorPage.close();
 

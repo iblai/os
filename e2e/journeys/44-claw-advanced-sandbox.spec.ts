@@ -1,14 +1,14 @@
 /**
  * Journey 44: CLAW Advanced Sandbox
  *
- * Covers the full lifecycle of the "Advanced Sandbox" feature (CLAW) in
+ * Covers the full lifecycle of the "Sandbox" feature (CLAW) in
  * the Edit Mentor modal:
  *
- *   Settings tab  — "Advanced Sandbox" toggle
+ *   Settings tab  — "Sandbox" toggle
  *   Tab visibility — Sandbox tab (after Settings) and Skills tab (after Prompts)
  *   Prompts tab   — "Agent Configuration" section
  *
- * The Advanced Sandbox toggle is "admin intent" — it maps directly to
+ * The Sandbox toggle is "admin intent" — it maps directly to
  * `enable_claw` on the mentor settings PUT. The toggle is always enabled for
  * admins (no dependency on a wired ClawMentorConfig).
  *
@@ -82,13 +82,12 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin)
-      test.skip(true, 'CLAW Advanced Sandbox requires admin access');
+    if (!isAdmin) test.skip(true, 'CLAW Sandbox requires admin access');
   });
 
   // ── TC01: Toggle is present in Settings tab ───────────────────────────────
 
-  test('admin opens Settings tab and Advanced Sandbox toggle is present', async ({
+  test('admin opens Settings tab and Sandbox toggle is present', async ({
     page,
     editMentorPage,
   }) => {
@@ -102,7 +101,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
   // ── TC02: Toggle is always interactable for admins (intent-only) ──────────
 
-  test('Advanced Sandbox toggle is interactable regardless of claw config state', async ({
+  test('Sandbox toggle is interactable regardless of claw config state', async ({
     page,
     editMentorPage,
   }) => {
@@ -126,7 +125,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   // tab state, so it doesn't depend on the test environment having CLAW
   // disabled.
 
-  test('admin flips Advanced Sandbox toggle but does not save — tab visibility is unchanged', async ({
+  test('admin flips Sandbox toggle but does not save — tab visibility is unchanged', async ({
     page,
     editMentorPage,
   }) => {
@@ -183,7 +182,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   // ClawMentorConfig (sandbox connected to an instance) — those are covered
   // conditionally in TC04b.
 
-  test('admin enables Advanced Sandbox and Sandbox tab appears after save (right after Settings)', async ({
+  test('admin enables Sandbox and Sandbox tab appears after save (right after Settings)', async ({
     page,
     editMentorPage,
   }) => {
@@ -306,7 +305,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
   // ── TC05: Reverse path — disable CLAW and verify tabs + section disappear ─
 
-  test('admin disables Advanced Sandbox and Sandbox tab, Skills tab, and Agent Configuration section disappear after save', async ({
+  test('admin disables Sandbox and Sandbox tab, Skills tab, and Agent Configuration section disappear after save', async ({
     page,
     editMentorPage,
   }) => {
@@ -455,11 +454,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin)
-      test.skip(true, 'CLAW Advanced Sandbox requires admin access');
+    if (!isAdmin) test.skip(true, 'CLAW Sandbox requires admin access');
   });
 
-  test('admin toggles Advanced Sandbox ON then OFF and Sandbox tab appears then disappears in the same session', async ({
+  test('admin toggles Sandbox ON then OFF and Sandbox tab appears then disappears in the same session', async ({
     page,
     editMentorPage,
   }) => {
