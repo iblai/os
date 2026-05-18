@@ -377,22 +377,22 @@ describe('SettingsTab', () => {
       expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
     });
 
-    it('renders Show Attachment toggle', () => {
+    it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Attachment')).toBeInTheDocument();
+      expect(screen.getByText('File Attachments')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Call toggle', () => {
+    it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Call')).toBeInTheDocument();
+      expect(screen.getByText('Voice Calls')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Record toggle', () => {
+    it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
+      expect(screen.getByText('Voice Recordings')).toBeInTheDocument();
     });
 
     it('renders Image upload section', () => {
@@ -424,9 +424,9 @@ describe('SettingsTab', () => {
       );
       const otherTriggers = [
         screen.getByLabelText('More info about lti accessibility'),
-        screen.getByLabelText('More info about show attachment'),
-        screen.getByLabelText('More info about show voice call'),
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about file attachments'),
+        screen.getByLabelText('More info about voice calls'),
+        screen.getByLabelText('More info about voice recordings'),
       ];
 
       [...chatAccessTriggers, ...otherTriggers].forEach((trigger) => {
@@ -461,11 +461,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Attachment tooltip does not call editMentor', async () => {
+    it('clicking File Attachments tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show attachment',
+        'More info about file attachments',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -474,11 +474,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Voice Call tooltip does not call editMentor', async () => {
+    it('clicking Voice Calls tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show voice call',
+        'More info about voice calls',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -487,11 +487,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Voice Record tooltip does not call editMentor', async () => {
+    it('clicking Voice Recordings tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show voice record',
+        'More info about voice recordings',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -569,69 +569,67 @@ describe('SettingsTab', () => {
     it('reflects show_attachment checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show attachment enabled');
+      const toggle = screen.getByLabelText('File attachments enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_call checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice call enabled');
+      const toggle = screen.getByLabelText('Voice calls enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_record unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('reflects is_lti_accessible unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Is lti accessible disabled');
+      const toggle = screen.getByLabelText('Lti accessible disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_attachment switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show attachment enabled');
+      const toggle = screen.getByLabelText('File attachments enabled');
       fireEvent.click(toggle);
 
       expect(
-        screen.getByLabelText('Show attachment disabled'),
+        screen.getByLabelText('File attachments disabled'),
       ).not.toBeChecked();
     });
 
     it('toggles show_voice_call switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice call enabled');
+      const toggle = screen.getByLabelText('Voice calls enabled');
       fireEvent.click(toggle);
 
-      expect(
-        screen.getByLabelText('Show voice call disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Voice calls disabled')).not.toBeChecked();
     });
 
     it('toggles show_voice_record switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
     });
 
     it('toggles is_lti_accessible switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Is lti accessible disabled');
+      const toggle = screen.getByLabelText('Lti accessible disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Is lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Lti accessible enabled')).toBeChecked();
     });
   });
 
@@ -640,6 +638,16 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByLabelText('Memory disabled')).not.toBeChecked();
+    });
+
+    it('renders the Memory tooltip describing the agent (not mentor)', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(
+          /Allow this agent to remember and reference information from past conversations\./i,
+        ),
+      ).toBeInTheDocument();
     });
 
     it('renders the Memory switch as enabled when enable_memory_component is true', () => {
@@ -1010,16 +1018,14 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment enabled'),
+        screen.getByLabelText('File attachments enabled'),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Voice calls enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Voice recordings disabled'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Show voice call enabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Show voice record disabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Is lti accessible disabled'),
+        screen.getByLabelText('Lti accessible disabled'),
       ).toBeInTheDocument();
     });
 
@@ -1038,13 +1044,13 @@ describe('SettingsTab', () => {
         screen.getByLabelText('More info about lti accessibility'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show attachment'),
+        screen.getByLabelText('More info about file attachments'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice call'),
+        screen.getByLabelText('More info about voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -1126,7 +1132,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Toggle show_voice_record from false to true
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1167,17 +1173,17 @@ describe('SettingsTab', () => {
     });
   });
 
-  describe('Allow Copies Toggle', () => {
-    it('renders Allow Copies toggle', () => {
+  describe('Copies Toggle', () => {
+    it('renders Copies toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Allow Copies')).toBeInTheDocument();
+      expect(screen.getByText('Copies')).toBeInTheDocument();
     });
 
     it('reflects forkable checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       expect(toggle).toBeChecked();
     });
 
@@ -1189,23 +1195,23 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies disabled');
+      const toggle = screen.getByLabelText('Copies disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles forkable switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Allow copies disabled')).not.toBeChecked();
+      expect(screen.getByLabelText('Copies disabled')).not.toBeChecked();
     });
 
     it('submits forkable value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1226,7 +1232,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about allow copies'),
+        screen.getByLabelText('More info about copies'),
       ).toBeInTheDocument();
     });
   });
@@ -1295,11 +1301,11 @@ describe('SettingsTab', () => {
   // ADVANCED SANDBOX (CLAW)
   // ==========================================================================
 
-  describe('Advanced Sandbox toggle', () => {
-    it('renders the Advanced Sandbox toggle', () => {
+  describe('Sandbox toggle', () => {
+    it('renders the Sandbox toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Advanced Sandbox')).toBeInTheDocument();
+      expect(screen.getByText('Sandbox')).toBeInTheDocument();
     });
 
     it('reflects enable_claw=true from mentor settings as checked', () => {
@@ -1310,31 +1316,29 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Advanced sandbox enabled')).toBeChecked();
+      expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
     });
 
     it('reflects enable_claw=false (or missing) from mentor settings as unchecked', () => {
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Advanced sandbox disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Sandbox disabled')).not.toBeChecked();
     });
 
     it('toggle is enabled regardless of claw config state (admin intent)', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Advanced sandbox disabled');
+      const toggle = screen.getByLabelText('Sandbox disabled');
       expect(toggle).not.toBeDisabled();
     });
 
     it('flipping the toggle does not immediately call editMentor', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Advanced sandbox enabled')).toBeChecked();
+        expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
       });
       expect(mockEditMentor).not.toHaveBeenCalled();
     });
@@ -1342,7 +1346,7 @@ describe('SettingsTab', () => {
     it('on Save, includes enable_claw=true in the editMentor formData when toggled on', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1364,7 +1368,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Advanced sandbox enabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1398,7 +1402,7 @@ describe('SettingsTab', () => {
   // ==========================================================================
   // CLAW CONFIG SYNC ON SAVE
   //
-  // When the Advanced Sandbox toggle changes AND a claw-config exists for the
+  // When the Sandbox toggle changes AND a claw-config exists for the
   // mentor, the save must ALSO PATCH /claw-config to keep `enabled` in sync.
   // When no claw-config exists (the data-layer normalises 404 → null), the
   // PATCH is skipped and only mentor-settings is written.
@@ -1442,7 +1446,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip OFF → ON, save
-      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1470,7 +1474,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip ON → OFF, save
-      fireEvent.click(screen.getByLabelText('Advanced sandbox enabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1491,7 +1495,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1532,7 +1536,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Advanced sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
