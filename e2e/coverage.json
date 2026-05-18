@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-10",
+  "lastUpdated": "2026-05-12",
   "summary": {
-    "totalCheckpoints": 387,
-    "coveredCheckpoints": 375,
-    "deprecatedCheckpoints": 12,
+    "totalCheckpoints": 399,
+    "coveredCheckpoints": 386,
+    "deprecatedCheckpoints": 13,
     "percent": 100,
-    "totalJourneys": 45,
-    "activeJourneys": 44
+    "totalJourneys": 47,
+    "activeJourneys": 46
   },
   "journeys": [
     {
@@ -2516,6 +2516,85 @@
         {
           "id": "vtt-01",
           "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "dataset-cloud-pickers",
+      "name": "Dataset Cloud Pickers",
+      "spec": "45-dataset-cloud-pickers.spec.ts",
+      "sourceFiles": [
+        "hooks/use-google-drive-picker.ts",
+        "hooks/use-one-drive-picker.ts",
+        "hooks/use-dropdox-picker.ts",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "dscp-01",
+          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Google Drive — asserts a popup opens at accounts.google.com (OAuth flow)",
+          "status": "covered"
+        },
+        {
+          "id": "dscp-02",
+          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Microsoft OneDrive — asserts a popup opens at login.microsoftonline.com (OAuth flow)",
+          "status": "covered"
+        },
+        {
+          "id": "dscp-03",
+          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Dropbox — asserts a popup opens at www.dropbox.com/chooser (Dropbox Chooser SDK)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "dataset-upload-types",
+      "name": "Dataset Upload Types",
+      "spec": "46-dataset-upload-types.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "du-01",
+          "description": "Admin uploads a PowerPoint (.pptx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-02",
+          "description": "Admin uploads a DOCX file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-03",
+          "description": "Admin uploads a CSV file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-04",
+          "description": "Admin uploads a TXT file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-05",
+          "description": "Admin uploads an Audio (.mp3) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-06",
+          "description": "Admin uploads a Video (.mp4) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-07",
+          "description": "Admin uploads an Image (.png) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-08",
+          "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
           "status": "covered"
         }
       ]
