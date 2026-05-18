@@ -48,6 +48,7 @@ export const MODALS = {
       mcp: 'mcp',
       tools: 'tools',
       safety: 'safety',
+      privacy: 'privacy',
       disclaimer: 'disclaimer',
       access: 'access',
       memory: 'memory',

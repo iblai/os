@@ -188,6 +188,7 @@ vi.mock('../tabs', () => ({
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   FlowTab: () => <div data-testid="flow-tab">Flow Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
