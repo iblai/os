@@ -6,7 +6,10 @@ import {
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
-import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import {
+  enableChatActionsPopup,
+  setAutoplayLastAiMessage,
+} from '@/features/chat/chatSlice';
 import eventBus, { RemoteEvents } from './eventBus';
 
 export function useIframeHandlers() {
@@ -171,6 +174,14 @@ export function useIframeHandlers() {
     },
     'MENTOR:NEW_CHAT': () => {
       eventBus.emit(RemoteEvents.newChat);
+    },
+    'MENTOR:ENABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
+      dispatch(setAutoplayLastAiMessage(true));
+      eventBus.emit(RemoteEvents.enableAutoplayLastAiMessage);
+    },
+    'MENTOR:DISABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
+      dispatch(setAutoplayLastAiMessage(false));
+      eventBus.emit(RemoteEvents.disableAutoplayLastAiMessage);
     },
   };
 

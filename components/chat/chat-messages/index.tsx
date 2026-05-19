@@ -6,6 +6,9 @@ import React, { forwardRef } from 'react';
 import { formatRelativeDate } from '@/lib/utils';
 import { Message as BaseMessage } from '@iblai/iblai-js/web-utils';
 import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
+import { useSpeech } from '@/hooks/use-speech';
+import { useAppSelector } from '@/lib/hooks';
+import { selectAutoplayLastAiMessage } from '@/features/chat/chatSlice';
 import type { CanvasOpenPayload } from './types';
 import { UserMessageBubble } from './user-message-bubble';
 
@@ -29,6 +32,7 @@ type Props = {
   mentorId: string;
   tenantKey: string;
   streamingArtifactId?: number;
+  isStreaming?: boolean;
   handleHighlightMessage: (messageId: number) => void;
   handleSubmit: (content: string) => void;
   onReply?: (message: Message) => void;
@@ -49,10 +53,13 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
       onReply,
       onOpenCanvas,
       streamingArtifactId,
+      isStreaming = false,
     },
     ref,
   ) {
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
+    const { speak, stop } = useSpeech();
+    const autoplayEnabled = useAppSelector(selectAutoplayLastAiMessage);
 
     // Find the index of the last AI message for focus management
     const visibleMessages = messages.filter(
@@ -64,6 +71,44 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
       },
       -1,
     );
+
+    const lastAIMessage =
+      lastAIMessageIndex >= 0 ? visibleMessages[lastAIMessageIndex] : null;
+    const lastAIMessageId = lastAIMessage?.id ?? null;
+    const lastAIMessageContent = lastAIMessage?.content ?? '';
+
+    // Track the most recent AI message id we already spoke (or skipped on mount)
+    // so we never re-speak the same message or retroactively speak history when
+    // autoplay is toggled on.
+    const lastSpokenIdRef =
+      React.useRef<typeof lastAIMessageId>(lastAIMessageId);
+    const prevAutoplayRef = React.useRef(autoplayEnabled);
+
+    React.useEffect(() => {
+      if (autoplayEnabled === prevAutoplayRef.current) return;
+      prevAutoplayRef.current = autoplayEnabled;
+      if (autoplayEnabled) {
+        // Don't retroactively read messages that arrived before autoplay was on.
+        lastSpokenIdRef.current = lastAIMessageId;
+      } else {
+        stop();
+      }
+    }, [autoplayEnabled, lastAIMessageId, stop]);
+
+    React.useEffect(() => {
+      if (!autoplayEnabled) return;
+      if (isStreaming) return;
+      if (!lastAIMessageId || !lastAIMessageContent) return;
+      if (lastAIMessageId === lastSpokenIdRef.current) return;
+      lastSpokenIdRef.current = lastAIMessageId;
+      speak(lastAIMessageContent);
+    }, [
+      autoplayEnabled,
+      isStreaming,
+      lastAIMessageId,
+      lastAIMessageContent,
+      speak,
+    ]);
 
     // Filter out invisible messages before rendering to prevent flash
     return (
