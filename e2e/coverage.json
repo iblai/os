@@ -1436,7 +1436,8 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/header.tsx"
+        "components/header.tsx",
+        "components/header/profile-button.tsx"
       ],
       "checkpoints": [
         {
