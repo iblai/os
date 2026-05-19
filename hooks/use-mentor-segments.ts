@@ -9,6 +9,7 @@ import {
   Plug,
   Wrench,
   Shield,
+  ShieldCheck,
   Clock,
   Grid,
   Key,
@@ -177,6 +178,17 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       'moderation_response',
       'safety_response',
     ],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.privacy,
+    label: 'Privacy',
+    icon: ShieldCheck,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,

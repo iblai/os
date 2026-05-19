@@ -723,6 +723,22 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
+## Journey 45: Mentor Privacy Tab (7 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly.
+
+- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar
+- [x] PR-02: Privacy tab heading and description render correctly
+- [x] PR-03: Master Privacy Router switch is visible
+- [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
+- [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
+- [x] PR-06: Selecting Block reveals the block-message textarea and selecting Redact hides it
+- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+
+---
+
 ## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`

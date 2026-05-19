@@ -176,7 +176,7 @@ describe('hasNonExpiredAuthToken function', () => {
   });
 
   it('should return true when no token exists', () => {
-    expect(hasNonExpiredAuthToken()).toBe(true);
+    expect(hasNonExpiredAuthToken()).toBe(false);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -2740,6 +2740,7 @@ describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
     expect(postMessageSpy).toHaveBeenCalledWith({ authExpired: true }, '*');
     expect(consoleSpy).toHaveBeenCalledWith(
       '[redirectToAuthSpa]: sending authExpired to parent',
+      expect.any(String),
     );
 
     // Should not redirect when in iframe

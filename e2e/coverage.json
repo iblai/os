@@ -2178,6 +2178,55 @@
       ]
     },
     {
+      "id": "mentor-privacy-tab",
+      "name": "Mentor Privacy Tab",
+      "spec": "45-mentor-privacy-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/privacy-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "pr-01",
+          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "pr-02",
+          "description": "Privacy tab heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "pr-03",
+          "description": "Master Privacy Router switch is visible",
+          "status": "covered"
+        },
+        {
+          "id": "pr-04",
+          "description": "Action dropdown, entity chips, and output-filter switch are hidden when the router is off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-05",
+          "description": "Enabling the router reveals the action, entity chips and output-filter fields",
+          "status": "covered"
+        },
+        {
+          "id": "pr-06",
+          "description": "Selecting Block reveals the block-message textarea and selecting Redact hides it",
+          "status": "covered"
+        },
+        {
+          "id": "pr-07",
+          "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "audit-log",
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",
