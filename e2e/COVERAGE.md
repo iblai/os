@@ -739,6 +739,20 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 
 ---
 
+## Journey 46: Mentor Tasks Tab (5 checkpoints) — `journeys/46-mentor-tasks-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Tasks tab is a thin wrapper around the SDK's `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). Unlike most tabs, `AgentTasksTab` has no tenant/mentor/username props — it reads them from the nearest `AgentSettingsProvider` and throws when rendered without one, so the wrapper wraps it in `AgentSettingsProvider` (identity from URL params + navigate hook, `enableRBAC` from `config`).
+
+- [x] TA-01: Tasks tab label is visible in the Edit Mentor modal sidebar
+- [x] TA-02: Tasks tab heading and description render correctly
+- [x] TA-03: Toolbar exposes the task search input and the Schedule Task button
+- [x] TA-04: Total Tasks, Active and Inactive metric cards render
+- [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
+
+---
+
 ## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`

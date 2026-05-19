@@ -2227,6 +2227,45 @@
       ]
     },
     {
+      "id": "mentor-tasks-tab",
+      "name": "Mentor Tasks Tab",
+      "spec": "46-mentor-tasks-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/tasks-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ta-01",
+          "description": "Tasks tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ta-02",
+          "description": "Tasks tab heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ta-03",
+          "description": "Toolbar exposes the task search input and the Schedule Task button",
+          "status": "covered"
+        },
+        {
+          "id": "ta-04",
+          "description": "Total Tasks, Active and Inactive metric cards render",
+          "status": "covered"
+        },
+        {
+          "id": "ta-05",
+          "description": "Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "audit-log",
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",

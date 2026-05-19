@@ -95,9 +95,11 @@ vi.mock('@iblai/web-containers', () => ({
 }));
 
 // Same reasoning as above for the Next-only entrypoint that ships the
-// AgentPrivacyTab component used by PrivacyTab.
+// AgentPrivacyTab / AgentTasksTab components used by PrivacyTab / TasksTab.
 vi.mock('@iblai/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
+  AgentTasksTab: () => null,
+  AgentSettingsProvider: () => null,
 }));
 
 // ----------------------------------------------------------------------------
@@ -135,10 +137,10 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 17 mentor segments unfiltered', () => {
+  it('returns the canonical 18 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(17);
+    expect(MENTOR_SEGMENTS).toHaveLength(18);
   });
 
   it('places the Sandbox segment right after Settings', () => {

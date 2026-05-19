@@ -10,6 +10,7 @@ import {
   Wrench,
   Shield,
   ShieldCheck,
+  CalendarClock,
   Clock,
   Grid,
   Key,
@@ -187,6 +188,17 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     value: MODALS.EDIT_MENTOR.tabs.privacy,
     label: 'Privacy',
     icon: ShieldCheck,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.tasks,
+    label: 'Tasks',
+    icon: CalendarClock,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     permissionFieldsCheck: [],
     mentorVisibility: [
