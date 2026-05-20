@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.65.2](https://github.com/iblai/mentorai/compare/v0.65.1...v0.65.2) (2026-05-20)
+
+### Bug Fixes
+
+* **embed:** hide Close X when chat is not iframed ([2d77d31](https://github.com/iblai/mentorai/commit/2d77d31de6b5034d4f0878b84a1f67feec854160))
+* **header:** rename Learner/Instructor to User/Admin ([cf6acd7](https://github.com/iblai/mentorai/commit/cf6acd7d59ff9f5038ef026cd26d37719a3accd0))
+* **mentor-settings:** unify settings-tab labels to nouns + agent tooltip wording ([1097474](https://github.com/iblai/mentorai/commit/109747478645ac13fc8bb3cf66c2e976efee43fa))
+
+### Chores
+
+* **e2e:** map components/header/profile-button.tsx to journey 28 ([42e97bf](https://github.com/iblai/mentorai/commit/42e97bf5687a428f2ae0ed2cffbf203c4c26716c))
+
+### Tests
+
+* **e2e:** update label strings + coverage for [#1688](https://github.com/iblai/mentorai/issues/1688) ([42c469a](https://github.com/iblai/mentorai/commit/42c469a7242880a165f4238a9d1b680ca3796677))
+* **learner-mode-switch:** cover LearnerModeSwitch render + toggle to satisfy 95% gate ([b8617a6](https://github.com/iblai/mentorai/commit/b8617a600e14aece916ea44d23edd6900b6d6228))
+
 ## [0.65.1](https://github.com/iblai/mentorai/compare/v0.65.0...v0.65.1) (2026-05-20)
 
 ### Bug Fixes
