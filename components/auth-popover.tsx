@@ -45,11 +45,11 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
   const handleLogin = useCallback(() => {
     if (!tenantKey) {
       console.log('[auth-redirect] Auth popover login without tenant key');
-      redirectToAuthSpa('/', tenantKey);
+      redirectToAuthSpa('/', tenantKey, undefined, true, true);
       return;
     }
 
-    redirectToAuthSpaJoinTenant(tenantKey);
+    redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
   }, [tenantKey]);
 
   const handleTriggerClick = useCallback(
