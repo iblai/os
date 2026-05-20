@@ -4,11 +4,11 @@
 
 ### Features
 
-* **mentorai:** adding privacy tab for edit mentor and playwright tests ([3804a7b](https://github.com/iblai/mentorai/commit/3804a7b27ab926d522fc383315cb9915a8d35265))
+- **mentorai:** adding privacy tab for edit mentor and playwright tests ([3804a7b](https://github.com/iblai/mentorai/commit/3804a7b27ab926d522fc383315cb9915a8d35265))
 
 ### Bug Fixes
 
-* **mentor:** fix for the package ([1494838](https://github.com/iblai/mentorai/commit/149483806b4b0f7f9ade3d2c90d23d8007902b42))
+- **mentor:** fix for the package ([1494838](https://github.com/iblai/mentorai/commit/149483806b4b0f7f9ade3d2c90d23d8007902b42))
 
 ## [0.64.3](https://github.com/iblai/mentorai/compare/v0.64.2...v0.64.3) (2026-05-14)
 
