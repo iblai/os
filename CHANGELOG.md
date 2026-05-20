@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.65.1](https://github.com/iblai/mentorai/compare/v0.65.0...v0.65.1) (2026-05-20)
+
+### Bug Fixes
+
+* **deps:** patch 32 Dependabot security alerts ([33103f4](https://github.com/iblai/mentorai/commit/33103f4d55f76e28262f1b3a7ee36dc39594b13a))
+* **tauri:** patch 3 Cargo security alerts ([215aeaa](https://github.com/iblai/mentorai/commit/215aeaa8049df08fe9e41268c9b4b513f296c671))
+
 ## [0.65.0](https://github.com/iblai/mentorai/compare/v0.64.3...v0.65.0) (2026-05-18)
 
 ### Features
