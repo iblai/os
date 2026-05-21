@@ -278,7 +278,7 @@ export function Header({
                 <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]">
                   <Avatar className="h-5 w-5">
                     <AvatarImage
-                      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/agentAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
+                      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
                       alt="Agentic OS"
                     />
                     <AvatarFallback>
@@ -444,7 +444,7 @@ export function Header({
               <div className="flex items-center space-x-2 text-sm font-medium text-[#646464]">
                 <Avatar className="mr-1 h-5 w-5">
                   <AvatarImage
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/agentAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
                     alt="Agentic OS"
                   />
                   <AvatarFallback>
@@ -458,7 +458,7 @@ export function Header({
                 <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]">
                   <Avatar className="h-5 w-5">
                     <AvatarImage
-                      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/agentAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
+                      src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
                       alt="Agentic OS"
                     />
                     <AvatarFallback>
