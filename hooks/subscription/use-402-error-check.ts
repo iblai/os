@@ -3,19 +3,18 @@ import { toast } from 'sonner';
 import {
   setPricingModalData,
   setOpenPricingModal,
-  setOpenAppleRestrictionModal,
 } from '@/features/subscription/subscription-slice';
 import {
   Error402MessageData,
   SUBSCRIPTION_MESSAGES,
   SUBSCRIPTION_V2_TRIGGERS,
 } from '@iblai/iblai-js/web-utils';
+import { setOpenAppleRestrictionModal, useOS } from '@iblai/web-utils';
 import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
 import { getUserEmail } from '@/features/utils';
 import { useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
-import { useOS } from '../use-os';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();

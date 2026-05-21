@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { ModalContainer } from '../modal-container';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import { appleRestrictionReducer } from '@iblai/web-utils';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -109,24 +110,28 @@ vi.mock('@/components/modals/settings-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/apple-restriction-modal', () => ({
-  AppleRestrictionModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div
-        data-testid="apple-restriction-modal"
-        role="dialog"
-        aria-label="Apple Restriction"
-      >
-        <button onClick={onClose}>Close Apple</button>
-      </div>
-    ) : null,
-}));
+vi.mock('@iblai/web-containers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@iblai/web-containers')>();
+  return {
+    ...actual,
+    AppleRestrictionModal: ({
+      isOpen,
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) =>
+      isOpen ? (
+        <div
+          data-testid="apple-restriction-modal"
+          role="dialog"
+          aria-label="Apple Restriction"
+        >
+          <button onClick={onClose}>Close Apple</button>
+        </div>
+      ) : null,
+  };
+});
 
 vi.mock('@/components/modals/shortcuts-modal', () => ({
   ShortcutsModal: ({
@@ -248,7 +253,6 @@ function createTestStore(options: StoreOptions = {}) {
       subscription: (
         state = {
           openPricingModal,
-          openAppleRestrictionModal,
           freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
           pricingModalData: {
             referenceId: '',
@@ -260,6 +264,7 @@ function createTestStore(options: StoreOptions = {}) {
           error402Detected: '',
         },
       ) => state,
+      appleRestriction: appleRestrictionReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -280,6 +285,7 @@ function createTestStore(options: StoreOptions = {}) {
         darkMode: false,
         shortcutsModal,
       },
+      appleRestriction: { openAppleRestrictionModal },
     },
   });
 }

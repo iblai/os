@@ -32,13 +32,10 @@ vi.mock('@/lib/hooks', () => ({
 }));
 
 let mockIsAppleDevice = false;
-vi.mock('@/hooks/use-os', () => ({
+vi.mock('@iblai/web-utils', () => ({
   useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
-}));
-
-vi.mock('@/features/subscription/subscription-slice', () => ({
   setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
-    type: 'subscription/setOpenAppleRestrictionModal',
+    type: 'appleRestriction/setOpenAppleRestrictionModal',
     payload: val,
   })),
 }));
@@ -213,7 +210,7 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBeNull();
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
           payload: true,
         }),
       );
@@ -234,7 +231,7 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBe('done');
       expect(mockDispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
         }),
       );
     });
