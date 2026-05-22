@@ -2255,12 +2255,27 @@
         },
         {
           "id": "ta-04",
-          "description": "Total Tasks, Active and Inactive metric cards render",
+          "description": "Total Tasks, Completed and Failed metric cards render",
           "status": "covered"
         },
         {
           "id": "ta-05",
           "description": "Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting",
+          "status": "covered"
+        },
+        {
+          "id": "ta-06",
+          "description": "Admin schedules a new daily periodic task and it appears in the task list",
+          "status": "covered"
+        },
+        {
+          "id": "ta-07",
+          "description": "Searching filters the task list — a matching query keeps the task, a non-matching query hides it, and clearing restores it",
+          "status": "covered"
+        },
+        {
+          "id": "ta-08",
+          "description": "Admin deletes a task and its row is removed from the list",
           "status": "covered"
         }
       ]

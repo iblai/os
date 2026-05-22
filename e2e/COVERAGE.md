@@ -739,17 +739,22 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 
 ---
 
-## Journey 46: Mentor Tasks Tab (5 checkpoints) — `journeys/46-mentor-tasks-tab.spec.ts`
+## Journey 46: Mentor Tasks Tab (8 checkpoints) — `journeys/46-mentor-tasks-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
 The Tasks tab is a thin wrapper around the SDK's `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). Unlike most tabs, `AgentTasksTab` has no tenant/mentor/username props — it reads them from the nearest `AgentSettingsProvider` and throws when rendered without one, so the wrapper wraps it in `AgentSettingsProvider` (identity from URL params + navigate hook, `enableRBAC` from `config`).
 
+The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js/playwright` (`scheduleTask`, `searchTasks`, `deleteTask`, `expectTaskInList`, …) — resolving elements by accessible name/placeholder/role rather than CSS classes. The lifecycle checkpoints (TA-06..TA-08) each create a uniquely-named periodic agent and delete it in a `finally` block, so every spec is independent, retry-safe and leaves no orphaned task behind.
+
 - [x] TA-01: Tasks tab label is visible in the Edit Mentor modal sidebar
 - [x] TA-02: Tasks tab heading and description render correctly
 - [x] TA-03: Toolbar exposes the task search input and the Schedule Task button
-- [x] TA-04: Total Tasks, Active and Inactive metric cards render
+- [x] TA-04: Total Tasks, Completed and Failed metric cards render
 - [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
+- [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
+- [x] TA-07: Searching filters the task list — a matching query keeps the task, a non-matching query hides it, and clearing restores it
+- [x] TA-08: Admin deletes a task and its row is removed from the list
 
 ---
 
