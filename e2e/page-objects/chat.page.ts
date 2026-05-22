@@ -111,6 +111,52 @@ export class ChatPage {
     });
   }
 
+  // ── URL ?prompt= injection helpers ─────────────────────────────────────────
+
+  /**
+   * Navigate to a mentor chat page with a URL-encoded `?prompt=` query param.
+   * Uses the project's MENTOR_NEXTJS_HOST base — pass the tenant key and
+   * mentor ID obtained from `getPlatformContext(page)`.
+   */
+  async gotoWithPrompt(
+    host: string,
+    tenantKey: string,
+    mentorId: string,
+    prompt: string,
+  ): Promise<void> {
+    const url = `${host}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(prompt)}`;
+    await this.page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+  }
+
+  /**
+   * Count the number of visible user-message bubbles that contain `content`.
+   */
+  async getUserBubbleCount(content: string): Promise<number> {
+    return this.page
+      .locator('.chat-user-message-query', { hasText: content })
+      .count();
+  }
+
+  /**
+   * Read the cached session id for a specific `mentorId` from localStorage.
+   * The app stores sessions as `Record<string, string>` under the key
+   * `session_id` (see `lib/constants.ts → LOCAL_STORAGE_KEYS.SESSION_ID`).
+   */
+  async getCachedSessionId(mentorId: string): Promise<string | null> {
+    return this.page.evaluate((mid: string) => {
+      try {
+        const raw = window.localStorage.getItem('session_id');
+        if (!raw) return null;
+        return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
+      } catch {
+        return null;
+      }
+    }, mentorId);
+  }
+
   /** Deletes the nth prompt (0-indexed) from the Prompt Gallery. */
   async deletePromptFromGallery(index = 0): Promise<void> {
     const deleteButton = this.getPromptGalleryDeleteButtons().nth(index);
