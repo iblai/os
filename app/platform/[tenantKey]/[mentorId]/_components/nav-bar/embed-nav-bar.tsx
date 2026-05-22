@@ -12,6 +12,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
+import { useIsIframed } from '@/hooks/use-is-iframed';
 import {
   Tooltip,
   TooltipContent,
@@ -56,6 +57,7 @@ export function EmbedNavBar({
 }: Props) {
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
+  const isIframed = useIsIframed();
   const chatMode = useChatMode();
   const dispatch = useAppDispatch();
 
@@ -254,19 +256,21 @@ export function EmbedNavBar({
             </DropdownMenu>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          aria-label="Close chat"
-          onClick={() => {
-            if (isPreviewMode) return;
-            notifyParentOnEmbedClose();
-          }}
-        >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close chat</span>
-        </Button>
+        {isIframed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            aria-label="Close chat"
+            onClick={() => {
+              if (isPreviewMode) return;
+              notifyParentOnEmbedClose();
+            }}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close chat</span>
+          </Button>
+        )}
       </div>
     </nav>
   );

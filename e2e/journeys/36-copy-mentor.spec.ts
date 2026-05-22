@@ -23,7 +23,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     }
   });
 
-  test('admin creates a mentor and verifies Allow Copies toggle shows and hides the Copy button', async ({
+  test('admin creates a mentor and verifies Copies toggle shows and hides the Copy button', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -45,7 +45,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await expect(editMentorPage.settings.copyMentorButton).toBeVisible({
       timeout: 30_000,
     });
-    logger.info('Copy button is visible after enabling Allow Copies');
+    logger.info('Copy button is visible after enabling Copies');
 
     await editMentorPage.settings.disableAllowCopies();
 
@@ -55,7 +55,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await expect(editMentorPage.settings.copyMentorButton).not.toBeVisible({
       timeout: 30_000,
     });
-    logger.info('Copy button is hidden after disabling Allow Copies');
+    logger.info('Copy button is hidden after disabling Copies');
     await editMentorPage.close();
   });
 
