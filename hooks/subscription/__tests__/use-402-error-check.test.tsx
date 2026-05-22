@@ -6,7 +6,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { use402ErrorCheck } from '../use-402-error-check';
 import subscriptionSlice from '@/features/subscription/subscription-slice';
 import topBannerSlice from '@/features/top-banner/top-banner-slice';
-import { appleRestrictionReducer } from '@iblai/web-utils';
+import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { toast } from 'sonner';
 
 // Mock sonner toast
@@ -46,12 +46,13 @@ vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => mockIsAdmin),
 }));
 
-// Mock useOS hook (now sourced from @iblai/web-utils alongside
+// Mock useOS hook (sourced from @iblai/iblai-js/web-utils alongside
 // setOpenAppleRestrictionModal); use importOriginal so we keep the real
 // action creator and reducer.
 let mockIsAppleDevice = false;
-vi.mock('@iblai/web-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/web-utils')>();
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
   return {
     ...actual,
     useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),

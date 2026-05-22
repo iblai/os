@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { FreeTrialDialog as IblFreeTrialDialog } from '@/components/free-trial-dialog';
 import { useAppDispatch } from '@/lib/hooks';
 import { useAppSelector } from '@/lib/hooks';
-import { setOpenAppleRestrictionModal, useOS } from '@iblai/web-utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
@@ -10,6 +9,8 @@ import { useUserTenants } from '@/hooks/use-user';
 import { useCurrentTenant } from '@/hooks/use-user';
 import {
   SUBSCRIPTION_V2_TRIGGERS,
+  setOpenAppleRestrictionModal,
+  useOS,
   useSubscriptionHandlerV2,
 } from '@iblai/iblai-js/web-utils';
 import { isStripeActivated } from '@/lib/utils';

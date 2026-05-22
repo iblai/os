@@ -24,7 +24,7 @@ import { providerAssociationApiSlice } from '@/features/provider-association/api
 import { chatReducer } from '@/features/chat/chatSlice';
 import { filesReducer } from '@iblai/iblai-js/web-utils';
 import { chatSliceReducerShared } from '@iblai/iblai-js/web-utils';
-import { appleRestrictionReducer } from '@iblai/web-utils';
+import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { analyticsReducer } from '@/features/analytics/slice';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
 import rbacReducer from '@/features/rbac/rbac-slice';

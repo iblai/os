@@ -8,8 +8,9 @@ import {
   Error402MessageData,
   SUBSCRIPTION_MESSAGES,
   SUBSCRIPTION_V2_TRIGGERS,
+  setOpenAppleRestrictionModal,
+  useOS,
 } from '@iblai/iblai-js/web-utils';
-import { setOpenAppleRestrictionModal, useOS } from '@iblai/web-utils';
 import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
 import { getUserEmail } from '@/features/utils';
 import { useCallback } from 'react';

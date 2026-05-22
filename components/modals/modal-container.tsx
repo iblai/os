@@ -22,8 +22,8 @@ import { setOpenPricingModal } from '@/features/subscription/subscription-slice'
 import {
   setOpenAppleRestrictionModal,
   type AppleRestrictionState,
-} from '@iblai/web-utils';
-import { AppleRestrictionModal } from '@iblai/web-containers';
+} from '@iblai/iblai-js/web-utils';
+import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
