@@ -1,28 +1,56 @@
 # Changelog
 
+## [0.66.0](https://github.com/iblai/mentorai/compare/v0.65.2...v0.66.0) (2026-05-24)
+
+### Features
+
+* **chat:** forward ?prompt= URL param to useAdvancedChat as initialPrompt ([07f19d8](https://github.com/iblai/mentorai/commit/07f19d821b85ef70b59d37e6ec2cb2eb1ffee313))
+
+### Bug Fixes
+
+* **deps:** scope brace-expansion override to majors 1 and 2 ([25e978f](https://github.com/iblai/mentorai/commit/25e978f0a63f43aabec366b87bda77196aacface))
+
+### Reverts
+
+* **header:** restore mentorAI_logo URL; re-apply tauri shortDescription ([ad707ba](https://github.com/iblai/mentorai/commit/ad707ba5b45b7221cffaefe860f6825ea12fb4b3))
+* **tauri:** restore shortDescription "AI-powered mentoring assistant" ([1b4ef6b](https://github.com/iblai/mentorai/commit/1b4ef6b28cbae687fcc250a1142a8424968f363e))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.11.5 ([dd3efa7](https://github.com/iblai/mentorai/commit/dd3efa78674d2e4698f3a99da9d4a615f8d2f5f6))
+* **disclaimer:** drop product noun from default disclaimer ([e59f90d](https://github.com/iblai/mentorai/commit/e59f90d27cd2762c0cae940977763ca8183e0433))
+* **disclaimer:** rename MentorAI to Iblai in default disclaimer ([7dfc43e](https://github.com/iblai/mentorai/commit/7dfc43e96906fc20c376d4302da65dad72ccaec3))
+* **e2e:** sync coverage summary after rebase onto main ([422c7aa](https://github.com/iblai/mentorai/commit/422c7aa688dd15f150639968a573dc39c5b96efe)), closes [1688/#190](https://github.com/1688/mentorai/issues/190)
+* **ui:** rebrand remaining MentorAI references to Agent AI ([dab6493](https://github.com/iblai/mentorai/commit/dab6493aa112685dd580001b0b89f0aa8dbd80d9))
+
+### Tests
+
+* **chat:** add E2E journey for ?prompt= URL auto-injection ([14de559](https://github.com/iblai/mentorai/commit/14de559dd8c277cd18c7bc884a8bdba0b8342290)), closes [iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722)
+* **chat:** cover initialPrompt forwarding from searchParams ([0e13cdf](https://github.com/iblai/mentorai/commit/0e13cdf92f9af3965515c1d2708badf180373a2d))
+
 ## [0.65.2](https://github.com/iblai/mentorai/compare/v0.65.1...v0.65.2) (2026-05-20)
 
 ### Bug Fixes
 
-* **embed:** hide Close X when chat is not iframed ([2d77d31](https://github.com/iblai/mentorai/commit/2d77d31de6b5034d4f0878b84a1f67feec854160))
-* **header:** rename Learner/Instructor to User/Admin ([cf6acd7](https://github.com/iblai/mentorai/commit/cf6acd7d59ff9f5038ef026cd26d37719a3accd0))
-* **mentor-settings:** unify settings-tab labels to nouns + agent tooltip wording ([1097474](https://github.com/iblai/mentorai/commit/109747478645ac13fc8bb3cf66c2e976efee43fa))
+- **embed:** hide Close X when chat is not iframed ([2d77d31](https://github.com/iblai/mentorai/commit/2d77d31de6b5034d4f0878b84a1f67feec854160))
+- **header:** rename Learner/Instructor to User/Admin ([cf6acd7](https://github.com/iblai/mentorai/commit/cf6acd7d59ff9f5038ef026cd26d37719a3accd0))
+- **mentor-settings:** unify settings-tab labels to nouns + agent tooltip wording ([1097474](https://github.com/iblai/mentorai/commit/109747478645ac13fc8bb3cf66c2e976efee43fa))
 
 ### Chores
 
-* **e2e:** map components/header/profile-button.tsx to journey 28 ([42e97bf](https://github.com/iblai/mentorai/commit/42e97bf5687a428f2ae0ed2cffbf203c4c26716c))
+- **e2e:** map components/header/profile-button.tsx to journey 28 ([42e97bf](https://github.com/iblai/mentorai/commit/42e97bf5687a428f2ae0ed2cffbf203c4c26716c))
 
 ### Tests
 
-* **e2e:** update label strings + coverage for [#1688](https://github.com/iblai/mentorai/issues/1688) ([42c469a](https://github.com/iblai/mentorai/commit/42c469a7242880a165f4238a9d1b680ca3796677))
-* **learner-mode-switch:** cover LearnerModeSwitch render + toggle to satisfy 95% gate ([b8617a6](https://github.com/iblai/mentorai/commit/b8617a600e14aece916ea44d23edd6900b6d6228))
+- **e2e:** update label strings + coverage for [#1688](https://github.com/iblai/mentorai/issues/1688) ([42c469a](https://github.com/iblai/mentorai/commit/42c469a7242880a165f4238a9d1b680ca3796677))
+- **learner-mode-switch:** cover LearnerModeSwitch render + toggle to satisfy 95% gate ([b8617a6](https://github.com/iblai/mentorai/commit/b8617a600e14aece916ea44d23edd6900b6d6228))
 
 ## [0.65.1](https://github.com/iblai/mentorai/compare/v0.65.0...v0.65.1) (2026-05-20)
 
 ### Bug Fixes
 
-* **deps:** patch 32 Dependabot security alerts ([33103f4](https://github.com/iblai/mentorai/commit/33103f4d55f76e28262f1b3a7ee36dc39594b13a))
-* **tauri:** patch 3 Cargo security alerts ([215aeaa](https://github.com/iblai/mentorai/commit/215aeaa8049df08fe9e41268c9b4b513f296c671))
+- **deps:** patch 32 Dependabot security alerts ([33103f4](https://github.com/iblai/mentorai/commit/33103f4d55f76e28262f1b3a7ee36dc39594b13a))
+- **tauri:** patch 3 Cargo security alerts ([215aeaa](https://github.com/iblai/mentorai/commit/215aeaa8049df08fe9e41268c9b4b513f296c671))
 
 ## [0.65.0](https://github.com/iblai/mentorai/compare/v0.64.3...v0.65.0) (2026-05-18)
 
