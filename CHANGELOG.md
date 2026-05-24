@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.66.0](https://github.com/iblai/mentorai/compare/v0.65.2...v0.66.0) (2026-05-24)
+
+### Features
+
+* **chat:** forward ?prompt= URL param to useAdvancedChat as initialPrompt ([07f19d8](https://github.com/iblai/mentorai/commit/07f19d821b85ef70b59d37e6ec2cb2eb1ffee313))
+
+### Bug Fixes
+
+* **deps:** scope brace-expansion override to majors 1 and 2 ([25e978f](https://github.com/iblai/mentorai/commit/25e978f0a63f43aabec366b87bda77196aacface))
+
+### Reverts
+
+* **header:** restore mentorAI_logo URL; re-apply tauri shortDescription ([ad707ba](https://github.com/iblai/mentorai/commit/ad707ba5b45b7221cffaefe860f6825ea12fb4b3))
+* **tauri:** restore shortDescription "AI-powered mentoring assistant" ([1b4ef6b](https://github.com/iblai/mentorai/commit/1b4ef6b28cbae687fcc250a1142a8424968f363e))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.11.5 ([dd3efa7](https://github.com/iblai/mentorai/commit/dd3efa78674d2e4698f3a99da9d4a615f8d2f5f6))
+* **disclaimer:** drop product noun from default disclaimer ([e59f90d](https://github.com/iblai/mentorai/commit/e59f90d27cd2762c0cae940977763ca8183e0433))
+* **disclaimer:** rename MentorAI to Iblai in default disclaimer ([7dfc43e](https://github.com/iblai/mentorai/commit/7dfc43e96906fc20c376d4302da65dad72ccaec3))
+* **e2e:** sync coverage summary after rebase onto main ([422c7aa](https://github.com/iblai/mentorai/commit/422c7aa688dd15f150639968a573dc39c5b96efe)), closes [1688/#190](https://github.com/1688/mentorai/issues/190)
+* **ui:** rebrand remaining MentorAI references to Agent AI ([dab6493](https://github.com/iblai/mentorai/commit/dab6493aa112685dd580001b0b89f0aa8dbd80d9))
+
+### Tests
+
+* **chat:** add E2E journey for ?prompt= URL auto-injection ([14de559](https://github.com/iblai/mentorai/commit/14de559dd8c277cd18c7bc884a8bdba0b8342290)), closes [iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722)
+* **chat:** cover initialPrompt forwarding from searchParams ([0e13cdf](https://github.com/iblai/mentorai/commit/0e13cdf92f9af3965515c1d2708badf180373a2d))
+
 ## [0.65.2](https://github.com/iblai/mentorai/compare/v0.65.1...v0.65.2) (2026-05-20)
 
 ### Bug Fixes
