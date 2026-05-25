@@ -164,13 +164,10 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-vi.mock('xlsx', () => ({
-  utils: {
-    json_to_sheet: vi.fn(),
-    book_new: vi.fn(() => ({})),
-    book_append_sheet: vi.fn(),
-  },
-  write: vi.fn(() => new ArrayBuffer(0)),
+vi.mock('write-excel-file/browser', () => ({
+  default: vi.fn(() => ({
+    toBlob: vi.fn(() => Promise.resolve(new Blob())),
+  })),
 }));
 
 vi.mock('file-saver', () => ({
@@ -643,12 +640,14 @@ describe('PinnedMessages', () => {
       expect(exportButtons.length).toBeGreaterThan(0);
     });
 
-    it('should call saveAs when export button is clicked', () => {
+    it('should call saveAs when export button is clicked', async () => {
       render(<PinnedMessages {...defaultProps} />);
 
       fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
-      expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
+      await waitFor(() => {
+        expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
+      });
     });
   });
 

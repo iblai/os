@@ -33,7 +33,7 @@ import {
 import { getUserName } from '@/features/utils';
 import { useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import * as XLSX from 'xlsx';
+import writeXlsxFile from 'write-excel-file/browser';
 import { saveAs } from 'file-saver';
 import {
   chatActions,
@@ -198,25 +198,26 @@ export function RecentMessages({
     }
   };
 
-  const handleExport = (messages: any) => {
-    const data = messages.filter((item: any) => item?.message?.data?.content);
-    const worksheet = XLSX.utils.json_to_sheet(
-      data.map((message: any) => ({
-        'Message Type': message.message.data.type,
-        Content: message.message.data.content,
-      })),
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Messages');
-
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array',
-    });
-    const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    saveAs(blob, 'messages.xlsx');
+  const handleExport = async (messages: any) => {
+    try {
+      const data = messages.filter((item: any) => item?.message?.data?.content);
+      const blob = await writeXlsxFile(data, {
+        sheet: 'Messages',
+        columns: [
+          {
+            header: 'Message Type',
+            cell: (message: any) => message?.message?.data?.type,
+          },
+          {
+            header: 'Content',
+            cell: (message: any) => message?.message?.data?.content,
+          },
+        ],
+      }).toBlob();
+      saveAs(blob, 'messages.xlsx');
+    } catch (err) {
+      console.error('Failed to export messages: ', err);
+    }
   };
 
   const handleSelectMessage = (message: any) => {
@@ -332,7 +333,7 @@ export function RecentMessages({
                             <span>Pin</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleExport(result.messages)}
+                            onClick={() => void handleExport(result.messages)}
                           >
                             <Download className="mr-2 h-4 w-4" />
                             <span>Export</span>

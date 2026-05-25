@@ -183,13 +183,10 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-vi.mock('xlsx', () => ({
-  utils: {
-    json_to_sheet: vi.fn(),
-    book_new: vi.fn(() => ({})),
-    book_append_sheet: vi.fn(),
-  },
-  write: vi.fn(() => new ArrayBuffer(0)),
+vi.mock('write-excel-file/browser', () => ({
+  default: vi.fn(() => ({
+    toBlob: vi.fn(() => Promise.resolve(new Blob())),
+  })),
 }));
 
 vi.mock('file-saver', () => ({
@@ -698,7 +695,7 @@ describe('RecentMessages', () => {
     expect(mockEventBusEmit).not.toHaveBeenCalled();
   });
 
-  it('exports messages to xlsx', () => {
+  it('exports messages to xlsx', async () => {
     mockRecentData = {
       results: [
         {
@@ -720,7 +717,9 @@ describe('RecentMessages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
-    expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
+    await waitFor(() => {
+      expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
+    });
   });
 
   it('refetches recent messages after assistant response completes', async () => {
