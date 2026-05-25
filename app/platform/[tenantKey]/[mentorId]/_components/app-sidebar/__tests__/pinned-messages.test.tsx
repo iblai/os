@@ -126,7 +126,13 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 vi.mock('@/components/markdown', () => ({
   default: ({ children }: { children: string }) => (
-    <span>{children?.replace(/<[^>]+>/g, '') ?? ''}</span>
+    <span>
+      {(() => {
+        let t = children ?? '';
+        while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+        return t;
+      })()}
+    </span>
   ),
 }));
 
