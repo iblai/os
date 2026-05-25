@@ -44,7 +44,16 @@ export const useExternalPricing = () => {
     }
     if (message?.payment_initialization_launched) {
       if (message?.payment_initialization_successful) {
-        window.location.href = message?.redirect_to;
+        const redirectTo = String(message?.redirect_to ?? '');
+        try {
+          const url = new URL(redirectTo);
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+            return;
+          }
+        } catch {
+          return;
+        }
+        window.location.href = redirectTo;
       } else {
         //TODO notify user of error
       }
