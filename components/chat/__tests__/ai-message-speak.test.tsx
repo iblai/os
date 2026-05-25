@@ -11,6 +11,21 @@ vi.mock('@/components/ui/tooltip', () => ({
   ),
 }));
 
+vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
+  useMentorSettings: vi.fn(() => ({
+    data: { voiceProvider: 'browser' },
+  })),
+}));
+
+vi.mock('@/providers/use-user', () => ({
+  useUsername: vi.fn(() => 'tester'),
+}));
+
+const fetchTtsMock = vi.fn();
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useLazyGetChatMessageTtsQuery: () => [fetchTtsMock, { isFetching: false }],
+}));
+
 type UtteranceLike = {
   text: string;
   onend: (() => void) | null;
@@ -29,6 +44,23 @@ class MockSpeechSynthesisUtterance {
   }
 }
 
+const baseMessage = {
+  id: '42',
+  role: 'assistant' as const,
+  content: 'Hello world',
+  timestamp: '',
+  visible: true,
+};
+
+const renderSpeak = (overrides: Partial<typeof baseMessage> = {}) =>
+  render(
+    <AIMessageSpeak
+      message={{ ...baseMessage, ...overrides }}
+      mentorId="mentor-1"
+      tenantKey="org-1"
+    />,
+  );
+
 describe('AIMessageSpeak', () => {
   beforeEach(() => {
     speakCalls = [];
@@ -40,6 +72,7 @@ describe('AIMessageSpeak', () => {
         cancelCalls += 1;
       },
     };
+    fetchTtsMock.mockReset();
   });
 
   afterEach(() => {
@@ -49,21 +82,21 @@ describe('AIMessageSpeak', () => {
   });
 
   it('renders the speak button with the read-aloud label', () => {
-    render(<AIMessageSpeak content="Hello world" />);
+    renderSpeak();
     expect(
       screen.getByRole('button', { name: /read aloud/i }),
     ).toBeInTheDocument();
   });
 
   it('speaks the content when clicked', () => {
-    render(<AIMessageSpeak content="Hello world" />);
+    renderSpeak();
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }));
     expect(speakCalls).toHaveLength(1);
     expect(speakCalls[0].text).toBe('Hello world');
   });
 
   it('switches the button label to stop while speaking', () => {
-    render(<AIMessageSpeak content="Hello world" />);
+    renderSpeak();
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }));
     expect(
       screen.getByRole('button', { name: /stop reading aloud/i }),
@@ -71,7 +104,7 @@ describe('AIMessageSpeak', () => {
   });
 
   it('cancels speech when toggled off', () => {
-    render(<AIMessageSpeak content="Hello world" />);
+    renderSpeak();
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }));
     fireEvent.click(
       screen.getByRole('button', { name: /stop reading aloud/i }),
@@ -80,7 +113,7 @@ describe('AIMessageSpeak', () => {
   });
 
   it('resets the label when the utterance finishes', () => {
-    render(<AIMessageSpeak content="Hello world" />);
+    renderSpeak();
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }));
     act(() => {
       speakCalls[0].onend?.();
@@ -91,14 +124,14 @@ describe('AIMessageSpeak', () => {
   });
 
   it('cancels any pending speech when unmounted', () => {
-    const { unmount } = render(<AIMessageSpeak content="Hello world" />);
+    const { unmount } = renderSpeak();
     unmount();
     expect(cancelCalls).toBeGreaterThanOrEqual(1);
   });
 
   it('renders nothing if speech synthesis is unsupported', () => {
     delete (window as any).speechSynthesis;
-    const { container } = render(<AIMessageSpeak content="Hello world" />);
+    const { container } = renderSpeak();
     expect(container).toBeEmptyDOMElement();
   });
 });

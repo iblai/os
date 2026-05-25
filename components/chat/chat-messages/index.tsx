@@ -58,7 +58,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     ref,
   ) {
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
-    const { speak, stop } = useSpeech();
+    const { speak, stop } = useSpeech({ mentorId, tenantKey });
     const autoplayEnabled = useAppSelector(selectAutoplayLastAiMessage);
 
     // Find the index of the last AI message for focus management
@@ -98,13 +98,14 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     React.useEffect(() => {
       if (!autoplayEnabled) return;
       if (isStreaming) return;
-      if (!lastAIMessageId || !lastAIMessageContent) return;
+      if (!lastAIMessage || !lastAIMessageId || !lastAIMessageContent) return;
       if (lastAIMessageId === lastSpokenIdRef.current) return;
       lastSpokenIdRef.current = lastAIMessageId;
-      speak(lastAIMessageContent);
+      speak(lastAIMessage);
     }, [
       autoplayEnabled,
       isStreaming,
+      lastAIMessage,
       lastAIMessageId,
       lastAIMessageContent,
       speak,
