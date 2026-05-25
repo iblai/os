@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.66.2](https://github.com/iblai/mentorai/compare/v0.66.1...v0.66.2) (2026-05-25)
+
+### Bug Fixes
+
+* **deps:** patch 6 follow-up Dependabot security alerts ([a6e2a90](https://github.com/iblai/mentorai/commit/a6e2a90bf623db097bd0fa0ad24d8b303a88d8fe))
+
 ## [0.66.1](https://github.com/iblai/mentorai/compare/v0.66.0...v0.66.1) (2026-05-25)
 
 ### Bug Fixes
