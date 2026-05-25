@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import useEmbedTab from '../hooks/useEmbedTab';
+import { validateWebsiteUrl } from '../utils';
 import { CopyCodeBlock } from '@/components/copy-code-block';
 import {
   Dialog,
@@ -1257,7 +1258,12 @@ export function EmbedTab() {
                   {([allowAnonymous]) =>
                     !allowAnonymous && (
                       <>
-                        <form.Field name="website_url">
+                        <form.Field
+                          name="website_url"
+                          validators={{
+                            onChange: ({ value }) => validateWebsiteUrl(value),
+                          }}
+                        >
                           {(field) => (
                             <div className="space-y-2">
                               <h3 className="text-sm font-medium text-[#646464]">
@@ -1274,7 +1280,8 @@ export function EmbedTab() {
                                 disabled={form.state.isSubmitting}
                               />
                               <p className="text-sm text-red-500">
-                                {createTokenError}
+                                {field.state.meta.errors?.[0] ??
+                                  createTokenError}
                               </p>
                             </div>
                           )}
