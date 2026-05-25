@@ -3,20 +3,20 @@
   "packages": {
     "@iblai/iblai-js": {
       "signature": "12c42e7a33ad1d63e0ee4fe7ce011085",
-      "pure": true,
+      "file": true,
       "replaced": "1.10.2"
     },
     "@iblai/data-layer": {
       "signature": "fdcdd255147d5292e79bd351e8597c0e",
-      "pure": true
+      "file": true
     },
     "@iblai/web-utils": {
       "signature": "ae176b780848d58f515605d0bb4072fa",
-      "pure": true
+      "file": true
     },
     "@iblai/web-containers": {
       "signature": "99e8f3201b34d11919256da575caa78b",
-      "pure": true
+      "file": true
     }
   }
 }

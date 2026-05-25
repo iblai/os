@@ -14,12 +14,19 @@ type Props = {
   message: Message;
   mentorId: string;
   tenantKey: string;
+  sessionId: string;
 };
 
-export function AIMessageSpeak({ message, mentorId, tenantKey }: Props) {
+export function AIMessageSpeak({
+  message,
+  mentorId,
+  tenantKey,
+  sessionId,
+}: Props) {
   const { isSpeaking, isSupported, toggle } = useSpeech({
     mentorId,
     tenantKey,
+    sessionId,
   });
 
   if (!isSupported) {

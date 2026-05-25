@@ -169,6 +169,7 @@ export const AIMessageBubble = forwardRef<
                 message={message}
                 mentorId={mentorId}
                 tenantKey={tenantKey}
+                sessionId={sessionId}
               />
 
               {isLoggedIn() && !showingSharedChat && (

@@ -58,7 +58,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     ref,
   ) {
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
-    const { speak, stop } = useSpeech({ mentorId, tenantKey });
+    const { speak, stop } = useSpeech({ mentorId, tenantKey, sessionId });
     const autoplayEnabled = useAppSelector(selectAutoplayLastAiMessage);
 
     // Find the index of the last AI message for focus management
