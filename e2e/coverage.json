@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-10",
+  "lastUpdated": "2026-05-22",
   "summary": {
-    "totalCheckpoints": 387,
-    "coveredCheckpoints": 375,
+    "totalCheckpoints": 399,
+    "coveredCheckpoints": 387,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 45,
-    "activeJourneys": 44
+    "totalJourneys": 47,
+    "activeJourneys": 46
   },
   "journeys": [
     {
@@ -373,17 +373,17 @@
         },
         {
           "id": "uid-06",
-          "description": "Enhance Document Retrieval toggle is visible with correct label and defaults to OFF",
+          "description": "Enhanced RAG toggle is visible with correct label and defaults to OFF",
           "status": "covered"
         },
         {
           "id": "uid-07",
-          "description": "Enhance Document Retrieval tooltip contains wording about multiple search queries",
+          "description": "Enhanced RAG tooltip contains wording about multiple search queries",
           "status": "covered"
         },
         {
           "id": "uid-08",
-          "description": "Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles",
+          "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
         }
       ]
@@ -465,7 +465,7 @@
         },
         {
           "id": "vc-03",
-          "description": "Voice call button hidden when Show voice call toggled off",
+          "description": "Voice call button hidden when Voice Calls toggled off",
           "status": "covered"
         },
         {
@@ -1436,7 +1436,8 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/header.tsx"
+        "components/header.tsx",
+        "components/header/profile-button.tsx"
       ],
       "checkpoints": [
         {
@@ -1968,7 +1969,7 @@
       "checkpoints": [
         {
           "id": "cpm-01",
-          "description": "Allow Copies toggle shows Copy button when enabled and hides it when disabled",
+          "description": "Copies toggle shows Copy button when enabled and hides it when disabled",
           "status": "covered"
         },
         {
@@ -2102,12 +2103,12 @@
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens Settings tab and Advanced Sandbox toggle is present",
+          "description": "Admin opens Settings tab and Sandbox toggle is present",
           "status": "covered"
         },
         {
           "id": "claw-02",
-          "description": "Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
+          "description": "Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
           "status": "covered"
         },
         {
@@ -2117,7 +2118,7 @@
         },
         {
           "id": "claw-04",
-          "description": "Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)",
+          "description": "Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)",
           "status": "covered"
         },
         {
@@ -2132,7 +2133,7 @@
         },
         {
           "id": "claw-07",
-          "description": "Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
+          "description": "Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
           "status": "covered"
         },
         {
@@ -2142,7 +2143,7 @@
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
+          "description": "Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
           "status": "covered"
         },
         {
@@ -2439,7 +2440,7 @@
         },
         {
           "id": "sp-12",
-          "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
+          "description": "Admin in user mode can see and run admin-created prompts but cannot edit, delete, or add",
           "status": "covered"
         }
       ]
@@ -2516,6 +2517,39 @@
         {
           "id": "vtt-01",
           "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-url-prompt-injection",
+      "name": "Chat URL ?prompt= Auto-Injection",
+      "spec": "chat-url-prompt-injection.spec.ts",
+      "sourceFiles": ["components/chat/index.tsx"],
+      "checkpoints": [
+        {
+          "id": "upi-01",
+          "description": "Fresh session + ?prompt=<text>: user-message bubble for <text> appears automatically and AI responds; location.search still contains prompt= after response settles",
+          "status": "covered"
+        },
+        {
+          "id": "upi-02",
+          "description": "Dedup: reloading the same ?prompt= URL on a cached session produces exactly one user bubble (no duplicate) and leaves localStorage session_id[mentorId] unchanged",
+          "status": "covered"
+        },
+        {
+          "id": "upi-03",
+          "description": "Cached session + different ?prompt=: original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged",
+          "status": "covered"
+        },
+        {
+          "id": "upi-04",
+          "description": "No ?prompt= query string: welcome state is shown, no user-message bubbles appear, chat input is idle; confirmed stable over 3 seconds with no auto-submit",
+          "status": "covered"
+        },
+        {
+          "id": "upi-05",
+          "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
           "status": "covered"
         }
       ]

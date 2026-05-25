@@ -595,7 +595,7 @@ export function NavBar() {
                   userIsStudent ? 'font-semibold' : 'text-gray-500',
                 )}
               >
-                Learner
+                User
               </span>
               <LearnerModeSwitch />
               <span
@@ -604,7 +604,7 @@ export function NavBar() {
                   userIsStudent ? 'text-gray-500' : 'font-semibold',
                 )}
               >
-                Instructor
+                Admin
               </span>
             </div>
           )}

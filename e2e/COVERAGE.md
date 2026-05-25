@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-11 | 387 checkpoints (375 active, 12 deprecated) | 45 journeys (44 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-22 | 399 checkpoints (387 active, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -119,9 +119,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
-- [x] Enhance Document Retrieval toggle is visible with correct label and defaults to OFF
-- [x] Enhance Document Retrieval tooltip contains wording about multiple search queries
-- [x] Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles
+- [x] Enhanced RAG toggle is visible with correct label and defaults to OFF
+- [x] Enhanced RAG tooltip contains wording about multiple search queries
+- [x] Enhanced RAG toggle persists ON and OFF across save/reopen cycles
 
 ---
 
@@ -147,7 +147,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Voice call dialog opens with heading, mute button, and end-call button (Chromium)
 - [x] Voice call dialog opens correctly on Firefox and WebKit
-- [x] Voice call button is hidden when "Show voice call" is toggled off in settings
+- [x] Voice call button is hidden when "Voice Calls" is toggled off in settings
 - [x] Voice call button reappears after re-enabling the toggle
 - [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
 - [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
@@ -583,7 +583,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx`
 
-- [x] Allow Copies toggle shows Copy button when enabled and hides it when disabled
+- [x] Copies toggle shows Copy button when enabled and hides it when disabled
 - [x] Copy Mentor modal opens with correct defaults (pre-filled name, training data toggle, Cancel/Copy buttons)
 - [x] Copy Mentor modal closes via Escape key
 - [x] Mentor can be copied with default name and user navigates to the new mentor
@@ -678,7 +678,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Admin opens the Prompt Gallery from the chat area
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
-- [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+- [x] Admin in user mode can see and run admin-created prompts but cannot edit, delete, or add
 
 ---
 
@@ -705,15 +705,15 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
-- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
+- [x] Admin opens Settings tab and Sandbox toggle is present
+- [x] Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
 - [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
+- [x] Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)
 - [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
 - [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
-- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
 - [x] Admin navigates to Sandbox tab and the sandbox config container renders
-- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
+- [x] Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
 - [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
 - [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
@@ -746,6 +746,27 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+
+---
+
+## Journey: Chat URL ?prompt= Auto-Injection (5 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
+
+**Source files:** `components/chat/index.tsx`
+
+Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
+
+**Contracts verified:**
+
+- `location.search` retains `?prompt=...` after submission (no `router.replace` is called).
+- The dedup guard scans back for the last user message; if content matches the trimmed prompt, the hook no-ops so no second bubble appears.
+- A new session is NOT created on a dedup reload — `localStorage.session_id[mentorId]` is unchanged.
+- `searchParams.get('prompt')` decodes percent-encoded characters natively (`%20` → space).
+
+- [x] UPI-01: Fresh session + `?prompt=<text>` — user-message bubble appears automatically, AI responds, `location.search` still contains `prompt=` after response settles
+- [x] UPI-02: Dedup — reloading the same `?prompt=` URL on a cached session produces exactly one user bubble (count === 1) and `localStorage.session_id[mentorId]` is unchanged
+- [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
+- [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
+- [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
 
 ---
 
