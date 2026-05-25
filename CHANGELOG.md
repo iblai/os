@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.7](https://github.com/iblai/mentorai/compare/v0.67.6...v0.67.7) (2026-05-25)
+
+### Refactors
+
+* remove external pricing modal and hook ([8de6f66](https://github.com/iblai/mentorai/commit/8de6f6622bc11961bd2582cfd472f9660a147576))
+
 ## [0.67.6](https://github.com/iblai/mentorai/compare/v0.67.5...v0.67.6) (2026-05-25)
 
 ### Bug Fixes
