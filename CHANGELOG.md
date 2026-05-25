@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.66.1](https://github.com/iblai/mentorai/compare/v0.66.0...v0.66.1) (2026-05-25)
+
+### Bug Fixes
+
+* **auth:** ensure explicit login clicks always redirect, bypassing stale cookies ([91d9eb5](https://github.com/iblai/mentorai/commit/91d9eb536ef35330f6407eb94328c8e735fc4d58))
+* **macos:** remove network.server entitlement per App Store review ([f1077d9](https://github.com/iblai/mentorai/commit/f1077d9424753a5baecd360dc29deb7275fa8cee))
+
 ## [0.66.0](https://github.com/iblai/mentorai/compare/v0.65.2...v0.66.0) (2026-05-24)
 
 ### Features
