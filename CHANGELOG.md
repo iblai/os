@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.2](https://github.com/iblai/mentorai/compare/v0.67.1...v0.67.2) (2026-05-25)
+
+### Bug Fixes
+
+* **security:** loop HTML tag stripping in remaining test mocks ([8038b62](https://github.com/iblai/mentorai/commit/8038b62594c7a146afb701f5696b68c988f5fbd6)), closes [#66](https://github.com/iblai/mentorai/issues/66)
+
 ## [0.67.1](https://github.com/iblai/mentorai/compare/v0.67.0...v0.67.1) (2026-05-25)
 
 ### Bug Fixes
