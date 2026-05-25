@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.8](https://github.com/iblai/agentai/compare/v0.67.7...v0.67.8) (2026-05-25)
+
+### Documentation
+
+* rename mentorAI to agentAI in README ([4370d2b](https://github.com/iblai/agentai/commit/4370d2b36a9fb22c85fbb3c966ca8f6a46f26f46))
+
 ## [0.67.7](https://github.com/iblai/mentorai/compare/v0.67.6...v0.67.7) (2026-05-25)
 
 ### Refactors
