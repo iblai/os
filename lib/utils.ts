@@ -82,6 +82,7 @@ export async function redirectToAuthSpa(
   platformKey?: string,
   logout?: boolean,
   saveRedirect = true,
+  explicitUserAction = false,
 ) {
   console.log(
     '[redirectToAuthSpa] starting redirect to auth spa',
@@ -89,37 +90,50 @@ export async function redirectToAuthSpa(
     platformKey,
     logout,
     saveRedirect,
+    explicitUserAction,
   );
-  // Skip if a tenant switch is already in progress
-  if (document.cookie.includes('ibl_tenant_switching')) {
-    console.log('[AuthProvider] Tenant switch in progress, skipping redirect');
-    return;
-  }
 
-  // Skip if a login occurred after the last logout (login takes precedence)
-  // but only if this app actually has a valid auth token — otherwise the login
-  // cookie may have been set by a different app on the same domain.
-  const loginTs = getCookieValue('ibl_login_timestamp');
-  const logoutTs = getCookieValue('ibl_logout_timestamp');
-  const hasValidToken = hasNonExpiredAuthToken();
-  console.log('[AuthProvider] Login/logout timestamp check', {
-    loginTs,
-    logoutTs,
-    hasValidToken,
-    loginAhead:
-      loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
-  });
-  if (
-    hasValidToken &&
-    loginTs &&
-    logoutTs &&
-    Number(loginTs) > Number(logoutTs)
-  ) {
-    console.log(
-      '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
-      { loginTs, logoutTs },
-    );
-    return;
+  if (explicitUserAction) {
+    // Explicit user action (e.g. login button click) — clear stale cookies
+    // and skip all cookie-based early returns so the redirect always happens.
+    const currentDomain = window.location.hostname;
+    deleteCookieOnAllDomains('ibl_tenant_switching', currentDomain);
+    deleteCookieOnAllDomains('ibl_login_timestamp', currentDomain);
+    deleteCookieOnAllDomains('ibl_logout_timestamp', currentDomain);
+  } else {
+    // Skip if a tenant switch is already in progress
+    if (document.cookie.includes('ibl_tenant_switching')) {
+      console.log(
+        '[AuthProvider] Tenant switch in progress, skipping redirect',
+      );
+      return;
+    }
+
+    // Skip if a login occurred after the last logout (login takes precedence)
+    // but only if this app actually has a valid auth token — otherwise the login
+    // cookie may have been set by a different app on the same domain.
+    const loginTs = getCookieValue('ibl_login_timestamp');
+    const logoutTs = getCookieValue('ibl_logout_timestamp');
+    const hasValidToken = hasNonExpiredAuthToken();
+    console.log('[AuthProvider] Login/logout timestamp check', {
+      loginTs,
+      logoutTs,
+      hasValidToken,
+      loginAhead:
+        loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
+    });
+    if (
+      hasValidToken &&
+      loginTs &&
+      logoutTs &&
+      Number(loginTs) > Number(logoutTs)
+    ) {
+      console.log(
+        '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
+        { loginTs, logoutTs },
+      );
+      return;
+    }
   }
   // Don't redirect to auth when in Tauri offline mode
   // Check origin first (most reliable) or Tauri offline flags
@@ -225,6 +239,7 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
 export function redirectToAuthSpaJoinTenant(
   tenantKey?: string,
   redirectUrl?: string,
+  explicitUserAction = false,
 ) {
   const resolvedTenant =
     tenantKey || getPlatformKey(window.location.pathname) || '';
@@ -234,7 +249,13 @@ export function redirectToAuthSpaJoinTenant(
       tenantKey,
       redirectUrl,
     });
-    redirectToAuthSpa(redirectUrl);
+    redirectToAuthSpa(
+      redirectUrl,
+      undefined,
+      undefined,
+      true,
+      explicitUserAction,
+    );
     return;
   }
 
@@ -846,7 +867,15 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) {
+      targetOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // keep '*' if referrer is unavailable or unparseable
+  }
+  window.parent.postMessage(payload, targetOrigin);
 }
 
 export function isLoggedIn() {

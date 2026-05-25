@@ -40,11 +40,23 @@ export const useExternalPricing = () => {
       // Add type assertion to fix TypeScript error
       (
         pricingBoxIframeRef?.current as unknown as HTMLIFrameElement
-      )?.contentWindow?.postMessage(JSON.stringify({ data: dataToSend }), '*');
+      )?.contentWindow?.postMessage(
+        JSON.stringify({ data: dataToSend }),
+        new URL(PRICING_URL).origin,
+      );
     }
     if (message?.payment_initialization_launched) {
       if (message?.payment_initialization_successful) {
-        window.location.href = message?.redirect_to;
+        const redirectTo = String(message?.redirect_to ?? '');
+        try {
+          const url = new URL(redirectTo);
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+            return;
+          }
+        } catch {
+          return;
+        }
+        window.location.href = redirectTo;
       } else {
         //TODO notify user of error
       }
