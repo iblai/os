@@ -31,8 +31,7 @@ import {
 import { getUserName } from '@/features/utils';
 import { useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import writeXlsxFile from 'write-excel-file/browser';
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from './export-messages';
 import {
   chatActions,
   clearFiles,
@@ -188,28 +187,6 @@ export function PinnedMessages({
     }
   };
 
-  const handleExport = async (messages: any) => {
-    try {
-      const data = messages.filter((item: any) => item?.message?.data?.content);
-      const blob = await writeXlsxFile(data, {
-        sheet: 'Messages',
-        columns: [
-          {
-            header: 'Message Type',
-            cell: (message: any) => message?.message?.data?.type,
-          },
-          {
-            header: 'Content',
-            cell: (message: any) => message?.message?.data?.content,
-          },
-        ],
-      }).toBlob();
-      saveAs(blob, 'messages.xlsx');
-    } catch (err) {
-      console.error('Failed to export messages: ', err);
-    }
-  };
-
   const handleSelectMessage = (message: any) => {
     onSelectMessage(message);
     if (isMobile) {
@@ -298,7 +275,7 @@ export function PinnedMessages({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() =>
-                            void handleExport(pinnedMessage.messages)
+                            void exportMessagesToXlsx(pinnedMessage.messages)
                           }
                         >
                           <Download className="mr-2 h-4 w-4" />

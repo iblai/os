@@ -183,14 +183,8 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-vi.mock('write-excel-file/browser', () => ({
-  default: vi.fn(() => ({
-    toBlob: vi.fn(() => Promise.resolve(new Blob())),
-  })),
-}));
-
-vi.mock('file-saver', () => ({
-  saveAs: vi.fn(),
+vi.mock('../export-messages', () => ({
+  exportMessagesToXlsx: vi.fn(),
 }));
 
 const mockEventBusEmit = vi.fn();
@@ -220,7 +214,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
 }));
 
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from '../export-messages';
 
 // ============================================================================
 // TESTS
@@ -695,7 +689,7 @@ describe('RecentMessages', () => {
     expect(mockEventBusEmit).not.toHaveBeenCalled();
   });
 
-  it('exports messages to xlsx', async () => {
+  it('exports messages to xlsx', () => {
     mockRecentData = {
       results: [
         {
@@ -717,9 +711,9 @@ describe('RecentMessages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
-    await waitFor(() => {
-      expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
-    });
+    expect(exportMessagesToXlsx).toHaveBeenCalledWith(
+      mockRecentData.results[0].messages,
+    );
   });
 
   it('refetches recent messages after assistant response completes', async () => {

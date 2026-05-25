@@ -164,14 +164,8 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-vi.mock('write-excel-file/browser', () => ({
-  default: vi.fn(() => ({
-    toBlob: vi.fn(() => Promise.resolve(new Blob())),
-  })),
-}));
-
-vi.mock('file-saver', () => ({
-  saveAs: vi.fn(),
+vi.mock('../export-messages', () => ({
+  exportMessagesToXlsx: vi.fn(),
 }));
 
 const mockEventBusEmit = vi.fn();
@@ -196,7 +190,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
 }));
 
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from '../export-messages';
 
 describe('PinnedMessages', () => {
   const mockOnSelectMessage = vi.fn();
@@ -640,14 +634,14 @@ describe('PinnedMessages', () => {
       expect(exportButtons.length).toBeGreaterThan(0);
     });
 
-    it('should call saveAs when export button is clicked', async () => {
+    it('should export messages when export button is clicked', () => {
       render(<PinnedMessages {...defaultProps} />);
 
       fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
-      await waitFor(() => {
-        expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
-      });
+      expect(exportMessagesToXlsx).toHaveBeenCalledWith(
+        mockPinnedData.results[0].messages,
+      );
     });
   });
 
