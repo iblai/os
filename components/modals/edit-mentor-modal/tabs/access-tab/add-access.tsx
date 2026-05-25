@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -84,6 +84,24 @@ export function AddAccessDialog({
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
   const [debouncedGroupSearchTerm] = useDebounce(groupSearchTerm, 300);
+  const userSearchBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const groupSearchBlurTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (userSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(userSearchBlurTimeoutRef.current);
+      }
+      if (groupSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(groupSearchBlurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
 
@@ -222,7 +240,11 @@ export function AddAccessDialog({
   }, [userSearchTerm]);
 
   const handleUserSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (userSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(userSearchBlurTimeoutRef.current);
+    }
+    userSearchBlurTimeoutRef.current = setTimeout(() => {
+      userSearchBlurTimeoutRef.current = null;
       setShowUserSearchResults(false);
     }, 100);
   }, []);
@@ -298,7 +320,11 @@ export function AddAccessDialog({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (groupSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(groupSearchBlurTimeoutRef.current);
+    }
+    groupSearchBlurTimeoutRef.current = setTimeout(() => {
+      groupSearchBlurTimeoutRef.current = null;
       setShowGroupSearchResults(false);
     }, 100);
   }, []);
