@@ -140,7 +140,7 @@
     "tw-animate-css": "1.2.5",
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
-    "xlsx": "0.18.5",
+    "write-excel-file": "^4.0.7",
     "zod": "3.24.2"
   },
   "devDependencies": {
@@ -215,7 +215,9 @@
       "ip-address": ">=10.1.1",
       "brace-expansion": ">=5.0.6",
       "postcss": ">=8.5.10",
-      "ws": ">=8.20.1"
+      "ws": ">=8.20.1",
+      "qs": ">=6.15.2",
+      "uuid": "^11.1.1"
     }
   },
   "lint-staged": {
