@@ -54,9 +54,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock @/lib/utils
 vi.mock('@/lib/utils', () => ({
-  htmlToMarkdown: vi.fn((html: string) =>
-    (html || '').replace(/<[^>]*>/g, '').trim(),
-  ),
+  htmlToMarkdown: vi.fn((html: string) => {
+    let text = html || '';
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return text.trim();
+  }),
   markdownToHtml: vi.fn((md: string) => `<p>${md || ''}</p>`),
 }));
 
