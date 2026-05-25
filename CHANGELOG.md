@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.6](https://github.com/iblai/mentorai/compare/v0.67.5...v0.67.6) (2026-05-25)
+
+### Bug Fixes
+
+* **security:** restrict postMessage target origins ([5c10b3c](https://github.com/iblai/mentorai/commit/5c10b3c16b0870cb5343f68fd1df536c0d56c1cc)), closes [#72](https://github.com/iblai/mentorai/issues/72)
+
 ## [0.67.5](https://github.com/iblai/mentorai/compare/v0.67.4...v0.67.5) (2026-05-25)
 
 ### Bug Fixes
