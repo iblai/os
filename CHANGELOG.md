@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.66.3](https://github.com/iblai/mentorai/compare/v0.66.2...v0.66.3) (2026-05-25)
+
+### Bug Fixes
+
+* access tabs failing tests fixed ([b3b2fe6](https://github.com/iblai/mentorai/commit/b3b2fe63cd44e87b2344dede7f340b9fc2300397))
+* ios restriction modal moved to sdk ([777bfba](https://github.com/iblai/mentorai/commit/777bfba73253a37b919f9f47e91c7ef23c5a8281))
+* ios restriction modal moved to sdk ([de50c60](https://github.com/iblai/mentorai/commit/de50c60f073d7993436645f4254eea509784414d))
+* ios restriction modal moved to sdk > istanbul coverage issues fixed ([aa9e94d](https://github.com/iblai/mentorai/commit/aa9e94d278a1df0c5ffda2d3a1559db2b9945f84))
+* ios restriction modal moved to sdk > test coverage ([3aff85e](https://github.com/iblai/mentorai/commit/3aff85e623a2344c9975bd6e7fa3e1069329b871))
+
 ## [0.66.2](https://github.com/iblai/mentorai/compare/v0.66.1...v0.66.2) (2026-05-25)
 
 ### Bug Fixes
