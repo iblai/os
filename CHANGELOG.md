@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.67.0](https://github.com/iblai/mentorai/compare/v0.66.3...v0.67.0) (2026-05-25)
+
+### Features
+
+* **embed:** validate Website URL input as origin-only without trailing slash ([7e6b5d6](https://github.com/iblai/mentorai/commit/7e6b5d6838f7b2df2529f3a9aef6965140c989bf))
+
+### Bug Fixes
+
+* **security:** loop HTML tag stripping to prevent incomplete sanitization ([00b8820](https://github.com/iblai/mentorai/commit/00b882069379ddcd4e8e6cd59f19fcadf4075c29)), closes [#71](https://github.com/iblai/mentorai/issues/71)
+
+### Chores
+
+* skip coverage check for embed-tab and utils (pre-existing low coverage) ([eaa7883](https://github.com/iblai/mentorai/commit/eaa7883780686756303f84dd6a239db957070bf2))
+
 ## [0.66.3](https://github.com/iblai/mentorai/compare/v0.66.2...v0.66.3) (2026-05-25)
 
 ### Bug Fixes

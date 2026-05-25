@@ -1,4 +1,25 @@
 import { config } from '@/lib/config';
+
+/**
+ * Validates that a website URL is a valid origin (scheme + host) without
+ * trailing slash or extra path segments.
+ * Returns an error string or undefined if valid.
+ */
+export function validateWebsiteUrl(value: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.pathname !== '/' && url.pathname !== '') {
+      return 'URL should be origin only, without a path (e.g. https://ibl.ai)';
+    }
+    if (url.pathname === '/' && value.endsWith('/')) {
+      return 'Remove the trailing slash (e.g. https://ibl.ai)';
+    }
+  } catch {
+    return 'Enter a valid URL with scheme (e.g. https://ibl.ai)';
+  }
+  return undefined;
+}
 import {
   CustomFloatingBubbleConfig,
   EmbedFormValues,
