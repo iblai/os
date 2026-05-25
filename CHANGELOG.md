@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.1](https://github.com/iblai/mentorai/compare/v0.67.0...v0.67.1) (2026-05-25)
+
+### Bug Fixes
+
+* **security:** loop HTML tag stripping in canvas-utils tests ([e2145a5](https://github.com/iblai/mentorai/commit/e2145a5356425b36b5cad1af095ee7d1dd97189b)), closes [#67](https://github.com/iblai/mentorai/issues/67)
+
 ## [0.67.0](https://github.com/iblai/mentorai/compare/v0.66.3...v0.67.0) (2026-05-25)
 
 ### Features
