@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.65.2",
+  "version": "0.66.2",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -181,7 +181,7 @@
     "release-it": "19.2.4",
     "tailwind-scrollbar": "4.0.2",
     "tailwindcss": "4.2.2",
-    "turbo": "2.5.3",
+    "turbo": "2.9.14",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.4",
@@ -213,10 +213,9 @@
       "devalue": ">=5.8.1",
       "fast-uri": ">=3.1.2",
       "ip-address": ">=10.1.1",
-      "brace-expansion@<1.1.12": "1.1.14",
-      "brace-expansion@>=2 <2.0.2": "2.1.0",
-      "brace-expansion@>=3 <3.0.1": "3.0.1",
-      "brace-expansion@>=4 <4.0.1": "4.0.1"
+      "brace-expansion": ">=5.0.6",
+      "postcss": ">=8.5.10",
+      "ws": ">=8.20.1"
     }
   },
   "lint-staged": {

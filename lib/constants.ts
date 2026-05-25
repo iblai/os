@@ -1,7 +1,5 @@
 import { config } from './config';
 
-console.log('################## CONSTANTS ####################');
-
 // Local storage keys
 export const LOCAL_STORAGE_KEYS = {
   VISITING_TENANT: 'visiting_tenant',
