@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.3](https://github.com/iblai/mentorai/compare/v0.67.2...v0.67.3) (2026-05-25)
+
+### Bug Fixes
+
+* **security:** sanitize redirect URL from postMessage to prevent XSS ([c9ca184](https://github.com/iblai/mentorai/commit/c9ca184d79da388af5f5692594e7c6701541efd3))
+
 ## [0.67.2](https://github.com/iblai/mentorai/compare/v0.67.1...v0.67.2) (2026-05-25)
 
 ### Bug Fixes
