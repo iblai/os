@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/iblai-logo.png" alt="mentorAI" width="80" />
+  <img src="public/iblai-logo.png" alt="agentAI" width="80" />
 </p>
 
-<h1 align="center">mentorAI</h1>
+<h1 align="center">agentAI</h1>
 
 <p align="center">
   <strong>Open-source AI agent platform — build, deploy, and manage intelligent conversational agents in minutes.</strong>
@@ -20,11 +20,11 @@
 
 ---
 
-## What is mentorAI?
+## What is agentAI?
 
-mentorAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
+agentAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
 
-Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — mentorAI gives you the complete stack out of the box.
+Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — agentAI gives you the complete stack out of the box.
 
 ---
 
@@ -121,8 +121,8 @@ Whether you're a university deploying course assistants, a company building inte
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/iblai/mentor-ai.git
-cd mentor-ai
+git clone https://github.com/iblai/agentai.git
+cd agentai
 ```
 
 ### 2. Install dependencies
@@ -184,8 +184,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Build and run with Docker:
 
 ```bash
-docker build -t mentor-ai .
-docker run -p 5000:5000 --env-file .env.local mentor-ai
+docker build -t agentai .
+docker run -p 5000:5000 --env-file .env.local agentai
 ```
 
 The Dockerfile uses a multi-stage build that produces a minimal standalone image (~67% smaller than a full Node.js image).
@@ -232,7 +232,7 @@ pnpm desktop:build
 ## Architecture
 
 ```
-mentor-ai/
+agentai/
 ├── app/                        # Next.js App Router
 │   ├── platform/               # Main authenticated routes
 │   │   └── [tenantKey]/        # Multi-tenant routing
@@ -353,7 +353,7 @@ Feature flags are set via environment variables prefixed with `NEXT_PUBLIC_`. Th
 
 ## IBL.ai Platform
 
-mentorAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
+agentAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
 
 - **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
 - **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support
