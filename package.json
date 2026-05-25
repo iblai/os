@@ -68,7 +68,7 @@
     "@sentry/nextjs": "9.47.1",
     "@sentry/replay": "7.116.0",
     "@tanstack/react-form": "1.6.3",
-    "@tauri-apps/api": "2.10.1",
+    "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-opener": "2.5.3",
     "@tauri-apps/plugin-os": "2.3.2",
     "@tauri-apps/plugin-shell": "2.3.4",
