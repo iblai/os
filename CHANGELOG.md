@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.67.5](https://github.com/iblai/mentorai/compare/v0.67.4...v0.67.5) (2026-05-25)
+
+### Bug Fixes
+
+* **deps:** pin qs to >=6.15.2 to fix DoS (CVE-2026-8723) ([38d71a8](https://github.com/iblai/mentorai/commit/38d71a8f8e1e9e30949ed4fe94b2b71fa85fc038))
+* **deps:** pin uuid to ^11.1.1 to fix buffer bounds check (CVE-2026-41907) ([23bc69a](https://github.com/iblai/mentorai/commit/23bc69a4e81af828901622d25b0e40dab91908b2))
+* **deps:** replace xlsx with write-excel-file to fix prototype pollution ([5bc1702](https://github.com/iblai/mentorai/commit/5bc1702cb29c20674083d69518981d7b83544450)), closes [iblai/iblai-platform#1455](https://github.com/iblai/iblai-platform/issues/1455)
+* **deps:** update glib version to v0.20.0 ([46c74d2](https://github.com/iblai/mentorai/commit/46c74d26b16affbbc35f98609514b235830a5374))
+
+### Refactors
+
+* extract shared exportMessagesToXlsx helper ([3e91403](https://github.com/iblai/mentorai/commit/3e9140318840ecd4148b4491bbc216cabebd20c6))
+
 ## [0.67.4](https://github.com/iblai/mentorai/compare/v0.67.3...v0.67.4) (2026-05-25)
 
 ### Bug Fixes
