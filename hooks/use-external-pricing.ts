@@ -40,7 +40,10 @@ export const useExternalPricing = () => {
       // Add type assertion to fix TypeScript error
       (
         pricingBoxIframeRef?.current as unknown as HTMLIFrameElement
-      )?.contentWindow?.postMessage(JSON.stringify({ data: dataToSend }), '*');
+      )?.contentWindow?.postMessage(
+        JSON.stringify({ data: dataToSend }),
+        new URL(PRICING_URL).origin,
+      );
     }
     if (message?.payment_initialization_launched) {
       if (message?.payment_initialization_successful) {
