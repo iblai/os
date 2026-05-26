@@ -401,7 +401,11 @@ vi.mock('../canvas-controls', () => ({
 // Mock cn utility
 vi.mock('@/lib/utils', () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
-  htmlToMarkdown: vi.fn((html: string) => html.replace(/<[^>]*>/g, '')),
+  htmlToMarkdown: vi.fn((html: string) => {
+    let t = html;
+    while (/<[^>]*>/.test(t)) t = t.replace(/<[^>]*>/g, '');
+    return t;
+  }),
   markdownToHtml: vi.fn((md: string) => `<p>${md}</p>`),
 }));
 

@@ -380,16 +380,16 @@ test.describe('Journey 42: Suggested Prompts', () => {
   // Non-Admin: a student should be able to see and run admin-created prompts
   // but should NOT be able to edit, delete, or add new prompts.
   //
-  // We exercise this via the Learner-mode toggle on the same admin user. The
+  // We exercise this via the User-mode toggle on the same admin user. The
   // RBAC code path that hides Edit/Delete (`useUserIsStudent()` in
-  // hooks/use-user.ts) returns `true` for admins in learner mode, so the
+  // hooks/use-user.ts) returns `true` for admins in user mode, so the
   // student experience is rendered identically to that of a real student user.
   // This avoids cross-tenant prompt-visibility limitations that prevent a
   // separately-authenticated non-admin from seeing the admin's prompts.
   // ==========================================================================
 
   test.describe('Non-Admin', () => {
-    test('admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add', async ({
+    test('admin in user mode can see and run admin-created prompts but cannot edit, delete, or add', async ({
       page,
       editMentorPage,
       chatPage,
@@ -410,13 +410,13 @@ test.describe('Journey 42: Suggested Prompts', () => {
       await editMentorPage.close();
       await waitForPageReady(page);
 
-      // ── Switch to Learner mode (acts as a non-admin / student) ──────────────
+      // ── Switch to User mode (acts as a non-admin / student) ──────────────
       const learnerSwitch = page.getByRole('switch', {
-        name: /learner mode/i,
+        name: /user mode/i,
       });
       await expect(learnerSwitch).toBeVisible({ timeout: 10_000 });
-      // The switch is `checked` when in instructor mode; click to flip to
-      // learner mode.
+      // The switch is `checked` when in administrator mode; click to flip to
+      // user mode.
       const isInstructor =
         (await learnerSwitch.getAttribute('aria-checked')) === 'true';
       if (isInstructor) {

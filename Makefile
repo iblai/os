@@ -217,7 +217,7 @@ tauri-android-build:
 
 # Build for Android (release AAB for Play Store)
 tauri-android-build-aab:
-	cargo tauri android build --aab
+	cargo tauri android build --aab true
 
 # ============================================
 # Tauri Mobile - iOS (macOS only)

@@ -114,7 +114,11 @@ const {
   mockEscapeHtml: vi.fn((str: string) =>
     str.replace(/</g, '&lt;').replace(/>/g, '&gt;'),
   ),
-  mockStripHtml: vi.fn((html: string) => html.replace(/<[^>]+>/g, '')),
+  mockStripHtml: vi.fn((html: string) => {
+    let t = html;
+    while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+    return t;
+  }),
   mockSplitTextIntoLines: vi.fn((text: string) => [text]),
 }));
 
@@ -1424,9 +1428,11 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mock
-      mockStripHtml.mockImplementation((html: string) =>
-        html.replace(/<[^>]+>/g, ''),
-      );
+      mockStripHtml.mockImplementation((html: string) => {
+        let t = html;
+        while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+        return t;
+      });
     });
 
     it('handles fallback with page break when content is long', async () => {
@@ -1442,9 +1448,11 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mocks
-      mockStripHtml.mockImplementation((html: string) =>
-        html.replace(/<[^>]+>/g, ''),
-      );
+      mockStripHtml.mockImplementation((html: string) => {
+        let t = html;
+        while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+        return t;
+      });
       mockSplitTextIntoLines.mockImplementation((text: string) => [text]);
     });
 
@@ -1458,9 +1466,11 @@ describe('canvas-export-handlers', () => {
       expect(mockToastSuccess).toHaveBeenCalledWith('Document exported as PDF');
 
       // Reset mock
-      mockStripHtml.mockImplementation((html: string) =>
-        html.replace(/<[^>]+>/g, ''),
-      );
+      mockStripHtml.mockImplementation((html: string) => {
+        let t = html;
+        while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+        return t;
+      });
     });
 
     it('triggers element-level page break when many elements exceed page height (lines 215-217)', async () => {

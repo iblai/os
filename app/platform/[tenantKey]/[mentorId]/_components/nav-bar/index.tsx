@@ -171,14 +171,14 @@ export function NavBar() {
 
   const handleLoginClick = React.useCallback(() => {
     if (requiresLoginForChat && tenantKey) {
-      redirectToAuthSpaJoinTenant(tenantKey);
+      redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
       return;
     }
 
     console.log(
       '[auth-redirect] User login from navbar without tenant key or login not required',
     );
-    redirectToAuthSpa();
+    redirectToAuthSpa(undefined, undefined, undefined, true, true);
   }, [requiresLoginForChat, tenantKey]);
 
   const {
@@ -595,7 +595,7 @@ export function NavBar() {
                   userIsStudent ? 'font-semibold' : 'text-gray-500',
                 )}
               >
-                Learner
+                User
               </span>
               <LearnerModeSwitch />
               <span
@@ -604,7 +604,7 @@ export function NavBar() {
                   userIsStudent ? 'text-gray-500' : 'font-semibold',
                 )}
               >
-                Instructor
+                Admin
               </span>
             </div>
           )}
