@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.9](https://github.com/iblai/agentai/compare/v0.67.8...v0.67.9) (2026-05-26)
+
+### Bug Fixes
+
+* **ci:** update PR Validation status when E2E tests complete ([3f03342](https://github.com/iblai/agentai/commit/3f033426613b7ed33ee06f38eed0c2738311408d))
+
 ## [0.67.8](https://github.com/iblai/agentai/compare/v0.67.7...v0.67.8) (2026-05-25)
 
 ### Documentation
