@@ -100,6 +100,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     () => Promise.resolve({}),
     { isLoading: false },
   ],
+  // settings-tab.tsx also reads the mentor's CallConfiguration to hydrate
+  // the two voice-call toggles surfaced in Settings, and PATCHes/POSTs
+  // the call-configurations endpoint when those toggles change. Stub the
+  // hooks so this test (which doesn't exercise that branch) keeps working.
+  useGetCallConfigurationsQuery: () => ({
+    data: [],
+    isError: false,
+    isLoading: false,
+  }),
+  useCreateCallConfigurationMutation: () => [
+    () => ({ unwrap: () => Promise.resolve({}) }),
+    { isLoading: false },
+  ],
+  useUpdateCallConfigurationMutation: () => [
+    () => ({ unwrap: () => Promise.resolve({}) }),
+    { isLoading: false },
+  ],
 }));
 
 // Mock sonner

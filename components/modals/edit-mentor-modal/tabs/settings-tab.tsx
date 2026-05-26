@@ -29,6 +29,9 @@ import {
   useEditMentorMutation,
   useGetClawMentorConfigQuery,
   useUpdateClawMentorConfigMutation,
+  useGetCallConfigurationsQuery,
+  useCreateCallConfigurationMutation,
+  useUpdateCallConfigurationMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 
@@ -90,6 +93,10 @@ interface SettingsForm {
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
+  /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
+  use_function_calling_for_rag: boolean;
+  /** Voice-call: enable screen sharing. Persisted on CallConfiguration, not MentorSettings. */
+  enable_video: boolean;
 }
 
 export function SettingsTab() {
@@ -137,6 +144,28 @@ export function SettingsTab() {
   );
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
+
+  // CallConfiguration is the source of truth for the two voice-call toggles
+  // surfaced in Settings (`use_function_calling_for_rag` and `enable_video`).
+  // The backend embeds the active config inside the mentor-settings response,
+  // but we still hit the list endpoint as a fallback for older API versions
+  // that don't inline it. Skip the network call when the inline value exists.
+  // @ts-ignore call_configuration is on the API response but not typed
+  const inlineCallConfig = mentor?.call_configuration ?? undefined;
+  const { data: callConfigList } = useGetCallConfigurationsQuery(
+    { org: tenantKey!, userId: username ?? '', mentor: activeMentorId! },
+    {
+      skip:
+        inlineCallConfig !== undefined ||
+        !tenantKey ||
+        !username ||
+        !activeMentorId,
+    },
+  );
+  const existingCallConfig = inlineCallConfig ?? callConfigList?.[0];
+
+  const [createCallConfig] = useCreateCallConfigurationMutation();
+  const [updateCallConfig] = useUpdateCallConfigurationMutation();
   // @ts-ignore - enable_memory_component exists on API but not typed
   const initialMemoryEnabled: boolean =
     // @ts-ignore - enable_memory_component exists on API but not typed
@@ -202,6 +231,9 @@ export function SettingsTab() {
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
+      use_function_calling_for_rag:
+        existingCallConfig?.use_function_calling_for_rag ?? false,
+      enable_video: existingCallConfig?.enable_video ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -305,6 +337,64 @@ export function SettingsTab() {
             console.error(JSON.stringify({ tenant: tenantKey, clawError }));
           }
         }
+
+        // Sync the voice-call toggles (use_function_calling_for_rag,
+        // enable_video) to the CallConfiguration endpoint. Only fire when
+        // the user actually changed one of them so we don't churn the
+        // backend on no-op saves. If no config exists yet, POST a new one
+        // with mode='realtime' as the default; otherwise PATCH the two
+        // fields against the existing config id.
+        const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
+          ? true
+          : false;
+        const prevEnableVideo = existingCallConfig?.enable_video ? true : false;
+        const callConfigChanged =
+          value.use_function_calling_for_rag !== prevFnCalling ||
+          value.enable_video !== prevEnableVideo;
+
+        if (
+          callConfigChanged &&
+          tenantKey &&
+          username &&
+          activeMentorId !== undefined
+        ) {
+          try {
+            if (existingCallConfig?.id) {
+              await updateCallConfig({
+                org: tenantKey,
+                userId: username,
+                id: existingCallConfig.id,
+                requestBody: {
+                  use_function_calling_for_rag:
+                    value.use_function_calling_for_rag,
+                  enable_video: value.enable_video,
+                },
+              }).unwrap();
+            } else {
+              await createCallConfig({
+                org: tenantKey,
+                userId: username,
+                requestBody: {
+                  mentor: activeMentorId,
+                  mode: 'realtime',
+                  language: 'en',
+                  use_function_calling_for_rag:
+                    value.use_function_calling_for_rag,
+                  enable_video: value.enable_video,
+                },
+              }).unwrap();
+            }
+          } catch (callConfigError) {
+            // Mirror the claw-config approach: don't fail the whole save
+            // if the voice-call sync fails — mentor settings already
+            // persisted. Surface a separate toast so admins know.
+            console.error(
+              JSON.stringify({ tenant: tenantKey, callConfigError }),
+            );
+            toast.error('Voice call settings failed to save');
+          }
+        }
+
         toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
@@ -873,6 +963,75 @@ export function SettingsTab() {
                   </form.Field>
                 )}
               </WithFormPermissions>
+
+              <form.Field name="use_function_calling_for_rag">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Look things up only when needed
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about function calling for RAG"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              During voice calls, only retrieve from datasets
+                              when the model decides it needs them. Persisted
+                              with the call configuration.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Look things up only when needed ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field name="enable_video">
+                {(field) => (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#646464]">
+                        Allow screen sharing on a call
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            type="button"
+                            aria-label="More info about allowing screen sharing on a call"
+                          >
+                            <Info className="h-4 w-4 text-gray-400" />
+                          </TooltipTrigger>
+                          <TooltipContent className="ibl-tooltip-content">
+                            <p>
+                              Lets users share their screen during a realtime
+                              voice call. Persisted with the call configuration.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      disabled={isDisabled}
+                      aria-label={`Allow screen sharing on a call ${field.state.value ? 'enabled' : 'disabled'}`}
+                    />
+                  </div>
+                )}
+              </form.Field>
 
               <form.Field name="enable_memory_component">
                 {(field) => (

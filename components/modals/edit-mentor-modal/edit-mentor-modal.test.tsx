@@ -118,6 +118,18 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     // segment. We don't add the clawApiSlice middleware to the test store, so
     // mock the hook to return `null` (no wired config) — Skills stays hidden.
     useGetClawMentorConfigQuery: () => ({ data: null }),
+    // Settings tab now reads the CallConfiguration to hydrate the two
+    // voice-call toggles. The list endpoint isn't mounted in this test
+    // store, so stub the hooks with safe defaults.
+    useGetCallConfigurationsQuery: () => ({ data: [] }),
+    useCreateCallConfigurationMutation: () => [
+      () => ({ unwrap: () => Promise.resolve({}) }),
+      { isLoading: false },
+    ],
+    useUpdateCallConfigurationMutation: () => [
+      () => ({ unwrap: () => Promise.resolve({}) }),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -189,6 +201,10 @@ vi.mock('./tabs', () => ({
   SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
   SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
+  VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
+  ScreenShareTab: () => (
+    <div data-testid="screenshare-tab">Screen Share Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({

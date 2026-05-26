@@ -21,6 +21,7 @@ import {
   Sparkles,
   ScrollText,
   Volume2,
+  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -53,6 +54,12 @@ export type MentorSegmentConfigFlags = {
   /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
   clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
+  /**
+   * True when the mentor's CallConfiguration has `enable_video` on — the
+   * toggle that's surfaced in the Settings tab. Gates the standalone
+   * Screen share top-level tab.
+   */
+  isScreenshareEnabled: boolean;
 };
 
 export type MentorSegment = {
@@ -147,6 +154,23 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.screenshare,
+    label: 'Screen Share',
+    icon: MonitorPlay,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Tab is gated by the "Allow screen sharing on a call" toggle in
+    // Settings, which writes `enable_video` on the CallConfiguration. The
+    // SDK's <AgentScreenShareTab/> still renders an off-state hint when
+    // `enable_video` is false, but at the host level we hide the tab
+    // entirely so the sidebar stays clean.
+    enabledThroughConfig: (flags) => flags.isScreenshareEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
@@ -459,6 +483,14 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
     mentorSettings?.enable_memory_component ?? false;
+
+  // CallConfiguration is embedded directly in the mentor-settings response.
+  // The host gates the Screen share tab on `enable_video` so it only shows
+  // up after an admin flips the toggle in Settings.
+  // @ts-ignore - call_configuration exists on API but not typed
+  const isScreenshareEnabled: boolean =
+    // @ts-ignore - call_configuration exists on API but not typed
+    mentorSettings?.call_configuration?.enable_video ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -478,6 +510,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isMemoryComponentEnabled,
         isClawEnabled,
         clawConfigExists,
+        isScreenshareEnabled,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -490,6 +523,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       isClawEnabled,
       clawConfigExists,
       isMemoryComponentEnabled,
+      isScreenshareEnabled,
     ],
   );
 
