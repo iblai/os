@@ -1,33 +1,80 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { useLazyGetChatMessageTtsQuery } from '@iblai/iblai-js/data-layer';
 import type { Message } from '@iblai/iblai-js/web-utils';
 
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
-import { useSharedChatMessages } from './use-shared-chat-messages';
+
+// Module-level store so every consumer of useSpeech (the per-message
+// AIMessageSpeak buttons and the ChatMessages autoplay flow) shares one active
+// playback. This is what lets the icon on a specific message bubble light up
+// when autoplay reads that message from elsewhere in the tree.
+type SpeechSnapshot = {
+  currentMessageId: string | null;
+  isSpeaking: boolean;
+  isLoading: boolean;
+};
+
+let snapshot: SpeechSnapshot = {
+  currentMessageId: null,
+  isSpeaking: false,
+  isLoading: false,
+};
+
+let activeAudio: HTMLAudioElement | null = null;
+
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot() {
+  return snapshot;
+}
+
+function update(patch: Partial<SpeechSnapshot>) {
+  snapshot = { ...snapshot, ...patch };
+  listeners.forEach((l) => l());
+}
+
+function teardownPlayback() {
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio.src = '';
+    activeAudio = null;
+  }
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+function resetSpeech() {
+  teardownPlayback();
+  update({ currentMessageId: null, isSpeaking: false, isLoading: false });
+}
 
 type Props = {
   mentorId?: string;
   tenantKey?: string;
-  sessionId?: string;
 };
 
-export function useSpeech({ mentorId, tenantKey, sessionId }: Props = {}) {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
+export function useSpeech({ mentorId, tenantKey }: Props = {}) {
+  const { currentMessageId, isSpeaking, isLoading } = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getSnapshot,
+  );
 
   const username = useUsername();
   const { data: mentorSettings } = useMentorSettings({ mentorId, tenantKey });
   const voiceProvider = mentorSettings?.voiceProvider;
-  const { messages: persistedMessages } = useSharedChatMessages({
-    sessionId: sessionId ?? '',
-    tenantKey,
-  });
 
   const [fetchTts] = useLazyGetChatMessageTtsQuery();
 
@@ -38,124 +85,84 @@ export function useSpeech({ mentorId, tenantKey, sessionId }: Props = {}) {
   );
   const isSupported = useEndpoint || isBrowserSupported;
 
-  const releaseAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
-    }
-    if (audioUrlRef.current) {
-      URL.revokeObjectURL(audioUrlRef.current);
-      audioUrlRef.current = null;
-    }
-  }, []);
-
-  const cancelBrowserSpeech = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  }, []);
-
   useEffect(() => {
     return () => {
-      cancelBrowserSpeech();
-      releaseAudio();
+      // Only the last unmount needs to clean up; harmless when re-mounting.
+      if (listeners.size === 0) {
+        resetSpeech();
+      }
     };
-  }, [cancelBrowserSpeech, releaseAudio]);
+  }, []);
 
   const stop = useCallback(() => {
-    cancelBrowserSpeech();
-    releaseAudio();
-    setIsSpeaking(false);
-  }, [cancelBrowserSpeech, releaseAudio]);
+    resetSpeech();
+  }, []);
 
   const speakViaBrowser = useCallback(
-    (content: string) => {
-      if (!isBrowserSupported || !content) return;
-      cancelBrowserSpeech();
-      const utterance = new SpeechSynthesisUtterance(content);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      utteranceRef.current = utterance;
-      setIsSpeaking(true);
+    (message: Message) => {
+      if (!isBrowserSupported || !message.content) return;
+      teardownPlayback();
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      utterance.onend = () =>
+        update({ currentMessageId: null, isSpeaking: false });
+      utterance.onerror = () =>
+        update({ currentMessageId: null, isSpeaking: false });
+      update({
+        currentMessageId: message.id,
+        isSpeaking: true,
+        isLoading: false,
+      });
       window.speechSynthesis.speak(utterance);
     },
-    [isBrowserSupported, cancelBrowserSpeech],
+    [isBrowserSupported],
   );
 
   const speakViaEndpoint = useCallback(
     async (message: Message) => {
       if (!username || !tenantKey) return;
 
-      // Websocket-streamed messages arrive with a UUID; the persisted record
-      // has the numeric id the TTS endpoint expects. Fall back to the latest
-      // assistant message from the session when the local id isn't numeric.
-      console.log('[PERSISTED MESSAGE]: ', { persistedMessages });
-      let chatMessageId = Number(message.id);
-      if (!Number.isFinite(chatMessageId)) {
-        let lastAssistantId: string | undefined;
-        for (let i = persistedMessages.length - 1; i >= 0; i--) {
-          if (persistedMessages[i].role === 'assistant') {
-            lastAssistantId = persistedMessages[i].id;
-            break;
-          }
-        }
-        chatMessageId = Number(lastAssistantId);
-      }
-      if (!Number.isFinite(chatMessageId)) {
-        console.warn('TTS: could not resolve a numeric chat_message_id');
-        return;
-      }
+      teardownPlayback();
+      update({
+        currentMessageId: message.id,
+        isSpeaking: false,
+        isLoading: true,
+      });
 
-      cancelBrowserSpeech();
-      releaseAudio();
       try {
-        const blob = await fetchTts(
+        const dataUrl = await fetchTts(
           {
             org: tenantKey,
             user_id: username,
-            chat_message_id: chatMessageId,
+            chat_message_id: String(message.id),
           },
-          false,
+          true,
         ).unwrap();
-        console.log('[BLOB]: ', blob);
-        if (!(blob instanceof Blob)) {
+        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
           console.warn(
-            'TTS endpoint returned a non-Blob payload; falling back to browser speech.',
-            blob,
+            'TTS endpoint returned an unexpected payload; falling back to browser speech.',
+            dataUrl,
           );
-          speakViaBrowser(message.content);
+          speakViaBrowser(message);
           return;
         }
-        const url = URL.createObjectURL(blob);
-        audioUrlRef.current = url;
-        const audio = new Audio(url);
-        audioRef.current = audio;
+        const audio = new Audio(dataUrl);
+        activeAudio = audio;
         audio.onended = () => {
-          setIsSpeaking(false);
-          releaseAudio();
+          activeAudio = null;
+          update({ currentMessageId: null, isSpeaking: false });
         };
         audio.onerror = () => {
-          setIsSpeaking(false);
-          releaseAudio();
+          activeAudio = null;
+          update({ currentMessageId: null, isSpeaking: false });
         };
-        setIsSpeaking(true);
+        update({ isSpeaking: true, isLoading: false });
         await audio.play();
       } catch (error) {
         console.error('TTS endpoint failed', error);
-        setIsSpeaking(false);
-        releaseAudio();
+        resetSpeech();
       }
     },
-    [
-      username,
-      tenantKey,
-      fetchTts,
-      persistedMessages,
-      cancelBrowserSpeech,
-      releaseAudio,
-      speakViaBrowser,
-    ],
+    [username, tenantKey, fetchTts, speakViaBrowser],
   );
 
   const speak = useCallback(
@@ -164,7 +171,7 @@ export function useSpeech({ mentorId, tenantKey, sessionId }: Props = {}) {
       if (useEndpoint) {
         void speakViaEndpoint(message);
       } else {
-        speakViaBrowser(message.content);
+        speakViaBrowser(message);
       }
     },
     [useEndpoint, speakViaEndpoint, speakViaBrowser],
@@ -172,14 +179,25 @@ export function useSpeech({ mentorId, tenantKey, sessionId }: Props = {}) {
 
   const toggle = useCallback(
     (message: Message) => {
-      if (isSpeaking) {
+      const isThisActive =
+        snapshot.currentMessageId === message.id &&
+        (snapshot.isSpeaking || snapshot.isLoading);
+      if (isThisActive) {
         stop();
         return;
       }
       speak(message);
     },
-    [isSpeaking, speak, stop],
+    [speak, stop],
   );
 
-  return { isSpeaking, isSupported, speak, stop, toggle };
+  return {
+    currentMessageId,
+    isSpeaking,
+    isLoading,
+    isSupported,
+    speak,
+    stop,
+    toggle,
+  };
 }

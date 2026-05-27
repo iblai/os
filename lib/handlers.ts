@@ -177,11 +177,11 @@ export function useIframeHandlers() {
     },
     'MENTOR:ENABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
       dispatch(setAutoplayLastAiMessage(true));
-      eventBus.emit(RemoteEvents.enableAutoplayLastAiMessage);
+      //eventBus.emit(RemoteEvents.enableAutoplayLastAiMessage);
     },
     'MENTOR:DISABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
       dispatch(setAutoplayLastAiMessage(false));
-      eventBus.emit(RemoteEvents.disableAutoplayLastAiMessage);
+      //eventBus.emit(RemoteEvents.disableAutoplayLastAiMessage);
     },
   };
 

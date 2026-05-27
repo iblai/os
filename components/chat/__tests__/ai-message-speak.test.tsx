@@ -21,13 +21,12 @@ vi.mock('@/providers/use-user', () => ({
   useUsername: vi.fn(() => 'tester'),
 }));
 
-vi.mock('@/hooks/use-shared-chat-messages', () => ({
-  useSharedChatMessages: vi.fn(() => ({ messages: [] })),
-}));
-
 const fetchTtsMock = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useLazyGetChatMessageTtsQuery: () => [fetchTtsMock, { isFetching: false }],
+  useLazyGetChatMessageTtsQuery: () => [
+    fetchTtsMock,
+    { isFetching: false, isUninitialized: true },
+  ],
 }));
 
 type UtteranceLike = {
@@ -62,7 +61,6 @@ const renderSpeak = (overrides: Partial<typeof baseMessage> = {}) =>
       message={{ ...baseMessage, ...overrides }}
       mentorId="mentor-1"
       tenantKey="org-1"
-      sessionId="session-1"
     />,
   );
 

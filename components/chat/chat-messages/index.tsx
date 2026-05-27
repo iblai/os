@@ -7,10 +7,12 @@ import { formatRelativeDate } from '@/lib/utils';
 import { Message as BaseMessage } from '@iblai/iblai-js/web-utils';
 import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
 import { useSpeech } from '@/hooks/use-speech';
-import { useAppSelector } from '@/lib/hooks';
-import { selectAutoplayLastAiMessage } from '@/features/chat/chatSlice';
+// import { useAppSelector } from '@/lib/hooks';
+// import { selectAutoplayLastAiMessage } from '@/features/chat/chatSlice';
 import type { CanvasOpenPayload } from './types';
 import { UserMessageBubble } from './user-message-bubble';
+import { useAppSelector } from '@/lib/hooks';
+import { selectAutoplayLastAiMessage } from '@/features/chat/chatSlice';
 
 const ImagePreviewModal = dynamic(
   () => import('./image-preview-modal').then((mod) => mod.ImagePreviewModal),
@@ -58,7 +60,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
     ref,
   ) {
     const [previewImage, setPreviewImage] = React.useState<string | null>(null);
-    const { speak, stop } = useSpeech({ mentorId, tenantKey, sessionId });
+    const { speak, stop } = useSpeech({ mentorId, tenantKey });
     const autoplayEnabled = useAppSelector(selectAutoplayLastAiMessage);
 
     // Find the index of the last AI message for focus management
