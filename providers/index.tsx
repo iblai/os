@@ -508,6 +508,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             saveRedirect: boolean,
             useCurrentDomain = true,
           ) => {
+            console.log('[TenantProvider] handling tenant switching');
             if (!showingSharedChat)
               await handleTenantSwitch(
                 tenant,

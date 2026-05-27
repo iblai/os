@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Application identifier (must match provisioning profile) -->
+	<!-- Must match provisioning profile -->
 	<key>com.apple.application-identifier</key>
 	<string>L4FWRM8W5Z.ai.ibl.mentorai</string>
 

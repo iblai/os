@@ -726,6 +726,9 @@ export const handleTenantSwitch = async (
     console.log(
       '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
     );
+    console.log(
+      `[handleTenantSwitch] Switching from ${localStorage.getItem('tenant')} to ${tenant}`,
+    );
     return;
   }
 
