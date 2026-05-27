@@ -1560,6 +1560,32 @@ export function Chat({
     [enabledGuidedPrompts, tenantKey, sessionId, username, handleSubmit],
   );
 
+  // Gate for the "Just a sec..." loading placeholder.
+  // It must only appear in the brief window where a response is pending but
+  // nothing has rendered yet. Without the checks below, an unstable socket
+  // that retries/duplicates a generation renders "Just a sec..." next to an
+  // answer that is already streaming (or finished) in the current/previous
+  // bubble — the duplicate "stream showing while another stream is incoming"
+  // bug. So also hide it when the current stream already has reasoning/tool
+  // output, or when the last assistant message already shows any output.
+  const lastMessage =
+    messages.length > 0 ? messages[messages.length - 1] : undefined;
+  const lastAssistantHasOutput =
+    lastMessage?.role === 'assistant' &&
+    ((lastMessage.content ?? '').trim().length > 0 ||
+      (lastMessage.reasoningContent ?? '').trim().length > 0 ||
+      (lastMessage.toolCalls?.length ?? 0) > 0 ||
+      (lastMessage.artifactVersions?.length ?? 0) > 0);
+  const currentStreamHasOutput =
+    (currentStreamingMessage?.content ?? '').trim().length > 0 ||
+    isReasoning ||
+    (streamingReasoningContent ?? '').trim().length > 0 ||
+    (streamingToolCalls?.length ?? 0) > 0;
+  const showLoadingMessage =
+    (isPending || isStreaming) &&
+    !currentStreamHasOutput &&
+    !lastAssistantHasOutput;
+
   return (
     <div
       className={cn(
@@ -1773,21 +1799,12 @@ export function Chat({
                   </div>
 
                   {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                  {(isPending || isStreaming) &&
-                    !currentStreamingMessage?.content &&
-                    !isReasoning &&
-                    !(
-                      messages.length > 0 &&
-                      messages[messages.length - 1]?.role === 'assistant' &&
-                      messages[messages.length - 1]?.artifactVersions &&
-                      (messages[messages.length - 1]?.artifactVersions
-                        ?.length ?? 0) > 0
-                    ) && (
-                      <LoadingMessage
-                        mentorName={mentorName}
-                        profileImage={profileImage}
-                      />
-                    )}
+                  {showLoadingMessage && (
+                    <LoadingMessage
+                      mentorName={mentorName}
+                      profileImage={profileImage}
+                    />
+                  )}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -2002,21 +2019,12 @@ export function Chat({
                 </div>
 
                 {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                {(isPending || isStreaming) &&
-                  !currentStreamingMessage?.content &&
-                  !isReasoning &&
-                  !(
-                    messages.length > 0 &&
-                    messages[messages.length - 1]?.role === 'assistant' &&
-                    messages[messages.length - 1]?.artifactVersions &&
-                    (messages[messages.length - 1]?.artifactVersions?.length ??
-                      0) > 0
-                  ) && (
-                    <LoadingMessage
-                      mentorName={mentorName}
-                      profileImage={profileImage}
-                    />
-                  )}
+                {showLoadingMessage && (
+                  <LoadingMessage
+                    mentorName={mentorName}
+                    profileImage={profileImage}
+                  />
+                )}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}
