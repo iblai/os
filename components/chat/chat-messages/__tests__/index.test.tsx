@@ -81,6 +81,18 @@ vi.mock('@/components/chat/chat-messages/user-message-bubble', () => ({
   ),
 }));
 
+vi.mock('@/hooks/use-speech', () => ({
+  useSpeech: () => ({
+    currentMessageId: null,
+    isSpeaking: false,
+    isLoading: false,
+    isSupported: false,
+    speak: vi.fn(),
+    stop: vi.fn(),
+    toggle: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
   ImagePreviewModal: ({
     url,

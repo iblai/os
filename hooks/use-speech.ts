@@ -2,11 +2,39 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
-import { useLazyGetChatMessageTtsQuery } from '@iblai/iblai-js/data-layer';
 import type { Message } from '@iblai/iblai-js/web-utils';
 
+import { config } from '@/lib/config';
+import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
+
+async function fetchTtsDataUrl(
+  org: string,
+  userId: string,
+  chatMessageId: string,
+): Promise<string> {
+  const token =
+    typeof window !== 'undefined'
+      ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
+      : null;
+  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts`;
+  const response = await fetch(url, {
+    method: 'GET',
+    cache: 'no-cache',
+    headers: token ? { Authorization: `Token ${token}` } : undefined,
+  });
+  if (!response.ok) {
+    throw new Error(`TTS request failed with status ${response.status}`);
+  }
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
 
 // Module-level store so every consumer of useSpeech (the per-message
 // AIMessageSpeak buttons and the ChatMessages autoplay flow) shares one active
@@ -76,8 +104,6 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
   const { data: mentorSettings } = useMentorSettings({ mentorId, tenantKey });
   const voiceProvider = mentorSettings?.voiceProvider;
 
-  const [fetchTts] = useLazyGetChatMessageTtsQuery();
-
   const isBrowserSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window;
   const useEndpoint = Boolean(
@@ -129,19 +155,12 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
       });
 
       try {
-        const dataUrl = await fetchTts(
-          {
-            org: tenantKey,
-            user_id: username,
-            chat_message_id: String(message.id),
-          },
-          true,
-        ).unwrap();
+        const dataUrl = await fetchTtsDataUrl(
+          tenantKey,
+          username,
+          String(message.id),
+        );
         if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
-          console.warn(
-            'TTS endpoint returned an unexpected payload; falling back to browser speech.',
-            dataUrl,
-          );
           speakViaBrowser(message);
           return;
         }
@@ -157,12 +176,11 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         };
         update({ isSpeaking: true, isLoading: false });
         await audio.play();
-      } catch (error) {
-        console.error('TTS endpoint failed', error);
+      } catch {
         resetSpeech();
       }
     },
-    [username, tenantKey, fetchTts, speakViaBrowser],
+    [username, tenantKey, speakViaBrowser],
   );
 
   const speak = useCallback(
