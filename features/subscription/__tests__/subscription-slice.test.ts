@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import subscriptionSlice, {
   setOpenPricingModal,
-  setOpenAppleRestrictionModal,
   setFreeTrialUsageOptions,
   setPricingModalData,
   setSubscriptionStatus,
@@ -13,7 +12,6 @@ import { SUBSCRIPTION_V2_TRIGGERS } from '@iblai/iblai-js/web-utils';
 describe('subscription/subscription-slice', () => {
   const initialState = {
     openPricingModal: false,
-    openAppleRestrictionModal: false,
     freeTrialUsageOptions: {
       count: 0,
       limitReached: false,
@@ -38,30 +36,6 @@ describe('subscription/subscription-slice', () => {
       expect(subscriptionSlice.reducer(undefined, { type: 'unknown' })).toEqual(
         initialState,
       );
-    });
-  });
-
-  describe('setOpenAppleRestrictionModal', () => {
-    it('should set openAppleRestrictionModal to true', () => {
-      const state = subscriptionSlice.reducer(
-        initialState,
-        setOpenAppleRestrictionModal(true),
-      );
-
-      expect(state.openAppleRestrictionModal).toBe(true);
-    });
-
-    it('should set openAppleRestrictionModal to false', () => {
-      const modifiedState = {
-        ...initialState,
-        openAppleRestrictionModal: true,
-      };
-      const state = subscriptionSlice.reducer(
-        modifiedState,
-        setOpenAppleRestrictionModal(false),
-      );
-
-      expect(state.openAppleRestrictionModal).toBe(false);
     });
   });
 
@@ -220,7 +194,6 @@ describe('subscription/subscription-slice', () => {
 
     it('should export all action creators', () => {
       expect(setOpenPricingModal).toBeDefined();
-      expect(setOpenAppleRestrictionModal).toBeDefined();
       expect(setFreeTrialUsageOptions).toBeDefined();
       expect(setPricingModalData).toBeDefined();
       expect(setSubscriptionStatus).toBeDefined();

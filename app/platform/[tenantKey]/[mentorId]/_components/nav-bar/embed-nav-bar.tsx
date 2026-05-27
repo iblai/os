@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import {
   BadgeHelp,
@@ -12,6 +12,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
+import { useIsIframed } from '@/hooks/use-is-iframed';
 import {
   Tooltip,
   TooltipContent,
@@ -56,6 +57,7 @@ export function EmbedNavBar({
 }: Props) {
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
+  const isIframed = useIsIframed();
   const chatMode = useChatMode();
   const dispatch = useAppDispatch();
 
@@ -74,6 +76,22 @@ export function EmbedNavBar({
       '*',
     );
   }
+
+  useEffect(() => {
+    if (isPreviewMode) return;
+
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      // Let nested overlays (dropdowns, dialogs, popovers, tooltips) handle ESC first.
+      if (event.defaultPrevented) return;
+      if (document.querySelector('[data-state="open"]')) return;
+      notifyParentOnEmbedClose();
+    }
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isPreviewMode]);
 
   const helpItems = [
     ...(metadata?.show_help !== false
@@ -238,19 +256,21 @@ export function EmbedNavBar({
             </DropdownMenu>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-          aria-label="Close chat"
-          onClick={() => {
-            if (isPreviewMode) return;
-            notifyParentOnEmbedClose();
-          }}
-        >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close chat</span>
-        </Button>
+        {isIframed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            aria-label="Close chat"
+            onClick={() => {
+              if (isPreviewMode) return;
+              notifyParentOnEmbedClose();
+            }}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close chat</span>
+          </Button>
+        )}
       </div>
     </nav>
   );

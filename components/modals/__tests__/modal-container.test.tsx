@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { ModalContainer } from '../modal-container';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -58,18 +59,23 @@ vi.mock('@/lib/eventBus', () => ({
   RemoteEvents: {},
 }));
 
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantContext: () => ({
-    setDetermineUserPath: vi.fn(),
-    determineUserPath: false,
-    tenantKey: 'tenant123',
-    metadata: {},
-    setMetadata: vi.fn(),
-  }),
-  clearFiles: vi.fn(),
-  chatActions: { setShouldStartNewChat: vi.fn() },
-  SUBSCRIPTION_V2_TRIGGERS: { PRICING_MODAL: 'pricing_modal' },
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useTenantContext: () => ({
+      setDetermineUserPath: vi.fn(),
+      determineUserPath: false,
+      tenantKey: 'tenant123',
+      metadata: {},
+      setMetadata: vi.fn(),
+    }),
+    clearFiles: vi.fn(),
+    chatActions: { setShouldStartNewChat: vi.fn() },
+    SUBSCRIPTION_V2_TRIGGERS: { PRICING_MODAL: 'pricing_modal' },
+  };
+});
 
 vi.mock('@/hooks/use-local-storage', () => ({
   useLocalStorage: () => [{}, vi.fn()],
@@ -109,40 +115,6 @@ vi.mock('@/components/modals/settings-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@/components/modals/apple-restriction-modal', () => ({
-  AppleRestrictionModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div
-        data-testid="apple-restriction-modal"
-        role="dialog"
-        aria-label="Apple Restriction"
-      >
-        <button onClick={onClose}>Close Apple</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('@/components/modals/external-pricing-modal', () => ({
-  ExternalPricingModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
-        <button onClick={onClose}>Close Pricing</button>
-      </div>
-    ) : null,
-}));
-
 vi.mock('@/components/modals/shortcuts-modal', () => ({
   ShortcutsModal: ({
     isOpen,
@@ -154,21 +126,6 @@ vi.mock('@/components/modals/shortcuts-modal', () => ({
     isOpen ? (
       <div data-testid="shortcuts-modal" role="dialog" aria-label="Shortcuts">
         <button onClick={onClose}>Close Shortcuts</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal" role="dialog" aria-label="My Mentors">
-        <button onClick={onClose}>Close My Mentors</button>
       </div>
     ) : null,
 }));
@@ -192,34 +149,67 @@ vi.mock('@/components/modals/no-mentor-selected-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  InviteUserDialog: ({
-    isOpen,
-    onClose,
-    onSeeAllInvitedUsersClick,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSeeAllInvitedUsersClick?: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="invite-user-modal" role="dialog" aria-label="Invite">
-        <button onClick={onClose}>Close Invite</button>
-        {onSeeAllInvitedUsersClick && (
-          <button onClick={onSeeAllInvitedUsersClick}>See All Invited</button>
-        )}
+vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-containers')>();
+  return {
+    ...actual,
+    InviteUserDialog: ({
+      isOpen,
+      onClose,
+      onSeeAllInvitedUsersClick,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+      onSeeAllInvitedUsersClick?: () => void;
+    }) =>
+      isOpen ? (
+        <div data-testid="invite-user-modal" role="dialog" aria-label="Invite">
+          <button onClick={onClose}>Close Invite</button>
+          {onSeeAllInvitedUsersClick && (
+            <button onClick={onSeeAllInvitedUsersClick}>See All Invited</button>
+          )}
+        </div>
+      ) : null,
+    InvitedUsersDialog: ({ onClose }: { onClose: () => void }) => (
+      <div
+        data-testid="invited-users-dialog"
+        role="dialog"
+        aria-label="Invited Users"
+      >
+        <button onClick={onClose}>Close Invited</button>
       </div>
-    ) : null,
-  InvitedUsersDialog: ({ onClose }: { onClose: () => void }) => (
-    <div
-      data-testid="invited-users-dialog"
-      role="dialog"
-      aria-label="Invited Users"
-    >
-      <button onClick={onClose}>Close Invited</button>
-    </div>
-  ),
-}));
+    ),
+    UpgradePackageModal: ({
+      open,
+      onClose,
+    }: {
+      open: boolean;
+      onClose: () => void;
+    }) =>
+      open ? (
+        <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
+          <button onClick={onClose}>Close Pricing</button>
+        </div>
+      ) : null,
+    AppleRestrictionModal: ({
+      isOpen,
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) =>
+      isOpen ? (
+        <div
+          data-testid="apple-restriction-modal"
+          role="dialog"
+          aria-label="Apple Restriction"
+        >
+          <button onClick={onClose}>Close Apple</button>
+        </div>
+      ) : null,
+  };
+});
 
 vi.mock('@/components/custom-alert-dialog', () => ({
   CustomAlertDialog: ({
@@ -266,7 +256,6 @@ function createTestStore(options: StoreOptions = {}) {
       subscription: (
         state = {
           openPricingModal,
-          openAppleRestrictionModal,
           freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
           pricingModalData: {
             referenceId: '',
@@ -278,6 +267,7 @@ function createTestStore(options: StoreOptions = {}) {
           error402Detected: '',
         },
       ) => state,
+      appleRestriction: appleRestrictionReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -298,6 +288,7 @@ function createTestStore(options: StoreOptions = {}) {
         darkMode: false,
         shortcutsModal,
       },
+      appleRestriction: { openAppleRestrictionModal },
     },
   });
 }
@@ -490,9 +481,9 @@ describe('ModalContainer', () => {
     });
   });
 
-  describe('MyMentorsModal', () => {
-    it('renders when my_mentors modal is in the stack', () => {
-      const modalStack: ModalInfo[] = [{ name: MODALS.MY_MENTORS.name }];
+  describe('MyMentorsModal removal', () => {
+    it('does not render anything for a stale my_mentors modal entry', () => {
+      const modalStack: ModalInfo[] = [{ name: 'my_mentors' }];
       mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
       const store = createTestStore({ modalStack });
 
@@ -502,7 +493,7 @@ describe('ModalContainer', () => {
         </Provider>,
       );
 
-      expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
     });
   });
 

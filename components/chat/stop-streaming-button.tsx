@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef } from 'react';
 import { CircleStop } from 'lucide-react';
 
 import { Button } from '../ui/button';
@@ -16,24 +16,23 @@ type Props = {
 
 export const StopStreamingButton = forwardRef<HTMLButtonElement, Props>(
   function StopStreamingButton({ stopGenerating }, ref) {
-    const [open, setOpen] = useState(false);
     return (
-      <Tooltip
-        open={open}
-        onOpenChange={(next) => {
-          // Opening is driven solely by pointer hover (below). Ignore Radix's
-          // open-on-focus so the programmatic focus this button receives when
-          // streaming starts never pops the tooltip open. Still let it close.
-          if (!next) {
-            setOpen(false);
-          }
-        }}
-      >
-        <TooltipTrigger asChild>
-          <div
-            onPointerEnter={() => setOpen(true)}
-            onPointerLeave={() => setOpen(false)}
-          >
+      <Tooltip>
+        <TooltipTrigger
+          asChild
+          // Only suppress the tooltip when focus is NOT from the keyboard —
+          // i.e. the submit button swaps into the stop button mid-typing and
+          // this element inherits focus, or JS calls .focus(). Keyboard Tab
+          // navigation (:focus-visible) still opens the tooltip normally.
+          // See issue #576.
+          onFocus={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.matches(':focus-visible') === false) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <div>
             <Button
               ref={ref}
               type="button"

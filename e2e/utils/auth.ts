@@ -58,7 +58,7 @@ export async function navigateToMentorApp(
 
   // Default readiness: wait for mentor dropdown to be visible
   await expect(
-    page.getByRole('button', { name: 'Selected mentor dropdown button' }),
+    page.getByRole('button', { name: 'Selected agent dropdown button' }),
   ).toBeVisible({ timeout: 120_000 });
 }
 
@@ -100,7 +100,7 @@ export async function authenticate(
     logger.info('Waiting for platform redirect...');
     await safeWaitForURL(page, '**/platform/*/*', { timeout: 60_000 });
     await expect(
-      page.getByRole('button', { name: 'Selected mentor dropdown button' }),
+      page.getByRole('button', { name: 'Selected agent dropdown button' }),
     ).toBeVisible({ timeout: 30_000 });
     logger.info('Authentication completed successfully');
   }

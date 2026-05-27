@@ -4,7 +4,7 @@ import { useAppDispatch } from '@/lib/hooks';
 import { shortcutsModalUpdated } from '@/features/navigation/slice';
 
 export function useShortcuts() {
-  const { navigateToHome, openMyMentorsModal } = useNavigate();
+  const { navigateToHome } = useNavigate();
   const { toggleSidebar } = useSidebar();
   const dispatch = useAppDispatch();
 
@@ -30,11 +30,6 @@ export function useShortcuts() {
       label: 'Toggle Sidebar',
       keys: 'meta+shift+s',
       callback: toggleSidebar,
-    },
-    openMyMentorsModal: {
-      label: 'Open My Mentors',
-      keys: 'meta+shift+e',
-      callback: () => openMyMentorsModal(),
     },
     openShortcutsModal: {
       label: 'Open Shortcuts',

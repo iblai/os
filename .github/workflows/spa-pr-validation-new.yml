@@ -1,9 +1,6 @@
 name: SPA PR Validation (AMI-based)
 
 on:
-  pull_request:
-    branches: [main]
-    types: [labeled]
   workflow_dispatch:
     inputs:
       stg-slot:

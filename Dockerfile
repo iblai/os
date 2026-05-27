@@ -24,6 +24,7 @@ FROM base AS builder
 ARG NEXT_IMAGE_PATTERNS
 ARG NEXT_PUBLIC_BASE_PATH
 ARG SENTRY_AUTH_TOKEN
+ARG APP_VERSION
 # Make available as environment variables during build
 ENV NEXT_IMAGE_PATTERNS=$NEXT_IMAGE_PATTERNS
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
@@ -33,6 +34,11 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Copy entire source for build
 COPY . .
+
+# Override version in package.json if APP_VERSION is provided
+RUN if [ -n "$APP_VERSION" ]; then \
+      sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$APP_VERSION\"/" package.json; \
+    fi
 
 # Create production env file
 RUN echo "NEXT_PUBLIC_BASE_PATH=/${NEXT_PUBLIC_BASE_PATH}" > .env.production

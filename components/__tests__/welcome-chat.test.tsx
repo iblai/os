@@ -284,6 +284,30 @@ describe('WelcomeChat', () => {
       expect(mockOnPromptSelect).toHaveBeenCalledWith('Test Prompt');
     });
 
+    // Issue #1179 — guided prompts must render through the Markdown component
+    // so inline formatting (links, bold, etc.) authored in the prompt editor
+    // survives. Regression check: assert the prompt sits inside the mocked
+    // `markdown-content` wrapper rather than a plain <p>.
+    it('renders guided prompts through the Markdown component (issue #1179)', () => {
+      mockUseGetGuidedPromptsQuery.mockReturnValue({
+        data: {
+          ai_prompts: ['Visit [docs](https://docs.example.com)'],
+        },
+        isLoading: false,
+        error: undefined,
+      });
+
+      render(<WelcomeChat {...defaultProps} />);
+
+      const markdownNodes = screen.getAllByTestId('markdown-content');
+      const promptMarkdown = markdownNodes.find((n) =>
+        n.textContent?.includes('Visit [docs](https://docs.example.com)'),
+      );
+      expect(promptMarkdown).toBeDefined();
+      expect(promptMarkdown!.className).toContain('text-sm');
+      expect(promptMarkdown!.className).toContain('text-gray-700');
+    });
+
     it('should not render guided prompts when enabledGuidedPrompts is false', () => {
       mockUseGetGuidedPromptsQuery.mockReturnValue({
         data: {
@@ -309,8 +333,12 @@ describe('WelcomeChat', () => {
 
       render(<WelcomeChat {...defaultProps} />);
 
+      // Mentor name is hidden.
       expect(screen.queryByText('Test Mentor')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('markdown-content')).not.toBeInTheDocument();
+      // The welcome message itself is hidden, but there will still be
+      // `markdown-content` nodes for each prompt (issue #1179), so we assert
+      // the specific welcome-message text instead of the testid.
+      expect(screen.queryByText('Welcome message')).not.toBeInTheDocument();
     });
 
     it('should show mentor info when no guided prompts', () => {
@@ -600,6 +628,32 @@ describe('WelcomeChat', () => {
 
       fireEvent.click(screen.getByText('Click me'));
       expect(mockOnPromptSelect).toHaveBeenCalledWith('Click me');
+    });
+
+    // Issue #1179 — suggested prompts (authored via the Prompts editor) must
+    // render through the Markdown component so embedded links / bold / etc.
+    // come through in the embed and the welcome screen.
+    it('renders suggested prompts through the Markdown component (issue #1179)', () => {
+      mockUseGetPromptsSearchQuery.mockReturnValue({
+        data: {
+          results: [
+            {
+              id: '1',
+              prompt: 'See **docs** at [here](https://example.com)',
+            },
+          ],
+        },
+        isLoading: false,
+        error: undefined,
+      });
+
+      render(<WelcomeChat {...defaultProps} />);
+
+      const markdownNodes = screen.getAllByTestId('markdown-content');
+      const promptMarkdown = markdownNodes.find((n) =>
+        n.textContent?.includes('See **docs** at [here](https://example.com)'),
+      );
+      expect(promptMarkdown).toBeDefined();
     });
 
     it('should limit suggested prompts to 4', () => {

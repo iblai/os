@@ -144,6 +144,7 @@ vi.mock('@/lib/utils', () => ({
   hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
+  deleteCookieOnAllDomains: vi.fn(),
 }));
 
 vi.mock('@/lib/config', () => ({
@@ -222,7 +223,13 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     handlers?: unknown;
     defaultHandler?: (data: Record<string, unknown>) => void;
   }) => {
-    capturedIframeMessageHandler = opts;
+    // The provider tree contains multiple useIframeMessageHandler calls
+    // (Providers + AppProvider). Merge opts so a later call without a
+    // defaultHandler doesn't clobber one registered by an earlier call.
+    capturedIframeMessageHandler = {
+      ...capturedIframeMessageHandler,
+      ...opts,
+    };
     if (opts.defaultHandler && pendingIframeMessages.length > 0) {
       for (const msg of pendingIframeMessages) {
         opts.defaultHandler(msg);
@@ -500,6 +507,26 @@ describe('Providers', () => {
       expect(mockRedirectToAuthSpa).not.toHaveBeenCalled();
     });
 
+    it('401 handler skips redirect when token search param is present (shareable link)', () => {
+      // Use history.pushState to set the search param without replacing
+      // window.location entirely (which breaks subsequent tests).
+      const origUrl = window.location.href;
+      window.history.pushState({}, '', '/?token=share-abc');
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      renderProviders();
+      const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
+      errorHandlers?.['401']();
+      expect(mockRedirectToAuthSpa).not.toHaveBeenCalled();
+      const skipLog = consoleSpy.mock.calls.find(
+        (call) =>
+          typeof call[0] === 'string' &&
+          call[0].includes('Skipping 401 redirect - shareable link'),
+      );
+      expect(skipLog).toBeDefined();
+      consoleSpy.mockRestore();
+      window.history.pushState({}, '', origUrl);
+    });
+
     it('402 handler calls handle402Error', () => {
       renderProviders();
       const errorHandlers = mockInitializeDataLayer.mock.calls[0]?.[4];
@@ -554,6 +581,56 @@ describe('Providers', () => {
 
       renderProviders();
       // The component should redirect via window.location.href
+      hrefSpy.mockRestore();
+    });
+
+    it('does NOT redirect when both email and stripe_checkout_id are present (Stripe return)', () => {
+      mockSearchParams = new URLSearchParams(
+        'email=test@example.com&stripe_checkout_id=cs_test_123',
+      );
+      let capturedHref: string | undefined;
+      const hrefSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+        ...window.location,
+        origin: 'https://mentor.test',
+        set href(value: string) {
+          capturedHref = value;
+        },
+        get href() {
+          return capturedHref ?? 'https://mentor.test/';
+        },
+      } as Location);
+
+      // Should mount the full provider tree (no early return / no logout redirect)
+      const { getByText } = renderProviders(<div>Stripe Return Child</div>);
+
+      expect(getByText('Stripe Return Child')).toBeInTheDocument();
+      expect(capturedHref).toBeUndefined();
+
+      hrefSpy.mockRestore();
+    });
+
+    it('still redirects when stripe_checkout_id is empty/missing alongside email', () => {
+      mockSearchParams = new URLSearchParams(
+        'email=test@example.com&stripe_checkout_id=',
+      );
+      let capturedHref: string | undefined;
+      const hrefSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+        ...window.location,
+        origin: 'https://mentor.test',
+        set href(value: string) {
+          capturedHref = value;
+        },
+        get href() {
+          return capturedHref ?? 'https://mentor.test/';
+        },
+      } as Location);
+
+      renderProviders();
+
+      // Empty stripe_checkout_id is falsy → redirect should still fire
+      expect(capturedHref).toBeDefined();
+      expect(capturedHref).toContain('email=test%40example.com');
+
       hrefSpy.mockRestore();
     });
   });
@@ -771,6 +848,22 @@ describe('Providers', () => {
       expect(mockRedirectToAuthSpa).toHaveBeenCalledWith('r', 'p', true, false);
     });
 
+    it('onAuthFailure logs the reason and routes to /error/403', () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      renderProviders();
+      const onAuthFailure =
+        capturedTenantProviderProps.onAuthFailure as Function;
+      onAuthFailure('forbidden');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[TenantProvider] Auth failure:',
+        'forbidden',
+      );
+      expect(mockPush).toHaveBeenCalledWith('/error/403');
+      consoleSpy.mockRestore();
+    });
+
     it('passes correct currentTenant', () => {
       renderProviders();
       expect(capturedTenantProviderProps.currentTenant).toBe('test-tenant');
@@ -904,9 +997,7 @@ describe('Providers', () => {
       fn();
       expect(mockReplace).toHaveBeenCalled();
       vi.advanceTimersByTime(1100);
-      expect(toast.success).toHaveBeenCalledWith(
-        'Mentor switched successfully',
-      );
+      expect(toast.success).toHaveBeenCalledWith('Agent switched successfully');
       vi.useRealTimers();
     });
 
@@ -920,6 +1011,25 @@ describe('Providers', () => {
       mockIsPreviewMode = false;
       renderProviders();
       expect(capturedMentorProviderProps.fallback).not.toBeNull();
+    });
+  });
+
+  // ── workflow page short-circuits in MentorProvider callbacks ──────────
+
+  describe('workflow page MentorProvider callbacks', () => {
+    beforeEach(() => {
+      mockPathname = '/workflows/abc/run';
+    });
+
+    // One workflow-page test is enough to satisfy the 95% branch threshold
+    // for this file; the remaining isWorkflowPage short-circuits are
+    // structurally identical (same predicate, same early `return`).
+    it('redirectToNoMentorsPage no-ops on workflow pages', () => {
+      renderProviders();
+      const fn =
+        capturedMentorProviderProps.redirectToNoMentorsPage as Function;
+      fn();
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 
@@ -1138,6 +1248,34 @@ describe('Providers', () => {
         renderProviders();
         const fn = getMiddlewareFn('platform');
         expect(await fn!()).toBe(false);
+        consoleSpy.mockRestore();
+      });
+
+      // Regression coverage for issue #343 — `[ERROR] {}` Sentry events.
+      // The .catch on getMentorPublicSettings used to JSON.stringify the
+      // error, which produced "{}" for Error instances. The fix passes the
+      // Error directly to console.error; Sentry's captureConsoleIntegration
+      // (wired up in sentry.{client,server,edge}.config.ts) auto-promotes
+      // the call into a Sentry event with the full stack preserved.
+      it('logs Error directly to console.error on rejection (#343)', async () => {
+        const fetchErr = new TypeError('Failed to fetch');
+        mockUnwrap.mockRejectedValueOnce(fetchErr);
+        const consoleSpy = vi
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
+        renderProviders();
+        const fn = getMiddlewareFn('platform');
+        const result = await fn!();
+        expect(result).toBe(false);
+        // console.error must be called with a descriptive label AND the raw
+        // Error — not a pre-stringified payload that would lose the stack.
+        const matchingCall = consoleSpy.mock.calls.find(
+          (call) =>
+            typeof call[0] === 'string' &&
+            call[0].includes('getMentorPublicSettings failed'),
+        );
+        expect(matchingCall).toBeDefined();
+        expect(matchingCall?.[1]).toBe(fetchErr);
         consoleSpy.mockRestore();
       });
     });

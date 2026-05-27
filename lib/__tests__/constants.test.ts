@@ -73,8 +73,8 @@ describe('mentor constants', () => {
       expect(MODALS.SETTINGS.name).toBe('settings');
       expect(MODALS.CREATE_MENTOR.name).toBe('create_mentor');
       expect(MODALS.INVITE_USER.name).toBe('invite_user');
-      expect(MODALS.MY_MENTORS.name).toBe('my_mentors');
       expect(MODALS.LLM_PROVIDERS.name).toBe('llm_providers');
+      expect((MODALS as Record<string, unknown>).MY_MENTORS).toBeUndefined();
       expect(MODALS.ADD_PROMPT.name).toBe('add_prompt');
       expect(MODALS.ADD_RESOURCE.name).toBe('add_resource');
       expect(MODALS.NO_MENTOR_SELECTED.name).toBe('no_mentor_selected');
@@ -88,6 +88,7 @@ describe('mentor constants', () => {
       expect(MODALS.EDIT_MENTOR.tabs.mcp).toBe('mcp');
       expect(MODALS.EDIT_MENTOR.tabs.tools).toBe('tools');
       expect(MODALS.EDIT_MENTOR.tabs.safety).toBe('safety');
+      expect(MODALS.EDIT_MENTOR.tabs.privacy).toBe('privacy');
       expect(MODALS.EDIT_MENTOR.tabs.disclaimer).toBe('disclaimer');
       expect(MODALS.EDIT_MENTOR.tabs.access).toBe('access');
       expect(MODALS.EDIT_MENTOR.tabs.memory).toBe('memory');

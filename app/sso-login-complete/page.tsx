@@ -23,6 +23,23 @@ function SsoLoginCompleteContent() {
       }}
       redirectPathKey="redirect-to"
       defaultRedirectPath="/"
+      resolveRedirectPath={(
+        redirectPath: string,
+        parsedData: Record<string, string>,
+      ): string => {
+        // Check if redirectPath contains a platform key that doesn't match the authenticated tenant
+        const platformKeyMatch = redirectPath.match(/^\/platform\/([^/]+)/);
+        if (platformKeyMatch) {
+          const pathPlatformKey = platformKeyMatch[1];
+          const authenticatedTenant = parsedData.tenant;
+
+          if (authenticatedTenant && pathPlatformKey !== authenticatedTenant) {
+            // Platform key in path doesn't match authenticated tenant, reset to default
+            redirectPath = '/';
+          }
+        }
+        return redirectPath;
+      }}
     />
   );
 }
@@ -30,6 +47,13 @@ function SsoLoginCompleteContent() {
 export default function SsoLoginComplete() {
   useEffect(() => {
     hideInitialLoader();
+    // Notify other tabs/windows that the tenant switch SSO flow is complete
+    if (typeof BroadcastChannel !== 'undefined') {
+      const tenant = new URLSearchParams(window.location.search).get('tenant');
+      const channel = new BroadcastChannel('ibl-tenant-switch');
+      channel.postMessage({ type: 'TENANT_SWITCH_COMPLETE', tenant });
+      channel.close();
+    }
   }, []);
 
   return (

@@ -87,6 +87,7 @@ import { useUserAgreement } from '@/hooks/use-user-agreement';
 import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
 import { WelcomeChatNew } from '../welcome-chat-new';
+import { Spinner } from '@/components/spinner';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
@@ -120,6 +121,11 @@ const DisclaimerModal = dynamic(
 interface Message extends BaseMessage {
   replyTo?: Message | null;
   actions?: MessageAction[] | undefined;
+}
+
+interface SendChatMessagePayload {
+  content: string;
+  visible?: boolean;
 }
 
 /**
@@ -267,6 +273,7 @@ export function Chat({
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
   const isCompactMode = searchParams.get('compact') === 'true';
+  const initialPrompt = searchParams.get('prompt')?.trim() || undefined;
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
@@ -427,6 +434,7 @@ export function Chat({
     isOffline: isOfflineInTauri,
     onOfflineWithoutLocalLLM: handleOfflineWithoutLocalLLM,
     isPublicRoute: isAccessingPublicRoute,
+    initialPrompt,
   });
 
   const {
@@ -605,14 +613,32 @@ export function Chat({
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
+    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
+    const sendChatMessageHandler = (
+      payload: SendChatMessagePayload | unknown,
+    ) => {
+      const visible = (payload as SendChatMessagePayload)?.visible ?? true;
+      const content = (payload as SendChatMessagePayload)?.content ?? '';
+      if (!content || !content.trim()) return;
+      sendMessage(activeTab, content, { visible });
+    };
     eventBus.on(RemoteEvents.newChat, newChatEventHandler);
     eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+    eventBus.on(RemoteEvents.sendChatMessage, sendChatMessageHandler);
 
     return () => {
       eventBus.off(RemoteEvents.newChat, newChatEventHandler);
       eventBus.off(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
+      eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
-  }, [isCanvasOpen, startNewChat, stopGenerating, handleCloseCanvas]);
+  }, [
+    isCanvasOpen,
+    startNewChat,
+    stopGenerating,
+    handleCloseCanvas,
+    sendMessage,
+    activeTab,
+  ]);
 
   // Resize state for canvas/chat split view
   const [chatWidth, setChatWidth] = useState<number>(40); // Percentage of width for chat (default 40%)
@@ -1656,6 +1682,17 @@ export function Chat({
           </div>
         )}
 
+        {/* Loading spinner while a cached session's messages are being fetched.
+         * Without this, the welcome screen flashes before the cached messages arrive. */}
+        {!isAdvancedMode &&
+          !isNewSession.current &&
+          isLoadingChats &&
+          messages.length === 0 && (
+            <div className="flex h-full w-full items-center justify-center">
+              <Spinner className="h-14 w-14" />
+            </div>
+          )}
+
         {/* Welcome page for default mode */}
         {/*
          * (!isNewSession.current && messages.length === 1) here is to ensure that the welcome message is still shown if the user is not in a new session and there is only one message in the chat of type ai.
@@ -1665,7 +1702,12 @@ export function Chat({
           (!isNewSession.current &&
             messages.length === 1 &&
             messages[0]?.role === 'assistant')) &&
-          !isAdvancedMode && (
+          !isAdvancedMode &&
+          !(
+            !isNewSession.current &&
+            isLoadingChats &&
+            messages.length === 0
+          ) && (
             <WelcomeChatNew
               mentorName={mentorName}
               sessionId={cachedSessionId?.[mentorId] ?? sessionId}
@@ -2193,7 +2235,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Voice Call</DialogTitle>
             <DialogDescription>
-              Would you like to start a voice call with your mentor?
+              Would you like to start a voice call with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2243,7 +2285,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Screen Sharing</DialogTitle>
             <DialogDescription>
-              Would you like to start a screen sharing with your mentor?
+              Would you like to start a screen sharing with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

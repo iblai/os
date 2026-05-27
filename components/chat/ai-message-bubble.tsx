@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/tooltip';
 import { AIMessageCopy } from './ai-message-copy';
 import { AIMessageShare } from './ai-message-share';
+import { AIMessageSpeak } from './ai-message-speak';
 import {
   selectShowingSharedChat,
   useTenantMetadata as useTenantMetadataHook,
@@ -60,7 +61,6 @@ interface AIMessageBubbleProps {
   mentorId: string;
   message?: Message;
   onRetry: (content: string) => void;
-  onSpeak?: (content: string) => void;
   onReply?: () => void;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
   streamingArtifactId?: number;
@@ -197,6 +197,8 @@ export const AIMessageBubble = forwardRef<
                     supportEmail={supportEmail}
                   />
                 )}
+
+              <AIMessageSpeak content={content} />
 
               {isLoggedIn() && !showingSharedChat && (
                 <Tooltip>

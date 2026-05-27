@@ -1,6 +1,15 @@
+import path from 'path';
+
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+
+// Real WAV played as the fake mic input (looped while a track is consumed).
+// Lets the LiveKit voice agent receive real audio during vc-07's round-trip.
+const FAKE_AUDIO_WAV = path.resolve(
+  __dirname,
+  '../files/testing_folder/speech.wav',
+);
 
 // H2 fix: Chromium-only flags for fake audio device
 test.use({
@@ -8,6 +17,7 @@ test.use({
     args: [
       '--use-fake-device-for-media-stream',
       '--use-fake-ui-for-media-stream',
+      `--use-file-for-fake-audio-capture=${FAKE_AUDIO_WAV}`,
     ],
   },
 });
@@ -75,7 +85,7 @@ test.describe('Journey 9: Voice Chat', () => {
       await navigateToMentorApp(page);
     });
 
-    test('admin goes to mentor settings and hides the voice call button by toggling off Show Voice Call', async ({
+    test('admin goes to mentor settings and hides the voice call button by toggling off Voice Calls', async ({
       page,
       editMentorPage,
       chatPage,
@@ -85,7 +95,7 @@ test.describe('Journey 9: Voice Chat', () => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /voice calls/i,
       });
       const visible = await showVoiceSwitch
         .isVisible({ timeout: 5_000 })
@@ -118,7 +128,7 @@ test.describe('Journey 9: Voice Chat', () => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       const switchAgain = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /voice calls/i,
       });
       if ((await switchAgain.getAttribute('aria-checked')) === 'false') {
         await switchAgain.click();
@@ -145,7 +155,7 @@ test.describe('Journey 9: Voice Chat', () => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /voice calls/i,
       });
       const visible = await showVoiceSwitch
         .isVisible({ timeout: 5_000 })
@@ -246,5 +256,47 @@ test.describe('Journey 9: Voice Chat', () => {
         });
       },
     );
+
+    test('admin creates a new mentor and completes a real voice-call round-trip with LiveKit (vc-07)', async ({
+      page,
+      createMentorPage,
+      chatPage,
+    }) => {
+      const isAdmin = await checkAdminStatus(page);
+      test.skip(!isAdmin, 'Requires admin access to create a mentor');
+
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
+
+      await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 15_000 });
+      await chatPage.voiceCallButton.click();
+
+      const voiceDialog = page.getByRole('dialog', { name: 'Voice Chat' });
+      await expect(voiceDialog).toBeVisible({ timeout: 15_000 });
+
+      // The mute button is `disabled={isLoading}` (voice-chat-modal.tsx),
+      // and the hook auto-unmutes on connect. Once the mute button is
+      // enabled with aria-label="Mute microphone", connectionState has
+      // reached "connected" — proves /create-call-credentials/, room.connect,
+      // and setMicrophoneEnabled all succeeded against the real backend.
+      const muteButton = voiceDialog.getByRole('button', {
+        name: 'Mute microphone',
+      });
+      await expect(muteButton).toBeEnabled({ timeout: 90_000 });
+
+      // Loading messages should be gone once connected.
+      await expect(
+        voiceDialog.getByText(
+          /Requesting microphone access|Connecting to voice chat/,
+        ),
+      ).not.toBeVisible({ timeout: 5_000 });
+
+      // End the call — verifies the disconnect/cleanup path.
+      const endCallButton = voiceDialog.getByRole('button', {
+        name: 'Close voice chat',
+      });
+      await endCallButton.click();
+      await expect(voiceDialog).not.toBeVisible({ timeout: 10_000 });
+    });
   });
 });

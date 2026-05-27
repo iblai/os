@@ -10,6 +10,8 @@ import { MemoryTab } from './memory.tab';
 import { McpTab } from './mcp.tab';
 import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
+import { AccessTab } from './access.tab';
+import { PrivacyTab } from './privacy.tab';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -27,11 +29,13 @@ export class EditMentorPage {
   readonly memory: MemoryTab;
   readonly mcp: McpTab;
   readonly embed: EmbedTab;
+  readonly access: AccessTab;
+  readonly privacy: PrivacyTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
     this.page = page;
-    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Mentor' });
+    this.dialog = page.getByRole('dialog').filter({ hasText: 'Edit Agent' });
     this.closeButton = this.dialog.getByRole('button', {
       name: 'Close',
       exact: true,
@@ -47,6 +51,8 @@ export class EditMentorPage {
     this.memory = new MemoryTab(page, this.dialog);
     this.mcp = new McpTab(page, this.dialog);
     this.embed = new EmbedTab(page, this.dialog);
+    this.access = new AccessTab(page, this.dialog);
+    this.privacy = new PrivacyTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
@@ -56,7 +62,7 @@ export class EditMentorPage {
    */
   async open(tabName?: string): Promise<void> {
     const dropdown = this.page.getByRole('button', {
-      name: 'Selected mentor dropdown button',
+      name: 'Selected agent dropdown button',
     });
     await expect(dropdown).toBeVisible({ timeout: 15_000 });
     await dropdown.click();
@@ -87,6 +93,34 @@ export class EditMentorPage {
   }
 
   async close(): Promise<void> {
+    // If the parent dialog is already gone (e.g. an earlier teardown step
+    // already closed it), nothing to do.
+    const dialogCount = await this.dialog.count().catch(() => 0);
+    if (dialogCount === 0) return;
+
+    // The Edit Mentor dialog hosts portal-rendered child modals (New Skill,
+    // Edit Skill, Delete Skill, New/Edit Instance, Disconnect Instance,
+    // etc.). When a child modal is left open, its Radix overlay
+    // (`[data-iblai-dialog-interaction-layer]`) covers the parent and
+    // intercepts pointer events — making the parent's Close button
+    // appear "visible, enabled and stable" yet unclickable. Dismiss any
+    // leftover child modals first via Escape so cleanup can proceed
+    // even when an earlier API call left a modal stuck open.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const overlay = this.page.locator(
+        '[data-iblai-dialog-interaction-layer][data-state="open"]',
+      );
+      const overlayCount = await overlay.count().catch(() => 0);
+      if (overlayCount === 0) break;
+      await this.page.keyboard.press('Escape').catch(() => {});
+      await this.page.waitForTimeout(250);
+    }
+
+    // The parent might have been closed by a stray Escape that propagated
+    // through the modal stack. Re-check before asserting the close button.
+    const stillOpen = await this.dialog.count().catch(() => 0);
+    if (stillOpen === 0) return;
+
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
     await this.closeButton.click();
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });

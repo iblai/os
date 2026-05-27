@@ -20,8 +20,13 @@ on:
         description: 'iblai-prod-images git ref (tag/branch/sha). Pins both the iblai-cli-ops CLI and the container image tags. Default: main (latest).'
         required: false
         default: 'main'
+      skip-infra-launch:
+        description: "Skip the infra launch + service-update. Run tests against whatever instance is already in the stg slot's target group. Defaults to true — untick to launch a fresh EC2 from the slot's AMI."
+        required: false
+        type: boolean
+        default: true
 
-run-name: 'Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }}) @ ${{ inputs.prod-images-tag }}'
+run-name: "Full Pipeline — stg${{ inputs.stg-slot }} (${{ inputs.browsers }})${{ inputs.skip-infra-launch && ' [skip-launch]' || format(' @ {0}', inputs.prod-images-tag) }}"
 
 permissions:
   contents: read
@@ -46,6 +51,7 @@ jobs:
   # LAUNCH INFRASTRUCTURE
   # ============================================================
   launch-infra:
+    if: ${{ !inputs.skip-infra-launch }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -171,7 +177,10 @@ jobs:
   # ============================================================
   run-tests:
     needs: [build-playwright-image, launch-infra]
-    if: needs.launch-infra.result == 'success' && needs.build-playwright-image.result == 'success'
+    # `always()` is required to override GHA's default transitive-skip: without it,
+    # a skipped `launch-infra` auto-skips this job regardless of the `if:` result.
+    # Then we gate on the actual conditions we care about.
+    if: always() && needs.build-playwright-image.result == 'success' && (needs.launch-infra.result == 'success' || (needs.launch-infra.result == 'skipped' && inputs.skip-infra-launch))
     uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
     secrets: inherit
     with:
@@ -224,9 +233,13 @@ jobs:
           echo "| Run Tests (${{ inputs.browsers }}) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terminate | ${{ needs.terminate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Instance: ${{ needs.launch-infra.outputs.instance-id }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.skip-infra-launch }}" = "true" ]; then
+            echo "Mode: skip-infra-launch — tests ran against the pre-existing stg${{ inputs.stg-slot }} instance." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Instance: ${{ needs.launch-infra.outputs.instance-id }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "Test result: ${{ needs.run-tests.outputs.result }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.terminate }}" != "true" ]; then
+          if [ "${{ inputs.skip-infra-launch }}" != "true" ] && [ "${{ inputs.terminate }}" != "true" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Instance kept running (terminate=false). IP: ${{ needs.launch-infra.outputs.instance-ip }}" >> $GITHUB_STEP_SUMMARY
             echo "Remember to terminate it manually when you're done." >> $GITHUB_STEP_SUMMARY

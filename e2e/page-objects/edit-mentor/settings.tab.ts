@@ -17,6 +17,11 @@ export class SettingsTab {
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
   readonly showVoiceCallToggle: Locator;
+  readonly advancedSandboxToggle: Locator;
+  readonly chatAccessCombobox: Locator;
+  readonly memoryToggle: Locator;
+  readonly enhanceDocumentRetrievalToggle: Locator;
+  readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -52,14 +57,30 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     this.allowCopiesToggle = dialog.locator(
-      'button[role="switch"][aria-label*="Allow copies"]',
+      'button[role="switch"][aria-label*="Copies"]',
     );
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
       exact: true,
     });
     this.showVoiceCallToggle = dialog.getByRole('switch', {
-      name: /show voice call/i,
+      name: /voice calls/i,
+    });
+    // The Sandbox switch — aria-label reflects its current state
+    this.advancedSandboxToggle = dialog.getByRole('switch', {
+      name: /^Sandbox/i,
+    });
+    this.chatAccessCombobox = dialog.getByRole('combobox', {
+      name: 'Select who can chat',
+    });
+    // The Memory toggle lives in the Settings tab form; aria-label is
+    // "Memory enabled" or "Memory disabled" depending on current state.
+    this.memoryToggle = dialog.getByRole('switch', { name: /^Memory /i });
+    this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
+      name: /^enhanced rag /i,
+    });
+    this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
+      name: 'More info about enhanced rag',
     });
   }
 
@@ -95,28 +116,72 @@ export class SettingsTab {
     await this.setVisibility('Anyone');
   }
 
-  async enableAllowCopies(): Promise<void> {
-    await expect(this.allowCopiesToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked = await this.allowCopiesToggle.getAttribute('aria-checked');
-    if (isChecked !== 'true') {
-      await this.allowCopiesToggle.click();
+  async setChatAccess(label: string): Promise<void> {
+    await expect(this.chatAccessCombobox).toBeVisible({ timeout: 5_000 });
+    await this.chatAccessCombobox.click();
+    const opt = this.page.locator('div[role="option"]').filter({
+      hasText: new RegExp(`^${label}$`, 'i'),
+    });
+    const radixVisible = await opt
+      .first()
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (radixVisible) {
+      await opt.first().click();
+    } else {
+      const fallback = this.page.getByRole('option', {
+        name: new RegExp(label, 'i'),
+      });
+      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
+      await fallback.first().click();
     }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
-    await this.page.waitForTimeout(1_000);
+  }
+
+  async setChatAccessAnyone(): Promise<void> {
+    await this.setChatAccess('Anyone');
+  }
+
+  async enableAllowCopies(): Promise<void> {
+    await this.setAllowCopies(true);
   }
 
   async disableAllowCopies(): Promise<void> {
+    await this.setAllowCopies(false);
+  }
+
+  /**
+   * Toggles the Copies switch to the desired state and waits until the
+   * mutation is fully observable — the success toast must appear AND the next
+   * mentor settings refetch has to settle, otherwise the Copy button on the
+   * subsequent reopen can lag behind the form's toggle state by several
+   * seconds (the cache invalidation is propagated async by RTK Query).
+   */
+  private async setAllowCopies(target: boolean): Promise<void> {
     await expect(this.allowCopiesToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked = await this.allowCopiesToggle.getAttribute('aria-checked');
-    if (isChecked === 'true') {
-      await this.allowCopiesToggle.click();
+    const isChecked =
+      (await this.allowCopiesToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked === target) {
+      return;
     }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.allowCopiesToggle.click();
+    await expect(this.allowCopiesToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 30_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 30_000 });
     await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
-    await this.page.waitForTimeout(1_000);
+    // Block until the backend confirms the write — the success toast is the
+    // earliest reliable signal that the mutation resolved and RTK Query has
+    // started invalidating the mentor cache. Don't wait for networkidle here:
+    // the app fires a periodic analytics heartbeat (~every 30s) so networkidle
+    // can hang indefinitely in steady state.
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer to let the post-mutation refetch land and React re-render
+    // with fresh mentor data before the caller closes/reopens the dialog.
+    await this.page.waitForTimeout(500);
   }
 
   async enableVoiceCall(): Promise<void> {
@@ -143,11 +208,130 @@ export class SettingsTab {
     }
   }
 
+  /**
+   * Returns true if the Memory toggle is currently checked.
+   * The Memory toggle moved from the Memory tab to the Settings tab in fix/1584.
+   * It is a form-driven switch — changes only persist after Save is clicked.
+   */
+  async isMemoryEnabled(): Promise<boolean> {
+    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.memoryToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Memory toggle to the desired state and saves the form.
+   * A no-op if the toggle is already in the desired state.
+   *
+   * Design note: Save is called internally (same as enableVoiceCall /
+   * setAllowCopies) so callers don't need to know about the form lifecycle.
+   */
+  async setMemoryEnabled(target: boolean): Promise<void> {
+    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.memoryToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked === target) {
+      return;
+    }
+    await this.memoryToggle.click();
+    await expect(this.memoryToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer for RTK Query cache invalidation before the caller
+    // closes or re-opens the dialog.
+    await this.page.waitForTimeout(500);
+  }
+
+  async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.enhanceDocumentRetrievalToggle.getAttribute(
+        'aria-checked',
+      )) === 'true'
+    );
+  }
+
+  async enableEnhanceDocumentRetrieval(): Promise<void> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
+    if (!isChecked) {
+      await this.enhanceDocumentRetrievalToggle.click();
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1_000);
+  }
+
+  async disableEnhanceDocumentRetrieval(): Promise<void> {
+    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
+    if (isChecked) {
+      await this.enhanceDocumentRetrievalToggle.click();
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(1_000);
+  }
+
+  /**
+   * Returns true when the Sandbox toggle is ON (aria-checked="true").
+   */
+  async isAdvancedSandboxEnabled(): Promise<boolean> {
+    const state = await this.advancedSandboxToggle
+      .getAttribute('aria-checked')
+      .catch(() => 'false');
+    return state === 'true';
+  }
+
+  /**
+   * Sets the Sandbox toggle to the desired state and clicks Save.
+   * Does nothing if the toggle is already in the desired state.
+   *
+   * Waits for the success toast to confirm the save completed before returning,
+   * so callers can immediately assert on the downstream UI changes (Sandbox tab
+   * appearing, Agent Configuration showing, etc.) without race conditions.
+   */
+  async setAdvancedSandbox(desired: boolean): Promise<void> {
+    await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
+    const current = await this.isAdvancedSandboxEnabled();
+    if (current !== desired) {
+      await this.advancedSandboxToggle.click();
+      await expect(this.advancedSandboxToggle).toHaveAttribute(
+        'aria-checked',
+        desired ? 'true' : 'false',
+        { timeout: 5_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
   async deleteMentor(): Promise<void> {
     await expect(this.deleteButton).toBeVisible({ timeout: 10_000 });
     await this.deleteButton.click();
     const confirmDialog = this.page.getByRole('alertdialog', {
-      name: /delete mentor/i,
+      name: /delete agent/i,
     });
     await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
     const confirmButton = confirmDialog.getByRole('button', {

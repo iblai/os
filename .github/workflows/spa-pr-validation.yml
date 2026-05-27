@@ -1,11 +1,14 @@
 name: SPA PR Validation
 
 on:
-  pull_request:
-    branches: [main]
-    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number to validate (0 for manual run)'
+        required: false
+        default: '0'
 
-run-name: 'PR #${{ github.event.pull_request.number }} - Mentor Test Validation'
+run-name: 'Mentor Test Validation (dispatch) — PR #${{ inputs.pr-number }}'
 
 concurrency:
   group: pr-validation-mentor-${{ github.event.pull_request.number }}

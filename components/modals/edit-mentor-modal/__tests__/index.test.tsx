@@ -108,6 +108,19 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: true,
     }),
+    // Stub the claw RTK Query hooks — the real `clawApiSlice` middleware
+    // isn't mounted on this test's Redux store, so calling the real hooks
+    // would throw "Middleware for RTK-Query API ... has not been added".
+    // useMentorSegments + settings-tab consume these.
+    useGetClawMentorConfigQuery: () => ({
+      data: null,
+      isError: false,
+      isLoading: false,
+    }),
+    useUpdateClawMentorConfigMutation: () => [
+      () => Promise.resolve({}),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -155,7 +168,19 @@ vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
 }));
 
-// Mock all tab components
+// @iblai/web-containers transitively imports @iblai/web-utils which imports
+// axios — which fails to resolve in Vitest's transform pipeline. Stub it here
+// so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
+// these components) doesn't break the test.
+vi.mock('@iblai/web-containers', () => ({
+  SandboxConfig: () => null,
+  AgentSkills: () => null,
+  AgentConfigPrompts: () => null,
+}));
+
+// Mock all tab components. Keep this list in sync with `../tabs/index.ts` —
+// any export the barrel exposes that we leave out here will throw a
+// "No 'X' export is defined on the '../tabs' mock" error during render.
 vi.mock('../tabs', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
@@ -163,11 +188,15 @@ vi.mock('../tabs', () => ({
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
+  FlowTab: () => <div data-testid="flow-tab">Flow Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
+  SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
+  SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
 }));
 
@@ -354,7 +383,7 @@ describe('EditMentorModal', () => {
 
       await waitFor(() => {
         const description = screen.getByText(
-          /Edit Mentor settings, prompts, tools, safety, flow, history, datasets, and API keys/i,
+          /Edit Agent settings, prompts, tools, safety, flow, history, datasets, and API keys/i,
         );
         expect(description).toBeInTheDocument();
         expect(description).toHaveClass('sr-only');

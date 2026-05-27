@@ -16,12 +16,15 @@ import {
   McpTab,
   ToolsTab,
   SafetyTab,
+  PrivacyTab,
   // FlowTab,
   HistoryTab,
   DatasetsTab,
   ApiTab,
   EmbedTab,
   AccessTab,
+  SandboxTab,
+  SkillsTab,
   AuditLogTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -50,10 +53,13 @@ type Props = {
  */
 export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.settings]: <SettingsTab />,
+  [MODALS.EDIT_MENTOR.tabs.sandbox]: <SandboxTab />,
   [MODALS.EDIT_MENTOR.tabs.access]: <AccessTab />,
   [MODALS.EDIT_MENTOR.tabs.llm]: <LLMTab />,
   [MODALS.EDIT_MENTOR.tabs.prompts]: <PromptsTab />,
+  [MODALS.EDIT_MENTOR.tabs.skills]: <SkillsTab />,
   [MODALS.EDIT_MENTOR.tabs.safety]: <SafetyTab />,
+  [MODALS.EDIT_MENTOR.tabs.privacy]: <PrivacyTab />,
   [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
   [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
@@ -85,7 +91,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
         }}
       >
         <DialogDescription className="sr-only">
-          Edit Mentor settings, prompts, tools, safety, flow, history, datasets,
+          Edit Agent settings, prompts, tools, safety, flow, history, datasets,
           and API keys
         </DialogDescription>
         <div className="scrollbar-none flex-1 overflow-y-auto lg:overflow-hidden">
@@ -98,7 +104,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             <div className="lg:hidden">
               <DialogHeader className="border-b border-gray-200 px-3 py-4">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit Mentor
+                  Edit Agent
                 </DialogTitle>
               </DialogHeader>
             </div>
@@ -106,13 +112,13 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
               <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit Mentor
+                  Edit Agent
                 </DialogTitle>
               </DialogHeader>
               <div className="scrollbar-none flex-1 overflow-y-auto">
                 <TabsList
                   className="h-auto w-full flex-col space-y-1 bg-transparent p-2"
-                  aria-label="Mentor settings tabs"
+                  aria-label="Agent settings tabs"
                 >
                   {filteredSegments.map((tab) => (
                     <TabsTrigger
@@ -137,7 +143,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             <div className="lg:hidden">
               <TabsList
                 className="h-auto w-full justify-start overflow-x-auto rounded-none border-b border-gray-200 bg-white px-3 py-2"
-                aria-label="Mentor settings tabs"
+                aria-label="Agent settings tabs"
               >
                 {/* Show first 4 tabs on mobile, first 8 tabs on tablet */}
                 {filteredSegments

@@ -17,12 +17,13 @@ import {
 import { SettingsModal } from '@/components/modals/settings-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
-import { ExternalPricingModal } from './external-pricing-modal';
+import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
+import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import {
-  setOpenPricingModal,
   setOpenAppleRestrictionModal,
-} from '@/features/subscription/subscription-slice';
-import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
+  type AppleRestrictionState,
+} from '@iblai/iblai-js/web-utils';
+import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
@@ -31,8 +32,9 @@ import {
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { ShortcutsModal } from './shortcuts-modal';
-import { MyMentorsModal } from './my-mentors-modal';
 import { NoMentorSelectedModal } from './no-mentor-selected-modal';
+import { config } from '@/lib/config';
+import { getUserEmail } from '@/features/utils';
 
 export const ModalContainer = () => {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -43,9 +45,7 @@ export const ModalContainer = () => {
     // closeCreateMentorModal,
     closeInviteUserModal,
     closeSettingsModal,
-    closeMyMentorsModal,
     closeNoMentorSelectedModal,
-    showMyMentorsModal,
   } = useNavigate();
 
   // Get state once with useSelector
@@ -54,7 +54,9 @@ export const ModalContainer = () => {
 
   const { customAlertDialog } = state.modals;
 
-  const { openPricingModal, openAppleRestrictionModal } = state.subscription;
+  const { openPricingModal } = state.subscription;
+  const { openAppleRestrictionModal } =
+    state.appleRestriction as AppleRestrictionState;
 
   // Use state with selectors
   // const showCreateMentorModal = selectIsModalOpen(MODALS.CREATE_MENTOR.name)(
@@ -118,9 +120,13 @@ export const ModalContainer = () => {
       )}
 
       {openPricingModal && (
-        <ExternalPricingModal
-          isOpen={openPricingModal}
+        <UpgradePackageModal
+          open={openPricingModal}
           onClose={() => dispatch(setOpenPricingModal(false))}
+          redirectUrl={window.location.origin}
+          mainPlatformKey={config.mainTenantKey()}
+          sourcePlatformKey={tenantKey}
+          currentUserEmail={getUserEmail()}
         />
       )}
 
@@ -129,14 +135,6 @@ export const ModalContainer = () => {
         <ShortcutsModal
           isOpen={showShortcutsModal}
           onClose={closeShortcutsModal}
-        />
-      )}
-
-      {/* My Mentors Modal */}
-      {showMyMentorsModal && (
-        <MyMentorsModal
-          isOpen={showMyMentorsModal}
-          onClose={closeMyMentorsModal}
         />
       )}
 

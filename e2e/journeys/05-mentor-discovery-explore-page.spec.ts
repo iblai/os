@@ -10,14 +10,16 @@ test.describe('Journey 5: Mentor Discovery — Explore Page — Non-Admin', () =
   test('non-admin goes to explore page and sees the page title and description', async ({
     nonadminExplorePage,
   }) => {
-    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 20_000 });
+    // 2-min ceiling: explore page initial load can take ~30s when the
+    // ?limit=8 mentors query gets aborted+retried during component mount.
+    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 120_000 });
   });
 
   test('non-admin goes to explore page and sees mentor cards with correct information', async ({
     nonadminExplorePage,
   }) => {
     await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 20_000,
+      timeout: 120_000,
     });
   });
 

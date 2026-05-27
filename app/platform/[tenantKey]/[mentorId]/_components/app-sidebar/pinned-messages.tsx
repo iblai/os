@@ -31,8 +31,7 @@ import {
 import { getUserName } from '@/features/utils';
 import { useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from './export-messages';
 import {
   chatActions,
   clearFiles,
@@ -188,27 +187,6 @@ export function PinnedMessages({
     }
   };
 
-  const handleExport = (messages: any) => {
-    const data = messages.filter((item: any) => item?.message?.data?.content);
-    const worksheet = XLSX.utils.json_to_sheet(
-      data.map((message: any) => ({
-        'Message Type': message.message.data.type,
-        Content: message.message.data.content,
-      })),
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Messages');
-
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array',
-    });
-    const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    saveAs(blob, 'messages.xlsx');
-  };
-
   const handleSelectMessage = (message: any) => {
     onSelectMessage(message);
     if (isMobile) {
@@ -296,7 +274,9 @@ export function PinnedMessages({
                           <span>Unpin</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleExport(pinnedMessage.messages)}
+                          onClick={() =>
+                            void exportMessagesToXlsx(pinnedMessage.messages)
+                          }
                         >
                           <Download className="mr-2 h-4 w-4" />
                           <span>Export</span>

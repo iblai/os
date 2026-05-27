@@ -6,7 +6,7 @@ import { navigateToMentorApp } from '../utils/auth';
 // Generous timeout for LLM streaming responses
 const STREAMING_TIMEOUT = 120_000;
 
-test.describe('Journey 37: Tool Call Indicator and Reasoning Section', () => {
+test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });

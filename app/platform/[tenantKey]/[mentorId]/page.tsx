@@ -171,7 +171,7 @@ export default function Page() {
           {/* {showLoginBanner && (
             <div className="mb-3">
               <LoginRequiredBanner
-                message="You must login in order to chat with this mentor"
+                message="You must login in order to chat with this agent"
                 actionLabel=""
                 onAction={handleLoginBannerClick}
               />

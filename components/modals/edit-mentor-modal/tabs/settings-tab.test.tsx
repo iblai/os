@@ -20,6 +20,8 @@ const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockGetMentorCategoriesQuery = vi.fn();
+const mockGetClawMentorConfigQuery = vi.fn();
+const mockUpdateClawConfig = vi.fn();
 const mockUsername = 'testuser';
 const mockExecuteWithTrialCheck = vi.fn();
 const mockCloseModal = vi.fn();
@@ -57,6 +59,9 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetMentorSettingsQuery(...args),
   useGetMentorCategoriesQuery: (...args: unknown[]) =>
     mockGetMentorCategoriesQuery(...args),
+  useGetClawMentorConfigQuery: (...args: unknown[]) =>
+    mockGetClawMentorConfigQuery(...args),
+  useUpdateClawMentorConfigMutation: () => [mockUpdateClawConfig, {}],
 }));
 
 vi.mock('@sentry/nextjs', () => ({
@@ -306,6 +311,14 @@ describe('SettingsTab', () => {
       data: defaultMentorSettings,
       isLoading: false,
     });
+
+    // Default: no claw-config wired (404 → null) so the save short-circuit
+    // does not call updateClawConfig. Tests that need a wired config override
+    // this in their own arrangements.
+    mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+    mockUpdateClawConfig.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
   });
 
   afterEach(() => {
@@ -319,7 +332,7 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Configure your mentor's basic settings and preferences.",
+          "Configure your agent's basic settings and preferences.",
         ),
       ).toBeInTheDocument();
     });
@@ -365,22 +378,22 @@ describe('SettingsTab', () => {
       expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
     });
 
-    it('renders Show Attachment toggle', () => {
+    it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Attachment')).toBeInTheDocument();
+      expect(screen.getByText('File Attachments')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Call toggle', () => {
+    it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Call')).toBeInTheDocument();
+      expect(screen.getByText('Voice Calls')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Record toggle', () => {
+    it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
+      expect(screen.getByText('Voice Recordings')).toBeInTheDocument();
     });
 
     it('renders Image upload section', () => {
@@ -412,9 +425,9 @@ describe('SettingsTab', () => {
       );
       const otherTriggers = [
         screen.getByLabelText('More info about lti accessibility'),
-        screen.getByLabelText('More info about show attachment'),
-        screen.getByLabelText('More info about show voice call'),
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about file attachments'),
+        screen.getByLabelText('More info about voice calls'),
+        screen.getByLabelText('More info about voice recordings'),
       ];
 
       [...chatAccessTriggers, ...otherTriggers].forEach((trigger) => {
@@ -449,11 +462,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Attachment tooltip does not call editMentor', async () => {
+    it('clicking File Attachments tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show attachment',
+        'More info about file attachments',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -462,11 +475,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Voice Call tooltip does not call editMentor', async () => {
+    it('clicking Voice Calls tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show voice call',
+        'More info about voice calls',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -475,11 +488,11 @@ describe('SettingsTab', () => {
       });
     });
 
-    it('clicking Show Voice Record tooltip does not call editMentor', async () => {
+    it('clicking Voice Recordings tooltip does not call editMentor', async () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about show voice record',
+        'More info about voice recordings',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -519,7 +532,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -538,7 +551,7 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -557,69 +570,156 @@ describe('SettingsTab', () => {
     it('reflects show_attachment checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show attachment enabled');
+      const toggle = screen.getByLabelText('File attachments enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_call checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice call enabled');
+      const toggle = screen.getByLabelText('Voice calls enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_record unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('reflects is_lti_accessible unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Is lti accessible disabled');
+      const toggle = screen.getByLabelText('Lti accessible disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_attachment switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show attachment enabled');
+      const toggle = screen.getByLabelText('File attachments enabled');
       fireEvent.click(toggle);
 
       expect(
-        screen.getByLabelText('Show attachment disabled'),
+        screen.getByLabelText('File attachments disabled'),
       ).not.toBeChecked();
     });
 
     it('toggles show_voice_call switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice call enabled');
+      const toggle = screen.getByLabelText('Voice calls enabled');
       fireEvent.click(toggle);
 
-      expect(
-        screen.getByLabelText('Show voice call disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Voice calls disabled')).not.toBeChecked();
     });
 
     it('toggles show_voice_record switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
     });
 
     it('toggles is_lti_accessible switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Is lti accessible disabled');
+      const toggle = screen.getByLabelText('Lti accessible disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Is lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Lti accessible enabled')).toBeChecked();
+    });
+  });
+
+  describe('Memory toggle', () => {
+    it('renders the Memory switch as disabled when enable_memory_component is unset', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory disabled')).not.toBeChecked();
+    });
+
+    it('renders the Memory tooltip describing the agent (not mentor)', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(
+          /Allow this agent to remember and reference information from past conversations\./i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('renders the Memory switch as enabled when enable_memory_component is true', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Memory enabled')).toBeChecked();
+    });
+
+    it('does not call editMentor immediately when the Memory toggle is clicked', () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+
+      expect(mockEditMentor).not.toHaveBeenCalled();
+    });
+
+    it('submits enable_memory_component: true on Save when the user enabled it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_memory_component: false on Save when the user disabled it', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_memory_component: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Memory enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_memory_component: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('omits enable_memory_component on Save when the user did not change it', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const submittedFormData = mockEditMentor.mock.calls[0][0].formData;
+      expect(submittedFormData).not.toHaveProperty('enable_memory_component');
     });
   });
 
@@ -648,7 +748,7 @@ describe('SettingsTab', () => {
       const nameInput = screen.getByDisplayValue('Test Mentor');
       fireEvent.change(nameInput, { target: { value: '' } });
 
-      expect(screen.getByText('Mentor name is required')).toBeInTheDocument();
+      expect(screen.getByText('Agent name is required')).toBeInTheDocument();
     });
 
     it('shows validation error when mentor description is cleared', () => {
@@ -658,7 +758,7 @@ describe('SettingsTab', () => {
       fireEvent.change(descInput, { target: { value: '' } });
 
       expect(
-        screen.getByText('Mentor description is required'),
+        screen.getByText('Agent description is required'),
       ).toBeInTheDocument();
     });
   });
@@ -672,7 +772,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -684,7 +784,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -919,16 +1019,14 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment enabled'),
+        screen.getByLabelText('File attachments enabled'),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Voice calls enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Voice recordings disabled'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Show voice call enabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Show voice record disabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Is lti accessible disabled'),
+        screen.getByLabelText('Lti accessible disabled'),
       ).toBeInTheDocument();
     });
 
@@ -947,13 +1045,13 @@ describe('SettingsTab', () => {
         screen.getByLabelText('More info about lti accessibility'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show attachment'),
+        screen.getByLabelText('More info about file attachments'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice call'),
+        screen.getByLabelText('More info about voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -962,7 +1060,7 @@ describe('SettingsTab', () => {
     it('displays profile image when present', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByRole('img', { name: 'Mentor' });
+      const img = screen.getByRole('img', { name: 'Agent' });
       expect(img).toBeInTheDocument();
     });
 
@@ -1024,7 +1122,7 @@ describe('SettingsTab', () => {
     it('clicking on the image stops propagation', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByRole('img', { name: 'Mentor' });
+      const img = screen.getByRole('img', { name: 'Agent' });
       // Click should not throw and should not open file dialog
       fireEvent.click(img);
     });
@@ -1035,7 +1133,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Toggle show_voice_record from false to true
-      const toggle = screen.getByLabelText('Show voice record disabled');
+      const toggle = screen.getByLabelText('Voice recordings disabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1076,17 +1174,17 @@ describe('SettingsTab', () => {
     });
   });
 
-  describe('Allow Copies Toggle', () => {
-    it('renders Allow Copies toggle', () => {
+  describe('Copies Toggle', () => {
+    it('renders Copies toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Allow Copies')).toBeInTheDocument();
+      expect(screen.getByText('Copies')).toBeInTheDocument();
     });
 
     it('reflects forkable checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       expect(toggle).toBeChecked();
     });
 
@@ -1098,23 +1196,23 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies disabled');
+      const toggle = screen.getByLabelText('Copies disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles forkable switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Allow copies disabled')).not.toBeChecked();
+      expect(screen.getByLabelText('Copies disabled')).not.toBeChecked();
     });
 
     it('submits forkable value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow copies enabled');
+      const toggle = screen.getByLabelText('Copies enabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1135,7 +1233,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about allow copies'),
+        screen.getByLabelText('More info about copies'),
       ).toBeInTheDocument();
     });
   });
@@ -1261,6 +1359,267 @@ describe('SettingsTab', () => {
 
       const copyButton = screen.getByText('Copy');
       expect(copyButton).toBeDisabled();
+    });
+  });
+
+  // ==========================================================================
+  // ADVANCED SANDBOX (CLAW)
+  // ==========================================================================
+
+  describe('Sandbox toggle', () => {
+    it('renders the Sandbox toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Sandbox')).toBeInTheDocument();
+    });
+
+    it('reflects enable_claw=true from mentor settings as checked', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
+    });
+
+    it('reflects enable_claw=false (or missing) from mentor settings as unchecked', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Sandbox disabled')).not.toBeChecked();
+    });
+
+    it('toggle is enabled regardless of claw config state (admin intent)', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Sandbox disabled');
+      expect(toggle).not.toBeDisabled();
+    });
+
+    it('flipping the toggle does not immediately call editMentor', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
+      });
+      expect(mockEditMentor).not.toHaveBeenCalled();
+    });
+
+    it('on Save, includes enable_claw=true in the editMentor formData when toggled on', async () => {
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            mentor: 'test-mentor',
+            org: 'test-tenant',
+            formData: expect.objectContaining({ enable_claw: true }),
+          }),
+        );
+      });
+    });
+
+    it('on Save, includes enable_claw=false when toggled off', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({ enable_claw: false }),
+          }),
+        );
+      });
+    });
+
+    it('on Save with no toggle change, still passes the current enable_claw value', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({ enable_claw: true }),
+          }),
+        );
+      });
+    });
+  });
+
+  // ==========================================================================
+  // CLAW CONFIG SYNC ON SAVE
+  //
+  // When the Sandbox toggle changes AND a claw-config exists for the
+  // mentor, the save must ALSO PATCH /claw-config to keep `enabled` in sync.
+  // When no claw-config exists (the data-layer normalises 404 → null), the
+  // PATCH is skipped and only mentor-settings is written.
+  // ==========================================================================
+
+  describe('Claw config sync on Save', () => {
+    const wiredClawConfig = {
+      mentor: 'mentor-uuid-123',
+      server: 7,
+      server_name: 'sandbox-1',
+      enabled: false,
+      auto_push: false,
+    };
+
+    const settingsWithUuid = {
+      ...defaultMentorSettings,
+      mentor_unique_id: 'mentor-uuid-123',
+    };
+
+    it('queries claw-config with org and mentor_unique_id from mentor settings', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(mockGetClawMentorConfigQuery).toHaveBeenCalledWith(
+        { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
+        expect.objectContaining({ skip: false }),
+      );
+    });
+
+    it('PATCHes claw-config when toggle changed AND claw-config exists', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+
+      render(<SettingsTab />);
+
+      // Flip OFF → ON, save
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalledWith({
+          org: 'test-tenant',
+          mentorUniqueId: 'mentor-uuid-123',
+          enabled: true,
+        });
+      });
+    });
+
+    it('PATCHes claw-config with enabled=false when toggle is flipped off', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...settingsWithUuid, enable_claw: true },
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({
+        data: { ...wiredClawConfig, enabled: true },
+      });
+
+      render(<SettingsTab />);
+
+      // Flip ON → OFF, save
+      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalledWith({
+          org: 'test-tenant',
+          mentorUniqueId: 'mentor-uuid-123',
+          enabled: false,
+        });
+      });
+    });
+
+    it('does NOT PATCH claw-config when no claw-config exists (404 → null)', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      expect(mockUpdateClawConfig).not.toHaveBeenCalled();
+    });
+
+    it('does NOT PATCH claw-config when toggle value did not change, even with config wired', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+
+      render(<SettingsTab />);
+      // No toggle flip — just save other unchanged form fields
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      expect(mockUpdateClawConfig).not.toHaveBeenCalled();
+    });
+
+    it('still shows success toast when mentor-settings succeeds but claw PATCH fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: settingsWithUuid,
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+      mockUpdateClawConfig.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('claw boom')),
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(mockUpdateClawConfig).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith(
+          // mentor → agent rename: settings-tab.tsx now emits "Agent
+          // updated successfully" via the toast.success call after the
+          // editMentor mutation resolves.
+          'Agent updated successfully',
+        );
+      });
+
+      consoleSpy.mockRestore();
     });
   });
 });

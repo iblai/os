@@ -26,7 +26,7 @@ export function SearchSection({
     <div className="sticky top-0 z-10 mx-auto mb-3 w-full max-w-[800px] space-y-2 overflow-hidden border-b bg-white pt-0 pb-2 sm:mb-4 sm:pb-3 md:mb-6">
       <div className="relative mb-2 w-full max-w-full">
         <label htmlFor="mentor-search" className="sr-only">
-          Search mentors
+          Search agents
         </label>
         <Search
           className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-500 sm:h-4 sm:w-4"
@@ -35,8 +35,8 @@ export function SearchSection({
         <Input
           id="mentor-search"
           type="search"
-          placeholder="Search mentors"
-          aria-label="Search mentors"
+          placeholder="Search agents"
+          aria-label="Search agents"
           className="w-full py-4 pl-9 text-base shadow-[0_0_10px_rgba(0,0,0,0.05)] sm:h-10 sm:py-2 sm:pl-12"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -51,7 +51,7 @@ export function SearchSection({
         <div
           className="inline-flex min-w-full"
           role="tablist"
-          aria-label="Filter mentors by category"
+          aria-label="Filter agents by category"
         >
           <div className="scrollbar-none flex w-full flex-nowrap justify-start gap-1 overflow-x-auto sm:gap-2">
             {categories.map((category) => (

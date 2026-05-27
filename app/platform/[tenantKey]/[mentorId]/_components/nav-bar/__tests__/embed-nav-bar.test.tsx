@@ -12,6 +12,7 @@ import { EmbedNavBar } from '../embed-nav-bar';
 // ============================================================================
 
 let mockIsPreviewMode = false;
+let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
@@ -26,6 +27,10 @@ const mockEmit = vi.fn();
 
 vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
+}));
+
+vi.mock('@/hooks/use-is-iframed', () => ({
+  useIsIframed: () => mockIsIframed,
 }));
 
 vi.mock('@/hooks/use-chat-mode', () => ({
@@ -111,6 +116,7 @@ describe('EmbedNavBar', () => {
   beforeEach(() => {
     cleanup();
     mockIsPreviewMode = false;
+    mockIsIframed = true;
     mockChatMode = 'default';
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
@@ -151,6 +157,12 @@ describe('EmbedNavBar', () => {
     it('renders close chat button', () => {
       renderEmbedNavBar();
       expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
+    });
+
+    it('does not render close chat button when not iframed', () => {
+      mockIsIframed = false;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
     });
 
     it('renders the avatar container with mentor image ring class', () => {
@@ -394,6 +406,96 @@ describe('EmbedNavBar', () => {
       const settingsBtn = screen.getByLabelText('Open settings menu');
       // The onClick has an early return for preview mode — button should still render
       expect(settingsBtn).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // ESC Key Handler (WCAG 2.4.3 — Focus Order)
+  // --------------------------------------------------------------------------
+
+  describe('Escape key closes embed', () => {
+    let postMessageSpy: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      postMessageSpy = vi.fn();
+      Object.defineProperty(window, 'parent', {
+        value: { postMessage: postMessageSpy },
+        writable: true,
+      });
+    });
+
+    function pressEscape(init: KeyboardEventInit = {}) {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        cancelable: true,
+        bubbles: true,
+        ...init,
+      });
+      document.dispatchEvent(event);
+      return event;
+    }
+
+    it('posts closeEmbed message to parent when Escape is pressed', () => {
+      renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        { closeEmbed: true, collapseSidebarCopilot: true },
+        '*',
+      );
+    });
+
+    it('ignores key presses other than Escape', () => {
+      renderEmbedNavBar();
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      );
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'a', bubbles: true }),
+      );
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+      );
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not post message when in preview mode', () => {
+      mockIsPreviewMode = true;
+      renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('skips when an open Radix overlay is present', () => {
+      const overlay = document.createElement('div');
+      overlay.setAttribute('data-state', 'open');
+      document.body.appendChild(overlay);
+
+      renderEmbedNavBar();
+      pressEscape();
+
+      expect(postMessageSpy).not.toHaveBeenCalled();
+      overlay.remove();
+    });
+
+    it('skips when the event has been defaultPrevented by a nested handler', () => {
+      renderEmbedNavBar();
+      // Pre-empt the document handler by attaching one in the capture phase
+      // that calls preventDefault before the bubble-phase handler runs.
+      const preempt = (e: Event) => {
+        if ((e as KeyboardEvent).key === 'Escape') e.preventDefault();
+      };
+      document.addEventListener('keydown', preempt, { capture: true });
+      pressEscape();
+      document.removeEventListener('keydown', preempt, { capture: true });
+
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('removes the listener on unmount so further Escape presses do nothing', () => {
+      const { unmount } = renderEmbedNavBar();
+      unmount();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
     });
   });
 

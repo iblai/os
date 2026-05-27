@@ -41,7 +41,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return true;
+    return false;
   }
 
   const tokenExpiry = window.localStorage.getItem(
@@ -82,7 +82,59 @@ export async function redirectToAuthSpa(
   platformKey?: string,
   logout?: boolean,
   saveRedirect = true,
+  explicitUserAction = false,
 ) {
+  console.log(
+    '[redirectToAuthSpa] starting redirect to auth spa',
+    redirectTo,
+    platformKey,
+    logout,
+    saveRedirect,
+    explicitUserAction,
+  );
+
+  if (explicitUserAction) {
+    // Explicit user action (e.g. login button click) — clear stale cookies
+    // and skip all cookie-based early returns so the redirect always happens.
+    const currentDomain = window.location.hostname;
+    deleteCookieOnAllDomains('ibl_tenant_switching', currentDomain);
+    deleteCookieOnAllDomains('ibl_login_timestamp', currentDomain);
+    deleteCookieOnAllDomains('ibl_logout_timestamp', currentDomain);
+  } else {
+    // Skip if a tenant switch is already in progress
+    if (document.cookie.includes('ibl_tenant_switching')) {
+      console.log(
+        '[AuthProvider] Tenant switch in progress, skipping redirect',
+      );
+      return;
+    }
+
+    // Skip if a login occurred after the last logout (login takes precedence)
+    // but only if this app actually has a valid auth token — otherwise the login
+    // cookie may have been set by a different app on the same domain.
+    const loginTs = getCookieValue('ibl_login_timestamp');
+    const logoutTs = getCookieValue('ibl_logout_timestamp');
+    const hasValidToken = hasNonExpiredAuthToken();
+    console.log('[AuthProvider] Login/logout timestamp check', {
+      loginTs,
+      logoutTs,
+      hasValidToken,
+      loginAhead:
+        loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
+    });
+    if (
+      hasValidToken &&
+      loginTs &&
+      logoutTs &&
+      Number(loginTs) > Number(logoutTs)
+    ) {
+      console.log(
+        '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
+        { loginTs, logoutTs },
+      );
+      return;
+    }
+  }
   // Don't redirect to auth when in Tauri offline mode
   // Check origin first (most reliable) or Tauri offline flags
   if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
@@ -96,7 +148,7 @@ export async function redirectToAuthSpa(
 
   // Save JWT token before clearing localStorage (needed for Tauri mode)
   const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-
+  console.log('[redirectToAuthSpa] clearing local storage');
   localStorage.clear();
 
   if (logout || isInIframe()) {
@@ -113,7 +165,10 @@ export async function redirectToAuthSpa(
   }
 
   if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
+    console.log(
+      '[redirectToAuthSpa]: sending authExpired to parent',
+      JSON.stringify(localStorage),
+    );
     sendMessageToParentWebsite({ authExpired: true });
     return;
   }
@@ -184,6 +239,7 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
 export function redirectToAuthSpaJoinTenant(
   tenantKey?: string,
   redirectUrl?: string,
+  explicitUserAction = false,
 ) {
   const resolvedTenant =
     tenantKey || getPlatformKey(window.location.pathname) || '';
@@ -193,7 +249,13 @@ export function redirectToAuthSpaJoinTenant(
       tenantKey,
       redirectUrl,
     });
-    redirectToAuthSpa(redirectUrl);
+    redirectToAuthSpa(
+      redirectUrl,
+      undefined,
+      undefined,
+      true,
+      explicitUserAction,
+    );
     return;
   }
 
@@ -545,6 +607,15 @@ export function isInIframe() {
   return window?.self !== window?.top;
 }
 
+export function getCookieValue(name: string): string | null {
+  const match = document.cookie.match(
+    new RegExp(
+      '(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)',
+    ),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function deleteCookie(name: string, path: string, domain: string) {
   // Set the cookie expiration date to the past
   const expires = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
@@ -608,6 +679,7 @@ export const handleLogout = (
   callback?: () => void,
 ) => {
   const tenant = window.localStorage.getItem('tenant');
+  console.log('[handleLogout] clearing localstorage');
   window.localStorage.clear();
   window.localStorage.setItem('tenant', tenant ?? '');
 
@@ -635,18 +707,59 @@ export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
+  broadcastTenantSwitching = true,
 ) => {
-  // Clear current tenant cookie before switching
-  const { clearCurrentTenantCookie } = await import(
-    '@iblai/iblai-js/web-utils'
-  );
-  clearCurrentTenantCookie();
+  console.log('############### HANDLE TENANT SWITCHING ###############', {
+    broadcastTenantSwitching,
+  });
+  // Signal to the app that a tenant switch is in progress
+  if (
+    document.cookie.includes('ibl_tenant_switching') &&
+    broadcastTenantSwitching
+  ) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
+    );
+    return;
+  }
+  if (tenant === localStorage.getItem('tenant')) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
+    );
+    console.log(
+      `[handleTenantSwitch] Switching from ${localStorage.getItem('tenant')} to ${tenant}`,
+    );
+    return;
+  }
+
+  if (broadcastTenantSwitching) {
+    setCookieForAuth('ibl_tenant_switching', 'true');
+  }
+  // Notify other tabs/windows that a tenant switch is starting
+  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
+    const channel = new BroadcastChannel('ibl-tenant-switch');
+    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
+    channel.close();
+  }
+  if (broadcastTenantSwitching) {
+    // Clear current tenant cookie before switching
+    const { clearCurrentTenantCookie } = await import(
+      '@iblai/iblai-js/web-utils'
+    );
+    clearCurrentTenantCookie();
+  }
   // Preserve the current path before clearing localStorage
   const currentPath = `${window.location.pathname}${window.location.search}`;
   // Get JWT token before clearing localStorage
   const jwtToken = localStorage.getItem('edx_jwt_token');
-  localStorage.clear();
-
+  console.log('[handleTenantSwitch] clearing local storage', {
+    tenant,
+    currentTenant: localStorage.getItem('tenant'),
+  });
+  if (broadcastTenantSwitching) {
+    console.log('[handleTenantSwitch] clearing local storage');
+    localStorage.clear();
+  }
   const url = `${config.authUrl()}/login/complete`;
   const params: Record<string, string> = {
     tenant,
@@ -746,13 +859,26 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
     case 'nvidia':
       return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
+    case 'bedrock':
+    case 'amazon-bedrock':
+    case 'amazon_bedrock':
+    case 'IBLChatBedrock':
+      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
     default:
       return { logo: '/llm-generic-provider.png', name: llmProvider };
   }
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) {
+      targetOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // keep '*' if referrer is unavailable or unparseable
+  }
+  window.parent.postMessage(payload, targetOrigin);
 }
 
 export function isLoggedIn() {
@@ -824,12 +950,12 @@ function decodeHtmlEntities(text: string): string {
   if (typeof document === 'undefined') {
     // Server-side fallback - decode common entities manually
     return text
-      .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ');
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
   }
   const textarea = document.createElement('textarea');
   textarea.innerHTML = text;
@@ -1526,6 +1652,7 @@ function syncAuthDataToCookies(userObject: Record<string, any>): void {
 }
 
 export function saveUserObjectToLocalStorage(userObject: object) {
+  console.log('[saveUserObjectToLocalStorage] clearing local storage');
   localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;
@@ -1658,7 +1785,7 @@ export function getTenantKeyFromUrl() {
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    (currentTenant?.show_paywall || currentTenant?.key === 'main')
   );
 }
 

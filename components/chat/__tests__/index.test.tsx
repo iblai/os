@@ -1949,6 +1949,143 @@ describe('Chat', () => {
     });
   });
 
+  describe('cached session loading spinner', () => {
+    // Ensures the welcome screen does not flash while a cached session's
+    // previous messages are being fetched. See components/chat/index.tsx.
+
+    const cachedSessionAdvancedChat = {
+      changeTab: vi.fn(),
+      activeTab: 'chat',
+      currentStreamingMessage: null,
+      enabledGuidedPrompts: [],
+      isStreaming: false,
+      mentorName: 'Test Mentor',
+      messages: [] as any[],
+      profileImage: '/avatar.png',
+      sendMessage: vi.fn(),
+      setMessage: vi.fn(),
+      stopGenerating: vi.fn(),
+      uniqueMentorId: 'unique-mentor-123',
+      sessionId: 'session-123',
+      startNewChat: vi.fn(),
+      enableSafetyDisclaimer: false,
+      isPending: false,
+      isLoadingChats: false,
+    };
+
+    it('shows the spinner and hides the welcome while a cached session is loading', async () => {
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session' },
+        vi.fn(),
+      ]);
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...cachedSessionAdvancedChat,
+        messages: [],
+        isLoadingChats: true,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('spinner')).toBeInTheDocument();
+      expect(screen.queryByTestId('welcome-chat')).not.toBeInTheDocument();
+    });
+
+    it('shows the welcome (not the spinner) for a new session even while chats are loading', async () => {
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([{}, vi.fn()]);
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...cachedSessionAdvancedChat,
+        messages: [],
+        isLoadingChats: true,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('shows the welcome (not the spinner) for an empty cached session once loading completes', async () => {
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session' },
+        vi.fn(),
+      ]);
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...cachedSessionAdvancedChat,
+        messages: [],
+        isLoadingChats: false,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    it('hides the spinner once messages arrive for a cached session', async () => {
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session' },
+        vi.fn(),
+      ]);
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...cachedSessionAdvancedChat,
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+          {
+            id: '2',
+            role: 'assistant',
+            content: 'Hi!',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        isLoadingChats: false,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('welcome-chat')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
+    });
+
+    it('does not render the spinner in advanced mode even when a cached session is loading', async () => {
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([
+        { 'mentor-123': 'cached-session' },
+        vi.fn(),
+      ]);
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...cachedSessionAdvancedChat,
+        messages: [],
+        isLoadingChats: true,
+      });
+
+      renderWithRedux(<Chat mode="advanced" isPreviewMode={false} />);
+
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+  });
+
   describe('embedded mode', () => {
     it('should render chat input form in embedded mode even without messages', async () => {
       const { useEmbedMode } = await import('@/hooks/use-embed-mode');
@@ -19035,6 +19172,75 @@ describe('Chat', () => {
       });
 
       mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    });
+  });
+
+  describe('initialPrompt forwarding', () => {
+    // Build a mock searchParams object that returns a value for the `prompt`
+    // key (and null for everything else, so the rest of the component
+    // behaves normally).
+    const mockSearchParamsWith = (params: Record<string, string | null>) => ({
+      get: vi.fn((param: string) => (param in params ? params[param] : null)),
+    });
+
+    const getInitialPromptArg = async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const calls = (useAdvancedChat as any).mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      return calls[calls.length - 1][0].initialPrompt;
+    };
+
+    it('forwards a non-empty prompt to useAdvancedChat', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: 'hello there' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hello there');
+    });
+
+    it('forwards undefined when prompt is the empty string', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('forwards undefined when prompt is whitespace-only', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '   ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('trims surrounding whitespace from the prompt', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '  hi  ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hi');
+    });
+
+    it('forwards undefined when no prompt param is present', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(mockSearchParamsWith({}));
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
     });
   });
 });

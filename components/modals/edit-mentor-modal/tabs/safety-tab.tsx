@@ -81,12 +81,12 @@ export function SafetyTab() {
           userId: username ?? '',
           formData: { [tool]: value },
         }).unwrap();
-        toast.success('Mentor updated successfully');
+        toast.success('Agent updated successfully');
         callback?.();
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update mentor');
+      toast.error('Failed to update agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -103,10 +103,10 @@ export function SafetyTab() {
         // @ts-ignore
         userId: username ?? '',
       }).unwrap();
-      toast.success('Mentor updated successfully');
+      toast.success('Agent updated successfully');
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update mentor');
+      toast.error('Failed to update agent');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }

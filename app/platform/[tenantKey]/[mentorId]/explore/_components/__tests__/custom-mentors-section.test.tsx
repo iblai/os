@@ -211,10 +211,10 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByText('Create Custom Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Create Custom Agent')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Build your own custom mentor tailored to your specific learning needs',
+          'Build your own custom agent tailored to your specific learning needs',
         ),
       ).toBeInTheDocument();
       expect(screen.getByText('Get started today')).toBeInTheDocument();
@@ -229,9 +229,7 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
-      expect(
-        screen.queryByText('Create Custom Mentor'),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
     });
 
     it('does not render create mentor card below mentors when user does not have permission', () => {
@@ -240,16 +238,14 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByText('Custom Mentor 1')).toBeInTheDocument();
-      expect(
-        screen.queryByText('Create Custom Mentor'),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
     });
 
     it('renders mentors list with proper roles', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('list', { name: /Custom mentors/i }),
+        screen.getByRole('list', { name: /Custom agents/i }),
       ).toBeInTheDocument();
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
@@ -258,7 +254,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByText('Custom Mentor 1')).toBeInTheDocument();
-      expect(screen.getByText('Create Custom Mentor')).toBeInTheDocument();
+      expect(screen.getByText('Create Custom Agent')).toBeInTheDocument();
     });
   });
 
@@ -378,7 +374,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more custom mentors/i,
+        name: /Load more custom agents/i,
       });
       expect(seeMoreButton).toBeDisabled();
     });
@@ -395,7 +391,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       await user.click(createCard);
 
@@ -412,7 +408,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       createCard.focus();
       await user.keyboard('{Enter}');
@@ -430,7 +426,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       createCard.focus();
       await user.keyboard(' ');
@@ -449,7 +445,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       await user.click(createCard);
 
@@ -470,7 +466,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       createCard.focus();
       await user.keyboard('{Enter}');
@@ -487,7 +483,7 @@ describe('CustomMentorsSection', () => {
 
       // When mentors exist, the create card is shown below the mentor list
       const createCards = screen.getAllByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       const createCard = createCards[0];
       createCard.focus();
@@ -501,7 +497,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCards = screen.getAllByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       const createCard = createCards[0];
       createCard.focus();
@@ -522,7 +518,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createButton = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       fireEvent.click(createButton);
 
@@ -542,7 +538,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createButton = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       fireEvent.click(createButton);
 
@@ -560,7 +556,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createButtons = screen.getAllByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       fireEvent.click(createButtons[0]);
 
@@ -581,7 +577,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Load more custom mentors/i }),
+        screen.getByRole('button', { name: /Load more custom agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -594,7 +590,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.queryByRole('button', { name: /Load more custom mentors/i }),
+        screen.queryByRole('button', { name: /Load more custom agents/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -608,7 +604,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more custom mentors/i,
+        name: /Load more custom agents/i,
       });
       await user.click(seeMoreButton);
 
@@ -643,7 +639,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Create Custom Mentor/i }),
+        screen.getByRole('button', { name: /Create Custom Agent/i }),
       ).toBeInTheDocument();
     });
 
@@ -656,7 +652,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const createCard = screen.getByRole('button', {
-        name: /Create Custom Mentor/i,
+        name: /Create Custom Agent/i,
       });
       expect(createCard).toHaveAttribute('tabindex', '0');
     });
