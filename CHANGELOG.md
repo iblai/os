@@ -4,7 +4,7 @@
 
 ### Chores
 
-* bump iblai-js to 1.12.1, update macOS entitlements and Tauri version ([7882a36](https://github.com/iblai/agentai/commit/7882a364bb7dc4ed250380c848d31d37bccdfed1))
+- bump iblai-js to 1.12.1, update macOS entitlements and Tauri version ([7882a36](https://github.com/iblai/agentai/commit/7882a364bb7dc4ed250380c848d31d37bccdfed1))
 
 ## [0.67.9](https://github.com/iblai/agentai/compare/v0.67.8...v0.67.9) (2026-05-26)
 
