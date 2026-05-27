@@ -19048,4 +19048,73 @@ describe('Chat', () => {
       mockSelectEnableChatActionsPopup.mockReturnValue(false);
     });
   });
+
+  describe('initialPrompt forwarding', () => {
+    // Build a mock searchParams object that returns a value for the `prompt`
+    // key (and null for everything else, so the rest of the component
+    // behaves normally).
+    const mockSearchParamsWith = (params: Record<string, string | null>) => ({
+      get: vi.fn((param: string) => (param in params ? params[param] : null)),
+    });
+
+    const getInitialPromptArg = async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const calls = (useAdvancedChat as any).mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      return calls[calls.length - 1][0].initialPrompt;
+    };
+
+    it('forwards a non-empty prompt to useAdvancedChat', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: 'hello there' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hello there');
+    });
+
+    it('forwards undefined when prompt is the empty string', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('forwards undefined when prompt is whitespace-only', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '   ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('trims surrounding whitespace from the prompt', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '  hi  ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hi');
+    });
+
+    it('forwards undefined when no prompt param is present', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(mockSearchParamsWith({}));
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+  });
 });

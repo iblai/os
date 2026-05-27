@@ -261,7 +261,7 @@ export function SettingsTab() {
         values.enable_claw = value.enable_claw;
       }
 
-      // Detect whether the Advanced Sandbox toggle changed. If it did AND the
+      // Detect whether the Sandbox toggle changed. If it did AND the
       // mentor is wired to a Claw instance (clawMentorConfig exists), we also
       // PATCH the claw-config so its `enabled` flag stays in sync with the
       // mentor-settings intent. When no claw-config exists (404 → null) we
@@ -672,13 +672,13 @@ export function SettingsTab() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-[#646464]">
-                        Advanced Sandbox
+                        Sandbox
                       </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             type="button"
-                            aria-label="More info about advanced sandbox mode"
+                            aria-label="More info about sandbox mode"
                           >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
@@ -695,7 +695,7 @@ export function SettingsTab() {
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
-                      aria-label={`Advanced sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
+                      aria-label={`Sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}
@@ -739,7 +739,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Is lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -758,18 +758,20 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Show Attachment
+                            File Attachments
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about show attachment"
+                                aria-label="More info about file attachments"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Show Attachment Options in Chat Interface</p>
+                                <p>
+                                  Show File Attachment Options in Chat Interface
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -780,7 +782,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`File attachments ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -799,13 +801,13 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Show Voice Call
+                            Voice Calls
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about show voice call"
+                                aria-label="More info about voice calls"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
@@ -821,7 +823,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Voice calls ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -840,13 +842,13 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Show Voice Record
+                            Voice Recordings
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about show voice record"
+                                aria-label="More info about voice recordings"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
@@ -864,7 +866,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Voice recordings ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -889,7 +891,7 @@ export function SettingsTab() {
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
                             <p>
-                              Allow this mentor to remember and reference
+                              Allow this agent to remember and reference
                               information from past conversations.
                             </p>
                           </TooltipContent>
@@ -911,13 +913,13 @@ export function SettingsTab() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-[#646464]">
-                        Allow Copies
+                        Copies
                       </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             type="button"
-                            aria-label="More info about allow copies"
+                            aria-label="More info about copies"
                           >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
@@ -933,7 +935,7 @@ export function SettingsTab() {
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
-                      aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                      aria-label={`Copies ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}
@@ -950,13 +952,13 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Enhance Document Retrieval
+                            Enhanced RAG
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about enhance document retrieval"
+                                aria-label="More info about enhanced rag"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
@@ -979,7 +981,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled || disabled}
-                          aria-label={`Enhance document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Enhanced rag ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}

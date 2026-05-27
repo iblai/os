@@ -31,18 +31,6 @@ vi.mock('@/lib/hooks', () => ({
   }),
 }));
 
-let mockIsAppleDevice = false;
-vi.mock('@/hooks/use-os', () => ({
-  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
-}));
-
-vi.mock('@/features/subscription/subscription-slice', () => ({
-  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
-    type: 'subscription/setOpenAppleRestrictionModal',
-    payload: val,
-  })),
-}));
-
 type MockTenant = {
   key: string;
   org: string;
@@ -85,6 +73,7 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
+let mockIsAppleDevice = false;
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   SUBSCRIPTION_V2_TRIGGERS: {
     PRICING_MODAL: 'PRICING_MODAL',
@@ -92,6 +81,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useSubscriptionHandlerV2: () => ({
     bannerButtonTriggerCallback: vi.fn(() => vi.fn()),
   }),
+  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
+  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
+    type: 'appleRestriction/setOpenAppleRestrictionModal',
+    payload: val,
+  })),
 }));
 
 vi.mock('@/components/free-trial-dialog', () => ({
@@ -213,7 +207,7 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBeNull();
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
           payload: true,
         }),
       );
@@ -234,7 +228,7 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBe('done');
       expect(mockDispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
         }),
       );
     });

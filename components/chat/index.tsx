@@ -269,6 +269,7 @@ export function Chat({
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
   const isCompactMode = searchParams.get('compact') === 'true';
+  const initialPrompt = searchParams.get('prompt')?.trim() || undefined;
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
@@ -422,6 +423,7 @@ export function Chat({
     isOffline: isOfflineInTauri,
     onOfflineWithoutLocalLLM: handleOfflineWithoutLocalLLM,
     isPublicRoute: isAccessingPublicRoute,
+    initialPrompt,
   });
 
   const {
