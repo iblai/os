@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.67.11](https://github.com/iblai/agentai/compare/v0.67.10...v0.67.11) (2026-05-27)
+
+### Bug Fixes
+
+* **ci:** allow skipped E2E tests to pass summary job ([07894e4](https://github.com/iblai/agentai/commit/07894e4ae46816e84b3ad60beb492dd428d6d854))
+
 ## [0.67.10](https://github.com/iblai/agentai/compare/v0.67.9...v0.67.10) (2026-05-27)
 
 ### Chores
