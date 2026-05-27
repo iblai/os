@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { CircleStop } from 'lucide-react';
 
 import { Button } from '../ui/button';
@@ -16,10 +16,24 @@ type Props = {
 
 export const StopStreamingButton = forwardRef<HTMLButtonElement, Props>(
   function StopStreamingButton({ stopGenerating }, ref) {
+    const [open, setOpen] = useState(false);
     return (
-      <Tooltip>
+      <Tooltip
+        open={open}
+        onOpenChange={(next) => {
+          // Opening is driven solely by pointer hover (below). Ignore Radix's
+          // open-on-focus so the programmatic focus this button receives when
+          // streaming starts never pops the tooltip open. Still let it close.
+          if (!next) {
+            setOpen(false);
+          }
+        }}
+      >
         <TooltipTrigger asChild>
-          <div>
+          <div
+            onPointerEnter={() => setOpen(true)}
+            onPointerLeave={() => setOpen(false)}
+          >
             <Button
               ref={ref}
               type="button"
