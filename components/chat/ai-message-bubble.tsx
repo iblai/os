@@ -162,7 +162,16 @@ export const AIMessageBubble = forwardRef<
                 </div>
               )}
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Action toolbar (copy, rating, share, report, retry) — hidden
+                while this message is still streaming; only meaningful once the
+                response is complete. Kept mounted (not unmounted) so the
+                copy-button ref stays valid for post-stream focus handling. */}
+            <div
+              className={cn(
+                'flex items-center space-x-4',
+                isCurrentlyStreaming && 'hidden',
+              )}
+            >
               <AIMessageCopy ref={ref} content={content} />
 
               {isLoggedIn() && !showingSharedChat && (
