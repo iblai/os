@@ -734,7 +734,7 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 - [x] PR-03: Master Privacy Router switch is visible
 - [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
 - [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
-- [x] PR-06: Selecting Block reveals the block-message textarea and selecting Redact hides it
+- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
 - [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
 
 ---

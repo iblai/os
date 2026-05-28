@@ -2217,7 +2217,7 @@
         },
         {
           "id": "pr-06",
-          "description": "Selecting Block reveals the block-message textarea and selecting Redact hides it",
+          "description": "Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)",
           "status": "covered"
         },
         {
