@@ -22,6 +22,18 @@ export class SettingsTab {
   readonly memoryToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
+  /**
+   * Voice-call toggle: persists `use_function_calling_for_rag` on the
+   * mentor's CallConfiguration. Resolved via `data-testid` so the
+   * locator survives label rewrites in the host.
+   */
+  readonly useFunctionCallingForRagToggle: Locator;
+  /**
+   * Voice-call toggle: persists `enable_video` on the mentor's
+   * CallConfiguration. Flipping this on (and saving) is what makes the
+   * Screen Share top-level tab appear in the modal sidebar.
+   */
+  readonly enableVideoToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -82,6 +94,81 @@ export class SettingsTab {
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced rag',
     });
+    this.useFunctionCallingForRagToggle = dialog.getByTestId(
+      'settings-use-function-calling-for-rag-switch',
+    );
+    this.enableVideoToggle = dialog.getByTestId('settings-enable-video-switch');
+  }
+
+  /**
+   * Reads the current on/off state of a Radix Switch via its
+   * `aria-checked` attribute. Defaults to `false` when the attribute is
+   * missing (e.g. the toggle isn't rendered yet) so callers can use this
+   * as a precondition probe without try/catch.
+   */
+  private async readSwitchState(toggle: Locator): Promise<boolean> {
+    const attr = await toggle.getAttribute('aria-checked').catch(() => null);
+    return attr === 'true';
+  }
+
+  /** Whether the "Look things up only when needed" toggle is currently on. */
+  async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.useFunctionCallingForRagToggle);
+  }
+
+  /** Whether the "Allow screen sharing on a call" toggle is currently on. */
+  async isEnableVideoEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.enableVideoToggle);
+  }
+
+  /**
+   * Idempotently set the "Allow screen sharing on a call" toggle to the
+   * target state and click Save. This is the host-side trigger that
+   * flips `call_configuration.enable_video`, which in turn gates the
+   * Screen Share top-level tab's visibility via `MENTOR_SEGMENTS`.
+   *
+   * Blocks until the success toast appears so the next
+   * `useMentorSegments` re-render sees the updated CallConfiguration.
+   */
+  async setEnableVideoAndSave(target: boolean): Promise<void> {
+    await expect(this.enableVideoToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isEnableVideoEnabled();
+    if (isOn === target) return;
+
+    await this.enableVideoToggle.click();
+    await expect(this.enableVideoToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
+      { timeout: 30_000 },
+    );
+  }
+
+  /** Idempotently toggle "Look things up only when needed" + Save. */
+  async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
+    await expect(this.useFunctionCallingForRagToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isOn = await this.isUseFunctionCallingForRagEnabled();
+    if (isOn === target) return;
+
+    await this.useFunctionCallingForRagToggle.click();
+    await expect(this.useFunctionCallingForRagToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
+      { timeout: 30_000 },
+    );
   }
 
   async copyUniqueId(): Promise<void> {

@@ -994,6 +994,7 @@ export function SettingsTab() {
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
                       aria-label={`Look things up only when needed ${field.state.value ? 'enabled' : 'disabled'}`}
+                      data-testid="settings-use-function-calling-for-rag-switch"
                     />
                   </div>
                 )}
@@ -1028,6 +1029,7 @@ export function SettingsTab() {
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
                       aria-label={`Allow screen sharing on a call ${field.state.value ? 'enabled' : 'disabled'}`}
+                      data-testid="settings-enable-video-switch"
                     />
                   </div>
                 )}
@@ -1246,6 +1248,7 @@ export function SettingsTab() {
                           type="submit"
                           disabled={isDisabled || !isFormValid}
                           className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                          data-testid="settings-save-button"
                         >
                           {isLoadingEditMentor ? 'Saving...' : 'Save'}
                         </Button>

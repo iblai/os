@@ -10,8 +10,6 @@ import {
   getCallConfigForm,
   expectCallConfigVisible,
   selectCallMode,
-  expectTtsSelectDisabled,
-  expectSttSelectDisabled,
 } from '@iblai/iblai-js/playwright';
 
 /**
@@ -48,10 +46,12 @@ export class VoiceTab {
     this.page = page;
     this.dialog = dialog;
 
-    this.tabLink = dialog.getByRole('tab', {
-      name: VOICE_LABELS.tabName,
-      exact: true,
-    });
+    // Filter by `aria-controls="panel-voice"` to disambiguate the host's
+    // sidebar tab from the SDK's "Voice" sub-tab pill inside the panel —
+    // both have role="tab" and accessible name "Voice", so a plain
+    // getByRole match raises a strict-mode violation once the panel is
+    // active. The sidebar trigger uniquely owns `panel-voice`.
+    this.tabLink = dialog.locator('[role="tab"][aria-controls="panel-voice"]');
     this.heading = dialog.getByRole('heading', {
       name: VOICE_LABELS.headerTitle,
     });
@@ -112,14 +112,6 @@ export class VoiceTab {
 
   async selectCallMode(mode: 'realtime' | 'inference'): Promise<void> {
     await selectCallMode(this.dialog, mode);
-  }
-
-  async expectTtsDisabled(): Promise<void> {
-    await expectTtsSelectDisabled(this.dialog);
-  }
-
-  async expectSttDisabled(): Promise<void> {
-    await expectSttSelectDisabled(this.dialog);
   }
 
   /**

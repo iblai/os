@@ -785,7 +785,7 @@ The Settings tab also surfaces two voice-call toggles (`use_function_calling_for
 - [x] VO-05: Selecting the OpenAI provider marks the card active and reveals the voice picker trigger
 - [x] VO-06: Selecting the Browser provider hides the voice picker trigger
 - [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
-- [x] VO-08: Choosing Realtime call mode disables the TTS and STT provider selects
+- [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
 - [x] VO-09: Settings tab surfaces both voice-call toggles
 - [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
 

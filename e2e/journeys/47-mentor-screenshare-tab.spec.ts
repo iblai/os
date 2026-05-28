@@ -6,15 +6,21 @@ import { waitForPageReady } from '../utils/resilient';
  * Journey 47 — Mentor Screen Share Tab.
  *
  * The Screen Share top-level tab is rendered by the SDK's
- * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`). It's gated in the
- * host by `call_configuration.enable_video`, which is the same value the
- * "Allow screen sharing on a call" toggle on the Settings tab writes to.
+ * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`). It's
+ * gated in the host by `call_configuration.enable_video`, which is the
+ * same value the "Allow screen sharing on a call" toggle on the
+ * Settings tab writes to.
  *
- * These tests verify the host-side wiring:
- *   • the tab is hidden when screen sharing is off,
- *   • flipping the Settings toggle on (and saving) makes the tab appear,
- *   • the heading + disabled-hint behaviour from the SDK still work,
- *   • flipping it back off hides the tab again (idempotency).
+ * Selector policy:
+ *   • The Settings toggle is reached via `editMentorPage.settings.enableVideoToggle`
+ *     which resolves a stable `data-testid` ("settings-enable-video-switch").
+ *   • The tab trigger in the sidebar is `[role="tab"][aria-controls="panel-screenshare"]`
+ *     (host-rendered, unique).
+ *   • The tab body, heading, save button, and disabled hint are SDK
+ *     `data-testid`s exposed by `iblai-js`'s SCREENSHARE_LABELS helpers.
+ *
+ * No CSS class selectors anywhere — every locator survives style
+ * refactors on either side.
  */
 test.describe('Journey 47: Mentor Screen Share Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -28,32 +34,15 @@ test.describe('Journey 47: Mentor Screen Share Tab', () => {
     await waitForPageReady(page);
   });
 
-  // SS-01: With screen sharing off in Settings, the Screen share top-level
+  // SS-01: With screen sharing off in Settings, the Screen Share top-level
   // tab is hidden entirely from the sidebar.
   test('Screen Share tab is hidden when "Allow screen sharing on a call" is off', async ({
     editMentorPage,
   }) => {
-    const enableVideoToggle = editMentorPage.dialog.getByLabel(
-      /Allow screen sharing on a call (enabled|disabled)/i,
-    );
-    await expect(enableVideoToggle).toBeVisible({ timeout: 10_000 });
-
-    const isOn =
-      (await enableVideoToggle
-        .getAttribute('aria-checked')
-        .catch(() => null)) === 'true';
-
-    // If it's on in the fixture, flip it off and save so the precondition
-    // holds. Tests below restore by toggling back on as needed.
-    if (isOn) {
-      await enableVideoToggle.click();
-      await editMentorPage.dialog
-        .getByRole('button', { name: 'Save', exact: true })
-        .click();
-      await expect(
-        editMentorPage.page.getByText('Agent updated successfully'),
-      ).toBeVisible({ timeout: 15_000 });
-    }
+    // Force the precondition: enable_video = false. The helper is a
+    // no-op when already false, so we don't double-save fixtures that
+    // already match.
+    await editMentorPage.settings.setEnableVideoAndSave(false);
 
     await expect(editMentorPage.screenshare.tabLink).not.toBeVisible({
       timeout: 5_000,
@@ -63,74 +52,38 @@ test.describe('Journey 47: Mentor Screen Share Tab', () => {
   });
 
   // SS-02: Flipping the Settings toggle on (+ Save) reveals the Screen
-  // share tab in the sidebar.
+  // Share tab in the sidebar after the mentor-settings refetch
+  // completes.
   test('enabling the Settings toggle reveals the Screen Share tab', async ({
     editMentorPage,
-    page,
   }) => {
-    const enableVideoToggle = editMentorPage.dialog.getByLabel(
-      /Allow screen sharing on a call (enabled|disabled)/i,
-    );
-    await expect(enableVideoToggle).toBeVisible({ timeout: 10_000 });
+    const wasOn = await editMentorPage.settings.isEnableVideoEnabled();
 
-    const wasOn =
-      (await enableVideoToggle
-        .getAttribute('aria-checked')
-        .catch(() => null)) === 'true';
-
-    if (!wasOn) {
-      await enableVideoToggle.click();
-      await editMentorPage.dialog
-        .getByRole('button', { name: 'Save', exact: true })
-        .click();
-      await expect(page.getByText('Agent updated successfully')).toBeVisible({
-        timeout: 15_000,
-      });
-    }
+    await editMentorPage.settings.setEnableVideoAndSave(true);
 
     await expect(editMentorPage.screenshare.tabLink).toBeVisible({
       timeout: 15_000,
     });
 
-    // Restore: flip back off if we turned it on for this test so the
-    // suite is idempotent.
+    // Restore so other tests run from a clean slate.
     if (!wasOn) {
-      await enableVideoToggle.click();
-      await editMentorPage.dialog
-        .getByRole('button', { name: 'Save', exact: true })
-        .click();
-      await expect(page.getByText('Agent updated successfully')).toBeVisible({
-        timeout: 15_000,
-      });
+      await editMentorPage.settings.setEnableVideoAndSave(false);
     }
 
     await editMentorPage.close();
   });
 
-  // SS-03: Once the Screen share tab is visible, navigating to it renders
-  // the heading and the body provided by the SDK.
-  test('admin can switch to the Screen Share tab and sees the heading', async ({
+  // SS-03: Once the Screen Share tab is visible, navigating to it
+  // renders the SDK-owned body (testid `screenshare-tab-body`).
+  test('admin can switch to the Screen Share tab and sees the SDK body', async ({
     editMentorPage,
-    page,
   }) => {
-    const enableVideoToggle = editMentorPage.dialog.getByLabel(
-      /Allow screen sharing on a call (enabled|disabled)/i,
-    );
-    const wasOn =
-      (await enableVideoToggle
-        .getAttribute('aria-checked')
-        .catch(() => null)) === 'true';
+    const wasOn = await editMentorPage.settings.isEnableVideoEnabled();
     if (!wasOn) {
-      await enableVideoToggle.click();
-      await editMentorPage.dialog
-        .getByRole('button', { name: 'Save', exact: true })
-        .click();
-      await expect(page.getByText('Agent updated successfully')).toBeVisible({
-        timeout: 15_000,
-      });
+      await editMentorPage.settings.setEnableVideoAndSave(true);
     }
 
-    await editMentorPage.navigateToTab('Screen Share');
+    await editMentorPage.screenshare.switchTo();
     await expect(editMentorPage.screenshare.heading).toBeVisible({
       timeout: 10_000,
     });
@@ -138,13 +91,7 @@ test.describe('Journey 47: Mentor Screen Share Tab', () => {
     // Restore.
     if (!wasOn) {
       await editMentorPage.navigateToTab('Settings');
-      await enableVideoToggle.click();
-      await editMentorPage.dialog
-        .getByRole('button', { name: 'Save', exact: true })
-        .click();
-      await expect(page.getByText('Agent updated successfully')).toBeVisible({
-        timeout: 15_000,
-      });
+      await editMentorPage.settings.setEnableVideoAndSave(false);
     }
 
     await editMentorPage.close();

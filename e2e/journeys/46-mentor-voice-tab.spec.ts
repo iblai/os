@@ -120,17 +120,23 @@ test.describe('Journey 46: Mentor Voice Tab', () => {
     await editMentorPage.close();
   });
 
-  // VO-08: Realtime mode disables the TTS and STT selects (provider is
-  // handled inside the LLM combo). This protects against accidental
-  // regression of the inference vs realtime branching.
-  test('choosing Realtime call mode disables the TTS and STT selects', async ({
+  // VO-08: Switching between the Realtime and Step-by-step call modes
+  // keeps the Voice call configuration form rendered. The SDK no longer
+  // surfaces standalone TTS / STT selects — those providers are now
+  // auto-derived from the chosen LLM provider — so this checkpoint
+  // exercises the mode round-trip instead, which is the user-visible
+  // contract that survives the SDK collapse.
+  test('switching between Realtime and Step-by-step call modes keeps the form rendered', async ({
     editMentorPage,
   }) => {
     await editMentorPage.voice.switchToCallConfigSubTab();
+    await editMentorPage.voice.expectCallConfigVisible();
 
     await editMentorPage.voice.selectCallMode('realtime');
-    await editMentorPage.voice.expectTtsDisabled();
-    await editMentorPage.voice.expectSttDisabled();
+    await editMentorPage.voice.expectCallConfigVisible();
+
+    await editMentorPage.voice.selectCallMode('inference');
+    await editMentorPage.voice.expectCallConfigVisible();
 
     await editMentorPage.close();
   });
@@ -140,61 +146,47 @@ test.describe('Journey 46: Mentor Voice Tab', () => {
   // tab so admins can toggle them without leaving the main configuration
   // panel. They still write to the CallConfiguration endpoint under the
   // hood — see CallConfigSection in the SDK for the canonical fields.
+  //
+  // Locators come from the SettingsTab page object, which resolves both
+  // toggles by `data-testid` — keeping the test independent of any
+  // future label tweaks the host might apply.
   test('admin sees the voice-call toggles surfaced in the Settings tab', async ({
     editMentorPage,
   }) => {
     await editMentorPage.navigateToTab('Settings');
 
-    const fnCallingToggle = editMentorPage.dialog.getByLabel(
-      /Look things up only when needed (enabled|disabled)/i,
-    );
-    const screenShareToggle = editMentorPage.dialog.getByLabel(
-      /Allow screen sharing on a call (enabled|disabled)/i,
-    );
-
-    await expect(fnCallingToggle).toBeVisible({ timeout: 10_000 });
-    await expect(screenShareToggle).toBeVisible({ timeout: 5_000 });
+    await expect(
+      editMentorPage.settings.useFunctionCallingForRagToggle,
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.settings.enableVideoToggle).toBeVisible({
+      timeout: 5_000,
+    });
 
     await editMentorPage.close();
   });
 
-  // VO-10: Flipping a voice-call toggle in Settings and clicking Save
-  // surfaces the standard "Agent updated successfully" toast — proving
-  // the Settings-side Save handler routes the call-configurations
-  // mutation alongside the mentor-settings mutation without erroring.
+  // VO-10: Flipping the "Look things up only when needed" toggle in
+  // Settings and clicking Save surfaces the "Agent updated successfully"
+  // toast — proving the Settings-side Save handler routes the
+  // call-configurations mutation alongside the mentor-settings mutation
+  // without erroring. Restores to the original state so the suite stays
+  // idempotent regardless of fixture defaults.
   test('toggling the voice-call switches and saving succeeds end-to-end', async ({
     editMentorPage,
-    page,
   }) => {
     await editMentorPage.navigateToTab('Settings');
 
-    const fnCallingToggle = editMentorPage.dialog.getByLabel(
-      /Look things up only when needed (enabled|disabled)/i,
-    );
-    await expect(fnCallingToggle).toBeVisible({ timeout: 10_000 });
     const wasEnabled =
-      (await fnCallingToggle.getAttribute('aria-checked').catch(() => null)) ===
-      'true';
+      await editMentorPage.settings.isUseFunctionCallingForRagEnabled();
 
-    await fnCallingToggle.click();
-
-    await editMentorPage.dialog
-      .getByRole('button', { name: 'Save', exact: true })
-      .click();
-
-    await expect(page.getByText('Agent updated successfully')).toBeVisible({
-      timeout: 15_000,
-    });
+    await editMentorPage.settings.setUseFunctionCallingForRagAndSave(
+      !wasEnabled,
+    );
 
     // Restore so subsequent tests start from the same state.
-    await fnCallingToggle.click();
-    await editMentorPage.dialog
-      .getByRole('button', { name: 'Save', exact: true })
-      .click();
-    await expect(page.getByText('Agent updated successfully')).toBeVisible({
-      timeout: 15_000,
-    });
-    void wasEnabled;
+    await editMentorPage.settings.setUseFunctionCallingForRagAndSave(
+      wasEnabled,
+    );
 
     await editMentorPage.close();
   });

@@ -2604,7 +2604,7 @@
         },
         {
           "id": "vo-08",
-          "description": "Choosing Realtime call mode disables the TTS and STT provider selects",
+          "description": "Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered",
           "status": "covered"
         },
         {
