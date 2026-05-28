@@ -99,7 +99,6 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   clearCurrentTenantCookie: vi.fn(),
-  redirectToAuthSpa: vi.fn(),
 }));
 
 // Mock localStorage with spied functions
@@ -237,56 +236,80 @@ describe('hasNonExpiredAuthToken function', () => {
 });
 
 describe('redirectToAuthSpa function', () => {
-  let sdkRedirectMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    // Reset the window.location mock href
+    windowLocationMock.href = 'https://example.com/test';
 
-  beforeEach(async () => {
-    const webUtilsModule = await import('@iblai/iblai-js/web-utils');
-    sdkRedirectMock = vi.mocked(webUtilsModule.redirectToAuthSpa);
+    // Setup global window object
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: windowLocationMock,
+      writable: true,
+      configurable: true,
+    });
+
+    // Clear localStorage before each test
+    localStorageMock.clear();
 
     // Reset mocks
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    // Restore any mocks
     vi.restoreAllMocks();
   });
 
-  it('should call SDK redirectToAuthSpa with correct default options', async () => {
+  it('should redirect to auth URL with correct parameters', async () => {
+    // Call the function
     await redirectToAuthSpa();
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redirectTo: undefined,
-        platformKey: undefined,
-        logout: undefined,
-        saveRedirect: true,
-        forceRedirect: false,
-        authUrl: config.authUrl(),
-        appName: config.iblPlatform(),
-        queryParams: {
-          app: QUERY_PARAMS.APP,
-          redirectTo: QUERY_PARAMS.REDIRECT_TO,
-          tenant: QUERY_PARAMS.TENANT,
-        },
-        redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
-        preserveTokenKey: 'edx_jwt_token',
-        authRedirectProxy: '/api/auth-redirect',
-      }),
+    // Check if localStorage was updated with redirect path
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      LOCAL_STORAGE_KEYS.REDIRECT_TO,
+      '/test?query=value',
     );
+
+    // Check if window.location.href was set correctly (through API redirect)
+    const directAuthUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}&${QUERY_PARAMS.REDIRECT_TO}=https://example.com`;
+    const expectedUrl = `/api/auth-redirect?to=${encodeURIComponent(directAuthUrl)}`;
+    expect(windowLocationMock.href).toBe(expectedUrl);
   });
 
-  it('should pass through all parameters to SDK', async () => {
-    await redirectToAuthSpa('/custom-path', 'my-tenant', true, false, true);
+  it('should work with empty pathname and search', async () => {
+    // Save original values to restore later
+    const originalPathname = windowLocationMock.pathname;
+    const originalSearch = windowLocationMock.search;
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redirectTo: '/custom-path',
-        platformKey: 'my-tenant',
-        logout: true,
-        saveRedirect: false,
-        forceRedirect: true,
-      }),
+    // Temporarily modify the mock properties
+    windowLocationMock.pathname = '';
+    windowLocationMock.search = '';
+
+    // Reset href to initial value
+    windowLocationMock.href = 'https://example.com/test';
+
+    // Call the function
+    await redirectToAuthSpa();
+
+    // Check correct redirect path was stored
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      LOCAL_STORAGE_KEYS.REDIRECT_TO,
+      '',
     );
+
+    // Check if window.location.href was set correctly (through API redirect)
+    const directAuthUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}&${QUERY_PARAMS.REDIRECT_TO}=https://example.com`;
+    const expectedUrl = `/api/auth-redirect?to=${encodeURIComponent(directAuthUrl)}`;
+    expect(windowLocationMock.href).toBe(expectedUrl);
+
+    // Restore original values
+    windowLocationMock.pathname = originalPathname;
+    windowLocationMock.search = originalSearch;
   });
 });
 
@@ -434,8 +457,6 @@ describe('redirectToAuthSpaJoinTenant function', () => {
     });
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const webUtilsModule = await import('@iblai/iblai-js/web-utils');
-    const sdkRedirectMock = vi.mocked(webUtilsModule.redirectToAuthSpa);
 
     // Call without explicit tenant key - both params undefined
     redirectToAuthSpaJoinTenant(undefined, undefined);
@@ -449,13 +470,13 @@ describe('redirectToAuthSpaJoinTenant function', () => {
       }),
     );
 
-    // Should have called the SDK redirectToAuthSpa via the wrapper
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redirectTo: undefined,
-        authUrl: config.authUrl(),
-        appName: config.iblPlatform(),
-      }),
+    // Wait for the async redirectToAuthSpa to complete (it has a 100ms delay)
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Should redirect via the auth-redirect API endpoint
+    expect(locationHrefSpy).toContain('/api/auth-redirect');
+    expect(locationHrefSpy).toContain(
+      encodeURIComponent('https://auth.example.com/login'),
     );
 
     consoleSpy.mockRestore();
@@ -2446,94 +2467,293 @@ describe('formatDateToShortFormat function - error handling', () => {
   });
 });
 
-describe('redirectToAuthSpa - SDK delegation', () => {
-  let sdkRedirectMock: ReturnType<typeof vi.fn>;
+describe('redirectToAuthSpa - Tauri and platform/logout paths', () => {
+  let locationHrefSpy: string;
 
-  beforeEach(async () => {
-    const webUtilsModule = await import('@iblai/iblai-js/web-utils');
-    sdkRedirectMock = vi.mocked(webUtilsModule.redirectToAuthSpa);
+  beforeEach(() => {
+    locationHrefSpy = '';
+    // Clear cookies from previous tests
+    document.cookie =
+      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie =
+      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: {
+        origin: 'https://example.com',
+        pathname: '/platform/my-tenant/page',
+        search: '',
+        hostname: 'example.com',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return (
+            locationHrefSpy || 'https://example.com/platform/my-tenant/page'
+          );
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    localStorageMock.clear();
     vi.clearAllMocks();
   });
 
-  it('should pass platform key to SDK', async () => {
+  it('should include platform key in auth redirect URL', async () => {
     await redirectToAuthSpa(undefined, 'explicit-tenant');
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        platformKey: 'explicit-tenant',
-      }),
-    );
+    // Wait for the async redirect
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // The URL is encoded, so tenant= becomes tenant%3D
+    expect(locationHrefSpy).toContain('tenant%3Dexplicit-tenant');
   });
 
-  it('should pass logout flag to SDK', async () => {
+  it('should include logout flag in auth redirect URL when logging out', async () => {
     await redirectToAuthSpa(undefined, undefined, true);
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        logout: true,
-      }),
-    );
+    // Wait for the async redirect
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // The URL is encoded, so logout= becomes logout%3D
+    expect(locationHrefSpy).toContain('logout%3D1');
   });
 
-  it('should pass redirect path to SDK', async () => {
+  it('should extract platform key from redirect path if not explicitly provided', async () => {
     await redirectToAuthSpa('/platform/extracted-tenant/page');
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        redirectTo: '/platform/extracted-tenant/page',
-      }),
+    // Wait for the async redirect
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // The URL is encoded, so tenant= becomes tenant%3D
+    expect(locationHrefSpy).toContain('tenant%3Dextracted-tenant');
+  });
+
+  it('should handle Tauri app iOS redirect URL', async () => {
+    // Mock isTauriApp to return true
+    const tauriModule = await import('@/types/tauri');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(true);
+
+    // Mock the dynamic import of @tauri-apps/api/core
+    vi.doMock('@tauri-apps/api/core', () => ({
+      invoke: vi.fn().mockResolvedValue('ios'),
+    }));
+
+    await redirectToAuthSpa();
+
+    // Wait for the async operations
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Restore the mock
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+  });
+
+  it('should handle Tauri invoke error gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Mock isTauriApp to return true
+    const tauriModule = await import('@/types/tauri');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(true);
+
+    // Mock the dynamic import to throw an error
+    vi.doMock('@tauri-apps/api/core', () => ({
+      invoke: vi.fn().mockRejectedValue(new Error('Tauri not available')),
+    }));
+
+    await redirectToAuthSpa();
+
+    // Wait for the async operations
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Restore the mock
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+    consoleSpy.mockRestore();
+  });
+
+  it('should include JWT token in auth URL when token exists in localStorage in Tauri mode', async () => {
+    // Mock isTauriApp to return true
+    const tauriModule = await import('@/types/tauri');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(true);
+
+    // Set JWT token in localStorage
+    localStorageMock.setItem('edx_jwt_token', 'test-jwt-token-456');
+
+    await redirectToAuthSpa();
+
+    // Wait for the async operations
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Should include encoded token param
+    expect(locationHrefSpy).toContain('token=');
+    expect(locationHrefSpy).toContain(encodeURIComponent('test-jwt-token-456'));
+
+    // Cleanup
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+  });
+
+  it('should not include JWT token in auth URL when no token in localStorage', async () => {
+    // Mock isTauriApp to return true
+    const tauriModule = await import('@/types/tauri');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(true);
+
+    // Ensure no token in localStorage (cleared by beforeEach)
+
+    await redirectToAuthSpa();
+
+    // Wait for the async operations
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Should NOT include token param when no token exists
+    expect(locationHrefSpy).not.toContain('token=');
+
+    // Cleanup
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+  });
+
+  it('should not include JWT token in auth URL when not in Tauri mode', async () => {
+    // Mock isTauriApp to return false (default)
+    const tauriModule = await import('@/types/tauri');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+
+    await redirectToAuthSpa();
+
+    // Wait for the async operations
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Should not include the token param (non-Tauri mode uses /api/auth-redirect)
+    expect(locationHrefSpy).not.toContain('token=');
+  });
+
+  it('should not include platform if not in URL and not provided', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        origin: 'https://example.com',
+        pathname: '/no-platform-here',
+        search: '',
+        hostname: 'example.com',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return locationHrefSpy || 'https://example.com/no-platform-here';
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    await redirectToAuthSpa('/no-platform-here');
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Should not include tenant param if no platform key is found
+    expect(locationHrefSpy).not.toContain('tenant=');
+  });
+
+  it('should skip redirect when in Tauri offline mode via isOfflineServerOrigin', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    // Mock isOfflineServerOrigin to return true
+    const offlineModule = await import('@/hooks/use-tauri-offline');
+    vi.mocked(offlineModule.isOfflineServerOrigin).mockReturnValue(true);
+
+    await redirectToAuthSpa();
+
+    // Wait for any async operations
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Should not redirect - locationHrefSpy should remain empty
+    expect(locationHrefSpy).toBe('');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[redirectToAuthSpa] Skipping redirect - Tauri offline mode',
+      expect.any(Object),
     );
+
+    // Restore mocks
+    vi.mocked(offlineModule.isOfflineServerOrigin).mockReturnValue(false);
+    consoleSpy.mockRestore();
   });
 
-  it('should pass isNativeApp callback that checks isTauriApp', async () => {
+  it('should skip redirect when in Tauri offline mode via isTauriOfflineMode', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    // Mock both isTauriApp and isTauriOfflineMode to return true
+    const tauriModule = await import('@/types/tauri');
+    const cacheModule = await import('@/lib/tauri-api-cache');
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(true);
+    vi.mocked(cacheModule.isTauriOfflineMode).mockReturnValue(true);
+
     await redirectToAuthSpa();
 
-    const callArgs = sdkRedirectMock.mock.calls[0][0];
-    expect(callArgs.isNativeApp).toBeTypeOf('function');
-  });
+    // Wait for any async operations
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
-  it('should pass isOffline callback', async () => {
-    await redirectToAuthSpa();
-
-    const callArgs = sdkRedirectMock.mock.calls[0][0];
-    expect(callArgs.isOffline).toBeTypeOf('function');
-  });
-
-  it('should pass preserveTokenKey as edx_jwt_token', async () => {
-    await redirectToAuthSpa();
-
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        preserveTokenKey: 'edx_jwt_token',
-      }),
+    // Should not redirect - locationHrefSpy should remain empty
+    expect(locationHrefSpy).toBe('');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[redirectToAuthSpa] Skipping redirect - Tauri offline mode',
+      expect.any(Object),
     );
+
+    // Restore mocks
+    vi.mocked(tauriModule.isTauriApp).mockReturnValue(false);
+    vi.mocked(cacheModule.isTauriOfflineMode).mockReturnValue(false);
+    consoleSpy.mockRestore();
   });
 
-  it('should pass authRedirectProxy as /api/auth-redirect', async () => {
+  it('should send message to parent and return early when in iframe', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    // Mock isInIframe to return true by setting window.top !== window.self
+    const originalTop = window.top;
+    Object.defineProperty(window, 'top', {
+      value: { different: 'object' },
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, 'self', {
+      value: window,
+      configurable: true,
+      writable: true,
+    });
+
+    const postMessageSpy = vi
+      .spyOn(window.parent, 'postMessage')
+      .mockImplementation(() => {});
+
     await redirectToAuthSpa();
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authRedirectProxy: '/api/auth-redirect',
-      }),
+    // Wait for any async operations
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Should send message to parent
+    expect(postMessageSpy).toHaveBeenCalledWith({ authExpired: true }, '*');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[redirectToAuthSpa]: sending authExpired to parent',
+      expect.any(String),
     );
-  });
 
-  it('should map explicitUserAction to forceRedirect', async () => {
-    await redirectToAuthSpa(undefined, undefined, undefined, true, true);
+    // Should not redirect when in iframe
+    expect(locationHrefSpy).toBe('');
 
-    expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        forceRedirect: true,
-      }),
-    );
-  });
-
-  it('should pass hasNonExpiredAuthToken callback', async () => {
-    await redirectToAuthSpa();
-
-    const callArgs = sdkRedirectMock.mock.calls[0][0];
-    expect(callArgs.hasNonExpiredAuthToken).toBeTypeOf('function');
+    // Restore
+    Object.defineProperty(window, 'top', {
+      value: originalTop,
+      configurable: true,
+      writable: true,
+    });
+    consoleSpy.mockRestore();
+    postMessageSpy.mockRestore();
   });
 });
 
