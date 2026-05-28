@@ -608,25 +608,27 @@ export function NavBar() {
               </span>
             </div>
           )}
-          {creditBalanceComponentIsDisplayed && (
-            <CreditBalance
-              tenant={tenantKey}
-              enabled={true}
-              redirectUrl={window.location.origin}
-              mainPlatformKey={config.mainTenantKey()}
-              currentUserEmail={getUserEmail()}
-              username={getUserName()}
-            />
-          )}
-          {!embedMode && visibleToLoggedInUsersOnly && (
-            <NotificationDropdown
-              org={tenantKey}
-              userId={username ?? ''}
-              isAdmin={isAdmin}
-              onViewNotifications={handleViewNotifications}
-            />
-          )}
-          {visibleToLoggedInUsersOnly && <UserProfile />}
+          <div className="flex items-center gap-2">
+            {creditBalanceComponentIsDisplayed && (
+              <CreditBalance
+                tenant={tenantKey}
+                enabled={true}
+                redirectUrl={window.location.origin}
+                mainPlatformKey={config.mainTenantKey()}
+                currentUserEmail={getUserEmail()}
+                username={getUserName()}
+              />
+            )}
+            {!embedMode && visibleToLoggedInUsersOnly && (
+              <NotificationDropdown
+                org={tenantKey}
+                userId={username ?? ''}
+                isAdmin={isAdmin}
+                onViewNotifications={handleViewNotifications}
+              />
+            )}
+            {visibleToLoggedInUsersOnly && <UserProfile />}
+          </div>
 
           {!isLoggedIn() && (
             <div className="flex gap-x-2">

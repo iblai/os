@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.67.12](https://github.com/iblai/agentai/compare/v0.67.11...v0.67.12) (2026-05-28)
+
+### Bug Fixes
+
+- **deps:** drop brace-expansion override that broke coverage tooling ([5b5f5a8](https://github.com/iblai/agentai/commit/5b5f5a8ebca40b4a84eebb8e9e6a7870464f09d5))
+- **mentor:** tighten nav-bar credit/notification/profile spacing ([bd1e44c](https://github.com/iblai/agentai/commit/bd1e44c5095696675514b1d70e256aa37d35ba9b))
+- **mentor:** update Agent AI banner copy and docs link ([277ff84](https://github.com/iblai/agentai/commit/277ff842822265cc60f4af00d41dc35e1e7750c5))
+
+### Chores
+
+- **deps:** update pnpm-lock.yaml file ([db85752](https://github.com/iblai/agentai/commit/db85752e41b1af9103f6e1287e54b462abf18e89))
+
+### Tests
+
+- **mentor:** lock app-banner default fallbacks ([e6bda14](https://github.com/iblai/agentai/commit/e6bda14072b310c4062c17ca113a2341763f0298))
+
+## [0.67.11](https://github.com/iblai/agentai/compare/v0.67.10...v0.67.11) (2026-05-27)
+
+### Bug Fixes
+
+- **ci:** allow skipped E2E tests to pass summary job ([07894e4](https://github.com/iblai/agentai/commit/07894e4ae46816e84b3ad60beb492dd428d6d854))
+
 ## [0.67.10](https://github.com/iblai/agentai/compare/v0.67.9...v0.67.10) (2026-05-27)
 
 ### Chores
