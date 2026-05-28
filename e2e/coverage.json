@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-05-27",
   "summary": {
-    "totalCheckpoints": 399,
-    "coveredCheckpoints": 387,
+    "totalCheckpoints": 412,
+    "coveredCheckpoints": 400,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 47,
-    "activeJourneys": 46
+    "totalJourneys": 49,
+    "activeJourneys": 48
   },
   "journeys": [
     {
@@ -2550,6 +2550,100 @@
         {
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-voice-tab",
+      "name": "Mentor Voice Tab",
+      "spec": "46-mentor-voice-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "vo-01",
+          "description": "Voice tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "vo-02",
+          "description": "Voice tab heading renders correctly",
+          "status": "covered"
+        },
+        {
+          "id": "vo-03",
+          "description": "Voice and Voice call sub-tab pills are both visible",
+          "status": "covered"
+        },
+        {
+          "id": "vo-04",
+          "description": "All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab",
+          "status": "covered"
+        },
+        {
+          "id": "vo-05",
+          "description": "Selecting the OpenAI provider marks the card active and reveals the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-06",
+          "description": "Selecting the Browser provider hides the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-07",
+          "description": "Switching to the Voice call sub-tab renders the call configuration form",
+          "status": "covered"
+        },
+        {
+          "id": "vo-08",
+          "description": "Choosing Realtime call mode disables the TTS and STT provider selects",
+          "status": "covered"
+        },
+        {
+          "id": "vo-09",
+          "description": "Settings tab surfaces both voice-call toggles (Look things up only when needed, Allow screen sharing on a call)",
+          "status": "covered"
+        },
+        {
+          "id": "vo-10",
+          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-screenshare-tab",
+      "name": "Mentor Screen Share Tab",
+      "spec": "47-mentor-screenshare-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ss-01",
+          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Allow screen sharing on a call' toggle is off",
+          "status": "covered"
+        },
+        {
+          "id": "ss-02",
+          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ss-03",
+          "description": "Switching to the Screen Share tab renders the SDK heading and body",
           "status": "covered"
         }
       ]

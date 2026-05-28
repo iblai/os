@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-22 | 399 checkpoints (387 active, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-05-27 | 412 checkpoints (400 active, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -767,6 +767,39 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+
+---
+
+## Journey 46: Mentor Voice Tab (10 checkpoints) — `journeys/46-mentor-voice-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
+
+The Settings tab also surfaces two voice-call toggles (`use_function_calling_for_rag`, `enable_video`) so admins can flip them without leaving the main configuration panel. Save routes those two fields through the same `/call-configurations/` endpoint the SDK's Voice tab uses — POSTing a new config (mode=`realtime`) when none exists, PATCHing otherwise.
+
+- [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar
+- [x] VO-02: Voice tab heading renders correctly
+- [x] VO-03: Voice and Voice call sub-tab pills are both visible
+- [x] VO-04: All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab
+- [x] VO-05: Selecting the OpenAI provider marks the card active and reveals the voice picker trigger
+- [x] VO-06: Selecting the Browser provider hides the voice picker trigger
+- [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
+- [x] VO-08: Choosing Realtime call mode disables the TTS and STT provider selects
+- [x] VO-09: Settings tab surfaces both voice-call toggles
+- [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
+
+---
+
+## Journey 47: Mentor Screen Share Tab (3 checkpoints) — `journeys/47-mentor-screenshare-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The host gates visibility on `call_configuration.enable_video` — the toggle on the Settings tab. When the toggle is off, the tab is hidden from the sidebar entirely (the SDK still renders its own off-state hint, but at host level the tab itself goes away to keep the sidebar clean). The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
+
+- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Allow screen sharing on a call" toggle is off
+- [x] SS-02: Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar
+- [x] SS-03: Switching to the Screen Share tab renders the SDK heading and body
 
 ---
 
