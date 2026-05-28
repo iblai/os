@@ -8,11 +8,13 @@ interface Message {
 export interface ChatState {
   messages: Message[];
   enableChatActionsPopup: boolean;
+  autoplayLastAiMessage: boolean;
 }
 
 const initialState: ChatState = {
   messages: [],
   enableChatActionsPopup: false,
+  autoplayLastAiMessage: false,
 };
 
 export const chatSlice: Slice<ChatState> = createSlice({
@@ -28,13 +30,23 @@ export const chatSlice: Slice<ChatState> = createSlice({
     enableChatActionsPopup: (state, action: PayloadAction<boolean>) => {
       state.enableChatActionsPopup = action.payload;
     },
+    setAutoplayLastAiMessage: (state, action: PayloadAction<boolean>) => {
+      state.autoplayLastAiMessage = action.payload;
+    },
   },
 });
 
-export const { addMessage, clearMessages, enableChatActionsPopup } =
-  chatSlice.actions;
+export const {
+  addMessage,
+  clearMessages,
+  enableChatActionsPopup,
+  setAutoplayLastAiMessage,
+} = chatSlice.actions;
 
 export const chatReducer = chatSlice.reducer;
 
 export const selectEnableChatActionsPopup = (state) =>
   state.chat.enableChatActionsPopup;
+
+export const selectAutoplayLastAiMessage = (state) =>
+  state.chat.autoplayLastAiMessage;
