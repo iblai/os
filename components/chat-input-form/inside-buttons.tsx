@@ -82,35 +82,26 @@ export const InsideButtons = ({
     },
   ].filter((item) => item.isEnabled);
 
-  // Get visible inside buttons based on screen size
-  // Active buttons are always visible, inactive ones are hidden based on available width
+  // Get visible inside buttons based on screen size.
+  // Below the desktop breakpoint (800px) we collapse ALL tool buttons —
+  // including active ones — into the overflow dropdown. Active pills render
+  // as `icon + label + ✕`, so even two of them blow the inline row's width
+  // and push the outside buttons / send control out of alignment on
+  // small/tablet viewports. See issue #1533.
   const getVisibleInsideButtons = () => {
-    const activeButtons = allInsideButtons.filter((btn) => btn.isActive);
-    const inactiveButtons = allInsideButtons.filter((btn) => !btn.isActive);
     const minButtonWidth = 120;
 
     if (allInsideButtons.length === 1 && containerWidth > minButtonWidth) {
       return { visible: allInsideButtons, hidden: [] };
     }
 
-    if (containerWidth < 600) {
-      // Mobile: show only active buttons, hide all inactive ones
-      return {
-        visible: activeButtons,
-        hidden: inactiveButtons,
-      };
-    } else if (containerWidth < 800) {
-      // Tablet: show active buttons + first inactive one if space allows
-      const visibleInactive =
-        activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : [];
-      return {
-        visible: [...activeButtons, ...visibleInactive],
-        hidden: inactiveButtons.filter((btn) => !visibleInactive.includes(btn)),
-      };
-    } else {
-      // Desktop: show all buttons
-      return { visible: allInsideButtons, hidden: [] };
+    if (containerWidth < 800) {
+      // Mobile + tablet: nothing inline, everything in the dropdown.
+      return { visible: [], hidden: allInsideButtons };
     }
+
+    // Desktop: show all buttons inline.
+    return { visible: allInsideButtons, hidden: [] };
   };
 
   const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } =
@@ -184,33 +175,24 @@ export const InsideButtons = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
-            {/* Hidden buttons are always inactive based on current logic, so isActive branches are defensive */}
             {hiddenInsideButtons.map((button) => (
               <DropdownMenuItem
                 key={button.name}
                 onClick={button.action}
-                className={
-                  /* istanbul ignore next */ button.isActive
-                    ? 'bg-[#F5F8FF] text-[#38A1E5]'
-                    : ''
-                }
+                className={button.isActive ? 'bg-[#F5F8FF] text-[#38A1E5]' : ''}
               >
                 <div className="flex w-full items-center gap-2">
                   <span
                     className={
-                      /* istanbul ignore next */ button.isActive
-                        ? 'text-[#38A1E5]'
-                        : 'text-gray-600'
+                      button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'
                     }
                   >
                     {button.icon}
                   </span>
                   <span className="flex-1">{button.name}</span>
-                  {
-                    /* istanbul ignore next */ button.isActive && (
-                      <Check className="h-4 w-4 text-[#38A1E5]" />
-                    )
-                  }
+                  {button.isActive && (
+                    <Check className="h-4 w-4 text-[#38A1E5]" />
+                  )}
                 </div>
               </DropdownMenuItem>
             ))}
