@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.69.0](https://github.com/iblai/agentai/compare/v0.68.0...v0.69.0) (2026-05-28)
+
+### Features
+
+* iblai-js bump to 1.15.0 ([cb5ca30](https://github.com/iblai/agentai/commit/cb5ca303faae6127ecd563ae22303dd77878650a))
+
 ## [0.68.0](https://github.com/iblai/agentai/compare/v0.67.12...v0.68.0) (2026-05-28)
 
 ### Features
