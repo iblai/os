@@ -115,15 +115,12 @@ export const config = {
     getEnv('NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC', 'true'),
   defaultEmbedCssUrl: () => getEnv('NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL', ''),
   appBannerLink: () =>
-    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://docs.ibl.ai'),
+    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://ibl.ai/docs'),
   appBannerLinkText: () =>
-    getEnv('NEXT_PUBLIC_APP_BANNER_LINK_TEXT', 'View all'),
+    getEnv('NEXT_PUBLIC_APP_BANNER_LINK_TEXT', 'Check out'),
   appBannerBadge: () => getEnv('NEXT_PUBLIC_APP_BANNER_BADGE', 'New'),
   appBannerText: () =>
-    getEnv(
-      'NEXT_PUBLIC_APP_BANNER_TEXT',
-      'Explore our latest features for students',
-    ),
+    getEnv('NEXT_PUBLIC_APP_BANNER_TEXT', 'Explore our latest features'),
   showAppBanner: () => getEnv('NEXT_PUBLIC_SHOW_APP_BANNER', 'false'),
   mentorTrainingMaximumFileSize: () =>
     getEnv('NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE', '60'),
