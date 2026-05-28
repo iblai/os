@@ -4,14 +4,14 @@
 
 ### Features
 
-* autoplay ai message by voice event completed ([4b95ac8](https://github.com/iblai/agentai/commit/4b95ac851fbbde4bce1eb0e55609c167869f45b7))
-* autoplay ai message by voice event completed ([42b9b42](https://github.com/iblai/agentai/commit/42b9b4253685f56e3d8644c9c9b39f1841640b58))
-* autoplay ai message by voice event completed > pnpm lock update ([4c84ec6](https://github.com/iblai/agentai/commit/4c84ec609b8a62fcfbcfd04c3a745daeba04e15e))
-* autoplay ai message by voice event completed > test coverage ([eb4ec87](https://github.com/iblai/agentai/commit/eb4ec8743c5e71dbf410d1c35d90e813bc1ed044))
-* autoplay ai message by voice event completed > test coverage issue fixed ([d778c29](https://github.com/iblai/agentai/commit/d778c296c384c9ab029b97caea8733fce893f542))
-* autoplay ai message by voice event on progress ([b892590](https://github.com/iblai/agentai/commit/b8925902cb9205eeff7fd2ae5ac9e0f2508ac505))
-* autoplay ai message by voice event on progress ([5f783ff](https://github.com/iblai/agentai/commit/5f783ff05b8fa3c1020db728c73b301d0cf01f7f))
-* autoplay ai message by voice event on progress ([eac7a9f](https://github.com/iblai/agentai/commit/eac7a9f45198d0957b75eeadf468e83eafc446db))
+- autoplay ai message by voice event completed ([4b95ac8](https://github.com/iblai/agentai/commit/4b95ac851fbbde4bce1eb0e55609c167869f45b7))
+- autoplay ai message by voice event completed ([42b9b42](https://github.com/iblai/agentai/commit/42b9b4253685f56e3d8644c9c9b39f1841640b58))
+- autoplay ai message by voice event completed > pnpm lock update ([4c84ec6](https://github.com/iblai/agentai/commit/4c84ec609b8a62fcfbcfd04c3a745daeba04e15e))
+- autoplay ai message by voice event completed > test coverage ([eb4ec87](https://github.com/iblai/agentai/commit/eb4ec8743c5e71dbf410d1c35d90e813bc1ed044))
+- autoplay ai message by voice event completed > test coverage issue fixed ([d778c29](https://github.com/iblai/agentai/commit/d778c296c384c9ab029b97caea8733fce893f542))
+- autoplay ai message by voice event on progress ([b892590](https://github.com/iblai/agentai/commit/b8925902cb9205eeff7fd2ae5ac9e0f2508ac505))
+- autoplay ai message by voice event on progress ([5f783ff](https://github.com/iblai/agentai/commit/5f783ff05b8fa3c1020db728c73b301d0cf01f7f))
+- autoplay ai message by voice event on progress ([eac7a9f](https://github.com/iblai/agentai/commit/eac7a9f45198d0957b75eeadf468e83eafc446db))
 
 ## [0.67.12](https://github.com/iblai/agentai/compare/v0.67.11...v0.67.12) (2026-05-28)
 
