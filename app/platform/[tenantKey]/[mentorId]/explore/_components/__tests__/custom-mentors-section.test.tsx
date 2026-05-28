@@ -214,7 +214,7 @@ describe('CustomMentorsSection', () => {
       expect(screen.getByText('Create Custom Agent')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Build your own custom agent tailored to your specific learning needs',
+          'Build your own custom agent tailored to your specific needs',
         ),
       ).toBeInTheDocument();
       expect(screen.getByText('Get started today')).toBeInTheDocument();
