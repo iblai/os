@@ -90,6 +90,7 @@ interface SettingsForm {
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
+  enable_privacy_router: boolean;
 }
 
 export function SettingsTab() {
@@ -202,6 +203,8 @@ export function SettingsTab() {
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
+      // @ts-ignore - enable_privacy_router exists on API but not in the public type yet
+      enable_privacy_router: mentor?.enable_privacy_router ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -278,6 +281,10 @@ export function SettingsTab() {
 
       if (value.enable_multi_query_rag !== undefined) {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
+      }
+
+      if (value.enable_privacy_router !== undefined) {
+        values.enable_privacy_router = value.enable_privacy_router;
       }
 
       try {
@@ -982,6 +989,51 @@ export function SettingsTab() {
                           }
                           disabled={isDisabled || disabled}
                           aria-label={`Enhanced rag ${field.state.value ? 'enabled' : 'disabled'}`}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+                )}
+              </WithFormPermissions>
+
+              <WithFormPermissions
+                name="enable_privacy_router"
+                // @ts-ignore - enable_privacy_router not in permissions type yet
+                permissions={mentor?.permissions?.field}
+              >
+                {({ disabled }) => (
+                  <form.Field name="enable_privacy_router">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Privacy
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about privacy"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Enable the privacy router. When on, a
+                                  dedicated Privacy tab appears for configuring
+                                  PII detection rules.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled || disabled}
+                          aria-label={`Privacy ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}

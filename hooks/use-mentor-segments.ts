@@ -52,6 +52,8 @@ export type MentorSegmentConfigFlags = {
   /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
   clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
+  /** True when `enable_privacy_router` is on for this mentor. */
+  isPrivacyEnabled: boolean;
 };
 
 export type MentorSegment = {
@@ -193,6 +195,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
@@ -444,6 +447,9 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
     mentorSettings?.enable_memory_component ?? false;
+  const isPrivacyEnabled =
+    // @ts-ignore - enable_privacy_router exists on API but not typed
+    mentorSettings?.enable_privacy_router ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -463,6 +469,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isMemoryComponentEnabled,
         isClawEnabled,
         clawConfigExists,
+        isPrivacyEnabled,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -475,6 +482,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       isClawEnabled,
       clawConfigExists,
       isMemoryComponentEnabled,
+      isPrivacyEnabled,
     ],
   );
 
