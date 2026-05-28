@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Application identifier (must match provisioning profile) -->
+	<!-- Must match provisioning profile -->
 	<key>com.apple.application-identifier</key>
 	<string>L4FWRM8W5Z.ai.ibl.mentorai</string>
 
@@ -14,11 +14,7 @@
 	<key>com.apple.security.network.client</key>
 	<true/>
 
-	<!-- Allow outgoing network connections (server for web content) -->
-	<key>com.apple.security.network.server</key>
-	<true/>
-
-	<!-- Required for WebView to work properly -->
+<!-- Required for WebView to work properly -->
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 

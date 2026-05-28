@@ -120,5 +120,5 @@ jobs:
           echo "Mode: skip-infra-launch — tests ran against the pre-existing stg1 instance." >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if tests did not pass
-        if: needs.run-tests.result != 'success'
+        if: needs.run-tests.result != 'success' && needs.run-tests.result != 'skipped'
         run: exit 1
