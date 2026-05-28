@@ -6,7 +6,7 @@ import { waitForPageReady } from '../utils/resilient';
  * Journey 47 — Mentor Screen Share Tab.
  *
  * The Screen Share top-level tab is rendered by the SDK's
- * `AgentScreenShareTab` (`@iblai/web-containers/next`). It's gated in the
+ * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`). It's gated in the
  * host by `call_configuration.enable_video`, which is the same value the
  * "Allow screen sharing on a call" toggle on the Settings tab writes to.
  *

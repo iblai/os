@@ -96,7 +96,7 @@ vi.mock('@iblai/web-containers', () => ({
 
 // Same reasoning as above for the Next-only entrypoint that ships the
 // AgentPrivacyTab component used by PrivacyTab.
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
 }));
 

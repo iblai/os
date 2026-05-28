@@ -18,7 +18,7 @@ import {
  * Page object for the Voice tab inside the Edit Mentor dialog.
  *
  * The tab is rendered by the SDK's `AgentVoiceTab` component
- * (`@iblai/web-containers/next`). All selectors come from the official
+ * (`@iblai/iblai-js/web-containers/next`). All selectors come from the official
  * Playwright helpers re-exported by `@iblai/iblai-js/playwright` —
  * keeping the labels and `data-testid` hooks in lock-step with the SDK.
  *

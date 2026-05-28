@@ -27,9 +27,9 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-// ScreenShareTab imports `AgentScreenShareTab` from `@iblai/web-containers/next`
+// ScreenShareTab imports `AgentScreenShareTab` from `@iblai/iblai-js/web-containers/next`
 // directly. Vitest keys mocks by module specifier — match the source path.
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentScreenShareTab: (props: any) => {
     mockAgentScreenShareTab(props);
     return (

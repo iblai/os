@@ -8,7 +8,7 @@ import {
  * Page object for the Screen Share top-level tab inside the Edit Mentor
  * dialog.
  *
- * Rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`)
+ * Rendered by the SDK's `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`)
  * and gated in the host by `call_configuration.enable_video` — the toggle
  * that lives on the Settings tab. The tab edits the two screensharing
  * prompts on the mentor's CallConfiguration; everything else (mode,
