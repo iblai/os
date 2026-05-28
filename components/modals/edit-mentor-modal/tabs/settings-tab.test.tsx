@@ -1238,11 +1238,11 @@ describe('SettingsTab', () => {
     });
   });
 
-  describe('Show Reasoning Toggle', () => {
-    it('renders Show Reasoning toggle', () => {
+  describe('Verbose Reasoning Toggle', () => {
+    it('renders Verbose Reasoning toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Reasoning')).toBeInTheDocument();
+      expect(screen.getByText('Verbose Reasoning')).toBeInTheDocument();
     });
 
     it('reflects show_reasoning checked state', () => {
@@ -1253,30 +1253,30 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show reasoning enabled');
+      const toggle = screen.getByLabelText('Verbose reasoning enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_reasoning unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show reasoning disabled');
+      const toggle = screen.getByLabelText('Verbose reasoning disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_reasoning switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show reasoning disabled');
+      const toggle = screen.getByLabelText('Verbose reasoning disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Show reasoning enabled')).toBeChecked();
+      expect(screen.getByLabelText('Verbose reasoning enabled')).toBeChecked();
     });
 
     it('submits show_reasoning value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Show reasoning disabled');
+      const toggle = screen.getByLabelText('Verbose reasoning disabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1297,7 +1297,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about show reasoning'),
+        screen.getByLabelText('More info about verbose reasoning'),
       ).toBeInTheDocument();
     });
   });

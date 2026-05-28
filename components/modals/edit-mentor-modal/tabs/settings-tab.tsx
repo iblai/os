@@ -953,13 +953,13 @@ export function SettingsTab() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-[#646464]">
-                        Show Reasoning
+                        Verbose Reasoning
                       </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             type="button"
-                            aria-label="More info about show reasoning"
+                            aria-label="More info about verbose reasoning"
                           >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
@@ -976,7 +976,7 @@ export function SettingsTab() {
                       checked={field.state.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
                       disabled={isDisabled}
-                      aria-label={`Show reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                      aria-label={`Verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
                     />
                   </div>
                 )}
