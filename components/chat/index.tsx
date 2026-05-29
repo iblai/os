@@ -88,6 +88,7 @@ import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { ToastErrorMessage } from './toast-error-message';
+import { ChatPrivacyToggle } from './chat-privacy-menu';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useServiceWorker } from '@/components/service-worker-provider';
@@ -1597,6 +1598,12 @@ export function Chat({
           </div>
         </div>
       )}
+
+      {/* Temporary-chat / privacy toggle, anchored to the chat's top-right
+       * corner so it's visible from both the welcome state and an active
+       * conversation. The component renders nothing when the tenant gate is
+       * off, so this slot stays empty for workspaces that don't use it. */}
+      <ChatPrivacyToggle className="absolute top-2 right-2 z-30" />
       <div
         className={cn({
           // Fill available space when the messages section won't render

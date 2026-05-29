@@ -109,6 +109,22 @@ vi.mock('next/image', () => ({
   default: (props: any) => <img alt="" {...props} />,
 }));
 
+// SettingsTab nests the form inside Radix Tabs (Basic / Discovery /
+// Chat Interface / Capabilities) to reduce vertical scroll. Radix only
+// mounts the active TabsContent, but our existing assertions probe for
+// fields across all sections — flatten the primitive in tests so every
+// section renders unconditionally.
+vi.mock('@/components/ui/tabs', () => ({
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div>{children}</div>,
+  TabsTrigger: ({ children, onClick }: any) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  TabsContent: ({ children }: any) => <div>{children}</div>,
+}));
+
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, type, ...props }: any) => (
     <button
