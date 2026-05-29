@@ -21,6 +21,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       embed_show_attachment: true,
       embed_show_voice_call: true,
       embed_show_voice_record: true,
+      show_catalogue: true,
       mentor_unique_id: 'mentor-123',
     },
   })),
@@ -117,6 +118,40 @@ describe('useEmbedTab', () => {
       expect(result.current.updateConfig).toBeDefined();
       expect(result.current.updateMultipleConfig).toBeDefined();
       expect(result.current.handleFloatingBubbleImageError).toBeDefined();
+    });
+
+    it('should hydrate show_catalogue from mentorPublicSettings', () => {
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('show_catalogue')).toBe(true);
+    });
+
+    it('should default show_catalogue to true when mentorPublicSettings is undefined', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValueOnce({
+        data: undefined,
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('show_catalogue')).toBe(true);
+    });
+
+    it('should default show_catalogue to true when field is missing from mentorPublicSettings', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValueOnce({
+        data: {
+          allow_anonymous: false,
+          mentor_visibility: 'public',
+          custom_css: '',
+          embed_show_attachment: true,
+          embed_show_voice_call: true,
+          embed_show_voice_record: true,
+          mentor_unique_id: 'mentor-123',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('show_catalogue')).toBe(true);
     });
 
     it('should initialize custom floating bubble config with correct defaults', () => {
@@ -335,6 +370,31 @@ describe('useEmbedTab', () => {
       expect(mockToastError).toHaveBeenCalledWith('Failed to update settings');
 
       consoleSpy.mockRestore();
+    });
+
+    it('should pass show_catalogue through to updateMentorSettings payload', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('show_catalogue', true);
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      expect(mockUpdateMentorSettingsFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: expect.objectContaining({
+            show_catalogue: true,
+          }),
+        }),
+      );
     });
 
     it('should set is_context_aware=true when mode is advanced', async () => {
