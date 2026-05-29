@@ -212,10 +212,10 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByText('Create Custom Agent')).toBeInTheDocument();
+      // The marketing copy wraps across JSX nodes in the source, so an exact
+      // string match fails — use a regex that tolerates the line break.
       expect(
-        screen.getByText(
-          'Build your own custom agent tailored to your specific needs',
-        ),
+        screen.getByText(/Build your own custom agent tailored/i),
       ).toBeInTheDocument();
       expect(screen.getByText('Get started today')).toBeInTheDocument();
     });

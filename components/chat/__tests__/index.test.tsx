@@ -17708,7 +17708,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Response',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             artifactVersions: [], // Empty array
@@ -17759,7 +17759,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Response',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             // no artifactVersions property
@@ -18293,7 +18293,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Thinking...',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             // artifactVersions is undefined
