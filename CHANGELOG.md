@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.69.1](https://github.com/iblai/agentai/compare/v0.69.0...v0.69.1) (2026-05-29)
+
+### Refactors
+
+* **auth:** replace local redirectToAuthSpa with SDK wrapper from @iblai/iblai-js ([a03798d](https://github.com/iblai/agentai/commit/a03798d243c587f131dfbad95cf073205a950ca3))
+
+### Chores
+
+* adds android build schema ([cd0c703](https://github.com/iblai/agentai/commit/cd0c703c938eafc379ca6ff7f7e3a8f7d3de2f94))
+
 ## [0.69.0](https://github.com/iblai/agentai/compare/v0.68.0...v0.69.0) (2026-05-28)
 
 ### Features
