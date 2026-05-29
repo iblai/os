@@ -121,21 +121,6 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       () => Promise.resolve({}),
       { isLoading: false },
     ],
-    // Same rationale for the CallConfiguration RTK Query hooks — settings-tab
-    // consumes them to hydrate / persist the two voice-call toggles.
-    useGetCallConfigurationsQuery: () => ({
-      data: [],
-      isError: false,
-      isLoading: false,
-    }),
-    useCreateCallConfigurationMutation: () => [
-      () => ({ unwrap: () => Promise.resolve({}) }),
-      { isLoading: false },
-    ],
-    useUpdateCallConfigurationMutation: () => [
-      () => ({ unwrap: () => Promise.resolve({}) }),
-      { isLoading: false },
-    ],
   };
 });
 

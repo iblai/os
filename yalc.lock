@@ -1,0 +1,27 @@
+{
+  "version": "v1",
+  "packages": {
+    "@iblai/iblai-js": {
+      "signature": "88980de5c6253e04f6708c49d436f9a6",
+      "file": true,
+      "replaced": "1.10.2"
+    },
+    "@iblai/data-layer": {
+      "signature": "5a334de421d41896269aa765c9a32b9c",
+      "file": true
+    },
+    "@iblai/web-utils": {
+      "signature": "1c9bec5a1839c561588acdb8761e7a05",
+      "file": true
+    },
+    "@iblai/web-containers": {
+      "signature": "5f3e470c73025f3c7372cb2197cae8e6",
+      "file": true
+    },
+    "@iblai/agent-ai": {
+      "signature": "ed1ed237c917885295bc6a772e52d672",
+      "file": true,
+      "replaced": "2.5.2"
+    }
+  }
+}

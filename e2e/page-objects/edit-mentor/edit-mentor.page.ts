@@ -12,8 +12,6 @@ import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
-import { VoiceTab } from './voice.tab';
-import { ScreenShareTab } from './screenshare.tab';
 
 export class EditMentorPage {
   readonly page: Page;
@@ -33,8 +31,6 @@ export class EditMentorPage {
   readonly embed: EmbedTab;
   readonly access: AccessTab;
   readonly privacy: PrivacyTab;
-  readonly voice: VoiceTab;
-  readonly screenshare: ScreenShareTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -57,8 +53,6 @@ export class EditMentorPage {
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
     this.privacy = new PrivacyTab(page, this.dialog);
-    this.voice = new VoiceTab(page, this.dialog);
-    this.screenshare = new ScreenShareTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 

@@ -22,9 +22,6 @@ const mockGetMentorSettingsQuery = vi.fn();
 const mockGetMentorCategoriesQuery = vi.fn();
 const mockGetClawMentorConfigQuery = vi.fn();
 const mockUpdateClawConfig = vi.fn();
-const mockGetCallConfigurationsQuery = vi.fn();
-const mockCreateCallConfig = vi.fn();
-const mockUpdateCallConfig = vi.fn();
 const mockUsername = 'testuser';
 const mockExecuteWithTrialCheck = vi.fn();
 const mockCloseModal = vi.fn();
@@ -65,10 +62,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetClawMentorConfigQuery: (...args: unknown[]) =>
     mockGetClawMentorConfigQuery(...args),
   useUpdateClawMentorConfigMutation: () => [mockUpdateClawConfig, {}],
-  useGetCallConfigurationsQuery: (...args: unknown[]) =>
-    mockGetCallConfigurationsQuery(...args),
-  useCreateCallConfigurationMutation: () => [mockCreateCallConfig, {}],
-  useUpdateCallConfigurationMutation: () => [mockUpdateCallConfig, {}],
 }));
 
 vi.mock('@sentry/nextjs', () => ({
@@ -322,15 +315,6 @@ describe('SettingsTab', () => {
     // does not call updateClawConfig. Tests that need a wired config override
     // this in their own arrangements.
     mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
-    // Default: no existing CallConfiguration and no inline one on the mentor
-    // settings response. Tests that need an existing config override these.
-    mockGetCallConfigurationsQuery.mockReturnValue({ data: [] });
-    mockCreateCallConfig.mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({}),
-    });
-    mockUpdateCallConfig.mockReturnValue({
-      unwrap: vi.fn().mockResolvedValue({}),
-    });
     mockUpdateClawConfig.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({}),
     });
@@ -1566,149 +1550,6 @@ describe('SettingsTab', () => {
           // mentor → agent rename: settings-tab.tsx now emits "Agent
           // updated successfully" via the toast.success call after the
           // editMentor mutation resolves.
-          'Agent updated successfully',
-        );
-      });
-
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('Voice-call toggles (CallConfiguration sync)', () => {
-    it('renders the "Look things up only when needed" toggle defaulting to off when no call config exists', () => {
-      render(<SettingsTab />);
-
-      const toggle = screen.getByLabelText(
-        'Look things up only when needed disabled',
-      );
-      expect(toggle).not.toBeChecked();
-    });
-
-    it('renders the "Allow screen sharing on a call" toggle defaulting to off when no call config exists', () => {
-      render(<SettingsTab />);
-
-      const toggle = screen.getByLabelText(
-        'Allow screen sharing on a call disabled',
-      );
-      expect(toggle).not.toBeChecked();
-    });
-
-    it('reflects existing call-config values when the mentor settings response inlines one', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: {
-          ...defaultMentorSettings,
-          call_configuration: {
-            id: 42,
-            use_function_calling_for_rag: true,
-            enable_video: true,
-          },
-        },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      expect(
-        screen.getByLabelText('Look things up only when needed enabled'),
-      ).toBeChecked();
-      expect(
-        screen.getByLabelText('Allow screen sharing on a call enabled'),
-      ).toBeChecked();
-    });
-
-    it('does NOT call create or update when neither toggle changed', async () => {
-      render(<SettingsTab />);
-
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(mockEditMentor).toHaveBeenCalled();
-      });
-      expect(mockCreateCallConfig).not.toHaveBeenCalled();
-      expect(mockUpdateCallConfig).not.toHaveBeenCalled();
-    });
-
-    it('POSTs a new CallConfiguration with mode=realtime when none exists and a toggle changed', async () => {
-      render(<SettingsTab />);
-
-      fireEvent.click(
-        screen.getByLabelText('Look things up only when needed disabled'),
-      );
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(mockCreateCallConfig).toHaveBeenCalledWith({
-          org: 'test-tenant',
-          userId: 'testuser',
-          requestBody: {
-            mentor: 'test-mentor',
-            mode: 'realtime',
-            language: 'en',
-            use_function_calling_for_rag: true,
-            enable_video: false,
-          },
-        });
-      });
-      expect(mockUpdateCallConfig).not.toHaveBeenCalled();
-    });
-
-    it('PATCHes the existing CallConfiguration with only the two toggle fields when one changed', async () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: {
-          ...defaultMentorSettings,
-          call_configuration: {
-            id: 99,
-            use_function_calling_for_rag: false,
-            enable_video: false,
-          },
-        },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      fireEvent.click(
-        screen.getByLabelText('Allow screen sharing on a call disabled'),
-      );
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(mockUpdateCallConfig).toHaveBeenCalledWith({
-          org: 'test-tenant',
-          userId: 'testuser',
-          id: 99,
-          requestBody: {
-            use_function_calling_for_rag: false,
-            enable_video: true,
-          },
-        });
-      });
-      expect(mockCreateCallConfig).not.toHaveBeenCalled();
-    });
-
-    it('still completes the mentor save and surfaces a separate error toast when call-config sync fails', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      mockCreateCallConfig.mockReturnValue({
-        unwrap: vi.fn().mockRejectedValue(new Error('call config boom')),
-      });
-
-      render(<SettingsTab />);
-
-      fireEvent.click(
-        screen.getByLabelText('Look things up only when needed disabled'),
-      );
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(
-          'Voice call settings failed to save',
-        );
-      });
-      // Mentor save still succeeded — the success toast still fires.
-      await waitFor(() => {
-        expect(toast.success).toHaveBeenCalledWith(
           'Agent updated successfully',
         );
       });
