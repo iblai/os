@@ -20,7 +20,6 @@ import {
   Container,
   Sparkles,
   ScrollText,
-  Volume2,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -129,20 +128,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/llms/#list`,
     permissionFieldsCheck: ['llm_provider'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.voice,
-    label: 'Voice',
-    icon: Volume2,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
-    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
-    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
-    permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,

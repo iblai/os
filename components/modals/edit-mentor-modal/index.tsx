@@ -26,7 +26,6 @@ import {
   SandboxTab,
   SkillsTab,
   AuditLogTab,
-  VoiceTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -70,7 +69,6 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
-  [MODALS.EDIT_MENTOR.tabs.voice]: <VoiceTab />,
 };
 
 export function EditMentorModal({ isOpen, onClose }: Props) {

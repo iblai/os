@@ -14,4 +14,3 @@ export * from './access-tab';
 export * from './sandbox-tab';
 export * from './skills-tab';
 export * from './audit-log-tab';
-export * from './voice-tab';
