@@ -362,7 +362,6 @@ export function SettingsTab() {
             <TabsList className="mb-4">
               <TabsTrigger value="basic">Basic</TabsTrigger>
               <TabsTrigger value="discovery">Discovery</TabsTrigger>
-              <TabsTrigger value="chat-interface">Chat Interface</TabsTrigger>
               <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
             </TabsList>
 
@@ -555,113 +554,6 @@ export function SettingsTab() {
                         </form.Field>
                       )}
                     </WithFormPermissions>
-                    <WithFormPermissions
-                      name="mentor_visibility"
-                      // @ts-ignore
-                      permissions={mentor?.permissions?.field}
-                    >
-                      {({ disabled }) => (
-                        <form.Field name="mentor_visibility">
-                          {(field) => (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Label className="flex items-center text-sm font-medium text-[#646464]">
-                                  Who Can View?
-                                  <span className="ml-1 text-red-500">*</span>
-                                </Label>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      type="button"
-                                      aria-label="More info about chat access"
-                                    >
-                                      <Info className="h-4 w-4 text-gray-400" />
-                                    </TooltipTrigger>
-                                    <TooltipContent className="ibl-tooltip-content">
-                                      <p>Control who can view this agent.</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                              <Select
-                                value={field.state.value}
-                                onValueChange={(value) =>
-                                  value && field.handleChange(value)
-                                }
-                                required
-                                disabled={isDisabled || disabled}
-                              >
-                                <SelectTrigger aria-label="Select Who Can View">
-                                  <SelectValue placeholder="Select Who Can View" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {MENTOR_VISIBILITY.map((visibility) => (
-                                    <SelectItem
-                                      key={visibility.value}
-                                      value={visibility.value}
-                                    >
-                                      {visibility.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </form.Field>
-                      )}
-                    </WithFormPermissions>
-                    <WithFormPermissions
-                      name="allow_anonymous"
-                      // @ts-ignore
-                      permissions={mentor?.permissions?.field}
-                    >
-                      {({ disabled }) => (
-                        <form.Field name="allow_anonymous">
-                          {(field) => (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm font-medium text-[#646464]">
-                                  Who Can Chat?
-                                  <span className="ml-1 text-red-500">*</span>
-                                </Label>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      type="button"
-                                      aria-label="More info about chat access"
-                                    >
-                                      <Info className="h-4 w-4 text-gray-400" />
-                                    </TooltipTrigger>
-                                    <TooltipContent className="ibl-tooltip-content">
-                                      <p>
-                                        Control who can chat with this agent.
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                              <Select
-                                value={field.state.value}
-                                onValueChange={(value) =>
-                                  value && field.handleChange(value)
-                                }
-                                disabled={isDisabled || disabled}
-                              >
-                                <SelectTrigger aria-label="Select who can chat">
-                                  <SelectValue placeholder="Select who can chat" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="true">Anyone</SelectItem>
-                                  <SelectItem value="false">
-                                    Authenticated Users
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </form.Field>
-                      )}
-                    </WithFormPermissions>
                   </div>
 
                   <WithFormPermissions
@@ -748,6 +640,113 @@ export function SettingsTab() {
 
               <TabsContent value="discovery" className="space-y-6">
                 <WithFormPermissions
+                  name="mentor_visibility"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="mentor_visibility">
+                      {(field) => (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="flex items-center text-sm font-medium text-[#646464]">
+                              Who Can View?
+                              <span className="ml-1 text-red-500">*</span>
+                            </Label>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about chat access"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>Control who can view this agent.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Select
+                            value={field.state.value}
+                            onValueChange={(value) =>
+                              value && field.handleChange(value)
+                            }
+                            required
+                            disabled={isDisabled || disabled}
+                          >
+                            <SelectTrigger aria-label="Select Who Can View">
+                              <SelectValue placeholder="Select Who Can View" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {MENTOR_VISIBILITY.map((visibility) => (
+                                <SelectItem
+                                  key={visibility.value}
+                                  value={visibility.value}
+                                >
+                                  {visibility.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </form.Field>
+                  )}
+                </WithFormPermissions>
+
+                <WithFormPermissions
+                  name="allow_anonymous"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="allow_anonymous">
+                      {(field) => (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium text-[#646464]">
+                              Who Can Chat?
+                              <span className="ml-1 text-red-500">*</span>
+                            </Label>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about chat access"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>Control who can chat with this agent.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Select
+                            value={field.state.value}
+                            onValueChange={(value) =>
+                              value && field.handleChange(value)
+                            }
+                            disabled={isDisabled || disabled}
+                          >
+                            <SelectTrigger aria-label="Select who can chat">
+                              <SelectValue placeholder="Select who can chat" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Anyone</SelectItem>
+                              <SelectItem value="false">
+                                Authenticated Users
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </form.Field>
+                  )}
+                </WithFormPermissions>
+
+                <WithFormPermissions
                   name="is_featured"
                   // @ts-ignore
                   permissions={mentor?.permissions?.field}
@@ -758,7 +757,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Featured
+                              Highlight in featured listings
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -799,7 +798,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              LTI Accessible
+                              Allow LTI launches
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -833,45 +832,9 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
-
-                <form.Field name="forkable">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Copies
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about copies"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow other admins to create a copy of this
-                                agent.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label={`Copies ${field.state.value ? 'enabled' : 'disabled'}`}
-                      />
-                    </div>
-                  )}
-                </form.Field>
               </TabsContent>
 
-              <TabsContent value="chat-interface" className="space-y-6">
+              <TabsContent value="capabilities" className="space-y-6">
                 <WithFormPermissions
                   name="show_attachment"
                   // @ts-ignore
@@ -883,7 +846,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              File Attachments
+                              Allow file attachments in chat
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -927,7 +890,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Voice Calls
+                              Enable voice calls
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -970,7 +933,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Voice Recordings
+                              Enable voice recordings
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -1002,15 +965,13 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
-              </TabsContent>
 
-              <TabsContent value="capabilities" className="space-y-6">
                 <form.Field name="enable_claw">
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Sandbox
+                          Enable advanced sandbox
                         </span>
                         <TooltipProvider>
                           <Tooltip>
@@ -1046,7 +1007,7 @@ export function SettingsTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Memory
+                          Remember past conversations
                         </span>
                         <TooltipProvider>
                           <Tooltip>
@@ -1088,7 +1049,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Enhanced RAG
+                              Improve document retrieval
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -1137,7 +1098,7 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Privacy
+                              Filter PII from messages
                             </span>
                             <TooltipProvider>
                               <Tooltip>
@@ -1170,6 +1131,42 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
+
+                <form.Field name="forkable">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Allow other admins to clone this agent
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about cloning"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                When on, other tenant admins can fork this agent
+                                into their own workspace.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label={`Cloning ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
               </TabsContent>
             </div>
           </Tabs>
