@@ -1560,6 +1560,36 @@ export function EmbedTab() {
                     </div>
                   )}
                 </form.Field>
+
+                <form.Field name="show_catalogue">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Show Catalogue
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger aria-label="More info about show catalogue">
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>Show Catalogue in Chat Interface</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={form.state.isSubmitting}
+                        aria-label={`Show catalogue ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
                 <hr className="my-4 border-t border-gray-200" />
                 <form.Field name="generateShareableLink">
                   {(field) => (
