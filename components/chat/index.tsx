@@ -1781,6 +1781,7 @@ export function Chat({
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
+                      isStreaming={isStreaming}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -2018,6 +2019,7 @@ export function Chat({
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
+                  isStreaming={isStreaming}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}

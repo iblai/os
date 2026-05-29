@@ -268,6 +268,12 @@ export function useMentorSettings({
         (effectiveSettings?.enable_memory_component ??
           effectivePublicSettings?.enable_memory_component ??
           false),
+
+      voiceProvider:
+        // @ts-ignore - voice_provider may not be exposed on the typed settings shape
+        effectiveSettings?.voice_provider ??
+        // @ts-ignore - voice_provider may not be exposed on the typed settings shape
+        effectivePublicSettings?.voice_provider,
     },
   };
 }

@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.69.0](https://github.com/iblai/agentai/compare/v0.68.0...v0.69.0) (2026-05-28)
+
+### Features
+
+- iblai-js bump to 1.15.0 ([cb5ca30](https://github.com/iblai/agentai/commit/cb5ca303faae6127ecd563ae22303dd77878650a))
+
+## [0.68.0](https://github.com/iblai/agentai/compare/v0.67.12...v0.68.0) (2026-05-28)
+
+### Features
+
+- autoplay ai message by voice event completed ([4b95ac8](https://github.com/iblai/agentai/commit/4b95ac851fbbde4bce1eb0e55609c167869f45b7))
+- autoplay ai message by voice event completed ([42b9b42](https://github.com/iblai/agentai/commit/42b9b4253685f56e3d8644c9c9b39f1841640b58))
+- autoplay ai message by voice event completed > pnpm lock update ([4c84ec6](https://github.com/iblai/agentai/commit/4c84ec609b8a62fcfbcfd04c3a745daeba04e15e))
+- autoplay ai message by voice event completed > test coverage ([eb4ec87](https://github.com/iblai/agentai/commit/eb4ec8743c5e71dbf410d1c35d90e813bc1ed044))
+- autoplay ai message by voice event completed > test coverage issue fixed ([d778c29](https://github.com/iblai/agentai/commit/d778c296c384c9ab029b97caea8733fce893f542))
+- autoplay ai message by voice event on progress ([b892590](https://github.com/iblai/agentai/commit/b8925902cb9205eeff7fd2ae5ac9e0f2508ac505))
+- autoplay ai message by voice event on progress ([5f783ff](https://github.com/iblai/agentai/commit/5f783ff05b8fa3c1020db728c73b301d0cf01f7f))
+- autoplay ai message by voice event on progress ([eac7a9f](https://github.com/iblai/agentai/commit/eac7a9f45198d0957b75eeadf468e83eafc446db))
+
+## [0.67.12](https://github.com/iblai/agentai/compare/v0.67.11...v0.67.12) (2026-05-28)
+
+### Bug Fixes
+
+- **deps:** drop brace-expansion override that broke coverage tooling ([5b5f5a8](https://github.com/iblai/agentai/commit/5b5f5a8ebca40b4a84eebb8e9e6a7870464f09d5))
+- **mentor:** tighten nav-bar credit/notification/profile spacing ([bd1e44c](https://github.com/iblai/agentai/commit/bd1e44c5095696675514b1d70e256aa37d35ba9b))
+- **mentor:** update Agent AI banner copy and docs link ([277ff84](https://github.com/iblai/agentai/commit/277ff842822265cc60f4af00d41dc35e1e7750c5))
+
+### Chores
+
+- **deps:** update pnpm-lock.yaml file ([db85752](https://github.com/iblai/agentai/commit/db85752e41b1af9103f6e1287e54b462abf18e89))
+
+### Tests
+
+- **mentor:** lock app-banner default fallbacks ([e6bda14](https://github.com/iblai/agentai/commit/e6bda14072b310c4062c17ca113a2341763f0298))
+
 ## [0.67.11](https://github.com/iblai/agentai/compare/v0.67.10...v0.67.11) (2026-05-27)
 
 ### Bug Fixes
