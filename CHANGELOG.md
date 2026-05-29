@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.70.0](https://github.com/iblai/agentai/compare/v0.69.1...v0.70.0) (2026-05-29)
+
+### Features
+
+* **embed:** add Show Catalogue toggle to the embed tab ([4b11211](https://github.com/iblai/agentai/commit/4b11211f0934cb321b5a631262a1d2908be6ebed)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+* **logo:** gate sidebar logo navigation on show_catalogue in embed mode ([6acac52](https://github.com/iblai/agentai/commit/6acac5202ef0f3a7a7d27fb6bdab41bb4a69c345)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
+### Styles
+
+* **changelog:** normalize list bullets via prettier ([1be68ab](https://github.com/iblai/agentai/commit/1be68abe0db31a5e617ef3a582066c42bc7461a8))
+
+### Tests
+
+* **e2e:** cover Show Catalogue toggle and embed logo gating ([e46fc47](https://github.com/iblai/agentai/commit/e46fc470edae759c9621982c3e2e463419807a27)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
 ## [0.69.1](https://github.com/iblai/agentai/compare/v0.69.0...v0.69.1) (2026-05-29)
 
 ### Refactors
