@@ -81,7 +81,7 @@ interface JsValidationResult {
   warnings: string[];
 }
 
-function validateCss(css: string): CssValidationResult {
+export function validateCss(css: string): CssValidationResult {
   if (!css.trim()) {
     return { isValid: true, errors: [] };
   }
@@ -120,7 +120,7 @@ function validateCss(css: string): CssValidationResult {
   };
 }
 
-function validateJavaScript(js: string): JsValidationResult {
+export function validateJavaScript(js: string): JsValidationResult {
   if (!js.trim()) {
     return { isValid: true, errors: [], warnings: [] };
   }
