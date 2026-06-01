@@ -101,6 +101,20 @@ vi.mock('@/components/chat/chat-messages/user-message-bubble', () => ({
   ),
 }));
 
+const mockSpeak = vi.fn();
+const mockStop = vi.fn();
+vi.mock('@/hooks/use-speech', () => ({
+  useSpeech: () => ({
+    currentMessageId: null,
+    isSpeaking: false,
+    isLoading: false,
+    isSupported: false,
+    speak: mockSpeak,
+    stop: mockStop,
+    toggle: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
   ImagePreviewModal: ({
     url,
@@ -118,10 +132,10 @@ vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
   ),
 }));
 
-const createMockStore = () =>
+const createMockStore = (autoplayLastAiMessage = false) =>
   configureStore({
     reducer: {
-      chat: (state = {}) => state,
+      chat: (state = { autoplayLastAiMessage }) => state,
     },
   });
 
@@ -715,6 +729,86 @@ describe('ChatMessages', () => {
       // Only message with visible === true should be rendered
       const userBubbles = screen.getAllByTestId('user-message-bubble');
       expect(userBubbles).toHaveLength(1);
+    });
+  });
+
+  describe('autoplay last AI message', () => {
+    beforeEach(() => {
+      mockSpeak.mockReset();
+      mockStop.mockReset();
+    });
+
+    it('speaks the last AI message when autoplay becomes enabled with new content', () => {
+      const store = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} messages={[userMessage]} />
+        </Provider>,
+      );
+      // No AI message yet → nothing to speak
+      expect(mockSpeak).not.toHaveBeenCalled();
+
+      // A new AI message arrives while autoplay is on → speak it
+      rerender(
+        <Provider store={store}>
+          <ChatMessages
+            {...defaultProps}
+            messages={[userMessage, assistantMessage]}
+          />
+        </Provider>,
+      );
+      expect(mockSpeak).toHaveBeenCalledWith(assistantMessage);
+    });
+
+    it('does not speak while streaming is in progress', () => {
+      const store = createMockStore(true);
+      render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} isStreaming />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
+    });
+
+    it('does not re-speak the same AI message on rerender', () => {
+      const store = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      mockSpeak.mockClear();
+      rerender(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
+    });
+
+    it('stops playback when autoplay is turned off', async () => {
+      const enabledStore = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={enabledStore}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      const disabledStore = createMockStore(false);
+      rerender(
+        <Provider store={disabledStore}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      await waitFor(() => expect(mockStop).toHaveBeenCalled());
+    });
+
+    it('does not autoplay when the feature is disabled', () => {
+      render(
+        <Provider store={createMockStore(false)}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
     });
   });
 });

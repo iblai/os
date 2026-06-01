@@ -1818,6 +1818,7 @@ export function Chat({
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
+                      isStreaming={isStreaming}
                       streamingReasoningContent={streamingReasoningContent}
                       streamingToolCalls={streamingToolCalls}
                       isReasoning={isReasoning}
@@ -2051,6 +2052,7 @@ export function Chat({
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
+                  isStreaming={isStreaming}
                   streamingReasoningContent={streamingReasoningContent}
                   streamingToolCalls={streamingToolCalls}
                   isReasoning={isReasoning}

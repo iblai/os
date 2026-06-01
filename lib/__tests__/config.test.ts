@@ -247,12 +247,24 @@ describe('config', () => {
         const result = config.appBannerLink();
         expect(typeof result).toBe('string');
       });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLink();
+        expect(result).toBe('https://ibl.ai/docs');
+      });
     });
 
     describe('appBannerLinkText', () => {
       it('should return app banner link text', () => {
         const result = config.appBannerLinkText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLinkText();
+        expect(result).toBe('Check out');
       });
     });
 
@@ -267,6 +279,12 @@ describe('config', () => {
       it('should return app banner text', () => {
         const result = config.appBannerText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerText();
+        expect(result).toBe('Explore our latest features');
       });
     });
 

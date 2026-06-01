@@ -59,7 +59,7 @@ interface AIMessageBubbleProps {
   messages: Message[];
   tenantKey: string;
   mentorId: string;
-  message?: Message;
+  message: Message;
   onRetry: (content: string) => void;
   onReply?: () => void;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
@@ -198,7 +198,11 @@ export const AIMessageBubble = forwardRef<
                   />
                 )}
 
-              <AIMessageSpeak content={content} />
+              <AIMessageSpeak
+                message={message}
+                mentorId={mentorId}
+                tenantKey={tenantKey}
+              />
 
               {isLoggedIn() && !showingSharedChat && (
                 <Tooltip>

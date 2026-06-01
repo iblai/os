@@ -41,9 +41,9 @@ vi.mock('@/components/chat/ai-message-copy', () => ({
 }));
 
 vi.mock('@/components/chat/ai-message-speak', () => ({
-  AIMessageSpeak: ({ content }: { content: string }) => (
+  AIMessageSpeak: ({ message }: { message?: { content?: string } }) => (
     <button data-testid="ai-message-speak">
-      Speak: {content.slice(0, 10)}
+      Speak: {(message?.content ?? '').slice(0, 10)}
     </button>
   ),
 }));
@@ -190,6 +190,7 @@ describe('AIMessageBubble', () => {
     timestamp: '10:30 AM',
     sessionId: 'session-123',
     messages: mockMessages,
+    message: mockMessages[1],
     tenantKey: 'test-tenant',
     mentorId: 'mentor-123',
     onRetry: mockOnRetry,
