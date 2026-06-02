@@ -36,8 +36,7 @@ import {
   Workflow,
   Globe2,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from './export-messages';
 
 import { Sidebar, useSidebar } from '@/components/ui/sidebar';
 import {
@@ -1321,27 +1320,9 @@ function SidebarChatsSection({
   };
 
   const handleExport = (row: ChatRow) => {
-    const messages =
-      (row.messages as Array<{
-        message?: { data?: { type?: string; content?: string } };
-      }>) ?? [];
-    const data = messages.filter((m) => m?.message?.data?.content);
-    const worksheet = XLSX.utils.json_to_sheet(
-      data.map((m) => ({
-        'Message Type': m.message?.data?.type ?? '',
-        Content: m.message?.data?.content ?? '',
-      })),
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Messages');
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array',
-    });
-    const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    saveAs(blob, 'messages.xlsx');
+    // Delegate to the shared sibling helper — it uses `write-excel-file`
+    // (already a project dep) and is covered by `export-messages.test.ts`.
+    exportMessagesToXlsx(row.messages ?? []);
   };
 
   // Render helpers -----------------------------------------------------
