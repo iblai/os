@@ -1,7 +1,37 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { EMBED_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
+import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+
+/** Builds the embed entry URL (the iframe's own src) for a mentor page. */
+function embedUrlFor(mentorUrl: string): string {
+  const url = new URL(mentorUrl);
+  url.searchParams.set('embed', 'true');
+  url.searchParams.set('extra-body-classes', 'iframed-externally');
+  return url.toString();
+}
+
+/** Configures + persists the embed with a given Show Catalogue value (via UI). */
+async function createEmbedWithShowCatalogue(
+  page: Page,
+  editMentorPage: EditMentorPage,
+  mentorUrl: string,
+  enabled: boolean,
+): Promise<void> {
+  await page.goto(mentorUrl, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await editMentorPage.open('Embed');
+  await expect(editMentorPage.embed.showCatalogueToggle).toBeVisible({
+    timeout: 15_000,
+  });
+  await editMentorPage.embed.setShowCatalogue(enabled);
+  await editMentorPage.embed.submit();
+  await editMentorPage.close();
+}
 
 test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   test.beforeEach(async ({ page }) => {
@@ -93,6 +123,134 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
     await editMentorPage.close();
   });
+
+  // Each Show Catalogue test runs against its own freshly created, anonymous
+  // mentor — isolating the tests (no contention over a shared mentor's
+  // show_catalogue) and letting "Create Embed" pass the anonymous-or-URL gate.
+  test.describe('Show Catalogue setting', () => {
+    test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+      await createMentorPage.openAndCreate(`Catalogue E2E ${Date.now()}`);
+
+      // Make the mentor anonymous so "Create Embed" can persist settings.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      await saveBtn.click();
+      await page.waitForTimeout(1_500);
+      await editMentorPage.close();
+    });
+
+    // emb-06: The Show Catalogue toggle works in the embed tab and is independent
+    // of the sibling toggles. Stays in-modal so it neither mutates backend state
+    // nor depends on cache invalidation; persistence is covered by emb-07.
+    test('embed tab Show Catalogue toggle flips and leaves sibling toggles unaffected', async ({
+      editMentorPage,
+    }) => {
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.showCatalogueToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      const original = await editMentorPage.embed.getShowCatalogueState();
+
+      // Capture sibling toggle states before touching Show Catalogue.
+      const voiceCallBefore = await editMentorPage.embed.voiceCallToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+      const voiceRecordBefore = await editMentorPage.embed.voiceRecordToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+      const attachmentBefore = await editMentorPage.embed.attachmentToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+
+      // Toggle Show Catalogue and confirm the switch flips.
+      await editMentorPage.embed.toggleShowCatalogue();
+      await expect(editMentorPage.embed.showCatalogueToggle).toHaveAttribute(
+        'aria-checked',
+        original ? 'false' : 'true',
+        { timeout: 5_000 },
+      );
+
+      // Sibling toggles must be unchanged after toggling Show Catalogue.
+      if (voiceCallBefore !== null) {
+        await expect(editMentorPage.embed.voiceCallToggle).toHaveAttribute(
+          'aria-checked',
+          voiceCallBefore,
+        );
+      }
+      if (voiceRecordBefore !== null) {
+        await expect(editMentorPage.embed.voiceRecordToggle).toHaveAttribute(
+          'aria-checked',
+          voiceRecordBefore,
+        );
+      }
+      if (attachmentBefore !== null) {
+        await expect(editMentorPage.embed.attachmentToggle).toHaveAttribute(
+          'aria-checked',
+          attachmentBefore,
+        );
+      }
+
+      // Restore the original state (UI only — nothing is persisted).
+      await editMentorPage.embed.setShowCatalogue(original);
+      await editMentorPage.close();
+    });
+
+    // emb-07: With Show Catalogue disabled, the embed view's sidebar logo
+    // renders but is not wrapped in a navigable button.
+    test('embed view sidebar logo is not clickable when Show Catalogue is disabled', async ({
+      page,
+      editMentorPage,
+      sidebarPage,
+    }) => {
+      const baseMentorUrl = page.url();
+      await createEmbedWithShowCatalogue(
+        page,
+        editMentorPage,
+        baseMentorUrl,
+        false,
+      );
+
+      await page.goto(embedUrlFor(baseMentorUrl), {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      await sidebarPage.ensureExpanded();
+      await expect(sidebarPage.logoImage).toBeVisible({ timeout: 15_000 });
+      // The logo renders but is not wrapped in a navigable button. toHaveCount(0)
+      // retries past the brief loading window before settings resolve.
+      await expect(sidebarPage.logoButton).toHaveCount(0, { timeout: 10_000 });
+    });
+
+    // emb-08: With Show Catalogue enabled, the embed view's sidebar logo is
+    // clickable (navigates home), matching the non-embed behaviour.
+    test('embed view sidebar logo is clickable when Show Catalogue is enabled', async ({
+      page,
+      editMentorPage,
+      sidebarPage,
+    }) => {
+      const baseMentorUrl = page.url();
+      await createEmbedWithShowCatalogue(
+        page,
+        editMentorPage,
+        baseMentorUrl,
+        true,
+      );
+
+      await page.goto(embedUrlFor(baseMentorUrl), {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      await sidebarPage.ensureExpanded();
+      await expect(sidebarPage.logoButton).toBeVisible({ timeout: 15_000 });
+    });
+  }); // test.describe('Show Catalogue setting')
 
   // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)
   test('admin opens embedded mentor and pressing Escape inside the iframe closes the widget', async ({

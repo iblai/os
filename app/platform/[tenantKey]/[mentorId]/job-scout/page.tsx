@@ -44,9 +44,9 @@ export default function JobScoutPage() {
       } else if (prompt.includes('job interview')) {
         response =
           'Preparing for behavioral interviews is crucial! The STAR method can help structure your answers:\n\n- Situation: Describe the context\n- Task: Explain your responsibility\n- Action: Detail the steps you took\n- Result: Share the outcome\n\nCommon behavioral questions include:\n- Tell me about a time you faced a challenge\n- Describe a situation where you showed leadership\n- Share an example of resolving a conflict\n\nWould you like to practice with some sample questions?';
-      } else if (prompt.includes('find a mentor')) {
+      } else if (prompt.includes('find an agent')) {
         response =
-          "Finding a mentor can significantly accelerate your career growth. Here's how to approach it:\n\n1. Identify what you want to learn and develop\n2. Look within your organization first\n3. Attend industry events and networking opportunities\n4. Consider professional associations in your field\n5. Don't limit yourself to just one mentor\n\nWhen approaching potential mentors, be specific about what you admire about their work and what you hope to learn.";
+          "Finding an agent can significantly accelerate your career growth. Here's how to approach it:\n\n1. Identify what you want to learn and develop\n2. Look within your organization first\n3. Attend industry events and networking opportunities\n4. Consider professional associations in your field\n5. Don't limit yourself to just one agent\n\nWhen approaching potential agents, be specific about what you admire about their work and what you hope to learn.";
       }
 
       setMessages([
@@ -98,7 +98,7 @@ export default function JobScoutPage() {
     },
     {
       id: 4,
-      text: 'Give me advice on how to find a mentor.',
+      text: 'Give me advice on how to find an agent.',
     },
   ];
 

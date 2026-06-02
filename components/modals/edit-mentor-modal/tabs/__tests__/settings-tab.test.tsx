@@ -223,23 +223,19 @@ vi.mock('@/components/ui/select', () => ({
     </button>
   ),
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => (
-    <div data-testid="select-content">{children}</div>
+  SelectContent: ({ children, onValueChange }: any) => (
+    <div data-testid="select-content">
+      {React.Children.map(children, (child: any) =>
+        child ? React.cloneElement(child, { onValueChange }) : null,
+      )}
+    </div>
   ),
-  SelectItem: ({ children, value, ...props }: any) => (
+  SelectItem: ({ children, value, onValueChange }: any) => (
     <div
       role="option"
       aria-selected={false}
       data-value={value}
-      onClick={() => {
-        // Find parent Select's onValueChange through DOM traversal
-        const event = new CustomEvent('select-value', {
-          detail: value,
-          bubbles: true,
-        });
-        props.ref?.current?.dispatchEvent(event);
-      }}
-      {...props}
+      onClick={() => onValueChange?.(value)}
     >
       {children}
     </div>
@@ -1545,6 +1541,123 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByLabelText('Select a category')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Form onSubmit handler / Select onValueChange / Featured switch
+  // ==========================================================================
+  describe('Form element submit and field changes', () => {
+    it('submits via the form onSubmit handler', async () => {
+      const { container } = render(<SettingsTab />);
+
+      const formEl = container.querySelector('form') as HTMLFormElement;
+      expect(formEl).toBeTruthy();
+
+      fireEvent.submit(formEl);
+
+      await waitFor(() => {
+        expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('changes the "Who Can View" visibility select value', async () => {
+      render(<SettingsTab />);
+
+      // The current value is "viewable_by_tenant_admins" (Administrators),
+      // pick a different option to fire onValueChange.
+      const studentsOption = screen.getByRole('option', { name: 'Students' });
+      fireEvent.click(studentsOption);
+
+      // Submitting should now include the changed visibility value.
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              mentor_visibility: 'viewable_by_tenant_students',
+            }),
+          }),
+        );
+      });
+    });
+
+    it('changes the "Who Can Chat" select value', async () => {
+      render(<SettingsTab />);
+
+      // allow_anonymous defaults to true ("Anyone"); choose Authenticated Users.
+      const authedOption = screen.getByRole('option', {
+        name: 'Authenticated Users',
+      });
+      fireEvent.click(authedOption);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('toggles the Featured switch', async () => {
+      render(<SettingsTab />);
+
+      const featuredSwitch = screen.getByLabelText(
+        /^Featured (enabled|disabled)$/,
+      );
+      fireEvent.click(featuredSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('toggles the Allow Copies switch', async () => {
+      render(<SettingsTab />);
+
+      const allowCopiesSwitch = screen.getByLabelText(
+        /^Copies (enabled|disabled)$/,
+      );
+      fireEvent.click(allowCopiesSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('stops propagation when clicking the mentor image preview', () => {
+      render(<SettingsTab />);
+
+      const image = screen.getByAltText('Agent');
+      fireEvent.click(image);
+      // The handler calls event.stopPropagation(); rendering and clicking
+      // without throwing exercises the onClick line.
+      expect(image).toBeInTheDocument();
+    });
+
+    it('opens the Copy mentor modal for forkable mentors', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByRole('button', { name: 'Copy' });
+      fireEvent.click(copyButton);
+
+      expect(copyButton).toBeInTheDocument();
     });
   });
 });

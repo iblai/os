@@ -20,6 +20,11 @@ export class SidebarPage {
   readonly settingsButton: Locator;
   readonly helpButton: Locator;
   readonly logoutButton: Locator;
+  // The brand logo lives in the sidebar header — a separate landmark from
+  // the `<aside>` body. Consumed by `ensureExpanded()` and the share/embed
+  // journeys, so they are scoped to the header rather than the aside root.
+  readonly logoImage: Locator;
+  readonly logoButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -28,6 +33,16 @@ export class SidebarPage {
     // through this root so we never accidentally pick up a button
     // from the page content (e.g. an "Overview" tab on /analytics).
     this.sidebar = page.locator('aside').first();
+
+    // The brand logo image lives in the sidebar header. When clickable it is
+    // wrapped in a <button> (navigates home); otherwise it renders in a plain
+    // <div>. Scope to the header so other logos never match, and exclude the
+    // sibling sidebar-toggle button via `has`.
+    const sidebarHeader = page.locator('[data-sidebar="header"]');
+    this.logoImage = sidebarHeader.getByAltText('logo');
+    this.logoButton = sidebarHeader
+      .getByRole('button')
+      .filter({ has: page.getByAltText('logo') });
 
     // The toggle button's aria-label flips between "Expand sidebar"
     // and "Collapse sidebar" depending on state.
@@ -131,5 +146,19 @@ export class SidebarPage {
 
   async isVisible(): Promise<boolean> {
     return this.toggleButton.isVisible({ timeout: 3_000 }).catch(() => false);
+  }
+
+  /**
+   * Expands the sidebar if collapsed. While collapsed (icon mode) the header
+   * logo container is `hidden`, so the logo must be revealed before asserting
+   * on its clickability.
+   */
+  async ensureExpanded(): Promise<void> {
+    const visible = await this.logoImage
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (visible) return;
+    await this.toggle();
+    await expect(this.logoImage).toBeVisible({ timeout: 10_000 });
   }
 }

@@ -181,14 +181,14 @@ export function NavBar() {
 
   const handleLoginClick = React.useCallback(() => {
     if (requiresLoginForChat && tenantKey) {
-      redirectToAuthSpaJoinTenant(tenantKey);
+      redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
       return;
     }
 
     console.log(
       '[auth-redirect] User login from navbar without tenant key or login not required',
     );
-    redirectToAuthSpa();
+    redirectToAuthSpa(undefined, undefined, undefined, true, true);
   }, [requiresLoginForChat, tenantKey]);
 
   const {
@@ -628,12 +628,6 @@ export function NavBar() {
               </span>
             </div>
           )}
-          {/*
-            Credit balance, notification bell, and profile avatar form a
-            single visual group with tight (gap-2 / 8px) spacing — they
-            sit further from LearnerModeSwitch via the outer `xl:gap-6`.
-            Matches prod's layout exactly.
-          */}
           <div className="flex items-center gap-2">
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance

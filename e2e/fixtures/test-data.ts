@@ -11,6 +11,8 @@ export const MENTOR_NEXTJS_STRIPE_HOST =
   process.env.MENTOR_NEXTJS_STRIPE_HOST || '';
 export const DM_URL = process.env.DM_URL || '';
 export const FORDHAM_HOST = process.env.FORDHAM_HOST || '';
+export const ADVERTISING_TENANT_MENTOR_URL =
+  process.env.ADVERTISING_TENANT_MENTOR_URL || '';
 export const AUTH_NEXTJS_HOST = process.env.AUTH_NEXTJS_HOST || '';
 
 // ── Credentials ──────────────────────────────────────────────────────────────

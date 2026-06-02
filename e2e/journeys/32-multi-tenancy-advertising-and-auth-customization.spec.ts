@@ -9,6 +9,7 @@ import { waitForPageReady } from '../utils/resilient';
 import {
   MENTOR_NEXTJS_HOST,
   FORDHAM_HOST,
+  ADVERTISING_TENANT_MENTOR_URL,
   AUTH_NEXTJS_HOST,
   ENABLE_ADVERTISING_LOGIN_TEST,
 } from '../fixtures/test-data';
@@ -262,6 +263,50 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
       }
     }
     await editMentorPage.close();
+  });
+});
+
+test.describe('Journey 32: Multi-Tenancy — Cross-Tenant Navigation', () => {
+  test('authenticated user on own tenant can navigate to advertising tenant mentor via direct URL', async ({
+    page,
+    browser,
+  }) => {
+    test.skip(
+      !ADVERTISING_TENANT_MENTOR_URL,
+      'Set ADVERTISING_TENANT_MENTOR_URL to enable cross-tenant advertising navigation test',
+    );
+
+    await navigateToMentorApp(page);
+
+    // Verify user is on their own (non-advertising) tenant
+    const ownTenantUrl = page.url();
+    expect(ownTenantUrl).toContain('/platform/');
+
+    // Verify chat input is visible on own tenant
+    const chatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
+      exact: true,
+    });
+    await expect(chatInput).toBeVisible({ timeout: 30_000 });
+
+    // Directly navigate to the advertising tenant mentor URL (simulates pasting URL in browser)
+    await page.goto(ADVERTISING_TENANT_MENTOR_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: 80_000,
+    });
+
+    await safeWaitForURL(page, (url) => url.href.includes('/platform/'), {
+      timeout: 60_000,
+    });
+
+    await waitForPageReady(page);
+
+    // Verify the chat input field is visible — user was NOT redirected away
+    const advertisingChatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
+      exact: true,
+    });
+    await expect(advertisingChatInput).toBeVisible({ timeout: 30_000 });
   });
 });
 
