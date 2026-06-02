@@ -1605,10 +1605,15 @@ describe('SettingsTab', () => {
     });
 
     it('toggles the Featured switch', async () => {
+      // Renamed when Settings was split into Basic/Discovery/Capabilities:
+      // the aria-label is now the descriptive copy "Highlight in featured
+      // listings" (lives in the Discovery sub-tab). The sub-tab content
+      // is `forceMount`-ed, so the switch is in the DOM even when the
+      // active sub-tab is Basic.
       render(<SettingsTab />);
 
       const featuredSwitch = screen.getByLabelText(
-        /^Featured (enabled|disabled)$/,
+        'Highlight in featured listings',
       );
       fireEvent.click(featuredSwitch);
 
@@ -1621,10 +1626,13 @@ describe('SettingsTab', () => {
     });
 
     it('toggles the Allow Copies switch', async () => {
+      // Renamed when Settings was split: aria-label is now "Allow other
+      // admins to clone this agent" (lives in the Capabilities sub-tab,
+      // also `forceMount`-ed).
       render(<SettingsTab />);
 
       const allowCopiesSwitch = screen.getByLabelText(
-        /^Copies (enabled|disabled)$/,
+        'Allow other admins to clone this agent',
       );
       fireEvent.click(allowCopiesSwitch);
 
