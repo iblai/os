@@ -194,9 +194,15 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
   test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
     editMentorPage,
   }) => {
-    const label = editMentorPage.dialog.getByText('Enhanced RAG', {
-      exact: true,
-    });
+    // Renamed from "Enhanced RAG" → "Improve document retrieval" and moved
+    // into the Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
+    const label = editMentorPage.dialog.getByText(
+      'Improve document retrieval',
+      {
+        exact: true,
+      },
+    );
     await expect(label).toBeVisible({ timeout: 10_000 });
 
     const toggle = editMentorPage.settings.enhanceDocumentRetrievalToggle;
@@ -215,6 +221,7 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     page,
     editMentorPage,
   }) => {
+    await editMentorPage.settings.selectSubTab('Capabilities');
     const tooltipTrigger =
       editMentorPage.settings.enhanceDocumentRetrievalTooltipTrigger;
     await expect(tooltipTrigger).toBeVisible({ timeout: 10_000 });

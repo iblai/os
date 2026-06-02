@@ -65,9 +65,13 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
 
   test('admin goes to Create Mentor modal and it meets accessibility guidelines', async ({
     page,
+    sidebarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
+    // "New Agent" lives inside the collapsible "Agents" section in the
+    // new sidebar — expand the section first so the inner item resolves.
+    await sidebarPage.expandSection('Agents');
     const newMentorBtn = page.getByRole('button', {
       name: 'New Agent',
       exact: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -29,16 +29,15 @@ import {
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
-import { useMentorSegments } from '@/hooks/use-mentor-segments';
+import {
+  useMentorSegments,
+  MENTOR_SEGMENT_NAV_CATEGORIES,
+  type MentorSegment,
+  type MentorSegmentNavCategory,
+} from '@/hooks/use-mentor-segments';
+import { cn } from '@/lib/utils';
 
 type Props = {
   isOpen: boolean;
@@ -76,9 +75,87 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const { filteredSegments } = useMentorSegments({ preferModalMentorId: true });
   const activeTab = getEditMentorTab() || MODALS.EDIT_MENTOR.tabs.settings;
 
+  // Bucket the visible segments by their nav category. Segments without a
+  // category (e.g. hidden tabs) are silently dropped here — the sidebar
+  // intentionally only surfaces categorized tabs.
+  const itemsByCategory = useMemo(() => {
+    const map = new Map<MentorSegmentNavCategory, MentorSegment[]>();
+    for (const item of filteredSegments) {
+      if (!item.navCategory) continue;
+      const bucket = map.get(item.navCategory) ?? [];
+      bucket.push(item);
+      map.set(item.navCategory, bucket);
+    }
+    return map;
+  }, [filteredSegments]);
+
+  const activeSegment = filteredSegments.find((s) => s.value === activeTab);
+
+  // Only categories that actually have items get a column / pill. If
+  // RBAC removes every Integrations or Analytics segment for a user,
+  // the whole category disappears from the strip — no greyed-out pills.
+  const visibleCategories = useMemo(
+    () =>
+      MENTOR_SEGMENT_NAV_CATEGORIES.filter(
+        (c) => (itemsByCategory.get(c.key)?.length ?? 0) > 0,
+      ),
+    [itemsByCategory],
+  );
+
+  const fallbackCategory =
+    visibleCategories[0]?.key ?? ('configurations' as MentorSegmentNavCategory);
+
+  // Track the active category for the sidebar tab strip. Defaults to the
+  // category of the active segment so deep-linking to a tab opens the
+  // correct category; falls back to the first non-empty category.
+  const [activeCategory, setActiveCategory] =
+    useState<MentorSegmentNavCategory>(
+      activeSegment?.navCategory ?? fallbackCategory,
+    );
+
+  // Keep the category in sync if the active segment moves to a different
+  // category (e.g. via URL/modal-stack navigation). The effect runs only
+  // when activeTab actually points at a categorized segment, so manual
+  // category switches aren't immediately overridden.
+  useEffect(() => {
+    if (activeSegment?.navCategory) {
+      setActiveCategory(activeSegment.navCategory);
+    }
+  }, [activeSegment?.navCategory]);
+
+  // Self-correct when the current category becomes empty (e.g. an
+  // admin's Analytics tabs disappear after a permissions refresh). We
+  // snap to the first visible category so the sidebar never gets stuck
+  // pointing at an empty bucket.
+  useEffect(() => {
+    if (
+      visibleCategories.length > 0 &&
+      !visibleCategories.some((c) => c.key === activeCategory)
+    ) {
+      setActiveCategory(visibleCategories[0].key);
+    }
+  }, [visibleCategories, activeCategory]);
+
   const handleTabChange = (tabValue: string) => {
     changeModalTab(tabValue);
   };
+
+  // When the user picks a category tab, pre-open the first segment in that
+  // category — matches the nav-bar pattern where each section "opens" with
+  // a sensible default selection instead of leaving the panel blank.
+  const handleCategoryChange = (categoryKey: string) => {
+    const next = categoryKey as MentorSegmentNavCategory;
+    setActiveCategory(next);
+    const firstItem = itemsByCategory.get(next)?.[0];
+    if (firstItem && firstItem.value !== activeTab) {
+      changeModalTab(firstItem.value);
+    }
+  };
+
+  const visibleSidebarItems = itemsByCategory.get(activeCategory) ?? [];
+  // Drop the category strip entirely when only one bucket has items —
+  // no point in showing a single pill above the segment list.
+  const showCategoryStrip = visibleCategories.length > 1;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -108,19 +185,51 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                 </DialogTitle>
               </DialogHeader>
             </div>
-            {/* Desktop Sidebar - Now takes up 1/3 of the width */}
+            {/* Desktop Sidebar - 3-category tab strip + filtered segment list */}
             <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
               <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
                   Edit Agent
                 </DialogTitle>
               </DialogHeader>
-              <div className="scrollbar-none flex-1 overflow-y-auto">
+              <div className="scrollbar-none flex-1 overflow-y-auto p-2">
+                {/* Standalone Tabs root just for the category strip — it
+                    doesn't drive content, only filters the segment list
+                    below. Hidden entirely when only one category has
+                    items (no point showing a strip with a single pill).
+                    Column count is dynamic so 2 visible buckets get a
+                    2-col grid instead of 3 with an empty slot. */}
+                {showCategoryStrip && (
+                  <Tabs
+                    value={activeCategory}
+                    onValueChange={handleCategoryChange}
+                    className="mb-2"
+                  >
+                    <TabsList
+                      className="grid h-auto w-full gap-1 bg-gray-100 p-1 dark:bg-gray-800"
+                      style={{
+                        gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
+                      }}
+                      aria-label="Agent settings categories"
+                    >
+                      {visibleCategories.map((category) => (
+                        <TabsTrigger
+                          key={category.key}
+                          value={category.key}
+                          className="px-2 py-1.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100"
+                        >
+                          {category.title}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                )}
+
                 <TabsList
-                  className="h-auto w-full flex-col space-y-1 bg-transparent p-2"
+                  className="h-auto w-full flex-col space-y-1 bg-transparent p-0"
                   aria-label="Agent settings tabs"
                 >
-                  {filteredSegments.map((tab) => (
+                  {visibleSidebarItems.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
@@ -139,68 +248,54 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               </div>
             </div>
 
-            {/* Mobile and Tablet Tabs */}
-            <div className="lg:hidden">
+            {/* Mobile and Tablet — category tab strip + segment select */}
+            <div className="border-b border-gray-200 lg:hidden">
+              {showCategoryStrip && (
+                <Tabs
+                  value={activeCategory}
+                  onValueChange={handleCategoryChange}
+                  className="px-3 pt-2"
+                >
+                  <TabsList
+                    className="grid h-auto w-full gap-1 bg-gray-100 p-1"
+                    style={{
+                      gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
+                    }}
+                    aria-label="Agent settings categories"
+                  >
+                    {visibleCategories.map((category) => (
+                      <TabsTrigger
+                        key={category.key}
+                        value={category.key}
+                        className="px-2 py-1.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                      >
+                        {category.title}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              )}
               <TabsList
-                className="h-auto w-full justify-start overflow-x-auto rounded-none border-b border-gray-200 bg-white px-3 py-2"
+                className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
                 aria-label="Agent settings tabs"
               >
-                {/* Show first 4 tabs on mobile, first 8 tabs on tablet */}
-                {filteredSegments
-                  .slice(0, window.innerWidth >= 768 ? 8 : 3)
-                  .map((tab) => (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className="flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm"
-                      id={`tab-${tab.value}`}
-                      aria-controls={`panel-${tab.value}`}
-                    >
-                      <tab.icon
-                        className="h-3 w-3 sm:h-4 sm:w-4"
-                        aria-hidden="true"
-                      />
-                      <span className="hidden sm:inline">{tab.label}</span>
-                      <span className="text-xs sm:hidden">{tab.label}</span>
-                    </TabsTrigger>
-                  ))}
-                {/* Show dropdown for remaining tabs */}
-                {filteredSegments.length >
-                  (window.innerWidth >= 768 ? 8 : 3) && (
-                  <>
-                    <TabsTrigger
-                      key={activeTab}
-                      value={activeTab}
-                      className="flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:shadow-none sm:text-sm"
-                      id={`tab-${activeTab}`}
-                      aria-controls={`panel-${activeTab}`}
-                    >
-                      <Select value={activeTab} onValueChange={handleTabChange}>
-                        <SelectTrigger
-                          className="w-auto border-none text-xs shadow-none sm:text-sm"
-                          aria-label="More tabs"
-                        >
-                          <SelectValue placeholder="More..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredSegments
-                            .slice(window.innerWidth >= 768 ? 8 : 3)
-                            .map((tab) => (
-                              <SelectItem key={tab.value} value={tab.value}>
-                                <div className="flex items-center gap-2">
-                                  <tab.icon
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                  />
-                                  {tab.label}
-                                </div>
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </TabsTrigger>
-                  </>
-                )}
+                {visibleSidebarItems.map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={cn(
+                      'flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm',
+                    )}
+                    id={`tab-${tab.value}`}
+                    aria-controls={`panel-${tab.value}`}
+                  >
+                    <tab.icon
+                      className="h-3 w-3 sm:h-4 sm:w-4"
+                      aria-hidden="true"
+                    />
+                    <span>{tab.label}</span>
+                  </TabsTrigger>
+                ))}
               </TabsList>
             </div>
             {/* Main Content Area - Now takes up 2/3 of the width */}

@@ -56,32 +56,61 @@ export class SettingsTab {
     this.advancedJsEditor = dialog
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
-    this.allowCopiesToggle = dialog.locator(
-      'button[role="switch"][aria-label*="Copies"]',
-    );
+    // Renamed in the Capabilities sub-tab: aria-label is now
+    // "Allow other admins to clone this agent" (no enabled/disabled
+    // suffix — state is exposed via aria-checked).
+    this.allowCopiesToggle = dialog.getByRole('switch', {
+      name: /allow other admins to clone this agent/i,
+    });
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
       exact: true,
     });
+    // Capabilities sub-tab. Renamed visible label "Enable voice calls".
     this.showVoiceCallToggle = dialog.getByRole('switch', {
-      name: /voice calls/i,
+      name: /enable voice calls/i,
     });
-    // The Sandbox switch — aria-label reflects its current state
+    // Capabilities sub-tab. Renamed visible label "Enable advanced sandbox".
     this.advancedSandboxToggle = dialog.getByRole('switch', {
-      name: /^Sandbox/i,
+      name: /enable advanced sandbox/i,
     });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
     });
-    // The Memory toggle lives in the Settings tab form; aria-label is
-    // "Memory enabled" or "Memory disabled" depending on current state.
-    this.memoryToggle = dialog.getByRole('switch', { name: /^Memory /i });
+    // Capabilities sub-tab. Renamed visible label "Remember past conversations".
+    this.memoryToggle = dialog.getByRole('switch', {
+      name: /remember past conversations/i,
+    });
+    // Capabilities sub-tab. Renamed visible label "Improve document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^enhanced rag /i,
+      name: /improve document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enhanced rag',
+      name: 'More info about improve document retrieval',
     });
+  }
+
+  /**
+   * Settings is now split into Basic / Discovery / Capabilities sub-tabs.
+   * Each interaction below auto-switches to the right sub-tab so callers
+   * don't have to know the layout. No-op when already on the target tab.
+   *
+   * The parent category Tabs use distinct names (Configurations /
+   * Integrations / Analytics), so an exact-name role match is sufficient
+   * to target only the inner sub-tab without extra filters.
+   */
+  async selectSubTab(
+    name: 'Basic' | 'Discovery' | 'Capabilities',
+  ): Promise<void> {
+    const tab = this.dialog.getByRole('tab', { name, exact: true });
+    await expect(tab).toBeVisible({ timeout: 10_000 });
+    const selected = await tab.getAttribute('aria-selected').catch(() => null);
+    if (selected !== 'true') {
+      await tab.click();
+      await expect(tab).toHaveAttribute('aria-selected', 'true', {
+        timeout: 5_000,
+      });
+    }
   }
 
   async copyUniqueId(): Promise<void> {
@@ -90,6 +119,7 @@ export class SettingsTab {
   }
 
   async setVisibility(label: string): Promise<void> {
+    await this.selectSubTab('Discovery');
     await expect(this.visibilityCombobox).toBeVisible({ timeout: 5_000 });
     await this.visibilityCombobox.click();
     // Use the Radix UI option (div[role="option"]) rather than native <option>
@@ -117,6 +147,7 @@ export class SettingsTab {
   }
 
   async setChatAccess(label: string): Promise<void> {
+    await this.selectSubTab('Discovery');
     await expect(this.chatAccessCombobox).toBeVisible({ timeout: 5_000 });
     await this.chatAccessCombobox.click();
     const opt = this.page.locator('div[role="option"]').filter({
@@ -157,6 +188,7 @@ export class SettingsTab {
    * seconds (the cache invalidation is propagated async by RTK Query).
    */
   private async setAllowCopies(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.allowCopiesToggle).toBeVisible({ timeout: 10_000 });
     const isChecked =
       (await this.allowCopiesToggle.getAttribute('aria-checked')) === 'true';
@@ -185,6 +217,7 @@ export class SettingsTab {
   }
 
   async enableVoiceCall(): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
     const isChecked =
       (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
@@ -197,6 +230,7 @@ export class SettingsTab {
   }
 
   async disableVoiceCall(): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
     const isChecked =
       (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
@@ -214,6 +248,7 @@ export class SettingsTab {
    * It is a form-driven switch — changes only persist after Save is clicked.
    */
   async isMemoryEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
     await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
     return (
       (await this.memoryToggle
@@ -230,6 +265,7 @@ export class SettingsTab {
    * setAllowCopies) so callers don't need to know about the form lifecycle.
    */
   async setMemoryEnabled(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
     const isChecked =
       (await this.memoryToggle.getAttribute('aria-checked')) === 'true';
@@ -253,6 +289,7 @@ export class SettingsTab {
   }
 
   async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
     await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -264,6 +301,7 @@ export class SettingsTab {
   }
 
   async enableEnhanceDocumentRetrieval(): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -278,6 +316,7 @@ export class SettingsTab {
   }
 
   async disableEnhanceDocumentRetrieval(): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -295,6 +334,7 @@ export class SettingsTab {
    * Returns true when the Sandbox toggle is ON (aria-checked="true").
    */
   async isAdvancedSandboxEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
     const state = await this.advancedSandboxToggle
       .getAttribute('aria-checked')
       .catch(() => 'false');
@@ -310,6 +350,7 @@ export class SettingsTab {
    * appearing, Agent Configuration showing, etc.) without race conditions.
    */
   async setAdvancedSandbox(desired: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
     await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
     const current = await this.isAdvancedSandboxEnabled();
     if (current !== desired) {

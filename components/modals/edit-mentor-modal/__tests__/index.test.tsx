@@ -172,7 +172,7 @@ vi.mock('@sentry/nextjs', () => ({
 // axios — which fails to resolve in Vitest's transform pipeline. Stub it here
 // so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
 // these components) doesn't break the test.
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
   AgentSkills: () => null,
   AgentConfigPrompts: () => null,

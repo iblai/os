@@ -7,12 +7,32 @@ import { safeWaitForURL } from './navigation';
  * This avoids a full page.goto() which can lose client-side auth tokens.
  */
 export async function navigateToWorkflowsPage(page: Page): Promise<void> {
-  const workflowsButton = page.getByRole('button', {
+  // Sidebar "Workflows" is now a collapsible section (same pattern as
+  // Agents / Chats / Projects / Analytics). Scope to the `<aside>`
+  // landmark, then idempotently expand via `aria-expanded` so we don't
+  // accidentally collapse an already-open section by clicking twice.
+  const sidebar = page.locator('aside').first();
+  const workflowsButton = sidebar.getByRole('button', {
     name: 'Workflows',
     exact: true,
   });
   await expect(workflowsButton).toBeVisible({ timeout: 15_000 });
-  await workflowsButton.click();
+  const expanded = await workflowsButton
+    .getAttribute('aria-expanded')
+    .catch(() => null);
+  if (expanded !== 'true') {
+    await workflowsButton.click();
+    await expect(workflowsButton).toHaveAttribute('aria-expanded', 'true', {
+      timeout: 5_000,
+    });
+  }
+
+  const myWorkflowsLink = sidebar.getByRole('button', {
+    name: 'My Workflows',
+    exact: true,
+  });
+  await expect(myWorkflowsLink).toBeVisible({ timeout: 10_000 });
+  await myWorkflowsLink.click();
 
   await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
     timeout: 60_000,

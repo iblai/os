@@ -71,9 +71,13 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
   // not just open and Escape. Original called fillCreateMentorForm.
   test('admin goes to enterprise tenant and creates a new mentor from the sidebar dialog', async ({
     page,
+    sidebarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
+    // "New Agent" is inside the collapsible "Agents" section in the new
+    // sidebar — expand it first or the button won't be visible.
+    await sidebarPage.expandSection('Agents');
     const newMentorBtn = page.getByRole('button', {
       name: 'New Agent',
       exact: true,

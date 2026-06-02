@@ -455,31 +455,35 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
+      expect(screen.getByText('Allow LTI launches')).toBeInTheDocument();
     });
 
     it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('File Attachments')).toBeInTheDocument();
+      expect(
+        screen.getByText('Allow file attachments in chat'),
+      ).toBeInTheDocument();
     });
 
     it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Voice Calls')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice calls')).toBeInTheDocument();
     });
 
     it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Voice Recordings')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice recordings')).toBeInTheDocument();
     });
 
     it('renders Enhanced RAG toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Enhanced RAG')).toBeInTheDocument();
+      expect(
+        screen.getByText('Improve document retrieval'),
+      ).toBeInTheDocument();
     });
 
     it('renders Enhanced RAG tooltip text', () => {
@@ -496,7 +500,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about enhanced rag'),
+        screen.getByLabelText('More info about improve document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -565,16 +569,16 @@ describe('SettingsTab', () => {
         screen.getAllByLabelText('More info about chat access'),
       ).toHaveLength(2);
       expect(
-        screen.getByLabelText('More info about lti accessibility'),
+        screen.getByLabelText('More info about allow lti launches'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about file attachments'),
+        screen.getByLabelText('More info about allow file attachments in chat'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about voice calls'),
+        screen.getByLabelText('More info about enable voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about voice recordings'),
+        screen.getByLabelText('More info about enable voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -648,7 +652,7 @@ describe('SettingsTab', () => {
     it('toggles LTI accessible switch', () => {
       render(<SettingsTab />);
 
-      const ltiSwitch = screen.getByLabelText('Lti accessible disabled');
+      const ltiSwitch = screen.getByLabelText('Allow LTI launches');
       expect(ltiSwitch).not.toBeChecked();
 
       fireEvent.click(ltiSwitch);
@@ -660,7 +664,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const attachmentSwitch = screen.getByLabelText(
-        'File attachments enabled',
+        'Allow file attachments in chat',
       );
       expect(attachmentSwitch).toBeChecked();
 
@@ -672,7 +676,7 @@ describe('SettingsTab', () => {
     it('toggles voice calls switch', () => {
       render(<SettingsTab />);
 
-      const voiceCallSwitch = screen.getByLabelText('Voice calls enabled');
+      const voiceCallSwitch = screen.getByLabelText('Enable voice calls');
       expect(voiceCallSwitch).toBeChecked();
 
       fireEvent.click(voiceCallSwitch);
@@ -684,7 +688,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const voiceRecordSwitch = screen.getByLabelText(
-        'Voice recordings disabled',
+        'Enable voice recordings',
       );
       expect(voiceRecordSwitch).not.toBeChecked();
 
@@ -696,7 +700,7 @@ describe('SettingsTab', () => {
     it('toggles rag switch', () => {
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Enhanced rag disabled');
+      const ragSwitch = screen.getByLabelText('Improve document retrieval');
       expect(ragSwitch).not.toBeChecked();
 
       fireEvent.click(ragSwitch);
@@ -904,7 +908,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Enhanced rag disabled');
+      const ragSwitch = screen.getByLabelText('Improve document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -929,7 +933,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Enhanced rag enabled');
+      const ragSwitch = screen.getByLabelText('Improve document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -1384,7 +1388,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeChecked();
     });
 
     it('reflects show_attachment false in switch', () => {
@@ -1396,7 +1400,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('File attachments disabled'),
+        screen.getByLabelText('Allow file attachments in chat'),
       ).not.toBeChecked();
     });
 
@@ -1408,7 +1412,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Voice calls disabled')).not.toBeChecked();
+      expect(screen.getByLabelText('Enable voice calls')).not.toBeChecked();
     });
 
     it('reflects show_voice_record true in switch', () => {
@@ -1419,7 +1423,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
     });
 
     it('defaults show_attachment to true when undefined', () => {
@@ -1430,7 +1434,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('File attachments enabled')).toBeChecked();
+      expect(
+        screen.getByLabelText('Allow file attachments in chat'),
+      ).toBeChecked();
     });
 
     it('defaults show_voice_call to true when undefined', () => {
@@ -1441,7 +1447,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Voice calls enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice calls')).toBeChecked();
     });
 
     it('defaults show_voice_record to true when undefined', () => {
@@ -1452,7 +1458,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
     });
 
     it('defaults is_lti_accessible to false when undefined', () => {
@@ -1463,9 +1469,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Lti accessible disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Allow LTI launches')).not.toBeChecked();
     });
 
     it('reflects enable_multi_query_rag true in switch', () => {
@@ -1476,7 +1480,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Enhanced rag enabled')).toBeChecked();
+      expect(screen.getByLabelText('Improve document retrieval')).toBeChecked();
     });
 
     it('reflects enable_multi_query_rag false in switch', () => {
@@ -1487,7 +1491,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Enhanced rag disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Improve document retrieval'),
+      ).not.toBeChecked();
     });
 
     it('defaults enable_multi_query_rag to false when undefined', () => {
@@ -1498,7 +1504,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Enhanced rag disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Improve document retrieval'),
+      ).not.toBeChecked();
     });
   });
 
@@ -1510,15 +1518,13 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('File attachments enabled'),
+        screen.getByLabelText('Allow file attachments in chat'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Voice calls enabled')).toBeInTheDocument();
+      expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Voice recordings disabled'),
+        screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Lti accessible disabled'),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeInTheDocument();
     });
 
     it('has accessible remove image button', () => {
