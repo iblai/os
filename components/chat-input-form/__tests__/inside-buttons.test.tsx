@@ -16,6 +16,20 @@ vi.mock('../memory-button', () => ({
   MemoryButton: () => <button data-testid="memory-button">Memory</button>,
 }));
 
+// MemoryMenu pulls mentor context from next/navigation; stub it so the hidden
+// Memory popover can open without a router. The merged inside-buttons opens
+// this menu instead of calling onOptionClick for the Memory item.
+vi.mock('../memory-menu', () => ({
+  MemoryMenu: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="memory-menu">
+      Memory Menu
+      <button data-testid="memory-menu-close" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
+}));
+
 // Mock hooks that require Redux Provider
 vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => true),
@@ -336,7 +350,9 @@ describe('InsideButtons', () => {
       expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it('should show active buttons visible on mobile even when containerWidth is less than 600', () => {
+    it('should collapse active buttons into the dropdown on mobile (<600)', () => {
+      // Regression for #1533: active pills used to render inline at <600
+      // and overflow the row when multiple tools were active.
       render(
         <InsideButtons
           {...defaultProps}
@@ -346,15 +362,14 @@ describe('InsideButtons', () => {
         />,
       );
 
-      // Active button (Canvas) should be visible
-      expect(screen.getByText('Canvas')).toBeInTheDocument();
-      // Inactive button (Deep Research) should be in dropdown
-      expect(screen.queryAllByText('Deep Research')).toHaveLength(0);
-      // Should show more options button for inactive tools
+      // Neither active Canvas nor inactive Deep Research is inline.
+      expect(screen.queryByText('Canvas')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
+      // Only the ••• overflow trigger is rendered inline.
       expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it('should show one button and dropdown when containerWidth is between 600-800', () => {
+    it('should collapse all tool buttons into the dropdown on tablet (600-800)', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -364,9 +379,9 @@ describe('InsideButtons', () => {
         />,
       );
 
-      // Active button should be visible
-      expect(screen.getByText('Canvas')).toBeInTheDocument();
-      // More options should exist for inactive tools
+      // No inline pills, just the overflow trigger.
+      expect(screen.queryByText('Canvas')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
       expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
@@ -477,9 +492,10 @@ describe('InsideButtons', () => {
   });
 
   describe('tablet responsive behavior (600-800px)', () => {
-    it('should show first inactive button when no buttons are active on tablet with multiple buttons', () => {
-      // Both Canvas and Deep Research enabled, both inactive
-      // This tests line 84: activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : []
+    it('should hide all enabled tool buttons in the dropdown on tablet (multiple inactives)', () => {
+      // Both Canvas and Deep Research enabled, both inactive.
+      // Pre-#1533 the first inactive used to sneak inline; now everything
+      // below 800px lives in the dropdown.
       render(
         <InsideButtons
           {...defaultProps}
@@ -490,16 +506,15 @@ describe('InsideButtons', () => {
         />,
       );
 
-      // With two inactive buttons on tablet and no active buttons,
-      // should show first inactive button (Canvas) and hide the rest
-      expect(screen.getByText('Canvas')).toBeInTheDocument();
-      // Deep Research should be in dropdown
+      // Nothing inline.
+      expect(screen.queryByText('Canvas')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
       expect(screen.getByText('•••')).toBeInTheDocument();
     });
 
-    it('should show only active buttons on tablet (not the first inactive)', () => {
-      // Canvas: artifactsEnabled=true means isActive=true
-      // Deep Research: not in activeOptions, so isActive=false
+    it('should hide active tool buttons in the dropdown on tablet', () => {
+      // Canvas: artifactsEnabled=true means isActive=true.
+      // Deep Research: not in activeOptions, so isActive=false.
       render(
         <InsideButtons
           {...defaultProps}
@@ -510,10 +525,9 @@ describe('InsideButtons', () => {
         />,
       );
 
-      // Active button (Canvas due to artifactsEnabled) should be visible
-      expect(screen.getByText('Canvas')).toBeInTheDocument();
-      // Since Canvas is active, inactive buttons (Deep Research) go to dropdown
-      // visibleInactive will be [] because activeButtons.length > 0
+      // Active Canvas is NOT rendered as an inline pill (this is the bug fix).
+      expect(screen.queryByText('Canvas')).not.toBeInTheDocument();
+      expect(screen.queryByText('Deep Research')).not.toBeInTheDocument();
       expect(screen.getByText('•••')).toBeInTheDocument();
     });
   });
@@ -593,7 +607,7 @@ describe('InsideButtons', () => {
       await user.click(moreButton!);
 
       await waitFor(() => {
-        screen.getByRole('menuitem');
+        expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(0);
         // Deep Research icon should be in the menu item
         expect(screen.getByTestId('deep-search-icon')).toBeInTheDocument();
       });
@@ -772,6 +786,123 @@ describe('InsideButtons', () => {
       const button = screen.getByText('Prompts').closest('button');
       // Should not throw when clicked without onOpenPromptGallery
       expect(() => fireEvent.click(button!)).not.toThrow();
+    });
+  });
+
+  describe('dropdown active-state styling (#1533)', () => {
+    it('renders active styling on an active Canvas item inside the dropdown at width 500', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          deepResearch={true}
+          activeOptions={['canvas']}
+          containerWidth={500}
+        />,
+      );
+
+      await user.click(screen.getByText('•••').closest('button')!);
+      await waitFor(() => {
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+      });
+
+      const canvasItem = screen
+        .getAllByRole('menuitem')
+        .find((item) => item.textContent?.includes('Canvas'))!;
+      expect(canvasItem).toBeTruthy();
+      // DropdownMenuItem active className branch.
+      expect(canvasItem.className).toContain('bg-[#F5F8FF]');
+      expect(canvasItem.className).toContain('text-[#38A1E5]');
+      // Icon active span branch.
+      const iconSpan = canvasItem.querySelector('span.text-\\[\\#38A1E5\\]');
+      expect(iconSpan).not.toBeNull();
+      // Trailing Check icon.
+      expect(canvasItem.querySelector('svg.lucide-check')).not.toBeNull();
+    });
+
+    it('row-overflow repro: Canvas + Deep Research both active at width 500 stay out of the inline row', async () => {
+      const user = userEvent.setup();
+      const { container } = render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          deepResearch={true}
+          activeOptions={['canvas', 'deep-research']}
+          containerWidth={500}
+        />,
+      );
+
+      // The inline row contains only the ••• overflow trigger.
+      const inlineRow = container.querySelector(
+        'div.relative.flex.items-center.gap-1\\.5',
+      )!;
+      expect(inlineRow).not.toBeNull();
+      const inlineButtons = inlineRow.querySelectorAll('button');
+      expect(inlineButtons).toHaveLength(1);
+      expect(inlineButtons[0].textContent).toContain('•••');
+      // Both tools live in the dropdown with active markers.
+      await user.click(screen.getByText('•••').closest('button')!);
+      await waitFor(() => {
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+      });
+      const items = screen.getAllByRole('menuitem');
+      const canvasItem = items.find((i) => i.textContent?.includes('Canvas'))!;
+      const deepResearchItem = items.find((i) =>
+        i.textContent?.includes('Deep Research'),
+      )!;
+      expect(canvasItem.querySelector('svg.lucide-check')).not.toBeNull();
+      expect(deepResearchItem.querySelector('svg.lucide-check')).not.toBeNull();
+    });
+
+    it('regression guard: at desktop width 1000 both active tools render inline (no overflow trigger)', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          deepResearch={true}
+          activeOptions={['canvas', 'deep-research']}
+          containerWidth={1000}
+        />,
+      );
+      expect(screen.getByText('Canvas')).toBeInTheDocument();
+      expect(screen.getByText('Deep Research')).toBeInTheDocument();
+      expect(screen.queryByText('•••')).not.toBeInTheDocument();
+    });
+
+    it('opens the Memory popover menu when its dropdown item is clicked', async () => {
+      // Memory is enabled, so it lands in the dropdown at width 500.
+      // Clicking it should NOT call onOptionClick — it opens the MemoryMenu
+      // popover instead (setHiddenMemoryPopoverOpen(true)).
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          username="alice"
+          containerWidth={500}
+        />,
+      );
+
+      await user.click(screen.getByText('•••').closest('button')!);
+      await waitFor(() => {
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+      });
+
+      const memoryItem = screen
+        .getAllByRole('menuitem')
+        .find((item) => item.textContent?.includes('Memory'))!;
+      expect(memoryItem).toBeTruthy();
+      await user.click(memoryItem);
+
+      // The popover-backed MemoryMenu opens; the tool-toggle handler is not used.
+      await waitFor(() => {
+        expect(screen.getByTestId('memory-menu')).toBeInTheDocument();
+      });
+      expect(mockOnOptionClick).not.toHaveBeenCalledWith('memory');
+
+      // Closing the menu fires onClose → setHiddenMemoryPopoverOpen(false).
+      await user.click(screen.getByTestId('memory-menu-close'));
     });
   });
 });
