@@ -82,7 +82,7 @@ jobs:
       auth-uri: ${{ steps.read-auth.outputs.image-uri }}
     steps:
       - name: Checkout ops
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: iblai/iblai-web-ops
           token: ${{ secrets.GIT_TOKEN || github.token }}

@@ -33,13 +33,13 @@ jobs:
     outputs:
       should-build-app: ${{ steps.decide.outputs.should-build-app }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Detect changes
         id: changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             app:
@@ -111,7 +111,7 @@ jobs:
     if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check all dependency versions are pinned
         run: ./scripts/check-pinned-versions.sh
 
@@ -120,10 +120,10 @@ jobs:
     if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
       - run: npm install --global @commitlint/cli @commitlint/config-conventional
@@ -155,10 +155,10 @@ jobs:
     if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
       - run: node e2e/scripts/check-journey-coverage.mjs --all --no-regress --base origin/${{ github.base_ref }}
@@ -169,7 +169,7 @@ jobs:
     if: always() && (needs.acquire-stg-slot.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Get changed files
@@ -236,7 +236,7 @@ jobs:
       mentor-uri: ${{ steps.read-mentor.outputs.image-uri }}
       auth-uri: ${{ steps.read-auth.outputs.image-uri }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: iblai/iblai-web-ops
           token: ${{ secrets.GIT_TOKEN || github.token }}
@@ -384,7 +384,7 @@ jobs:
           done
 
       - name: Checkout infra CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: iblai/iblai-infra-cli
           token: ${{ secrets.GIT_TOKEN }}
@@ -823,7 +823,7 @@ jobs:
 
       - name: Update PR gate status
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const passed = '${{ steps.check-results.outcome }}' === 'success';

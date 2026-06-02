@@ -125,7 +125,7 @@ jobs:
           done
 
       - name: Checkout infra CLI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: iblai/iblai-infra-cli
           token: ${{ secrets.GIT_TOKEN }}
