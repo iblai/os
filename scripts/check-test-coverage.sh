@@ -11,7 +11,6 @@ BASE_BRANCH="${BASE_BRANCH:-origin/main}"
 SKIP_COVERAGE_FILES=(
   "providers/index.tsx"
   "_components/nav-bar/index.tsx"
-  "_components/app-sidebar/index.tsx"
   "lib/chunk-retry.ts"
   "explore/layout.tsx"
   "notifications/layout.tsx"
