@@ -1618,7 +1618,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const allowCopiesSwitch = screen.getByLabelText(
-        /^Allow copies (enabled|disabled)$/,
+        /^Copies (enabled|disabled)$/,
       );
       fireEvent.click(allowCopiesSwitch);
 
@@ -1633,7 +1633,7 @@ describe('SettingsTab', () => {
     it('stops propagation when clicking the mentor image preview', () => {
       render(<SettingsTab />);
 
-      const image = screen.getByAltText('Mentor');
+      const image = screen.getByAltText('Agent');
       fireEvent.click(image);
       // The handler calls event.stopPropagation(); rendering and clicking
       // without throwing exercises the onClick line.

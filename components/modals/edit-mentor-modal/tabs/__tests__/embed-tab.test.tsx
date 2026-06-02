@@ -528,7 +528,7 @@ describe('EmbedTab', () => {
     renderEmbedTab();
     expect(screen.getByText('Embed')).toBeInTheDocument();
     expect(
-      screen.getByText('Configure embedding options for your mentor.'),
+      screen.getByText('Configure embedding options for your agent.'),
     ).toBeInTheDocument();
   });
 
@@ -847,7 +847,9 @@ describe('EmbedTab', () => {
     fireEvent.change(titleInput, { target: { value: 'New Title' } });
     expect(mockUpdateConfig).toHaveBeenCalledWith('title', 'New Title');
 
-    const subtitleInput = screen.getByPlaceholderText('Created with mentorAI');
+    const subtitleInput = screen.getByPlaceholderText(
+      'Created with Agentic OS',
+    );
     fireEvent.change(subtitleInput, { target: { value: 'Sub' } });
     expect(mockUpdateConfig).toHaveBeenCalledWith('subtitle', 'Sub');
   });

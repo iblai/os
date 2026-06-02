@@ -16,6 +16,13 @@ vi.mock('../memory-button', () => ({
   MemoryButton: () => <button data-testid="memory-button">Memory</button>,
 }));
 
+// MemoryMenu pulls mentor context from next/navigation; stub it so the hidden
+// Memory popover can open without a router. The merged inside-buttons opens
+// this menu instead of calling onOptionClick for the Memory item.
+vi.mock('../memory-menu', () => ({
+  MemoryMenu: () => <div data-testid="memory-menu">Memory Menu</div>,
+}));
+
 // Mock hooks that require Redux Provider
 vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => true),
@@ -856,9 +863,10 @@ describe('InsideButtons', () => {
       expect(screen.queryByText('•••')).not.toBeInTheDocument();
     });
 
-    it('invokes the Memory action when its dropdown item is clicked', async () => {
+    it('opens the Memory popover menu when its dropdown item is clicked', async () => {
       // Memory is enabled, so it lands in the dropdown at width 500.
-      // Clicking it should fire the Memory `action` lambda → onOptionClick('memory').
+      // Clicking it should NOT call onOptionClick — it opens the MemoryMenu
+      // popover instead (setHiddenMemoryPopoverOpen(true)).
       const user = userEvent.setup();
       render(
         <InsideButtons
@@ -880,7 +888,11 @@ describe('InsideButtons', () => {
       expect(memoryItem).toBeTruthy();
       await user.click(memoryItem);
 
-      expect(mockOnOptionClick).toHaveBeenCalledWith('memory');
+      // The popover-backed MemoryMenu opens; the tool-toggle handler is not used.
+      await waitFor(() => {
+        expect(screen.getByTestId('memory-menu')).toBeInTheDocument();
+      });
+      expect(mockOnOptionClick).not.toHaveBeenCalledWith('memory');
     });
   });
 });
