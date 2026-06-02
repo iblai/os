@@ -37,7 +37,7 @@ jobs:
     steps:
       # Checkout the PR branch using the bot token so git push works
       # and so `gh` CLI inside Claude is authenticated as the bot account
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
@@ -46,7 +46,7 @@ jobs:
       - name: Fetch base branch
         run: git fetch origin ${{ github.base_ref }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
