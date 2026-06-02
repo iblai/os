@@ -41,6 +41,7 @@ type Props = {
   streamingReasoningContent?: string;
   streamingToolCalls?: ToolCallInfo[];
   isReasoning?: boolean;
+  showReasoning?: boolean;
   currentStreamingMessageId?: string;
   handleHighlightMessage: (messageId: number) => void;
   handleSubmit: (content: string) => void;
@@ -66,6 +67,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
       streamingReasoningContent,
       streamingToolCalls,
       isReasoning,
+      showReasoning,
       currentStreamingMessageId,
     },
     ref,
@@ -173,6 +175,7 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
                 isReasoning={
                   message.id === currentStreamingMessageId ? isReasoning : false
                 }
+                showReasoning={showReasoning}
                 isCurrentlyStreaming={message.id === currentStreamingMessageId}
               />
             </div>

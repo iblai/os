@@ -196,6 +196,7 @@ describe('AIMessageBubble', () => {
     onRetry: mockOnRetry,
     onReply: mockOnReply,
     onOpenCanvas: mockOnOpenCanvas,
+    showReasoning: true,
   };
 
   beforeEach(async () => {
@@ -592,6 +593,30 @@ describe('AIMessageBubble', () => {
         'true',
       );
     });
+
+    it('should not render ReasoningSection when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={false}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should not render ReasoningSection when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={undefined}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
   });
 
   describe('tool call indicator', () => {
@@ -637,6 +662,32 @@ describe('AIMessageBubble', () => {
         'data-is-currently-streaming',
         'true',
       );
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={undefined}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
     });
   });
 });

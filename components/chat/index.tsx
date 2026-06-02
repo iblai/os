@@ -1822,6 +1822,7 @@ export function Chat({
                       streamingReasoningContent={streamingReasoningContent}
                       streamingToolCalls={streamingToolCalls}
                       isReasoning={isReasoning}
+                      showReasoning={mentorSettings.showReasoning}
                       currentStreamingMessageId={currentStreamingMsg?.id}
                     />
                   ) : (
@@ -2056,6 +2057,7 @@ export function Chat({
                   streamingReasoningContent={streamingReasoningContent}
                   streamingToolCalls={streamingToolCalls}
                   isReasoning={isReasoning}
+                  showReasoning={mentorSettings.showReasoning}
                   currentStreamingMessageId={currentStreamingMsg?.id}
                 />
                 <div aria-live="polite" role="status" className="sr-only">

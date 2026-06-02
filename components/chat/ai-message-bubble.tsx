@@ -68,6 +68,7 @@ interface AIMessageBubbleProps {
   toolCalls?: ToolCallInfo[];
   isReasoning?: boolean;
   isCurrentlyStreaming?: boolean;
+  showReasoning?: boolean;
 }
 
 export const AIMessageBubble = forwardRef<
@@ -91,6 +92,7 @@ export const AIMessageBubble = forwardRef<
     toolCalls,
     isReasoning,
     isCurrentlyStreaming,
+    showReasoning,
   },
   ref,
 ) {
@@ -127,14 +129,14 @@ export const AIMessageBubble = forwardRef<
                 hasArtifactVersions(message) && 'bg-white p-0',
               )}
             >
-              {reasoningContent && (
+              {showReasoning && reasoningContent && (
                 <ReasoningSection
                   reasoningContent={reasoningContent}
                   isReasoning={isReasoning ?? false}
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
               )}
-              {toolCalls && toolCalls.length > 0 && (
+              {showReasoning && toolCalls && toolCalls.length > 0 && (
                 <ToolCallIndicator
                   toolCalls={toolCalls}
                   isCurrentlyStreaming={isCurrentlyStreaming}

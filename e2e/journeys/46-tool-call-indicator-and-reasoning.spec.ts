@@ -23,7 +23,10 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
     await createMentorPage.openAndCreate('E2E Tool Call Test Mentor');
 
     // Enable Web Search via Tools tab
-    await editMentorPage.open('Tools');
+    // Verbose Reasoning gates the tool-call indicator — enable it first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
@@ -75,7 +78,10 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   }) => {
     await createMentorPage.openAndCreate('E2E Tool Call Expand Test Mentor');
 
-    await editMentorPage.open('Tools');
+    // Verbose Reasoning gates the tool-call indicator — enable it first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
@@ -143,7 +149,10 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   }) => {
     await createMentorPage.openAndCreate('E2E Unique Tool Count Mentor');
 
-    await editMentorPage.open('Tools');
+    // Verbose Reasoning gates the tool-call indicator — enable it first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
@@ -235,7 +244,10 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   }) => {
     await createMentorPage.openAndCreate('E2E Web Search Not Activated Mentor');
 
-    await editMentorPage.open('Tools');
+    // Verbose Reasoning gates the tool-call indicator — enable it first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
@@ -274,8 +286,11 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   }) => {
     await createMentorPage.openAndCreate('E2E Reasoning Test Mentor');
 
-    // Set LLM to gpt-5 via the LLM tab page object
-    await editMentorPage.open('LLM');
+    // Verbose Reasoning gates the reasoning section — enable it, then set the
+    // LLM to gpt-5 via the LLM tab page object.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.navigateToTab('LLM');
     await editMentorPage.llm.selectProviderAndModel(
       'OpenAI',
       'OpenAI icon gpt-5',
@@ -371,9 +386,16 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   test('Reasoning Section Does Not Appear When Model Does Not Produce Reasoning Tokens', async ({
     page,
     createMentorPage,
+    editMentorPage,
     chatPage,
   }) => {
     await createMentorPage.openAndCreate('E2E Non-Reasoning Mentor');
+
+    // Enable Verbose Reasoning so this test verifies the model produces no
+    // reasoning tokens, rather than the section being hidden by the toggle.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+    await editMentorPage.close();
 
     await chatPage.sendMessage('Explain the theory of relativity in detail');
     await chatPage.waitForUserMessage(
@@ -412,8 +434,13 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
   }) => {
     await createMentorPage.openAndCreate('E2E Combined Features Mentor');
 
+    // Verbose Reasoning gates both the reasoning section and the tool-call
+    // indicator — enable it first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVerboseReasoning(true);
+
     // Set LLM to gpt-5
-    await editMentorPage.open('LLM');
+    await editMentorPage.navigateToTab('LLM');
     await editMentorPage.llm.selectProviderAndModel(
       'OpenAI',
       'OpenAI icon gpt-5',
@@ -475,5 +502,51 @@ test.describe('Journey 46: Tool Call Indicator and Reasoning Section', () => {
     await expect(lastAIMessage).toContainText(/quantum/i, {
       timeout: 10_000,
     });
+  });
+
+  // ────────────────────────────────────────────────────────────────
+  // Test 4.1: Verbose Reasoning OFF hides the tool-call indicator
+  // ────────────────────────────────────────────────────────────────
+  test('Tool Call Indicator Is Hidden When Verbose Reasoning Is Off', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+    chatPage,
+  }) => {
+    await createMentorPage.openAndCreate('E2E Verbose Reasoning Off Mentor');
+
+    // Verbose Reasoning defaults to OFF. Enable Web Search but leave the toggle
+    // off, so the tool genuinely runs yet its indicator must stay hidden.
+    await editMentorPage.open('Settings');
+    expect(await editMentorPage.settings.isVerboseReasoningEnabled()).toBe(
+      false,
+    );
+    await editMentorPage.navigateToTab('Tools');
+    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.close();
+
+    await chatPage.activateWebSearch();
+    await chatPage.sendMessage(
+      'using the web search tool, when is the next f1 race?',
+    );
+    await chatPage.waitForUserMessage(
+      'using the web search tool, when is the next f1 race?',
+      30_000,
+    );
+
+    await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
+    await expect(chatPage.aiMessages.last()).toBeVisible({ timeout: 30_000 });
+
+    // The tool-call indicator must NOT appear while Verbose Reasoning is off,
+    // even though Web Search ran during the response.
+    const toolCallTrigger = chatPage.aiMessages
+      .last()
+      .getByRole('button', { name: /used \d+ tools?/i });
+    try {
+      await toolCallTrigger.waitFor({ state: 'visible', timeout: 5_000 });
+      expect(true).toBe(false); // Should not reach here
+    } catch {
+      // Expected: indicator is gated off by the Verbose Reasoning toggle
+    }
   });
 });

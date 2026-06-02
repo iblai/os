@@ -2048,7 +2048,9 @@
         "components/chat/tool-call-utils.ts",
         "components/chat/reasoning-section.tsx",
         "components/chat/ai-message-bubble.tsx",
-        "components/chat/chat-messages/index.tsx"
+        "components/chat/chat-messages/index.tsx",
+        "components/chat/index.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
       ],
       "checkpoints": [
         {
@@ -2084,6 +2086,11 @@
         {
           "id": "tcr-07",
           "description": "Tool call indicator and reasoning section both render in correct order in same message",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-08",
+          "description": "Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-27 | 406 checkpoints (394 active, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-02 | 407 checkpoints (395 active, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -773,9 +773,9 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 
 ---
 
-## Journey 46: Tool Call Indicator & Reasoning Section (7 checkpoints) — `journeys/46-tool-call-indicator-and-reasoning.spec.ts`
+## Journey 46: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/46-tool-call-indicator-and-reasoning.spec.ts`
 
-**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
 - [x] Web Search tool pill appears during streaming with tool name and pulse animation
 - [x] Tool call pill is expandable and shows query detail
@@ -784,6 +784,7 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 

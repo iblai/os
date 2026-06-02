@@ -27,6 +27,7 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     reasoningContent,
     toolCalls,
     isReasoning,
+    showReasoning,
     isCurrentlyStreaming,
   }: {
     content: string;
@@ -40,6 +41,7 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     reasoningContent?: string;
     toolCalls?: unknown[];
     isReasoning?: boolean;
+    showReasoning?: boolean;
     isCurrentlyStreaming?: boolean;
   }) => (
     <div
@@ -48,6 +50,7 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
       data-reasoning-content={reasoningContent || ''}
       data-tool-calls-count={toolCalls?.length ?? 0}
       data-is-reasoning={isReasoning ?? false}
+      data-show-reasoning={showReasoning ?? false}
       data-is-currently-streaming={isCurrentlyStreaming ?? false}
     >
       <span data-testid="mentor-name">{mentorName}</span>
@@ -662,6 +665,28 @@ describe('ChatMessages', () => {
 
       const aiBubble = screen.getByTestId('ai-message-bubble');
       expect(aiBubble).toHaveAttribute('data-tool-calls-count', '2');
+    });
+
+    it('should forward showReasoning to AIMessageBubble', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          showReasoning={true}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-show-reasoning', 'true');
+    });
+
+    it('should default showReasoning to false when not provided', () => {
+      renderWithRedux(
+        <ChatMessages {...defaultProps} currentStreamingMessageId="2" />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-show-reasoning', 'false');
     });
 
     it('should pass isReasoning=true to the active streaming message', () => {
