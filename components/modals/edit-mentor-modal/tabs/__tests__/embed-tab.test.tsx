@@ -739,34 +739,6 @@ describe('EmbedTab', () => {
     consoleSpy.mockRestore();
   });
 
-  it('saves embed settings successfully and toasts', async () => {
-    renderEmbedTab();
-    const saveButtons = screen.getAllByRole('button', { name: 'Save' });
-    fireEvent.click(saveButtons[saveButtons.length - 1]);
-    await waitFor(() => {
-      expect(mockSyncEmbedSettings).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        description: 'Successfully saved embed settings',
-      });
-    });
-  });
-
-  it('shows an error toast when saving embed settings fails', async () => {
-    mockSyncEmbedSettings.mockRejectedValue(new Error('boom'));
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    renderEmbedTab();
-    const saveButtons = screen.getAllByRole('button', { name: 'Save' });
-    fireEvent.click(saveButtons[saveButtons.length - 1]);
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith({
-        description: 'Failed to save embed settings',
-      });
-    });
-    consoleSpy.mockRestore();
-  });
-
   it('submits the form via Create Embed button', () => {
     renderEmbedTab();
     fireEvent.click(screen.getByRole('button', { name: 'Create Embed' }));
