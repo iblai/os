@@ -195,6 +195,10 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     ...actual,
     selectShowingSharedChat: (state: any) =>
       state.chatSliceShared?.showingSharedChat ?? false,
+    useTenantMetadata: () => ({
+      metadata: {},
+      metadataLoaded: true,
+    }),
   };
 });
 

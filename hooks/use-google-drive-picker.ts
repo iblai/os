@@ -90,7 +90,7 @@ const useGoogleDrivePicker = () => {
   React.useEffect(() => {
     const handlePickerFileSelection = async () => {
       if (!mentorId) {
-        toast.error('Mentor not found');
+        toast.error('Agent not found');
         return;
       }
 

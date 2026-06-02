@@ -189,4 +189,86 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     logger.info('Unique ID section is properly labeled');
     await editMentorPage.close();
   });
+
+  // uid-06: Enhanced RAG toggle is visible with correct label, default OFF
+  test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
+    editMentorPage,
+  }) => {
+    const label = editMentorPage.dialog.getByText('Enhanced RAG', {
+      exact: true,
+    });
+    await expect(label).toBeVisible({ timeout: 10_000 });
+
+    const toggle = editMentorPage.settings.enhanceDocumentRetrievalToggle;
+    await expect(toggle).toBeVisible({ timeout: 10_000 });
+
+    // Default value is false (mentor?.enable_multi_query_rag ?? false)
+    const ariaChecked = await toggle.getAttribute('aria-checked');
+    expect(ariaChecked).toBe('false');
+    logger.info(`uid-06: Enhanced RAG toggle aria-checked=${ariaChecked}`);
+
+    await editMentorPage.close();
+  });
+
+  // uid-07: Enhanced RAG tooltip contains expected wording
+  test('admin goes to mentor settings tab and sees the Enhanced RAG tooltip text', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const tooltipTrigger =
+      editMentorPage.settings.enhanceDocumentRetrievalTooltipTrigger;
+    await expect(tooltipTrigger).toBeVisible({ timeout: 10_000 });
+    await tooltipTrigger.hover();
+
+    await expect(
+      page.getByRole('tooltip', {
+        name: /multiple search queries from a single user question/i,
+      }),
+    ).toBeVisible({ timeout: 5_000 });
+    logger.info('uid-07: Enhanced RAG tooltip content is visible');
+
+    await editMentorPage.close();
+  });
+
+  // uid-08: Enhanced RAG toggle persists ON then OFF across save/reopen cycles
+  test('admin goes to mentor settings tab and toggles Enhanced RAG ON then OFF with persistence', async ({
+    page,
+    editMentorPage,
+  }) => {
+    // --- Turn ON ---
+    await editMentorPage.settings.enableEnhanceDocumentRetrieval();
+    logger.info('uid-08: Saved Enhanced RAG = ON');
+
+    await editMentorPage.close();
+
+    // Reopen and verify ON persisted
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+
+    const isOn =
+      await editMentorPage.settings.isEnhanceDocumentRetrievalEnabled();
+    expect(isOn).toBe(true);
+    logger.info(
+      `uid-08: After reopen, toggle = ${isOn ? 'ON' : 'OFF'} (expected ON)`,
+    );
+
+    // --- Turn OFF ---
+    await editMentorPage.settings.disableEnhanceDocumentRetrieval();
+    logger.info('uid-08: Saved Enhanced RAG = OFF');
+
+    await editMentorPage.close();
+
+    // Reopen and verify OFF persisted
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+
+    const isOff =
+      await editMentorPage.settings.isEnhanceDocumentRetrievalEnabled();
+    expect(isOff).toBe(false);
+    logger.info(
+      `uid-08: After reopen, toggle = ${isOff ? 'ON' : 'OFF'} (expected OFF)`,
+    );
+
+    await editMentorPage.close();
+  });
 });

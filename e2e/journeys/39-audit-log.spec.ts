@@ -67,7 +67,7 @@ test.describe('Journey 39: Audit log (tenant admin)', () => {
   }) => {
     await analyticsPage.goto();
     await navigateToAuditLog(page);
-    await expect(page).toHaveURL(/\/analytics\/audit-log$/);
+    await expect(page).toHaveURL(/\/analytics\/audit$/);
     await expectAdminAuditLogUi(page);
   });
 
@@ -187,5 +187,63 @@ test.describe('Journey 39: Audit log (non-admin)', () => {
     });
     await expect(auditTab).not.toBeVisible({ timeout: 5_000 });
     await nonadminEditMentorPage.close();
+  });
+
+  // fixme: I don't think non-admins should have access to analytics tab
+  test.fixme(
+    'non-admin user does not see Audit tab in the Analytics tab bar',
+    async ({ nonadminPage, nonadminAnalyticsPage }) => {
+      await navigateToMentorApp(nonadminPage);
+      const isAdmin = await checkAdminStatus(nonadminPage);
+      if (isAdmin) {
+        test.skip(true, 'This test requires a non-admin user');
+      }
+
+      const reachedAnalytics = await nonadminAnalyticsPage
+        .goto()
+        .then(() => true)
+        .catch(() => false);
+
+      if (!reachedAnalytics) {
+        // Non-admin may not have access to Analytics at all — acceptable.
+        return;
+      }
+
+      const auditTab = nonadminPage.getByRole('tab', {
+        name: 'Audit',
+        exact: true,
+      });
+      await expect(auditTab).not.toBeVisible({ timeout: 5_000 });
+    },
+  );
+
+  test('non-admin user visiting the audit page directly does not see audit content', async ({
+    nonadminPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+    const isAdmin = await checkAdminStatus(nonadminPage);
+    if (isAdmin) {
+      test.skip(true, 'This test requires a non-admin user');
+    }
+
+    const currentUrl = new URL(nonadminPage.url());
+    const match = currentUrl.pathname.match(/\/platform\/([^/]+)\/([^/]+)/);
+    if (!match) {
+      test.skip(true, 'Could not resolve mentor URL for non-admin');
+      return;
+    }
+    const [, tenantKey, mentorId] = match;
+
+    await nonadminPage.goto(
+      `/platform/${tenantKey}/${mentorId}/analytics/audit`,
+    );
+    await waitForPageReady(nonadminPage);
+
+    await expect(
+      nonadminPage
+        .locator('table')
+        .or(nonadminPage.getByText(EMPTY_MESSAGE))
+        .or(nonadminPage.getByText(PERMISSION_DENIED)),
+    ).not.toBeVisible({ timeout: 5_000 });
   });
 });

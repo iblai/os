@@ -67,6 +67,10 @@ function dms() {
     platform_key: 'tenant123',
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     permissions: { field: { ...dfp } },
+    // The Memory segment is gated on this flag (in addition to memsearch).
+    // Default to true so the canonical fully-permitted-mentor case still
+    // exposes the Memory tab in tests that don't override settings.
+    enable_memory_component: true,
   };
 }
 
@@ -110,6 +114,10 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: true },
     }),
+    // The mentor-segments hook now queries the claw-config to gate the Skills
+    // segment. We don't add the clawApiSlice middleware to the test store, so
+    // mock the hook to return `null` (no wired config) — Skills stays hidden.
+    useGetClawMentorConfigQuery: () => ({ data: null }),
   };
 });
 
@@ -155,6 +163,16 @@ vi.mock('@/lib/config', () => ({
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
+// @iblai/web-containers transitively imports @iblai/web-utils which imports
+// axios — which fails to resolve in Vitest's transform pipeline. Stub it here
+// so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
+// these components) doesn't break the test.
+vi.mock('@iblai/web-containers', () => ({
+  SandboxConfig: () => null,
+  AgentSkills: () => null,
+  AgentConfigPrompts: () => null,
+}));
+
 vi.mock('./tabs', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
@@ -162,11 +180,14 @@ vi.mock('./tabs', () => ({
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
+  SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
+  SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
 }));
 
@@ -270,7 +291,7 @@ describe('EditMentorModal', () => {
       await waitFor(() => {
         const h = screen
           .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Mentor'));
+          .find((el) => el.textContent?.includes('Edit Agent'));
         expect(h).toBeTruthy();
       });
     });
@@ -281,7 +302,7 @@ describe('EditMentorModal', () => {
       await waitFor(() => {
         const h = screen
           .getAllByRole('heading')
-          .find((el) => el.textContent?.includes('Edit Mentor'));
+          .find((el) => el.textContent?.includes('Edit Agent'));
         expect(h).toBeTruthy();
       });
     });
@@ -290,7 +311,7 @@ describe('EditMentorModal', () => {
       renderM();
       await waitFor(() => {
         const d = screen.getByText(
-          /Edit Mentor settings, prompts, tools, safety/i,
+          /Edit Agent settings, prompts, tools, safety/i,
         );
         expect(d).toHaveClass('sr-only');
       });
@@ -367,7 +388,7 @@ describe('EditMentorModal', () => {
           screen
             .getAllByRole('tablist')
             .find(
-              (t) => t.getAttribute('aria-label') === 'Mentor settings tabs',
+              (t) => t.getAttribute('aria-label') === 'Agent settings tabs',
             ),
         ).toBeTruthy();
       });
@@ -625,7 +646,7 @@ describe('EditMentorModal', () => {
         expect(
           screen
             .getAllByRole('heading')
-            .find((h) => h.textContent?.includes('Edit Mentor')),
+            .find((h) => h.textContent?.includes('Edit Agent')),
         ).toBeTruthy(),
       );
     });
@@ -637,7 +658,7 @@ describe('EditMentorModal', () => {
         expect(
           screen
             .getAllByRole('heading')
-            .find((h) => h.textContent?.includes('Edit Mentor')),
+            .find((h) => h.textContent?.includes('Edit Agent')),
         ).toBeTruthy(),
       );
     });
@@ -665,6 +686,7 @@ describe('EditMentorModal', () => {
       { t: MODALS.EDIT_MENTOR.tabs.llm, id: 'llm-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.prompts, id: 'prompts-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.safety, id: 'safety-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.privacy, id: 'privacy-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },

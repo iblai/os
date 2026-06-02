@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -84,6 +84,24 @@ export function AddAccessDialog({
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
   const [debouncedGroupSearchTerm] = useDebounce(groupSearchTerm, 300);
+  const userSearchBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const groupSearchBlurTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (userSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(userSearchBlurTimeoutRef.current);
+      }
+      if (groupSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(groupSearchBlurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
 
@@ -222,7 +240,11 @@ export function AddAccessDialog({
   }, [userSearchTerm]);
 
   const handleUserSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (userSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(userSearchBlurTimeoutRef.current);
+    }
+    userSearchBlurTimeoutRef.current = setTimeout(() => {
+      userSearchBlurTimeoutRef.current = null;
       setShowUserSearchResults(false);
     }, 100);
   }, []);
@@ -298,7 +320,11 @@ export function AddAccessDialog({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (groupSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(groupSearchBlurTimeoutRef.current);
+    }
+    groupSearchBlurTimeoutRef.current = setTimeout(() => {
+      groupSearchBlurTimeoutRef.current = null;
       setShowGroupSearchResults(false);
     }, 100);
   }, []);
@@ -325,14 +351,14 @@ export function AddAccessDialog({
 
     /* istanbul ignore if -- defensive: Create button is disabled when mentor context missing */
     if (!mentorDbId || !tenantKey) {
-      toast.error('Mentor context is missing. Close the modal and try again.');
+      toast.error('Agent context is missing. Close the modal and try again.');
       return;
     }
 
     /* istanbul ignore if -- defensive: role selection only allows valid availableRoles */
     if (!availableRoles.includes(selectedRole)) {
       toast.error(
-        `${formatRoleName(selectedRole)} already exists for this mentor.`,
+        `${formatRoleName(selectedRole)} already exists for this agent.`,
       );
       return;
     }
@@ -385,7 +411,7 @@ export function AddAccessDialog({
       await onAccessCreated();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, 'Unable to create mentor role access.'),
+        getErrorMessage(error, 'Unable to create agent role access.'),
       );
     }
   }, [
@@ -431,9 +457,9 @@ export function AddAccessDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create mentor role access</DialogTitle>
+          <DialogTitle>Create agent role access</DialogTitle>
           <DialogDescription>
-            Create a mentor access policy for a new role. You can add users to
+            Create an agent access policy for a new role. You can add users to
             it afterward.
           </DialogDescription>
         </DialogHeader>

@@ -131,7 +131,7 @@ function getOfflineFallback(request) {
       `<!DOCTYPE html>
       <html>
         <head>
-          <title>Offline - IBL Mentor</title>
+          <title>Offline - IBL Agent</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }

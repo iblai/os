@@ -269,6 +269,7 @@ export function Chat({
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
   const isCompactMode = searchParams.get('compact') === 'true';
+  const initialPrompt = searchParams.get('prompt')?.trim() || undefined;
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
@@ -422,6 +423,7 @@ export function Chat({
     isOffline: isOfflineInTauri,
     onOfflineWithoutLocalLLM: handleOfflineWithoutLocalLLM,
     isPublicRoute: isAccessingPublicRoute,
+    initialPrompt,
   });
 
   const {
@@ -1779,6 +1781,7 @@ export function Chat({
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
+                      isStreaming={isStreaming}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -2016,6 +2019,7 @@ export function Chat({
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
+                  isStreaming={isStreaming}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
@@ -2204,7 +2208,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Voice Call</DialogTitle>
             <DialogDescription>
-              Would you like to start a voice call with your mentor?
+              Would you like to start a voice call with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2254,7 +2258,7 @@ export function Chat({
           <DialogHeader>
             <DialogTitle>Confirm Screen Sharing</DialogTitle>
             <DialogDescription>
-              Would you like to start a screen sharing with your mentor?
+              Would you like to start a screen sharing with your agent?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

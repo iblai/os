@@ -87,6 +87,19 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetMentorSettingsQuery(...args),
   useGetMentorCategoriesQuery: (...args: unknown[]) =>
     mockGetMentorCategoriesQuery(...args),
+  // settings-tab.tsx renders `useGetClawMentorConfigQuery` /
+  // `useUpdateClawMentorConfigMutation` for the Sandbox toggle's
+  // claw-config sync. Stub them so this test (which doesn't exercise that
+  // branch) doesn't crash with "No 'X' export defined on the mock".
+  useGetClawMentorConfigQuery: () => ({
+    data: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useUpdateClawMentorConfigMutation: () => [
+    () => Promise.resolve({}),
+    { isLoading: false },
+  ],
 }));
 
 // Mock sonner
@@ -357,7 +370,7 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Settings')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Configure your mentor's basic settings and preferences.",
+          "Configure your agent's basic settings and preferences.",
         ),
       ).toBeInTheDocument();
     });
@@ -441,22 +454,46 @@ describe('SettingsTab', () => {
       expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
     });
 
-    it('renders Show Attachment toggle', () => {
+    it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Attachment')).toBeInTheDocument();
+      expect(screen.getByText('File Attachments')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Call toggle', () => {
+    it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Call')).toBeInTheDocument();
+      expect(screen.getByText('Voice Calls')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Record toggle', () => {
+    it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
+      expect(screen.getByText('Voice Recordings')).toBeInTheDocument();
+    });
+
+    it('renders Enhanced RAG toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enhanced RAG')).toBeInTheDocument();
+    });
+
+    it('renders Enhanced RAG tooltip text', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(
+          /Generates multiple search queries from a single user question/i,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('renders tooltip trigger for Enhanced RAG', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enhanced rag'),
+      ).toBeInTheDocument();
     });
 
     it('renders the Image upload section', () => {
@@ -468,7 +505,7 @@ describe('SettingsTab', () => {
     it('renders mentor image when profile_image is a URL', () => {
       render(<SettingsTab />);
 
-      const img = screen.getByAltText('Mentor');
+      const img = screen.getByAltText('Agent');
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', 'https://example.com/avatar.jpg');
     });
@@ -527,13 +564,13 @@ describe('SettingsTab', () => {
         screen.getByLabelText('More info about lti accessibility'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show attachment'),
+        screen.getByLabelText('More info about file attachments'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice call'),
+        screen.getByLabelText('More info about voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -574,7 +611,7 @@ describe('SettingsTab', () => {
       await user.clear(input);
 
       await waitFor(() => {
-        expect(screen.getByText('Mentor name is required')).toBeInTheDocument();
+        expect(screen.getByText('Agent name is required')).toBeInTheDocument();
       });
     });
 
@@ -589,7 +626,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText('Mentor description is required'),
+          screen.getByText('Agent description is required'),
         ).toBeInTheDocument();
       });
     });
@@ -607,7 +644,7 @@ describe('SettingsTab', () => {
     it('toggles LTI accessible switch', () => {
       render(<SettingsTab />);
 
-      const ltiSwitch = screen.getByLabelText('Is lti accessible disabled');
+      const ltiSwitch = screen.getByLabelText('Lti accessible disabled');
       expect(ltiSwitch).not.toBeChecked();
 
       fireEvent.click(ltiSwitch);
@@ -615,10 +652,12 @@ describe('SettingsTab', () => {
       expect(ltiSwitch).toBeChecked();
     });
 
-    it('toggles show attachment switch', () => {
+    it('toggles file attachments switch', () => {
       render(<SettingsTab />);
 
-      const attachmentSwitch = screen.getByLabelText('Show attachment enabled');
+      const attachmentSwitch = screen.getByLabelText(
+        'File attachments enabled',
+      );
       expect(attachmentSwitch).toBeChecked();
 
       fireEvent.click(attachmentSwitch);
@@ -626,10 +665,10 @@ describe('SettingsTab', () => {
       expect(attachmentSwitch).not.toBeChecked();
     });
 
-    it('toggles show voice call switch', () => {
+    it('toggles voice calls switch', () => {
       render(<SettingsTab />);
 
-      const voiceCallSwitch = screen.getByLabelText('Show voice call enabled');
+      const voiceCallSwitch = screen.getByLabelText('Voice calls enabled');
       expect(voiceCallSwitch).toBeChecked();
 
       fireEvent.click(voiceCallSwitch);
@@ -637,17 +676,28 @@ describe('SettingsTab', () => {
       expect(voiceCallSwitch).not.toBeChecked();
     });
 
-    it('toggles show voice record switch', () => {
+    it('toggles voice recordings switch', () => {
       render(<SettingsTab />);
 
       const voiceRecordSwitch = screen.getByLabelText(
-        'Show voice record disabled',
+        'Voice recordings disabled',
       );
       expect(voiceRecordSwitch).not.toBeChecked();
 
       fireEvent.click(voiceRecordSwitch);
 
       expect(voiceRecordSwitch).toBeChecked();
+    });
+
+    it('toggles rag switch', () => {
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText('Enhanced rag disabled');
+      expect(ragSwitch).not.toBeChecked();
+
+      fireEvent.click(ragSwitch);
+
+      expect(ragSwitch).toBeChecked();
     });
   });
 
@@ -725,7 +775,7 @@ describe('SettingsTab', () => {
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalledWith(
-          'Mentor updated successfully',
+          'Agent updated successfully',
         );
       });
     });
@@ -744,7 +794,7 @@ describe('SettingsTab', () => {
       fireEvent.click(saveButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Failed to update mentor');
+        expect(toast.error).toHaveBeenCalledWith('Failed to update agent');
       });
 
       consoleSpy.mockRestore();
@@ -841,6 +891,56 @@ describe('SettingsTab', () => {
         );
       });
     });
+
+    it('submits enable_multi_query_rag as true after toggling ON', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText('Enhanced rag disabled');
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_multi_query_rag as false after toggling OFF', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const ragSwitch = screen.getByLabelText('Enhanced rag enabled');
+      fireEvent.click(ragSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_multi_query_rag: false,
+            }),
+          }),
+        );
+      });
+    });
   });
 
   // ==========================================================================
@@ -868,7 +968,7 @@ describe('SettingsTab', () => {
 
       // After uploading, the image should be displayed
       await waitFor(() => {
-        expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+        expect(screen.getByAltText('Agent')).toBeInTheDocument();
       });
     });
 
@@ -876,7 +976,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Image should be displayed
-      expect(screen.getByAltText('Mentor')).toBeInTheDocument();
+      expect(screen.getByAltText('Agent')).toBeInTheDocument();
 
       const removeButton = screen.getByLabelText('Remove image');
       fireEvent.click(removeButton);
@@ -944,7 +1044,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -956,7 +1056,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -965,7 +1065,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).toBeDisabled();
     });
 
@@ -990,7 +1090,7 @@ describe('SettingsTab', () => {
     it('enables fields when nothing is loading', () => {
       render(<SettingsTab />);
 
-      const nameInput = screen.getByPlaceholderText('Mentor Name');
+      const nameInput = screen.getByPlaceholderText('Agent Name');
       expect(nameInput).not.toBeDisabled();
     });
   });
@@ -1280,7 +1380,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Is lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Lti accessible enabled')).toBeChecked();
     });
 
     it('reflects show_attachment false in switch', () => {
@@ -1292,7 +1392,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment disabled'),
+        screen.getByLabelText('File attachments disabled'),
       ).not.toBeChecked();
     });
 
@@ -1304,9 +1404,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Show voice call disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Voice calls disabled')).not.toBeChecked();
     });
 
     it('reflects show_voice_record true in switch', () => {
@@ -1317,7 +1415,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
     });
 
     it('defaults show_attachment to true when undefined', () => {
@@ -1328,7 +1426,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show attachment enabled')).toBeChecked();
+      expect(screen.getByLabelText('File attachments enabled')).toBeChecked();
     });
 
     it('defaults show_voice_call to true when undefined', () => {
@@ -1339,7 +1437,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice call enabled')).toBeChecked();
+      expect(screen.getByLabelText('Voice calls enabled')).toBeChecked();
     });
 
     it('defaults show_voice_record to true when undefined', () => {
@@ -1350,7 +1448,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
     });
 
     it('defaults is_lti_accessible to false when undefined', () => {
@@ -1362,8 +1460,41 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Is lti accessible disabled'),
+        screen.getByLabelText('Lti accessible disabled'),
       ).not.toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag true in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enhanced rag enabled')).toBeChecked();
+    });
+
+    it('reflects enable_multi_query_rag false in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enhanced rag disabled')).not.toBeChecked();
+    });
+
+    it('defaults enable_multi_query_rag to false when undefined', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_multi_query_rag: undefined },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enhanced rag disabled')).not.toBeChecked();
     });
   });
 
@@ -1375,16 +1506,14 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment enabled'),
+        screen.getByLabelText('File attachments enabled'),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Voice calls enabled')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Voice recordings disabled'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Show voice call enabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Show voice record disabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Is lti accessible disabled'),
+        screen.getByLabelText('Lti accessible disabled'),
       ).toBeInTheDocument();
     });
 

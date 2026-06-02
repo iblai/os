@@ -16,15 +16,26 @@ export class SidebarPage {
   readonly helpButton: Locator;
   readonly logoutButton: Locator;
   readonly projectItems: Locator;
+  readonly logoImage: Locator;
+  readonly logoButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    const sidebarHeader = page.locator('[data-sidebar="header"]');
+    // The brand logo image lives in the sidebar header. When clickable it is
+    // wrapped in a <button> (navigates home); otherwise it renders in a plain
+    // <div>. Scope to the header so other logos never match, and exclude the
+    // sibling sidebar-toggle button via `has`.
+    this.logoImage = sidebarHeader.getByAltText('logo');
+    this.logoButton = sidebarHeader
+      .getByRole('button')
+      .filter({ has: page.getByAltText('logo') });
     this.toggleButton = page
       .getByRole('button', { name: /toggle sidebar/i })
       .or(page.locator('[data-testid="sidebar-toggle"]'));
-    // H26 fix: sidebar button is labeled "Mentors" not "Explore"
+    // H26 fix: sidebar button is labeled "Agents" not "Explore"
     this.exploreLink = page
-      .getByRole('button', { name: 'Mentors', exact: true })
+      .getByRole('button', { name: 'Agents', exact: true })
       .or(page.getByRole('button', { name: 'Explore', exact: true }));
     this.notificationsLink = page.getByRole('button', {
       name: 'Notifications',
@@ -39,7 +50,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newMentorButton = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     this.newChatButton = page.getByRole('button', {
@@ -88,5 +99,19 @@ export class SidebarPage {
 
   async isVisible(): Promise<boolean> {
     return this.toggleButton.isVisible({ timeout: 3_000 }).catch(() => false);
+  }
+
+  /**
+   * Expands the sidebar if collapsed. While collapsed (icon mode) the header
+   * logo container is `hidden`, so the logo must be revealed before asserting
+   * on its clickability.
+   */
+  async ensureExpanded(): Promise<void> {
+    const visible = await this.logoImage
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    if (visible) return;
+    await this.toggle();
+    await expect(this.logoImage).toBeVisible({ timeout: 10_000 });
   }
 }

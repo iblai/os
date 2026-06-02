@@ -13,15 +13,15 @@ import { toast } from 'sonner';
 import { MemoryMenu } from '../memory-menu';
 
 // ---- Data-layer hook mocks ----
-const mockGetMentorMemoriesQuery = vi.fn();
+const mockGetMentorMemoriesListQuery = vi.fn();
 const mockGetMemoryCategoriesAdminQuery = vi.fn();
 const mockDeleteMentorMemory = vi.fn();
 const mockUpdateMentorMemory = vi.fn();
 const mockCreateMentorMemory = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorMemoriesQuery: (...args: unknown[]) =>
-    mockGetMentorMemoriesQuery(...args),
+  useGetMentorMemoriesListQuery: (...args: unknown[]) =>
+    mockGetMentorMemoriesListQuery(...args),
   useGetMemoryCategoriesAdminQuery: (...args: unknown[]) =>
     mockGetMemoryCategoriesAdminQuery(...args),
   useDeleteMentorMemoryMutation: () => [
@@ -50,9 +50,8 @@ vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({ getMentorId: mockGetMentorId }),
 }));
 
-const mockUserIsStudent = vi.fn();
 vi.mock('@/hooks/use-user', () => ({
-  useUserIsStudent: () => mockUserIsStudent(),
+  useUserIsStudent: () => true,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -113,48 +112,45 @@ const makeRejectingUnwrap = (fn: any, error: any) => {
   }));
 };
 
-const baseResponse = [
+const baseResults = [
   {
+    id: 10,
+    content: 'Likes tea',
     category: { id: 1, name: 'General', slug: 'general' },
-    memories: [
-      {
-        id: 10,
-        content: 'Likes tea',
-        category: { id: 1, name: 'General', slug: 'general' },
-        username: 'alice',
-        created_at: new Date(Date.now() - 60_000).toISOString(),
-      },
-      {
-        id: 11,
-        content: 'Loves hiking',
-        category: { id: 1, name: 'General', slug: 'general' },
-        username: 'alice',
-      },
-    ],
+    username: 'alice',
+    created_at: new Date(Date.now() - 60_000).toISOString(),
   },
   {
+    id: 11,
+    content: 'Loves hiking',
+    category: { id: 1, name: 'General', slug: 'general' },
+    username: 'alice',
+  },
+  {
+    id: 20,
+    content: 'Prefers async standups',
     category: { id: 2, name: 'Work', slug: 'work' },
-    memories: [
-      {
-        id: 20,
-        content: 'Prefers async standups',
-        category: { id: 2, name: 'Work', slug: 'work' },
-        username: 'alice',
-        created_at: new Date(Date.now() - 60_000).toISOString(),
-      },
-      {
-        id: 21,
-        content: 'Uses dark mode',
-        category: { id: 2, name: 'Work', slug: 'work' },
-      },
-      {
-        id: 22,
-        content: 'Remote team',
-        category: { id: 2, name: 'Work', slug: 'work' },
-      },
-    ],
+    username: 'alice',
+    created_at: new Date(Date.now() - 60_000).toISOString(),
+  },
+  {
+    id: 21,
+    content: 'Uses dark mode',
+    category: { id: 2, name: 'Work', slug: 'work' },
+  },
+  {
+    id: 22,
+    content: 'Remote team',
+    category: { id: 2, name: 'Work', slug: 'work' },
   },
 ];
+
+const baseResponse = {
+  count: baseResults.length,
+  next: null,
+  previous: null,
+  results: baseResults,
+};
 
 const adminCategories = [
   { id: 1, name: 'General', slug: 'general' },
@@ -171,10 +167,9 @@ describe('MemoryMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMentorId.mockReturnValue('mentor-1');
-    mockUserIsStudent.mockReturnValue(false);
-    mockGetMentorMemoriesQuery.mockReturnValue({
+    mockGetMentorMemoriesListQuery.mockReturnValue({
       data: baseResponse,
-      isLoading: false,
+      isFetching: false,
     });
     mockGetMemoryCategoriesAdminQuery.mockReturnValue({
       data: adminCategories,
@@ -199,19 +194,18 @@ describe('MemoryMenu', () => {
     expect(screen.getByText('Prefers async standups')).toBeInTheDocument();
   });
 
-  it('shows the student-specific subtitle when useUserIsStudent returns true', () => {
-    mockUserIsStudent.mockReturnValue(true);
+  it('always shows the student subtitle since the popup is scoped to my_memory', () => {
     render(<MemoryMenu {...defaultProps} />);
 
     expect(
-      screen.getByText('Your saved memories for this mentor'),
+      screen.getByText('Your saved memories for this agent'),
     ).toBeInTheDocument();
   });
 
   it('shows a loading spinner while memories are loading', () => {
-    mockGetMentorMemoriesQuery.mockReturnValue({
+    mockGetMentorMemoriesListQuery.mockReturnValue({
       data: undefined,
-      isLoading: true,
+      isFetching: true,
     });
     render(<MemoryMenu {...defaultProps} />);
 
@@ -220,7 +214,10 @@ describe('MemoryMenu', () => {
   });
 
   it('shows the empty state when there are no memories', () => {
-    mockGetMentorMemoriesQuery.mockReturnValue({ data: [], isLoading: false });
+    mockGetMentorMemoriesListQuery.mockReturnValue({
+      data: { count: 0, next: null, previous: null, results: [] },
+      isFetching: false,
+    });
     render(<MemoryMenu {...defaultProps} />);
 
     expect(screen.getByText('No memories yet.')).toBeInTheDocument();
@@ -470,19 +467,7 @@ describe('MemoryMenu', () => {
     });
   });
 
-  it('toggles the "View All Memories" button when the list exceeds 4', () => {
-    render(<MemoryMenu {...defaultProps} />);
-
-    const viewAllBtn = screen.getByRole('button', {
-      name: /view all memories \(5\)/i,
-    });
-    fireEvent.click(viewAllBtn);
-    expect(
-      screen.getByRole('button', { name: /show less/i }),
-    ).toBeInTheDocument();
-  });
-
-  it('derives categories from the response when admin categories are empty', () => {
+  it('renders the add form when admin categories are empty', () => {
     mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
     render(<MemoryMenu {...defaultProps} />);
 
@@ -497,42 +482,49 @@ describe('MemoryMenu', () => {
   it('skips mentor memory query when tenantKey is missing', () => {
     render(<MemoryMenu onClose={vi.fn()} username="alice" />);
 
-    const call = mockGetMentorMemoriesQuery.mock.calls[0]![1];
+    const call = mockGetMentorMemoriesListQuery.mock.calls[0]![1];
     expect(call.skip).toBe(true);
   });
 
-  it('passes my_memory=true in params for students', () => {
-    mockUserIsStudent.mockReturnValue(true);
+  it("always passes my_memory=true so the popup shows only the student's memories", () => {
     render(<MemoryMenu {...defaultProps} />);
 
-    const call = mockGetMentorMemoriesQuery.mock.calls[0]![0];
-    expect(call.params).toEqual({ my_memory: 'true' });
+    const call = mockGetMentorMemoriesListQuery.mock.calls[0]![0];
+    expect(call.params).toMatchObject({ my_memory: true });
+  });
+
+  it('requests page 1 with the page-size constant on initial render', () => {
+    render(<MemoryMenu {...defaultProps} />);
+
+    const call = mockGetMentorMemoriesListQuery.mock.calls[0]![0];
+    expect(call.params.page).toBe(1);
+    expect(call.params.page_size).toBeGreaterThan(0);
   });
 
   it('falls back to mentorId from params when useNavigate returns null', () => {
     mockGetMentorId.mockReturnValue(null);
     render(<MemoryMenu {...defaultProps} />);
 
-    const call = mockGetMentorMemoriesQuery.mock.calls[0]![0];
+    const call = mockGetMentorMemoriesListQuery.mock.calls[0]![0];
     expect(call.mentorId).toBe('mentor-from-params');
   });
 
   it('falls back to the raw string when formatDistanceToNow throws on an invalid date', () => {
-    mockGetMentorMemoriesQuery.mockReturnValue({
-      data: [
-        {
-          category: { id: 5, name: 'Misc', slug: 'misc' },
-          memories: [
-            {
-              id: 51,
-              content: 'bad date memory',
-              category: { id: 5, name: 'Misc', slug: 'misc' },
-              created_at: 'not-a-real-date',
-            },
-          ],
-        },
-      ],
-      isLoading: false,
+    mockGetMentorMemoriesListQuery.mockReturnValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 51,
+            content: 'bad date memory',
+            category: { id: 5, name: 'Misc', slug: 'misc' },
+            created_at: 'not-a-real-date',
+          },
+        ],
+      },
+      isFetching: false,
     });
     render(<MemoryMenu {...defaultProps} />);
     expect(screen.getByText('bad date memory')).toBeInTheDocument();
@@ -541,22 +533,167 @@ describe('MemoryMenu', () => {
   });
 
   it('renders a timestamp gracefully when created_at is missing or invalid', () => {
-    mockGetMentorMemoriesQuery.mockReturnValue({
-      data: [
-        {
-          category: { id: 99, name: 'Custom', slug: 'custom' },
-          memories: [
-            {
-              id: 99,
-              content: 'No date',
-              category: { id: 99, name: 'Custom', slug: 'custom' },
-            },
-          ],
-        },
-      ],
-      isLoading: false,
+    mockGetMentorMemoriesListQuery.mockReturnValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 99,
+            content: 'No date',
+            category: { id: 99, name: 'Custom', slug: 'custom' },
+          },
+        ],
+      },
+      isFetching: false,
     });
     render(<MemoryMenu {...defaultProps} />);
     expect(screen.getByText('No date')).toBeInTheDocument();
+  });
+
+  describe('infinite-scroll pagination', () => {
+    const setScrollMetrics = (
+      el: HTMLElement,
+      scrollHeight: number,
+      clientHeight: number,
+      scrollTop: number,
+    ) => {
+      Object.defineProperty(el, 'scrollHeight', {
+        value: scrollHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'clientHeight', {
+        value: clientHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'scrollTop', {
+        value: scrollTop,
+        configurable: true,
+      });
+    };
+
+    it('fetches and appends a second page when scrolled near the bottom', async () => {
+      const page1Response = {
+        count: 7,
+        next: 'next-url',
+        previous: null,
+        results: baseResults.slice(0, 5),
+      };
+      const page2Response = {
+        count: 7,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 30,
+            content: 'Second page item',
+            category: { id: 1, name: 'General', slug: 'general' },
+          },
+          {
+            id: 31,
+            content: 'Another second page item',
+            category: { id: 2, name: 'Work', slug: 'work' },
+          },
+        ],
+      };
+      mockGetMentorMemoriesListQuery.mockImplementation((args: any) => {
+        if (args?.params?.page === 1)
+          return { data: page1Response, isFetching: false };
+        if (args?.params?.page === 2)
+          return { data: page2Response, isFetching: false };
+        return { data: undefined, isFetching: false };
+      });
+
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      expect(screen.queryByText('Second page item')).not.toBeInTheDocument();
+
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      await waitFor(() => {
+        expect(screen.getByText('Second page item')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Another second page item')).toBeInTheDocument();
+      // Original page-1 items are still rendered alongside the appended page.
+      expect(screen.getByText('Likes tea')).toBeInTheDocument();
+    });
+
+    it('does not load more when there is no next page', () => {
+      // baseResponse already has next: null.
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('does not load more while a fetch is already in flight', () => {
+      mockGetMentorMemoriesListQuery.mockReturnValue({
+        data: { ...baseResponse, next: 'next-url' },
+        isFetching: true,
+      });
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('does not load more when not scrolled near the bottom', () => {
+      mockGetMentorMemoriesListQuery.mockReturnValue({
+        data: { ...baseResponse, next: 'next-url' },
+        isFetching: false,
+      });
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 100);
+      fireEvent.scroll(scrollEl);
+
+      const calls = mockGetMentorMemoriesListQuery.mock.calls;
+      expect(calls.every((c: any[]) => c[0]?.params?.page === 1)).toBe(true);
+    });
+
+    it('dedupes when a subsequent page only returns ids already seen', async () => {
+      const page1Response = {
+        count: 7,
+        next: 'next-url',
+        previous: null,
+        results: baseResults.slice(0, 5),
+      };
+      // Page 2 returns ids that are already in the accumulated list.
+      const page2Response = {
+        count: 7,
+        next: null,
+        previous: null,
+        results: baseResults.slice(0, 2),
+      };
+      mockGetMentorMemoriesListQuery.mockImplementation((args: any) => {
+        if (args?.params?.page === 1)
+          return { data: page1Response, isFetching: false };
+        if (args?.params?.page === 2)
+          return { data: page2Response, isFetching: false };
+        return { data: undefined, isFetching: false };
+      });
+
+      const { container } = render(<MemoryMenu {...defaultProps} />);
+      const scrollEl = container.querySelector('.max-h-80')! as HTMLElement;
+      setScrollMetrics(scrollEl, 1000, 400, 600);
+      fireEvent.scroll(scrollEl);
+
+      await waitFor(() => {
+        const calls = mockGetMentorMemoriesListQuery.mock.calls;
+        expect(calls.some((c: any[]) => c[0]?.params?.page === 2)).toBe(true);
+      });
+
+      // The 5 originals remain; the duplicate page-2 results were filtered out.
+      expect(screen.getAllByText('Likes tea').length).toBe(1);
+      expect(screen.getAllByText('Loves hiking').length).toBe(1);
+    });
   });
 });

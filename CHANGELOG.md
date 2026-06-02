@@ -1,5 +1,671 @@
 # Changelog
 
+## [0.70.0](https://github.com/iblai/agentai/compare/v0.69.1...v0.70.0) (2026-05-29)
+
+### Features
+
+- **embed:** add Show Catalogue toggle to the embed tab ([4b11211](https://github.com/iblai/agentai/commit/4b11211f0934cb321b5a631262a1d2908be6ebed)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+- **logo:** gate sidebar logo navigation on show_catalogue in embed mode ([6acac52](https://github.com/iblai/agentai/commit/6acac5202ef0f3a7a7d27fb6bdab41bb4a69c345)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
+### Styles
+
+- **changelog:** normalize list bullets via prettier ([1be68ab](https://github.com/iblai/agentai/commit/1be68abe0db31a5e617ef3a582066c42bc7461a8))
+
+### Tests
+
+- **e2e:** cover Show Catalogue toggle and embed logo gating ([e46fc47](https://github.com/iblai/agentai/commit/e46fc470edae759c9621982c3e2e463419807a27)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
+## [0.69.1](https://github.com/iblai/agentai/compare/v0.69.0...v0.69.1) (2026-05-29)
+
+### Refactors
+
+- **auth:** replace local redirectToAuthSpa with SDK wrapper from @iblai/iblai-js ([a03798d](https://github.com/iblai/agentai/commit/a03798d243c587f131dfbad95cf073205a950ca3))
+
+### Chores
+
+- adds android build schema ([cd0c703](https://github.com/iblai/agentai/commit/cd0c703c938eafc379ca6ff7f7e3a8f7d3de2f94))
+
+## [0.69.0](https://github.com/iblai/agentai/compare/v0.68.0...v0.69.0) (2026-05-28)
+
+### Features
+
+- iblai-js bump to 1.15.0 ([cb5ca30](https://github.com/iblai/agentai/commit/cb5ca303faae6127ecd563ae22303dd77878650a))
+
+## [0.68.0](https://github.com/iblai/agentai/compare/v0.67.12...v0.68.0) (2026-05-28)
+
+### Features
+
+- autoplay ai message by voice event completed ([4b95ac8](https://github.com/iblai/agentai/commit/4b95ac851fbbde4bce1eb0e55609c167869f45b7))
+- autoplay ai message by voice event completed ([42b9b42](https://github.com/iblai/agentai/commit/42b9b4253685f56e3d8644c9c9b39f1841640b58))
+- autoplay ai message by voice event completed > pnpm lock update ([4c84ec6](https://github.com/iblai/agentai/commit/4c84ec609b8a62fcfbcfd04c3a745daeba04e15e))
+- autoplay ai message by voice event completed > test coverage ([eb4ec87](https://github.com/iblai/agentai/commit/eb4ec8743c5e71dbf410d1c35d90e813bc1ed044))
+- autoplay ai message by voice event completed > test coverage issue fixed ([d778c29](https://github.com/iblai/agentai/commit/d778c296c384c9ab029b97caea8733fce893f542))
+- autoplay ai message by voice event on progress ([b892590](https://github.com/iblai/agentai/commit/b8925902cb9205eeff7fd2ae5ac9e0f2508ac505))
+- autoplay ai message by voice event on progress ([5f783ff](https://github.com/iblai/agentai/commit/5f783ff05b8fa3c1020db728c73b301d0cf01f7f))
+- autoplay ai message by voice event on progress ([eac7a9f](https://github.com/iblai/agentai/commit/eac7a9f45198d0957b75eeadf468e83eafc446db))
+
+## [0.67.12](https://github.com/iblai/agentai/compare/v0.67.11...v0.67.12) (2026-05-28)
+
+### Bug Fixes
+
+- **deps:** drop brace-expansion override that broke coverage tooling ([5b5f5a8](https://github.com/iblai/agentai/commit/5b5f5a8ebca40b4a84eebb8e9e6a7870464f09d5))
+- **mentor:** tighten nav-bar credit/notification/profile spacing ([bd1e44c](https://github.com/iblai/agentai/commit/bd1e44c5095696675514b1d70e256aa37d35ba9b))
+- **mentor:** update Agent AI banner copy and docs link ([277ff84](https://github.com/iblai/agentai/commit/277ff842822265cc60f4af00d41dc35e1e7750c5))
+
+### Chores
+
+- **deps:** update pnpm-lock.yaml file ([db85752](https://github.com/iblai/agentai/commit/db85752e41b1af9103f6e1287e54b462abf18e89))
+
+### Tests
+
+- **mentor:** lock app-banner default fallbacks ([e6bda14](https://github.com/iblai/agentai/commit/e6bda14072b310c4062c17ca113a2341763f0298))
+
+## [0.67.11](https://github.com/iblai/agentai/compare/v0.67.10...v0.67.11) (2026-05-27)
+
+### Bug Fixes
+
+- **ci:** allow skipped E2E tests to pass summary job ([07894e4](https://github.com/iblai/agentai/commit/07894e4ae46816e84b3ad60beb492dd428d6d854))
+
+## [0.67.10](https://github.com/iblai/agentai/compare/v0.67.9...v0.67.10) (2026-05-27)
+
+### Chores
+
+- bump iblai-js to 1.12.1, update macOS entitlements and Tauri version ([7882a36](https://github.com/iblai/agentai/commit/7882a364bb7dc4ed250380c848d31d37bccdfed1))
+
+## [0.67.9](https://github.com/iblai/agentai/compare/v0.67.8...v0.67.9) (2026-05-26)
+
+### Bug Fixes
+
+- **ci:** update PR Validation status when E2E tests complete ([3f03342](https://github.com/iblai/agentai/commit/3f033426613b7ed33ee06f38eed0c2738311408d))
+
+## [0.67.8](https://github.com/iblai/agentai/compare/v0.67.7...v0.67.8) (2026-05-25)
+
+### Documentation
+
+- rename mentorAI to agentAI in README ([4370d2b](https://github.com/iblai/agentai/commit/4370d2b36a9fb22c85fbb3c966ca8f6a46f26f46))
+
+## [0.67.7](https://github.com/iblai/mentorai/compare/v0.67.6...v0.67.7) (2026-05-25)
+
+### Refactors
+
+- remove external pricing modal and hook ([8de6f66](https://github.com/iblai/mentorai/commit/8de6f6622bc11961bd2582cfd472f9660a147576))
+
+## [0.67.6](https://github.com/iblai/mentorai/compare/v0.67.5...v0.67.6) (2026-05-25)
+
+### Bug Fixes
+
+- **security:** restrict postMessage target origins ([5c10b3c](https://github.com/iblai/mentorai/commit/5c10b3c16b0870cb5343f68fd1df536c0d56c1cc)), closes [#72](https://github.com/iblai/mentorai/issues/72)
+
+## [0.67.5](https://github.com/iblai/mentorai/compare/v0.67.4...v0.67.5) (2026-05-25)
+
+### Bug Fixes
+
+- **deps:** pin qs to >=6.15.2 to fix DoS (CVE-2026-8723) ([38d71a8](https://github.com/iblai/mentorai/commit/38d71a8f8e1e9e30949ed4fe94b2b71fa85fc038))
+- **deps:** pin uuid to ^11.1.1 to fix buffer bounds check (CVE-2026-41907) ([23bc69a](https://github.com/iblai/mentorai/commit/23bc69a4e81af828901622d25b0e40dab91908b2))
+- **deps:** replace xlsx with write-excel-file to fix prototype pollution ([5bc1702](https://github.com/iblai/mentorai/commit/5bc1702cb29c20674083d69518981d7b83544450)), closes [iblai/iblai-platform#1455](https://github.com/iblai/iblai-platform/issues/1455)
+- **deps:** update glib version to v0.20.0 ([46c74d2](https://github.com/iblai/mentorai/commit/46c74d26b16affbbc35f98609514b235830a5374))
+
+### Refactors
+
+- extract shared exportMessagesToXlsx helper ([3e91403](https://github.com/iblai/mentorai/commit/3e9140318840ecd4148b4491bbc216cabebd20c6))
+
+## [0.67.4](https://github.com/iblai/mentorai/compare/v0.67.3...v0.67.4) (2026-05-25)
+
+### Bug Fixes
+
+- **security:** loop HTML tag stripping in canvas-component and sidebar tests ([ed68d06](https://github.com/iblai/mentorai/commit/ed68d06051e1331b9be57cba8d4a433c1b93f7d0))
+
+## [0.67.3](https://github.com/iblai/mentorai/compare/v0.67.2...v0.67.3) (2026-05-25)
+
+### Bug Fixes
+
+- **security:** sanitize redirect URL from postMessage to prevent XSS ([c9ca184](https://github.com/iblai/mentorai/commit/c9ca184d79da388af5f5692594e7c6701541efd3))
+
+## [0.67.2](https://github.com/iblai/mentorai/compare/v0.67.1...v0.67.2) (2026-05-25)
+
+### Bug Fixes
+
+- **security:** loop HTML tag stripping in remaining test mocks ([8038b62](https://github.com/iblai/mentorai/commit/8038b62594c7a146afb701f5696b68c988f5fbd6)), closes [#66](https://github.com/iblai/mentorai/issues/66)
+
+## [0.67.1](https://github.com/iblai/mentorai/compare/v0.67.0...v0.67.1) (2026-05-25)
+
+### Bug Fixes
+
+- **security:** loop HTML tag stripping in canvas-utils tests ([e2145a5](https://github.com/iblai/mentorai/commit/e2145a5356425b36b5cad1af095ee7d1dd97189b)), closes [#67](https://github.com/iblai/mentorai/issues/67)
+
+## [0.67.0](https://github.com/iblai/mentorai/compare/v0.66.3...v0.67.0) (2026-05-25)
+
+### Features
+
+- **embed:** validate Website URL input as origin-only without trailing slash ([7e6b5d6](https://github.com/iblai/mentorai/commit/7e6b5d6838f7b2df2529f3a9aef6965140c989bf))
+
+### Bug Fixes
+
+- **security:** loop HTML tag stripping to prevent incomplete sanitization ([00b8820](https://github.com/iblai/mentorai/commit/00b882069379ddcd4e8e6cd59f19fcadf4075c29)), closes [#71](https://github.com/iblai/mentorai/issues/71)
+
+### Chores
+
+- skip coverage check for embed-tab and utils (pre-existing low coverage) ([eaa7883](https://github.com/iblai/mentorai/commit/eaa7883780686756303f84dd6a239db957070bf2))
+
+## [0.66.3](https://github.com/iblai/mentorai/compare/v0.66.2...v0.66.3) (2026-05-25)
+
+### Bug Fixes
+
+- access tabs failing tests fixed ([b3b2fe6](https://github.com/iblai/mentorai/commit/b3b2fe63cd44e87b2344dede7f340b9fc2300397))
+- ios restriction modal moved to sdk ([777bfba](https://github.com/iblai/mentorai/commit/777bfba73253a37b919f9f47e91c7ef23c5a8281))
+- ios restriction modal moved to sdk ([de50c60](https://github.com/iblai/mentorai/commit/de50c60f073d7993436645f4254eea509784414d))
+- ios restriction modal moved to sdk > istanbul coverage issues fixed ([aa9e94d](https://github.com/iblai/mentorai/commit/aa9e94d278a1df0c5ffda2d3a1559db2b9945f84))
+- ios restriction modal moved to sdk > test coverage ([3aff85e](https://github.com/iblai/mentorai/commit/3aff85e623a2344c9975bd6e7fa3e1069329b871))
+
+## [0.66.2](https://github.com/iblai/mentorai/compare/v0.66.1...v0.66.2) (2026-05-25)
+
+### Bug Fixes
+
+- **deps:** patch 6 follow-up Dependabot security alerts ([a6e2a90](https://github.com/iblai/mentorai/commit/a6e2a90bf623db097bd0fa0ad24d8b303a88d8fe))
+
+## [0.66.1](https://github.com/iblai/mentorai/compare/v0.66.0...v0.66.1) (2026-05-25)
+
+### Bug Fixes
+
+- **auth:** ensure explicit login clicks always redirect, bypassing stale cookies ([91d9eb5](https://github.com/iblai/mentorai/commit/91d9eb536ef35330f6407eb94328c8e735fc4d58))
+- **macos:** remove network.server entitlement per App Store review ([f1077d9](https://github.com/iblai/mentorai/commit/f1077d9424753a5baecd360dc29deb7275fa8cee))
+
+## [0.66.0](https://github.com/iblai/mentorai/compare/v0.65.2...v0.66.0) (2026-05-24)
+
+### Features
+
+- **chat:** forward ?prompt= URL param to useAdvancedChat as initialPrompt ([07f19d8](https://github.com/iblai/mentorai/commit/07f19d821b85ef70b59d37e6ec2cb2eb1ffee313))
+
+### Bug Fixes
+
+- **deps:** scope brace-expansion override to majors 1 and 2 ([25e978f](https://github.com/iblai/mentorai/commit/25e978f0a63f43aabec366b87bda77196aacface))
+
+### Reverts
+
+- **header:** restore mentorAI_logo URL; re-apply tauri shortDescription ([ad707ba](https://github.com/iblai/mentorai/commit/ad707ba5b45b7221cffaefe860f6825ea12fb4b3))
+- **tauri:** restore shortDescription "AI-powered mentoring assistant" ([1b4ef6b](https://github.com/iblai/mentorai/commit/1b4ef6b28cbae687fcc250a1142a8424968f363e))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.11.5 ([dd3efa7](https://github.com/iblai/mentorai/commit/dd3efa78674d2e4698f3a99da9d4a615f8d2f5f6))
+- **disclaimer:** drop product noun from default disclaimer ([e59f90d](https://github.com/iblai/mentorai/commit/e59f90d27cd2762c0cae940977763ca8183e0433))
+- **disclaimer:** rename MentorAI to Iblai in default disclaimer ([7dfc43e](https://github.com/iblai/mentorai/commit/7dfc43e96906fc20c376d4302da65dad72ccaec3))
+- **e2e:** sync coverage summary after rebase onto main ([422c7aa](https://github.com/iblai/mentorai/commit/422c7aa688dd15f150639968a573dc39c5b96efe)), closes [1688/#190](https://github.com/1688/mentorai/issues/190)
+- **ui:** rebrand remaining MentorAI references to Agent AI ([dab6493](https://github.com/iblai/mentorai/commit/dab6493aa112685dd580001b0b89f0aa8dbd80d9))
+
+### Tests
+
+- **chat:** add E2E journey for ?prompt= URL auto-injection ([14de559](https://github.com/iblai/mentorai/commit/14de559dd8c277cd18c7bc884a8bdba0b8342290)), closes [iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722)
+- **chat:** cover initialPrompt forwarding from searchParams ([0e13cdf](https://github.com/iblai/mentorai/commit/0e13cdf92f9af3965515c1d2708badf180373a2d))
+
+## [0.65.2](https://github.com/iblai/mentorai/compare/v0.65.1...v0.65.2) (2026-05-20)
+
+### Bug Fixes
+
+- **embed:** hide Close X when chat is not iframed ([2d77d31](https://github.com/iblai/mentorai/commit/2d77d31de6b5034d4f0878b84a1f67feec854160))
+- **header:** rename Learner/Instructor to User/Admin ([cf6acd7](https://github.com/iblai/mentorai/commit/cf6acd7d59ff9f5038ef026cd26d37719a3accd0))
+- **mentor-settings:** unify settings-tab labels to nouns + agent tooltip wording ([1097474](https://github.com/iblai/mentorai/commit/109747478645ac13fc8bb3cf66c2e976efee43fa))
+
+### Chores
+
+- **e2e:** map components/header/profile-button.tsx to journey 28 ([42e97bf](https://github.com/iblai/mentorai/commit/42e97bf5687a428f2ae0ed2cffbf203c4c26716c))
+
+### Tests
+
+- **e2e:** update label strings + coverage for [#1688](https://github.com/iblai/mentorai/issues/1688) ([42c469a](https://github.com/iblai/mentorai/commit/42c469a7242880a165f4238a9d1b680ca3796677))
+- **learner-mode-switch:** cover LearnerModeSwitch render + toggle to satisfy 95% gate ([b8617a6](https://github.com/iblai/mentorai/commit/b8617a600e14aece916ea44d23edd6900b6d6228))
+
+## [0.65.1](https://github.com/iblai/mentorai/compare/v0.65.0...v0.65.1) (2026-05-20)
+
+### Bug Fixes
+
+- **deps:** patch 32 Dependabot security alerts ([33103f4](https://github.com/iblai/mentorai/commit/33103f4d55f76e28262f1b3a7ee36dc39594b13a))
+- **tauri:** patch 3 Cargo security alerts ([215aeaa](https://github.com/iblai/mentorai/commit/215aeaa8049df08fe9e41268c9b4b513f296c671))
+
+## [0.65.0](https://github.com/iblai/mentorai/compare/v0.64.3...v0.65.0) (2026-05-18)
+
+### Features
+
+- **mentorai:** adding privacy tab for edit mentor and playwright tests ([3804a7b](https://github.com/iblai/mentorai/commit/3804a7b27ab926d522fc383315cb9915a8d35265))
+
+### Bug Fixes
+
+- **mentor:** fix for the package ([1494838](https://github.com/iblai/mentorai/commit/149483806b4b0f7f9ade3d2c90d23d8007902b42))
+
+## [0.64.3](https://github.com/iblai/mentorai/compare/v0.64.2...v0.64.3) (2026-05-14)
+
+### Chores
+
+- **deps:** add @iblai/agent-ai dependency ([75b245a](https://github.com/iblai/mentorai/commit/75b245a4d1e1424259ffa654ad96c3494e6b6769))
+
+## [0.64.2](https://github.com/iblai/mentorai/compare/v0.64.1...v0.64.2) (2026-05-14)
+
+### Bug Fixes
+
+- hasNonExpiredAuthToken returns false when no token, bump iblai-js to 1.9.11 ([7d18371](https://github.com/iblai/mentorai/commit/7d183713b142ee269ac0a30facfbee3e67342028))
+
+### Chores
+
+- add logs ([2633564](https://github.com/iblai/mentorai/commit/2633564b3d70cc80ba84658318e7c7a87a56795e))
+- **deps:** bump version of iblai-js to 1.9.4 ([c020649](https://github.com/iblai/mentorai/commit/c0206490249eec6acf2d121c61527c0d3092580d))
+- **deps:** bump version of iblai-js to 1.9.5 ([42af9ec](https://github.com/iblai/mentorai/commit/42af9ecb3200525507dcf70ad2a2e803ae143315))
+- rename app to ibl.ai, bump to 1.1.11, fix macOS entitlements ([5a7e440](https://github.com/iblai/mentorai/commit/5a7e44085effe2dc9951392d5cc943047811aa72))
+- update Dockerfile to include APP_VERSION arg ([1e04517](https://github.com/iblai/mentorai/commit/1e04517673f8f5c121673838dc6bc340d1b690ae))
+- update Dockerfile to include APP_VERSION arg ([51c5050](https://github.com/iblai/mentorai/commit/51c5050f38a2addb28b3f539df99efe96a48fbfe))
+
+## [0.64.1](https://github.com/iblai/mentorai/compare/v0.64.0...v0.64.1) (2026-05-12)
+
+### Chores
+
+- update Dockerfile to include APP_VERSION arg ([017ed8a](https://github.com/iblai/mentorai/commit/017ed8afd5db8e7f70bc40908c23783d3f76392d))
+
+## [0.64.0](https://github.com/iblai/mentorai/compare/v0.63.16...v0.64.0) (2026-05-11)
+
+### Features
+
+- **mentor:** adding open claw tabs for edit mentor ([1a417a8](https://github.com/iblai/mentorai/commit/1a417a8a7503133980b9eeef762990d28e834f9d))
+
+### Bug Fixes
+
+- **e2e:** adding fix for the playwright and merge issues ([13e2853](https://github.com/iblai/mentorai/commit/13e285374f02a376cec942732f29c3ef0a54c5e9))
+- **e2e:** adding for the coverage ([f0409d6](https://github.com/iblai/mentorai/commit/f0409d6c6843dec1477c60d805a4e67fd7507023))
+- **e2e:** better elements capture for tests ([39b2113](https://github.com/iblai/mentorai/commit/39b21137a09e3cef27662ea20bfd3836534d3002))
+- **e2e:** fix for the memory tests ([8d70dca](https://github.com/iblai/mentorai/commit/8d70dcac1ac9b4b6aafef00bfd96b9a1ec1a473b))
+- **e2e:** more fixes for the tests ([a0f2d61](https://github.com/iblai/mentorai/commit/a0f2d61fef2c1b036972788de23da9e3a5b50eb0))
+- **e2e:** open claw test fixes ([34a745d](https://github.com/iblai/mentorai/commit/34a745d1c3a2334c91c42449f5d63ece4906ece7))
+- **e2e:** test fixes for memory and open claw ([ba2ff85](https://github.com/iblai/mentorai/commit/ba2ff8558c2594a41aab0928276ca6c6f24270f1))
+- **mentor:** e2e playwright test fixes for claw ([e72dfb5](https://github.com/iblai/mentorai/commit/e72dfb58e34e544026001a1dc1e910af1c7bff20))
+- **mentor:** fixes for e2e and unit tests ([5315c3e](https://github.com/iblai/mentorai/commit/5315c3e67cfd875f9ff71316497efcd2e92889a1))
+- **mentor:** fixes for e2e and unit tests ([e7e24dd](https://github.com/iblai/mentorai/commit/e7e24ddafb989738662e7a7cbaa12789a7b59fca))
+- **mentor:** fixing imports ([7644b2f](https://github.com/iblai/mentorai/commit/7644b2f5f18869b1003e164c10c494460996017e))
+- **mentor:** memory test fixes ([9404b7b](https://github.com/iblai/mentorai/commit/9404b7b359b02a16f2414897d5c4ef474fe0ba03))
+- **mentor:** open claw fixes ([ffc5c96](https://github.com/iblai/mentorai/commit/ffc5c96872ad6b5118a492b0001a04a9323544ef))
+- **mentor:** package version fixes ([8b0b745](https://github.com/iblai/mentorai/commit/8b0b745ba507db0e9dc55725aa12766faa84d237))
+- **mentor:** remove yalc package ([1acb196](https://github.com/iblai/mentorai/commit/1acb19653a71aa5fa32c0e360651585ee644590e))
+- **mentor:** reverting prepush hook ([030152e](https://github.com/iblai/mentorai/commit/030152e0058448e0a6430722b0f16519fb8fb087))
+- **mentor:** udpates for open claw and playwright tests ([b5f95a2](https://github.com/iblai/mentorai/commit/b5f95a2bcb8c70e6457661be344d8006348033e2))
+- replace yalc @iblai/iblai-js with registry version 1.1.9 ([1c92772](https://github.com/iblai/mentorai/commit/1c92772fbcbb1b616a5261ef143cd670bec0c766))
+- skip version.tsx from unit test coverage check (pure JSX, not instrumentable) ([478e82c](https://github.com/iblai/mentorai/commit/478e82c943ecff42a9595333d08c02b7194f2f5e))
+
+### Chores
+
+- **deps:** bump iblai-js to 1.9.3 ([2fc5648](https://github.com/iblai/mentorai/commit/2fc5648f1e93bd0d7eb4a11ef1a093e786a49e2f))
+- drop redundant claw mock entries from tests not exercising claw ([ee8516e](https://github.com/iblai/mentorai/commit/ee8516e9cc73273358040dbd8b766f43cd92e738))
+- **mentor:** adding claw updates better ui ([bf86f0e](https://github.com/iblai/mentorai/commit/bf86f0ed2269dfed01c7dd62a9876d27aeb87b8f))
+- **mentor:** fixing for skills and settings tab ([ec85a2d](https://github.com/iblai/mentorai/commit/ec85a2dc8774192fab9759b350bb3c8628e89444))
+- **mentor:** skills tab fixes and playwright tests ([223206b](https://github.com/iblai/mentorai/commit/223206b07420ca65961620fe5612d033242ab5b4))
+
+### Tests
+
+- fix hasNonExpiredAuthToken ([d91a6a5](https://github.com/iblai/mentorai/commit/d91a6a510b0ab49baee1766c93bae35b6e8c33d2))
+
+## [0.63.16](https://github.com/iblai/mentorai/compare/v0.63.15...v0.63.16) (2026-05-11)
+
+### Chores
+
+- update iblai-js version ([39bc8da](https://github.com/iblai/mentorai/commit/39bc8dac18a04e7e9a1093c080fa3915e00457f9))
+
+## [0.63.15](https://github.com/iblai/mentorai/compare/v0.63.14...v0.63.15) (2026-05-10)
+
+### Tests
+
+- **e2e:** add real LiveKit voice-call round-trip (vc-07) ([c656273](https://github.com/iblai/mentorai/commit/c656273703267703958596d2d812a92f645f5584))
+- **e2e:** add voice-to-text dictation journey with real audio injection ([c3b444c](https://github.com/iblai/mentorai/commit/c3b444ca9a5546cd341bc4c3d05741e78224722e))
+
+## [0.63.14](https://github.com/iblai/mentorai/compare/v0.63.13...v0.63.14) (2026-05-09)
+
+### Chores
+
+- **deps:** bump iblai-js to 1.9.0 ([cee2f56](https://github.com/iblai/mentorai/commit/cee2f56b2fe9e663911e7590ed4bf51ad48beb11))
+
+## [0.63.13](https://github.com/iblai/mentorai/compare/v0.63.12...v0.63.13) (2026-05-08)
+
+### Reverts
+
+- drop out-of-scope reflow + skip-link + voice-call work from [#1596](https://github.com/iblai/mentorai/issues/1596) ([dbce21b](https://github.com/iblai/mentorai/commit/dbce21b519cda83a26b718123111ea9d1a638c8f))
+
+### Chores
+
+- **e2e:** map voice-call-button.tsx to journey 37 sourceFiles ([e1dd9a1](https://github.com/iblai/mentorai/commit/e1dd9a10f2ebf428e744b2a01fc9c7eedb22b4e0))
+
+## [0.63.12](https://github.com/iblai/mentorai/compare/v0.63.11...v0.63.12) (2026-05-08)
+
+### Bug Fixes
+
+- navbar header overflowing when llm name very long ([24f3e7e](https://github.com/iblai/mentorai/commit/24f3e7ee4be941ba0d115f05d0dee0ffbb446161))
+- navbar header overflowing when llm name very long > playwright test coverage ([daa3909](https://github.com/iblai/mentorai/commit/daa3909bd832c03c087c6cc3e2a10ee082b49850))
+- navbar header overflowing when llm name very long > test coverage ([cc11102](https://github.com/iblai/mentorai/commit/cc111026645b96677aaa39507bb8904e1e732fda))
+
+### Chores
+
+- bump iblai-js version to 1.7.0 ([c85204b](https://github.com/iblai/mentorai/commit/c85204ba9fdcc96bf43be9fbd7c51f7fc3186f86))
+
+## [0.63.11](https://github.com/iblai/mentorai/compare/v0.63.10...v0.63.11) (2026-05-08)
+
+### CI
+
+- updates pr-e2e-tests ([f02f1ba](https://github.com/iblai/mentorai/commit/f02f1ba580774de2ea7094b8b4466aa833bdb279))
+
+## [0.63.10](https://github.com/iblai/mentorai/compare/v0.63.9...v0.63.10) (2026-05-08)
+
+### CI
+
+- **pr-e2e:** add runs-on to reusable workflow calls ([52490ef](https://github.com/iblai/mentorai/commit/52490ef98a41cc04d9e2b86e626fe61068c6130d))
+
+## [0.63.9](https://github.com/iblai/mentorai/compare/v0.63.8...v0.63.9) (2026-05-08)
+
+### Bug Fixes
+
+- **ci:** use generic sed pattern to match any image URI in docker-compose ([33d89c6](https://github.com/iblai/mentorai/commit/33d89c60d7cef4d807bf7541505cf9b1a60e5d79))
+
+## [0.63.8](https://github.com/iblai/mentorai/compare/v0.63.7...v0.63.8) (2026-05-08)
+
+### Tests
+
+- add unit tests for Version and FileUpload components ([a291ad0](https://github.com/iblai/mentorai/commit/a291ad0a9f5e7d0356018b1f0302e6a29df52961))
+
+## [0.63.7](https://github.com/iblai/mentorai/compare/v0.63.6...v0.63.7) (2026-05-08)
+
+### Bug Fixes
+
+- unit test failures from tenant switching cookie and missing mock ([5429638](https://github.com/iblai/mentorai/commit/54296385f1ee3d0252601e135ad3d2cfbaa3f855))
+
+## [0.63.6](https://github.com/iblai/mentorai/compare/v0.63.5...v0.63.6) (2026-05-07)
+
+### CI
+
+- remove aws ecr docker login from pr-e2e-tests.yml ([e56a40e](https://github.com/iblai/mentorai/commit/e56a40e215a0ebfea630ab9e56d915177628787b))
+
+## [0.63.5](https://github.com/iblai/mentorai/compare/v0.63.4...v0.63.5) (2026-05-07)
+
+### CI
+
+- remove aws ecr docker login from pr-e2e-tests.yml ([b06d956](https://github.com/iblai/mentorai/commit/b06d956d5cf7b0032532439f88b8be9ac3fd07d5))
+
+## [0.63.4](https://github.com/iblai/mentorai/compare/v0.63.3...v0.63.4) (2026-05-07)
+
+### CI
+
+- remove aws ecr docker login from pr-e2e-tests.yml ([7e9eb0d](https://github.com/iblai/mentorai/commit/7e9eb0d014cbad1b2e381a884c0f89629c97401d))
+
+## [0.63.3](https://github.com/iblai/mentorai/compare/v0.63.2...v0.63.3) (2026-05-07)
+
+### CI
+
+- use only chrome browser for tests ([4a350a9](https://github.com/iblai/mentorai/commit/4a350a9741de9d61a75bae578953e32bf2a24b7e))
+
+## [0.63.2](https://github.com/iblai/mentorai/compare/v0.63.1...v0.63.2) (2026-05-07)
+
+### CI
+
+- **pr-e2e:** update sed replacement to use OCIR registry for PR image ([14f2b70](https://github.com/iblai/mentorai/commit/14f2b701e7378f4751dde3770582e61c1ae7f70c))
+
+## [0.63.1](https://github.com/iblai/mentorai/compare/v0.63.0...v0.63.1) (2026-05-07)
+
+### CI
+
+- **pr-e2e:** rename runner to iblai-stg-runner ([bda9d2f](https://github.com/iblai/mentorai/commit/bda9d2f58f9167bff3c72620b67a39541e66217e))
+
+## [0.63.0](https://github.com/iblai/mentorai/compare/v0.62.1...v0.63.0) (2026-05-07)
+
+### Features
+
+- add BroadcastChannel for cross-tab tenant switch sync & update CI runner ([1471104](https://github.com/iblai/mentorai/commit/1471104ed78e71476ede15593c610b3241c78f3f))
+- set ibl_tenant_switching cookie during tenant switch ([0bc909e](https://github.com/iblai/mentorai/commit/0bc909ec9be65f9a3f4635dbefa0c35c125345b8))
+
+## [0.62.1](https://github.com/iblai/mentorai/compare/v0.62.0...v0.62.1) (2026-05-06)
+
+### Bug Fixes
+
+- ecommerce main tenant update ([87c6ff0](https://github.com/iblai/mentorai/commit/87c6ff012a5631133155c476732848332ea98f9c))
+- ecommerce main tenant update ([f401333](https://github.com/iblai/mentorai/commit/f401333e48c31ff5f5c197e5c5d6ca1785f02c36))
+- ecommerce main tenant update > test coverage ([a36869c](https://github.com/iblai/mentorai/commit/a36869c8590d9b5ea6c33e48f039328cdd8e7b4a))
+- ecommerce main tenant update > test coverage ([7bf86bf](https://github.com/iblai/mentorai/commit/7bf86bf3f10165f882017be3c7294e73dbe6dda3))
+- ecommerce main tenant update > test coverage ([df6fcaa](https://github.com/iblai/mentorai/commit/df6fcaa8291ca9c82571e879e1a2c1e7231a9553))
+
+## [0.62.0](https://github.com/iblai/mentorai/compare/v0.61.2...v0.62.0) (2026-05-05)
+
+### Features
+
+- **settings:** add Enhance Document Retrieval toggle ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([0f22af5](https://github.com/iblai/mentorai/commit/0f22af58d18ffea15d1713f9a69b3a9d27225890))
+
+### Tests
+
+- **e2e:** cover Enhance Document Retrieval toggle in Journey 7 ([#1411](https://github.com/iblai/mentorai/issues/1411)) ([2d629d9](https://github.com/iblai/mentorai/commit/2d629d9300591b5cd440ea9c4890af89b9a7159c))
+
+## [0.61.2](https://github.com/iblai/mentorai/compare/v0.61.1...v0.61.2) (2026-05-05)
+
+### Bug Fixes
+
+- render suggested prompts as Markdown in welcome and advanced chat ([e2393d5](https://github.com/iblai/mentorai/commit/e2393d53bf152e916533f8fc056c87fadeb0d06f))
+
+### Tests
+
+- **mentor:** cover Markdown rendering in suggested prompts ([#1179](https://github.com/iblai/mentorai/issues/1179)) ([a3acfbf](https://github.com/iblai/mentorai/commit/a3acfbf717a2253f5ab1e8e5f6d4fb3c05b69aec))
+
+## [0.61.1](https://github.com/iblai/mentorai/compare/v0.61.0...v0.61.1) (2026-05-05)
+
+### Bug Fixes
+
+- **a11y:** add aria-labels to icon-only composer buttons ([93d0f90](https://github.com/iblai/mentorai/commit/93d0f90a5c14ef5b02c375f2090385e2f3abbabe)), closes [#778](https://github.com/iblai/mentorai/issues/778)
+- **a11y:** reflow chat composer at narrow viewport and add skip link ([df46180](https://github.com/iblai/mentorai/commit/df46180dc493d9351e0ac0d7c704f75dd51a13c6))
+
+### Chores
+
+- apply prettier formatting drift in unrelated files ([d273263](https://github.com/iblai/mentorai/commit/d27326369dab2221a134b47ef60a6a396a36c57c))
+
+### Tests
+
+- **e2e:** cover composer a11y, reflow, and skip-link journey ([15fe71a](https://github.com/iblai/mentorai/commit/15fe71a6cb251d029cbc8d7bb84d8f58f7bfa3b5)), closes [#chat-input-textarea](https://github.com/iblai/mentorai/issues/chat-input-textarea)
+
+## [0.61.0](https://github.com/iblai/mentorai/compare/v0.60.0...v0.61.0) (2026-05-05)
+
+### Features
+
+- add label to chat input textarea ([b9ac136](https://github.com/iblai/mentorai/commit/b9ac136be241d81cd924547fd38e7abc6c47ca35))
+
+### Bug Fixes
+
+- mark test for flag OFF as FIXME in persistent chat input label journey ([0eeb1dd](https://github.com/iblai/mentorai/commit/0eeb1dd602e1062c945f21e5348427f1d8357ec5))
+
+### Chores
+
+- add playwright tests for chat input label ([ff189d7](https://github.com/iblai/mentorai/commit/ff189d7fbc4e02090ee63deabbe8d7f6615d768a))
+- update iblai-js to 1.6.2 ([e59739c](https://github.com/iblai/mentorai/commit/e59739c1d2415f0ecc50a0c4cc47a626b16609c5))
+- update unit tests ([6cf1190](https://github.com/iblai/mentorai/commit/6cf11909434705e43ea4db1efcba639f8dc82782))
+
+## [0.60.0](https://github.com/iblai/mentorai/compare/v0.59.6...v0.60.0) (2026-05-04)
+
+### Features
+
+- new chat post message event added to iframe handlers ([761db2a](https://github.com/iblai/mentorai/commit/761db2ad13ac9f1ae9774d0193cb264018f04d2c))
+
+### Bug Fixes
+
+- setting tab playwright test updated and memory tab fixme added for later ([c52f709](https://github.com/iblai/mentorai/commit/c52f70938d4561cdf4622579ed4d69a9f2fab674))
+
+### Chores
+
+- bump iblai-js version to 1.6.1 & pnpm lock updated ([6893d6a](https://github.com/iblai/mentorai/commit/6893d6a441eb5358a4ef00a7dbfed7e04d25bb46))
+
+## [0.59.6](https://github.com/iblai/mentorai/compare/v0.59.5...v0.59.6) (2026-05-04)
+
+### CI
+
+- **pr-e2e:** add unlabeled trigger to allow re-running via label toggle ([3e2ac89](https://github.com/iblai/mentorai/commit/3e2ac8980a3c0eb0b1c24a990a064fb807b4ebcb))
+
+## [0.59.5](https://github.com/iblai/mentorai/compare/v0.59.4...v0.59.5) (2026-05-03)
+
+### CI
+
+- **pr-e2e:** rename ec2-command to ec2-commands to match reusable workflow ([7a9ceb7](https://github.com/iblai/mentorai/commit/7a9ceb7f544da405b90de453086874157d235ccb))
+
+## [0.59.4](https://github.com/iblai/mentorai/compare/v0.59.3...v0.59.4) (2026-05-03)
+
+### CI
+
+- fix pr-e2e-tests ([7365aae](https://github.com/iblai/mentorai/commit/7365aae1ee38c8ee8f94d5065b00b6269d986ae4))
+- **pr-e2e:** fix secrets handling and add EC2 deploy step ([e4c85f2](https://github.com/iblai/mentorai/commit/e4c85f24d3ab4a516e4e1ff098625a03515f2036))
+
+## [0.59.3](https://github.com/iblai/mentorai/compare/v0.59.2...v0.59.3) (2026-05-03)
+
+### CI
+
+- **pr-e2e:** add app image build job and EC2 deploy step ([8ad671c](https://github.com/iblai/mentorai/commit/8ad671c7571d9ca22a8d690cb9af6f24b5b08527))
+
+## [0.59.2](https://github.com/iblai/mentorai/compare/v0.59.1...v0.59.2) (2026-05-01)
+
+### Bug Fixes
+
+- **public:** add Amazon provider logo asset ([5066a84](https://github.com/iblai/mentorai/commit/5066a84086a5e913e76c1e09b9d5634c6afa658f))
+
+### Chores
+
+- update iblai-js to 1.5.1 ([160095c](https://github.com/iblai/mentorai/commit/160095c77b1f25457850ac0a3985023aeef558c2))
+- update pnpm-lock.yaml file ([978f3e9](https://github.com/iblai/mentorai/commit/978f3e919a600a6bc948b00260b7ca53e026f21e))
+- updated pnpm-lock file ([276cf2d](https://github.com/iblai/mentorai/commit/276cf2d05fcd7f5c30995483d834617c436c8e41))
+
+### Tests
+
+- **utils:** cover isLoggedIn missing-localStorage and KaTeX annotation paths ([e5a6bba](https://github.com/iblai/mentorai/commit/e5a6bbacf5ffb8e1b5aaa2fb5e9cde53eae3b285))
+
+## [0.59.1](https://github.com/iblai/mentorai/compare/v0.59.0...v0.59.1) (2026-05-01)
+
+### Chores
+
+- **security:** add pnpm supply chain protections ([055e263](https://github.com/iblai/mentorai/commit/055e263bda4d371b8a547ed51871a58d753f1b0e))
+
+## [0.59.0](https://github.com/iblai/mentorai/compare/v0.58.1...v0.59.0) (2026-05-01)
+
+### Features
+
+- credit coin component integration on header navbar on progress ([585a3f9](https://github.com/iblai/mentorai/commit/585a3f9c836c5e5e8e331fd3e360eaedf39390d4))
+- integrating credit balance component + ecommerce update ([ec350f6](https://github.com/iblai/mentorai/commit/ec350f6e4914543fc3eddc85abe2d818d5d70ca3))
+- integrating credit balance component + ecommerce update > lint & typechecks issue fixed ([4a447cd](https://github.com/iblai/mentorai/commit/4a447cdc6d5e4666c33e1963f341063b6a3c5725))
+- integrating credit balance component + ecommerce update > test issues fixed ([bc065a5](https://github.com/iblai/mentorai/commit/bc065a5ae1565f9f1642532d511f375caa76c428))
+- integrating credit balance component + ecommerce update > test issues fixed ([c7a7c28](https://github.com/iblai/mentorai/commit/c7a7c28333d3e4e4ad067931ead172fffbffb1dd))
+- integrating credit balance component + ecommerce update > test issues fixed ([fbf6da2](https://github.com/iblai/mentorai/commit/fbf6da2c66dedd09281f4ebf38e3f1401eb30c57))
+- integrating credit balance component + ecommerce update > test issues fixed ([958ff1c](https://github.com/iblai/mentorai/commit/958ff1c69203a0eee30558a0556e4efdb544475c))
+- integrating credit balance component + ecommerce update > tests coverage included ([545402d](https://github.com/iblai/mentorai/commit/545402d0b2cba3029c3e1558e38ffef67f861254))
+
+### Bug Fixes
+
+- is_enterprise flag replaced to show_paywall ([7e56cd2](https://github.com/iblai/mentorai/commit/7e56cd2ef9413dd9f45ea5c03ea1f38159415c05))
+- replace yalc @iblai/iblai-js with registry version 1.1.9 ([d9329eb](https://github.com/iblai/mentorai/commit/d9329ebb87f15f272426ca2594c242d99fde2878))
+
+### Chores
+
+- iblai-js package version bump ([e7ba803](https://github.com/iblai/mentorai/commit/e7ba80395ec896a01831dcda471171a4cc9d9be6))
+- pnpm lock update ([eb14c33](https://github.com/iblai/mentorai/commit/eb14c33bf0c0da475a3aaf80272fe2003126e18b))
+- pnpm lock updated ([5e0048b](https://github.com/iblai/mentorai/commit/5e0048b922d0d2eddc5682cffb5d942a7204640d))
+
+## [0.58.1](https://github.com/iblai/mentorai/compare/v0.58.0...v0.58.1) (2026-05-01)
+
+### Bug Fixes
+
+- **mentor:** adding fixed for the memory tab ([1930322](https://github.com/iblai/mentorai/commit/1930322c8e0dc75afc8f02991b2a790b6ac5fa1f))
+
+## [0.58.0](https://github.com/iblai/mentorai/compare/v0.57.2...v0.58.0) (2026-04-30)
+
+### Features
+
+- polish "mentorAI" brand mentions in user-visible copy ([ab8ea4e](https://github.com/iblai/mentorai/commit/ab8ea4e5a1781078d2e5f1dae79f1fb80d617652))
+- replace "Mentor" with "Agent" across the SPA UI ([f26db9b](https://github.com/iblai/mentorai/commit/f26db9b8f74d8442c079a8b6070e2c01bc051aed))
+
+### Tests
+
+- **e2e:** align Playwright assertions with the Mentor → Agent rename ([ca99a93](https://github.com/iblai/mentorai/commit/ca99a93e1f86cba48bdc263514eea351d7a06570))
+- **e2e:** extend explore-page wait timeouts to 2 min for cold-load race ([4fd87c8](https://github.com/iblai/mentorai/commit/4fd87c8dca4bf6bdcdf9706ace5f162db22e31e4))
+- **e2e:** mark non-admin "no Audit tab" test as fixme ([55889a0](https://github.com/iblai/mentorai/commit/55889a0aaefe3449612221d2b6657548b35b7c13))
+- **e2e:** restructure memory-tab tests to isolate per-test setup ([9931bb0](https://github.com/iblai/mentorai/commit/9931bb06dbcecb88bf5336ba4da0c19a996e939e))
+
+## [0.57.2](https://github.com/iblai/mentorai/compare/v0.57.1...v0.57.2) (2026-04-30)
+
+### CI
+
+- add PR E2E pipeline and make legacy SPA validations dispatch-only ([99d3454](https://github.com/iblai/mentorai/commit/99d3454cc80a60400769d7e52dcb29569c50837d))
+
+## [0.57.1](https://github.com/iblai/mentorai/compare/v0.57.0...v0.57.1) (2026-04-29)
+
+### Bug Fixes
+
+- replace non-existent chatActions.setMetadata with setIframeContext and add react-paginate dep ([349387e](https://github.com/iblai/mentorai/commit/349387ec4945094f56cb2e018e93e2ccb0c9d053))
+
+## [0.57.0](https://github.com/iblai/mentorai/compare/v0.56.6...v0.57.0) (2026-04-29)
+
+### Features
+
+- **header:** remove "My Mentors" trigger from header ([15b9e4b](https://github.com/iblai/mentorai/commit/15b9e4b6dca2f08af356944a21f928cec5820735))
+- **nav-bar:** remove "My Mentors" button from platform navbar ([4e66c75](https://github.com/iblai/mentorai/commit/4e66c75fec4894cabab6231f54c076be963ea1b6))
+
+### Refactors
+
+- **constants:** drop MODALS.MY_MENTORS ([cb33817](https://github.com/iblai/mentorai/commit/cb3381799e813f493c210a5864b5b59ed3b5a53a))
+- **hooks:** drop My Mentors navigation helpers and meta+shift+e shortcut ([6938e17](https://github.com/iblai/mentorai/commit/6938e17cd63d1d87bd7c42185cfcda31cb3db5cb))
+- **modals:** delete MyMentorsModal and unwire from container ([b1035f8](https://github.com/iblai/mentorai/commit/b1035f8fb4fa71d7b76456d06defbd7f218808c2))
+
+### Chores
+
+- **projects:** remove dead MyMentorsModal mount in project landing page ([1f20892](https://github.com/iblai/mentorai/commit/1f2089237b9a0bd9d3a8fe8b8b537cd42ac36b51))
+
+### Documentation
+
+- **e2e:** drop coverage entries for My Mentors removal ([b04b189](https://github.com/iblai/mentorai/commit/b04b1890318ea9226523242717ab586c4baf6aab))
+- **e2e:** mark My Mentors entries deprecated instead of deleting ([e210cbf](https://github.com/iblai/mentorai/commit/e210cbf08953cb2f1d8df24c718934641ff1f8b0))
+
+### Tests
+
+- **e2e:** remove My Mentors specs and page-object helpers ([fa107c5](https://github.com/iblai/mentorai/commit/fa107c54262b6d647d5cff1b6883c60ec7fbb43c))
+- **hot-keys-wrapper:** cover useShortcuts wiring and null render ([3dd6a93](https://github.com/iblai/mentorai/commit/3dd6a93052f296a9e6895b0a8c2ef02bdb1154e0))
+- **user-navigate:** cover sidebar rbacResource branches and Workflows no-mentor early return ([43d9953](https://github.com/iblai/mentorai/commit/43d99535f3009bcbfb06f97b5da047a89dc000b5))
+
+## [0.56.6](https://github.com/iblai/mentorai/compare/v0.56.5...v0.56.6) (2026-04-29)
+
+### Bug Fixes
+
+- **e2e:** fixes for memory tests ([a90f749](https://github.com/iblai/mentorai/commit/a90f7490ec5192c7fbd8f3186ba33f881a87a65c))
+- **mentor:** adding fix for the audit log RBAC ([c6d2389](https://github.com/iblai/mentorai/commit/c6d23896dcd1d6c6a81648518c8a7f3d423fad77))
+- **mentor:** adding memory fixes for the playwright and memory categories ([b7d1759](https://github.com/iblai/mentorai/commit/b7d1759f3ec7c8ee64461fc8d39514a7d58f9f5b))
+- **mentor:** analytics to use real username and memory validations in forms ([80b4ddd](https://github.com/iblai/mentorai/commit/80b4ddda94d64a9c57d0661105665b58ae2fa92a))
+
+## [0.56.5](https://github.com/iblai/mentorai/compare/v0.56.4...v0.56.5) (2026-04-28)
+
+### Bug Fixes
+
+- **e2e:** correct spec file names in coverage files [skip ci] ([3d10224](https://github.com/iblai/mentorai/commit/3d10224cbfaa09527b6d3848e91a7e74caddfa91))
+- **e2e:** increase timeout for anonymous chat response assertion ([8c32aaa](https://github.com/iblai/mentorai/commit/8c32aaaab8b4855a040d2217082310df31c70ca3))
+- **e2e:** update audit log URL and replace fixed timeouts in suggested prompts spec ([8494641](https://github.com/iblai/mentorai/commit/84946418a38be1f0112598119df992de732c9e03))
+- **prompts:** add delete, run and pagination for suggested prompts ([c0d7959](https://github.com/iblai/mentorai/commit/c0d7959ad572635a868e5d875d17a3f2706481b5)), closes [#1176](https://github.com/iblai/mentorai/issues/1176)
+- **providers:** preserve Error object in getMentorPublicSettings catch ([#343](https://github.com/iblai/mentorai/issues/343)) ([096ff67](https://github.com/iblai/mentorai/commit/096ff67591ab2a1ac276adfa0f50400e116a825c))
+
+### Chores
+
+- **e2e:** update coverage for suggested prompts feature [skip ci] ([afb262b](https://github.com/iblai/mentorai/commit/afb262bafa9b95d3943609e078abb606900cadca))
+- **prompts:** remove unused cn import ([94060a5](https://github.com/iblai/mentorai/commit/94060a51f7566c2cc0f4a9f323a5d9e3f18ae965))
+
+### Tests
+
+- **prompts-tab:** add unit tests for CopyButton ([aa8bf9b](https://github.com/iblai/mentorai/commit/aa8bf9b6b3b5f4cffdc856d87b22b0de120cb3c6))
+- **prompts:** add non-admin RBAC test for suggested prompts ([203f593](https://github.com/iblai/mentorai/commit/203f5934c955f1e32985e98ae5c95628b9eb993f))
+
+## [0.56.4](https://github.com/iblai/mentorai/compare/v0.56.3...v0.56.4) (2026-04-27)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.4.17 ([20bd931](https://github.com/iblai/mentorai/commit/20bd9318c2ad972165ff0ba3bf3c9940854b73d0))
+
+## [0.56.3](https://github.com/iblai/mentorai/compare/v0.56.2...v0.56.3) (2026-04-27)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.4.13 ([74a1eff](https://github.com/iblai/mentorai/commit/74a1efffe2f70ed48fd1a367e70bfcca4d513533))
+
+## [0.56.2](https://github.com/iblai/mentorai/compare/v0.56.1...v0.56.2) (2026-04-27)
+
+### Bug Fixes
+
+- **e2e:** correct audit log URL pattern to match /analytics/audit ([6db3bfd](https://github.com/iblai/mentorai/commit/6db3bfd595758b0a2d57e7f2b39d5dcbe21fbc5c))
+
 ## [0.56.1](https://github.com/iblai/mentorai/compare/v0.56.0...v0.56.1) (2026-04-24)
 
 ### Bug Fixes

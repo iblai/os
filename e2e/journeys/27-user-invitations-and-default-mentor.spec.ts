@@ -127,7 +127,7 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
     if (await advancedTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await advancedTab.click();
       const defaultMentorCombobox = dialog.getByRole('combobox', {
-        name: /default mentor/i,
+        name: /default agent/i,
       });
       if (
         await defaultMentorCombobox

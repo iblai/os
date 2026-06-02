@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ibl.ai OS",
+  "productName": "ibl.ai",
   "identifier": "ai.ibl.mentorai",
-  "version": "1.1.10",
+  "version": "1.1.17",
   "build": {
     "devUrl": "https://mentorai.iblai.app",
     "frontendDist": "offline-shell"
@@ -19,8 +19,8 @@
     ],
     "publisher": "IBL.ai",
     "homepage": "https://ibl.ai",
-    "shortDescription": "AI-powered mentoring assistant",
-    "longDescription": "ibl.ai OS provides intelligent tutoring and learning support with offline capabilities.",
+    "shortDescription": "AI-powered learning assistant",
+    "longDescription": "ibl.ai provides intelligent tutoring and learning support with offline capabilities.",
     "category": "Education",
     "macOS": {
       "minimumSystemVersion": "10.15",

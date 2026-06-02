@@ -10,6 +10,12 @@ let mockSubscriptionState = {
   callToAction: null as string | null,
 };
 
+let mockIsStripeActivated = true;
+
+vi.mock('@/lib/utils', () => ({
+  isStripeActivated: vi.fn(() => mockIsStripeActivated),
+}));
+
 vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => mockDispatch,
   useAppSelector: vi.fn((selector) => {
@@ -25,26 +31,25 @@ vi.mock('@/lib/hooks', () => ({
   }),
 }));
 
-let mockIsAppleDevice = false;
-vi.mock('@/hooks/use-os', () => ({
-  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
-}));
+type MockTenant = {
+  key: string;
+  org: string;
+  is_admin: boolean;
+  is_advertising: boolean;
+};
 
-vi.mock('@/features/subscription/subscription-slice', () => ({
-  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
-    type: 'subscription/setOpenAppleRestrictionModal',
-    payload: val,
-  })),
-}));
+const defaultMockTenant: MockTenant = {
+  key: 'test-tenant',
+  org: 'test-org',
+  is_admin: true,
+  is_advertising: false,
+};
+
+let mockCurrentTenant: MockTenant = { ...defaultMockTenant };
 
 vi.mock('@/hooks/use-user', () => ({
   useCurrentTenant: () => ({
-    currentTenant: {
-      key: 'test-tenant',
-      org: 'test-org',
-      is_admin: true,
-      is_advertising: false,
-    },
+    currentTenant: mockCurrentTenant,
   }),
   useUserTenants: () => ({
     userTenants: [{ key: 'test-tenant' }],
@@ -68,6 +73,7 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
+let mockIsAppleDevice = false;
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   SUBSCRIPTION_V2_TRIGGERS: {
     PRICING_MODAL: 'PRICING_MODAL',
@@ -75,6 +81,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useSubscriptionHandlerV2: () => ({
     bannerButtonTriggerCallback: vi.fn(() => vi.fn()),
   }),
+  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
+  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
+    type: 'appleRestriction/setOpenAppleRestrictionModal',
+    payload: val,
+  })),
 }));
 
 vi.mock('@/components/free-trial-dialog', () => ({
@@ -86,6 +97,8 @@ describe('useShowFreeTrialDialog', () => {
     vi.clearAllMocks();
     mockIsAppleDevice = false;
     mockSubscriptionState = { creditExhausted: false, callToAction: null };
+    mockIsStripeActivated = true;
+    mockCurrentTenant = { ...defaultMockTenant };
   });
 
   describe('initial state', () => {
@@ -194,7 +207,7 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBeNull();
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
           payload: true,
         }),
       );
@@ -215,9 +228,139 @@ describe('useShowFreeTrialDialog', () => {
       expect(actionResult).toBe('done');
       expect(mockDispatch).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'subscription/setOpenAppleRestrictionModal',
+          type: 'appleRestriction/setOpenAppleRestrictionModal',
         }),
       );
+    });
+
+    it('should block action and trigger subscription path on non-Apple when credit exhausted', () => {
+      mockIsAppleDevice = false;
+      mockSubscriptionState = {
+        creditExhausted: true,
+        callToAction: 'PRICING_MODAL',
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+      const mockAction = vi.fn();
+
+      let actionResult: unknown;
+      act(() => {
+        actionResult = result.current.executeWithTrialCheck(mockAction, false);
+      });
+
+      expect(mockAction).not.toHaveBeenCalled();
+      expect(actionResult).toBeNull();
+    });
+
+    it('should block action for non-admin user on main tenant when stripe is activated', () => {
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: false,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+      const mockAction = vi.fn();
+
+      let actionResult: unknown;
+      act(() => {
+        actionResult = result.current.executeWithTrialCheck(mockAction);
+      });
+
+      expect(mockAction).not.toHaveBeenCalled();
+      expect(actionResult).toBeNull();
+    });
+
+    it('should run action for non-admin user on main tenant when stripe is not activated', () => {
+      mockIsStripeActivated = false;
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: false,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+      const mockAction = vi.fn().mockReturnValue('ran');
+
+      let actionResult: unknown;
+      act(() => {
+        actionResult = result.current.executeWithTrialCheck(mockAction);
+      });
+
+      expect(mockAction).toHaveBeenCalled();
+      expect(actionResult).toBe('ran');
+    });
+  });
+
+  describe('isNewlyUserOnPreFreeOrAdvertisingMode', () => {
+    it('returns truthy for non-admin user on main tenant when stripe is activated', () => {
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: false,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+
+      expect(result.current.isNewlyUserOnPreFreeOrAdvertisingMode(true)).toBe(
+        true,
+      );
+    });
+
+    it('returns falsy for non-admin user on main tenant when stripe is not activated', () => {
+      mockIsStripeActivated = false;
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: false,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+
+      expect(
+        result.current.isNewlyUserOnPreFreeOrAdvertisingMode(true),
+      ).toBeFalsy();
+    });
+
+    it('returns truthy for non-admin user on advertising tenant when stripe is activated', () => {
+      mockCurrentTenant = {
+        key: 'other',
+        org: 'other-org',
+        is_admin: false,
+        is_advertising: true,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+
+      expect(result.current.isNewlyUserOnPreFreeOrAdvertisingMode(true)).toBe(
+        true,
+      );
+    });
+
+    it('returns falsy when isAdminAction is false', () => {
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: false,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+
+      expect(
+        result.current.isNewlyUserOnPreFreeOrAdvertisingMode(false),
+      ).toBeFalsy();
+    });
+
+    it('returns falsy when user is admin', () => {
+      mockCurrentTenant = {
+        key: 'main',
+        org: 'main-org',
+        is_admin: true,
+        is_advertising: false,
+      };
+      const { result } = renderHook(() => useShowFreeTrialDialog());
+
+      expect(
+        result.current.isNewlyUserOnPreFreeOrAdvertisingMode(true),
+      ).toBeFalsy();
     });
   });
 });

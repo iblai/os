@@ -69,10 +69,11 @@ export const UploadMenu = ({
           variant="ghost"
           size="icon"
           disabled={disabled}
+          aria-label="Attach file"
           className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#38A1E5] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          <span className="sr-only">Attach File</span>
+          <span className="sr-only">Attach file</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="z-50 w-56 p-2">

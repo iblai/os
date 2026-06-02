@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="public/iblai-logo.png" alt="mentorAI" width="80" />
+  <img src="public/iblai-logo.png" alt="agentAI" width="80" />
 </p>
 
-<h1 align="center">mentorAI</h1>
+<h1 align="center">agentAI</h1>
 
 <p align="center">
-  <strong>Open-source AI mentor platform — build, deploy, and manage intelligent conversational agents in minutes.</strong>
+  <strong>Open-source AI agent platform — build, deploy, and manage intelligent conversational agents in minutes.</strong>
 </p>
 
 <p align="center">
@@ -20,11 +20,11 @@
 
 ---
 
-## What is mentorAI?
+## What is agentAI?
 
-mentorAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI mentors for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
+agentAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
 
-Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — mentorAI gives you the complete stack out of the box.
+Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — agentAI gives you the complete stack out of the box.
 
 ---
 
@@ -44,16 +44,16 @@ Whether you're a university deploying course assistants, a company building inte
 - **Chat history** — full session history with search, export (PDF/CSV), and pagination
 - **Message rating** — thumbs up/down feedback on AI responses
 
-### Mentor Management
+### Agent Management
 
-- **Create & customize mentors** — name, avatar, system prompt, LLM provider, tools, safety filters
-- **Explore page** — discover public, featured, starred, and custom mentors
-- **Mentor categories** — organize mentors by subject and type
-- **Dataset training** — upload documents, connect Google Drive, OneDrive, Dropbox, or crawl websites to train mentors
+- **Create & customize agents** — name, avatar, system prompt, LLM provider, tools, safety filters
+- **Explore page** — discover public, featured, starred, and custom agents
+- **Agent categories** — organize agents by subject and type
+- **Dataset training** — upload documents, connect Google Drive, OneDrive, Dropbox, or crawl websites to train agents
 - **Prompt library** — save and share reusable prompt templates
 - **Guided prompts** — pre-configured conversation starters for end users
-- **Retrain schedules** — automated periodic retraining of mentor knowledge bases
-- **MCP server connections** — extend mentor capabilities with Model Context Protocol tool servers
+- **Retrain schedules** — automated periodic retraining of agent knowledge bases
+- **MCP server connections** — extend agent capabilities with Model Context Protocol tool servers
 
 ### Analytics
 
@@ -71,17 +71,17 @@ Whether you're a university deploying course assistants, a company building inte
 - **SSO authentication** — Single Sign-On with configurable identity providers
 - **Stripe billing** — subscription management, free trials, and usage-based pricing
 - **Notifications** — in-app notification system with alert templates
-- **Custom domains** — host mentors on your own domain
-- **Embed mode** — embed mentors in any website via iframe
+- **Custom domains** — host agents on your own domain
+- **Embed mode** — embed agents in any website via iframe
 - **API keys** — create and manage API keys for programmatic access
 - **User disclaimers** — configurable terms of service and advisory notices
 - **Memory system** — per-learner and conversation-level memory for personalized experiences
 
 ### Projects
 
-- **Collaborative workspaces** — group mentors into project-based collections
+- **Collaborative workspaces** — group agents into project-based collections
 - **Project instructions** — set project-wide context and goals
-- **Mentor assignment** — add/remove mentors from projects dynamically
+- **Agent assignment** — add/remove agents from projects dynamically
 
 ### Cross-Platform
 
@@ -121,8 +121,8 @@ Whether you're a university deploying course assistants, a company building inte
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/iblai/mentor-ai.git
-cd mentor-ai
+git clone https://github.com/iblai/agentai.git
+cd agentai
 ```
 
 ### 2. Install dependencies
@@ -184,8 +184,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Build and run with Docker:
 
 ```bash
-docker build -t mentor-ai .
-docker run -p 5000:5000 --env-file .env.local mentor-ai
+docker build -t agentai .
+docker run -p 5000:5000 --env-file .env.local agentai
 ```
 
 The Dockerfile uses a multi-stage build that produces a minimal standalone image (~67% smaller than a full Node.js image).
@@ -232,7 +232,7 @@ pnpm desktop:build
 ## Architecture
 
 ```
-mentor-ai/
+agentai/
 ├── app/                        # Next.js App Router
 │   ├── platform/               # Main authenticated routes
 │   │   └── [tenantKey]/        # Multi-tenant routing
@@ -353,7 +353,7 @@ Feature flags are set via environment variables prefixed with `NEXT_PUBLIC_`. Th
 
 ## IBL.ai Platform
 
-mentorAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
+agentAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
 
 - **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
 - **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support

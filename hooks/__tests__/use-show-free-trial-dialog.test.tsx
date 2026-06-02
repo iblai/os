@@ -8,6 +8,11 @@ import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 let mockReduxState: any;
 let mockCurrentTenant: any;
 let mockUserTenants: any[];
+let mockIsStripeActivated = true;
+
+vi.mock('@/lib/utils', () => ({
+  isStripeActivated: vi.fn(() => mockIsStripeActivated),
+}));
 
 vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => vi.fn(),
@@ -55,6 +60,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       return callbackSpy;
     },
   }),
+  useOS: () => ({ isAppleDevice: false }),
+  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
+    type: 'appleRestriction/setOpenAppleRestrictionModal',
+    payload: val,
+  })),
 }));
 
 // The fallback dialog component
@@ -86,6 +96,7 @@ beforeEach(() => {
   };
   mockCurrentTenant = { key: 'tenant-123', org: 'org-123', is_admin: true };
   mockUserTenants = [];
+  mockIsStripeActivated = true;
   callbackSpy.mockReset();
   bannerTriggerSpy.mockReset();
 });

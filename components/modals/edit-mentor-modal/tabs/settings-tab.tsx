@@ -27,6 +27,8 @@ import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
+  useGetClawMentorConfigQuery,
+  useUpdateClawMentorConfigMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 
@@ -85,6 +87,9 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  enable_claw: boolean;
+  enable_memory_component: boolean;
+  enable_multi_query_rag: boolean;
 }
 
 export function SettingsTab() {
@@ -114,6 +119,28 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+
+  // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
+  // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
+  // (which may already be a UUID when navigating directly).
+  // @ts-ignore mentor_unique_id is on the API response but not the public type
+  const mentorUuid: string | undefined =
+    // @ts-ignore mentor_unique_id is on the API response but not the public type
+    mentor?.mentor_unique_id ?? activeMentorId;
+
+  // Fetch the claw-config for this mentor. Returns null when no config exists
+  // (the data-layer normalises 404 → null) — that's how we know the mentor is
+  // not yet wired to a Claw instance.
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !tenantKey || !mentorUuid },
+  );
+
+  const [updateClawConfig] = useUpdateClawMentorConfigMutation();
+  // @ts-ignore - enable_memory_component exists on API but not typed
+  const initialMemoryEnabled: boolean =
+    // @ts-ignore - enable_memory_component exists on API but not typed
+    mentor?.enable_memory_component ?? false;
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -171,6 +198,10 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - enable_claw exists in API response but not in type
+      enable_claw: mentor?.enable_claw ?? false,
+      enable_memory_component: initialMemoryEnabled,
+      enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -226,6 +257,29 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
+      if (value.enable_claw !== undefined) {
+        values.enable_claw = value.enable_claw;
+      }
+
+      // Detect whether the Sandbox toggle changed. If it did AND the
+      // mentor is wired to a Claw instance (clawMentorConfig exists), we also
+      // PATCH the claw-config so its `enabled` flag stays in sync with the
+      // mentor-settings intent. When no claw-config exists (404 → null) we
+      // simply skip this — the mentor isn't connected to an instance yet.
+      // @ts-ignore enable_claw exists in API response but not in type
+      const previousEnableClaw: boolean = mentor?.enable_claw ?? false;
+      const enableClawChanged =
+        value.enable_claw !== undefined &&
+        value.enable_claw !== previousEnableClaw;
+      // Only send enable_memory_component if the user actually changed it.
+      if (value.enable_memory_component !== initialMemoryEnabled) {
+        values.enable_memory_component = value.enable_memory_component;
+      }
+
+      if (value.enable_multi_query_rag !== undefined) {
+        values.enable_multi_query_rag = value.enable_multi_query_rag;
+      }
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -237,10 +291,24 @@ export function SettingsTab() {
           },
         }).unwrap();
 
-        toast.success('Mentor updated successfully');
+        if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
+          try {
+            await updateClawConfig({
+              org: tenantKey,
+              mentorUniqueId: mentorUuid,
+              enabled: value.enable_claw,
+            }).unwrap();
+          } catch (clawError) {
+            // Don't fail the whole save flow if syncing the claw-config
+            // fails — the mentor-settings update already succeeded. Log
+            // for diagnostics; the next reload will reflect the truth.
+            console.error(JSON.stringify({ tenant: tenantKey, clawError }));
+          }
+        }
+        toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update mentor');
+        toast.error('Failed to update agent');
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -252,7 +320,7 @@ export function SettingsTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Settings</h3>
           <p className="text-xs text-gray-600">
-            Configure your mentor's basic settings and preferences.
+            Configure your agent's basic settings and preferences.
           </p>
         </div>
       </div>
@@ -298,12 +366,12 @@ export function SettingsTab() {
                               onChange={(e) =>
                                 field.handleChange(e.target.value)
                               }
-                              placeholder="Mentor Name"
+                              placeholder="Agent Name"
                               disabled={isDisabled || disabled}
                             />
                             {hasNoValueAndIsDirty && (
                               <p className="text-xs text-red-500">
-                                Mentor name is required
+                                Agent name is required
                               </p>
                             )}
                           </div>
@@ -369,13 +437,13 @@ export function SettingsTab() {
                               onChange={(e) =>
                                 field.handleChange(e.target.value)
                               }
-                              placeholder="Mentor Description"
+                              placeholder="Agent Description"
                               className="min-h-[150px]"
                               disabled={isDisabled || disabled}
                             />
                             {hasNoValueAndIsDirty && (
                               <p className="text-xs text-red-500">
-                                Mentor description is required
+                                Agent description is required
                               </p>
                             )}
                           </div>
@@ -483,7 +551,7 @@ export function SettingsTab() {
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can view this mentor.</p>
+                                  <p>Control who can view this agent.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -538,7 +606,7 @@ export function SettingsTab() {
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can chat with this mentor.</p>
+                                  <p>Control who can chat with this agent.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -585,7 +653,7 @@ export function SettingsTab() {
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
                                   <p>
-                                    Feature this mentor to highlight it in
+                                    Feature this agent to highlight it in
                                     listings.
                                   </p>
                                 </TooltipContent>
@@ -605,6 +673,43 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
+
+                <form.Field name="enable_claw">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Sandbox
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about sandbox mode"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Sandbox mode for configuring agent settings,
+                                prompts, and skills.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label={`Sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
                 <WithFormPermissions
                   name="is_lti_accessible"
                   // @ts-ignore
@@ -628,7 +733,7 @@ export function SettingsTab() {
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
                                   <p>
-                                    Allows this mentor to be accessible via LTI
+                                    Allows this agent to be accessible via LTI
                                     launches. Unselecting this will immediately
                                     remove access for any users users that have
                                     launched this via LTI.
@@ -643,7 +748,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Is lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label={`Lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
                           />
                         </div>
                       )}
@@ -662,19 +767,20 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Show Attachment
+                              File Attachments
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about show attachment"
+                                  aria-label="More info about file attachments"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
                                   <p>
-                                    Show Attachment Options in Chat Interface
+                                    Show File Attachment Options in Chat
+                                    Interface
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -686,7 +792,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label={`File attachments ${field.state.value ? 'enabled' : 'disabled'}`}
                           />
                         </div>
                       )}
@@ -705,13 +811,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Show Voice Call
+                              Voice Calls
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about show voice call"
+                                  aria-label="More info about voice calls"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -729,7 +835,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label={`Voice calls ${field.state.value ? 'enabled' : 'disabled'}`}
                           />
                         </div>
                       )}
@@ -748,13 +854,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Show Voice Record
+                              Voice Recordings
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about show voice record"
+                                  aria-label="More info about voice recordings"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -773,7 +879,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label={`Voice recordings ${field.state.value ? 'enabled' : 'disabled'}`}
                           />
                         </div>
                       )}
@@ -781,25 +887,25 @@ export function SettingsTab() {
                   )}
                 </WithFormPermissions>
 
-                <form.Field name="forkable">
+                <form.Field name="enable_memory_component">
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Allow Copies
+                          Memory
                         </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger
                               type="button"
-                              aria-label="More info about allow copies"
+                              aria-label="More info about memory"
                             >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
                               <p>
-                                Allow other admins to create a copy of this
-                                mentor.
+                                Allow this agent to remember and reference
+                                information from past conversations.
                               </p>
                             </TooltipContent>
                           </Tooltip>
@@ -811,11 +917,96 @@ export function SettingsTab() {
                           field.handleChange(checked)
                         }
                         disabled={isDisabled}
-                        aria-label={`Allow copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={`Memory ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
                     </div>
                   )}
                 </form.Field>
+
+                <form.Field name="forkable">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Copies
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about copies"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Allow other admins to create a copy of this
+                                agent.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label={`Copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
+                <WithFormPermissions
+                  name="enable_multi_query_rag"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="enable_multi_query_rag">
+                      {(field) => (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#646464]">
+                              Enhanced RAG
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about enhanced rag"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>
+                                    Generates multiple search queries from a
+                                    single user question to retrieve more
+                                    comprehensive and relevant documents.
+                                    Improves answer quality by approaching the
+                                    knowledge base from different angles,
+                                    reducing the chance of missing relevant
+                                    information.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Switch
+                            checked={field.state.value}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(checked)
+                            }
+                            disabled={isDisabled || disabled}
+                            aria-label={`Enhanced rag ${field.state.value ? 'enabled' : 'disabled'}`}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
+                  )}
+                </WithFormPermissions>
               </div>
 
               <WithFormPermissions
@@ -847,7 +1038,7 @@ export function SettingsTab() {
                                     ? field.state.value
                                     : URL.createObjectURL(field.state.value)
                                 }
-                                alt="Mentor"
+                                alt="Agent"
                                 className="h-full w-full rounded-lg object-cover"
                                 height={200}
                                 width={200}

@@ -24,6 +24,7 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+import { redirectToAuthSpa as sdkRedirectToAuthSpa } from '@iblai/iblai-js/web-utils/auth';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,7 +42,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return true;
+    return false;
   }
 
   const tokenExpiry = window.localStorage.getItem(
@@ -82,88 +83,29 @@ export async function redirectToAuthSpa(
   platformKey?: string,
   logout?: boolean,
   saveRedirect = true,
+  explicitUserAction = false,
 ) {
-  // Don't redirect to auth when in Tauri offline mode
-  // Check origin first (most reliable) or Tauri offline flags
-  if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
-    console.log('[redirectToAuthSpa] Skipping redirect - Tauri offline mode', {
-      isOfflineServerOrigin: isOfflineServerOrigin(),
-      isTauriApp: isTauriApp(),
-      isTauriOfflineMode: isTauriOfflineMode(),
-    });
-    return;
-  }
-
-  // Save JWT token before clearing localStorage (needed for Tauri mode)
-  const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-
-  localStorage.clear();
-
-  if (logout || isInIframe()) {
-    // Delete authentication cookies for cross-SPA synchronization
-    const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_current_tenant', currentDomain);
-    deleteCookieOnAllDomains('ibl_user_data', currentDomain);
-    deleteCookieOnAllDomains('ibl_tenant', currentDomain);
-
-    // Set logout timestamp cookie to trigger logout on other SPAs
-    if (!isInIframe()) {
-      setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
-    }
-  }
-
-  if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
-    sendMessageToParentWebsite({ authExpired: true });
-    return;
-  }
-
-  const redirectPath =
-    redirectTo ?? `${window.location.pathname}${window.location.search}`;
-
-  // Never save sso-login routes as redirect paths
-  if (
-    !redirectPath.startsWith('/sso-login') &&
-    !redirectPath.startsWith('/sso-login-complete') &&
-    saveRedirect
-  ) {
-    window.localStorage.setItem(LOCAL_STORAGE_KEYS.REDIRECT_TO, redirectPath);
-  }
-
-  const platform = platformKey ?? getPlatformKey(redirectPath);
-
-  const redirectToUrl = `${window.location.origin}`;
-
-  let authRedirectUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}`;
-
-  authRedirectUrl += `&${QUERY_PARAMS.REDIRECT_TO}=${redirectToUrl}`;
-
-  if (platform) {
-    authRedirectUrl += `&${QUERY_PARAMS.TENANT}=${platform}`;
-  }
-  if (logout) {
-    authRedirectUrl += '&logout=1';
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (isTauriApp()) {
-    // On Tauri (mobile), pass the JWT token as a query param so the auth app can use it
-    if (edxJwtToken) {
-      authRedirectUrl += `&token=${encodeURIComponent(edxJwtToken)}`;
-      console.log('[redirectToAuthSpa] Added edx_jwt_token to auth URL');
-    }
-    // Navigate the main webview directly to the auth URL
-    // This keeps the user within the app
-    console.log(
-      '[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:',
-      authRedirectUrl,
-    );
-    window.location.href = authRedirectUrl;
-  } else {
-    // window.location.href = authRedirectUrl;
-    window.location.href = `/api/auth-redirect?to=${encodeURIComponent(authRedirectUrl)}`;
-    // window.open(authRedirectUrl, "_self");
-  }
+  return sdkRedirectToAuthSpa({
+    redirectTo,
+    platformKey,
+    logout,
+    saveRedirect,
+    forceRedirect: explicitUserAction,
+    authUrl: config.authUrl(),
+    appName: config.iblPlatform(),
+    queryParams: {
+      app: QUERY_PARAMS.APP,
+      redirectTo: QUERY_PARAMS.REDIRECT_TO,
+      tenant: QUERY_PARAMS.TENANT,
+    },
+    redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
+    hasNonExpiredAuthToken,
+    isOffline: () =>
+      isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode()),
+    preserveTokenKey: 'edx_jwt_token',
+    authRedirectProxy: '/api/auth-redirect',
+    isNativeApp: () => isTauriApp(),
+  });
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
@@ -184,6 +126,7 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
 export function redirectToAuthSpaJoinTenant(
   tenantKey?: string,
   redirectUrl?: string,
+  explicitUserAction = false,
 ) {
   const resolvedTenant =
     tenantKey || getPlatformKey(window.location.pathname) || '';
@@ -193,7 +136,13 @@ export function redirectToAuthSpaJoinTenant(
       tenantKey,
       redirectUrl,
     });
-    redirectToAuthSpa(redirectUrl);
+    redirectToAuthSpa(
+      redirectUrl,
+      undefined,
+      undefined,
+      true,
+      explicitUserAction,
+    );
     return;
   }
 
@@ -545,6 +494,15 @@ export function isInIframe() {
   return window?.self !== window?.top;
 }
 
+export function getCookieValue(name: string): string | null {
+  const match = document.cookie.match(
+    new RegExp(
+      '(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)',
+    ),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function deleteCookie(name: string, path: string, domain: string) {
   // Set the cookie expiration date to the past
   const expires = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
@@ -608,6 +566,7 @@ export const handleLogout = (
   callback?: () => void,
 ) => {
   const tenant = window.localStorage.getItem('tenant');
+  console.log('[handleLogout] clearing localstorage');
   window.localStorage.clear();
   window.localStorage.setItem('tenant', tenant ?? '');
 
@@ -635,18 +594,59 @@ export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
+  broadcastTenantSwitching = true,
 ) => {
-  // Clear current tenant cookie before switching
-  const { clearCurrentTenantCookie } = await import(
-    '@iblai/iblai-js/web-utils'
-  );
-  clearCurrentTenantCookie();
+  console.log('############### HANDLE TENANT SWITCHING ###############', {
+    broadcastTenantSwitching,
+  });
+  // Signal to the app that a tenant switch is in progress
+  if (
+    document.cookie.includes('ibl_tenant_switching') &&
+    broadcastTenantSwitching
+  ) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
+    );
+    return;
+  }
+  if (tenant === localStorage.getItem('tenant')) {
+    console.log(
+      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
+    );
+    console.log(
+      `[handleTenantSwitch] Switching from ${localStorage.getItem('tenant')} to ${tenant}`,
+    );
+    return;
+  }
+
+  if (broadcastTenantSwitching) {
+    setCookieForAuth('ibl_tenant_switching', 'true');
+  }
+  // Notify other tabs/windows that a tenant switch is starting
+  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
+    const channel = new BroadcastChannel('ibl-tenant-switch');
+    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
+    channel.close();
+  }
+  if (broadcastTenantSwitching) {
+    // Clear current tenant cookie before switching
+    const { clearCurrentTenantCookie } = await import(
+      '@iblai/iblai-js/web-utils'
+    );
+    clearCurrentTenantCookie();
+  }
   // Preserve the current path before clearing localStorage
   const currentPath = `${window.location.pathname}${window.location.search}`;
   // Get JWT token before clearing localStorage
   const jwtToken = localStorage.getItem('edx_jwt_token');
-  localStorage.clear();
-
+  console.log('[handleTenantSwitch] clearing local storage', {
+    tenant,
+    currentTenant: localStorage.getItem('tenant'),
+  });
+  if (broadcastTenantSwitching) {
+    console.log('[handleTenantSwitch] clearing local storage');
+    localStorage.clear();
+  }
   const url = `${config.authUrl()}/login/complete`;
   const params: Record<string, string> = {
     tenant,
@@ -746,13 +746,26 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
     case 'nvidia':
       return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
+    case 'bedrock':
+    case 'amazon-bedrock':
+    case 'amazon_bedrock':
+    case 'IBLChatBedrock':
+      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
     default:
       return { logo: '/llm-generic-provider.png', name: llmProvider };
   }
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) {
+      targetOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // keep '*' if referrer is unavailable or unparseable
+  }
+  window.parent.postMessage(payload, targetOrigin);
 }
 
 export function isLoggedIn() {
@@ -1526,6 +1539,7 @@ function syncAuthDataToCookies(userObject: Record<string, any>): void {
 }
 
 export function saveUserObjectToLocalStorage(userObject: object) {
+  console.log('[saveUserObjectToLocalStorage] clearing local storage');
   localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;
@@ -1658,7 +1672,7 @@ export function getTenantKeyFromUrl() {
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&
-    (!currentTenant?.is_enterprise || currentTenant?.key === 'main')
+    (currentTenant?.show_paywall || currentTenant?.key === 'main')
   );
 }
 

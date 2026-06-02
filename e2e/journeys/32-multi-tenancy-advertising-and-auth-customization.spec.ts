@@ -9,6 +9,7 @@ import { waitForPageReady } from '../utils/resilient';
 import {
   MENTOR_NEXTJS_HOST,
   FORDHAM_HOST,
+  ADVERTISING_TENANT_MENTOR_URL,
   AUTH_NEXTJS_HOST,
   ENABLE_ADVERTISING_LOGIN_TEST,
 } from '../fixtures/test-data';
@@ -75,17 +76,17 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
     const newMentorBtn = page.getByRole('button', {
-      name: 'New Mentor',
+      name: 'New Agent',
       exact: true,
     });
     if (!(await newMentorBtn.isVisible().catch(() => false))) return;
     await newMentorBtn.click();
     const dialog = page.getByRole('dialog', {
-      name: /create.*mentor|new mentor/i,
+      name: /create.*agent|new agent/i,
     });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     // Fill the mentor creation form
-    const nameInput = dialog.getByPlaceholder(/mentor name|name/i).first();
+    const nameInput = dialog.getByPlaceholder(/agent name|name/i).first();
     if (await nameInput.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await nameInput.fill(`E2E Enterprise Test ${Date.now()}`);
       const createBtn = dialog
@@ -116,22 +117,22 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
       await settingsBtn.click();
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 10_000 });
-      // H28 fix: find and click "Create Mentor" inside the Settings dialog
+      // H28 fix: find and click "Create Agent" inside the Settings dialog
       const createMentorBtn = dialog.getByRole('button', {
-        name: 'Create Mentor',
+        name: 'Create Agent',
       });
       if (
         await createMentorBtn.isVisible({ timeout: 5_000 }).catch(() => false)
       ) {
         await createMentorBtn.click();
         const createDialog = page.getByRole('dialog', {
-          name: /create.*mentor|new mentor/i,
+          name: /create.*agent|new agent/i,
         });
         if (
           await createDialog.isVisible({ timeout: 5_000 }).catch(() => false)
         ) {
           const nameInput = createDialog
-            .getByPlaceholder(/mentor name|name/i)
+            .getByPlaceholder(/agent name|name/i)
             .first();
           if (
             await nameInput.isVisible({ timeout: 3_000 }).catch(() => false)
@@ -154,53 +155,6 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
         }
       }
       await page.keyboard.press('Escape');
-    },
-  );
-
-  // fixme: My Mentors dialog creation flow times out
-  test.fixme(
-    'admin goes to enterprise tenant and creates a new mentor from the My Mentors dialog',
-    async ({ page, navbarPage }) => {
-      const isAdmin = await checkAdminStatus(page);
-      test.skip(!isAdmin, 'Requires admin access');
-      await navbarPage.openMyMentors();
-      const dialog = page.getByRole('dialog');
-      await expect(dialog).toBeVisible({ timeout: 10_000 });
-      // H28 fix: click Create and fill the form
-      const createBtn = dialog.getByRole('button', { name: /create/i });
-      if (await createBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await createBtn.click();
-        const createDialog = page.getByRole('dialog', {
-          name: /create.*mentor|new mentor/i,
-        });
-        if (
-          await createDialog.isVisible({ timeout: 5_000 }).catch(() => false)
-        ) {
-          const nameInput = createDialog
-            .getByPlaceholder(/mentor name|name/i)
-            .first();
-          if (
-            await nameInput.isVisible({ timeout: 3_000 }).catch(() => false)
-          ) {
-            await nameInput.fill(`E2E MyMentors Create ${Date.now()}`);
-            const saveBtn = createDialog
-              .getByRole('button', { name: /create|save/i })
-              .last();
-            if (
-              await saveBtn.isEnabled({ timeout: 3_000 }).catch(() => false)
-            ) {
-              await saveBtn.click();
-              await safeWaitForURL(
-                page,
-                (url) => url.href.includes('/platform/'),
-                { timeout: 30_000 },
-              );
-            }
-          }
-        }
-      } else {
-        await page.keyboard.press('Escape');
-      }
     },
   );
 
@@ -305,6 +259,50 @@ test.describe('Journey 32: Multi-Tenancy — Admin', () => {
       }
     }
     await editMentorPage.close();
+  });
+});
+
+test.describe('Journey 32: Multi-Tenancy — Cross-Tenant Navigation', () => {
+  test('authenticated user on own tenant can navigate to advertising tenant mentor via direct URL', async ({
+    page,
+    browser,
+  }) => {
+    test.skip(
+      !ADVERTISING_TENANT_MENTOR_URL,
+      'Set ADVERTISING_TENANT_MENTOR_URL to enable cross-tenant advertising navigation test',
+    );
+
+    await navigateToMentorApp(page);
+
+    // Verify user is on their own (non-advertising) tenant
+    const ownTenantUrl = page.url();
+    expect(ownTenantUrl).toContain('/platform/');
+
+    // Verify chat input is visible on own tenant
+    const chatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
+      exact: true,
+    });
+    await expect(chatInput).toBeVisible({ timeout: 30_000 });
+
+    // Directly navigate to the advertising tenant mentor URL (simulates pasting URL in browser)
+    await page.goto(ADVERTISING_TENANT_MENTOR_URL, {
+      waitUntil: 'domcontentloaded',
+      timeout: 80_000,
+    });
+
+    await safeWaitForURL(page, (url) => url.href.includes('/platform/'), {
+      timeout: 60_000,
+    });
+
+    await waitForPageReady(page);
+
+    // Verify the chat input field is visible — user was NOT redirected away
+    const advertisingChatInput = page.getByRole('textbox', {
+      name: 'Ask anything',
+      exact: true,
+    });
+    await expect(advertisingChatInput).toBeVisible({ timeout: 30_000 });
   });
 });
 

@@ -798,7 +798,7 @@ describe('EmbedTab Component', () => {
       render(<EmbedTab />);
       expect(screen.getByText('Embed')).toBeInTheDocument();
       expect(
-        screen.getByText('Configure embedding options for your mentor.'),
+        screen.getByText('Configure embedding options for your agent.'),
       ).toBeInTheDocument();
     });
 
@@ -2893,6 +2893,105 @@ describe('EmbedTab Component', () => {
       fireEvent.click(closeButton);
 
       expect(mockSetEmbedCode).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('Show Catalogue Switch', () => {
+    const createFieldByName = (
+      values: Record<string, any>,
+      handleChangeByName: Record<string, ReturnType<typeof vi.fn>> = {},
+    ) => ({
+      handleSubmit: vi.fn(),
+      getFieldValue: vi.fn((name: string) => values[name]),
+      state: { isSubmitting: false },
+      Field: ({ children, name }: any) =>
+        children({
+          state: { value: values[name] ?? '' },
+          handleChange:
+            handleChangeByName[name] ??
+            vi.fn((v: any) => {
+              values[name] = v;
+            }),
+        }),
+      Subscribe: ({ children }: any) => children(['default']),
+    });
+
+    it('renders the Show Catalogue switch with correct label and tooltip', () => {
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          form: createFieldByName({ show_catalogue: false }),
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      expect(screen.getByText('Show Catalogue')).toBeInTheDocument();
+      expect(
+        screen.getByText('Show Catalogue in Chat Interface'),
+      ).toBeInTheDocument();
+    });
+
+    it('renders the Show Catalogue switch with aria-label reflecting state', () => {
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          form: createFieldByName({ show_catalogue: false }),
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      expect(
+        screen.getByLabelText('Show catalogue disabled'),
+      ).toBeInTheDocument();
+    });
+
+    it('reflects enabled state in aria-label when value is true', () => {
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          form: createFieldByName({ show_catalogue: true }),
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      expect(
+        screen.getByLabelText('Show catalogue enabled'),
+      ).toBeInTheDocument();
+    });
+
+    it('calls field.handleChange when the switch is toggled', () => {
+      const handleChange = vi.fn();
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          form: createFieldByName(
+            { show_catalogue: false },
+            { show_catalogue: handleChange },
+          ),
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      const toggle = screen.getByLabelText('Show catalogue disabled');
+      fireEvent.click(toggle);
+
+      expect(handleChange).toHaveBeenCalledWith(true);
+    });
+
+    it('disables the Show Catalogue switch while the form is submitting', () => {
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          form: {
+            ...createFieldByName({ show_catalogue: false }),
+            state: { isSubmitting: true },
+          },
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      const toggle = screen.getByLabelText('Show catalogue disabled');
+      expect(toggle).toBeDisabled();
     });
   });
 });

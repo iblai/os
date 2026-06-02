@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import useEmbedTab from '../hooks/useEmbedTab';
+import { validateWebsiteUrl } from '../utils';
 import { CopyCodeBlock } from '@/components/copy-code-block';
 import {
   Dialog,
@@ -531,7 +532,7 @@ export function EmbedTab() {
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">Embed</h3>
           <p className="text-xs text-gray-600">
-            Configure embedding options for your mentor.
+            Configure embedding options for your agent.
           </p>
         </div>
       </div>
@@ -582,9 +583,9 @@ export function EmbedTab() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p>
-                              Add custom CSS to style your mentor chat
-                              interface. Styles will be applied to the embedded
-                              chat widget.
+                              Add custom CSS to style your agent chat interface.
+                              Styles will be applied to the embedded chat
+                              widget.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -753,7 +754,7 @@ export function EmbedTab() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p>
-                              Add custom JavaScript to enhance your mentor chat
+                              Add custom JavaScript to enhance your agent chat
                               interface. Scripts will be executed when the
                               embedded chat widget loads.
                             </p>
@@ -791,16 +792,16 @@ export function EmbedTab() {
                           </h4>
                           <p className="mb-4 max-w-sm text-center text-xs text-gray-600">
                             For security reasons, the ability to add custom
-                            JavaScript to your mentor is restricted. This
-                            feature requires explicit approval from your
-                            organization's administrator.
+                            JavaScript to your agent is restricted. This feature
+                            requires explicit approval from your organization's
+                            administrator.
                           </p>
                           <div className="flex flex-col items-center gap-2">
                             <p className="text-center text-xs text-gray-500">
                               To request access, please contact support
                             </p>
                             <a
-                              href={`mailto:${supportEmail}?subject=Request%20to%20Enable%20Custom%20JavaScript&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Custom%20JavaScript%20feature%20for%20my%20mentor.%0A%0AMentor%20ID%3A%20${mentorId}%0ATenant%3A%20${tenantKey}%0A%0AThank%20you.`}
+                              href={`mailto:${supportEmail}?subject=Request%20to%20Enable%20Custom%20JavaScript&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Custom%20JavaScript%20feature%20for%20my%20agent.%0A%0AAgent%20ID%3A%20${mentorId}%0ATenant%3A%20${tenantKey}%0A%0AThank%20you.`}
                               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                             >
                               <Mail className="h-3.5 w-3.5" />
@@ -818,7 +819,7 @@ export function EmbedTab() {
                             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
                             <p className="text-xs text-blue-700">
                               Custom JavaScript runs in the context of your
-                              mentor. Ensure your code is secure and doesn't
+                              agent. Ensure your code is secure and doesn't
                               expose sensitive information.
                             </p>
                           </div>
@@ -830,7 +831,7 @@ export function EmbedTab() {
                               placeholder={`// Example JavaScript
 (function() {
   // Custom initialization code
-  console.log('Custom mentor script loaded');
+  console.log('Custom agent script loaded');
 
   // Example: Track chat interactions
   document.addEventListener('click', function(e) {
@@ -1165,7 +1166,7 @@ export function EmbedTab() {
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can view this mentor.</p>
+                                  <p>Control who can view this agent.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -1225,7 +1226,7 @@ export function EmbedTab() {
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can chat with this mentor.</p>
+                                  <p>Control who can chat with this agent.</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -1273,7 +1274,12 @@ export function EmbedTab() {
                   {([allowAnonymous]) =>
                     !allowAnonymous && (
                       <>
-                        <form.Field name="website_url">
+                        <form.Field
+                          name="website_url"
+                          validators={{
+                            onChange: ({ value }) => validateWebsiteUrl(value),
+                          }}
+                        >
                           {(field) => (
                             <div className="space-y-2">
                               <h3 className="text-sm font-medium text-[#646464]">
@@ -1290,7 +1296,8 @@ export function EmbedTab() {
                                 disabled={form.state.isSubmitting}
                               />
                               <p className="text-sm text-red-500">
-                                {createTokenError}
+                                {field.state.meta.errors?.[0] ??
+                                  createTokenError}
                               </p>
                             </div>
                           )}
@@ -1569,6 +1576,36 @@ export function EmbedTab() {
                     </div>
                   )}
                 </form.Field>
+
+                <form.Field name="show_catalogue">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Show Catalogue
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger aria-label="More info about show catalogue">
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>Show Catalogue in Chat Interface</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={form.state.isSubmitting}
+                        aria-label={`Show catalogue ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
                 <hr className="my-4 border-t border-gray-200" />
                 <form.Field name="generateShareableLink">
                   {(field) => (
@@ -1585,7 +1622,7 @@ export function EmbedTab() {
                             <TooltipContent className="ibl-tooltip-content">
                               <p>
                                 Generate a link users can use to chat with this
-                                mentor anonymously
+                                agent anonymously
                               </p>
                             </TooltipContent>
                           </Tooltip>
@@ -2100,7 +2137,7 @@ export function EmbedTab() {
                               onChange={(e) =>
                                 updateConfig('subtitle', e.target.value)
                               }
-                              placeholder="Created with mentorAI"
+                              placeholder="Created with Agentic OS"
                               className="mt-2"
                             />
                           </div>

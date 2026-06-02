@@ -21,7 +21,7 @@ export class ProjectPage {
       name: /add project instructions|edit project instructions/i,
     });
     this.addMentorButton = page
-      .getByRole('button', { name: /add mentor/i })
+      .getByRole('button', { name: /add agent/i })
       .first();
     this.chatInput = page.getByPlaceholder('Ask anything', { exact: true });
     this.sendButton = page.getByRole('button', { name: 'Send message' });

@@ -6,7 +6,10 @@ import {
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
 import { chatActions } from '@iblai/iblai-js/web-utils';
-import { enableChatActionsPopup } from '@/features/chat/chatSlice';
+import {
+  enableChatActionsPopup,
+  setAutoplayLastAiMessage,
+} from '@/features/chat/chatSlice';
 import eventBus, { RemoteEvents } from './eventBus';
 
 export function useIframeHandlers() {
@@ -104,10 +107,20 @@ export function useIframeHandlers() {
     // EDX integration handlers
     'MENTOR:EDX_USAGE_ID': (payload: { edxUsageId: string }) => {
       console.log('EDX Usage ID updated:', payload.edxUsageId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxUsageId: payload.edxUsageId },
+        }),
+      );
     },
 
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
+      dispatch(
+        chatActions.setIframeContext({
+          metadata: { edxCourseId: payload.edxCourseId },
+        }),
+      );
     },
 
     // Safety disclaimer handler
@@ -158,6 +171,17 @@ export function useIframeHandlers() {
         content: message,
         visible: false,
       });
+    },
+    'MENTOR:NEW_CHAT': () => {
+      eventBus.emit(RemoteEvents.newChat);
+    },
+    'MENTOR:ENABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
+      dispatch(setAutoplayLastAiMessage(true));
+      //eventBus.emit(RemoteEvents.enableAutoplayLastAiMessage);
+    },
+    'MENTOR:DISABLE_AUTOPLAY_LAST_AI_MESSAGE': () => {
+      dispatch(setAutoplayLastAiMessage(false));
+      //eventBus.emit(RemoteEvents.disableAutoplayLastAiMessage);
     },
   };
 

@@ -1,8 +1,8 @@
-# MSIX Build Guide for ibl.ai OS
+# MSIX Build Guide for ibl.ai
 
 ## Overview
 
-This guide covers building, testing, and publishing the ibl.ai OS Tauri desktop app as an MSIX package for the Microsoft Store.
+This guide covers building, testing, and publishing the ibl.ai Tauri desktop app as an MSIX package for the Microsoft Store.
 
 Tauri v2 does not produce MSIX natively (only NSIS and MSI). The MSIX is created as a post-build step using Windows SDK tools (`makeappx.exe` + `signtool.exe`).
 
@@ -84,7 +84,7 @@ Output: `msix-output\ibl-ai-os-1.1.9.0-x64.msix`
 
 Double-click the `.msix` file in `msix-output\`. The Windows App Installer dialog will appear - click **Install**.
 
-The app will appear in the Start menu as **ibl.ai OS**.
+The app will appear in the Start menu as **ibl.ai**.
 
 ### 7. Uninstall
 
@@ -161,7 +161,7 @@ Or do it all in one step (includes Tauri build):
 ### 1. Partner Center Setup (DONE)
 
 - [x] Enrolled in Microsoft Partner Center
-- [x] Product created and app name reserved: **ibl.ai OS**
+- [x] Product created and app name reserved: **ibl.ai**
 - [x] Store ID: `9MZPPXDWGWK9`
 - [x] Package Identity Name: `ibl.ai.ibl.aiOS`
 - [x] Publisher ID: `CN=02D69AED-8E37-4338-A36D-57B9C8A6FA57`

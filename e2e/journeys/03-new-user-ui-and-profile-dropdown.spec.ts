@@ -15,15 +15,22 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
     });
   });
 
-  test('newly registered non-admin user goes to navbar and sees New Chat and My Mentors buttons but not admin features', async ({
+  test('newly registered non-admin user goes to navbar and sees New Chat item in dropdown but no My Mentors button', async ({
     nonadminPage,
     nonadminNavbarPage,
   }) => {
+    // My Mentors button was removed from the header in feat-1431;
+    // discovery now flows entirely through the sidebar Explore link.
+    const myMentorsButton = nonadminPage.getByRole('button', {
+      name: /my mentors/i,
+    });
+    await expect(myMentorsButton).not.toBeVisible({ timeout: 5_000 });
+
+    // The mentor dropdown should still expose "New Chat"
     await nonadminNavbarPage.openMentorDropdown();
-    // Non-admin sees at most 2 items (New Chat + My Mentors)
     const items = nonadminPage.getByRole('menuitem');
     const count = await items.count();
-    expect(count).toBeLessThanOrEqual(2);
+    expect(count).toBeGreaterThanOrEqual(1);
   });
 
   test('newly registered user goes to navbar and opens profile dropdown to see exactly 3 items', async ({

@@ -169,7 +169,7 @@ test.describe('Journey 22-B: Admin — Edit Content', () => {
 
     // Toast: "Mentor updated successfully"
     const toast = page
-      .getByText(/mentor updated|advisory.*updated|updated successfully/i)
+      .getByText(/agent updated|advisory.*updated|updated successfully/i)
       .first();
     let toastVisible = false;
     try {

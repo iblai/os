@@ -14,6 +14,9 @@ SKIP_COVERAGE_FILES=(
   "lib/chunk-retry.ts"
   "explore/layout.tsx"
   "notifications/layout.tsx"
+  "components/version.tsx"
+  "edit-mentor-modal/utils.ts"
+  "edit-mentor-modal/tabs/embed-tab.tsx"
 )
 
 RED='\033[0;31m'

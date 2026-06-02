@@ -1,9 +1,9 @@
 export const customErrorMessages = {
   mentorNotFound: {
     key: 'mentorNotFound',
-    header: 'Mentor Not Found',
+    header: 'Agent Not Found',
     message:
-      'The mentor you are looking for does not exist. Please contact our support team if you believe this is an error.',
+      'The agent you are looking for does not exist. Please contact our support team if you believe this is an error.',
   },
   sessionNotFound: {
     key: 'sessionNotFound',

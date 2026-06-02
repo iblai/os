@@ -33,7 +33,6 @@
 		19CC12D5BCCCF48F335F9050 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		43FBF1D0E72EC89B9A91CB69 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 		59DA4705E22AADC994D5E687 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
-		5BCCB488F86B549D13F4F970 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		76BA59E47CB0FADF2B9BA8FD /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		892AB11436B265D48C370312 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		8F4143BC23E2B81F3919EA56 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -92,14 +91,6 @@
 			path = bindings;
 			sourceTree = "<group>";
 		};
-		5BF01BD3E71BB6B9F65DA890 /* debug */ = {
-			isa = PBXGroup;
-			children = (
-				5BCCB488F86B549D13F4F970 /* libapp.a */,
-			);
-			path = debug;
-			sourceTree = "<group>";
-		};
 		634339791682E057B7A4664C /* src */ = {
 			isa = PBXGroup;
 			children = (
@@ -115,14 +106,6 @@
 			);
 			name = src;
 			path = ../../src;
-			sourceTree = "<group>";
-		};
-		73C24CF52817D30348F0DBF7 /* arm64 */ = {
-			isa = PBXGroup;
-			children = (
-				5BF01BD3E71BB6B9F65DA890 /* debug */,
-			);
-			path = arm64;
 			sourceTree = "<group>";
 		};
 		7F8D2E3ACBE909905F7D1208 = {
@@ -160,7 +143,6 @@
 		A6E2199EE3915CDB6F39FDEF /* Externals */ = {
 			isa = PBXGroup;
 			children = (
-				73C24CF52817D30348F0DBF7 /* arm64 */,
 			);
 			path = Externals;
 			sourceTree = "<group>";
@@ -180,13 +162,6 @@
 				F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */,
 			);
 			path = "ibl-ai-os_iOS";
-			sourceTree = "<group>";
-		};
-		"TEMP_01C82AF1-5875-42B3-88D4-776C1428A56E" /* x86_64 */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = x86_64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -278,7 +253,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$HOME/.cargo/bin:/opt/homebrew/bin:$PATH\"\ncargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
+			shellScript = "cargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -320,7 +295,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = ai.ibl.mentorai;
-				PRODUCT_NAME = "ibl.ai OS";
+				PRODUCT_NAME = "ibl.ai";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  x86_64";
@@ -416,7 +391,7 @@
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				PRODUCT_BUNDLE_IDENTIFIER = ai.ibl.mentorai;
-				PRODUCT_NAME = "ibl.ai OS";
+				PRODUCT_NAME = "ibl.ai";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  x86_64";

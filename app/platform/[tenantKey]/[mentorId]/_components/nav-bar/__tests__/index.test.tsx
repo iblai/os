@@ -43,6 +43,12 @@ let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockIsVisiting = false;
 let mockIsAccessingPublicRoute = false;
+let mockCurrentTenant: any = {
+  key: 'test-tenant',
+  is_admin: true,
+  show_paywall: false,
+};
+let mockAllTenants: Array<{ key: string }> = [{ key: 'test-tenant' }];
 let mockMentorSettings: any = {
   mentor: 'Test Mentor',
   mentor_id: 123,
@@ -87,6 +93,16 @@ vi.mock('@/hooks/use-user', () => ({
   useIsVisiting: () => mockIsVisiting,
   useUserIsStudent: () => mockUserIsStudent,
   useUsername: () => 'testuser',
+  useCurrentTenant: () => ({
+    currentTenant: mockCurrentTenant,
+    saveCurrentTenant: vi.fn(),
+  }),
+  useGetAllTenants: () => mockAllTenants,
+}));
+
+vi.mock('@/features/utils', () => ({
+  getUserEmail: () => 'student@example.com',
+  getUserName: () => 'student-user',
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({
@@ -188,6 +204,19 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     }),
     useForkMentorMutation: () => [vi.fn(), { isLoading: false }],
     useEditMentorMutation: () => [vi.fn()],
+    // Stub the claw RTK Query hooks — the test's Redux store doesn't
+    // mount the new clawApiSlice middleware, so calling the real hooks
+    // throws "Middleware for RTK-Query API ... has not been added".
+    // useMentorSegments (used by NavBar) calls these.
+    useGetClawMentorConfigQuery: () => ({
+      data: null,
+      isError: false,
+      isLoading: false,
+    }),
+    useUpdateClawMentorConfigMutation: () => [
+      () => Promise.resolve({}),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -251,6 +280,8 @@ vi.mock('@/lib/utils', () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
   getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
   isLoggedIn: () => true,
+  isStripeActivated: (tenant: { show_paywall?: boolean; key?: string }) =>
+    Boolean(tenant?.show_paywall || tenant?.key === 'main'),
   redirectToAuthSpa: vi.fn(),
   redirectToAuthSpaJoinTenant: vi.fn(),
 }));
@@ -294,21 +325,6 @@ vi.mock('../learner-mode-switch', () => ({
 
 vi.mock('../embed-nav-bar', () => ({
   EmbedNavBar: () => <div data-testid="embed-nav-bar">Embed NavBar</div>,
-}));
-
-vi.mock('@/components/modals/my-mentors-modal', () => ({
-  MyMentorsModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="my-mentors-modal">
-        My Mentors <button onClick={onClose}>Close</button>
-      </div>
-    ) : null,
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
@@ -365,23 +381,22 @@ vi.mock('@/components/modals/auth-modal', () => ({
     ) : null,
 }));
 
+let lastCreditBalanceProps: any = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
+  CreditBalance: (props: any) => {
+    lastCreditBalanceProps = props;
+    return <div data-testid="credit-balance">CreditBalance</div>;
+  },
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  UserProfileModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
+  UserProfileModal: (props: any) =>
+    props.isOpen ? (
       <div data-testid="user-profile-modal">
-        User Profile Modal <button onClick={onClose}>Close</button>
+        User Profile Modal <button onClick={props.onClose}>Close</button>
       </div>
     ) : null,
 }));
@@ -469,6 +484,13 @@ describe('NavBar', () => {
       },
       forkable: false,
     };
+    mockCurrentTenant = {
+      key: 'test-tenant',
+      is_admin: true,
+      show_paywall: false,
+    };
+    mockAllTenants = [{ key: 'test-tenant' }];
+    lastCreditBalanceProps = null;
     // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -564,7 +586,7 @@ describe('NavBar', () => {
       );
 
       expect(
-        screen.getByLabelText('Selected mentor dropdown button'),
+        screen.getByLabelText('Selected agent dropdown button'),
       ).toBeInTheDocument();
     });
 
@@ -578,7 +600,7 @@ describe('NavBar', () => {
       );
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeEnabled();
       // Clicking should not throw
@@ -666,11 +688,11 @@ describe('NavBar', () => {
   });
 
   // --------------------------------------------------------------------------
-  // My Mentors Modal Tests
+  // My Mentors removal — issue #1431
   // --------------------------------------------------------------------------
 
-  describe('My Mentors Modal', () => {
-    it('opens My Mentors modal when clicking My Mentors button', async () => {
+  describe('My Mentors removed from navbar', () => {
+    it('does not render any "My Mentors" or "Explore" trigger in the navbar', () => {
       const store = createTestStore();
 
       render(
@@ -679,14 +701,12 @@ describe('NavBar', () => {
         </Provider>,
       );
 
-      // Find and click My Mentors button (contains "My Mentors" text)
-      const myMentorsButton = screen.getByText(/My Mentors/i).closest('button');
-      expect(myMentorsButton).toBeInTheDocument();
-      fireEvent.click(myMentorsButton!);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('my-mentors-modal')).toBeInTheDocument();
-      });
+      expect(screen.queryByText(/^My Mentors$/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Explore mentors'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Explore$/)).not.toBeInTheDocument();
     });
   });
 
@@ -720,7 +740,7 @@ describe('NavBar', () => {
       expect(llmButton).toBeInTheDocument();
 
       const dropdownButton = screen.getByLabelText(
-        'Selected mentor dropdown button',
+        'Selected agent dropdown button',
       );
       expect(dropdownButton).toBeInTheDocument();
     });
@@ -874,7 +894,12 @@ const buildContext = (
   tenantKey: undefined,
   mentorSettings: undefined,
   rbacPermissions: {},
-  flags: { isMemsearchEnabled: true },
+  flags: {
+    isMemsearchEnabled: true,
+    isMemoryComponentEnabled: true,
+    isClawEnabled: false,
+    clawConfigExists: false,
+  },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
   ...overrides,
@@ -1115,7 +1140,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false },
+          flags: {
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1130,7 +1160,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true },
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1145,7 +1180,12 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: true },
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
       const disabled = filterMentorSegments(
@@ -1155,7 +1195,14 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           isAdmin: true,
           tenantKey: 'custom-tenant',
           mentorSettings,
-          flags: { isMemsearchEnabled: false },
+          flags: {
+            // memsearch OFF — the assertion below verifies that this is
+            // the *only* difference between enabled and disabled output.
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+          },
         }),
       );
 
@@ -1201,6 +1248,149 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       // mentorNotOnMainTenant is true (custom-tenant !== 'main'), so the
       // visibility filter passes.
       expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // CreditBalance — paywall + permission gating
+  // --------------------------------------------------------------------------
+
+  describe('CreditBalance gating', () => {
+    function renderNav() {
+      const store = createTestStore();
+      return render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+    }
+
+    it('renders CreditBalance when tenant.show_paywall is true and user is admin', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+
+      renderNav();
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+      expect(lastCreditBalanceProps).toMatchObject({
+        tenant: 'tenant123',
+        enabled: true,
+        mainPlatformKey: 'main',
+        currentUserEmail: 'student@example.com',
+        username: 'student-user',
+      });
+      expect(typeof lastCreditBalanceProps.redirectUrl).toBe('string');
+    });
+
+    it('renders CreditBalance for free-trial users (non-admin on main with one tenant) when paywall is on', () => {
+      mockIsAdmin = false;
+      mockCurrentTenant = {
+        key: 'main',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'main' }];
+
+      renderNav();
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+    });
+
+    it('does NOT render CreditBalance when tenant.show_paywall is false', () => {
+      mockIsAdmin = true;
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+
+      renderNav();
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render CreditBalance for non-admin users without free-trial eligibility', () => {
+      mockIsAdmin = false;
+      // Non-admin on a non-main tenant → not free trial
+      mockCurrentTenant = {
+        key: 'org-tenant',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'org-tenant' }, { key: 'other-tenant' }];
+
+      renderNav();
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // LLM name responsive width — fix/nav-bar-header-overflowing-when-llm-name-long
+  //
+  // When CreditBalance is rendered alongside the LLM-name span, the span
+  // shrinks to max-w-[100px] on small screens and stays max-w-[150px] on md+
+  // so the header does not overflow horizontally when the LLM name is long.
+  // When CreditBalance is hidden, no responsive override is applied.
+  // --------------------------------------------------------------------------
+
+  describe('LLM name span responsive width vs CreditBalance', () => {
+    function getLlmNameSpan() {
+      const llmButton = screen.getByLabelText('LLM Model Selector');
+      // Span is the element holding the LLM name text ("GPT-4" per mocks)
+      return llmButton.querySelector('span');
+    }
+
+    it('applies the tighter responsive max-width when CreditBalance is displayed', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('max-w-[100px]');
+      expect(span!.className).toContain('md:max-w-[150px]');
+    });
+
+    it('does not apply the responsive override when CreditBalance is hidden', () => {
+      // Stripe disabled on tenant → CreditBalance does not render
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      // Base class always present; the conditional override must NOT be added
+      expect(span!.className).toContain('max-w-[150px]');
+      expect(span!.className).not.toContain('max-w-[100px]');
     });
   });
 });
