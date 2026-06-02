@@ -280,7 +280,14 @@ vi.mock('../export-messages', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   chatApiSlice: {
     util: {
-      updateQueryData: (...args: unknown[]) => updateQueryDataMock(...args),
+      // Re-type as a permissive function — the real RTK Query signature
+      // is heavily typed, but the production call site casts through
+      // `unknown` anyway, so this surface only needs the runtime shape.
+      updateQueryData: (
+        endpoint: string,
+        args: unknown,
+        recipe: (draft: any) => void,
+      ) => updateQueryDataMock(endpoint, args, recipe),
     },
   },
   useAddPinnedMessageMutation: () => [
@@ -644,45 +651,37 @@ function resetState() {
 // jsdom doesn't implement pointer-capture / ResizeObserver / IntersectionObserver
 // that Radix uses; stub them so primitives don't throw.
 beforeAll(() => {
-  if (typeof Element !== 'undefined') {
-    if (!('hasPointerCapture' in Element.prototype)) {
-      // @ts-expect-error — jsdom shim
-      Element.prototype.hasPointerCapture = () => false;
-    }
-    if (!('setPointerCapture' in Element.prototype)) {
-      // @ts-expect-error — jsdom shim
-      Element.prototype.setPointerCapture = () => {};
-    }
-    if (!('releasePointerCapture' in Element.prototype)) {
-      // @ts-expect-error — jsdom shim
-      Element.prototype.releasePointerCapture = () => {};
-    }
-    if (!('scrollIntoView' in Element.prototype)) {
-      // @ts-expect-error — jsdom shim
-      Element.prototype.scrollIntoView = () => {};
-    }
+  // jsdom doesn't ship pointer-capture / ResizeObserver / IntersectionObserver
+  // that Radix uses internally. Patch them onto the globals as `any` so we
+  // don't depend on which DOM lib version TS is using.
+  const elProto = (Element as any)?.prototype;
+  if (elProto) {
+    if (!('hasPointerCapture' in elProto))
+      elProto.hasPointerCapture = () => false;
+    if (!('setPointerCapture' in elProto)) elProto.setPointerCapture = () => {};
+    if (!('releasePointerCapture' in elProto))
+      elProto.releasePointerCapture = () => {};
+    if (!('scrollIntoView' in elProto)) elProto.scrollIntoView = () => {};
   }
   if (typeof window !== 'undefined') {
-    // @ts-expect-error — jsdom shim
-    window.ResizeObserver =
-      window.ResizeObserver ??
+    const w = window as any;
+    w.ResizeObserver =
+      w.ResizeObserver ??
       class {
         observe() {}
         unobserve() {}
         disconnect() {}
       };
-    // @ts-expect-error — jsdom shim
-    window.IntersectionObserver =
-      window.IntersectionObserver ??
+    w.IntersectionObserver =
+      w.IntersectionObserver ??
       class {
         observe() {}
         unobserve() {}
         disconnect() {}
       };
     // SidebarProvider reads matchMedia to detect mobile breakpoints.
-    if (!window.matchMedia) {
-      // @ts-expect-error — jsdom shim
-      window.matchMedia = (query: string) => ({
+    if (!w.matchMedia) {
+      w.matchMedia = (query: string) => ({
         matches: false,
         media: query,
         onchange: null,
@@ -796,14 +795,12 @@ describe('AppSidebar — Agents section', () => {
     const trigger = screen.getAllByRole('button', { name: 'Agents' })[0];
     fireEvent.click(trigger);
     expect(
-      screen.getByRole('button', { name: 'New Agent', exact: true }),
+      screen.getByRole('button', { name: 'New Agent' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'My Agents', exact: true }),
+      screen.getByRole('button', { name: 'My Agents' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Explore', exact: true }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
   });
 
   it('clicking New Agent routes through the trial gate to openCreateMentorModal', () => {
@@ -1523,7 +1520,10 @@ describe('AppSidebar — Analytics trial-gate negative path', () => {
   it('does not navigate when the trial gate blocks the click', () => {
     // Simulate the gate denying: returning null tells handleAnalyticsMenuSelect
     // to return false so the row swallows the click and never calls router.push.
-    executeWithTrialCheckMock.mockImplementation(() => null);
+    // Cast through `any` because the captured spy's inferred return type is
+    // `undefined` from the initial implementation — at runtime the source
+    // checks `result === null` so this is the realistic blocked-gate signal.
+    executeWithTrialCheckMock.mockImplementation((() => null) as any);
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
     pushMock.mockReset();
