@@ -126,7 +126,6 @@ const mockInitializeDataLayer = vi.fn();
 const mockRedirectToAuthSpa = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockIsInIframe = vi.fn(() => false);
-const mockHasNonExpiredAuthToken = vi.fn(() => true);
 
 vi.mock('@/lib/utils', () => ({
   isInIframe: () => mockIsInIframe(),
@@ -141,7 +140,6 @@ vi.mock('@/lib/utils', () => ({
     mockSaveUserObjectToLocalStorage(...args),
   sendMessageToParentWebsite: (...args: unknown[]) =>
     mockSendMessageToParentWebsite(...args),
-  hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
   deleteCookieOnAllDomains: vi.fn(),
@@ -758,15 +756,6 @@ describe('Providers', () => {
         true,
         false,
       );
-    });
-
-    it('redirectToAuthSpa callback is no-op in Tauri offline mode', () => {
-      // Need to test the callback in offline mode – but offline mode renders different JSX
-      // Instead, we test the hasNonExpiredAuthToken callback
-      renderProviders();
-      const hasTokenFn =
-        capturedAuthProviderProps.hasNonExpiredAuthToken as Function;
-      expect(hasTokenFn()).toBe(true); // calls mockHasNonExpiredAuthToken which returns true
     });
 
     it('passes correct pathname with query params', () => {
@@ -1700,14 +1689,6 @@ describe('Providers', () => {
       renderProviders();
       // Callback was invoked during render with isTauriOffline=false, so it calls the real function
       expect(mockRedirectToAuthSpa).toHaveBeenCalled();
-    });
-
-    it('invokes AuthProvider hasNonExpiredAuthToken during render', () => {
-      authProviderCallbacksToInvoke = [
-        { name: 'hasNonExpiredAuthToken', args: [] },
-      ];
-      renderProviders();
-      expect(mockHasNonExpiredAuthToken).toHaveBeenCalled();
     });
 
     it('invokes TenantProvider redirectToAuthSpa during render', () => {
