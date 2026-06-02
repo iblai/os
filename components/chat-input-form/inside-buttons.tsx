@@ -84,7 +84,9 @@ export const InsideButtons = ({
       name: 'Memory',
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
-      action: () => onOptionClick(TOOLS.MEMORY),
+      // Memory uses <MemoryButton> in visible mode and a popover handler in
+      // the hidden dropdown, so this `action` lambda is unreachable.
+      action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
       isEnabled: memoryEnabled && !embedMode && !!username,
     },
   ].filter((item) => item.isEnabled);
@@ -236,7 +238,11 @@ export const InsideButtons = ({
             align="start"
             className="w-96 rounded-lg border border-gray-200 bg-white p-0 shadow-xl"
             onOpenAutoFocus={(e) => e.preventDefault()}
-            onFocusOutside={(e) => e.preventDefault()}
+            // Radix wires this onto a global focus-outside listener that
+            // jsdom cannot reliably trigger from a unit test.
+            onFocusOutside={
+              /* istanbul ignore next */ (e) => e.preventDefault()
+            }
           >
             <MemoryMenu
               onClose={() => setHiddenMemoryPopoverOpen(false)}

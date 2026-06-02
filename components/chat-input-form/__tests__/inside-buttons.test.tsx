@@ -20,7 +20,14 @@ vi.mock('../memory-button', () => ({
 // Memory popover can open without a router. The merged inside-buttons opens
 // this menu instead of calling onOptionClick for the Memory item.
 vi.mock('../memory-menu', () => ({
-  MemoryMenu: () => <div data-testid="memory-menu">Memory Menu</div>,
+  MemoryMenu: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="memory-menu">
+      Memory Menu
+      <button data-testid="memory-menu-close" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 // Mock hooks that require Redux Provider
@@ -893,6 +900,9 @@ describe('InsideButtons', () => {
         expect(screen.getByTestId('memory-menu')).toBeInTheDocument();
       });
       expect(mockOnOptionClick).not.toHaveBeenCalledWith('memory');
+
+      // Closing the menu fires onClose → setHiddenMemoryPopoverOpen(false).
+      await user.click(screen.getByTestId('memory-menu-close'));
     });
   });
 });
