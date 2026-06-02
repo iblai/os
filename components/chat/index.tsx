@@ -1596,17 +1596,24 @@ export function Chat({
   // output, or when the last assistant message already shows any output.
   const lastMessage =
     messages.length > 0 ? messages[messages.length - 1] : undefined;
+  // Reasoning steps and tool calls only count as visible "output" when Verbose
+  // Reasoning is enabled. With it off those surfaces are hidden in the bubble,
+  // so they must not suppress the typing indicator — otherwise the user sees
+  // nothing while the agent reasons before any text streams in.
+  const verboseReasoningEnabled = mentorSettings.showReasoning;
   const lastAssistantHasOutput =
     lastMessage?.role === 'assistant' &&
     ((lastMessage.content ?? '').trim().length > 0 ||
-      (lastMessage.reasoningContent ?? '').trim().length > 0 ||
-      (lastMessage.toolCalls?.length ?? 0) > 0 ||
+      (verboseReasoningEnabled &&
+        ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
+          (lastMessage.toolCalls?.length ?? 0) > 0)) ||
       (lastMessage.artifactVersions?.length ?? 0) > 0);
   const currentStreamHasOutput =
     (currentStreamingMessage?.content ?? '').trim().length > 0 ||
-    isReasoning ||
-    (streamingReasoningContent ?? '').trim().length > 0 ||
-    (streamingToolCalls?.length ?? 0) > 0;
+    (verboseReasoningEnabled &&
+      (isReasoning ||
+        (streamingReasoningContent ?? '').trim().length > 0 ||
+        (streamingToolCalls?.length ?? 0) > 0));
   const showLoadingMessage =
     (isPending || isStreaming) &&
     !currentStreamHasOutput &&

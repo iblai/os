@@ -619,6 +619,93 @@ describe('AIMessageBubble', () => {
     });
   });
 
+  describe('empty bubble suppression', () => {
+    const mockToolCalls = [
+      { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+    ];
+
+    it('renders nothing while streaming with no text and verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      // No text, and both verbose surfaces are gated off -> nothing to show.
+      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByTestId('message-preview')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders when there is text content even with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content="Here is the answer"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+
+    it('renders when the reasoning section is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="visible thoughts"
+          showReasoning={true}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('renders when the tool-call indicator is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={mockToolCalls}
+          showReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+    });
+
+    it('renders an empty-text message that carries actions', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          showReasoning={false}
+          message={{
+            ...mockMessages[1],
+            content: '',
+            actions: [
+              {
+                actionType: 'redirectToAuthSpaJoinTenant',
+                text: 'Join',
+                type: 'primary',
+              },
+            ],
+          }}
+        />,
+      );
+      expect(screen.getByText('Join')).toBeInTheDocument();
+    });
+  });
+
   describe('tool call indicator', () => {
     const mockToolCalls = [
       { id: 'tc1', name: 'web_search_call', log: '', result: '' },

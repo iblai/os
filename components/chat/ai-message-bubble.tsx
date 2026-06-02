@@ -103,6 +103,30 @@ export const AIMessageBubble = forwardRef<
   const isMentorInappropriateContentEnabled =
     tenantMetadata?.mentor_report_inappropriate_content !== false;
   const supportEmail = tenantMetadata?.support_email || config.supportEmail();
+
+  // The reasoning section and tool-call indicator are gated by showReasoning.
+  // While that's off, an assistant message that is still streaming has no text
+  // yet — without the verbose surfaces there would be nothing to show, so the
+  // bubble would render as an empty gray box. Skip rendering entirely until the
+  // bubble has something visible (text, a visible verbose surface, actions, or
+  // an artifact preview); the typing indicator covers the interim.
+  const hasReasoningToShow = !!(showReasoning && reasoningContent);
+  const hasToolCallsToShow = !!(
+    showReasoning &&
+    toolCalls &&
+    toolCalls.length > 0
+  );
+  const hasVisibleContent =
+    (content ?? '').trim().length > 0 ||
+    hasReasoningToShow ||
+    hasToolCallsToShow ||
+    !!message?.actions?.length ||
+    hasArtifactVersions(message);
+
+  if (!hasVisibleContent) {
+    return null;
+  }
+
   return (
     <TooltipProvider>
       <div className="mb-4">
