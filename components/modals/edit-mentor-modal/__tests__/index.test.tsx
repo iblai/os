@@ -700,6 +700,124 @@ describe('EditMentorModal', () => {
       });
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Self-correcting category effect
+  //
+  // The modal mounts a useEffect that snaps `activeCategory` to the first
+  // visible category whenever the current category has no items left (RBAC
+  // changed mid-session, segments toggled, etc.). On first render activeCategory
+  // already matches, so the effect's body never runs without a transition.
+  // Force the transition by mutating the segments mock between an initial
+  // render where Integrations is active and a rerender where only
+  // Configurations remains — that exercises line 135.
+  // --------------------------------------------------------------------------
+
+  describe('self-correcting active-category effect', () => {
+    it('snaps active category to the first visible bucket when its current bucket empties', async () => {
+      // Start: two categories present, active tab lives in Integrations.
+      mockActiveTab = MODALS.EDIT_MENTOR.tabs.mcp;
+      mockFilteredSegments = [
+        makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
+          navCategory: 'configurations',
+        }),
+        makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
+          navCategory: 'integrations',
+        }),
+      ];
+
+      const store = createTestStore();
+      const { rerender } = render(
+        <Provider store={store}>
+          <EditMentorModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      // Confirm we're on Integrations (its pill is selected).
+      await waitFor(() => {
+        const integrations = screen.getAllByRole('tab', {
+          name: 'Integrations',
+        })[0];
+        expect(integrations.getAttribute('aria-selected')).toBe('true');
+      });
+
+      // Now remove all Integrations segments — only Configurations
+      // remains. The active tab `mcp` is gone, so `activeSegment` is
+      // undefined and the sync-from-active-segment effect can't recover
+      // the category. The self-correcting effect at line 135 must fire
+      // and reset activeCategory to 'configurations' (the only visible
+      // bucket).
+      mockFilteredSegments = [
+        makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
+          navCategory: 'configurations',
+        }),
+      ];
+
+      rerender(
+        <Provider store={store}>
+          <EditMentorModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      // After the effect fires, Integrations pill is gone and
+      // Configurations is the (now sole) active strip option. With only
+      // one visible category, the strip itself is hidden — assert via
+      // the rendered segment list: Settings (the only configurations
+      // segment) must be present.
+      await waitFor(() => {
+        expect(
+          screen.getAllByRole('tab', { name: MODALS.EDIT_MENTOR.tabs.settings })
+            .length,
+        ).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Mobile category strip
+  //
+  // The modal renders two parallel category strips — desktop (`hidden lg:flex`)
+  // and mobile (`lg:hidden`). Both run the same `handleCategoryChange`
+  // closure but they are two distinct inline arrow functions in the source,
+  // so they show up as separately-tracked branches in coverage. The earlier
+  // `handleCategoryChange` test only clicks the desktop instance; this one
+  // clicks the mobile instance to cover the onClick at line 317.
+  // --------------------------------------------------------------------------
+
+  describe('mobile category strip', () => {
+    it('clicking the mobile-strip category pill also routes through changeModalTab', async () => {
+      mockFilteredSegments = [
+        makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
+          navCategory: 'configurations',
+        }),
+        makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
+          navCategory: 'integrations',
+        }),
+      ];
+
+      const user = userEvent.setup();
+      render(
+        <Provider store={createTestStore()}>
+          <EditMentorModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      // The desktop strip renders before the mobile strip in DOM order,
+      // so getAllByRole returns [desktop, mobile]. Click index 1 to hit
+      // the mobile button (covers the second inline onClick).
+      const integrationsPills = await screen.findAllByRole('tab', {
+        name: 'Integrations',
+      });
+      expect(integrationsPills.length).toBeGreaterThanOrEqual(2);
+      await user.click(integrationsPills[1]);
+
+      await waitFor(() => {
+        expect(changeModalTabMock).toHaveBeenCalledWith(
+          MODALS.EDIT_MENTOR.tabs.mcp,
+        );
+      });
+    });
+  });
 });
 
 // NOTE: A previous version of this file maintained a local duplicate of
