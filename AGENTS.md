@@ -1,4 +1,4 @@
-# MentorAI — Claude Code Rules
+# OS — Claude Code Rules
 
 ## Formatting
 
