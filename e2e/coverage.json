@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-05-29",
   "summary": {
-    "totalCheckpoints": 399,
-    "coveredCheckpoints": 387,
+    "totalCheckpoints": 408,
+    "coveredCheckpoints": 396,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 47,
@@ -1350,8 +1350,11 @@
       "name": "Projects",
       "spec": "26-projects.spec.ts",
       "sourceFiles": [
+        "app/platform/[tenantKey]/projects/page.tsx",
         "app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx",
-        "components/projects/project-landing-page.tsx"
+        "hooks/user-navigate.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -1376,7 +1379,7 @@
         },
         {
           "id": "proj-05",
-          "description": "Project files modal opens with Add Files button",
+          "description": "Project files modal opens cleanly (no crash) with Add Files button and empty-state 'No files found' or populated table rows; ErrorBoundary appearance is a hard failure (regression guard for web-containers fix)",
           "status": "covered"
         },
         {
@@ -1392,6 +1395,51 @@
         {
           "id": "proj-08",
           "description": "Project can be deleted",
+          "status": "covered"
+        },
+        {
+          "id": "proj-09",
+          "description": "Projects index page renders with h1 heading 'Projects', subtitle, search input and gradient New Project button when reached via sidebar Projects nav button (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-10",
+          "description": "Projects index page shows project cards (name + agent count, no description/timestamp) or empty-state 'No projects found' + Create your first project button (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-11",
+          "description": "New Project button on index page opens create-project modal (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-12",
+          "description": "Project card on index shows name + agent count but no description or timestamp; kebab aria-label 'Project actions' reveals Rename and Delete menu items (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-13",
+          "description": "Clicking a project card on the index navigates to the project chat route /platform/<tenantKey>/projects/<projectId>/<mentorId> (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-14",
+          "description": "Admin renames a project via the index-page card kebab menu (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-15",
+          "description": "Admin deletes a project via the index-page card kebab menu and the card disappears (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-16",
+          "description": "LLM Model Selector navbar button is visible on a mentor chat page but hidden on the projects index page (isProjectsIndexPage guard in nav-bar/index.tsx) (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-17",
+          "description": "On projects index with no mentorId, clicking New Chat sidebar button shows No Agent Selected modal; Explore Agents button navigates to /explore (feat-1821)",
           "status": "covered"
         }
       ]
