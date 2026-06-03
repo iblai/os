@@ -15,6 +15,19 @@ export class ExplorePage {
   readonly typeFilterTrigger: Locator;
   readonly createdByFilterTrigger: Locator;
   readonly clearFiltersButton: Locator;
+  /**
+   * `DefaultMentorsSection` short-circuits to `<EmptyState />` (rendered by
+   * `app/.../explore/_components/empty-state.tsx`) when the mentors query
+   * returns zero results AND is not loading. Test environments with no
+   * seeded mentors hit this path and should not be treated as a code bug.
+   */
+  readonly emptyState: Locator;
+  /**
+   * Always-rendered page chrome: the `<main aria-label="Agent exploration
+   * page">` landmark wraps the entire ExplorePageContent tree, so its
+   * visibility confirms the page mounted regardless of how data resolved.
+   */
+  readonly main: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -56,6 +69,10 @@ export class ExplorePage {
       .getByRole('button', { name: /created by/i })
       .first();
     this.clearFiltersButton = page.getByRole('button', { name: /clear/i });
+    // Empty-state text rendered by `EmptyState` when DefaultMentorsSection
+    // has nothing to show.
+    this.emptyState = page.getByText(/sorry, no agents found/i);
+    this.main = page.getByRole('main', { name: /agent exploration page/i });
   }
 
   async search(query: string): Promise<void> {

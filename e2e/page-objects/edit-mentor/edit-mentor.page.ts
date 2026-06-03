@@ -94,17 +94,24 @@ export class EditMentorPage {
    * Pass the tab name to navigate directly to a specific tab.
    */
   async open(tabName?: string): Promise<void> {
-    // When called after a prior `close()` in the same test, the platform
-    // nav-bar can take a moment to re-mount its dropdown trigger while
-    // Radix tears down the previous dialog portal + overlay. Wait for any
-    // leftover dialog overlay to clear so the nav-bar is interactive,
-    // then resolve the trigger.
-    const lingeringOverlay = this.page.locator(
-      '[data-iblai-dialog-interaction-layer][data-state="open"], [role="dialog"][data-state="open"]',
-    );
-    await lingeringOverlay
+    // Radix Dialog cleanup can leave behind body[data-scroll-locked]
+    // and <body style="pointer-events: none"> when a previous Dialog was
+    // unmounted while still open. Wait for cleanup to complete before
+    // looking for the trigger; otherwise the nav-bar dropdown is in the
+    // DOM but invisible to a11y queries via inherited aria-hidden.
+    await this.page
+      .locator(
+        'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
+      )
       .first()
       .waitFor({ state: 'detached', timeout: 5_000 })
+      .catch(() => {});
+    await this.page
+      .waitForFunction(
+        () => getComputedStyle(document.body).pointerEvents !== 'none',
+        undefined,
+        { timeout: 5_000 },
+      )
       .catch(() => {});
 
     const dropdown = this.page.getByRole('button', {
@@ -113,10 +120,15 @@ export class EditMentorPage {
     await expect(dropdown).toBeVisible({ timeout: 30_000 });
     await dropdown.click();
 
-    // Find the menu item — the dropdown now shows "Modify" to open the edit dialog
-    const menuTarget = this.page
-      .getByRole('menuitem', { name: /modify/i })
-      .or(this.page.getByRole('menuitem', { name: /settings/i }).first());
+    // Find the menu item — under the new SDK CategorizedDropdownMenu,
+    // "Modify" is the fork action and never opens the edit modal. The prior
+    // regex-OR (/modify/i, /settings/i) resolved to whichever matched first,
+    // which is often "Modify". Match "Settings" exactly to open the edit
+    // dialog reliably.
+    const menuTarget = this.page.getByRole('menuitem', {
+      name: 'Settings',
+      exact: true,
+    });
 
     await expect(menuTarget).toBeVisible({ timeout: 10_000 });
     await menuTarget.click();

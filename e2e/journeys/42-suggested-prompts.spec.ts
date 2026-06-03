@@ -173,10 +173,15 @@ test.describe('Journey 42: Suggested Prompts', () => {
     // The Edit Mentor modal should close
     await expect(editMentorPage.dialog).not.toBeVisible({ timeout: 10_000 });
 
-    // The chat input should be populated with the prompt text
-    await expect(chatPage.chatInput).toBeVisible({ timeout: 10_000 });
+    // The chat input should be populated with the prompt text. Use a stable
+    // id-based locator (source: components/chat-input-form.tsx:342 sets
+    // id="chat-input-textarea") because the role+name selector races against
+    // the textarea's aria-labelledby briefly changing during the Redux
+    // re-render that follows the modal close.
+    const chatInputById = page.locator('#chat-input-textarea');
+    await expect(chatInputById).toBeVisible({ timeout: 10_000 });
     if (promptText) {
-      await expect(chatPage.chatInput).toHaveValue(promptText, {
+      await expect(chatInputById).toHaveValue(promptText, {
         timeout: 10_000,
       });
     }
@@ -401,13 +406,19 @@ test.describe('Journey 42: Suggested Prompts', () => {
       const promptText = `Non-admin visible prompt ${Date.now()}`;
       await editMentorPage.prompts.addSuggestedPrompt(promptText);
 
+      // Match the sibling test at line 137 — the prompt list refresh after a
+      // POST can take 30s+ when the backing mentor data is mid-fetch (same
+      // abort+retry race as explore). A 10s ceiling here is racy in CI.
       await expect
         .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
-          timeout: 10_000,
+          timeout: 120_000,
         })
         .toBeGreaterThan(0);
 
       await editMentorPage.close();
+      // Let the mentor-settings refetch triggered by the modal close settle
+      // before flipping user mode, otherwise the user-mode switch click can
+      // land mid-refetch and the subsequent gallery assertions race.
       await waitForPageReady(page);
 
       // ── Switch to User mode (acts as a non-admin / student) ──────────────

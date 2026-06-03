@@ -358,21 +358,29 @@ export function SettingsTab() {
               className="inline-flex h-auto rounded-md bg-gray-100 p-1"
               aria-label="Settings sub-categories"
             >
+              {/*
+                `text-gray-700` overrides Radix TabsList's default
+                `text-muted-foreground` (#737373) which has only 4.3:1
+                contrast against the bg-gray-100 strip — under the WCAG
+                2.1 AA threshold of 4.5:1 and flagged by axe-core in
+                journey 29:146. gray-700 (#374151) gives ~9.3:1 contrast
+                while the active state still darkens to gray-900.
+              */}
               <TabsTrigger
                 value="basic"
-                className="px-3 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
                 Basic
               </TabsTrigger>
               <TabsTrigger
                 value="discovery"
-                className="px-3 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
                 Discovery
               </TabsTrigger>
               <TabsTrigger
                 value="capabilities"
-                className="px-3 py-1.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
                 Capabilities
               </TabsTrigger>

@@ -158,69 +158,165 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const showCategoryStrip = visibleCategories.length > 1;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className={`mx-auto w-[85vw] max-w-7xl gap-0 overflow-hidden p-0 md:w-full`}
-        style={{
-          height: '75vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <DialogDescription className="sr-only">
-          Edit Agent settings, prompts, tools, safety, flow, history, datasets,
-          and API keys
-        </DialogDescription>
-        <div className="scrollbar-none flex-1 overflow-y-auto lg:overflow-hidden">
-          <Tabs
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="flex h-full flex-col lg:flex-row"
-          >
-            {/* Mobile Header */}
-            <div className="lg:hidden">
-              <DialogHeader className="border-b border-gray-200 px-3 py-4">
-                <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit Agent
-                </DialogTitle>
-              </DialogHeader>
-            </div>
-            {/* Desktop Sidebar - 3-category tab strip + filtered segment list */}
-            <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
-              <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
-                <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit Agent
-                </DialogTitle>
-              </DialogHeader>
-              <div className="scrollbar-none flex-1 overflow-y-auto p-2">
-                {/* Standalone Tabs root just for the category strip — it
+    /*
+      The <Dialog> shell is always rendered (even when the parent passes
+      isOpen=false) so Radix can observe the open: true -> false transition
+      and run react-remove-scroll cleanup. If the entire Dialog is unmounted
+      while still open, body[data-scroll-locked] and the sidebar-wrapper's
+      inherited aria-hidden remain in the DOM, breaking the nav-bar dropdown
+      visibility for subsequent interactions / a11y queries.
+
+      Only the heavy <DialogContent> subtree is gated on isOpen so we still
+      skip the expensive render work when the modal is closed.
+
+      The onOpenChange wrapper guards against the initial-mount call where
+      Radix may invoke the handler with o=true; we only want to trigger the
+      parent close callback on the true -> false transition.
+    */
+    <Dialog
+      open={isOpen}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      {isOpen && (
+        <DialogContent
+          className={`mx-auto w-[85vw] max-w-7xl gap-0 overflow-hidden p-0 md:w-full`}
+          style={{
+            height: '75vh',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <DialogDescription className="sr-only">
+            Edit Agent settings, prompts, tools, safety, flow, history,
+            datasets, and API keys
+          </DialogDescription>
+          <div className="scrollbar-none flex-1 overflow-y-auto lg:overflow-hidden">
+            <Tabs
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="flex h-full flex-col lg:flex-row"
+            >
+              {/* Mobile Header */}
+              <div className="lg:hidden">
+                <DialogHeader className="border-b border-gray-200 px-3 py-4">
+                  <DialogTitle className="text-lg font-semibold text-gray-900">
+                    Edit Agent
+                  </DialogTitle>
+                </DialogHeader>
+              </div>
+              {/* Desktop Sidebar - 3-category tab strip + filtered segment list */}
+              <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
+                <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
+                  <DialogTitle className="text-lg font-semibold text-gray-900">
+                    Edit Agent
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="scrollbar-none flex-1 overflow-y-auto p-2">
+                  {/* Standalone Tabs root just for the category strip — it
                     doesn't drive content, only filters the segment list
                     below. Hidden entirely when only one category has
                     items (no point showing a strip with a single pill).
                     Column count is dynamic so 2 visible buckets get a
                     2-col grid instead of 3 with an empty slot. */}
+                  {showCategoryStrip && (
+                    // Plain button group rather than Radix Tabs — the
+                    // category strip only filters the segment list below;
+                    // it does NOT own panel content. Using Tabs here
+                    // produces orphan `aria-controls` on each trigger
+                    // (axe-core flags it under aria-valid-attr-value), so
+                    // we use `<button role="tab" aria-selected>` directly.
+                    //
+                    // Sizing: the 320px sidebar leaves only ~96px per
+                    // grid cell with a 3-category strip. "Configurations"
+                    // (14 chars) at default `text-xs px-2` renders ~107px
+                    // and pushes its sibling cells right (reads as
+                    // "wrong padding on right" on the active Configurations
+                    // pill). Shrinking to `text-[11px] px-1.5` brings it
+                    // to ~89px so all three labels render in full and the
+                    // grid honors its `1fr` share. `whitespace-nowrap` +
+                    // `min-w-0` keeps it on one line even if the parent
+                    // shrinks unexpectedly.
+                    <div
+                      role="tablist"
+                      aria-label="Agent settings categories"
+                      className="mb-2 box-border grid h-auto w-full gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                      style={{
+                        gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {visibleCategories.map((category) => {
+                        const isActive = activeCategory === category.key;
+                        return (
+                          <button
+                            key={category.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            // Mirror Radix Tabs' `data-state` attribute so
+                            // existing test infrastructure that polls
+                            // `data-state="active"` to detect a completed
+                            // category switch (see
+                            // `e2e/page-objects/edit-mentor/edit-mentor.page.ts`
+                            // `navigateToTab`) keeps working without
+                            // every test having to learn about
+                            // `aria-selected` separately.
+                            data-state={isActive ? 'active' : 'inactive'}
+                            // WAI-ARIA tablist pattern: only the active
+                            // tab is in the Tab focus chain; arrow keys
+                            // handle navigation between tabs. Without
+                            // this, every category trigger steals focus
+                            // from the segment list below.
+                            tabIndex={isActive ? 0 : -1}
+                            onClick={() => handleCategoryChange(category.key)}
+                            className={cn(
+                              'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
+                              isActive
+                                ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-gray-100'
+                                : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50',
+                            )}
+                          >
+                            {category.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <TabsList
+                    className="h-auto w-full flex-col space-y-1 bg-transparent p-0"
+                    aria-label="Agent settings tabs"
+                  >
+                    {visibleSidebarItems.map((tab) => (
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        className="w-full justify-start px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-100 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-400 data-[state=active]:font-medium data-[state=active]:text-white dark:text-gray-300 dark:hover:bg-gray-800"
+                        id={`desktop-tab-${tab.value}`}
+                        aria-controls={`panel-${tab.value}`}
+                      >
+                        <tab.icon
+                          className="mr-3 h-4 w-4 flex-shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{tab.label}</span>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              </div>
+
+              {/* Mobile and Tablet — category tab strip + segment select */}
+              <div className="border-b border-gray-200 lg:hidden">
                 {showCategoryStrip && (
-                  // Plain button group rather than Radix Tabs — the
-                  // category strip only filters the segment list below;
-                  // it does NOT own panel content. Using Tabs here
-                  // produces orphan `aria-controls` on each trigger
-                  // (axe-core flags it under aria-valid-attr-value), so
-                  // we use `<button role="tab" aria-selected>` directly.
-                  //
-                  // Sizing: the 320px sidebar leaves only ~96px per
-                  // grid cell with a 3-category strip. "Configurations"
-                  // (14 chars) at default `text-xs px-2` renders ~107px
-                  // and pushes its sibling cells right (reads as
-                  // "wrong padding on right" on the active Configurations
-                  // pill). Shrinking to `text-[11px] px-1.5` brings it
-                  // to ~89px so all three labels render in full and the
-                  // grid honors its `1fr` share. `whitespace-nowrap` +
-                  // `min-w-0` keeps it on one line even if the parent
-                  // shrinks unexpectedly.
+                  // See desktop block above for the sizing rationale —
+                  // mobile has more horizontal room so the labels render
+                  // even more comfortably at `text-[11px] px-1.5`.
                   <div
                     role="tablist"
                     aria-label="Agent settings categories"
-                    className="mb-2 box-border grid h-auto w-full gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                    className="mx-3 mt-2 box-border grid h-auto w-[calc(100%-1.5rem)] gap-1 rounded-lg bg-gray-100 p-1"
                     style={{
                       gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
                     }}
@@ -233,27 +329,18 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                           type="button"
                           role="tab"
                           aria-selected={isActive}
-                          // Mirror Radix Tabs' `data-state` attribute so
-                          // existing test infrastructure that polls
-                          // `data-state="active"` to detect a completed
-                          // category switch (see
-                          // `e2e/page-objects/edit-mentor/edit-mentor.page.ts`
-                          // `navigateToTab`) keeps working without
-                          // every test having to learn about
-                          // `aria-selected` separately.
+                          // See desktop block — mirror Radix `data-state`
+                          // so the e2e page-object's tab-switch wait keeps
+                          // working unchanged. tabIndex matches the
+                          // WAI-ARIA tablist focus pattern.
                           data-state={isActive ? 'active' : 'inactive'}
-                          // WAI-ARIA tablist pattern: only the active
-                          // tab is in the Tab focus chain; arrow keys
-                          // handle navigation between tabs. Without
-                          // this, every category trigger steals focus
-                          // from the segment list below.
                           tabIndex={isActive ? 0 : -1}
                           onClick={() => handleCategoryChange(category.key)}
                           className={cn(
                             'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
                             isActive
-                              ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-gray-100'
-                              : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50',
+                              ? 'bg-white text-gray-900 shadow'
+                              : 'text-gray-600 hover:bg-gray-50',
                           )}
                         >
                           {category.title}
@@ -262,116 +349,51 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     })}
                   </div>
                 )}
-
                 <TabsList
-                  className="h-auto w-full flex-col space-y-1 bg-transparent p-0"
+                  className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
                   aria-label="Agent settings tabs"
                 >
                   {visibleSidebarItems.map((tab) => (
                     <TabsTrigger
                       key={tab.value}
                       value={tab.value}
-                      className="w-full justify-start px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-100 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-400 data-[state=active]:font-medium data-[state=active]:text-white dark:text-gray-300 dark:hover:bg-gray-800"
-                      id={`desktop-tab-${tab.value}`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm',
+                      )}
+                      id={`tab-${tab.value}`}
                       aria-controls={`panel-${tab.value}`}
                     >
                       <tab.icon
-                        className="mr-3 h-4 w-4 flex-shrink-0"
+                        className="h-3 w-3 sm:h-4 sm:w-4"
                         aria-hidden="true"
                       />
-                      <span className="truncate">{tab.label}</span>
+                      <span>{tab.label}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </div>
-            </div>
-
-            {/* Mobile and Tablet — category tab strip + segment select */}
-            <div className="border-b border-gray-200 lg:hidden">
-              {showCategoryStrip && (
-                // See desktop block above for the sizing rationale —
-                // mobile has more horizontal room so the labels render
-                // even more comfortably at `text-[11px] px-1.5`.
-                <div
-                  role="tablist"
-                  aria-label="Agent settings categories"
-                  className="mx-3 mt-2 box-border grid h-auto w-[calc(100%-1.5rem)] gap-1 rounded-lg bg-gray-100 p-1"
-                  style={{
-                    gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {visibleCategories.map((category) => {
-                    const isActive = activeCategory === category.key;
-                    return (
-                      <button
-                        key={category.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        // See desktop block — mirror Radix `data-state`
-                        // so the e2e page-object's tab-switch wait keeps
-                        // working unchanged. tabIndex matches the
-                        // WAI-ARIA tablist focus pattern.
-                        data-state={isActive ? 'active' : 'inactive'}
-                        tabIndex={isActive ? 0 : -1}
-                        onClick={() => handleCategoryChange(category.key)}
-                        className={cn(
-                          'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
-                          isActive
-                            ? 'bg-white text-gray-900 shadow'
-                            : 'text-gray-600 hover:bg-gray-50',
-                        )}
-                      >
-                        {category.title}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <TabsList
-                className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
-                aria-label="Agent settings tabs"
+              {/* Main Content Area - Now takes up 2/3 of the width */}
+              <div
+                className="flex flex-1 flex-col overflow-hidden"
+                style={{ height: '100%' }}
               >
-                {visibleSidebarItems.map((tab) => (
-                  <TabsTrigger
+                {filteredSegments.map((tab) => (
+                  <TabsContent
                     key={tab.value}
                     value={tab.value}
-                    className={cn(
-                      'flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm',
-                    )}
-                    id={`tab-${tab.value}`}
-                    aria-controls={`panel-${tab.value}`}
+                    className="m-0 flex flex-1 flex-col overflow-hidden p-0 data-[state=inactive]:hidden"
+                    style={{ height: '100%' }}
+                    id={`panel-${tab.value}`}
+                    aria-labelledby={`tab-${tab.value}`}
                   >
-                    <tab.icon
-                      className="h-3 w-3 sm:h-4 sm:w-4"
-                      aria-hidden="true"
-                    />
-                    <span>{tab.label}</span>
-                  </TabsTrigger>
+                    {EDIT_MENTOR_TAB_COMPONENTS[tab.value]}
+                  </TabsContent>
                 ))}
-              </TabsList>
-            </div>
-            {/* Main Content Area - Now takes up 2/3 of the width */}
-            <div
-              className="flex flex-1 flex-col overflow-hidden"
-              style={{ height: '100%' }}
-            >
-              {filteredSegments.map((tab) => (
-                <TabsContent
-                  key={tab.value}
-                  value={tab.value}
-                  className="m-0 flex flex-1 flex-col overflow-hidden p-0 data-[state=inactive]:hidden"
-                  style={{ height: '100%' }}
-                  id={`panel-${tab.value}`}
-                  aria-labelledby={`tab-${tab.value}`}
-                >
-                  {EDIT_MENTOR_TAB_COMPONENTS[tab.value]}
-                </TabsContent>
-              ))}
-            </div>
-          </Tabs>
-        </div>
-      </DialogContent>
+              </div>
+            </Tabs>
+          </div>
+        </DialogContent>
+      )}
     </Dialog>
   );
 }

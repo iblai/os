@@ -43,9 +43,21 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
     level: 1,
     exact: true,
   });
-  // The workflows page hydration can stall behind a slow backend response;
-  // a generous ceiling keeps the happy path fast and avoids spurious flakes.
-  await expect(heading).toBeVisible({ timeout: 60_000 });
+  const errorFallback = page.getByText('Failed to load workflows');
+  const searchInput = page.getByPlaceholder('Search workflows...');
+
+  // The workflows page renders only an error placeholder when
+  // useGetWorkflowsQuery fails (transient 401/403 on auth-token race
+  // after sidebar navigation). Race the h1 against the error branch
+  // so we fail fast with a clear message instead of a silent 60s timeout.
+  await expect(heading.or(errorFallback)).toBeVisible({ timeout: 30_000 });
+  if (await errorFallback.isVisible().catch(() => false)) {
+    throw new Error(
+      'Workflows page rendered error state (useGetWorkflowsQuery failed) — likely auth/token race after sidebar navigation',
+    );
+  }
+  // Belt-and-braces: the search input is the stable signal callers care about.
+  await expect(searchInput).toBeVisible({ timeout: 10_000 });
   logger.info('Navigated to workflows list page');
 }
 
