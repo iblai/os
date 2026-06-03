@@ -113,18 +113,18 @@ The skills it references live under `.claude/skills/`:
 
 ## Tech Stack
 
-| Layer       | Technology                                                                                                       |
-| ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| Framework   | Next.js 15, React 19, TypeScript                                                                                 |
-| Styling     | Tailwind CSS 4, Radix UI, shadcn/ui                                                                              |
-| State       | Redux Toolkit, React-Redux                                                                                       |
-| Forms       | React Hook Form, Zod                                                                                             |
-| Editor      | Tiptap (rich text), Markdown (react-markdown, remark, rehype)                                                    |
-| Voice/Video | LiveKit (WebRTC)                                                                                                 |
-| Charts      | Recharts                                                                                                         |
-| Desktop     | Tauri 2 (Rust + WebView)                                                                                         |
-| Testing     | Vitest, Testing Library, Playwright                                                                              |
-| Monitoring  | Sentry                                                                                                           |
+| Layer       | Technology                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Framework   | Next.js 15, React 19, TypeScript                                                                                              |
+| Styling     | Tailwind CSS 4, Radix UI, shadcn/ui                                                                                           |
+| State       | Redux Toolkit, React-Redux                                                                                                    |
+| Forms       | React Hook Form, Zod                                                                                                          |
+| Editor      | Tiptap (rich text), Markdown (react-markdown, remark, rehype)                                                                 |
+| Voice/Video | LiveKit (WebRTC)                                                                                                              |
+| Charts      | Recharts                                                                                                                      |
+| Desktop     | Tauri 2 (Rust + WebView)                                                                                                      |
+| Testing     | Vitest, Testing Library, Playwright                                                                                           |
+| Monitoring  | Sentry                                                                                                                        |
 | SDK         | [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) (version pinned in [`.iblai-js-version`](.iblai-js-version)) |
 
 ---
@@ -360,47 +360,47 @@ The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)*
 
 ### Environment Variables
 
-| Variable                                  | Required | Description                                |
-| ----------------------------------------- | -------- | ------------------------------------------ |
-| `NEXT_PUBLIC_AUTH_URL`                    | Yes      | Authentication service URL (e.g. `https://login.iblai.app`) |
-| `NEXT_PUBLIC_API_BASE_URL`                | Yes      | Consolidated API gateway base (e.g. `https://api.iblai.app`) — the SDK appends `/lms`, `/dm`, `/axd` |
-| `NEXT_PUBLIC_LEGACY_LMS_URL`              | No       | Direct LMS host for asset URLs that can't be proxied (e.g. `https://learn.iblai.app`) |
-| `NEXT_PUBLIC_LMS_URL`                     | No       | Override LMS path; defaults to `${API_BASE}/lms` |
-| `NEXT_PUBLIC_DM_URL`                      | No       | Override DM path; defaults to `${API_BASE}/dm` |
-| `NEXT_PUBLIC_AXD_URL`                     | No       | Override AXD path; defaults to `${API_BASE}/axd` |
-| `NEXT_PUBLIC_MAIN_TENANT_KEY`             | Yes      | Primary tenant identifier                  |
-| `NEXT_PUBLIC_BASE_WS_URL`                 | Yes      | WebSocket server URL                       |
-| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`     | Yes      | LiveKit voice server URL                   |
-| `NEXT_PUBLIC_MENTOR_URL`                  | Yes      | This app's public URL                      |
-| `NEXT_PUBLIC_IBL_PLATFORM`                | Yes      | Platform type (`mentor`)                   |
-| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`         | Yes      | Default mentor template slug               |
-| `NEXT_PUBLIC_STRIPE_ENABLED`              | No       | Enable Stripe billing (`true`/`false`)     |
-| `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER` | No       | Show free trial banner                     |
-| `NEXT_PUBLIC_ENABLE_ADVERTISING`          | No       | Enable advertising features                |
-| `NEXT_PUBLIC_ENABLE_RBAC`                 | No       | Enable RBAC permission checks              |
-| `NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL`   | No       | External pricing page URL                  |
-| `NEXT_PUBLIC_HIDE_ANALYTICS`              | No       | Hide the analytics surface entirely        |
-| `NEXT_PUBLIC_DISABLED_DATASETS`           | No       | Pipe-separated dataset types to hide (e.g. `zip\|courses`) |
-| `NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS`  | No       | Pipe-separated analytics reports to hide   |
-| `NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE` | No | Max dataset upload size in MB              |
-| `NEXT_PUBLIC_SHOW_BASE_MENTOR`            | No       | Show the base/template mentor in the picker |
-| `NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER`  | No       | Disclaimer line shown under mentor settings |
-| `NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC` | No    | Fall back to Gravatar when no profile pic  |
-| `NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL`       | No       | CSS injected into iframe embeds            |
-| `NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED` | No | Swap the logo when running inside an iframe |
-| `NEXT_PUBLIC_IFRAME_FROM_OLD_MENTOR`      | No       | Legacy mentor URL allowed to iframe this app |
-| `NEXT_PUBLIC_HELP_CENTER_URL`             | No       | Help center link in the UI                 |
-| `NEXT_PUBLIC_SUPPORT_EMAIL`               | No       | Support email shown in dialogs             |
-| `NEXT_PUBLIC_APP_BANNER_TEXT`             | No       | Top app banner copy                        |
-| `NEXT_PUBLIC_APP_BANNER_LINK`             | No       | Banner click-through URL                   |
-| `NEXT_PUBLIC_APP_BANNER_LINK_TEXT`        | No       | Banner CTA text                            |
-| `NEXT_PUBLIC_APP_BANNER_BADGE`            | No       | Small badge label next to the banner       |
-| `NEXT_PUBLIC_SHOW_APP_BANNER`             | No       | Toggle the top banner                      |
-| `NEXT_PUBLIC_PLATFORM_BASE_DOMAIN`        | No       | Brand domain (defaults to `iblai.app`)     |
-| `NEXT_PUBLIC_BASE_PATH`                   | No       | URL base path for subdirectory deployments |
-| `NEXT_IMAGE_PATTERNS`                     | No       | Comma-separated allowed image hosts        |
-| `NEXT_PUBLIC_IBL_SENTRY_DSN`              | No       | Sentry DSN for client-side error reporting |
-| `SENTRY_AUTH_TOKEN`                       | No       | Sentry auth token (build-time only)        |
+| Variable                                           | Required | Description                                                                                          |
+| -------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_AUTH_URL`                             | Yes      | Authentication service URL (e.g. `https://login.iblai.app`)                                          |
+| `NEXT_PUBLIC_API_BASE_URL`                         | Yes      | Consolidated API gateway base (e.g. `https://api.iblai.app`) — the SDK appends `/lms`, `/dm`, `/axd` |
+| `NEXT_PUBLIC_LEGACY_LMS_URL`                       | No       | Direct LMS host for asset URLs that can't be proxied (e.g. `https://learn.iblai.app`)                |
+| `NEXT_PUBLIC_LMS_URL`                              | No       | Override LMS path; defaults to `${API_BASE}/lms`                                                     |
+| `NEXT_PUBLIC_DM_URL`                               | No       | Override DM path; defaults to `${API_BASE}/dm`                                                       |
+| `NEXT_PUBLIC_AXD_URL`                              | No       | Override AXD path; defaults to `${API_BASE}/axd`                                                     |
+| `NEXT_PUBLIC_MAIN_TENANT_KEY`                      | Yes      | Primary tenant identifier                                                                            |
+| `NEXT_PUBLIC_BASE_WS_URL`                          | Yes      | WebSocket server URL                                                                                 |
+| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`              | Yes      | LiveKit voice server URL                                                                             |
+| `NEXT_PUBLIC_MENTOR_URL`                           | Yes      | This app's public URL                                                                                |
+| `NEXT_PUBLIC_IBL_PLATFORM`                         | Yes      | Platform type (`mentor`)                                                                             |
+| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`                  | Yes      | Default mentor template slug                                                                         |
+| `NEXT_PUBLIC_STRIPE_ENABLED`                       | No       | Enable Stripe billing (`true`/`false`)                                                               |
+| `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER`          | No       | Show free trial banner                                                                               |
+| `NEXT_PUBLIC_ENABLE_ADVERTISING`                   | No       | Enable advertising features                                                                          |
+| `NEXT_PUBLIC_ENABLE_RBAC`                          | No       | Enable RBAC permission checks                                                                        |
+| `NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL`            | No       | External pricing page URL                                                                            |
+| `NEXT_PUBLIC_HIDE_ANALYTICS`                       | No       | Hide the analytics surface entirely                                                                  |
+| `NEXT_PUBLIC_DISABLED_DATASETS`                    | No       | Pipe-separated dataset types to hide (e.g. `zip\|courses`)                                           |
+| `NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS`           | No       | Pipe-separated analytics reports to hide                                                             |
+| `NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE`    | No       | Max dataset upload size in MB                                                                        |
+| `NEXT_PUBLIC_SHOW_BASE_MENTOR`                     | No       | Show the base/template mentor in the picker                                                          |
+| `NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER`           | No       | Disclaimer line shown under mentor settings                                                          |
+| `NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC`       | No       | Fall back to Gravatar when no profile pic                                                            |
+| `NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL`                | No       | CSS injected into iframe embeds                                                                      |
+| `NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED` | No       | Swap the logo when running inside an iframe                                                          |
+| `NEXT_PUBLIC_IFRAME_FROM_OLD_MENTOR`               | No       | Legacy mentor URL allowed to iframe this app                                                         |
+| `NEXT_PUBLIC_HELP_CENTER_URL`                      | No       | Help center link in the UI                                                                           |
+| `NEXT_PUBLIC_SUPPORT_EMAIL`                        | No       | Support email shown in dialogs                                                                       |
+| `NEXT_PUBLIC_APP_BANNER_TEXT`                      | No       | Top app banner copy                                                                                  |
+| `NEXT_PUBLIC_APP_BANNER_LINK`                      | No       | Banner click-through URL                                                                             |
+| `NEXT_PUBLIC_APP_BANNER_LINK_TEXT`                 | No       | Banner CTA text                                                                                      |
+| `NEXT_PUBLIC_APP_BANNER_BADGE`                     | No       | Small badge label next to the banner                                                                 |
+| `NEXT_PUBLIC_SHOW_APP_BANNER`                      | No       | Toggle the top banner                                                                                |
+| `NEXT_PUBLIC_PLATFORM_BASE_DOMAIN`                 | No       | Brand domain (defaults to `iblai.app`)                                                               |
+| `NEXT_PUBLIC_BASE_PATH`                            | No       | URL base path for subdirectory deployments                                                           |
+| `NEXT_IMAGE_PATTERNS`                              | No       | Comma-separated allowed image hosts                                                                  |
+| `NEXT_PUBLIC_IBL_SENTRY_DSN`                       | No       | Sentry DSN for client-side error reporting                                                           |
+| `SENTRY_AUTH_TOKEN`                                | No       | Sentry auth token (build-time only)                                                                  |
 
 ### Feature Flags
 
@@ -427,29 +427,29 @@ The exact `@iblai/iblai-js` version this app is tested against lives in [`.iblai
 
 ## Scripts
 
-| Script                  | Description                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `pnpm dev`              | Start development server (port 3000)                 |
-| `pnpm build`            | Production build (standalone output)                 |
-| `pnpm start`            | Start production server via `server-wrapper.js`      |
-| `pnpm lint`             | Run ESLint with `--fix`, then `typecheck`            |
-| `pnpm lint:check`       | Lint without auto-fix (CI mode)                      |
-| `pnpm typecheck`        | TypeScript type checking (`tsc --noEmit`)            |
-| `pnpm format`           | Format code with Prettier                            |
-| `pnpm format:check`     | Prettier check without writing (CI mode)             |
-| `pnpm format-lint`      | Run `format` then `lint`                             |
-| `pnpm test`             | Run unit tests (Vitest)                              |
-| `pnpm test:watch`       | Run tests in watch mode                              |
-| `pnpm test:coverage`    | Generate test coverage report                        |
-| `pnpm test:ui`          | Vitest UI runner                                     |
-| `pnpm test:e2e`         | Playwright end-to-end (seeds empty `.auth` fixtures) |
-| `pnpm test:e2e:ui`      | Playwright UI runner                                 |
-| `pnpm test:e2e:headed`  | Playwright in a visible browser                      |
-| `pnpm tauri:dev`        | Start Tauri desktop dev mode                         |
-| `pnpm tauri:build`      | Build Tauri desktop app                              |
-| `pnpm tauri:build:debug`| Tauri debug build (sourcemaps, faster)               |
-| `pnpm release`          | Cut a release via release-it                         |
-| `pnpm prepare`          | Install husky hooks (runs on `pnpm install`)         |
+| Script                   | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `pnpm dev`               | Start development server (port 3000)                 |
+| `pnpm build`             | Production build (standalone output)                 |
+| `pnpm start`             | Start production server via `server-wrapper.js`      |
+| `pnpm lint`              | Run ESLint with `--fix`, then `typecheck`            |
+| `pnpm lint:check`        | Lint without auto-fix (CI mode)                      |
+| `pnpm typecheck`         | TypeScript type checking (`tsc --noEmit`)            |
+| `pnpm format`            | Format code with Prettier                            |
+| `pnpm format:check`      | Prettier check without writing (CI mode)             |
+| `pnpm format-lint`       | Run `format` then `lint`                             |
+| `pnpm test`              | Run unit tests (Vitest)                              |
+| `pnpm test:watch`        | Run tests in watch mode                              |
+| `pnpm test:coverage`     | Generate test coverage report                        |
+| `pnpm test:ui`           | Vitest UI runner                                     |
+| `pnpm test:e2e`          | Playwright end-to-end (seeds empty `.auth` fixtures) |
+| `pnpm test:e2e:ui`       | Playwright UI runner                                 |
+| `pnpm test:e2e:headed`   | Playwright in a visible browser                      |
+| `pnpm tauri:dev`         | Start Tauri desktop dev mode                         |
+| `pnpm tauri:build`       | Build Tauri desktop app                              |
+| `pnpm tauri:build:debug` | Tauri debug build (sourcemaps, faster)               |
+| `pnpm release`           | Cut a release via release-it                         |
+| `pnpm prepare`           | Install husky hooks (runs on `pnpm install`)         |
 
 ---
 

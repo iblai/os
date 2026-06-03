@@ -311,7 +311,11 @@ export class SettingsTab {
     }
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
+    // Bounded + non-fatal: the periodic analytics heartbeat (~30s) means
+    // the network may never idle, so cap networkidle so it can't hang.
+    await this.page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
     await this.page.waitForTimeout(1_000);
   }
 
@@ -326,7 +330,11 @@ export class SettingsTab {
     }
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
+    // Bounded + non-fatal: the periodic analytics heartbeat (~30s) means
+    // the network may never idle, so cap networkidle so it can't hang.
+    await this.page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
     await this.page.waitForTimeout(1_000);
   }
 

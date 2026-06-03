@@ -46,17 +46,27 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
   const errorFallback = page.getByText('Failed to load workflows');
   const searchInput = page.getByPlaceholder('Search workflows...');
 
-  // The workflows page renders only an error placeholder when
-  // useGetWorkflowsQuery fails (transient 401/403 on auth-token race
-  // after sidebar navigation). Race the h1 against the error branch
-  // so we fail fast with a clear message instead of a silent 60s timeout.
-  await expect(heading.or(errorFallback)).toBeVisible({ timeout: 30_000 });
+  // Readiness race. The <h1> "Workflows" is the obvious success signal,
+  // but it is matched by ROLE — so a stale `aria-hidden` lingering on the
+  // app shell (e.g. left by a dialog/overlay close earlier in the flow)
+  // drops it from the accessibility tree even though it renders, and the
+  // role query returns nothing. The search input is matched by its
+  // `placeholder` attribute, which survives a hidden ancestor, so include
+  // it as an aria-hidden-immune success signal. Race both against the
+  // error branch (the page renders only an error placeholder when
+  // useGetWorkflowsQuery fails on a transient 401/403 auth-token race)
+  // so we still fail fast with a clear message. 60s absorbs a slow
+  // AppLayout mentor-settings gate under CI load.
+  await expect(heading.or(searchInput).or(errorFallback)).toBeVisible({
+    timeout: 60_000,
+  });
   if (await errorFallback.isVisible().catch(() => false)) {
     throw new Error(
       'Workflows page rendered error state (useGetWorkflowsQuery failed) — likely auth/token race after sidebar navigation',
     );
   }
-  // Belt-and-braces: the search input is the stable signal callers care about.
+  // The search input is the stable, aria-hidden-immune signal callers
+  // care about — assert it directly as the final readiness gate.
   await expect(searchInput).toBeVisible({ timeout: 10_000 });
   logger.info('Navigated to workflows list page');
 }

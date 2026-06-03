@@ -23,9 +23,11 @@ export class ExplorePage {
    */
   readonly emptyState: Locator;
   /**
-   * Always-rendered page chrome: the `<main aria-label="Agent exploration
-   * page">` landmark wraps the entire ExplorePageContent tree, so its
-   * visibility confirms the page mounted regardless of how data resolved.
+   * Always-rendered page chrome: the scrollable
+   * `<div id="main-content" aria-label="Agent exploration page">` wraps
+   * the entire ExplorePageContent tree (the shared `<main>` landmark in
+   * app-layout carries no accessible name), so its visibility confirms
+   * the page mounted regardless of how the inner data query resolved.
    */
   readonly main: Locator;
 
@@ -72,7 +74,7 @@ export class ExplorePage {
     // Empty-state text rendered by `EmptyState` when DefaultMentorsSection
     // has nothing to show.
     this.emptyState = page.getByText(/sorry, no agents found/i);
-    this.main = page.getByRole('main', { name: /agent exploration page/i });
+    this.main = page.getByLabel('Agent exploration page');
   }
 
   async search(query: string): Promise<void> {

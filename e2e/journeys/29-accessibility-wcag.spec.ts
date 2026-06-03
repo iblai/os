@@ -46,14 +46,22 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Non-Admin', () => {
   test('non-admin goes to explore page and the mentors catalog has no accessibility violations', async ({
     nonadminPage,
     nonadminSidebarPage,
+    nonadminExplorePage,
   }) => {
     await nonadminSidebarPage.navigateToExplore();
-    // The All Mentors section streams in via a separate /mentors/ fetch — the
-    // trace shows the page often still renders "Loading mentors…" at 15s
-    // when the backend is under load.
-    await expect(
-      nonadminPage.getByRole('heading', { name: /all agents/i }),
-    ).toBeVisible({ timeout: 60_000 });
+    // Gate on the always-rendered page chrome rather than the "All Agents"
+    // <h2>. The <h2> is data-conditional (it never renders when
+    // DefaultMentorsSection short-circuits to <EmptyState /> on a tenant
+    // with no agents) and, being matched by role, it also disappears from
+    // the a11y tree if a stale `aria-hidden` lingers on the app shell —
+    // both produce false 60s timeouts here. `nonadminExplorePage.main`
+    // (`getByLabel('Agent exploration page')` → the `#main-content`
+    // container) always renders once mounted and is immune to aria-hidden.
+    await expect(nonadminExplorePage.main).toBeVisible({ timeout: 60_000 });
+    // Let the All Mentors section settle — it streams in via a separate
+    // /mentors/ fetch and the page can still show "Loading mentors…" for a
+    // few seconds under load — so the scan covers the resolved catalog.
+    await waitForPageReady(nonadminPage);
     // The mentors catalog is mounted inside #main-content. Sidebar +
     // nav-bar app-shell are covered by the sibling test at line 37
     // (currently fixme'd for known app-level violations).

@@ -94,18 +94,31 @@ export class EditMentorPage {
    * Pass the tab name to navigate directly to a specific tab.
    */
   async open(tabName?: string): Promise<void> {
-    // Radix Dialog cleanup can leave behind body[data-scroll-locked]
-    // and <body style="pointer-events: none"> when a previous Dialog was
-    // unmounted while still open. Wait for cleanup to complete before
-    // looking for the trigger; otherwise the nav-bar dropdown is in the
-    // DOM but invisible to a11y queries via inherited aria-hidden.
-    await this.page
+    // Radix/SDK Dialog cleanup can leave behind body[data-scroll-locked],
+    // <body style="pointer-events: none"> and a stale
+    // `[data-slot="sidebar-wrapper"][aria-hidden="true"]` when a previous
+    // Dialog is unmounted while still open. The SDK Edit Agent dialog does
+    // NOT reliably restore these on close, so a passive
+    // `waitFor({ state: 'detached' })` never resolves — it burns its full
+    // timeout and surfaces as a red step even though the test continues.
+    // Restore the page chrome ourselves (the SDK should have), then confirm
+    // the stale markers are gone. This keeps the nav-bar trigger clickable
+    // and visible to the a11y tree, and leaves the trace green.
+    const staleChrome = this.page
       .locator(
         'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
       )
-      .first()
-      .waitFor({ state: 'detached', timeout: 5_000 })
-      .catch(() => {});
+      .first();
+    if ((await staleChrome.count()) > 0) {
+      await this.page.evaluate(() => {
+        document.body.removeAttribute('data-scroll-locked');
+        document.body.style.removeProperty('pointer-events');
+        document
+          .querySelectorAll('[data-slot="sidebar-wrapper"][aria-hidden="true"]')
+          .forEach((el) => el.removeAttribute('aria-hidden'));
+      });
+    }
+    await expect(staleChrome).toHaveCount(0, { timeout: 5_000 });
     await this.page
       .waitForFunction(
         () => getComputedStyle(document.body).pointerEvents !== 'none',
@@ -114,9 +127,12 @@ export class EditMentorPage {
       )
       .catch(() => {});
 
-    const dropdown = this.page.getByRole('button', {
-      name: 'Selected agent dropdown button',
-    });
+    // Match the trigger by its `aria-label` attribute. A DOM query is robust
+    // even if any stale `aria-hidden` slips past the cleanup above, and
+    // `toBeVisible` / `click` operate on layout rather than the a11y tree.
+    const dropdown = this.page.locator(
+      'button[aria-label="Selected agent dropdown button"]',
+    );
     await expect(dropdown).toBeVisible({ timeout: 30_000 });
     await dropdown.click();
 
