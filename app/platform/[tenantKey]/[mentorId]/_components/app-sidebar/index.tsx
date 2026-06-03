@@ -2271,12 +2271,18 @@ function AccountSheet({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       {/*
-        Dimensions match the SDK's `InviteUserDialog` (`sm:max-w-7xl
-        w-[95vw] max-h-[90vh] p-0 gap-0 rounded-lg`) so every footer
-        popup feels the same width/height as Invites and other
-        admin-area surfaces.
+        Dimensions: width matches the SDK's `InviteUserDialog`
+        (`sm:max-w-7xl w-[95vw]`). Height is PINNED to `h-[90vh]`
+        (was `max-h-[90vh]`) so the dialog stays the same size as
+        the user navigates between sub-tabs inside Management
+        (Users → Groups → Roles → Policies) and Integrations. With
+        `max-h`, an empty/short sub-tab made the dialog collapse to
+        fit, then expand back when content loaded — felt jumpy.
+        Pinning the outer height + keeping the inner scroll area
+        (`flex-1 overflow-y-auto`) means the chrome is stable and
+        all the variation happens inside the scroll region.
       */}
-      <DialogContent className="mx-auto my-auto flex max-h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
+      <DialogContent className="mx-auto my-auto flex h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
         <DialogHeader className="flex-shrink-0 border-b border-gray-200 p-4 pt-[30px]">
           <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
             {tab ? ACCOUNT_TAB_TITLES[tab] : ''}
