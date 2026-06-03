@@ -717,11 +717,32 @@ describe('ChatMessages', () => {
 
     it('should mark the active streaming message as isCurrentlyStreaming', () => {
       renderWithRedux(
-        <ChatMessages {...defaultProps} currentStreamingMessageId="2" />,
+        <ChatMessages
+          {...defaultProps}
+          isStreaming
+          currentStreamingMessageId="2"
+        />,
       );
 
       const aiBubble = screen.getByTestId('ai-message-bubble');
       expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'true');
+    });
+
+    it('should not mark the message as currently streaming once the stream ends, even while currentStreamingMessageId still points at it', () => {
+      // currentStreamingMessageId keeps pointing at the last assistant message
+      // after the stream finishes; without gating on isStreaming the tool-call
+      // indicator's bounce dots would never stop and the action toolbar would
+      // stay hidden.
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isStreaming={false}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'false');
     });
 
     it('should mark non-streaming messages as not currently streaming', () => {

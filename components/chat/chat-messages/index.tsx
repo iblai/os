@@ -176,7 +176,14 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
                   message.id === currentStreamingMessageId ? isReasoning : false
                 }
                 showReasoning={showReasoning}
-                isCurrentlyStreaming={message.id === currentStreamingMessageId}
+                // Only "currently streaming" while a stream is actually active.
+                // currentStreamingMessageId keeps pointing at the last assistant
+                // message after the stream ends, so without the isStreaming gate
+                // the tool-call indicator's bounce dots never stop and the action
+                // toolbar stays hidden once the response completes.
+                isCurrentlyStreaming={
+                  isStreaming && message.id === currentStreamingMessageId
+                }
               />
             </div>
           ),
