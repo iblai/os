@@ -2,11 +2,11 @@
 
 <a href="https://ibl.ai"><img src="https://ibl.ai/images/iblai-logo.png" alt="ibl.ai" width="300"></a>
 
-# agentAI
+# OS
 
 **Open-source AI agent platform — build, deploy, and manage intelligent conversational agents in minutes.**
 
-agentAI is deployed at [os.ibl.ai](https://os.ibl.ai). It's a production-ready AI chatbot platform on the [ibl.ai](https://ibl.ai) stack — create and customize agents, train them on your data, and ship them to web, desktop, and mobile out of the box.
+OS is deployed at [os.ibl.ai](https://os.ibl.ai). It's a production-ready AI chatbot platform on the [ibl.ai](https://ibl.ai) stack — create and customize agents, train them on your data, and ship them to web, desktop, and mobile out of the box.
 
 [![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -27,11 +27,11 @@ agentAI is deployed at [os.ibl.ai](https://os.ibl.ai). It's a production-ready A
 
 ---
 
-## What is agentAI?
+## What is OS?
 
-agentAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
+OS is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
 
-Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — agentAI gives you the complete stack out of the box, powered by the [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) SDK and connected to [iblai.app](https://iblai.app).
+Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — OS gives you the complete stack out of the box, powered by the [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) SDK and connected to [iblai.app](https://iblai.app).
 
 ---
 
@@ -143,7 +143,7 @@ git clone https://github.com/iblai/os.git
 cd os
 ```
 
-> The repo lives at `iblai/os` on GitHub; the app inside is **agentAI**.
+> The repo lives at `iblai/os` on GitHub; the app inside is **OS**.
 
 ### 2. Install dependencies
 
@@ -224,8 +224,8 @@ See also [`docs/running-the-app.md`](docs/running-the-app.md) for the longer set
 Build and run with Docker:
 
 ```bash
-docker build -t agentai .
-docker run -p 5000:5000 --env-file .env.local agentai
+docker build -t os .
+docker run -p 5000:5000 --env-file .env.local os
 ```
 
 The Dockerfile uses a multi-stage build that produces a minimal standalone image (~67% smaller than a full Node.js image).
@@ -414,7 +414,7 @@ Feature flags are set via environment variables prefixed with `NEXT_PUBLIC_`. Th
 
 ### Sentry
 
-agentAI wires Sentry via `sentry.client.config.ts`, `sentry.server.config.ts`, and `sentry.edge.config.ts` at the repo root. Two env vars control it:
+OS wires Sentry via `sentry.client.config.ts`, `sentry.server.config.ts`, and `sentry.edge.config.ts` at the repo root. Two env vars control it:
 
 - `NEXT_PUBLIC_IBL_SENTRY_DSN` — runtime DSN for client/server error reporting. Leave empty to disable.
 - `SENTRY_AUTH_TOKEN` — **build-time only**; lets `next build` upload source maps so stack traces stay readable in production. Without it the build still succeeds, just with minified frames in Sentry.
@@ -470,7 +470,7 @@ The exact `@iblai/iblai-js` version this app is tested against lives in [`.iblai
 
 ## IBL.ai Platform
 
-agentAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
+OS is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
 
 - **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
 - **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support
