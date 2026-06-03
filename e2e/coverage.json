@@ -613,6 +613,10 @@
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/logo.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts",
+        "hooks/use-embed-mode.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
       ],
       "checkpoints": [
@@ -639,6 +643,21 @@
         {
           "id": "emb-05",
           "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
+        },
+        {
+          "id": "emb-06",
+          "description": "Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-07",
+          "description": "Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-08",
+          "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
           "status": "covered"
         }
       ]

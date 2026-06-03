@@ -82,7 +82,7 @@ interface JsValidationResult {
   warnings: string[];
 }
 
-function validateCss(css: string): CssValidationResult {
+export function validateCss(css: string): CssValidationResult {
   if (!css.trim()) {
     return { isValid: true, errors: [] };
   }
@@ -121,7 +121,7 @@ function validateCss(css: string): CssValidationResult {
   };
 }
 
-function validateJavaScript(js: string): JsValidationResult {
+export function validateJavaScript(js: string): JsValidationResult {
   if (!js.trim()) {
     return { isValid: true, errors: [], warnings: [] };
   }
@@ -1556,6 +1556,36 @@ export function EmbedTab() {
                         }
                         disabled={form.state.isSubmitting}
                         aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="show_catalogue">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Show Catalogue
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger aria-label="More info about show catalogue">
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>Show Catalogue in Chat Interface</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={form.state.isSubmitting}
+                        aria-label={`Show catalogue ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
                     </div>
                   )}

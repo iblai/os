@@ -24,6 +24,7 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+import { redirectToAuthSpa as sdkRedirectToAuthSpa } from '@iblai/iblai-js/web-utils/auth';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -84,141 +85,27 @@ export async function redirectToAuthSpa(
   saveRedirect = true,
   explicitUserAction = false,
 ) {
-  console.log(
-    '[redirectToAuthSpa] starting redirect to auth spa',
+  return sdkRedirectToAuthSpa({
     redirectTo,
     platformKey,
     logout,
     saveRedirect,
-    explicitUserAction,
-  );
-
-  if (explicitUserAction) {
-    // Explicit user action (e.g. login button click) — clear stale cookies
-    // and skip all cookie-based early returns so the redirect always happens.
-    const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_tenant_switching', currentDomain);
-    deleteCookieOnAllDomains('ibl_login_timestamp', currentDomain);
-    deleteCookieOnAllDomains('ibl_logout_timestamp', currentDomain);
-  } else {
-    // Skip if a tenant switch is already in progress
-    if (document.cookie.includes('ibl_tenant_switching')) {
-      console.log(
-        '[AuthProvider] Tenant switch in progress, skipping redirect',
-      );
-      return;
-    }
-
-    // Skip if a login occurred after the last logout (login takes precedence)
-    // but only if this app actually has a valid auth token — otherwise the login
-    // cookie may have been set by a different app on the same domain.
-    const loginTs = getCookieValue('ibl_login_timestamp');
-    const logoutTs = getCookieValue('ibl_logout_timestamp');
-    const hasValidToken = hasNonExpiredAuthToken();
-    console.log('[AuthProvider] Login/logout timestamp check', {
-      loginTs,
-      logoutTs,
-      hasValidToken,
-      loginAhead:
-        loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
-    });
-    if (
-      hasValidToken &&
-      loginTs &&
-      logoutTs &&
-      Number(loginTs) > Number(logoutTs)
-    ) {
-      console.log(
-        '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
-        { loginTs, logoutTs },
-      );
-      return;
-    }
-  }
-  // Don't redirect to auth when in Tauri offline mode
-  // Check origin first (most reliable) or Tauri offline flags
-  if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
-    console.log('[redirectToAuthSpa] Skipping redirect - Tauri offline mode', {
-      isOfflineServerOrigin: isOfflineServerOrigin(),
-      isTauriApp: isTauriApp(),
-      isTauriOfflineMode: isTauriOfflineMode(),
-    });
-    return;
-  }
-
-  // Save JWT token before clearing localStorage (needed for Tauri mode)
-  const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-  console.log('[redirectToAuthSpa] clearing local storage');
-  localStorage.clear();
-
-  if (logout || isInIframe()) {
-    // Delete authentication cookies for cross-SPA synchronization
-    const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_current_tenant', currentDomain);
-    deleteCookieOnAllDomains('ibl_user_data', currentDomain);
-    deleteCookieOnAllDomains('ibl_tenant', currentDomain);
-
-    // Set logout timestamp cookie to trigger logout on other SPAs
-    if (!isInIframe()) {
-      setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
-    }
-  }
-
-  if (isInIframe()) {
-    console.log(
-      '[redirectToAuthSpa]: sending authExpired to parent',
-      JSON.stringify(localStorage),
-    );
-    sendMessageToParentWebsite({ authExpired: true });
-    return;
-  }
-
-  const redirectPath =
-    redirectTo ?? `${window.location.pathname}${window.location.search}`;
-
-  // Never save sso-login routes as redirect paths
-  if (
-    !redirectPath.startsWith('/sso-login') &&
-    !redirectPath.startsWith('/sso-login-complete') &&
-    saveRedirect
-  ) {
-    window.localStorage.setItem(LOCAL_STORAGE_KEYS.REDIRECT_TO, redirectPath);
-  }
-
-  const platform = platformKey ?? getPlatformKey(redirectPath);
-
-  const redirectToUrl = `${window.location.origin}`;
-
-  let authRedirectUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}`;
-
-  authRedirectUrl += `&${QUERY_PARAMS.REDIRECT_TO}=${redirectToUrl}`;
-
-  if (platform) {
-    authRedirectUrl += `&${QUERY_PARAMS.TENANT}=${platform}`;
-  }
-  if (logout) {
-    authRedirectUrl += '&logout=1';
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (isTauriApp()) {
-    // On Tauri (mobile), pass the JWT token as a query param so the auth app can use it
-    if (edxJwtToken) {
-      authRedirectUrl += `&token=${encodeURIComponent(edxJwtToken)}`;
-      console.log('[redirectToAuthSpa] Added edx_jwt_token to auth URL');
-    }
-    // Navigate the main webview directly to the auth URL
-    // This keeps the user within the app
-    console.log(
-      '[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:',
-      authRedirectUrl,
-    );
-    window.location.href = authRedirectUrl;
-  } else {
-    // window.location.href = authRedirectUrl;
-    window.location.href = `/api/auth-redirect?to=${encodeURIComponent(authRedirectUrl)}`;
-    // window.open(authRedirectUrl, "_self");
-  }
+    forceRedirect: explicitUserAction,
+    authUrl: config.authUrl(),
+    appName: config.iblPlatform(),
+    queryParams: {
+      app: QUERY_PARAMS.APP,
+      redirectTo: QUERY_PARAMS.REDIRECT_TO,
+      tenant: QUERY_PARAMS.TENANT,
+    },
+    redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
+    hasNonExpiredAuthToken,
+    isOffline: () =>
+      isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode()),
+    preserveTokenKey: 'edx_jwt_token',
+    authRedirectProxy: '/api/auth-redirect',
+    isNativeApp: () => isTauriApp(),
+  });
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {

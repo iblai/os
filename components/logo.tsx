@@ -9,6 +9,7 @@ import { useHeader } from '@/hooks/use-header';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -27,7 +28,13 @@ export default function Logo({
 
   const { useSpecialIframeLogo } = useHeader();
   const { data: mentorSettings } = useMentorSettings();
+  const embedMode = useEmbedMode();
   const [logoUrl, setLogoUrl] = React.useState('');
+
+  // Outside embed mode the logo always navigates home. Inside embed mode it
+  // only navigates when the mentor's catalogue is shown — when `show_catalogue`
+  // is disabled the logo stays visible but is not clickable.
+  const isLogoClickable = !embedMode || (mentorSettings?.showCatalogue ?? true);
 
   const loadLogo = async () => {
     setLogoUrl(`${config.dmUrl()}/api/core/orgs/${tenantKey}/logo/`);
@@ -49,26 +56,34 @@ export default function Logo({
     }
   }, [tenantKey, useSpecialIframeLogo, mentorSettings?.profileImage]);
 
+  const logoContent = (
+    <>
+      {logoUrl && (
+        <Image
+          src={logoUrl}
+          loading="lazy"
+          width={100}
+          height={100}
+          alt="logo"
+          className={cn('max-h-[50px] w-auto', className)}
+          onError={handleLogoError}
+        />
+      )}
+
+      {useSpecialIframeLogo && <div>{mentorSettings?.mentorName}</div>}
+    </>
+  );
+
+  if (!isLogoClickable) {
+    return <div className="flex items-center">{logoContent}</div>;
+  }
+
   return (
     <button
       onClick={navigateToHome}
       className="flex cursor-pointer items-center"
     >
-      {logoUrl && (
-        <>
-          <Image
-            src={logoUrl}
-            loading="lazy"
-            width={100}
-            height={100}
-            alt="logo"
-            className={cn('max-h-[50px] w-auto', className)}
-            onError={handleLogoError}
-          />
-        </>
-      )}
-
-      {useSpecialIframeLogo && <div>{mentorSettings?.mentorName}</div>}
+      {logoContent}
     </button>
   );
 }

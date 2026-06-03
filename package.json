@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.68.0",
+  "version": "0.71.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -205,7 +205,7 @@
       "lodash": ">=4.18.0",
       "undici": ">=6.24.0",
       "hono": ">=4.12.18",
-      "axios": ">=1.15.0",
+      "axios": ">=1.16.0",
       "prismjs": ">=1.30.0",
       "dompurify": ">=3.4.0",
       "@hono/node-server": ">=1.19.13",
@@ -214,7 +214,7 @@
       "fast-uri": ">=3.1.2",
       "ip-address": ">=10.1.1",
       "brace-expansion": ">=5.0.6",
-      "minimatch@^9>brace-expansion": "2.0.2",
+      "minimatch@^9>brace-expansion": "2.0.3",
       "postcss": ">=8.5.10",
       "ws": ">=8.20.1",
       "qs": ">=6.15.2",
