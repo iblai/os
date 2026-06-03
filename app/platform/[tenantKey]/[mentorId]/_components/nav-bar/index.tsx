@@ -364,11 +364,17 @@ export function NavBar() {
   const isPromptGalleryOrAnalytics =
     pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
   const isOnChatPage =
     !pathname.includes('/prompt-gallery') &&
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore') &&
-    !isWorkflowsPage;
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);

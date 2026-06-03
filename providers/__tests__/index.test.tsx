@@ -760,15 +760,6 @@ describe('Providers', () => {
       );
     });
 
-    it('redirectToAuthSpa callback is no-op in Tauri offline mode', () => {
-      // Need to test the callback in offline mode – but offline mode renders different JSX
-      // Instead, we test the hasNonExpiredAuthToken callback
-      renderProviders();
-      const hasTokenFn =
-        capturedAuthProviderProps.hasNonExpiredAuthToken as Function;
-      expect(hasTokenFn()).toBe(true); // calls mockHasNonExpiredAuthToken which returns true
-    });
-
     it('passes correct pathname with query params', () => {
       mockSearchParams = new URLSearchParams('foo=bar');
       mockPathname = '/platform/t1/m1';
@@ -1700,14 +1691,6 @@ describe('Providers', () => {
       renderProviders();
       // Callback was invoked during render with isTauriOffline=false, so it calls the real function
       expect(mockRedirectToAuthSpa).toHaveBeenCalled();
-    });
-
-    it('invokes AuthProvider hasNonExpiredAuthToken during render', () => {
-      authProviderCallbacksToInvoke = [
-        { name: 'hasNonExpiredAuthToken', args: [] },
-      ];
-      renderProviders();
-      expect(mockHasNonExpiredAuthToken).toHaveBeenCalled();
     });
 
     it('invokes TenantProvider redirectToAuthSpa during render', () => {

@@ -31,7 +31,7 @@ import {
   TokenResponse,
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { hasNonExpiredAuthToken, redirectToAuthSpa } from '@/lib/utils';
+import { redirectToAuthSpa } from '@/lib/utils';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
@@ -235,6 +235,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
   // to prevent it from redirecting when the URL's mentorId changes during navigation.
   const isWorkflowPage = /\/workflows\//.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) has no mentor in
+  // the URL, so MentorProvider would otherwise pick a default mentor and redirect to
+  // the chat page. Like workflow pages it manages its own context, so skip the mentor
+  // check. Match the index path only — the project chat route
+  // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Pages that own their mentor context and must not be redirected away when the
+  // URL has no mentorId segment.
+  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -470,14 +479,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
           redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
         }}
-        hasNonExpiredAuthToken={() => {
-          // In Tauri offline mode, always return true to skip auth checks
-          /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-          if (isTauriOffline) {
-            return true;
-          }
-          return hasNonExpiredAuthToken();
-        }}
         username={username || ''}
         middleware={middleware}
         pathname={fullPathname}
@@ -581,25 +582,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 if (!embed) redirectToNoMentorsPage();
               }}
               redirectToCreateMentor={() => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToCreateMentor();
               }}
               redirectToMentor={(tKey: string, mId: string) => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToMentor(tKey, mId);
               }}
               onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={isWorkflowPage ? undefined : mentorId}
+              requestedMentorId={skipMentorCheck ? undefined : mentorId}
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
@@ -624,7 +625,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   );
                   return;
                 }
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 await handleMentorNotFound();
               }}
               onComplete={() => {
