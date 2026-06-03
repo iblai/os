@@ -200,29 +200,52 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     Column count is dynamic so 2 visible buckets get a
                     2-col grid instead of 3 with an empty slot. */}
                 {showCategoryStrip && (
-                  <Tabs
-                    value={activeCategory}
-                    onValueChange={handleCategoryChange}
-                    className="mb-2"
+                  // Plain button group rather than Radix Tabs — the
+                  // category strip only filters the segment list below;
+                  // it does NOT own panel content. Using Tabs here
+                  // produces orphan `aria-controls` on each trigger
+                  // (axe-core flags it under aria-valid-attr-value), so
+                  // we use `<button role="tab" aria-selected>` directly.
+                  //
+                  // Sizing: the 320px sidebar leaves only ~96px per
+                  // grid cell with a 3-category strip. "Configurations"
+                  // (14 chars) at default `text-xs px-2` renders ~107px
+                  // and pushes its sibling cells right (reads as
+                  // "wrong padding on right" on the active Configurations
+                  // pill). Shrinking to `text-[11px] px-1.5` brings it
+                  // to ~89px so all three labels render in full and the
+                  // grid honors its `1fr` share. `whitespace-nowrap` +
+                  // `min-w-0` keeps it on one line even if the parent
+                  // shrinks unexpectedly.
+                  <div
+                    role="tablist"
+                    aria-label="Agent settings categories"
+                    className="mb-2 box-border grid h-auto w-full gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                    style={{
+                      gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
+                    }}
                   >
-                    <TabsList
-                      className="grid h-auto w-full gap-1 bg-gray-100 p-1 dark:bg-gray-800"
-                      style={{
-                        gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
-                      }}
-                      aria-label="Agent settings categories"
-                    >
-                      {visibleCategories.map((category) => (
-                        <TabsTrigger
+                    {visibleCategories.map((category) => {
+                      const isActive = activeCategory === category.key;
+                      return (
+                        <button
                           key={category.key}
-                          value={category.key}
-                          className="px-2 py-1.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100"
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          onClick={() => handleCategoryChange(category.key)}
+                          className={cn(
+                            'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
+                            isActive
+                              ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-gray-100'
+                              : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50',
+                          )}
                         >
                           {category.title}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
 
                 <TabsList
@@ -251,29 +274,38 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             {/* Mobile and Tablet — category tab strip + segment select */}
             <div className="border-b border-gray-200 lg:hidden">
               {showCategoryStrip && (
-                <Tabs
-                  value={activeCategory}
-                  onValueChange={handleCategoryChange}
-                  className="px-3 pt-2"
+                // See desktop block above for the sizing rationale —
+                // mobile has more horizontal room so the labels render
+                // even more comfortably at `text-[11px] px-1.5`.
+                <div
+                  role="tablist"
+                  aria-label="Agent settings categories"
+                  className="mx-3 mt-2 box-border grid h-auto w-[calc(100%-1.5rem)] gap-1 rounded-lg bg-gray-100 p-1"
+                  style={{
+                    gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
+                  }}
                 >
-                  <TabsList
-                    className="grid h-auto w-full gap-1 bg-gray-100 p-1"
-                    style={{
-                      gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
-                    }}
-                    aria-label="Agent settings categories"
-                  >
-                    {visibleCategories.map((category) => (
-                      <TabsTrigger
+                  {visibleCategories.map((category) => {
+                    const isActive = activeCategory === category.key;
+                    return (
+                      <button
                         key={category.key}
-                        value={category.key}
-                        className="px-2 py-1.5 text-xs font-medium data-[state=active]:bg-white data-[state=active]:text-gray-900"
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => handleCategoryChange(category.key)}
+                        className={cn(
+                          'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
+                          isActive
+                            ? 'bg-white text-gray-900 shadow'
+                            : 'text-gray-600 hover:bg-gray-50',
+                        )}
                       >
                         {category.title}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
               <TabsList
                 className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"

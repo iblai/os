@@ -94,10 +94,23 @@ export class EditMentorPage {
    * Pass the tab name to navigate directly to a specific tab.
    */
   async open(tabName?: string): Promise<void> {
+    // When called after a prior `close()` in the same test, the platform
+    // nav-bar can take a moment to re-mount its dropdown trigger while
+    // Radix tears down the previous dialog portal + overlay. Wait for any
+    // leftover dialog overlay to clear so the nav-bar is interactive,
+    // then resolve the trigger.
+    const lingeringOverlay = this.page.locator(
+      '[data-iblai-dialog-interaction-layer][data-state="open"], [role="dialog"][data-state="open"]',
+    );
+    await lingeringOverlay
+      .first()
+      .waitFor({ state: 'detached', timeout: 5_000 })
+      .catch(() => {});
+
     const dropdown = this.page.getByRole('button', {
       name: 'Selected agent dropdown button',
     });
-    await expect(dropdown).toBeVisible({ timeout: 15_000 });
+    await expect(dropdown).toBeVisible({ timeout: 30_000 });
     await dropdown.click();
 
     // Find the menu item — the dropdown now shows "Modify" to open the edit dialog

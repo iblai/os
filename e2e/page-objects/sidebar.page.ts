@@ -15,14 +15,24 @@ export class SidebarPage {
   readonly analyticsButton: Locator;
   readonly newMentorButton: Locator;
   readonly newChatButton: Locator;
+  readonly newProjectButton: Locator;
   readonly inviteUsersButton: Locator;
   readonly workflowsButton: Locator;
   readonly settingsButton: Locator;
   readonly helpButton: Locator;
   readonly logoutButton: Locator;
-  // The brand logo lives in the sidebar header — a separate landmark from
-  // the `<aside>` body. Consumed by `ensureExpanded()` and the share/embed
-  // journeys, so they are scoped to the header rather than the aside root.
+  // "Explore" used to be a top-level link; in the new sidebar it lives
+  // inside the collapsible "Agents" section. Older journeys still
+  // reference `exploreLink` so we keep it as an alias for the same
+  // button — `navigateToExplore()` is the preferred entry point because
+  // it expands the parent section first.
+  readonly exploreLink: Locator;
+  // The brand logo lives directly inside the sidebar `<aside>` in the
+  // new layout — the old layout wrapped it in `SidebarHeader`
+  // (`[data-sidebar="header"]`) but the rewrite mounts the `<Logo />`
+  // component as a direct child of the aside instead. Scope to the
+  // aside so embed-mode and share-page tests that read the logo still
+  // resolve it.
   readonly logoImage: Locator;
   readonly logoButton: Locator;
 
@@ -34,13 +44,12 @@ export class SidebarPage {
     // from the page content (e.g. an "Overview" tab on /analytics).
     this.sidebar = page.locator('aside').first();
 
-    // The brand logo image lives in the sidebar header. When clickable it is
-    // wrapped in a <button> (navigates home); otherwise it renders in a plain
-    // <div>. Scope to the header so other logos never match, and exclude the
-    // sibling sidebar-toggle button via `has`.
-    const sidebarHeader = page.locator('[data-sidebar="header"]');
-    this.logoImage = sidebarHeader.getByAltText('logo');
-    this.logoButton = sidebarHeader
+    // Logo: scoped to the aside (NOT to `[data-sidebar="header"]`, which
+    // the new sidebar layout doesn't use). When the logo is clickable it
+    // is wrapped in a <button>; the image itself always carries
+    // `alt="logo"` per `components/logo.tsx`.
+    this.logoImage = this.sidebar.getByAltText('logo');
+    this.logoButton = this.sidebar
       .getByRole('button')
       .filter({ has: page.getByAltText('logo') });
 
@@ -66,6 +75,22 @@ export class SidebarPage {
     });
     this.newChatButton = this.sidebar.getByRole('button', {
       name: 'New Chat',
+      exact: true,
+    });
+    // "New Project" lives inside the collapsible "Projects" section in
+    // the new sidebar — consumers that just need the locator (e.g.
+    // visibility assertions) can use this directly; consumers that need
+    // to CLICK it should call `expandSection('Projects')` first or use
+    // `ProjectPage.createFromSidebar()`.
+    this.newProjectButton = this.sidebar.getByRole('button', {
+      name: 'New Project',
+      exact: true,
+    });
+    // "Explore" is the third item inside the collapsible Agents section
+    // in the new sidebar — kept as a thin alias for older journeys that
+    // still reference `exploreLink`.
+    this.exploreLink = this.sidebar.getByRole('button', {
+      name: 'Explore',
       exact: true,
     });
     // Footer entries were renamed in the new sidebar:
