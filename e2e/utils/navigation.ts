@@ -148,9 +148,24 @@ export async function navigateToTenantExplorePage(page: Page): Promise<string> {
     timeout: 60_000,
   });
 
-  // Wait for explore heading to confirm the page is stable
-  const heading = page.getByRole('heading', { name: /all agents/i });
-  await expect(heading).toBeVisible({ timeout: 60_000 });
+  // Wait for the page chrome — the explore page mounts a single
+  // `<main aria-label="Agent exploration page">` that ALWAYS renders,
+  // regardless of how the inner data query resolves. Falling back to
+  // either the always-on `<h1>` ("Discover and create academic agents
+  // …") or the dynamic `<h2>` "All Agents" keeps things resilient:
+  //
+  //   - On a populated tenant the `<h2>` resolves first.
+  //   - On a tenant with zero mentors `DefaultMentorsSection`
+  //     short-circuits to `<EmptyState />` (no heading), but the
+  //     `<main>` landmark and the intro `<h1>` are both already
+  //     visible, so the test can still confirm the page mounted.
+  //   - When the backend explore query is slow the heading would
+  //     stay behind a spinner; the landmark check still succeeds.
+  const pageReady = page
+    .getByRole('main', { name: /agent exploration page/i })
+    .or(page.getByRole('heading', { level: 1, name: /discover and create/i }))
+    .or(page.getByRole('heading', { name: /all agents/i }));
+  await expect(pageReady.first()).toBeVisible({ timeout: 60_000 });
 
   return tenantKey;
 }
