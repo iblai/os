@@ -157,10 +157,10 @@ pnpm install
 cp .env.example .env.local
 ```
 
-Edit `.env.local` with your IBL.ai platform credentials:
+Edit `.env.local` with your ibl.ai platform credentials:
 
 ```env
-# Required — your IBL.ai platform URLs
+# Required — your ibl.ai platform URLs
 NEXT_PUBLIC_AUTH_URL=https://login.iblai.app
 NEXT_PUBLIC_API_BASE_URL=https://api.iblai.app
 NEXT_PUBLIC_LEGACY_LMS_URL=https://learn.iblai.app
@@ -344,7 +344,7 @@ os/
 ### Data Flow
 
 ```
-User → React Components → Custom Hooks → Redux (RTK Query) → IBL.ai API
+User → React Components → Custom Hooks → Redux (RTK Query) → ibl.ai API
                                               ↓
                                         @iblai/iblai-js SDK
                                         ├── /data-layer  (API slices, reducers)
@@ -468,9 +468,9 @@ The exact `@iblai/iblai-js` version this app is tested against lives in [`.iblai
 
 ---
 
-## IBL.ai Platform
+## ibl.ai Platform
 
-OS is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
+OS is built on the [ibl.ai](https://ibl.ai) platform. To use this app, you need access to an ibl.ai backend instance which provides:
 
 - **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
 - **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support
