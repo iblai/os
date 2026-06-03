@@ -233,6 +233,21 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                           type="button"
                           role="tab"
                           aria-selected={isActive}
+                          // Mirror Radix Tabs' `data-state` attribute so
+                          // existing test infrastructure that polls
+                          // `data-state="active"` to detect a completed
+                          // category switch (see
+                          // `e2e/page-objects/edit-mentor/edit-mentor.page.ts`
+                          // `navigateToTab`) keeps working without
+                          // every test having to learn about
+                          // `aria-selected` separately.
+                          data-state={isActive ? 'active' : 'inactive'}
+                          // WAI-ARIA tablist pattern: only the active
+                          // tab is in the Tab focus chain; arrow keys
+                          // handle navigation between tabs. Without
+                          // this, every category trigger steals focus
+                          // from the segment list below.
+                          tabIndex={isActive ? 0 : -1}
                           onClick={() => handleCategoryChange(category.key)}
                           className={cn(
                             'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
@@ -293,6 +308,12 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                         type="button"
                         role="tab"
                         aria-selected={isActive}
+                        // See desktop block — mirror Radix `data-state`
+                        // so the e2e page-object's tab-switch wait keeps
+                        // working unchanged. tabIndex matches the
+                        // WAI-ARIA tablist focus pattern.
+                        data-state={isActive ? 'active' : 'inactive'}
+                        tabIndex={isActive ? 0 : -1}
                         onClick={() => handleCategoryChange(category.key)}
                         className={cn(
                           'box-border block w-full min-w-0 rounded-md px-1 py-2 text-center text-[11px] leading-tight font-medium whitespace-nowrap transition-colors',
