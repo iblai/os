@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.71.1](https://github.com/iblai/os/compare/v0.71.0...v0.71.1) (2026-06-03)
+
+### Bug Fixes
+
+* **deps:** bump axios >=1.16.0 and minimatch's brace-expansion to 2.0.3 ([5a9b63f](https://github.com/iblai/os/commit/5a9b63f2f18774e1b47fa57a0f762961bc71976a))
+
+### Chores
+
+* change agentAI -> OS ([ec6cc3c](https://github.com/iblai/os/commit/ec6cc3c0a3a07ec2ce5fad28397c7668c9e79470))
+* change IBL.ai to ibl.ai ([df48cc5](https://github.com/iblai/os/commit/df48cc5f518785d45abb2b5374b91a30dfda4488))
+* update app name in AGENTS.md ([0bc8a6e](https://github.com/iblai/os/commit/0bc8a6e4fd54c0921d20f26ac5f5830256f24c88))
+* update documentation ([d802e80](https://github.com/iblai/os/commit/d802e802227135715d19097a5a08d80771d83614))
+
 ## [0.71.0](https://github.com/iblai/os/compare/v0.70.1...v0.71.0) (2026-06-02)
 
 ### Features
