@@ -327,12 +327,6 @@ vi.mock('../recent-messages', () => ({
   ),
 }));
 
-vi.mock('../projects-sidebar-dropdown', () => ({
-  ProjectsSidebarDropdown: () => (
-    <div data-testid="projects-dropdown">Projects</div>
-  ),
-}));
-
 vi.mock('../app-sidebar-footer', () => ({
   AppSidebarFooter: (props: any) => (
     <div data-testid="sidebar-footer" data-embed-mode={props.embedMode}>
@@ -440,14 +434,13 @@ describe('AppSidebar', () => {
     expect(screen.getByTestId('sidebar-footer')).toBeInTheDocument();
   });
 
-  it('filters content items and hides projects dropdown in embed mode', () => {
+  it('filters content items in embed mode', () => {
     mockEmbedMode = true;
 
     render(<AppSidebar />);
 
     expect(screen.getByTestId('nav-item-New Chat')).toBeInTheDocument();
     expect(screen.queryByTestId('nav-item-History')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('projects-dropdown')).not.toBeInTheDocument();
   });
 
   it('adds student user type for main tenant students', () => {

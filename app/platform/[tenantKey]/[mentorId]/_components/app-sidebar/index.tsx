@@ -28,7 +28,6 @@ import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useUserType } from '@/hooks/use-user-type';
 import { chatActions, selectSessionId } from '@iblai/iblai-js/web-utils';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
-import { ProjectsSidebarDropdown } from './projects-sidebar-dropdown';
 import { ProjectPageParams } from '@/lib/types';
 import { AppSidebarFooter } from './app-sidebar-footer';
 import { AppSidebarContent } from './app-sidebar-content';
@@ -256,7 +255,6 @@ export function AppSidebar() {
             <SidebarMenuItem className="scrollbar-thin h-full overflow-y-auto">
               {isSidebarOpen && (
                 <div className="flex max-h-fit flex-col overflow-y-auto">
-                  {!embedMode && <ProjectsSidebarDropdown />}
                   <PinnedMessages
                     onSelectMessage={handleSelectMessage}
                     mentorId={mentorId}
