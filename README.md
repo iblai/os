@@ -10,7 +10,12 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 [![Website](https://img.shields.io/badge/Website-ibl.ai-blue)](https://ibl.ai)
 [![Docs](https://img.shields.io/badge/Docs-docs.ibl.ai-green)](https://docs.ibl.ai)
-[![License: ISC](https://img.shields.io/badge/License-ISC-yellow)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js&logoColor=white)](https://nextjs.org)
+[![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Desktop & Mobile](https://img.shields.io/badge/Desktop_%26_Mobile-supported-blue)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
 [Features](#features) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Enterprise](#enterprise) · [Contributing](#contributing)
@@ -31,7 +36,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 - **MCP Servers** — Extend agent capabilities with Model Context Protocol tool servers
 - **Analytics** — Usage dashboards, topic analysis, transcript viewer, and financial reporting
 - **Projects** — Collaborative workspaces to group agents with shared context and goals
-- **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android) via Tauri 2
+- **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android)
 
 ---
 
@@ -42,15 +47,15 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 | Platform    | Status                                                                     |
 | ----------- | -------------------------------------------------------------------------- |
 | **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app via Tauri 2 — lightweight, fast, system-integrated      |
+| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
 | **iOS**     | Native mobile app — available on iPhone and iPad                           |
 | **Android** | Native mobile app — available on phones and tablets                        |
-| **Windows** | Native desktop app via Tauri 2                                             |
-| **Linux**   | Native desktop app via Tauri 2                                             |
+| **Windows** | Native desktop app                                                         |
+| **Linux**   | Native desktop app                                                         |
 
 </div>
 
-One codebase, six platforms. OS runs natively everywhere your users are — no Electron bloat, no compromises. The desktop and mobile apps are built with [Tauri 2](https://tauri.app), delivering near-native performance with a fraction of the resource footprint.
+One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
 
 ---
 
@@ -70,29 +75,61 @@ Open [http://localhost:3000](http://localhost:3000). See the full [Development G
 
 ## Deployment
 
-### Docker
+OS is the frontend for the ibl.ai platform. Choose your path based on your backend setup:
 
-```bash
-docker build -t os .
-docker run -p 5000:5000 --env-file .env.local os
-```
+### Option A: Existing ibl.ai Tenant
 
-### Standalone
+If you already have an ibl.ai tenant (organization key, API access):
 
-```bash
-pnpm build
-PORT=3000 node server-wrapper.js
-```
+1. **Configure your tenant**
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Update these values with your tenant details:
+
+   ```bash
+   NEXT_PUBLIC_MAIN_TENANT_KEY=your-tenant-key    # Your organization key
+   NEXT_PUBLIC_AUTH_URL=https://login.iblai.app   # Or your custom auth URL
+   NEXT_PUBLIC_API_BASE_URL=https://api.iblai.app # Or your custom API URL
+   ```
+
+2. **Deploy with Docker** (recommended)
+
+   ```bash
+   docker build -t os .
+   docker run -p 5000:5000 --env-file .env.local os
+   ```
+
+   Or **deploy standalone**:
+
+   ```bash
+   pnpm build
+   PORT=3000 node server-wrapper.js
+   ```
+
+### Option B: Starting from Scratch
+
+If you're new to ibl.ai and need backend infrastructure:
+
+1. **Get your ibl.ai tenant**
+
+   - Visit [ibl.ai](https://ibl.ai) to request a tenant
+   - You'll receive your tenant key and API credentials
+   - The ibl.ai platform provides: authentication, AI orchestration, RAG pipeline, analytics, and all backend services
+
+2. **Configure and deploy**
+
+   Once you have your credentials, follow Option A above.
+
+> **Note**: OS requires the ibl.ai backend platform for authentication, AI agent APIs, and data services. The backend is not included in this repository — visit [ibl.ai](https://ibl.ai) to get started.
 
 ### Desktop & Mobile
 
-```bash
-pnpm tauri:build                              # macOS, Windows, Linux
-cargo tauri ios build --export-method app-store-connect   # iOS
-cargo tauri android build                     # Android
-```
+See [docs/development.md](docs/development.md) for native app build instructions.
 
-Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md) · [Tauri iOS](docs/tauri-ios-setup.md)
+Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
 
 ---
 
@@ -141,4 +178,4 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## License
 
-ISC License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
