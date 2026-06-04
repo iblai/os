@@ -1,5 +1,110 @@
 # Changelog
 
+## [0.72.0](https://github.com/iblai/os/compare/v0.71.1...v0.72.0) (2026-06-04)
+
+### Features
+
+* **mentor:** sidebar, agent settings layout changes ([3bc2762](https://github.com/iblai/os/commit/3bc276244face45d4dd5db2668c4a4bbba3a20c6))
+
+### Bug Fixes
+
+* **e2e:** fix for the e2e tests ([3733d96](https://github.com/iblai/os/commit/3733d967e2c3093a4e8df10041cb42ba8dc6fa05))
+* **e2e:** fix the explore page test failiures ([ecf8a27](https://github.com/iblai/os/commit/ecf8a27a7711b08326aac17afe58daebbd39a55c))
+* **e2e:** fixing coverage.json for missing components ([c63ca0e](https://github.com/iblai/os/commit/c63ca0eb7794fbe57b9e28d518e726f045f4757e))
+* **e2e:** fixing for the e2e tests ([d44cc81](https://github.com/iblai/os/commit/d44cc8160fa2e7e86b1884a9e797d4c5d7555dbf))
+* **e2e:** fixing for the e2e tests ([08965fd](https://github.com/iblai/os/commit/08965fd81c7dcd2782e438df218c972f03fa5309))
+* **e2e:** more fixes for the tests ([8a40c32](https://github.com/iblai/os/commit/8a40c321f77c2ba446c92fa5a96459ca1d7f0e0a))
+* **e2e:** more fixes for the tests ([3104d2e](https://github.com/iblai/os/commit/3104d2e352201a8281421b708dc51c703bcce161))
+* **mentor:** adding app-sidebar test ([0e5f654](https://github.com/iblai/os/commit/0e5f65411086e8bc433dc0d04983e6dbb76a72d8))
+* **mentor:** adding app-sidebar test ([deaa14c](https://github.com/iblai/os/commit/deaa14ce048be7433f1e8b302dc3a586e011ffb9))
+* **mentor:** adding data state ([9a1a7fb](https://github.com/iblai/os/commit/9a1a7fb5da3d61c8980e1e884db798ad5a98a5dd))
+* **mentor:** adding unit tests coverage ([740a2d3](https://github.com/iblai/os/commit/740a2d34cb95ea23fc1c7b767596c85f8c96f7ac))
+* **mentor:** coverage fixes ([606508b](https://github.com/iblai/os/commit/606508b445a7eb04c0601d726cae1a87f69327ff))
+* **mentor:** fix for the excel ([d49413a](https://github.com/iblai/os/commit/d49413a0510e86b0d8b2e59549556103869bc765))
+* **mentor:** fix for the packages ([420ae98](https://github.com/iblai/os/commit/420ae981689dd3cbc3ea643ed7a6b2ce682b3ee5))
+* **mentor:** fix for the settings tab unit tests ([c4a6d50](https://github.com/iblai/os/commit/c4a6d50dfdcbfd827b11ff92ec35802e5085340f))
+* **mentor:** fixes for the e2e tests and tabs for agent settings ([276df4e](https://github.com/iblai/os/commit/276df4e304d92dce95dc33a39fa60026edb6347f))
+* **mentor:** fixing for the tabs inconsistant height ([d1f3535](https://github.com/iblai/os/commit/d1f35359596c634e835e010eafa0df5b9305b8db))
+* **mentor:** type check issue fix ([87d9277](https://github.com/iblai/os/commit/87d9277e018b2354604b99b1d3c2dd5e39a24c15))
+* **mentor:** unit test coverage ([d8a0555](https://github.com/iblai/os/commit/d8a05551ad4f4ce29be8943c875eb23f7579e20a))
+* **mentor:** unit test fixes for providers ([44336a5](https://github.com/iblai/os/commit/44336a58ae0a0001f5c3508384edda09fee9c0cc))
+
+## [0.71.1](https://github.com/iblai/os/compare/v0.71.0...v0.71.1) (2026-06-03)
+
+### Bug Fixes
+
+* **deps:** bump axios >=1.16.0 and minimatch's brace-expansion to 2.0.3 ([5a9b63f](https://github.com/iblai/os/commit/5a9b63f2f18774e1b47fa57a0f762961bc71976a))
+
+### Chores
+
+* change agentAI -> OS ([ec6cc3c](https://github.com/iblai/os/commit/ec6cc3c0a3a07ec2ce5fad28397c7668c9e79470))
+* change IBL.ai to ibl.ai ([df48cc5](https://github.com/iblai/os/commit/df48cc5f518785d45abb2b5374b91a30dfda4488))
+* update app name in AGENTS.md ([0bc8a6e](https://github.com/iblai/os/commit/0bc8a6e4fd54c0921d20f26ac5f5830256f24c88))
+* update documentation ([d802e80](https://github.com/iblai/os/commit/d802e802227135715d19097a5a08d80771d83614))
+
+## [0.71.0](https://github.com/iblai/os/compare/v0.70.1...v0.71.0) (2026-06-02)
+
+### Features
+
+- **embed-tab:** add Save button to persist embed settings ([9d684bb](https://github.com/iblai/os/commit/9d684bb012cf649a434edeb32b1e1e376cab7563))
+
+### Bug Fixes
+
+- **chat-input:** collapse inside tool buttons to dropdown below 800px ([c392b5d](https://github.com/iblai/os/commit/c392b5d3f710cbfca98b66de78e5ab52ebf576d4))
+
+### Refactors
+
+- **embed-tab:** export validateCss and validateJavaScript ([6f2505f](https://github.com/iblai/os/commit/6f2505f4b5ec651aa79cac8e5a2723548f469f68))
+- **settings-tab:** pin Save/Copy/Delete to fixed footer ([e8793fb](https://github.com/iblai/os/commit/e8793fb8f56a19d5fc0e451d65632145c098b9a9))
+
+### Chores
+
+- **embed:** remove save button in embed tab ([0353fd3](https://github.com/iblai/os/commit/0353fd329d3393d153fa8939e479e1d2de66dfa2))
+- **tests:** fixed failing unit tests ([3796795](https://github.com/iblai/os/commit/37967955e86e63b402928bbaf197cc5de1b0c965))
+- **tests:** improve test coverage to 95% ([bd20761](https://github.com/iblai/os/commit/bd20761e401a6637220f175afd2ae2af3209b5a3))
+
+### Tests
+
+- **embed-tab,settings-tab:** raise coverage to >=95% ([dbdcac3](https://github.com/iblai/os/commit/dbdcac307adfd94acb785a3ba65d0690f1aa138b))
+
+## [0.70.1](https://github.com/iblai/agentai/compare/v0.70.0...v0.70.1) (2026-06-01)
+
+### Chores
+
+- bump iblai-js to 1.17.3 ([a5fc5b7](https://github.com/iblai/agentai/commit/a5fc5b712c52d41cc4c36835d26dc573d3327704))
+- migrate default URLs from iblai.org to iblai.app and bump Tauri to 1.1.18 ([3993417](https://github.com/iblai/agentai/commit/3993417eeb54e32ed1506fd35e33280c0bd434d4))
+
+## [0.70.0](https://github.com/iblai/agentai/compare/v0.69.1...v0.70.0) (2026-05-29)
+
+### Features
+
+- **embed:** add Show Catalogue toggle to the embed tab ([4b11211](https://github.com/iblai/agentai/commit/4b11211f0934cb321b5a631262a1d2908be6ebed)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+- **logo:** gate sidebar logo navigation on show_catalogue in embed mode ([6acac52](https://github.com/iblai/agentai/commit/6acac5202ef0f3a7a7d27fb6bdab41bb4a69c345)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
+### Styles
+
+- **changelog:** normalize list bullets via prettier ([1be68ab](https://github.com/iblai/agentai/commit/1be68abe0db31a5e617ef3a582066c42bc7461a8))
+
+### Tests
+
+- **e2e:** cover Show Catalogue toggle and embed logo gating ([e46fc47](https://github.com/iblai/agentai/commit/e46fc470edae759c9621982c3e2e463419807a27)), closes [#1775](https://github.com/iblai/agentai/issues/1775)
+
+## [0.69.1](https://github.com/iblai/agentai/compare/v0.69.0...v0.69.1) (2026-05-29)
+
+### Refactors
+
+- **auth:** replace local redirectToAuthSpa with SDK wrapper from @iblai/iblai-js ([a03798d](https://github.com/iblai/agentai/commit/a03798d243c587f131dfbad95cf073205a950ca3))
+
+### Chores
+
+- adds android build schema ([cd0c703](https://github.com/iblai/agentai/commit/cd0c703c938eafc379ca6ff7f7e3a8f7d3de2f94))
+
+## [0.69.0](https://github.com/iblai/agentai/compare/v0.68.0...v0.69.0) (2026-05-28)
+
+### Features
+
+- iblai-js bump to 1.15.0 ([cb5ca30](https://github.com/iblai/agentai/commit/cb5ca303faae6127ecd563ae22303dd77878650a))
+
 ## [0.68.0](https://github.com/iblai/agentai/compare/v0.67.12...v0.68.0) (2026-05-28)
 
 ### Features

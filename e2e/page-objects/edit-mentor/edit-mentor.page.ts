@@ -15,6 +15,41 @@ import { PrivacyTab } from './privacy.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
 
+/**
+ * Which sidebar category each segment lives in. Mirrors the `navCategory`
+ * field set on each entry in `MENTOR_SEGMENTS` (hooks/use-mentor-segments.ts).
+ * Used by `navigateToTab` to switch the category strip before clicking a
+ * segment tab — segment triggers are only mounted for the active category.
+ *
+ * Keep in sync with MENTOR_SEGMENTS. The e2e covering test journeys exercise
+ * one tab per category, so any drift surfaces as a Playwright failure rather
+ * than silent skip.
+ */
+const TAB_CATEGORY: Record<
+  string,
+  'Configurations' | 'Integrations' | 'Analytics'
+> = {
+  Settings: 'Configurations',
+  Sandbox: 'Configurations',
+  Access: 'Configurations',
+  LLM: 'Configurations',
+  Prompts: 'Configurations',
+  Skills: 'Configurations',
+  Safety: 'Configurations',
+  Privacy: 'Configurations',
+  Disclaimers: 'Configurations',
+  Tools: 'Configurations',
+  MCP: 'Integrations',
+  Datasets: 'Integrations',
+  API: 'Integrations',
+  Embed: 'Integrations',
+  Voice: 'Configurations',
+  'Screen Share': 'Configurations',
+  Memory: 'Analytics',
+  History: 'Analytics',
+  Audit: 'Analytics',
+};
+
 export class EditMentorPage {
   readonly page: Page;
   readonly dialog: Locator;
@@ -67,16 +102,57 @@ export class EditMentorPage {
    * Pass the tab name to navigate directly to a specific tab.
    */
   async open(tabName?: string): Promise<void> {
-    const dropdown = this.page.getByRole('button', {
-      name: 'Selected agent dropdown button',
-    });
-    await expect(dropdown).toBeVisible({ timeout: 15_000 });
+    // Radix/SDK Dialog cleanup can leave behind body[data-scroll-locked],
+    // <body style="pointer-events: none"> and a stale
+    // `[data-slot="sidebar-wrapper"][aria-hidden="true"]` when a previous
+    // Dialog is unmounted while still open. The SDK Edit Agent dialog does
+    // NOT reliably restore these on close, so a passive
+    // `waitFor({ state: 'detached' })` never resolves — it burns its full
+    // timeout and surfaces as a red step even though the test continues.
+    // Restore the page chrome ourselves (the SDK should have), then confirm
+    // the stale markers are gone. This keeps the nav-bar trigger clickable
+    // and visible to the a11y tree, and leaves the trace green.
+    const staleChrome = this.page
+      .locator(
+        'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
+      )
+      .first();
+    if ((await staleChrome.count()) > 0) {
+      await this.page.evaluate(() => {
+        document.body.removeAttribute('data-scroll-locked');
+        document.body.style.removeProperty('pointer-events');
+        document
+          .querySelectorAll('[data-slot="sidebar-wrapper"][aria-hidden="true"]')
+          .forEach((el) => el.removeAttribute('aria-hidden'));
+      });
+    }
+    await expect(staleChrome).toHaveCount(0, { timeout: 5_000 });
+    await this.page
+      .waitForFunction(
+        () => getComputedStyle(document.body).pointerEvents !== 'none',
+        undefined,
+        { timeout: 5_000 },
+      )
+      .catch(() => {});
+
+    // Match the trigger by its `aria-label` attribute. A DOM query is robust
+    // even if any stale `aria-hidden` slips past the cleanup above, and
+    // `toBeVisible` / `click` operate on layout rather than the a11y tree.
+    const dropdown = this.page.locator(
+      'button[aria-label="Selected agent dropdown button"]',
+    );
+    await expect(dropdown).toBeVisible({ timeout: 30_000 });
     await dropdown.click();
 
-    // Find the menu item — the dropdown now shows "Modify" to open the edit dialog
-    const menuTarget = this.page
-      .getByRole('menuitem', { name: /modify/i })
-      .or(this.page.getByRole('menuitem', { name: /settings/i }).first());
+    // Find the menu item — under the new SDK CategorizedDropdownMenu,
+    // "Modify" is the fork action and never opens the edit modal. The prior
+    // regex-OR (/modify/i, /settings/i) resolved to whichever matched first,
+    // which is often "Modify". Match "Settings" exactly to open the edit
+    // dialog reliably.
+    const menuTarget = this.page.getByRole('menuitem', {
+      name: 'Settings',
+      exact: true,
+    });
 
     await expect(menuTarget).toBeVisible({ timeout: 10_000 });
     await menuTarget.click();
@@ -89,12 +165,38 @@ export class EditMentorPage {
   }
 
   async navigateToTab(tabName: string): Promise<void> {
-    const tab = this.dialog.getByRole('tab', { name: tabName });
+    // The sidebar now renders only the segments belonging to the active
+    // category, so segment triggers outside that category aren't in the DOM
+    // yet. Switch to the segment's category first when known.
+    const category = TAB_CATEGORY[tabName];
+    if (category) {
+      const categoryTab = this.dialog.getByRole('tab', {
+        name: category,
+        exact: true,
+      });
+      const categoryActive =
+        (await categoryTab.getAttribute('data-state').catch(() => null)) ===
+        'active';
+      if (!categoryActive) {
+        await categoryTab.click();
+        // Wait for Radix to flip `data-state` to active rather than sleeping —
+        // when active, the new category's segments are guaranteed mounted.
+        await expect(categoryTab).toHaveAttribute('data-state', 'active', {
+          timeout: 5_000,
+        });
+      }
+    }
+
+    const tab = this.dialog.getByRole('tab', { name: tabName, exact: true });
     const isActive =
       (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {
       await tab.click();
-      await this.page.waitForTimeout(500);
+      // Wait for the tab to register as active; this is more reliable than
+      // a fixed sleep across slow/fast machines.
+      await expect(tab).toHaveAttribute('data-state', 'active', {
+        timeout: 5_000,
+      });
     }
   }
 

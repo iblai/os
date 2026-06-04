@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-27",
+  "lastUpdated": "2026-05-22",
   "summary": {
-    "totalCheckpoints": 412,
-    "coveredCheckpoints": 400,
+    "totalCheckpoints": 415,
+    "coveredCheckpoints": 403,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 49,
@@ -203,7 +203,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery \u2014 Explore Page",
+      "name": "Mentor Discovery — Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -279,7 +279,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management \u2014 Admin",
+      "name": "Mentor Management — Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -340,7 +340,7 @@
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab \u2014 Unique ID",
+      "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
@@ -480,7 +480,7 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
           "status": "covered"
         },
         {
@@ -492,7 +492,7 @@
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas \u2014 AI Document Editor",
+      "name": "Canvas — AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": ["components/canvas/canvas-component.tsx"],
       "checkpoints": [
@@ -555,7 +555,7 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas \u2014 Embed",
+      "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
@@ -613,6 +613,10 @@
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/logo.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts",
+        "hooks/use-embed-mode.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
       ],
       "checkpoints": [
@@ -639,6 +643,21 @@
         {
           "id": "emb-05",
           "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
+        },
+        {
+          "id": "emb-06",
+          "description": "Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-07",
+          "description": "Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-08",
+          "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
           "status": "covered"
         }
       ]
@@ -1320,7 +1339,8 @@
       "name": "Mentor MCP Tab",
       "spec": "25-mentor-mcp-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx"
       ],
       "checkpoints": [
         {
@@ -1436,6 +1456,7 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/ui/hover-card.tsx",
         "components/header.tsx",
         "components/header/profile-button.tsx"
       ],
@@ -1504,7 +1525,7 @@
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility \u2014 WCAG 2.1 AA",
+      "name": "Accessibility — WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
@@ -1619,21 +1640,21 @@
         },
         {
           "id": "a11y-21",
-          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Reflow refactor reverted as out-of-scope; only WCAG 4.1.2 (button aria-labels) is in scope for #1596. Track WCAG 1.4.10 separately."
         },
         {
           "id": "a11y-22",
-          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Duplicate-composer removal reverted with the reflow refactor; out of scope for #1596."
         },
         {
           "id": "a11y-23",
-          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea — WCAG 2.4.1 (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Skip-link added by the reflow refactor reverted as out-of-scope; track WCAG 2.4.1 separately."
@@ -2228,6 +2249,100 @@
       ]
     },
     {
+      "id": "mentor-voice-tab",
+      "name": "Mentor Voice Tab",
+      "spec": "46-mentor-voice-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "vo-01",
+          "description": "Voice tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "vo-02",
+          "description": "Voice tab heading renders correctly",
+          "status": "covered"
+        },
+        {
+          "id": "vo-03",
+          "description": "Voice and Voice call sub-tab pills are both visible",
+          "status": "covered"
+        },
+        {
+          "id": "vo-04",
+          "description": "All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab",
+          "status": "covered"
+        },
+        {
+          "id": "vo-05",
+          "description": "Selecting the OpenAI provider marks the card active and reveals the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-06",
+          "description": "Selecting the Browser provider hides the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-07",
+          "description": "Switching to the Voice call sub-tab renders the call configuration form",
+          "status": "covered"
+        },
+        {
+          "id": "vo-08",
+          "description": "Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered",
+          "status": "covered"
+        },
+        {
+          "id": "vo-09",
+          "description": "Settings tab surfaces both voice-call toggles (Look things up only when needed, Allow screen sharing on a call)",
+          "status": "covered"
+        },
+        {
+          "id": "vo-10",
+          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-screenshare-tab",
+      "name": "Mentor Screen Share Tab",
+      "spec": "47-mentor-screenshare-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ss-01",
+          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Allow screen sharing on a call' toggle is off",
+          "status": "covered"
+        },
+        {
+          "id": "ss-02",
+          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ss-03",
+          "description": "Switching to the Screen Share tab renders the SDK heading and body",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "audit-log",
       "name": "Audit Log",
       "spec": "39-audit-log.spec.ts",
@@ -2334,7 +2449,7 @@
         },
         {
           "id": "ac-03",
-          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
+          "description": "Access tab shows roles table or empty state — never a blank crash screen",
           "status": "covered"
         },
         {
@@ -2550,100 +2665,6 @@
         {
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
-          "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "mentor-voice-tab",
-      "name": "Mentor Voice Tab",
-      "spec": "46-mentor-voice-tab.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/index.ts",
-        "components/modals/edit-mentor-modal/index.tsx",
-        "hooks/use-mentor-segments.ts",
-        "lib/constants.ts"
-      ],
-      "checkpoints": [
-        {
-          "id": "vo-01",
-          "description": "Voice tab label is visible in the Edit Mentor modal sidebar",
-          "status": "covered"
-        },
-        {
-          "id": "vo-02",
-          "description": "Voice tab heading renders correctly",
-          "status": "covered"
-        },
-        {
-          "id": "vo-03",
-          "description": "Voice and Voice call sub-tab pills are both visible",
-          "status": "covered"
-        },
-        {
-          "id": "vo-04",
-          "description": "All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab",
-          "status": "covered"
-        },
-        {
-          "id": "vo-05",
-          "description": "Selecting the OpenAI provider marks the card active and reveals the voice picker trigger",
-          "status": "covered"
-        },
-        {
-          "id": "vo-06",
-          "description": "Selecting the Browser provider hides the voice picker trigger",
-          "status": "covered"
-        },
-        {
-          "id": "vo-07",
-          "description": "Switching to the Voice call sub-tab renders the call configuration form",
-          "status": "covered"
-        },
-        {
-          "id": "vo-08",
-          "description": "Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered",
-          "status": "covered"
-        },
-        {
-          "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Look things up only when needed, Allow screen sharing on a call)",
-          "status": "covered"
-        },
-        {
-          "id": "vo-10",
-          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
-          "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "mentor-screenshare-tab",
-      "name": "Mentor Screen Share Tab",
-      "spec": "47-mentor-screenshare-tab.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/index.ts",
-        "components/modals/edit-mentor-modal/index.tsx",
-        "hooks/use-mentor-segments.ts",
-        "lib/constants.ts"
-      ],
-      "checkpoints": [
-        {
-          "id": "ss-01",
-          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Allow screen sharing on a call' toggle is off",
-          "status": "covered"
-        },
-        {
-          "id": "ss-02",
-          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
-          "status": "covered"
-        },
-        {
-          "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading and body",
           "status": "covered"
         }
       ]

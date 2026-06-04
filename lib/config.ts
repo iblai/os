@@ -64,7 +64,7 @@ export const config = {
     return `https://learn.${domain()}`;
   },
   legacyLmsUrl: () =>
-    getEnv('NEXT_PUBLIC_LEGACY_LMS_URL', 'https://learn.iblai.org'),
+    getEnv('NEXT_PUBLIC_LEGACY_LMS_URL', 'https://learn.iblai.app'),
   dmUrl: () => {
     const apiBase = getEnv('NEXT_PUBLIC_API_BASE_URL');
     if (apiBase) return `${apiBase}/dm`;
@@ -81,9 +81,9 @@ export const config = {
   iblPlatform: () => getEnv('NEXT_PUBLIC_IBL_PLATFORM', 'mentor'),
   iblEnableSpecialLogoWhenIframed: () =>
     getEnv('NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED', 'false'),
-  mentorUrl: () => getEnv('NEXT_PUBLIC_MENTOR_URL', 'https://mentor.iblai.org'),
+  mentorUrl: () => getEnv('NEXT_PUBLIC_MENTOR_URL', 'https://mentor.iblai.app'),
   mentorIframeUrl: () =>
-    getEnv('NEXT_PUBLIC_MENTOR_IFRAME_URL', 'https://mentor.iblai.org'),
+    getEnv('NEXT_PUBLIC_MENTOR_IFRAME_URL', 'https://mentor.iblai.app'),
   externalPricingPageUrl: () =>
     getEnv(
       'NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL',
@@ -91,11 +91,11 @@ export const config = {
     ),
   stripeEnabled: () => getEnv('NEXT_PUBLIC_STRIPE_ENABLED', 'true'),
   baseWsUrl: () =>
-    getEnv('NEXT_PUBLIC_BASE_WS_URL', 'https://asgi.data.iblai.org'),
+    getEnv('NEXT_PUBLIC_BASE_WS_URL', 'https://asgi.data.iblai.app'),
   liveKitServerUrl: () =>
     getEnv(
       'NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL',
-      'wss://livekit.call.iblai.org',
+      'wss://livekit.call.iblai.app',
     ),
   mentorSettingsDisclaimer: () =>
     getEnv('NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER', ''),
