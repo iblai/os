@@ -108,7 +108,7 @@ If you already have an ibl.ai tenant (organization key, API access):
    PORT=3000 node server-wrapper.js
    ```
 
-### Option B: Starting from Scratch
+### Option B: Enterprise Deployment
 
 If you're new to ibl.ai and need backend infrastructure:
 
