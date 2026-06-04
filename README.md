@@ -89,9 +89,7 @@ If you already have an ibl.ai tenant (organization key, API access):
    Update these values with your tenant details:
 
    ```bash
-   NEXT_PUBLIC_MAIN_TENANT_KEY=your-tenant-key    # Your organization key
-   NEXT_PUBLIC_AUTH_URL=https://login.iblai.app   # Or your custom auth URL
-   NEXT_PUBLIC_API_BASE_URL=https://api.iblai.app # Or your custom API URL
+   NEXT_PUBLIC_TENANT=your-tenant                 # Your tenant key
    ```
 
 2. **Deploy with Docker** (recommended)
