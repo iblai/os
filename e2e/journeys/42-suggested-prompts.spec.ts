@@ -222,6 +222,8 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E prompt for delete visibility',
     );
+    // `addSuggestedPrompt` already waits for the new prompt to render, so
+    // this resolves immediately; kept as the explicit assertion of intent.
     await expect
       .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
         timeout: 10_000,

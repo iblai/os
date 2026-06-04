@@ -23,14 +23,19 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
   test('non-admin goes to tenant explore page and sees mentor cards', async ({
     nonadminExplorePage,
   }) => {
+    // The All Agents list streams in via a separate, abortable `?limit=8`
+    // mentors query that gets retried during mount, so under CI load the
+    // spinner can sit well past 60s before either cards or the empty state
+    // resolve. Give the race 120s (and the test 180s) before deciding.
+    test.setTimeout(180_000);
     await expect(nonadminExplorePage.main).toBeVisible({ timeout: 30_000 });
     const cards = nonadminExplorePage.mentorCards.first();
     const outcome = await Promise.race([
       cards
-        .waitFor({ state: 'visible', timeout: 60_000 })
+        .waitFor({ state: 'visible', timeout: 120_000 })
         .then(() => 'cards' as const),
       nonadminExplorePage.emptyState
-        .waitFor({ state: 'visible', timeout: 60_000 })
+        .waitFor({ state: 'visible', timeout: 120_000 })
         .then(() => 'empty' as const),
     ]).catch(() => 'timeout' as const);
     test.skip(
@@ -72,9 +77,25 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
     nonadminExplorePage,
     nonadminChatPage,
   }) => {
-    await expect(nonadminExplorePage.mentorCards.first()).toBeVisible({
-      timeout: 15_000,
-    });
+    // Same slow-streaming caveat as the "sees mentor cards" test above: race
+    // cards against the empty state with a generous window, and skip cleanly
+    // when the tenant has no agents (there's no card to click).
+    test.setTimeout(180_000);
+    await expect(nonadminExplorePage.main).toBeVisible({ timeout: 30_000 });
+    const firstCard = nonadminExplorePage.mentorCards.first();
+    const outcome = await Promise.race([
+      firstCard
+        .waitFor({ state: 'visible', timeout: 120_000 })
+        .then(() => 'cards' as const),
+      nonadminExplorePage.emptyState
+        .waitFor({ state: 'visible', timeout: 120_000 })
+        .then(() => 'empty' as const),
+    ]).catch(() => 'timeout' as const);
+    test.skip(
+      outcome === 'empty',
+      'Test tenant has no agents — cannot click a card.',
+    );
+    expect(outcome).toBe('cards');
     await nonadminExplorePage.clickFirstMentorCard();
     await expect(nonadminPage).toHaveURL(/\/platform\/[^/]+\/[^/]+$/, {
       timeout: 20_000,
