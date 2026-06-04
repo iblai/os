@@ -4,6 +4,15 @@ export class ExplorePage {
   readonly page: Page;
 
   readonly heading: Locator;
+  /**
+   * The always-rendered page title/description `<h1>` ("Discover and create
+   * academic agents …"). Unlike `heading` (the "All Agents" `<h2>`, which is
+   * a data-conditional SECTION heading that disappears when
+   * `DefaultMentorsSection` renders `<EmptyState />`), this `<h1>` renders as
+   * soon as `ExplorePageContent` mounts — so it's the correct signal for
+   * "page title is shown".
+   */
+  readonly pageTitle: Locator;
   readonly searchInput: Locator;
   readonly mentorCards: Locator;
   readonly seeMoreButton: Locator;
@@ -34,6 +43,10 @@ export class ExplorePage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole('heading', { name: /all agents/i });
+    this.pageTitle = page.getByRole('heading', {
+      level: 1,
+      name: /discover and create/i,
+    });
     this.searchInput = page.getByPlaceholder(/search/i);
     this.mentorCards = page.getByRole('listitem', {
       name: /^explore agent:/i,

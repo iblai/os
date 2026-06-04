@@ -46,6 +46,13 @@ test.describe('Journey 35: Tenant Explore Page — Non-Admin', () => {
     nonadminSidebarPage,
     nonadminExplorePage,
   }) => {
+    // "Explore" lives inside the collapsible "Agents" section in the new
+    // sidebar; Radix unmounts collapsed content, so the link isn't in the
+    // DOM until the section is expanded. Expand the sidebar itself first
+    // (rail mode renders icon-only flyouts, no text section triggers), then
+    // expand the Agents section before asserting on the link.
+    await nonadminSidebarPage.ensureExpanded();
+    await nonadminSidebarPage.expandSection('Agents');
     await expect(nonadminSidebarPage.exploreLink).toBeVisible({
       timeout: 10_000,
     });
@@ -90,6 +97,10 @@ test.describe('Journey 35: Tenant Explore Page — Admin', () => {
     test.fail(!isAdmin, 'New Chat modal test requires admin access');
 
     await expect(explorePage.main).toBeVisible({ timeout: 30_000 });
+    // Expand the sidebar first: in rail (collapsed) mode New Chat is an
+    // icon button with aria-label "New chat", which the text-based
+    // `newChatButton` locator ("New Chat", exact) doesn't match.
+    await sidebarPage.ensureExpanded();
     await expect(sidebarPage.newChatButton).toBeVisible({
       timeout: 30_000,
     });
@@ -114,10 +125,18 @@ test.describe('Journey 35: Tenant Explore Page — Admin', () => {
     test.fail(!isAdmin, 'Workflows button requires admin access');
 
     await expect(explorePage.main).toBeVisible({ timeout: 30_000 });
-    await expect(sidebarPage.workflowsButton).toBeVisible({
-      timeout: 30_000,
+    // "Workflows" is a collapsible section in the new sidebar — its trigger
+    // only toggles open/close. The No-Agent-Selected modal fires from its
+    // inner items (New/My Workflows → handleWorkflowMenuSelect when there's
+    // no mentorId), so expand the sidebar + the section, then click an item.
+    await sidebarPage.ensureExpanded();
+    await sidebarPage.expandSection('Workflows');
+    const newWorkflowItem = sidebarPage.sidebar.getByRole('button', {
+      name: 'New Workflow',
+      exact: true,
     });
-    await sidebarPage.workflowsButton.click();
+    await expect(newWorkflowItem).toBeVisible({ timeout: 10_000 });
+    await newWorkflowItem.click();
 
     const modal = page.getByRole('alertdialog');
     await expect(modal).toBeVisible({ timeout: 10_000 });
@@ -138,10 +157,16 @@ test.describe('Journey 35: Tenant Explore Page — Admin', () => {
     test.fail(!isAdmin, 'Workflows button requires admin access');
 
     await expect(explorePage.main).toBeVisible({ timeout: 30_000 });
-    await expect(sidebarPage.workflowsButton).toBeVisible({
-      timeout: 30_000,
+    // Same as above: open the modal via a Workflows inner item, not the
+    // collapsible section trigger.
+    await sidebarPage.ensureExpanded();
+    await sidebarPage.expandSection('Workflows');
+    const newWorkflowItem = sidebarPage.sidebar.getByRole('button', {
+      name: 'New Workflow',
+      exact: true,
     });
-    await sidebarPage.workflowsButton.click();
+    await expect(newWorkflowItem).toBeVisible({ timeout: 10_000 });
+    await newWorkflowItem.click();
 
     const modal = page.getByRole('alertdialog');
     await expect(modal).toBeVisible({ timeout: 10_000 });

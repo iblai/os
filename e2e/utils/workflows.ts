@@ -56,8 +56,10 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
   // error branch (the page renders only an error placeholder when
   // useGetWorkflowsQuery fails on a transient 401/403 auth-token race)
   // so we still fail fast with a clear message. 60s absorbs a slow
-  // AppLayout mentor-settings gate under CI load.
-  await expect(heading.or(searchInput).or(errorFallback)).toBeVisible({
+  // AppLayout mentor-settings gate under CI load. `.first()` because the
+  // h1 and the search input both render on success, so the union resolves
+  // to >1 element — `toBeVisible` is strict-mode and would otherwise throw.
+  await expect(heading.or(searchInput).or(errorFallback).first()).toBeVisible({
     timeout: 60_000,
   });
   if (await errorFallback.isVisible().catch(() => false)) {

@@ -10,9 +10,15 @@ test.describe('Journey 5: Mentor Discovery — Explore Page — Non-Admin', () =
   test('non-admin goes to explore page and sees the page title and description', async ({
     nonadminExplorePage,
   }) => {
+    // Assert the always-rendered <h1> page title, NOT the "All Agents" <h2>
+    // (`heading`) — that section heading is hidden when the tenant has no
+    // default mentors (DefaultMentorsSection → <EmptyState />), which made
+    // this title test fail on empty tenants.
     // 2-min ceiling: explore page initial load can take ~30s when the
     // ?limit=8 mentors query gets aborted+retried during component mount.
-    await expect(nonadminExplorePage.heading).toBeVisible({ timeout: 120_000 });
+    await expect(nonadminExplorePage.pageTitle).toBeVisible({
+      timeout: 120_000,
+    });
   });
 
   test('non-admin goes to explore page and sees mentor cards with correct information', async ({
