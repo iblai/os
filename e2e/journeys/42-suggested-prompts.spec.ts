@@ -424,9 +424,12 @@ test.describe('Journey 42: Suggested Prompts', () => {
       await waitForPageReady(page);
 
       // ── Switch to User mode (acts as a non-admin / student) ──────────────
-      const learnerSwitch = page.getByRole('switch', {
-        name: /user mode/i,
-      });
+      // Match by aria-label, not role: closing the Edit Agent dialog above
+      // can leave a stale `aria-hidden="true"` on the app shell (SDK dialog
+      // cleanup), which drops the navbar switch out of the accessibility
+      // tree so a role-based query returns nothing even though it's visible.
+      // `getByLabel` resolves by attribute and survives the stale aria-hidden.
+      const learnerSwitch = page.getByLabel(/user mode/i);
       await expect(learnerSwitch).toBeVisible({ timeout: 10_000 });
       // The switch is `checked` when in administrator mode; click to flip to
       // user mode.
