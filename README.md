@@ -16,7 +16,6 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
-[![Desktop & Mobile](https://img.shields.io/badge/Desktop_%26_Mobile-supported-blue)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
 [Features](#features) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Enterprise](#enterprise) · [Contributing](#contributing)
 
