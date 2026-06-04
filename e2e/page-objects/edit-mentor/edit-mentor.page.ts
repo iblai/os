@@ -93,17 +93,21 @@ export class EditMentorPage {
    * Opens the Edit Mentor modal via the mentor dropdown menu item.
    * Pass the tab name to navigate directly to a specific tab.
    */
-  async open(tabName?: string): Promise<void> {
-    // Radix/SDK Dialog cleanup can leave behind body[data-scroll-locked],
-    // <body style="pointer-events: none"> and a stale
-    // `[data-slot="sidebar-wrapper"][aria-hidden="true"]` when a previous
-    // Dialog is unmounted while still open. The SDK Edit Agent dialog does
-    // NOT reliably restore these on close, so a passive
-    // `waitFor({ state: 'detached' })` never resolves — it burns its full
-    // timeout and surfaces as a red step even though the test continues.
-    // Restore the page chrome ourselves (the SDK should have), then confirm
-    // the stale markers are gone. This keeps the nav-bar trigger clickable
-    // and visible to the a11y tree, and leaves the trace green.
+  /**
+   * Restore the app chrome the SDK Edit Agent dialog fails to clean up.
+   *
+   * Radix/SDK Dialog teardown can leave `body[data-scroll-locked]`,
+   * `<body style="pointer-events: none">` and a stale
+   * `[data-slot="sidebar-wrapper"][aria-hidden="true"]` behind after the
+   * dialog unmounts. The aria-hidden one is the worst: it drops the entire
+   * app shell (navbar, sidebar, chat chrome) out of the accessibility tree,
+   * so every `getByRole`/role-based query against page chrome returns
+   * nothing even though it's visually present. We remove these ourselves
+   * (the SDK should) and confirm they're gone. Called both before opening
+   * the dialog and after closing it so callers can interact with the page
+   * chrome immediately afterward.
+   */
+  private async restoreAppChrome(): Promise<void> {
     const staleChrome = this.page
       .locator(
         'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
@@ -126,6 +130,12 @@ export class EditMentorPage {
         { timeout: 5_000 },
       )
       .catch(() => {});
+  }
+
+  async open(tabName?: string): Promise<void> {
+    // Restore any chrome a previous dialog left in a broken state before
+    // looking for the nav-bar trigger (see restoreAppChrome).
+    await this.restoreAppChrome();
 
     // Match the trigger by its `aria-label` attribute. A DOM query is robust
     // even if any stale `aria-hidden` slips past the cleanup above, and
@@ -224,6 +234,12 @@ export class EditMentorPage {
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
     await this.closeButton.click();
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The SDK dialog frequently leaves the app shell `aria-hidden="true"`
+    // after closing, hiding the navbar/chat chrome from the a11y tree and
+    // breaking role-based queries that callers run right after close()
+    // (e.g. the chat "Prompts" button, the User-mode switch). Restore it.
+    await this.restoreAppChrome();
   }
 
   async isOpen(): Promise<boolean> {
