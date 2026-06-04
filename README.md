@@ -35,6 +35,25 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 ---
 
+## Available On
+
+<div align="center">
+
+| Platform    | Status                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
+| **macOS**   | Native desktop app via Tauri 2 — lightweight, fast, system-integrated      |
+| **iOS**     | Native mobile app — available on iPhone and iPad                           |
+| **Android** | Native mobile app — available on phones and tablets                        |
+| **Windows** | Native desktop app via Tauri 2                                             |
+| **Linux**   | Native desktop app via Tauri 2                                             |
+
+</div>
+
+One codebase, six platforms. OS runs natively everywhere your users are — no Electron bloat, no compromises. The desktop and mobile apps are built with [Tauri 2](https://tauri.app), delivering near-native performance with a fraction of the resource footprint.
+
+---
+
 ## Quick Start
 
 ```bash
