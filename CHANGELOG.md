@@ -17,33 +17,33 @@
 
 ### Features
 
-* **embed-tab:** add Save button to persist embed settings ([9d684bb](https://github.com/iblai/os/commit/9d684bb012cf649a434edeb32b1e1e376cab7563))
+- **embed-tab:** add Save button to persist embed settings ([9d684bb](https://github.com/iblai/os/commit/9d684bb012cf649a434edeb32b1e1e376cab7563))
 
 ### Bug Fixes
 
-* **chat-input:** collapse inside tool buttons to dropdown below 800px ([c392b5d](https://github.com/iblai/os/commit/c392b5d3f710cbfca98b66de78e5ab52ebf576d4))
+- **chat-input:** collapse inside tool buttons to dropdown below 800px ([c392b5d](https://github.com/iblai/os/commit/c392b5d3f710cbfca98b66de78e5ab52ebf576d4))
 
 ### Refactors
 
-* **embed-tab:** export validateCss and validateJavaScript ([6f2505f](https://github.com/iblai/os/commit/6f2505f4b5ec651aa79cac8e5a2723548f469f68))
-* **settings-tab:** pin Save/Copy/Delete to fixed footer ([e8793fb](https://github.com/iblai/os/commit/e8793fb8f56a19d5fc0e451d65632145c098b9a9))
+- **embed-tab:** export validateCss and validateJavaScript ([6f2505f](https://github.com/iblai/os/commit/6f2505f4b5ec651aa79cac8e5a2723548f469f68))
+- **settings-tab:** pin Save/Copy/Delete to fixed footer ([e8793fb](https://github.com/iblai/os/commit/e8793fb8f56a19d5fc0e451d65632145c098b9a9))
 
 ### Chores
 
-* **embed:** remove save button in embed tab ([0353fd3](https://github.com/iblai/os/commit/0353fd329d3393d153fa8939e479e1d2de66dfa2))
-* **tests:** fixed failing unit tests ([3796795](https://github.com/iblai/os/commit/37967955e86e63b402928bbaf197cc5de1b0c965))
-* **tests:** improve test coverage to 95% ([bd20761](https://github.com/iblai/os/commit/bd20761e401a6637220f175afd2ae2af3209b5a3))
+- **embed:** remove save button in embed tab ([0353fd3](https://github.com/iblai/os/commit/0353fd329d3393d153fa8939e479e1d2de66dfa2))
+- **tests:** fixed failing unit tests ([3796795](https://github.com/iblai/os/commit/37967955e86e63b402928bbaf197cc5de1b0c965))
+- **tests:** improve test coverage to 95% ([bd20761](https://github.com/iblai/os/commit/bd20761e401a6637220f175afd2ae2af3209b5a3))
 
 ### Tests
 
-* **embed-tab,settings-tab:** raise coverage to >=95% ([dbdcac3](https://github.com/iblai/os/commit/dbdcac307adfd94acb785a3ba65d0690f1aa138b))
+- **embed-tab,settings-tab:** raise coverage to >=95% ([dbdcac3](https://github.com/iblai/os/commit/dbdcac307adfd94acb785a3ba65d0690f1aa138b))
 
 ## [0.70.1](https://github.com/iblai/agentai/compare/v0.70.0...v0.70.1) (2026-06-01)
 
 ### Chores
 
-* bump iblai-js to 1.17.3 ([a5fc5b7](https://github.com/iblai/agentai/commit/a5fc5b712c52d41cc4c36835d26dc573d3327704))
-* migrate default URLs from iblai.org to iblai.app and bump Tauri to 1.1.18 ([3993417](https://github.com/iblai/agentai/commit/3993417eeb54e32ed1506fd35e33280c0bd434d4))
+- bump iblai-js to 1.17.3 ([a5fc5b7](https://github.com/iblai/agentai/commit/a5fc5b712c52d41cc4c36835d26dc573d3327704))
+- migrate default URLs from iblai.org to iblai.app and bump Tauri to 1.1.18 ([3993417](https://github.com/iblai/agentai/commit/3993417eeb54e32ed1506fd35e33280c0bd434d4))
 
 ## [0.70.0](https://github.com/iblai/agentai/compare/v0.69.1...v0.70.0) (2026-05-29)
 

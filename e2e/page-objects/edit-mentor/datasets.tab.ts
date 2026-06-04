@@ -94,8 +94,13 @@ export class DatasetsTab {
     await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
     await submitBtn.click();
 
-    // Wait for the upload to complete (toast: "Document has been queued for training")
-    await this.page.waitForLoadState('networkidle');
+    // Wait for the upload to complete (toast: "Document has been queued for
+    // training"). Bounded + non-fatal: the app's long-lived connections /
+    // analytics heartbeat mean the network may never idle, so cap
+    // networkidle so it can't hang until the default timeout.
+    await this.page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
     await this.page.waitForTimeout(3_000);
 
     // Close the upload dialog, then the Add Resources modal
