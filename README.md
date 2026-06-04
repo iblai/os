@@ -100,7 +100,14 @@ One codebase, six platforms. OS runs natively everywhere your users are — ligh
 git clone https://github.com/iblai/os.git
 cd os
 pnpm install
-cp .env.example .env.local   # configure your ibl.ai credentials
+```
+
+**Using [Claude Code](https://claude.ai/claude-code)?** Run `/setup` — it will walk you through connecting your ibl.ai tenant and configuring `.env.local` automatically.
+
+**Manual setup:** Copy `.env.example` to `.env.local`, then set `NEXT_PUBLIC_MAIN_TENANT_KEY` to your org key from [login.iblai.app/me](https://login.iblai.app/me).
+
+```bash
+cp .env.example .env.local   # then edit NEXT_PUBLIC_MAIN_TENANT_KEY
 pnpm dev
 ```
 
