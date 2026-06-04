@@ -17,7 +17,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
-[Features](#features) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Enterprise](#enterprise) · [Contributing](#contributing)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Enterprise](#enterprise) · [Contributing](#contributing)
 
 </div>
 
@@ -36,6 +36,34 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 - **Analytics** — Usage dashboards, topic analysis, transcript viewer, and financial reporting
 - **Projects** — Collaborative workspaces to group agents with shared context and goals
 - **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android)
+
+---
+
+## Screenshots
+
+<div align="center">
+
+<img src="docs/images/agent-config.jpeg" alt="Agent Configuration" width="800">
+
+*Configure agents with LLMs, prompts, safety filters, and explore conversation starters*
+
+<img src="docs/images/agent-settings.jpeg" alt="Agent Settings" width="800">
+
+*Customize agent identity, description, and appearance*
+
+<img src="docs/images/mcp-connectors.jpeg" alt="MCP Connectors" width="800">
+
+*Connect to external services via Model Context Protocol — GitHub, Notion, Slack, and more*
+
+<img src="docs/images/memory-settings.jpeg" alt="Memory Settings" width="800">
+
+*Manage agent memory with knowledge gaps, learning goals, and user preferences*
+
+<img src="docs/images/agent-discovery.jpeg" alt="Agent Discovery" width="800">
+
+*Control agent visibility, access permissions, and LTI integration*
+
+</div>
 
 ---
 
