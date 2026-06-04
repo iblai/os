@@ -17,7 +17,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Enterprise](#enterprise) · [Contributing](#contributing)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Contributing](#contributing)
 
 </div>
 
@@ -36,6 +36,14 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 - **Analytics** — Usage dashboards, topic analysis, transcript viewer, and financial reporting
 - **Projects** — Collaborative workspaces to group agents with shared context and goals
 - **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android)
+- **Multi-tenancy** — Full tenant isolation with per-org configuration, branding, and user management
+- **SSO** — Single Sign-On with configurable identity providers (OAuth, OIDC, SAML)
+- **RBAC** — Granular role-based access control with policies and group-based permissions
+- **Stripe Billing** — Subscription management, free trials, and usage-based pricing
+- **Embed Mode** — Embed agents in any website via iframe with custom styling
+- **Custom Domains** — Host agents on your own domain
+- **API Keys** — Programmatic access for integrations and automation
+- **Whitelabeling** — Custom branding, logos, and disclaimers
 
 ---
 
@@ -45,23 +53,23 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 <img src="docs/images/agent-config.jpeg" alt="Agent Configuration" width="800">
 
-*Configure agents with LLMs, prompts, safety filters, and explore conversation starters*
+_Configure agents with LLMs, prompts, safety filters, and explore conversation starters_
 
 <img src="docs/images/agent-settings.jpeg" alt="Agent Settings" width="800">
 
-*Customize agent identity, description, and appearance*
+_Customize agent identity, description, and appearance_
 
 <img src="docs/images/mcp-connectors.jpeg" alt="MCP Connectors" width="800">
 
-*Connect to external services via Model Context Protocol — GitHub, Notion, Slack, and more*
+_Connect to external services via Model Context Protocol — GitHub, Notion, Slack, and more_
 
 <img src="docs/images/memory-settings.jpeg" alt="Memory Settings" width="800">
 
-*Manage agent memory with knowledge gaps, learning goals, and user preferences*
+_Manage agent memory with knowledge gaps, learning goals, and user preferences_
 
 <img src="docs/images/agent-discovery.jpeg" alt="Agent Discovery" width="800">
 
-*Control agent visibility, access permissions, and LTI integration*
+_Control agent visibility, access permissions, and LTI integration_
 
 </div>
 
@@ -106,7 +114,7 @@ OS is the frontend for the ibl.ai platform. Choose your path based on your backe
 
 ### Option A: Existing ibl.ai Tenant
 
-If you already have an ibl.ai tenant (organization key, API access):
+If you already have an ibl.ai tenant (organization key):
 
 1. **Configure your tenant**
 
@@ -117,7 +125,7 @@ If you already have an ibl.ai tenant (organization key, API access):
    Update these values with your tenant details:
 
    ```bash
-   NEXT_PUBLIC_TENANT=your-tenant                 # Your tenant key
+   NEXT_PUBLIC_TENANT=your-tenant
    ```
 
 2. **Deploy with Docker** (recommended)
@@ -153,32 +161,6 @@ If you need full backend infrastructure:
 See [docs/development.md](docs/development.md) for native app build instructions.
 
 Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
-
----
-
-## Enterprise
-
-- **Multi-tenancy** — Full tenant isolation with per-org configuration, branding, and user management
-- **SSO** — Single Sign-On with configurable identity providers (OAuth, OIDC, SAML)
-- **RBAC** — Granular role-based access control with policies and group-based permissions
-- **Stripe Billing** — Subscription management, free trials, and usage-based pricing
-- **Embed Mode** — Embed agents in any website via iframe with custom styling
-- **Custom Domains** — Host agents on your own domain
-- **API Keys** — Programmatic access for integrations and automation
-- **Whitelabeling** — Custom branding, logos, and disclaimers
-
----
-
-## ibl.ai Platform
-
-OS is the open-source frontend for the [ibl.ai](https://ibl.ai) platform, which provides the backend infrastructure:
-
-- **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
-- **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support
-- **Data Platform** — Analytics, billing, user management, and notification services
-- **LiveKit** — Voice and video call infrastructure
-
-Visit [ibl.ai](https://ibl.ai) to set up your backend or request a hosted instance.
 
 ---
 
