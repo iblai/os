@@ -110,17 +110,15 @@ If you already have an ibl.ai tenant (organization key, API access):
 
 ### Option B: Enterprise Deployment
 
-If you're new to ibl.ai and need backend infrastructure:
+If you need full backend infrastructure:
 
-1. **Get your ibl.ai tenant**
+1. **Get an enterprise license**
 
-   - Visit [ibl.ai](https://ibl.ai) to request a tenant
-   - You'll receive your tenant key and API credentials
-   - The ibl.ai platform provides: authentication, AI orchestration, RAG pipeline, analytics, and all backend services
+   Reach out at [ibl.ai/contact](https://ibl.ai/contact) to get a license of the enterprise platform (full backend codebase).
 
-2. **Configure and deploy**
+2. **Deploy with our infra CLI**
 
-   Once you have your credentials, follow Option A above.
+   If you already have access to our Docker images, deploy them easily via [iblai/iblai-infra-cli](https://github.com/iblai/iblai-infra-cli).
 
 > **Note**: OS requires the ibl.ai backend platform for authentication, AI agent APIs, and data services. The backend is not included in this repository — visit [ibl.ai](https://ibl.ai) to get started.
 
