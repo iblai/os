@@ -51,7 +51,14 @@ export class VoiceTab {
     // both have role="tab" and accessible name "Voice", so a plain
     // getByRole match raises a strict-mode violation once the panel is
     // active. The sidebar trigger uniquely owns `panel-voice`.
-    this.tabLink = dialog.locator('[role="tab"][aria-controls="panel-voice"]');
+    //
+    // `:visible` additionally excludes the host's hidden responsive twin —
+    // the sidebar is rendered twice (desktop `#desktop-tab-voice` + compact
+    // `#tab-voice`), both owning `aria-controls="panel-voice"`, so a bare CSS
+    // match (which ignores visibility) still resolves 2 elements.
+    this.tabLink = dialog.locator(
+      '[role="tab"][aria-controls="panel-voice"]:visible',
+    );
     this.heading = dialog.getByRole('heading', {
       name: VOICE_LABELS.headerTitle,
     });

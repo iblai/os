@@ -154,6 +154,10 @@ test.describe('Journey 46: Mentor Voice Tab', () => {
     editMentorPage,
   }) => {
     await editMentorPage.navigateToTab('Settings');
+    // Both toggles live in the Capabilities sub-tab. Panels are forceMounted
+    // but CSS-hidden when inactive, so switch there before asserting on
+    // visibility.
+    await editMentorPage.settings.selectSubTab('Capabilities');
 
     await expect(
       editMentorPage.settings.useFunctionCallingForRagToggle,

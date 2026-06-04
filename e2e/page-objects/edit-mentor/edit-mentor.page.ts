@@ -187,7 +187,16 @@ export class EditMentorPage {
       }
     }
 
-    const tab = this.dialog.getByRole('tab', { name: tabName, exact: true });
+    // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
+    // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
+    // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
+    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
+    // generated `radix-*` id, so filtering on that prefix isolates the sidebar
+    // tab without needing to know each segment's value.
+    const tab = this.dialog
+      .getByRole('tab', { name: tabName, exact: true })
+      .and(this.dialog.locator('[aria-controls^="panel-"]'));
     const isActive =
       (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {

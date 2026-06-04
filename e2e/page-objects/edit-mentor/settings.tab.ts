@@ -137,6 +137,10 @@ export class SettingsTab {
    * `useMentorSegments` re-render sees the updated CallConfiguration.
    */
   async setEnableVideoAndSave(target: boolean): Promise<void> {
+    // The toggle lives in the Capabilities sub-tab. Panels are forceMounted
+    // but CSS-hidden when inactive, so the switch is in the DOM yet not
+    // clickable until we switch to that sub-tab.
+    await this.selectSubTab('Capabilities');
     await expect(this.enableVideoToggle).toBeVisible({ timeout: 10_000 });
     const isOn = await this.isEnableVideoEnabled();
     if (isOn === target) return;
@@ -157,6 +161,8 @@ export class SettingsTab {
 
   /** Idempotently toggle "Look things up only when needed" + Save. */
   async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
+    // Lives in the Capabilities sub-tab — switch there before interacting.
+    await this.selectSubTab('Capabilities');
     await expect(this.useFunctionCallingForRagToggle).toBeVisible({
       timeout: 10_000,
     });

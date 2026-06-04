@@ -48,8 +48,13 @@ export class ScreenShareTab {
     this.page = page;
     this.dialog = dialog;
 
+    // `:visible` excludes the host's hidden responsive twin — the sidebar is
+    // rendered twice (desktop `#desktop-tab-screenshare` + compact
+    // `#tab-screenshare`), both owning `aria-controls="panel-screenshare"`,
+    // and only the viewport-appropriate one is visible. Without it a bare CSS
+    // match (which ignores visibility) resolves 2 elements → strict-mode fail.
     this.tabLink = dialog.locator(
-      '[role="tab"][aria-controls="panel-screenshare"]',
+      '[role="tab"][aria-controls="panel-screenshare"]:visible',
     );
     this.body = dialog.getByTestId('screenshare-tab-body');
     this.heading = dialog.getByRole('heading', {
