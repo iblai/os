@@ -16,6 +16,11 @@
     ]
   },
   "permissions": [
+    "allow-check-ollama-status",
+    "allow-download-phi3-model",
+    "allow-ollama-chat",
+    "allow-ollama-chat-stream",
+
     "core:webview:allow-internal-toggle-devtools",
     "core:default",
     "core:event:default",
@@ -39,6 +44,7 @@
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
-    "os:default"
+    "os:default",
+    "allow-check-network-status"
   ]
 }

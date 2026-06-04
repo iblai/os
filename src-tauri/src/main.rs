@@ -2063,6 +2063,36 @@ fn main() {
                     return false; // Prevent webview navigation in main window
                 }
 
+                // Custom-scheme deep links: rewrite to the app URL and navigate the
+                // main window there. The webview can't load iblai-mentor:// directly,
+                // so we intercept here and redirect via window.location.href.
+                //
+                // Desktop only — on mobile (iOS/Android) the OS handles the deep-link
+                // hand-off via the tauri deep-link plugin, so the webview never sees
+                // the custom scheme as an on_navigation event.
+                #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+                {
+                    if url_str.starts_with("iblai-mentor://")
+                        || url_str.starts_with("ai.ibl.mentorai://")
+                    {
+                        let path = url_str
+                            .replace("iblai-mentor://", "/")
+                            .replace("ai.ibl.mentorai://", "/");
+                        let target_url = format!("{}{}", get_app_url(), path);
+                        println!(
+                            "[ibl.ai] Rewriting deep-link {} -> {}",
+                            url_str, target_url
+                        );
+                        if let Some(main_win) = app_handle.get_webview_window("main") {
+                            let _ = main_win.eval(&format!(
+                                "window.location.href = '{}';",
+                                target_url
+                            ));
+                        }
+                        return false; // Block the deep-link navigation; redirect runs via eval
+                    }
+                }
+
                 // Allow navigation within the app's domains and localhost
                 let allowed = url_str.starts_with("http://localhost")
                     || url_str.starts_with("http://127.0.0.1")
