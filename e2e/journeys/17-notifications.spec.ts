@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import { reliableClick } from '../utils/resilient';
 
 test.describe('Journey 17: Notifications — Non-Admin', () => {
   test.beforeEach(async ({ nonadminPage }) => {
@@ -75,7 +76,10 @@ test.describe('Journey 17: Notifications — Admin', () => {
     test.skip(!isAdmin, 'Alerts tab requires admin access');
     await notificationsPage.goto();
     await expect(notificationsPage.alertsTab).toBeVisible({ timeout: 10_000 });
-    await notificationsPage.alertsTab.click();
+    // The Radix tab list re-renders as notification data loads, detaching
+    // the Alerts tab mid-click ("element was detached from the DOM").
+    // reliableClick waits for stability and retries, so a detach re-runs.
+    await reliableClick(page, notificationsPage.alertsTab);
     await page.waitForTimeout(1_000);
     const alertsContent = notificationsPage.alertsContent;
     await expect(alertsContent).toBeVisible({ timeout: 10_000 });
