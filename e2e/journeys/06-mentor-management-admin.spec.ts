@@ -167,6 +167,39 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.settings.deleteMentor();
     await expect(page).toHaveURL(/\/platform\//, { timeout: 15_000 });
   });
+
+  // Regression: opening Edit Agent for a sibling mentor via sidebar →
+  // Agents → My Agents → click row used to render only the Privacy tab.
+  // The page mentor's RBAC was the only set in the global cache, so the
+  // segment filter stripped every tab with an `rbacResource`. The modal
+  // now hydrates the chosen mentor's RBAC on open
+  // (`components/modals/edit-mentor-modal/index.tsx`), so the full
+  // sidebar — Settings, LLM, Prompts, etc. — should be present.
+  test('admin opens edit mentor from My Agents and sees the full segment sidebar', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.openFromMyAgents();
+    await waitForPageReady(page);
+
+    const sidebar = editMentorPage.dialog
+      .getByRole('tablist', { name: 'Agent settings tabs' })
+      .first();
+
+    // Settings is the canary — it has an rbacResource and was missing in
+    // the bug. If RBAC hydration regresses, this is the first tab to drop.
+    await expect(
+      sidebar.getByRole('tab', { name: 'Settings', exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // A second tab with rbacResource confirms it isn't just Settings that
+    // slipped through (e.g. via a non-RBAC fallback).
+    await expect(
+      sidebar.getByRole('tab', { name: 'LLM', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await editMentorPage.close();
+  });
 });
 
 test.describe('Journey 6: Mentor Management — Non-Admin', () => {

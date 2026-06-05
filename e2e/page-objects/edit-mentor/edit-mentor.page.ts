@@ -166,6 +166,59 @@ export class EditMentorPage {
     }
   }
 
+  /**
+   * Opens the Edit Mentor modal via the sidebar's Agents → My Agents flow:
+   * expands the Agents section, clicks My Agents to surface the agent list,
+   * then clicks the first row. This path is the regression case behind
+   * `edit-mentor-modal/index.tsx`'s RBAC-hydration effect — the page mentor's
+   * RBAC is loaded on boot, but a sibling agent opened from this list has no
+   * permissions cached and the segment filter would otherwise strip every
+   * tab except Privacy. The companion test in journey 06 asserts the full
+   * sidebar still renders.
+   */
+  async openFromMyAgents(): Promise<void> {
+    await this.restoreAppChrome();
+
+    const sidebar = this.page.locator('aside').first();
+    const agentsTrigger = sidebar.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    await expect(agentsTrigger).toBeVisible({ timeout: 10_000 });
+    const expanded = await agentsTrigger
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await agentsTrigger.click();
+      await expect(agentsTrigger).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 5_000,
+      });
+    }
+
+    const myAgents = sidebar.getByRole('button', {
+      name: 'My Agents',
+      exact: true,
+    });
+    await expect(myAgents).toBeVisible({ timeout: 10_000 });
+    await myAgents.click();
+
+    const settingsDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: 'Showing the list of agents available in your tenant' });
+    await expect(settingsDialog).toBeVisible({ timeout: 15_000 });
+
+    // Pagination is async; wait for at least one agent row to appear before
+    // clicking. Names are rendered as plain text in a cell, so we match by
+    // CSS rather than role.
+    const firstAgentName = settingsDialog
+      .locator('tbody tr td:first-child div.cursor-pointer')
+      .first();
+    await expect(firstAgentName).toBeVisible({ timeout: 15_000 });
+    await firstAgentName.click();
+
+    await expect(this.dialog).toBeVisible({ timeout: 15_000 });
+  }
+
   async navigateToTab(tabName: string): Promise<void> {
     // The sidebar now renders only the segments belonging to the active
     // category, so segment triggers outside that category aren't in the DOM
