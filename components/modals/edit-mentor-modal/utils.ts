@@ -166,14 +166,19 @@ export function buildFloatingBubbleConfigFromSettings(
 const getBubbleImage = async (tenant: string) => {
   let bubbleImg = `/images/ibl-logo-animated.gif`;
 
-  const url = `${config.axdUrl()}/api/core/orgs/${tenant}/thumbnail/`;
+  // The thumbnail is a DM (manager) endpoint, so we build it from dmUrl().
+  // On the unified API gateway, axdUrl() resolves to an invalid `/axd` prefix
+  // (HTTP 404), whereas dmUrl() -> `/dm/...` returns 200. In the legacy config
+  // (no API base URL) axdUrl() and dmUrl() are identical, so behavior is
+  // unchanged there. This matches the live-preview default in useEmbedTab.ts.
+  const url = `${config.dmUrl()}/api/core/orgs/${tenant}/thumbnail/`;
   try {
     const response = await fetch(url);
     if (response.ok) {
       bubbleImg = url;
     } else {
       if (tenant !== 'main') {
-        const url2 = `${config.axdUrl()}/api/core/orgs/main/thumbnail/`;
+        const url2 = `${config.dmUrl()}/api/core/orgs/main/thumbnail/`;
         const response2 = await fetch(url2);
         if (response2.ok) {
           bubbleImg = url2;
