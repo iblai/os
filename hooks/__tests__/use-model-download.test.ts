@@ -409,7 +409,7 @@ describe('useModelDownload hook', () => {
           await result.current.startDownload?.();
         });
 
-        expect(mockInvoke).toHaveBeenCalledWith('download_phi3_model');
+        expect(mockInvoke).toHaveBeenCalledWith('download_model', undefined);
       }
     });
 

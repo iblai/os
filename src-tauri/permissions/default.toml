@@ -9,13 +9,15 @@ permissions = [
     "allow-navigate-to",
     "allow-get-os-type",
     "allow-install-ollama",
+    "allow-stop-ollama",
     "allow-check-ollama-status",
     "allow-check-disk-space-for-model",
     "allow-download-phi3-model",
+    "allow-download-model",
     "allow-cancel-model-download",
     "allow-check-network-status",
     "allow-ollama-chat",
-    "allow-ollama-chat-stream"
+    "allow-ollama-chat-stream",
 ]
 
 [[permission]]
@@ -43,6 +45,12 @@ description = "Enables installing Ollama"
 allow = ["install_ollama"]
 
 [[permission]]
+identifier = "allow-stop-ollama"
+description = "Enables stopping the Ollama model manager server"
+[permission.commands]
+allow = ["stop_ollama"]
+
+[[permission]]
 identifier = "allow-check-ollama-status"
 description = "Enables checking Ollama status"
 [permission.commands]
@@ -59,6 +67,12 @@ identifier = "allow-download-phi3-model"
 description = "Enables downloading the phi3 model"
 [permission.commands]
 allow = ["download_phi3_model"]
+
+[[permission]]
+identifier = "allow-download-model"
+description = "Enables downloading any Ollama model (generic model download)"
+[permission.commands]
+allow = ["download_model"]
 
 [[permission]]
 identifier = "allow-cancel-model-download"

@@ -555,10 +555,10 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`",
+          "description": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`"
+          "markdownDescription": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`"
         },
         {
           "description": "Enables canceling model downloads",
@@ -583,6 +583,12 @@
           "type": "string",
           "const": "allow-check-ollama-status",
           "markdownDescription": "Enables checking Ollama status"
+        },
+        {
+          "description": "Enables downloading any Ollama model (generic model download)",
+          "type": "string",
+          "const": "allow-download-model",
+          "markdownDescription": "Enables downloading any Ollama model (generic model download)"
         },
         {
           "description": "Enables downloading the phi3 model",
@@ -625,6 +631,12 @@
           "type": "string",
           "const": "allow-open-external-url",
           "markdownDescription": "Enables opening URLs in the system browser for OAuth flows"
+        },
+        {
+          "description": "Enables stopping the Ollama model manager server",
+          "type": "string",
+          "const": "allow-stop-ollama",
+          "markdownDescription": "Enables stopping the Ollama model manager server"
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",

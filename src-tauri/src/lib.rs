@@ -10,8 +10,9 @@ mod web_cache;
 
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
-    is_ollama_running, pull_model, start_ollama_server, DiskSpaceError, DownloadProgress,
-    InstallationLog, OllamaStatus, REQUIRED_FREE_SPACE_GB,
+    is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
+    wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
+    SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use offline_server::{get_server_url, start_offline_server};
@@ -715,38 +716,64 @@ const EVENT_OLLAMA_STATUS: &str = "model:ollama-status";
 /// Install Ollama on the system
 #[command]
 async fn install_ollama() -> Result<String, String> {
-    // Check if already installed using the same logic as model_manager
+    // "Enable Local Models" === ensure the model manager is installed AND running.
+    // Check if already installed using the same logic as model_manager.
     if check_ollama_installed() {
-        return Ok("Ollama already installed".into());
+        // Already installed — make sure the server is actually running.
+        if !is_ollama_running().await {
+            start_ollama_server().map_err(|e| e.to_string())?;
+            // Wait until the server actually answers its API before returning.
+            wait_for_ollama_ready(30).await;
+        }
+        return Ok("Model manager is installed and running".into());
     }
 
     download_and_install_ollama().await?;
 
     // Start Ollama server using the correct path
     start_ollama_server().map_err(|e| e.to_string())?;
+    wait_for_ollama_ready(30).await;
 
-    Ok("Ollama installed and started".into())
+    Ok("Model manager installed and started".into())
+}
+
+/// Stop the Ollama model manager server (mobile/cdylib parity with main.rs).
+#[command]
+async fn stop_ollama(app: AppHandle) -> Result<(), String> {
+    stop_ollama_server()?;
+    tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
+    let _ = check_ollama_status(app).await;
+    Ok(())
 }
 
 /// Check Ollama installation and model status
 #[command]
 async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
-    let installed = check_ollama_installed();
-    let running = if installed {
-        is_ollama_running().await
+    // Determine availability FIRST (/api/version), then — only once available —
+    // wait a short grace period BEFORE reaching /api/tags (it lags /api/version
+    // right after start, so reading too early reports "stopped"/"no models").
+    let running = is_ollama_running().await;
+    let installed_models = if running {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        let mut t = list_installed_models().await;
+        if t.is_none() {
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            t = list_installed_models().await;
+        }
+        t.unwrap_or_default()
     } else {
-        false
+        Vec::new()
     };
-    let model_installed = if running {
-        is_model_installed("phi3:mini").await
-    } else {
-        false
-    };
+    let installed = running || check_ollama_installed();
+    let model_installed = installed_models
+        .iter()
+        .any(|n| n.starts_with("phi3:mini") || n == "phi3:mini");
 
     let status = OllamaStatus {
         installed,
         running,
         model_installed,
+        installed_models,
     };
 
     // Emit status update event
@@ -776,9 +803,29 @@ async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
     Ok(true)
 }
 
+/// Report total system RAM and best-effort VRAM (bytes) so the UI can warn
+/// before downloading a model that is large relative to the machine's capacity.
+#[command]
+async fn get_system_memory() -> Result<SystemMemory, String> {
+    Ok(model_manager::get_system_memory())
+}
+
 /// Download the Phi3 Mini model
 #[command]
 async fn download_phi3_model(app: AppHandle) -> Result<(), String> {
+    download_ollama_model(app, "phi3:mini".to_string()).await
+}
+
+/// Download (pull) an arbitrary Ollama model with streaming progress events.
+#[command]
+async fn download_model(app: AppHandle, model: Option<String>) -> Result<(), String> {
+    let model = model.unwrap_or_else(|| "phi3:mini".to_string());
+    println!("[ibl.ai] download_model: pulling {}", model);
+    download_ollama_model(app, model).await
+}
+
+/// Shared implementation: pull an Ollama model, emitting progress/log/disk events.
+async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), String> {
     let app_progress = Arc::new(app.clone());
     let app_log = Arc::new(app.clone());
 
@@ -806,10 +853,9 @@ async fn download_phi3_model(app: AppHandle) -> Result<(), String> {
         // Try to start it
         start_ollama_server()?;
 
-        // Wait for it to start
-        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-        if !is_ollama_running().await {
+        // Wait for it to actually become ready (it can take several seconds; a
+        // fixed short delay raced the server and made downloads fail).
+        if !wait_for_ollama_ready(30).await {
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
@@ -839,7 +885,7 @@ async fn download_phi3_model(app: AppHandle) -> Result<(), String> {
     }
 
     // Check if already installed
-    if is_model_installed("phi3:mini").await {
+    if is_model_installed(&model).await {
         let _ = app.emit(
             EVENT_DOWNLOAD_PROGRESS,
             DownloadProgress {
@@ -857,7 +903,7 @@ async fn download_phi3_model(app: AppHandle) -> Result<(), String> {
             InstallationLog {
                 timestamp: get_timestamp(),
                 level: "info".to_string(),
-                message: "Phi3 Mini model is already installed".to_string(),
+                message: format!("{} model is already installed", model),
             },
         );
 
@@ -866,7 +912,7 @@ async fn download_phi3_model(app: AppHandle) -> Result<(), String> {
 
     // Start the model download
     pull_model(
-        "phi3:mini",
+        &model,
         move |progress| {
             let _ = app_progress.emit(EVENT_DOWNLOAD_PROGRESS, &progress);
         },
@@ -2529,9 +2575,12 @@ pub fn run() {
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
         let builder = builder.invoke_handler(tauri::generate_handler![
             install_ollama,
+            stop_ollama,
             check_ollama_status,
             check_disk_space_for_model,
+            get_system_memory,
             download_phi3_model,
+            download_model,
             cancel_model_download,
             check_network_status,
             set_cache_online_status,
@@ -2557,9 +2606,12 @@ pub fn run() {
         #[cfg(any(target_os = "ios", target_os = "android"))]
         let builder = builder.invoke_handler(tauri::generate_handler![
             install_ollama,
+            stop_ollama,
             check_ollama_status,
             check_disk_space_for_model,
+            get_system_memory,
             download_phi3_model,
+            download_model,
             cancel_model_download,
             check_network_status,
             get_os_type,

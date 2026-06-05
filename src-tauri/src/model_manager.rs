@@ -1,12 +1,18 @@
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::Path;
+
+/// Set when the user cancels an in-flight model download. `pull_model` checks
+/// this each iteration and stops cleanly (emitting a "cancelled" event) instead
+/// of relying solely on killing the Ollama process.
+static DOWNLOAD_CANCELLED: AtomicBool = AtomicBool::new(false);
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::process::Command;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-use sysinfo::Disks;
+use sysinfo::{Disks, System};
 
 #[cfg(target_os = "windows")]
 use std::process::Stdio;
@@ -26,6 +32,19 @@ fn create_command(program: &str) -> Command {
     }
 
     cmd
+}
+
+/// Whether `sudo` can run non-interactively right now (passwordless sudoers entry
+/// or a still-valid cached credential). Used to decide whether to attempt
+/// privileged systemd/package-manager commands before falling back to
+/// unprivileged alternatives. `sudo -n` never prompts — it fails fast instead.
+#[cfg(target_os = "linux")]
+pub fn can_sudo() -> bool {
+    create_command("sudo")
+        .args(["-n", "true"])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
 }
 
 /// Event payload for download progress updates
@@ -61,6 +80,10 @@ pub struct OllamaStatus {
     pub installed: bool,
     pub running: bool,
     pub model_installed: bool,
+    /// All model tags currently installed in Ollama (e.g. "llama3.2:latest",
+    /// "phi3:mini"). Lets the UI mark every downloaded model as ready, not just
+    /// the primary one.
+    pub installed_models: Vec<String>,
 }
 
 /// Ollama API response for streaming pull
@@ -134,6 +157,32 @@ pub async fn is_ollama_running() -> bool {
         .is_ok()
 }
 
+/// Poll until Ollama is actually answering its API, up to `timeout_secs`.
+/// Starting Ollama (systemd or `ollama serve`) returns before the server is
+/// ready to serve, so callers that just started it must wait for readiness
+/// instead of assuming a fixed delay is enough. Returns true once reachable.
+///
+/// Ollama starts accepting connections (`/api/version`) a moment before it can
+/// actually serve real requests (e.g. `/api/tags`), so once it first responds we
+/// wait a short grace period before declaring it ready — otherwise callers reach
+/// it too early and fail.
+pub async fn wait_for_ollama_ready(timeout_secs: u64) -> bool {
+    const GRACE: std::time::Duration = std::time::Duration::from_secs(1);
+    for _ in 0..timeout_secs.max(1) {
+        if is_ollama_running().await {
+            tokio::time::sleep(GRACE).await;
+            return true;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    if is_ollama_running().await {
+        tokio::time::sleep(GRACE).await;
+        true
+    } else {
+        false
+    }
+}
+
 /// Start Ollama server if not running
 pub fn start_ollama_server() -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -163,10 +212,20 @@ pub fn start_ollama_server() -> Result<(), String> {
 
     #[cfg(target_os = "linux")]
     {
-        create_command("ollama")
-            .arg("serve")
-            .spawn()
-            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        // Prefer the systemd service via sudo (only attempted when sudo is
+        // non-interactive); fall back to spawning the server executable directly.
+        let systemctl_started = can_sudo()
+            && create_command("sudo")
+                .args(["systemctl", "start", "ollama"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+        if !systemctl_started {
+            create_command("ollama")
+                .arg("serve")
+                .spawn()
+                .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        }
     }
 
     // Mobile platforms don't support Ollama
@@ -176,6 +235,47 @@ pub fn start_ollama_server() -> Result<(), String> {
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    Ok(())
+}
+
+/// Stop the Ollama server (the model manager). On Linux prefer the systemd
+/// service, falling back to killing the process; on macOS/Windows kill the
+/// process directly.
+pub fn stop_ollama_server() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        create_command("taskkill")
+            .args(["/F", "/IM", "ollama.exe"])
+            .output()
+            .ok();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        create_command("pkill")
+            .args(["-TERM", "-f", "ollama"])
+            .output()
+            .ok();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Prefer the systemd service via sudo (only when sudo is non-interactive);
+        // fall back to killing the process directly.
+        let systemctl_stopped = can_sudo()
+            && create_command("sudo")
+                .args(["systemctl", "stop", "ollama"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+        if !systemctl_stopped {
+            create_command("pkill")
+                .args(["-TERM", "-f", "ollama"])
+                .output()
+                .ok();
+        }
+    }
+
     Ok(())
 }
 
@@ -219,6 +319,67 @@ pub fn check_disk_space() -> Result<f64, String> {
     }
 }
 
+/// Total memory the host can bring to bear on running a model, in bytes.
+/// `vram_total` is the largest single GPU's memory (0 when no discrete GPU is
+/// detected — e.g. integrated graphics or Apple unified memory, where system
+/// RAM is the right figure to size a model against).
+#[derive(Clone, Serialize)]
+pub struct SystemMemory {
+    pub ram_total: u64,
+    pub vram_total: u64,
+}
+
+/// Best-effort total VRAM of the largest GPU, in bytes. Queries `nvidia-smi`
+/// (present on NVIDIA Linux/Windows installs); returns 0 when it's unavailable
+/// or reports nothing, so callers fall back to system RAM.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn get_vram_total() -> u64 {
+    let output = create_command("nvidia-smi")
+        .args(["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
+        .output();
+
+    let output = match output {
+        Ok(output) if output.status.success() => output,
+        _ => return 0,
+    };
+
+    // Each line is one GPU's total memory in MiB. Use the largest single GPU,
+    // since a model runs on one device rather than the summed pool.
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| line.trim().parse::<u64>().ok())
+        .max()
+        .map(|mib| mib * 1024 * 1024)
+        .unwrap_or(0)
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn get_vram_total() -> u64 {
+    0
+}
+
+/// Read total system RAM (and best-effort VRAM) in bytes. Used to warn the user
+/// before downloading a model that is large relative to what the machine can run.
+pub fn get_system_memory() -> SystemMemory {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    {
+        let mut sys = System::new();
+        sys.refresh_memory();
+        SystemMemory {
+            ram_total: sys.total_memory(),
+            vram_total: get_vram_total(),
+        }
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        SystemMemory {
+            ram_total: 0,
+            vram_total: get_vram_total(),
+        }
+    }
+}
+
 /// Check if a specific model is installed in Ollama
 pub async fn is_model_installed(model_name: &str) -> bool {
     let client = Client::new();
@@ -246,6 +407,43 @@ pub async fn is_model_installed(model_name: &str) -> bool {
     }
 }
 
+/// Fetch the installed model tags from Ollama (e.g. "llama3.2:latest").
+/// Returns `None` when Ollama is UNREACHABLE — so callers can distinguish "no
+/// models installed" from "couldn't ask" (the latter must not be shown as
+/// not-downloaded) — and `Some(tags)` when reachable (possibly an empty list).
+pub async fn list_installed_models() -> Option<Vec<String>> {
+    let client = Client::new();
+    let response = match client
+        .get(format!("{}/api/tags", OLLAMA_API_URL))
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            println!("[Ollama] /api/tags request failed: {}", e);
+            return None;
+        }
+    };
+
+    match response.json::<OllamaTagsResponse>().await {
+        Ok(tags) => {
+            let names: Vec<String> = tags
+                .models
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|m| m.name)
+                .collect();
+            println!("[Ollama] /api/tags ok: {} model(s) {:?}", names.len(), names);
+            Some(names)
+        }
+        Err(e) => {
+            println!("[Ollama] /api/tags parse failed: {}", e);
+            None
+        }
+    }
+}
+
 /// Pull a model from Ollama with streaming progress updates
 pub async fn pull_model<F, G>(model_name: &str, on_progress: F, on_log: G) -> Result<(), String>
 where
@@ -253,6 +451,9 @@ where
     G: Fn(InstallationLog) + Send + 'static,
 {
     let client = Client::new();
+
+    // Clear any cancellation request left over from a previous download.
+    DOWNLOAD_CANCELLED.store(false, Ordering::SeqCst);
 
     #[cfg(target_os = "windows")]
     on_log(InstallationLog {
@@ -290,9 +491,51 @@ where
 
     let mut stream = response.bytes_stream();
     let mut last_percentage: f64 = 0.0;
+    // Track per-layer (digest) byte counts so the reported percentage reflects the
+    // WHOLE pull, not just the current layer. Ollama downloads layers sequentially
+    // and only reveals a layer's `total` once it starts, but summing across every
+    // layer seen so far keeps the bar smooth instead of snapping back to 0% each
+    // time a new layer begins.
+    let mut layers: std::collections::HashMap<String, (u64, u64)> = std::collections::HashMap::new();
 
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| format!("Stream error: {}", e))?;
+        // The user requested cancellation — stop cleanly (not as an error).
+        if DOWNLOAD_CANCELLED.load(Ordering::SeqCst) {
+            on_progress(DownloadProgress {
+                status: "cancelled".to_string(),
+                completed: 0,
+                total: 0,
+                percentage: 0.0,
+                digest: None,
+                message: "Download cancelled".to_string(),
+            });
+            on_log(InstallationLog {
+                timestamp: get_timestamp(),
+                level: "info".to_string(),
+                message: "Download cancelled".to_string(),
+            });
+            return Ok(());
+        }
+
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                // Cancelling restarts/kills Ollama, which breaks the stream — treat
+                // that as a clean cancellation rather than a download error.
+                if DOWNLOAD_CANCELLED.load(Ordering::SeqCst) {
+                    on_progress(DownloadProgress {
+                        status: "cancelled".to_string(),
+                        completed: 0,
+                        total: 0,
+                        percentage: 0.0,
+                        digest: None,
+                        message: "Download cancelled".to_string(),
+                    });
+                    return Ok(());
+                }
+                return Err(format!("Stream error: {}", e));
+            }
+        };
         let text = String::from_utf8_lossy(&chunk);
 
         // Ollama streams newline-delimited JSON
@@ -313,8 +556,21 @@ where
                 }
 
                 let status_text = resp.status.clone().unwrap_or_default();
-                let total = resp.total.unwrap_or(0);
-                let completed = resp.completed.unwrap_or(0);
+
+                // Accumulate per-layer byte counts keyed by digest, then report the
+                // cumulative totals across every layer seen so far (keeps the bar
+                // smooth/monotonic instead of resetting at each new layer).
+                if let Some(digest) = resp.digest.clone() {
+                    let entry = layers.entry(digest).or_insert((0, 0));
+                    if let Some(t) = resp.total {
+                        entry.1 = t;
+                    }
+                    if let Some(c) = resp.completed {
+                        entry.0 = c;
+                    }
+                }
+                let completed: u64 = layers.values().map(|(c, _)| *c).sum();
+                let total: u64 = layers.values().map(|(_, t)| *t).sum();
                 let percentage = if total > 0 {
                     (completed as f64 / total as f64) * 100.0
                 } else {
@@ -421,23 +677,50 @@ where
     Ok(())
 }
 
-/// Cancel an ongoing model download by killing Ollama processes
+/// Cancel an ongoing model download. Sets a cancellation flag so `pull_model`
+/// stops cleanly, then aborts the in-flight server-side pull — always leaving
+/// the Ollama server running afterwards (cancelling a download must not take the
+/// model manager down).
 pub fn cancel_download() -> Result<(), String> {
+    DOWNLOAD_CANCELLED.store(true, Ordering::SeqCst);
+
+    #[cfg(target_os = "linux")]
+    {
+        // Restarting the systemd service via sudo cleanly aborts the pull AND
+        // leaves Ollama running. If sudo isn't available/permitted, kill the
+        // process and start it back up so the manager stays available.
+        let restarted = can_sudo()
+            && create_command("sudo")
+                .args(["systemctl", "restart", "ollama"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+        if !restarted {
+            create_command("pkill")
+                .args(["-TERM", "-f", "ollama"])
+                .output()
+                .ok();
+            let _ = start_ollama_server();
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        create_command("pkill")
+            .args(["-TERM", "-f", "ollama"])
+            .output()
+            .ok();
+        // Bring Ollama back up so the manager stays available after cancel.
+        let _ = start_ollama_server();
+    }
+
     #[cfg(target_os = "windows")]
     {
         create_command("taskkill")
             .args(["/F", "/IM", "ollama.exe"])
             .output()
             .ok();
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
-    {
-        // Send SIGTERM to gracefully stop the download
-        create_command("pkill")
-            .args(["-TERM", "-f", "ollama"])
-            .output()
-            .ok();
+        let _ = start_ollama_server();
     }
 
     Ok(())
