@@ -120,6 +120,12 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     const wasSelected =
       await editMentorPage.privacy.isEntitySelected('EMAIL_ADDRESS');
 
+    // EntityChip's `disabled` prop tracks the form save state — the chip
+    // briefly renders disabled after setRouterEnabled while the save settles.
+    // Without this guard the click would no-op and the aria-checked assertion
+    // would race the save round-trip.
+    await expect(chip).not.toBeDisabled({ timeout: 10_000 });
+
     await chip.click();
     await expect(chip).toHaveAttribute(
       'aria-checked',
@@ -128,6 +134,7 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     );
 
     // Restore the original state so the suite stays idempotent.
+    await expect(chip).not.toBeDisabled({ timeout: 10_000 });
     await chip.click();
     await expect(chip).toHaveAttribute(
       'aria-checked',

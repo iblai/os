@@ -1,6 +1,8 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { parsePlatformUrl, safeWaitForURL } from '../utils/navigation';
+import { waitForPageReady } from '../utils/resilient';
 import {
   MENTOR_NEXTJS_HOST,
   PLAYWRIGHT_TENANT_KEY,
@@ -17,7 +19,6 @@ import {
   shouldCloseCSVEditorWhenClickingCloseButton,
   shouldVerifyCSVEditorDialogAccessibility,
   shouldOpenCSVEditorForUserMetadataReport,
-  shouldDirectlyDownloadChatHistoryReportWithoutCSVEditor,
   shouldDisableOtherDownloadButtonsWhileGeneratingReport,
   navigateToReportDownload,
   verifyPreparingPhase,
@@ -47,6 +48,91 @@ const REPORT_CARDS = [
     expectsCsvEditor: false,
   },
 ];
+
+/**
+ * Local copy of the SDK's `shouldDirectlyDownloadChatHistoryReportWithoutCSVEditor`
+ * with a longer report-generation timeout. The SDK helper hard-codes 40s for
+ * both the `download` event and the deferred-notification toast, which the
+ * backend regularly exceeds under CI load (the report generates fine when run
+ * manually — it's just slow). Since the SDK helper takes no timeout argument
+ * and lives in node_modules, we reproduce its logic here verbatim and bump the
+ * window. Keep this in sync with the SDK implementation.
+ */
+const DEFERRED_NOTIFICATION_TEXT =
+  'You will be notified once the report is available.';
+
+async function downloadChatHistoryReportDirectly(
+  page: Page,
+  timeout = 90_000,
+): Promise<void> {
+  const dataReportsTab = page.getByRole('tab', { name: 'Data Reports' });
+  await expect(dataReportsTab).toBeVisible({ timeout: 120_000 });
+  await dataReportsTab.click();
+  await waitForPageReady(page);
+
+  const chatHistoryCard = page.getByLabel(
+    'All Mentor Chat History report card',
+  );
+  if (!(await chatHistoryCard.isVisible().catch(() => false))) {
+    test.skip();
+    return;
+  }
+
+  // Start listening for the download before triggering — the auto-download
+  // fires as soon as the date-range picker is confirmed.
+  const downloadPromise = page.waitForEvent('download', { timeout });
+
+  // Inlined `triggerReportFromCard`: prefer Regenerate (always opens the
+  // picker), else Download; then confirm the date-range popover.
+  const triggerAsync = (async () => {
+    const regenerateButton = chatHistoryCard.getByRole('button', {
+      name: 'Regenerate report',
+    });
+    const downloadButton = chatHistoryCard.getByRole('button', {
+      name: 'Download report',
+    });
+    const hasRegenerate = await regenerateButton.isVisible().catch(() => false);
+    const trigger = hasRegenerate ? regenerateButton : downloadButton;
+    await trigger.click();
+    const dateRangePopover = page.getByTestId('report-date-range-popover');
+    await expect(dateRangePopover).toBeVisible({ timeout: 10_000 });
+    await dateRangePopover
+      .getByRole('button', { name: /^(Generate|Regenerate)$/ })
+      .click();
+    await expect(dateRangePopover).not.toBeVisible({ timeout: 10_000 });
+  })();
+
+  // Either the browser fires a download, or the backend defers and shows the
+  // deferred-notification toast. Both are valid outcomes.
+  const deferredNotification = page.getByText(DEFERRED_NOTIFICATION_TEXT);
+  const [, outcome] = await Promise.all([
+    triggerAsync,
+    Promise.race([
+      downloadPromise.then((download) => ({
+        kind: 'download' as const,
+        download,
+      })),
+      deferredNotification
+        .waitFor({ state: 'visible', timeout })
+        .then(() => ({ kind: 'deferred' as const })),
+    ]).catch(() => null),
+  ]);
+
+  if (!outcome) {
+    throw new Error(
+      `Chat History generation did not complete: neither a download nor the deferred-notification toast appeared within ${timeout / 1000}s`,
+    );
+  }
+  if (outcome.kind === 'download') {
+    const filename = outcome.download.suggestedFilename();
+    expect(filename.endsWith('.csv')).toBeTruthy();
+  }
+
+  // Regardless of outcome, the CSV editor dialog must never open for chat history.
+  const csvEditorDialog = page.getByRole('dialog', { name: 'Edit CSV Data' });
+  const dialogOpened = await csvEditorDialog.isVisible().catch(() => false);
+  expect(dialogOpened).toBeFalsy();
+}
 
 test.describe('Journey 19: Data Reports', () => {
   test.beforeEach(async ({ page }) => {
@@ -151,8 +237,11 @@ test.describe('Journey 19: Data Reports', () => {
     page,
     analyticsPage,
   }) => {
+    // Report generation is slow under CI load — give the whole test room
+    // beyond the 90s the helper waits for the download/deferred toast.
+    test.setTimeout(180_000);
     await analyticsPage.goto();
-    await shouldDirectlyDownloadChatHistoryReportWithoutCSVEditor(page);
+    await downloadChatHistoryReportDirectly(page);
   });
 
   test('admin goes to Data Reports tab and verifies other download buttons are disabled while generating', async ({

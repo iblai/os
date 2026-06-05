@@ -44,9 +44,27 @@ export class CreateMentorPage {
   }
 
   /**
-   * Open the Create Mentor modal via the sidebar "New Mentor" button.
+   * Open the Create Mentor modal via the sidebar "New Agent" entry.
+   *
+   * In the new sidebar, "New Agent" lives inside the collapsible
+   * "Agents" section (alongside "My Agents" and "Explore"). Radix
+   * Collapsible hides items when the section is closed, so we expand
+   * Agents first and only then click New Agent.
    */
   async open(): Promise<void> {
+    const agentsTrigger = this.page.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    if (await agentsTrigger.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      const expanded = await agentsTrigger
+        .getAttribute('aria-expanded')
+        .catch(() => null);
+      if (expanded !== 'true') {
+        await agentsTrigger.click();
+      }
+    }
+
     const newMentorBtn = this.page.getByRole('button', {
       name: 'New Agent',
       exact: true,

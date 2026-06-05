@@ -1339,7 +1339,8 @@
       "name": "Mentor MCP Tab",
       "spec": "25-mentor-mcp-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx"
       ],
       "checkpoints": [
         {
@@ -1455,6 +1456,7 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/ui/hover-card.tsx",
         "components/header.tsx",
         "components/header/profile-button.tsx"
       ],

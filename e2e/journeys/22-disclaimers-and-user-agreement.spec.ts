@@ -385,6 +385,10 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await editMentorPage.navigateToTab('Settings');
     await waitForPageReady(page);
 
+    // Visibility combobox lives under the Discovery sub-tab now that
+    // Settings was split into Basic / Discovery / Capabilities.
+    await editMentorPage.settings.selectSubTab('Discovery');
+
     let visibilityVisible = false;
     try {
       await editMentorPage.settings.visibilityCombobox.waitFor({

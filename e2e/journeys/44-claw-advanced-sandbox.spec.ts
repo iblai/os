@@ -94,6 +94,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -108,6 +110,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     const toggle = editMentorPage.settings.advancedSandboxToggle;
     await expect(toggle).toBeVisible({ timeout: 10_000 });
     await expect(toggle).toBeEnabled({ timeout: 5_000 });
@@ -132,6 +136,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     const toggle = editMentorPage.settings.advancedSandboxToggle;
     await expect(toggle).toBeVisible({ timeout: 10_000 });
 
@@ -189,6 +195,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -312,6 +320,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
       timeout: 10_000,
     });
@@ -465,6 +475,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
 
+    // Sandbox toggle moved to Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
       timeout: 10_000,
     });
