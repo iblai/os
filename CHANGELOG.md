@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.1](https://github.com/iblai/os/compare/v0.73.0...v0.73.1) (2026-06-05)
+
+### Documentation
+
+* update YouTube demo video link and hyperlink label ([458b66d](https://github.com/iblai/os/commit/458b66d4552ad885a8eda74326785afbacbc1bf4))
+
 ## [0.73.0](https://github.com/iblai/os/compare/v0.72.1...v0.73.0) (2026-06-05)
 
 ### Features
