@@ -501,7 +501,11 @@ test.describe('Journey 20: Dataset Management', () => {
         .locator('input[type="file"]')
         .setInputFiles(resource.path);
       await page.waitForTimeout(3_000);
-      await page.waitForLoadState('networkidle');
+      // Bounded + non-fatal: the SPA's streaming/polling connections may
+      // keep it from ever idling, so cap networkidle so it can't hang.
+      await page
+        .waitForLoadState('networkidle', { timeout: 15_000 })
+        .catch(() => {});
       await page.keyboard.press('Escape');
       await page.waitForTimeout(2_000);
       logger.info(`TC23: Uploaded ${resource.type}: ${resource.name}`);

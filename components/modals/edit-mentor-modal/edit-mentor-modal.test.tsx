@@ -118,6 +118,12 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     // segment. We don't add the clawApiSlice middleware to the test store, so
     // mock the hook to return `null` (no wired config) — Skills stays hidden.
     useGetClawMentorConfigQuery: () => ({ data: null }),
+    // EditMentorModal hydrates the mentor's RBAC on open via this hook; stub
+    // to keep the test Redux store free of the coreApiSlice middleware.
+    useGetRbacPermissionsMutation: () => [
+      () => ({ unwrap: () => Promise.resolve({}) }),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -167,7 +173,7 @@ vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 // axios — which fails to resolve in Vitest's transform pipeline. Stub it here
 // so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
 // these components) doesn't break the test.
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
   AgentSkills: () => null,
   AgentConfigPrompts: () => null,
@@ -731,6 +737,11 @@ describe('EditMentorModal', () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
+      // MCP lives under the Integrations category. The sidebar only renders
+      // segments belonging to the active category, so we open the modal
+      // pre-pointed at MCP — the modal derives activeCategory from the
+      // segment's navCategory, which puts MCP into the DOM.
+      mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.mcp;
       renderM();
       await waitFor(() =>
         expect(
@@ -804,30 +815,49 @@ describe('EditMentorModal', () => {
   });
 
   describe('Full 13 tabs', () => {
-    it('all tabs render', async () => {
-      renderM();
-      const ts = [
-        MODALS.EDIT_MENTOR.tabs.settings,
-        MODALS.EDIT_MENTOR.tabs.access,
-        MODALS.EDIT_MENTOR.tabs.llm,
-        MODALS.EDIT_MENTOR.tabs.prompts,
-        MODALS.EDIT_MENTOR.tabs.safety,
-        MODALS.EDIT_MENTOR.tabs.disclaimer,
-        MODALS.EDIT_MENTOR.tabs.tools,
-        MODALS.EDIT_MENTOR.tabs.mcp,
-        MODALS.EDIT_MENTOR.tabs.memory,
-        MODALS.EDIT_MENTOR.tabs.history,
-        MODALS.EDIT_MENTOR.tabs.datasets,
-        MODALS.EDIT_MENTOR.tabs.api,
-        MODALS.EDIT_MENTOR.tabs.embed,
-      ];
-      await waitFor(() => {
-        for (const v of ts)
-          expect(
-            document.getElementById(`desktop-tab-${v}`),
-          ).toBeInTheDocument();
+    // The sidebar now groups segments under three category tabs, and only
+    // the segments belonging to the active category render. We exercise each
+    // category by opening the modal with that category's first segment as
+    // the active tab — the modal derives activeCategory from navCategory and
+    // mounts the category's segments. Re-mount with cleanup() between
+    // groups so each fresh render reflects the new mockGetEditMentorTab.
+    const groups: Array<{ tabs: string[] }> = [
+      {
+        tabs: [
+          MODALS.EDIT_MENTOR.tabs.settings,
+          MODALS.EDIT_MENTOR.tabs.access,
+          MODALS.EDIT_MENTOR.tabs.llm,
+          MODALS.EDIT_MENTOR.tabs.prompts,
+          MODALS.EDIT_MENTOR.tabs.safety,
+          MODALS.EDIT_MENTOR.tabs.disclaimer,
+          MODALS.EDIT_MENTOR.tabs.tools,
+        ],
+      },
+      {
+        tabs: [
+          MODALS.EDIT_MENTOR.tabs.mcp,
+          MODALS.EDIT_MENTOR.tabs.datasets,
+          MODALS.EDIT_MENTOR.tabs.api,
+          MODALS.EDIT_MENTOR.tabs.embed,
+        ],
+      },
+      {
+        tabs: [MODALS.EDIT_MENTOR.tabs.memory, MODALS.EDIT_MENTOR.tabs.history],
+      },
+    ];
+
+    for (const [idx, group] of groups.entries()) {
+      it(`category #${idx + 1} renders all its tabs`, async () => {
+        mockGetEditMentorTab = group.tabs[0];
+        renderM();
+        await waitFor(() => {
+          for (const v of group.tabs)
+            expect(
+              document.getElementById(`desktop-tab-${v}`),
+            ).toBeInTheDocument();
+        });
       });
-    });
+    }
   });
 
   describe('Re-runs', () => {

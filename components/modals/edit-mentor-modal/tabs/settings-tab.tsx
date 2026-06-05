@@ -73,6 +73,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Settings is now split into three sub-tabs so the form scales as more
+// fields land. Form state is shared (single `useForm`) so Save submits
+// the whole thing regardless of which sub-tab is active. Tests need to
+// click into the relevant sub-tab before exercising a toggle.
+type SettingsSubTab = 'basic' | 'discovery' | 'capabilities';
 
 interface SettingsForm {
   mentor_name: string;
@@ -149,6 +156,7 @@ export function SettingsTab() {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isCopyModalOpen, setIsCopyModalOpen] = React.useState(false);
+  const [subTab, setSubTab] = React.useState<SettingsSubTab>('basic');
   const isDeletingMentor = false;
 
   const openDeleteMentorModal = () => {
@@ -324,210 +332,343 @@ export function SettingsTab() {
           </p>
         </div>
       </div>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div
-          className="flex-1 space-y-4 p-3 lg:p-4"
-          style={{
-            overflowY: 'auto',
-            overflowX: 'hidden',
+      <div
+        className="flex-1 space-y-4 p-3 lg:p-4"
+        style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+        tabIndex={0}
+        role="region"
+        aria-label="Settings form content"
+      >
+        <form
+          onSubmit={(formEvent) => {
+            formEvent.preventDefault();
+            formEvent.stopPropagation();
+            executeWithTrialCheck(form.handleSubmit);
           }}
-          tabIndex={0}
-          role="region"
-          aria-label="Settings form content"
         >
-          <form
-            onSubmit={(formEvent) => {
-              formEvent.preventDefault();
-              formEvent.stopPropagation();
-              executeWithTrialCheck(form.handleSubmit);
-            }}
+          <Tabs
+            value={subTab}
+            onValueChange={(v) => setSubTab(v as SettingsSubTab)}
+            className="space-y-4"
           >
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_200px]">
-              <div className="order-2 space-y-6 sm:order-1">
-                <WithFormPermissions
-                  name="mentor_name"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="mentor_name">
-                      {(field) => {
-                        const hasNoValue = field.state.value === '';
-                        const isDirty = field.state.meta.isDirty;
-                        const hasNoValueAndIsDirty = hasNoValue && isDirty;
-                        return (
+            <TabsList
+              className="inline-flex h-auto rounded-md bg-gray-100 p-1"
+              aria-label="Settings sub-categories"
+            >
+              {/*
+                `text-gray-700` overrides Radix TabsList's default
+                `text-muted-foreground` (#737373) which has only 4.3:1
+                contrast against the bg-gray-100 strip — under the WCAG
+                2.1 AA threshold of 4.5:1 and flagged by axe-core in
+                journey 29:146. gray-700 (#374151) gives ~9.3:1 contrast
+                while the active state still darkens to gray-900.
+              */}
+              <TabsTrigger
+                value="basic"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              >
+                Basic
+              </TabsTrigger>
+              <TabsTrigger
+                value="discovery"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              >
+                Discovery
+              </TabsTrigger>
+              <TabsTrigger
+                value="capabilities"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
+              >
+                Capabilities
+              </TabsTrigger>
+            </TabsList>
+
+            {/* === BASIC ===================================================== */}
+            <TabsContent
+              value="basic"
+              forceMount
+              className="m-0 data-[state=inactive]:hidden"
+            >
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_200px]">
+                <div className="order-2 space-y-6 sm:order-1">
+                  <WithFormPermissions
+                    name="mentor_name"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="mentor_name">
+                        {(field) => {
+                          const hasNoValue = field.state.value === '';
+                          const isDirty = field.state.meta.isDirty;
+                          const hasNoValueAndIsDirty = hasNoValue && isDirty;
+                          return (
+                            <div className="space-y-2">
+                              <Label className="flex items-center text-sm font-medium text-[#646464]">
+                                Name
+                                <span className="ml-1 text-red-500">*</span>
+                              </Label>
+                              <Input
+                                value={field.state.value}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                placeholder="Agent Name"
+                                disabled={isDisabled || disabled}
+                              />
+                              {hasNoValueAndIsDirty && (
+                                <p className="text-xs text-red-500">
+                                  Agent name is required
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center text-sm font-medium text-[#646464]">
+                      Unique ID
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={activeMentorId || ''}
+                        readOnly
+                        disabled
+                        className="flex-1 cursor-not-allowed bg-gray-50"
+                        placeholder="Unique ID"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => activeMentorId && copy(activeMentorId)}
+                        disabled={!activeMentorId}
+                        aria-label={
+                          copyStatus === 'success'
+                            ? 'Unique ID copied to clipboard'
+                            : 'Copy unique ID to clipboard'
+                        }
+                      >
+                        {copyStatus === 'success' ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <WithFormPermissions
+                    name="mentor_description"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="mentor_description">
+                        {(field) => {
+                          const hasNoValue = field.state.value === '';
+                          const isDirty = field.state.meta.isDirty;
+                          const hasNoValueAndIsDirty = hasNoValue && isDirty;
+
+                          return (
+                            <div className="space-y-2">
+                              <Label className="flex items-center text-sm font-medium text-[#646464]">
+                                Description
+                                <span className="ml-1 text-red-500">*</span>
+                              </Label>
+                              <Textarea
+                                value={field.state.value}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                placeholder="Agent Description"
+                                className="min-h-[150px]"
+                                disabled={isDisabled || disabled}
+                              />
+                              {hasNoValueAndIsDirty && (
+                                <p className="text-xs text-red-500">
+                                  Agent description is required
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="metadata"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="categories">
+                        {(field) => (
                           <div className="space-y-2">
                             <Label className="flex items-center text-sm font-medium text-[#646464]">
-                              Name
+                              Category
                               <span className="ml-1 text-red-500">*</span>
                             </Label>
-                            <Input
-                              value={field.state.value}
-                              onChange={(e) =>
-                                field.handleChange(e.target.value)
-                              }
-                              placeholder="Agent Name"
-                              disabled={isDisabled || disabled}
-                            />
-                            {hasNoValueAndIsDirty && (
-                              <p className="text-xs text-red-500">
-                                Agent name is required
-                              </p>
-                            )}
+                            <Popover>
+                              <PopoverTrigger
+                                asChild
+                                aria-label="Select a category"
+                              >
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className="w-full justify-between"
+                                  disabled={isDisabled || disabled}
+                                >
+                                  {field.state.value
+                                    ? categories?.find(
+                                        (category) =>
+                                          category.id === field.state.value,
+                                      )?.name
+                                    : 'Select category...'}
+                                  <ChevronsUpDown className="opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]">
+                                <Command>
+                                  <CommandInput
+                                    placeholder="Search category..."
+                                    className="h-9"
+                                  />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      No Category found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {categories?.map((category) => (
+                                        <CommandItem
+                                          key={category.id}
+                                          value={category.id.toString()}
+                                          onSelect={(currentValue) => {
+                                            field.handleChange(
+                                              Number(currentValue),
+                                            );
+                                          }}
+                                        >
+                                          {category.name}
+                                          <Check
+                                            className={cn(
+                                              'ml-auto',
+                                              field.state.value === category.id
+                                                ? 'opacity-100'
+                                                : 'opacity-0',
+                                            )}
+                                          />
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
-                        );
-                      }}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center text-sm font-medium text-[#646464]">
-                    Unique ID
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={activeMentorId || ''}
-                      readOnly
-                      disabled
-                      className="flex-1 cursor-not-allowed bg-gray-50"
-                      placeholder="Unique ID"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => activeMentorId && copy(activeMentorId)}
-                      disabled={!activeMentorId}
-                      aria-label={
-                        copyStatus === 'success'
-                          ? 'Unique ID copied to clipboard'
-                          : 'Copy unique ID to clipboard'
-                      }
-                    >
-                      {copyStatus === 'success' ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
                 </div>
 
                 <WithFormPermissions
-                  name="mentor_description"
+                  name="profile_image"
                   // @ts-ignore
                   permissions={mentor?.permissions?.field}
                 >
                   {({ disabled }) => (
-                    <form.Field name="mentor_description">
-                      {(field) => {
-                        const hasNoValue = field.state.value === '';
-                        const isDirty = field.state.meta.isDirty;
-                        const hasNoValueAndIsDirty = hasNoValue && isDirty;
-
-                        return (
-                          <div className="space-y-2">
-                            <Label className="flex items-center text-sm font-medium text-[#646464]">
-                              Description
-                              <span className="ml-1 text-red-500">*</span>
-                            </Label>
-                            <Textarea
-                              value={field.state.value}
-                              onChange={(e) =>
-                                field.handleChange(e.target.value)
-                              }
-                              placeholder="Agent Description"
-                              className="min-h-[150px]"
-                              disabled={isDisabled || disabled}
-                            />
-                            {hasNoValueAndIsDirty && (
-                              <p className="text-xs text-red-500">
-                                Agent description is required
-                              </p>
-                            )}
-                          </div>
-                        );
-                      }}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <WithFormPermissions
-                  name="metadata"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="categories">
+                    <form.Field name="profile_image">
                       {(field) => (
-                        <div className="space-y-2">
-                          <Label className="flex items-center text-sm font-medium text-[#646464]">
-                            Category
-                            <span className="ml-1 text-red-500">*</span>
+                        <div className="order-1 mb-6 space-y-2 sm:order-2 sm:mb-0">
+                          <Label className="text-sm font-medium text-[#646464]">
+                            Image
                           </Label>
-                          <Popover>
-                            <PopoverTrigger
-                              asChild
-                              aria-label="Select a category"
-                            >
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="w-full justify-between"
-                                disabled={isDisabled || disabled}
-                              >
-                                {field.state.value
-                                  ? categories?.find(
-                                      (category) =>
-                                        category.id === field.state.value,
-                                    )?.name
-                                  : 'Select category...'}
-                                <ChevronsUpDown className="opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]">
-                              <Command>
-                                <CommandInput
-                                  placeholder="Search category..."
-                                  className="h-9"
+                          <div
+                            className="flex h-[200px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (!isDisabled && fileInputRef.current) {
+                                fileInputRef.current.click();
+                              }
+                            }}
+                          >
+                            {field.state.value ? (
+                              <div className="relative h-full w-full">
+                                <Image
+                                  src={
+                                    typeof field.state.value === 'string'
+                                      ? field.state.value
+                                      : URL.createObjectURL(field.state.value)
+                                  }
+                                  alt="Agent"
+                                  className="h-full w-full rounded-lg object-cover"
+                                  height={200}
+                                  width={200}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                  }}
                                 />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No Category found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {categories?.map((category) => (
-                                      <CommandItem
-                                        key={category.id}
-                                        value={category.id.toString()}
-                                        onSelect={(currentValue) => {
-                                          field.handleChange(
-                                            Number(currentValue),
-                                          );
-                                        }}
-                                      >
-                                        {category.name}
-                                        <Check
-                                          className={cn(
-                                            'ml-auto',
-                                            field.state.value === category.id
-                                              ? 'opacity-100'
-                                              : 'opacity-0',
-                                          )}
-                                        />
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="absolute top-2 right-2 h-7 w-7 cursor-pointer rounded-full"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    if (!isDisabled && fileInputRef.current) {
+                                      field.handleChange(null);
+                                      fileInputRef.current.value = '';
+                                    }
+                                  }}
+                                  aria-label="Remove image"
+                                  disabled={isDisabled || disabled}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-500">
+                                + Upload
+                              </span>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={fileInputRef}
+                              disabled={isDisabled || disabled}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) {
+                                  field.handleChange(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </div>
                         </div>
                       )}
                     </form.Field>
                   )}
                 </WithFormPermissions>
+              </div>
+            </TabsContent>
+
+            {/* === DISCOVERY ================================================= */}
+            <TabsContent
+              value="discovery"
+              forceMount
+              className="m-0 data-[state=inactive]:hidden"
+            >
+              <div className="space-y-6">
                 <WithFormPermissions
                   name="mentor_visibility"
                   // @ts-ignore
@@ -583,6 +724,7 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
+
                 <WithFormPermissions
                   name="allow_anonymous"
                   // @ts-ignore
@@ -633,6 +775,7 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
+
                 <WithFormPermissions
                   name="is_featured"
                   // @ts-ignore
@@ -644,11 +787,11 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Featured
+                              Highlight in featured listings
                             </span>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger aria-label="More info about featured">
+                                <TooltipTrigger aria-label="More info about highlight in featured listings">
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
@@ -666,49 +809,14 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Featured ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Highlight in featured listings"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
                     </form.Field>
                   )}
                 </WithFormPermissions>
-
-                <form.Field name="enable_claw">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Sandbox
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about sandbox mode"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Sandbox mode for configuring agent settings,
-                                prompts, and skills.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label={`Sandbox ${field.state.value ? 'enabled' : 'disabled'}`}
-                      />
-                    </div>
-                  )}
-                </form.Field>
 
                 <WithFormPermissions
                   name="is_lti_accessible"
@@ -721,13 +829,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              LTI Accessible
+                              Allow LTI launches
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about lti accessibility"
+                                  aria-label="More info about allow lti launches"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -748,14 +856,24 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Lti accessible ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Allow LTI launches"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
                     </form.Field>
                   )}
                 </WithFormPermissions>
+              </div>
+            </TabsContent>
 
+            {/* === CAPABILITIES ============================================== */}
+            <TabsContent
+              value="capabilities"
+              forceMount
+              className="m-0 data-[state=inactive]:hidden"
+            >
+              <div className="space-y-6">
                 <WithFormPermissions
                   name="show_attachment"
                   // @ts-ignore
@@ -767,13 +885,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              File Attachments
+                              Allow file attachments in chat
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about file attachments"
+                                  aria-label="More info about allow file attachments in chat"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -792,7 +910,8 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`File attachments ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Allow file attachments in chat"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
@@ -811,13 +930,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Voice Calls
+                              Enable voice calls
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about voice calls"
+                                  aria-label="More info about enable voice calls"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -835,7 +954,8 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Voice calls ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Enable voice calls"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
@@ -854,13 +974,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Voice Recordings
+                              Enable voice recordings
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about voice recordings"
+                                  aria-label="More info about enable voice recordings"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -879,7 +999,8 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Voice recordings ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Enable voice recordings"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
@@ -887,18 +1008,55 @@ export function SettingsTab() {
                   )}
                 </WithFormPermissions>
 
-                <form.Field name="enable_memory_component">
+                <form.Field name="enable_claw">
                   {(field) => (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Memory
+                          Enable advanced sandbox
                         </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger
                               type="button"
-                              aria-label="More info about memory"
+                              aria-label="More info about enable advanced sandbox"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Sandbox mode for configuring agent settings,
+                                prompts, and skills.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label="Enable advanced sandbox"
+                        aria-checked={field.state.value}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="enable_memory_component">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Remember past conversations
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about remember past conversations"
                             >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
@@ -917,43 +1075,8 @@ export function SettingsTab() {
                           field.handleChange(checked)
                         }
                         disabled={isDisabled}
-                        aria-label={`Memory ${field.state.value ? 'enabled' : 'disabled'}`}
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="forkable">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Copies
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about copies"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow other admins to create a copy of this
-                                agent.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label={`Copies ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label="Remember past conversations"
+                        aria-checked={field.state.value}
                       />
                     </div>
                   )}
@@ -970,13 +1093,13 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Enhanced RAG
+                              Improve document retrieval
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about enhanced rag"
+                                  aria-label="More info about improve document retrieval"
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
@@ -1000,156 +1123,113 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label={`Enhanced rag ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label="Improve document retrieval"
+                            aria-checked={field.state.value}
                           />
                         </div>
                       )}
                     </form.Field>
                   )}
                 </WithFormPermissions>
+
+                <form.Field name="forkable">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Allow other admins to clone this agent
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about allow other admins to clone this agent"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Allow other admins to create a copy of this
+                                agent.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label="Allow other admins to clone this agent"
+                        aria-checked={field.state.value}
+                      />
+                    </div>
+                  )}
+                </form.Field>
               </div>
+            </TabsContent>
+          </Tabs>
+          <div className="mt-6 flex items-center">
+            <div className="flex gap-2">
+              <form.Subscribe
+                selector={(state) => ({ isFormValid: state.canSubmit })}
+              >
+                {({ isFormValid }) => (
+                  <WithFormPermissions
+                    name="object"
+                    // @ts-ignore
+                    permissions={mentor?.permissions}
+                  >
+                    {({ disabled }) =>
+                      !disabled && (
+                        <Button
+                          type="submit"
+                          disabled={isDisabled || !isFormValid}
+                          className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                        >
+                          {isLoadingEditMentor ? 'Saving...' : 'Save'}
+                        </Button>
+                      )
+                    }
+                  </WithFormPermissions>
+                )}
+              </form.Subscribe>
+
+              {/* @ts-ignore forkable exists in API response but not in type */}
+              {mentor?.forkable && (
+                <Button
+                  onClick={openCopyMentorModal}
+                  type="button"
+                  disabled={isDisabled}
+                  variant="outline"
+                >
+                  Copy
+                </Button>
+              )}
 
               <WithFormPermissions
-                name="profile_image"
+                name="object"
                 // @ts-ignore
-                permissions={mentor?.permissions?.field}
+                permissions={mentor?.permissions}
               >
-                {({ disabled }) => (
-                  <form.Field name="profile_image">
-                    {(field) => (
-                      <div className="order-1 mb-6 space-y-2 sm:order-2 sm:mb-0">
-                        <Label className="text-sm font-medium text-[#646464]">
-                          Image
-                        </Label>
-                        <div
-                          className="flex h-[200px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (!isDisabled && fileInputRef.current) {
-                              fileInputRef.current.click();
-                            }
-                          }}
-                        >
-                          {field.state.value ? (
-                            <div className="relative h-full w-full">
-                              <Image
-                                src={
-                                  typeof field.state.value === 'string'
-                                    ? field.state.value
-                                    : URL.createObjectURL(field.state.value)
-                                }
-                                alt="Agent"
-                                className="h-full w-full rounded-lg object-cover"
-                                height={200}
-                                width={200}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="absolute top-2 right-2 h-7 w-7 cursor-pointer rounded-full"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (!isDisabled && fileInputRef.current) {
-                                    field.handleChange(null);
-                                    fileInputRef.current.value = '';
-                                  }
-                                }}
-                                aria-label="Remove image"
-                                disabled={isDisabled || disabled}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">
-                              + Upload
-                            </span>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            disabled={isDisabled || disabled}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) {
-                                field.handleChange(file);
-                              }
-                            }}
-                            className="hidden"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </form.Field>
-                )}
+                {({ canDelete }) =>
+                  canDelete && (
+                    <Button
+                      onClick={openDeleteMentorModal}
+                      type="button"
+                      disabled={isDisabled}
+                      variant="outline"
+                    >
+                      Delete
+                    </Button>
+                  )
+                }
               </WithFormPermissions>
             </div>
-          </form>
-        </div>
-        <div className="flex flex-shrink-0 justify-end border-t border-gray-200 bg-white px-3 py-4">
-          <div className="flex gap-2">
-            <form.Subscribe
-              selector={(state) => ({ isFormValid: state.canSubmit })}
-            >
-              {({ isFormValid }) => (
-                <WithFormPermissions
-                  name="object"
-                  // @ts-ignore
-                  permissions={mentor?.permissions}
-                >
-                  {({ disabled }) =>
-                    !disabled && (
-                      <Button
-                        type="button"
-                        onClick={() => executeWithTrialCheck(form.handleSubmit)}
-                        disabled={isDisabled || !isFormValid}
-                        className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
-                      >
-                        {isLoadingEditMentor ? 'Saving...' : 'Save'}
-                      </Button>
-                    )
-                  }
-                </WithFormPermissions>
-              )}
-            </form.Subscribe>
-
-            {/* @ts-ignore forkable exists in API response but not in type */}
-            {mentor?.forkable && (
-              <Button
-                onClick={openCopyMentorModal}
-                type="button"
-                disabled={isDisabled}
-                variant="outline"
-              >
-                Copy
-              </Button>
-            )}
-
-            <WithFormPermissions
-              name="object"
-              // @ts-ignore
-              permissions={mentor?.permissions}
-            >
-              {({ canDelete }) =>
-                canDelete && (
-                  <Button
-                    onClick={openDeleteMentorModal}
-                    type="button"
-                    disabled={isDisabled}
-                    variant="outline"
-                  >
-                    Delete
-                  </Button>
-                )
-              }
-            </WithFormPermissions>
           </div>
-        </div>
+        </form>
       </div>
 
       {isModalOpen && FreeTrialDialog && (

@@ -149,6 +149,16 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     const initialContent = `E2E memory ${suffix}`;
     const updatedContent = `E2E memory updated ${suffix}`;
 
+    // Seed a category before the CRUD flow: selectConcreteMemoryCategory waits
+    // for a non-"All" option, but on a fresh mentor with zero admin categories
+    // the SelectContent renders 0 SelectItems and the locator times out. Seed
+    // an E2E category so the dropdown has at least one concrete entry. We
+    // best-effort clean it up at the end so the suite stays idempotent.
+    const seededCategory = `E2E Seed ${suffix}`;
+    await editMentorPage.memory.openManageCategories();
+    await editMentorPage.memory.createCategory(seededCategory);
+    await editMentorPage.memory.closeManageCategories();
+
     const memoryList = dialog.getByRole('list', { name: 'Saved memories' });
     const allTab = dialog
       .getByRole('tablist', { name: 'Memory categories' })
@@ -278,6 +288,20 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await expect(
       memoryList.getByRole('listitem').filter({ hasText: updatedContent }),
     ).toHaveCount(0, { timeout: 30_000 });
+
+    // Best-effort cleanup of the seeded category so leftover E2E rows don't
+    // accumulate. Failures here are swallowed — the CRUD flow already passed.
+    try {
+      await editMentorPage.memory.openManageCategories();
+      if (await editMentorPage.memory.hasCategory(seededCategory)) {
+        await editMentorPage.memory
+          .deleteCategory(seededCategory)
+          .catch(() => undefined);
+      }
+      await editMentorPage.memory.closeManageCategories();
+    } catch {
+      // Ignore cleanup errors.
+    }
 
     await editMentorPage.close();
   });

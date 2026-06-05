@@ -19,7 +19,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 [![Demo by Miguel Amigot, CTO at ibl.ai](https://img.youtube.com/vi/P2ph8FAB0nI/maxresdefault.jpg)](https://youtu.be/P2ph8FAB0nI)
 
-_Demo by Miguel Amigot, CTO ibl.ai_
+_Demo by Miguel Amigot, CTO at ibl.ai_
 
 [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Contributing](#contributing)
 
