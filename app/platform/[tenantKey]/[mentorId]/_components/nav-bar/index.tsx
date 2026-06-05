@@ -12,15 +12,16 @@ import {
   User,
   Bot,
   GitFork,
-  Loader2,
 } from 'lucide-react';
 
 import {
+  CategorizedDropdownMenu,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  type CategoryConfig,
+  type CategorizedItem,
+} from '@iblai/iblai-js/web-containers';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -84,6 +85,7 @@ import { toast } from 'sonner';
 import { useModelDownload } from '@/hooks/use-model-download';
 import {
   useMentorSegments,
+  MENTOR_SEGMENT_NAV_CATEGORIES,
   type MentorSegment,
 } from '@/hooks/use-mentor-segments';
 import {
@@ -127,6 +129,7 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
   ],
+  navCategory: 'analytics',
 };
 
 export function NavBar() {
@@ -140,7 +143,14 @@ export function NavBar() {
   const userEmail = getUserEmail();
   const userIsStudent = useUserIsStudent();
   const { userOnFreeTrial } = useFreeTrial();
-  const canViewCreditCoinComponent = isAdmin || userOnFreeTrial();
+  // Live admin signal — `useIsAdmin` reads `currentTenant.is_admin` from
+  // localStorage (static), `useUserIsStudent` subscribes to the Redux
+  // user slice that the User/Admin nav-bar toggle writes to. Combining
+  // them gives "admin AND currently in admin mode" — so flipping the
+  // toggle in the navbar immediately hides admin-only chrome like the
+  // CreditBalance / Billing icon and the sidebar admin items.
+  const isLiveAdmin = isAdmin && !userIsStudent;
+  const canViewCreditCoinComponent = isLiveAdmin || userOnFreeTrial();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
 
@@ -324,15 +334,25 @@ export function NavBar() {
   const selectedMentorCategory =
     mentorSettingsCombinedPublicAndPrivate?.llmName ?? '';
 
-  // Compose the nav-bar dropdown:
-  //   1. New Chat — always shown, no permission gating
-  //   2. The 13 mentor segments shared with EditMentorModal
-  //   3. Analytics — gated by the same RBAC/visibility rules as the segments
-  const dropdownItems = [
-    NEW_CHAT_NAV_ITEM,
-    ...filteredSegments,
-    ...(isSegmentVisible(ANALYTICS_NAV_ITEM) ? [ANALYTICS_NAV_ITEM] : []),
-  ];
+  // Map MentorSegment → SDK CategorizedItem. The SDK's
+  // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout
+  // and the in-section state — we just hand it items + per-category
+  // metadata. New Chat is a `topAction` and Modify (fork) is a
+  // `footerAction`, both rendered outside the category columns.
+  const categorizedDropdownItems = React.useMemo<CategorizedItem[]>(() => {
+    const segments: MentorSegment[] = [
+      ...filteredSegments,
+      ...(isSegmentVisible(ANALYTICS_NAV_ITEM) ? [ANALYTICS_NAV_ITEM] : []),
+    ];
+    return segments
+      .filter((s) => s.navCategory)
+      .map((s) => ({
+        value: s.value,
+        label: s.label,
+        icon: s.icon,
+        category: s.navCategory,
+      }));
+  }, [filteredSegments, isSegmentVisible]);
 
   const showForkButton =
     !(isAdmin && tenantKey === config.mainTenantKey()) &&
@@ -342,9 +362,27 @@ export function NavBar() {
     mentorSettings?.platform_key === config.mainTenantKey() &&
     mentorSettings?.forkable;
 
-  // dropdownItems always contains New Chat (length ≥ 1), so this preserves
-  // the previous behavior where the dropdown was effectively always shown.
-  const hasDropdownItems = dropdownItems.length > 0 || showForkButton;
+  // New Chat is always present as a quick action, so the dropdown trigger
+  // is effectively always rendered.
+  const hasDropdownItems = true;
+
+  const FORK_ACTION_VALUE = 'fork-mentor';
+
+  const handleSegmentClick = (value: string) => {
+    if (value === NEW_CHAT_NAV_ITEM.value) {
+      eventBus.emit(RemoteEvents.newChat);
+      return;
+    }
+    if (value === ANALYTICS_NAV_ITEM.value) {
+      executeWithTrialCheck(navigateToAnalytics);
+      return;
+    }
+    if (value === FORK_ACTION_VALUE) {
+      executeWithTrialCheck(handleModifyMentor);
+      return;
+    }
+    openEditMentorModal(value);
+  };
 
   React.useEffect(() => {
     if (mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId) {
@@ -523,60 +561,42 @@ export function NavBar() {
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                     </Button>
                   </DropdownMenuTrigger>
+                  {/*
+                    Intrinsic width: with the SDK's
+                    `grid-template-columns: repeat(N, minmax(11rem, 1fr))`,
+                    each visible column claims its 11rem and the popup
+                    grows only as wide as the visible category count
+                    needs. `min-w` keeps a sane width when only the top
+                    action is visible; `max-w-[90vw]` + `max-h-[80vh]`
+                    + `overflow-y-auto` keep the popup inside small
+                    viewports for users with long item lists.
+                  */}
                   <DropdownMenuContent
-                    align="center"
-                    className="w-[180px] rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+                    align="start"
+                    className="max-h-[80vh] w-auto max-w-[90vw] min-w-[260px] overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg"
                   >
-                    {dropdownItems.map((item) => {
-                      return (
-                        <DropdownMenuItem
-                          key={item.value}
-                          className={cn(
-                            'flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
-                          )}
-                          onClick={() => {
-                            if (item.value === NEW_CHAT_NAV_ITEM.value) {
-                              eventBus.emit(RemoteEvents.newChat);
-                              return;
+                    <CategorizedDropdownMenu
+                      categories={
+                        MENTOR_SEGMENT_NAV_CATEGORIES as ReadonlyArray<CategoryConfig>
+                      }
+                      items={categorizedDropdownItems}
+                      onItemSelect={handleSegmentClick}
+                      topAction={{
+                        value: NEW_CHAT_NAV_ITEM.value,
+                        label: NEW_CHAT_NAV_ITEM.label,
+                        icon: NEW_CHAT_NAV_ITEM.icon,
+                      }}
+                      footerAction={
+                        showForkButton
+                          ? {
+                              value: FORK_ACTION_VALUE,
+                              label: 'Modify',
+                              icon: GitFork,
+                              disabled: isForkingMentor,
                             }
-                            if (item.value === ANALYTICS_NAV_ITEM.value) {
-                              executeWithTrialCheck(navigateToAnalytics);
-                              return;
-                            }
-                            openEditMentorModal(item.value);
-                          }}
-                        >
-                          <item.icon className="mr-3 h-4 w-4 text-gray-600" />
-                          {item.label}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                    {/* FORK MENTOR FEATURE */}
-                    {!(isAdmin && tenantKey === config.mainTenantKey()) &&
-                      mentorSettings?.mentor_visibility ===
-                        MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
-                      // @ts-ignore
-                      mentorSettings?.platform_key === config.mainTenantKey() &&
-                      mentorSettings?.forkable && (
-                        <DropdownMenuItem
-                          className={cn(
-                            'flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
-                          )}
-                          onClick={() => {
-                            executeWithTrialCheck(handleModifyMentor);
-                          }}
-                          disabled={isForkingMentor}
-                          aria-disabled={isForkingMentor}
-                          aria-busy={isForkingMentor}
-                        >
-                          {isForkingMentor ? (
-                            <Loader2 className="mr-3 h-4 w-4 animate-spin text-gray-600" />
-                          ) : (
-                            <GitFork className="mr-3 h-4 w-4 text-gray-600" />
-                          )}
-                          Modify
-                        </DropdownMenuItem>
-                      )}
+                          : undefined
+                      }
+                    />
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
@@ -656,12 +676,17 @@ export function NavBar() {
           onClose={() => setIsProviderSelectionOpen(false)}
         />
       )}
-      {showEditMentorModal && (
-        <EditMentorModal
-          isOpen={showEditMentorModal}
-          onClose={closeEditMentorModal}
-        />
-      )}
+      {/*
+        Radix Dialog must observe the open: true -> false transition to run
+        react-remove-scroll cleanup. Conditional unmount while open=true leaves
+        body[data-scroll-locked] and the sidebar-wrapper aria-hidden set,
+        which blocks subsequent nav-bar interactions (the dropdown remains in
+        the DOM but is invisible to accessibility-tree queries).
+      */}
+      <EditMentorModal
+        isOpen={showEditMentorModal}
+        onClose={closeEditMentorModal}
+      />
       {showCreateMentorModal && (
         <CreateMentorModal
           isOpen={showCreateMentorModal}

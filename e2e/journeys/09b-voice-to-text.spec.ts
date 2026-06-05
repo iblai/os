@@ -92,11 +92,13 @@ test.describe('Journey 9b: Voice-to-Text Dictation', () => {
 
     // Real STT round-trip: hook POSTs to /audio-to-text/, backend transcribes,
     // response.text is piped into the textarea via setTextareaInput. Wait for
-    // the button to leave the "Processing voice input" state.
+    // the button to leave the "Processing voice input" state. The timeout is
+    // intentionally generous (120s) — this is a backend SLA dependency and
+    // intermittent STT latency was flaking the test at 60s.
     await expect(chatPage.voiceInputButton).toHaveAttribute(
       'aria-label',
       'Voice input',
-      { timeout: 60_000 },
+      { timeout: 120_000 },
     );
 
     // After processing, the accessible name reverts to "Ask anything", so

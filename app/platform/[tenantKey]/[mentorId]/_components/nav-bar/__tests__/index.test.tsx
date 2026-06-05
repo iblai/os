@@ -390,6 +390,36 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     lastCreditBalanceProps = props;
     return <div data-testid="credit-balance">CreditBalance</div>;
   },
+  // Stubs for the agent dropdown shell — Radix-style components from the
+  // SDK. Tests don't exercise dropdown internals so plain pass-through
+  // div wrappers + button trigger are enough.
+  DropdownMenu: ({ children }: any) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children, asChild, ...rest }: any) =>
+    asChild ? (
+      children
+    ) : (
+      <button {...rest} data-testid="dropdown-menu-trigger">
+        {children}
+      </button>
+    ),
+  DropdownMenuContent: ({ children }: any) => (
+    <div data-testid="dropdown-menu-content">{children}</div>
+  ),
+  CategorizedDropdownMenu: ({ topAction, items, footerAction }: any) => (
+    <div data-testid="categorized-dropdown-menu">
+      {topAction && <div data-testid="cdm-top-action">{topAction.label}</div>}
+      {items?.map((item: any) => (
+        <div key={item.value} data-testid={`cdm-item-${item.value}`}>
+          {item.label}
+        </div>
+      ))}
+      {footerAction && (
+        <div data-testid="cdm-footer-action">{footerAction.label}</div>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({

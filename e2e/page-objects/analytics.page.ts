@@ -3,6 +3,7 @@ import { safeWaitForURL } from '../utils/navigation';
 
 export class AnalyticsPage {
   readonly page: Page;
+  readonly sidebar: Locator;
 
   readonly overviewTab: Locator;
   readonly usersTab: Locator;
@@ -14,7 +15,11 @@ export class AnalyticsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.analyticsButton = page.getByRole('button', {
+    // Scope sidebar lookups to the `<aside>` landmark so sidebar
+    // sub-items like "Overview" don't clash with same-named tabs
+    // rendered in the page content.
+    this.sidebar = page.locator('aside').first();
+    this.analyticsButton = this.sidebar.getByRole('button', {
       name: 'Analytics',
       exact: true,
     });
@@ -26,9 +31,36 @@ export class AnalyticsPage {
     this.reportsTab = page.getByRole('tab', { name: /reports|data reports/i });
   }
 
-  async goto(): Promise<void> {
+  /**
+   * Expand the sidebar's collapsible "Analytics" section idempotently.
+   * Uses Radix's `aria-expanded` so a second click never collapses it.
+   */
+  private async expandSidebarAnalytics(): Promise<void> {
     await expect(this.analyticsButton).toBeVisible({ timeout: 120_000 });
-    await this.analyticsButton.click();
+    const expanded = await this.analyticsButton
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await this.analyticsButton.click();
+      await expect(this.analyticsButton).toHaveAttribute(
+        'aria-expanded',
+        'true',
+        { timeout: 5_000 },
+      );
+    }
+  }
+
+  async goto(): Promise<void> {
+    // The sidebar's "Analytics" button is a collapsible-section trigger
+    // (Agents/Workflows/Chats/Projects/Analytics all collapse). The
+    // sub-item "Overview" is what actually navigates to `/analytics`.
+    await this.expandSidebarAnalytics();
+    const overviewLink = this.sidebar.getByRole('button', {
+      name: 'Overview',
+      exact: true,
+    });
+    await expect(overviewLink).toBeVisible({ timeout: 10_000 });
+    await overviewLink.click();
     await safeWaitForURL(this.page, (url) => url.href.endsWith('/analytics'), {
       timeout: 60_000,
     });
@@ -48,16 +80,29 @@ export class AnalyticsPage {
     const locator = tabLocators[tab];
     await expect(locator).toBeVisible({ timeout: 15_000 });
     await locator.click();
-    await this.page.waitForTimeout(1_000);
+    // The tab list reflects active state through `aria-selected`. Wait
+    // for that to settle rather than sleeping a magic 1s — flakiness
+    // here was caused by races between the click and content render.
+    await expect(locator).toHaveAttribute('aria-selected', 'true', {
+      timeout: 10_000,
+    });
   }
 
   async navigateToDataReports(): Promise<void> {
-    await expect(this.analyticsButton).toBeVisible({ timeout: 120_000 });
-    await this.analyticsButton.click();
-    await safeWaitForURL(this.page, (url) => url.href.endsWith('/analytics'), {
-      timeout: 60_000,
+    // Sidebar Analytics is a collapsible section now (see `goto()`).
+    // Expand it, then click the "Data Reports" sub-item which deep-links
+    // directly to `/analytics/reports` without needing the on-page tab.
+    await this.expandSidebarAnalytics();
+    const dataReportsLink = this.sidebar.getByRole('button', {
+      name: 'Data Reports',
+      exact: true,
     });
-    await expect(this.reportsTab).toBeVisible({ timeout: 30_000 });
-    await this.reportsTab.click();
+    await expect(dataReportsLink).toBeVisible({ timeout: 10_000 });
+    await dataReportsLink.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => /\/analytics\/reports\/?$/.test(url.href),
+      { timeout: 60_000 },
+    );
   }
 }

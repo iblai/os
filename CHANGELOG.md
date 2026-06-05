@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.72.0](https://github.com/iblai/os/compare/v0.71.1...v0.72.0) (2026-06-04)
+
+### Features
+
+- **mentor:** sidebar, agent settings layout changes ([3bc2762](https://github.com/iblai/os/commit/3bc276244face45d4dd5db2668c4a4bbba3a20c6))
+
+### Bug Fixes
+
+- **e2e:** fix for the e2e tests ([3733d96](https://github.com/iblai/os/commit/3733d967e2c3093a4e8df10041cb42ba8dc6fa05))
+- **e2e:** fix the explore page test failiures ([ecf8a27](https://github.com/iblai/os/commit/ecf8a27a7711b08326aac17afe58daebbd39a55c))
+- **e2e:** fixing coverage.json for missing components ([c63ca0e](https://github.com/iblai/os/commit/c63ca0eb7794fbe57b9e28d518e726f045f4757e))
+- **e2e:** fixing for the e2e tests ([d44cc81](https://github.com/iblai/os/commit/d44cc8160fa2e7e86b1884a9e797d4c5d7555dbf))
+- **e2e:** fixing for the e2e tests ([08965fd](https://github.com/iblai/os/commit/08965fd81c7dcd2782e438df218c972f03fa5309))
+- **e2e:** more fixes for the tests ([8a40c32](https://github.com/iblai/os/commit/8a40c321f77c2ba446c92fa5a96459ca1d7f0e0a))
+- **e2e:** more fixes for the tests ([3104d2e](https://github.com/iblai/os/commit/3104d2e352201a8281421b708dc51c703bcce161))
+- **mentor:** adding app-sidebar test ([0e5f654](https://github.com/iblai/os/commit/0e5f65411086e8bc433dc0d04983e6dbb76a72d8))
+- **mentor:** adding app-sidebar test ([deaa14c](https://github.com/iblai/os/commit/deaa14ce048be7433f1e8b302dc3a586e011ffb9))
+- **mentor:** adding data state ([9a1a7fb](https://github.com/iblai/os/commit/9a1a7fb5da3d61c8980e1e884db798ad5a98a5dd))
+- **mentor:** adding unit tests coverage ([740a2d3](https://github.com/iblai/os/commit/740a2d34cb95ea23fc1c7b767596c85f8c96f7ac))
+- **mentor:** coverage fixes ([606508b](https://github.com/iblai/os/commit/606508b445a7eb04c0601d726cae1a87f69327ff))
+- **mentor:** fix for the excel ([d49413a](https://github.com/iblai/os/commit/d49413a0510e86b0d8b2e59549556103869bc765))
+- **mentor:** fix for the packages ([420ae98](https://github.com/iblai/os/commit/420ae981689dd3cbc3ea643ed7a6b2ce682b3ee5))
+- **mentor:** fix for the settings tab unit tests ([c4a6d50](https://github.com/iblai/os/commit/c4a6d50dfdcbfd827b11ff92ec35802e5085340f))
+- **mentor:** fixes for the e2e tests and tabs for agent settings ([276df4e](https://github.com/iblai/os/commit/276df4e304d92dce95dc33a39fa60026edb6347f))
+- **mentor:** fixing for the tabs inconsistant height ([d1f3535](https://github.com/iblai/os/commit/d1f35359596c634e835e010eafa0df5b9305b8db))
+- **mentor:** type check issue fix ([87d9277](https://github.com/iblai/os/commit/87d9277e018b2354604b99b1d3c2dd5e39a24c15))
+- **mentor:** unit test coverage ([d8a0555](https://github.com/iblai/os/commit/d8a05551ad4f4ce29be8943c875eb23f7579e20a))
+- **mentor:** unit test fixes for providers ([44336a5](https://github.com/iblai/os/commit/44336a58ae0a0001f5c3508384edda09fee9c0cc))
+
 ## [0.71.1](https://github.com/iblai/os/compare/v0.71.0...v0.71.1) (2026-06-03)
 
 ### Bug Fixes

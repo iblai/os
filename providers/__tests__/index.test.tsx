@@ -126,7 +126,6 @@ const mockInitializeDataLayer = vi.fn();
 const mockRedirectToAuthSpa = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockIsInIframe = vi.fn(() => false);
-const mockHasNonExpiredAuthToken = vi.fn(() => true);
 
 vi.mock('@/lib/utils', () => ({
   isInIframe: () => mockIsInIframe(),
@@ -141,7 +140,6 @@ vi.mock('@/lib/utils', () => ({
     mockSaveUserObjectToLocalStorage(...args),
   sendMessageToParentWebsite: (...args: unknown[]) =>
     mockSendMessageToParentWebsite(...args),
-  hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
   deleteCookieOnAllDomains: vi.fn(),

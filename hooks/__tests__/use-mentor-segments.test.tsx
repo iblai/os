@@ -88,7 +88,7 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 // Mocked so EDIT_MENTOR_TAB_COMPONENTS can import SandboxTab/SkillsTab without
 // pulling in @iblai/web-utils -> axios, which fails to resolve in tests.
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
   AgentSkills: () => null,
   AgentConfigPrompts: () => null,
@@ -96,7 +96,7 @@ vi.mock('@iblai/web-containers', () => ({
 
 // Same reasoning as above for the Next-only entrypoint that ships the
 // AgentPrivacyTab component used by PrivacyTab.
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
 }));
 

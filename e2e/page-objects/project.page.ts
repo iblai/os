@@ -244,12 +244,39 @@ export class ProjectPage {
    * Waits for the index heading to confirm arrival.
    */
   async navigateViaProjectsSidebarButton(): Promise<void> {
-    const projectsButton = this.page.getByRole('button', {
+    // The sidebar renders "Projects" as a collapsible section trigger; the
+    // dedicated index page is reached via the "My Projects" item inside it
+    // (mirroring "My Workflows"). Expand the rail first if it is collapsed.
+    const sidebar = this.page.locator('aside').first();
+
+    const expandToggle = sidebar.getByRole('button', {
+      name: 'Expand sidebar',
+      exact: true,
+    });
+    if (await expandToggle.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await expandToggle.click();
+    }
+
+    const projectsTrigger = sidebar.getByRole('button', {
       name: 'Projects',
       exact: true,
     });
-    await expect(projectsButton).toBeVisible({ timeout: 15_000 });
-    await projectsButton.click();
+    await expect(projectsTrigger).toBeVisible({ timeout: 15_000 });
+    // Expand the Projects section (idempotent) so "My Projects" is rendered.
+    const expanded = await projectsTrigger
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await projectsTrigger.click();
+    }
+
+    const myProjects = sidebar.getByRole('button', {
+      name: 'My Projects',
+      exact: true,
+    });
+    await expect(myProjects).toBeVisible({ timeout: 10_000 });
+    await myProjects.click();
+
     await safeWaitForURL(
       this.page,
       (url) => /\/projects\/?$/.test(url.pathname),

@@ -90,6 +90,9 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     async ({ page, editMentorPage }) => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
+      // Visibility moved under the Discovery sub-tab when Settings was
+      // split into Basic / Discovery / Capabilities.
+      await editMentorPage.settings.selectSubTab('Discovery');
       const hasVisibility = await editMentorPage.settings.visibilityCombobox
         .isVisible({ timeout: 5_000 })
         .catch(() => false);

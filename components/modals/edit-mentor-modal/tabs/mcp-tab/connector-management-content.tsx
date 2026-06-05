@@ -1504,9 +1504,12 @@ export function ConnectorManagementContent({
         key={server.id}
         className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
       >
-        <div className="flex items-center justify-between border-b border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-white">
+        {/* Card header: title cluster shrinks/truncates, status cluster
+            stays fixed-width so long names like "EdgeOne Pages" don't
+            collide with the Inactive/Switch on the right. */}
+        <div className="flex items-center justify-between gap-2 border-b border-gray-200 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-white">
               {oauthData?.image || server.image ? (
                 <img
                   src={oauthData?.image || server.image}
@@ -1517,9 +1520,14 @@ export function ConnectorManagementContent({
                 <Plug className="h-5 w-5 text-gray-400" />
               )}
             </div>
-            <h4 className="text-sm font-medium text-gray-900">{displayName}</h4>
+            <h4
+              className="truncate text-sm font-medium text-gray-900"
+              title={displayName}
+            >
+              {displayName}
+            </h4>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {needsOAuthConnection ? (
               <span className="text-xs text-gray-600">Not Connected</span>
             ) : (
@@ -1552,7 +1560,7 @@ export function ConnectorManagementContent({
           <div className="mb-3 max-h-20 overflow-y-auto text-sm text-gray-600">
             {oauthData?.description || server.description || server.url}
           </div>
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             {isOAuth2 && (
               <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-600">
                 OAuth
@@ -1849,7 +1857,9 @@ export function ConnectorManagementContent({
           featuredRegularServers.length > 0) && (
           <div>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+              {/* Match the MCP page header (`text-base font-medium`) so the
+                  section titles don't visually outweigh the tab title. */}
+              <h3 className="text-base font-medium text-gray-900">
                 Featured Connectors
               </h3>
             </div>
@@ -1880,7 +1890,7 @@ export function ConnectorManagementContent({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {featuredOAuthServers.map((server) =>
                     renderServerCard(server, true),
                   )}
@@ -1905,8 +1915,8 @@ export function ConnectorManagementContent({
 
         {/* Connectors Section */}
         <div>
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Connectors</h3>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-base font-medium text-gray-900">Connectors</h3>
             <WithPermissions rbacResource="/mcpservers/#create">
               {({ hasPermission }) =>
                 hasPermission ? (
@@ -1916,7 +1926,8 @@ export function ConnectorManagementContent({
                     className="ibl-button-primary shrink-0"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Connector
+                    <span className="hidden sm:inline">Add Connector</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                 ) : null
               }
@@ -1953,7 +1964,7 @@ export function ConnectorManagementContent({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredMyServers.map((server) =>
                   renderServerCard(server, false),
                 )}

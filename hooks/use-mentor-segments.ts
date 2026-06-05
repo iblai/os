@@ -54,6 +54,29 @@ export type MentorSegmentConfigFlags = {
   isMemoryComponentEnabled: boolean;
 };
 
+/**
+ * Visual grouping shared by the platform NavBar dropdown (3 columns / mobile
+ * accordion) and the EditMentorModal sidebar (3 category tabs). Optional on
+ * a segment so ad-hoc/hidden tabs can omit it and fall through to a default.
+ */
+export type MentorSegmentNavCategory =
+  | 'configurations'
+  | 'integrations'
+  | 'analytics';
+
+/**
+ * Category order + display titles. Drives the left-to-right column order
+ * in the nav-bar dropdown and the tab order in the EditMentorModal sidebar.
+ */
+export const MENTOR_SEGMENT_NAV_CATEGORIES: ReadonlyArray<{
+  key: MentorSegmentNavCategory;
+  title: string;
+}> = [
+  { key: 'configurations', title: 'Configurations' },
+  { key: 'integrations', title: 'Integrations' },
+  { key: 'analytics', title: 'Analytics' },
+];
+
 export type MentorSegment = {
   /** Stable identifier — matches MODALS.EDIT_MENTOR.tabs.* for tab segments */
   value: string;
@@ -69,6 +92,8 @@ export type MentorSegment = {
    * to leave the segment always config-enabled.
    */
   enabledThroughConfig?: (flags: MentorSegmentConfigFlags) => boolean;
+  /** Which NavBar dropdown column / modal sidebar tab this segment lives in. */
+  navCategory?: MentorSegmentNavCategory;
 };
 
 /**
@@ -99,6 +124,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.sandbox,
@@ -111,6 +137,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     enabledThroughConfig: (flags) => flags.isClawEnabled,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.access,
@@ -120,6 +147,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
@@ -132,6 +160,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
@@ -149,6 +178,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.skills,
@@ -164,6 +194,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // Sandbox tab itself is shown earlier so admins can connect first.
     enabledThroughConfig: (flags) =>
       flags.isClawEnabled && flags.clawConfigExists,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
@@ -182,6 +213,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.privacy,
@@ -193,6 +225,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
@@ -206,6 +239,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
@@ -219,6 +253,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,
@@ -231,6 +266,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.memory,
@@ -245,6 +281,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
     enabledThroughConfig: (flags) =>
       flags.isMemsearchEnabled && flags.isMemoryComponentEnabled,
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.history,
@@ -257,6 +294,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.audit_log,
@@ -266,6 +304,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.datasets,
@@ -278,6 +317,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.api,
@@ -290,6 +330,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.embed,
@@ -302,6 +343,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
 ];
 
