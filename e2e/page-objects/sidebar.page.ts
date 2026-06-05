@@ -74,8 +74,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newChatButton = this.sidebar.getByRole('button', {
-      name: 'New Chat',
-      exact: true,
+      name: /^new chat$/i,
     });
     // "New Project" lives inside the collapsible "Projects" section in
     // the new sidebar — consumers that just need the locator (e.g.

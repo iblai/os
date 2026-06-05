@@ -1,7 +1,6 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { safeWaitForURL } from '../utils/navigation';
 import { generateProjectName } from '../fixtures/test-data';
 
 const PROJECT_NAME = generateProjectName();
@@ -659,7 +658,6 @@ test.describe('Journey 26: LLM Selector hidden on Projects index (feat-1821)', (
   });
 
   test('admin goes to chat page and sees LLM Model Selector, then navigates to projects index and it is hidden', async ({
-    page,
     navbarPage,
     projectPage,
   }) => {
@@ -667,18 +665,8 @@ test.describe('Journey 26: LLM Selector hidden on Projects index (feat-1821)', (
     const selectorOnChat = await navbarPage.llmSelectorIsVisible(10_000);
     expect(selectorOnChat).toBe(true);
 
-    // 2. Navigate to the projects index via the sidebar "Projects" button
-    const projectsButton = page.getByRole('button', {
-      name: 'Projects',
-      exact: true,
-    });
-    await expect(projectsButton).toBeVisible({ timeout: 15_000 });
-    await projectsButton.click();
-
-    await safeWaitForURL(page, (url) => /\/projects\/?$/.test(url.pathname), {
-      timeout: 30_000,
-    });
-    await expect(projectPage.indexHeading).toBeVisible({ timeout: 20_000 });
+    // 2. Navigate to the projects index via the sidebar
+    await projectPage.navigateViaProjectsSidebarButton();
 
     // 3. LLM Model Selector must NOT be visible on the projects index
     const selectorOnIndex = await navbarPage.llmSelectorIsVisible(5_000);
@@ -710,18 +698,7 @@ test.describe('Journey 26: No Agent Selected modal from projects index (feat-182
     sidebarPage,
     projectPage,
   }) => {
-    // Navigate to the projects index via the sidebar
-    const projectsButton = page.getByRole('button', {
-      name: 'Projects',
-      exact: true,
-    });
-    await expect(projectsButton).toBeVisible({ timeout: 15_000 });
-    await projectsButton.click();
-
-    await safeWaitForURL(page, (url) => /\/projects\/?$/.test(url.pathname), {
-      timeout: 30_000,
-    });
-    await expect(projectPage.indexHeading).toBeVisible({ timeout: 20_000 });
+    await projectPage.navigateViaProjectsSidebarButton();
 
     // On the projects index there is no mentorId in the URL, so the "New Chat"
     // sidebar button should trigger the "No Agent Selected" modal.
