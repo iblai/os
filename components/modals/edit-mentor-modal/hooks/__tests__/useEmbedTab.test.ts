@@ -55,13 +55,22 @@ vi.mock('@/features/utils', () => ({
   getUserName: vi.fn(),
 }));
 
-vi.mock('../../utils', () => ({
-  getEmbedCode: vi.fn(),
-}));
+vi.mock('../../utils', async () => {
+  // Keep the real pure helpers (isDataUrl, dataUrlToFile, build* serializers)
+  // so the save/load wiring exercises actual round-trip behavior; only stub the
+  // async `getEmbedCode` snippet builder.
+  const actual =
+    await vi.importActual<typeof import('../../utils')>('../../utils');
+  return {
+    ...actual,
+    getEmbedCode: vi.fn(),
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
+    success: vi.fn(),
   },
 }));
 
@@ -81,6 +90,7 @@ describe('useEmbedTab', () => {
   let mockGetUserName: ReturnType<typeof vi.fn>;
   let mockGetEmbedCode: ReturnType<typeof vi.fn>;
   let mockToastError: ReturnType<typeof vi.fn>;
+  let mockToastSuccess: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -89,6 +99,7 @@ describe('useEmbedTab', () => {
     mockGetUserName = vi.mocked(utils.getUserName);
     mockGetEmbedCode = vi.mocked(embedUtils.getEmbedCode);
     mockToastError = vi.mocked(toast.error);
+    mockToastSuccess = vi.mocked(toast.success);
 
     // Create fresh mock functions for mutations
     mockCreateRedirectTokenFn = vi.fn();
@@ -106,6 +117,23 @@ describe('useEmbedTab', () => {
     // Setup default mock return values
     mockGetUserName.mockReturnValue('test-user');
     mockGetEmbedCode.mockResolvedValue('<embed-code>');
+
+    // Reset the public-settings query to its default shape so a per-test
+    // `mockReturnValue` override (used by the hydration tests) doesn't leak into
+    // subsequent tests — `vi.clearAllMocks` clears call history but not the
+    // implementation set via `mockReturnValue`.
+    vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+      data: {
+        allow_anonymous: false,
+        mentor_visibility: 'public',
+        custom_css: '',
+        embed_show_attachment: true,
+        embed_show_voice_call: true,
+        embed_show_voice_record: true,
+        show_catalogue: true,
+        mentor_unique_id: 'mentor-123',
+      },
+    } as any);
   });
 
   describe('initialization', () => {
@@ -152,6 +180,88 @@ describe('useEmbedTab', () => {
       const { result } = renderHook(() => useEmbedTab());
 
       expect(result.current.form.getFieldValue('show_catalogue')).toBe(true);
+    });
+
+    it('initializes icon_selection to "custom" when embed_icon_selection_data exists', () => {
+      // Regression for #789: the mode must hydrate from the form's reactive
+      // defaultValues (existence of the persisted JSON map), NOT from an
+      // imperative setFieldValue that the reactive re-init would clobber.
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: { title: 'Persisted' },
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'custom',
+      );
+    });
+
+    it('initializes icon_selection to "default" when embed_icon_selection_data is an empty object (cleared state)', () => {
+      // The backend clears the field by storing `{}` (verified live). An empty
+      // object has no own keys, so the mode must derive to 'default'.
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: {},
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
+    });
+
+    it('initializes icon_selection to "default" for an empty object even when a stale embed_custom_image lingers', () => {
+      // A leftover image URL after switching to default must NOT force 'custom';
+      // the mode depends ONLY on the (empty) JSON map.
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: {},
+          embed_custom_image: 'https://cdn.example.com/stale-icon.png',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
+    });
+
+    it('initializes icon_selection to "default" when embed_icon_selection_data is an empty string', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: '',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
+    });
+
+    it('initializes icon_selection to "default" when embed_icon_selection_data is absent', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
     });
 
     it('should initialize custom floating bubble config with correct defaults', () => {
@@ -420,6 +530,414 @@ describe('useEmbedTab', () => {
             mode: 'advanced',
           }),
         }),
+      );
+    });
+  });
+
+  describe('handleSaveSettings', () => {
+    it('persists settings via updateMentorSettings and shows a success toast without creating a token or embed code', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      // No URL / not anonymous: save must NOT validate the website URL.
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', false);
+        result.current.form.setFieldValue('website_url', '');
+        result.current.form.setFieldValue('show_catalogue', true);
+      });
+
+      await act(async () => {
+        await result.current.handleSaveSettings();
+      });
+
+      expect(mockUpdateMentorSettingsFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mentor: 'test-mentor',
+          org: 'test-tenant',
+          userId: 'test-user',
+          formData: expect.objectContaining({ show_catalogue: true }),
+        }),
+      );
+      expect(mockToastSuccess).toHaveBeenCalledWith('Settings saved');
+      // No URL validation error was set despite the empty website_url.
+      expect(result.current.createTokenError).toBe('');
+      // Save must not create a redirect token, generate embed code, or open the
+      // embed dialog.
+      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
+      expect(mockGetEmbedCode).not.toHaveBeenCalled();
+      expect(result.current.embedCode).toBe('');
+    });
+
+    it('does not show the success toast and surfaces an error toast on failure', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        error: { error: { error: 'Save failed' } },
+      });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.handleSaveSettings();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith('Save failed');
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('toggles isSavingSettings around the save call', async () => {
+      let resolveSave: (v: unknown) => void = () => {};
+      mockUpdateMentorSettingsFn.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+      );
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.isSavingSettings).toBe(false);
+
+      let savePromise: Promise<void>;
+      act(() => {
+        savePromise = result.current.handleSaveSettings();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSavingSettings).toBe(true);
+      });
+
+      await act(async () => {
+        resolveSave({ data: { success: true } });
+        await savePromise;
+      });
+
+      expect(result.current.isSavingSettings).toBe(false);
+    });
+  });
+
+  describe('custom launcher icon persistence', () => {
+    // 1x1 transparent PNG data URL used as a freshly-uploaded image preview.
+    const dataUrl =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+    it('in custom mode sends embed_icon_selection_data (object) without an icon_selection key', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        result.current.updateMultipleConfig({
+          title: 'Ask me',
+          subtitle: 'How can I help?',
+          backgroundColor: '#ff0000',
+        });
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const payload = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(payload.formData.embed_icon_selection_data).toEqual(
+        expect.objectContaining({
+          title: 'Ask me',
+          subtitle: 'How can I help?',
+          backgroundColor: '#ff0000',
+          position: 'bottom-right',
+        }),
+      );
+      // Mode is derived from existence, so the JSON must NOT carry the key.
+      expect(payload.formData.embed_icon_selection_data).not.toHaveProperty(
+        'icon_selection',
+      );
+      // The raw image binary must NOT be embedded in the JSON map.
+      expect(payload.formData.embed_icon_selection_data).not.toHaveProperty(
+        'image',
+      );
+    });
+
+    it('in default mode clears embed_icon_selection_data with an empty JSON object and sends no image', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('icon_selection', 'default');
+        // Even if a data-URL image lingers in config, default mode must not
+        // upload it.
+        result.current.updateMultipleConfig({ image: dataUrl });
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const payload = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      // The empty JSON object `{}` is the verified clearing value: live testing
+      // showed `''` is rejected (HTTP 400) and JSON null is silently ignored by
+      // DRF's partial update, while `{}` actually sets the field to `{}`. We
+      // pass a plain object literal; the SDK's getFormData JSON-stringifies it
+      // to the string "{}". On reload, `{}` has no own keys so the mode derives
+      // back to 'default'.
+      expect(payload.formData.embed_icon_selection_data).toEqual({});
+      expect(payload.formData).not.toHaveProperty('embed_custom_image');
+    });
+
+    it('converts a newly-uploaded data URL image into a File for embed_custom_image', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        result.current.updateMultipleConfig({ image: dataUrl });
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const payload = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(payload.formData.embed_custom_image).toBeInstanceOf(File);
+      expect(payload.formData.embed_custom_image.type).toBe('image/png');
+    });
+
+    it('omits embed_custom_image when the image is an unchanged resolved URL', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        // Default image is a resolved thumbnail URL, not a data URL.
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const payload = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(payload.formData).not.toHaveProperty('embed_custom_image');
+    });
+
+    it('omits embed_custom_image when the image was removed (null)', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        result.current.updateMultipleConfig({ image: null });
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const payload = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(payload.formData).not.toHaveProperty('embed_custom_image');
+    });
+
+    it('hydrates customFloatingBubbleConfig + icon_selection from persisted settings', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          allow_anonymous: false,
+          mentor_visibility: 'public',
+          custom_css: '',
+          embed_show_attachment: true,
+          embed_show_voice_call: true,
+          embed_show_voice_record: true,
+          show_catalogue: true,
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: {
+            icon_selection: 'custom',
+            title: 'Persisted Title',
+            backgroundColor: '#abcdef',
+            position: 'top-left',
+          },
+          embed_custom_image: 'https://cdn.example.com/saved-icon.png',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'custom',
+      );
+      expect(result.current.customFloatingBubbleConfig.title).toBe(
+        'Persisted Title',
+      );
+      expect(result.current.customFloatingBubbleConfig.backgroundColor).toBe(
+        '#abcdef',
+      );
+      expect(result.current.customFloatingBubbleConfig.position).toBe(
+        'top-left',
+      );
+      expect(result.current.customFloatingBubbleConfig.image).toBe(
+        'https://cdn.example.com/saved-icon.png',
+      );
+    });
+
+    it('hydrates using mentorId as the settings key when mentor_unique_id is absent', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          // no mentor_unique_id -> settings key falls back to mentorId
+          embed_icon_selection_data: {
+            icon_selection: 'custom',
+            title: 'Keyed By MentorId',
+          },
+          embed_custom_image: 'https://cdn.example.com/keyed.png',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.customFloatingBubbleConfig.title).toBe(
+        'Keyed By MentorId',
+      );
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'custom',
+      );
+    });
+
+    it('derives icon_selection "custom" from a JSON map even without a stored key', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          // No icon_selection key — mode is derived purely from existence.
+          embed_icon_selection_data: { title: 'No Selection' },
+          embed_custom_image: 'https://cdn.example.com/x.png',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.customFloatingBubbleConfig.title).toBe(
+        'No Selection',
+      );
+      // The JSON map exists, so the mode derives to 'custom'.
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'custom',
+      );
+    });
+
+    it('derives icon_selection "default" when the JSON is cleared (empty string) even if a stale image lingers', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: '',
+          embed_custom_image: 'https://cdn.example.com/stale.png',
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      // No JSON map (empty string) => default, regardless of the lingering image.
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
+    });
+
+    it('does not hydrate when there is no persisted icon data or image', () => {
+      // The default public-settings mock has neither field.
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('icon_selection')).toBe(
+        'default',
+      );
+      expect(result.current.customFloatingBubbleConfig.title).toBe('');
+    });
+
+    it('does not clobber in-progress edits on re-render once already hydrated', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: {
+            icon_selection: 'custom',
+            title: 'Persisted Title',
+          },
+          embed_custom_image: 'https://cdn.example.com/saved-icon.png',
+        },
+      } as any);
+
+      const { result, rerender } = renderHook(() => useEmbedTab());
+
+      // User edits after initial hydration.
+      act(() => {
+        result.current.updateMultipleConfig({ title: 'User Edit' });
+      });
+      expect(result.current.customFloatingBubbleConfig.title).toBe('User Edit');
+
+      // A re-render with the same settings identity must NOT re-hydrate.
+      rerender();
+      expect(result.current.customFloatingBubbleConfig.title).toBe('User Edit');
+    });
+
+    it('round-trips: a saved icon hydrates back on a fresh mount', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      // First mount: user uploads + saves.
+      const first = renderHook(() => useEmbedTab());
+      await act(async () => {
+        first.result.current.form.setFieldValue('allow_anonymous', true);
+        first.result.current.form.setFieldValue('icon_selection', 'custom');
+        first.result.current.updateMultipleConfig({
+          image: dataUrl,
+          title: 'RoundTrip',
+        });
+      });
+      await act(async () => {
+        await first.result.current.syncEmbedSettings();
+      });
+
+      const savedPayload = mockUpdateMentorSettingsFn.mock.calls[0][0].formData;
+      first.unmount();
+
+      // Simulate the backend persisting the data and returning it (the image
+      // becomes a resolved URL after upload).
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          mentor_unique_id: 'mentor-123',
+          embed_icon_selection_data: savedPayload.embed_icon_selection_data,
+          embed_custom_image: 'https://cdn.example.com/round-trip.png',
+        },
+      } as any);
+
+      // Second mount: the icon persists.
+      const second = renderHook(() => useEmbedTab());
+      expect(second.result.current.form.getFieldValue('icon_selection')).toBe(
+        'custom',
+      );
+      expect(second.result.current.customFloatingBubbleConfig.title).toBe(
+        'RoundTrip',
+      );
+      expect(second.result.current.customFloatingBubbleConfig.image).toBe(
+        'https://cdn.example.com/round-trip.png',
       );
     });
   });

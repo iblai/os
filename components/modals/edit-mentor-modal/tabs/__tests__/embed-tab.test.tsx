@@ -6,6 +6,7 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -39,6 +40,7 @@ const mockSetFocusEditCustomFloatingBubble = vi.fn();
 const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
+const mockHandleSaveSettings = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -195,6 +197,9 @@ vi.mock('@/components/ui/select', () => ({
     <div
       data-testid="select-root"
       data-value={value ?? defaultValue}
+      // Expose how the Select is bound so tests can assert a Select is
+      // *controlled* (driven by `value`) rather than uncontrolled (`defaultValue`).
+      data-controlled={value !== undefined ? 'true' : 'false'}
       data-disabled={disabled}
     >
       {React.Children.map(children, (child: any) =>
@@ -332,6 +337,8 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     updateConfig: mockUpdateConfig,
     updateMultipleConfig: mockUpdateMultipleConfig,
     syncEmbedSettings: mockSyncEmbedSettings,
+    handleSaveSettings: mockHandleSaveSettings,
+    isSavingSettings: false,
     ...overrides,
   };
 }
@@ -745,6 +752,28 @@ describe('EmbedTab', () => {
     expect(mockFormHandleSubmit).toHaveBeenCalled();
   });
 
+  it('renders both the Save and Create Embed footer buttons', () => {
+    renderEmbedTab();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Create Embed' }),
+    ).toBeInTheDocument();
+  });
+
+  it('persists settings via the Save button without submitting the form', () => {
+    renderEmbedTab();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(mockHandleSaveSettings).toHaveBeenCalled();
+    expect(mockFormHandleSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows the saving label and disables the Save button while saving', () => {
+    renderEmbedTab({ isSavingSettings: true });
+    const saveBtn = screen.getByRole('button', { name: 'Saving...' });
+    expect(saveBtn).toBeInTheDocument();
+    expect(saveBtn).toBeDisabled();
+  });
+
   it('submits the form via the form element onSubmit', () => {
     const { container } = renderEmbedTab();
     const formEl = container.querySelector('form') as HTMLFormElement;
@@ -803,6 +832,32 @@ describe('EmbedTab', () => {
     expect(mockSetFocusEditCustomFloatingBubble).toHaveBeenCalledWith(true);
   });
 
+  // Regression for issue #789: the Icon Selection Select must be *controlled*
+  // (bound via `value`, not `defaultValue`) so that when the form field is
+  // hydrated to 'custom' asynchronously after settings load, the trigger label
+  // reflects it instead of being stuck on "Default".
+  it('renders a controlled Icon Selection Select that reflects the field value', () => {
+    renderEmbedTab({}, { ...defaultFormValues, icon_selection: 'custom' });
+
+    const iconHeading = screen.getByRole('heading', { name: 'Icon Selection' });
+    const iconBlock = iconHeading.parentElement as HTMLElement;
+    const select = within(iconBlock).getByTestId('select-root');
+
+    expect(select).toHaveAttribute('data-controlled', 'true');
+    expect(select).toHaveAttribute('data-value', 'custom');
+  });
+
+  it('Icon Selection Select reflects the default field value', () => {
+    renderEmbedTab({}, { ...defaultFormValues, icon_selection: 'default' });
+
+    const iconHeading = screen.getByRole('heading', { name: 'Icon Selection' });
+    const iconBlock = iconHeading.parentElement as HTMLElement;
+    const select = within(iconBlock).getByTestId('select-root');
+
+    expect(select).toHaveAttribute('data-controlled', 'true');
+    expect(select).toHaveAttribute('data-value', 'default');
+  });
+
   it('renders the floating bubble editor dialog and its tabs', () => {
     renderEmbedTab({ focusEditCustomFloatingBubble: true });
     expect(screen.getByText('Icon Editor')).toBeInTheDocument();
@@ -831,6 +886,34 @@ describe('EmbedTab', () => {
     const removeBtn = screen.getByRole('button', { name: 'Remove Image' });
     fireEvent.click(removeBtn);
     expect(mockUpdateMultipleConfig).toHaveBeenCalledWith({ image: null });
+  });
+
+  it('reads an uploaded icon image as a data URL and stores it in config', async () => {
+    renderEmbedTab({ focusEditCustomFloatingBubble: true });
+
+    const fileInput = document.getElementById('iconImage') as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(['icon-bytes'], 'icon.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // FileReader.readAsDataURL resolves asynchronously.
+    await waitFor(() => {
+      expect(mockUpdateMultipleConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image: expect.stringMatching(/^data:image\/png;base64,/),
+        }),
+      );
+    });
+  });
+
+  it('ignores the icon upload when no file is selected', () => {
+    renderEmbedTab({ focusEditCustomFloatingBubble: true });
+
+    const fileInput = document.getElementById('iconImage') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [] } });
+
+    expect(mockUpdateMultipleConfig).not.toHaveBeenCalled();
   });
 
   it('renders the generated embed code dialog', () => {
