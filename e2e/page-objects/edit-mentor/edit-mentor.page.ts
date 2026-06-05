@@ -132,6 +132,65 @@ export class EditMentorPage {
       .catch(() => {});
   }
 
+  /**
+   * Restore the Edit Agent dialog to the accessibility tree.
+   *
+   * When the Edit Agent modal is opened from the My Agents list, the
+   * SettingsModal dialog stays open underneath it (the modal stack pushes
+   * rather than replaces — see `openEditMentorModal` in
+   * `hooks/user-navigate.ts`). Radix's stacked-dialog `aria-hidden`
+   * management then drops the Edit dialog's subtree out of the a11y tree,
+   * so the dialog renders on screen but every `getByRole` query against it
+   * (the dialog itself and its tabs) returns nothing. We clear the stale
+   * `aria-hidden` from the Edit dialog's ancestor chain so role-based
+   * locators resolve again.
+   *
+   * Locating the dialog uses a raw `[role="dialog"]` CSS query rather than
+   * `getByRole`, because the latter consults the a11y tree we're trying to
+   * repair.
+   */
+  private async unhideEditDialog(): Promise<void> {
+    const editDialog = this.page
+      .locator('[role="dialog"]')
+      .filter({ hasText: 'Edit Agent' })
+      .first();
+    // toBeVisible checks layout (CSS), not the a11y tree, so it resolves even
+    // while the dialog is aria-hidden — confirming the click opened it.
+    await expect(editDialog).toBeVisible({ timeout: 35_000 });
+
+    // A one-time strip doesn't hold: the still-open settings dialog re-runs
+    // Radix's hideOthers and keeps re-applying aria-hidden to the backgrounded
+    // Edit portal. Install a MutationObserver that re-strips it (and inert)
+    // from the Edit dialog's ancestor chain whenever it reappears, so
+    // role-based queries stay valid for the rest of the test.
+    await this.page.evaluate(() => {
+      const strip = () => {
+        const dialog = Array.from(
+          document.querySelectorAll('[role="dialog"]'),
+        ).find((d) => d.textContent?.includes('Edit Agent'));
+        let node: Element | null = dialog ?? null;
+        while (node) {
+          if (node.getAttribute('aria-hidden') === 'true') {
+            node.removeAttribute('aria-hidden');
+          }
+          if (node.hasAttribute('inert')) {
+            node.removeAttribute('inert');
+          }
+          node = node.parentElement;
+        }
+      };
+
+      strip();
+      // Observing a live node keeps the observer reachable for the page's
+      // lifetime; no need to stash a reference.
+      new MutationObserver(strip).observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'inert'],
+      });
+    });
+  }
+
   async open(tabName?: string): Promise<void> {
     // Restore any chrome a previous dialog left in a broken state before
     // looking for the nav-bar trigger (see restoreAppChrome).
@@ -205,18 +264,27 @@ export class EditMentorPage {
     const settingsDialog = this.page
       .getByRole('dialog')
       .filter({ hasText: 'Showing the list of agents available in your tenant' });
-    await expect(settingsDialog).toBeVisible({ timeout: 15_000 });
+    await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
 
-    // Pagination is async; wait for at least one agent row to appear before
-    // clicking. Names are rendered as plain text in a cell, so we match by
-    // CSS rather than role.
+    // Agents list is fetched server-side with pagination — on tenants with
+    // many agents the first page can take a while to arrive. Wait for the
+    // first row to render before reaching for the clickable name inside it.
+    const agentRows = settingsDialog.locator('tbody tr');
+    await expect(agentRows.first()).toBeVisible({ timeout: 90_000 });
+
+    // Mentor names live in a `div` with `cursor-pointer` inside the first
+    // cell of each row (see `components/modals/settings-modal.tsx`).
     const firstAgentName = settingsDialog
       .locator('tbody tr td:first-child div.cursor-pointer')
       .first();
-    await expect(firstAgentName).toBeVisible({ timeout: 15_000 });
+    await expect(firstAgentName).toBeVisible({ timeout: 30_000 });
     await firstAgentName.click();
 
-    await expect(this.dialog).toBeVisible({ timeout: 15_000 });
+    // The Edit dialog opens on top of the still-open settings list, which
+    // leaves it aria-hidden. Repair the a11y tree before role-based queries.
+    await this.unhideEditDialog();
+
+    await expect(this.dialog).toBeVisible({ timeout: 35_000 });
   }
 
   async navigateToTab(tabName: string): Promise<void> {

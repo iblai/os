@@ -179,6 +179,12 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     page,
     editMentorPage,
   }) => {
+    // The auth + platform-load beforeEach can eat most of the default 120s
+    // budget on a slow remote server, and the agent list inside the modal is
+    // fetched server-side with pagination. Triple the budget (→360s) so the
+    // slow before-hooks don't starve the modal-load wait below.
+    test.slow();
+
     await editMentorPage.openFromMyAgents();
     await waitForPageReady(page);
 
