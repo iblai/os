@@ -964,7 +964,12 @@ export function EmbedTab() {
                               Icon Selection
                             </h3>
                             <Select
-                              defaultValue={field.state.value}
+                              // Controlled (not `defaultValue`) so the trigger
+                              // label updates when the field is hydrated to
+                              // 'custom' asynchronously after settings load.
+                              // Radix reads `defaultValue` only once at mount,
+                              // which left the label stuck on "Default".
+                              value={field.state.value}
                               onValueChange={(value) =>
                                 field.handleChange(value)
                               }
