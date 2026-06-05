@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.73.1](https://github.com/iblai/os/compare/v0.73.0...v0.73.1) (2026-06-05)
+
+### Documentation
+
+- update YouTube demo video link and hyperlink label ([458b66d](https://github.com/iblai/os/commit/458b66d4552ad885a8eda74326785afbacbc1bf4))
+
+## [0.73.0](https://github.com/iblai/os/compare/v0.72.1...v0.73.0) (2026-06-05)
+
+### Features
+
+- add /setup skill for guided tenant configuration ([26641e1](https://github.com/iblai/os/commit/26641e1265905547d9bb6cc0019e3c3583f636ee))
+
+### Chores
+
+- add NEXT_PUBLIC_TENANT to .env.example, fix demo alt text ([2606b4b](https://github.com/iblai/os/commit/2606b4ba85128d8f4ca32298d57bc248873e607e))
+- bump iblai-js to 1.17.17 ([157cb24](https://github.com/iblai/os/commit/157cb24a07423839d25cc670de7a6519d90fdbba))
+- bump Tauri version to 1.1.19 ([c0e20bd](https://github.com/iblai/os/commit/c0e20bdef96beaef0e3935352176b3d9e13774ea))
+
+### Documentation
+
+- add cross-platform availability section to README ([9eaa79e](https://github.com/iblai/os/commit/9eaa79efb02df3e1a361fe5cee127d3d000a34ef))
+- add MIT LICENSE file ([9f79cf1](https://github.com/iblai/os/commit/9f79cf1485719637985c024501306791eff0e810))
+- add product screenshots to README ([8a2ce4b](https://github.com/iblai/os/commit/8a2ce4bbd65291f3be6706cdd0c68d170d12c8ed))
+- add YouTube demo link to README header ([b7dbadd](https://github.com/iblai/os/commit/b7dbadd0e2b7386ca8717c39088f0068f6905e99))
+- merge enterprise section into features in README ([d5daab0](https://github.com/iblai/os/commit/d5daab07435d4d6c4ee889c4d86f3f707a4bbaba))
+- move screenshots section below Available On ([59e5a2c](https://github.com/iblai/os/commit/59e5a2c94ad24c477c46ac9ef6d2245f902cacdc))
+- remove Desktop & Mobile badge ([b2f6fa1](https://github.com/iblai/os/commit/b2f6fa1cc9620cce071a70516e1c427f778ccc06))
+- rename Option B to Enterprise Deployment ([ab66b8e](https://github.com/iblai/os/commit/ab66b8ea9c89e355920e136947583ed040f0db0d))
+- replace YouTube badge with video thumbnail preview ([e064dd7](https://github.com/iblai/os/commit/e064dd7727720d5be0d227645c4e9b331ea3cc33))
+- revamp deployment section and update README badges ([bc21ba7](https://github.com/iblai/os/commit/bc21ba72e94a99a256be2cdbf7e8c5f88478a7ec))
+- revamp README to be marketing-focused, move developer content to docs/ ([a5565e2](https://github.com/iblai/os/commit/a5565e23abdc5a6b9a2308c70d119f2060fdc55f))
+- simplify tenant configuration to single env var ([579752a](https://github.com/iblai/os/commit/579752a3de60de3d323bf2e66277bddceccfc41c))
+- update Enterprise Deployment with contact and infra CLI info ([24a8b78](https://github.com/iblai/os/commit/24a8b78605d95932c7d70036c6c3715784261be9))
+
 ## [0.72.1](https://github.com/iblai/os/compare/v0.72.0...v0.72.1) (2026-06-05)
 
 ### Bug Fixes
