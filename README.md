@@ -17,7 +17,9 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
-[![Demo](https://img.shields.io/badge/Demo-YouTube-red?logo=youtube&logoColor=white)](https://youtu.be/P2ph8FAB0nI) **Demo by Miguel Amigot, CTO ibl.ai**
+[![Demo by Miguel Amigot, CTO ibl.ai](https://img.youtube.com/vi/P2ph8FAB0nI/maxresdefault.jpg)](https://youtu.be/P2ph8FAB0nI)
+
+_Demo by Miguel Amigot, CTO ibl.ai_
 
 [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Contributing](#contributing)
 
