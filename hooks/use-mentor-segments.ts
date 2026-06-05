@@ -60,6 +60,12 @@ export type MentorSegmentConfigFlags = {
    * Screen share top-level tab.
    */
   isScreenshareEnabled: boolean;
+  /**
+   * True when "Enable voice calls" (`show_voice_call`) is on in Settings.
+   * Gates the standalone Voice top-level tab — turning voice calls off
+   * removes the Voice tab from the sidebar entirely.
+   */
+  isVoiceCallEnabled: boolean;
 };
 
 /**
@@ -183,6 +189,11 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    // Tab is gated by the "Enable voice calls" toggle (`show_voice_call`) in
+    // Settings. Turning voice calls off hides the Voice tab from the sidebar
+    // entirely — it configures voice providers + call settings, which are
+    // meaningless when voice calls are disabled.
+    enabledThroughConfig: (flags) => flags.isVoiceCallEnabled,
     navCategory: 'configurations',
   },
   {
@@ -535,6 +546,13 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isScreenshareEnabled: boolean =
     // @ts-ignore - call_configuration exists on API but not typed
     mentorSettings?.call_configuration?.enable_video ?? false;
+
+  // The Voice tab is gated on "Enable voice calls". Default to true to match
+  // the Settings form (`show_voice_call ?? true`) so a mentor that never
+  // explicitly set the flag still surfaces the tab.
+  const isVoiceCallEnabled: boolean =
+    // @ts-ignore - show_voice_call exists on API but not typed
+    mentorSettings?.show_voice_call ?? true;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -555,6 +573,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isClawEnabled,
         clawConfigExists,
         isScreenshareEnabled,
+        isVoiceCallEnabled,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -568,6 +587,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       clawConfigExists,
       isMemoryComponentEnabled,
       isScreenshareEnabled,
+      isVoiceCallEnabled,
     ],
   );
 

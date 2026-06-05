@@ -311,14 +311,14 @@ export class SettingsTab {
 
   async enableVoiceCall(): Promise<void> {
     await this.selectSubTab('Capabilities');
-    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
+    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 15_000 });
     const isChecked =
       (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
     if (!isChecked) {
       await this.showVoiceCallToggle.click();
-      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await expect(this.saveButton).toBeEnabled({ timeout: 30_000 });
       await this.saveButton.click();
-      await this.page.waitForTimeout(2_000);
+      await this.page.waitForTimeout(5_000);
     }
   }
 

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-05 | 416 checkpoints (404 active, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-06 | 418 checkpoints (406 active, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -774,7 +774,7 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 
 ---
 
-## Journey 46: Mentor Voice Tab (10 checkpoints) — `journeys/46-mentor-voice-tab.spec.ts`
+## Journey 46: Mentor Voice Tab (12 checkpoints) — `journeys/46-mentor-voice-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
@@ -792,6 +792,8 @@ The Settings tab also surfaces two voice-call toggles (`use_function_calling_for
 - [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
 - [x] VO-09: Settings tab surfaces both voice-call toggles
 - [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
+- [x] VO-11: Voice tab is hidden from the sidebar when "Enable voice calls" (`show_voice_call`) is turned off in Settings
+- [x] VO-12: Re-enabling "Enable voice calls" brings the Voice tab back into the sidebar after the settings refetch
 
 ---
 

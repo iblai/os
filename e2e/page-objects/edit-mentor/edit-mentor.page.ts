@@ -271,7 +271,9 @@ export class EditMentorPage {
 
     const settingsDialog = this.page
       .getByRole('dialog')
-      .filter({ hasText: 'Showing the list of agents available in your tenant' });
+      .filter({
+        hasText: 'Showing the list of agents available in your tenant',
+      });
     await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
 
     // Agents list is fetched server-side with pagination — on tenants with
@@ -325,9 +327,20 @@ export class EditMentorPage {
     // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
     // generated `radix-*` id, so filtering on that prefix isolates the sidebar
     // tab without needing to know each segment's value.
+    //
+    // `:visible` additionally excludes the host's hidden responsive twin —
+    // every sidebar trigger is rendered twice (desktop `#desktop-tab-<value>`
+    // + compact `#tab-<value>`); both own the same `aria-controls`, so without
+    // the visibility filter the locator resolves to two elements and `.click`
+    // hangs waiting for the strict-mode collision to resolve itself.
     const tab = this.dialog
       .getByRole('tab', { name: tabName, exact: true })
-      .and(this.dialog.locator('[aria-controls^="panel-"]'));
+      .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+    // Wait for the tab to actually appear before reaching for its state.
+    // The modal renders a loading spinner until mentor-settings + RBAC have
+    // hydrated; segment-list tabs only mount once both resolve. Using waitFor
+    // here means callers don't have to know about that timing.
+    await tab.waitFor({ state: 'visible', timeout: 15_000 });
     const isActive =
       (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {

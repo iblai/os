@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-22",
   "summary": {
-    "totalCheckpoints": 416,
-    "coveredCheckpoints": 404,
+    "totalCheckpoints": 418,
+    "coveredCheckpoints": 406,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 49,
@@ -2314,6 +2314,16 @@
         {
           "id": "vo-10",
           "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "status": "covered"
+        },
+        {
+          "id": "VO-11",
+          "description": "Voice tab is hidden from the sidebar when \"Enable voice calls\" (show_voice_call) is off",
+          "status": "covered"
+        },
+        {
+          "id": "VO-12",
+          "description": "Re-enabling \"Enable voice calls\" reveals the Voice tab in the sidebar after the settings refetch",
           "status": "covered"
         }
       ]

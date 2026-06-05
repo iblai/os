@@ -101,6 +101,9 @@ const baseFlags = {
   clawConfigExists: false,
   isMemoryComponentEnabled: false,
   isScreenshareEnabled: false,
+  // Voice calls default on so the Screen Share gating tests aren't perturbed
+  // by the separate Voice-tab gate.
+  isVoiceCallEnabled: true,
 };
 
 const buildContext = (
