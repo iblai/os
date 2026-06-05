@@ -93,17 +93,21 @@ export class EditMentorPage {
    * Opens the Edit Mentor modal via the mentor dropdown menu item.
    * Pass the tab name to navigate directly to a specific tab.
    */
-  async open(tabName?: string): Promise<void> {
-    // Radix/SDK Dialog cleanup can leave behind body[data-scroll-locked],
-    // <body style="pointer-events: none"> and a stale
-    // `[data-slot="sidebar-wrapper"][aria-hidden="true"]` when a previous
-    // Dialog is unmounted while still open. The SDK Edit Agent dialog does
-    // NOT reliably restore these on close, so a passive
-    // `waitFor({ state: 'detached' })` never resolves — it burns its full
-    // timeout and surfaces as a red step even though the test continues.
-    // Restore the page chrome ourselves (the SDK should have), then confirm
-    // the stale markers are gone. This keeps the nav-bar trigger clickable
-    // and visible to the a11y tree, and leaves the trace green.
+  /**
+   * Restore the app chrome the SDK Edit Agent dialog fails to clean up.
+   *
+   * Radix/SDK Dialog teardown can leave `body[data-scroll-locked]`,
+   * `<body style="pointer-events: none">` and a stale
+   * `[data-slot="sidebar-wrapper"][aria-hidden="true"]` behind after the
+   * dialog unmounts. The aria-hidden one is the worst: it drops the entire
+   * app shell (navbar, sidebar, chat chrome) out of the accessibility tree,
+   * so every `getByRole`/role-based query against page chrome returns
+   * nothing even though it's visually present. We remove these ourselves
+   * (the SDK should) and confirm they're gone. Called both before opening
+   * the dialog and after closing it so callers can interact with the page
+   * chrome immediately afterward.
+   */
+  private async restoreAppChrome(): Promise<void> {
     const staleChrome = this.page
       .locator(
         'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
@@ -126,6 +130,71 @@ export class EditMentorPage {
         { timeout: 5_000 },
       )
       .catch(() => {});
+  }
+
+  /**
+   * Restore the Edit Agent dialog to the accessibility tree.
+   *
+   * When the Edit Agent modal is opened from the My Agents list, the
+   * SettingsModal dialog stays open underneath it (the modal stack pushes
+   * rather than replaces — see `openEditMentorModal` in
+   * `hooks/user-navigate.ts`). Radix's stacked-dialog `aria-hidden`
+   * management then drops the Edit dialog's subtree out of the a11y tree,
+   * so the dialog renders on screen but every `getByRole` query against it
+   * (the dialog itself and its tabs) returns nothing. We clear the stale
+   * `aria-hidden` from the Edit dialog's ancestor chain so role-based
+   * locators resolve again.
+   *
+   * Locating the dialog uses a raw `[role="dialog"]` CSS query rather than
+   * `getByRole`, because the latter consults the a11y tree we're trying to
+   * repair.
+   */
+  private async unhideEditDialog(): Promise<void> {
+    const editDialog = this.page
+      .locator('[role="dialog"]')
+      .filter({ hasText: 'Edit Agent' })
+      .first();
+    // toBeVisible checks layout (CSS), not the a11y tree, so it resolves even
+    // while the dialog is aria-hidden — confirming the click opened it.
+    await expect(editDialog).toBeVisible({ timeout: 35_000 });
+
+    // A one-time strip doesn't hold: the still-open settings dialog re-runs
+    // Radix's hideOthers and keeps re-applying aria-hidden to the backgrounded
+    // Edit portal. Install a MutationObserver that re-strips it (and inert)
+    // from the Edit dialog's ancestor chain whenever it reappears, so
+    // role-based queries stay valid for the rest of the test.
+    await this.page.evaluate(() => {
+      const strip = () => {
+        const dialog = Array.from(
+          document.querySelectorAll('[role="dialog"]'),
+        ).find((d) => d.textContent?.includes('Edit Agent'));
+        let node: Element | null = dialog ?? null;
+        while (node) {
+          if (node.getAttribute('aria-hidden') === 'true') {
+            node.removeAttribute('aria-hidden');
+          }
+          if (node.hasAttribute('inert')) {
+            node.removeAttribute('inert');
+          }
+          node = node.parentElement;
+        }
+      };
+
+      strip();
+      // Observing a live node keeps the observer reachable for the page's
+      // lifetime; no need to stash a reference.
+      new MutationObserver(strip).observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'inert'],
+      });
+    });
+  }
+
+  async open(tabName?: string): Promise<void> {
+    // Restore any chrome a previous dialog left in a broken state before
+    // looking for the nav-bar trigger (see restoreAppChrome).
+    await this.restoreAppChrome();
 
     // Match the trigger by its `aria-label` attribute. A DOM query is robust
     // even if any stale `aria-hidden` slips past the cleanup above, and
@@ -154,6 +223,68 @@ export class EditMentorPage {
     if (tabName) {
       await this.navigateToTab(tabName);
     }
+  }
+
+  /**
+   * Opens the Edit Mentor modal via the sidebar's Agents → My Agents flow:
+   * expands the Agents section, clicks My Agents to surface the agent list,
+   * then clicks the first row. This path is the regression case behind
+   * `edit-mentor-modal/index.tsx`'s RBAC-hydration effect — the page mentor's
+   * RBAC is loaded on boot, but a sibling agent opened from this list has no
+   * permissions cached and the segment filter would otherwise strip every
+   * tab except Privacy. The companion test in journey 06 asserts the full
+   * sidebar still renders.
+   */
+  async openFromMyAgents(): Promise<void> {
+    await this.restoreAppChrome();
+
+    const sidebar = this.page.locator('aside').first();
+    const agentsTrigger = sidebar.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    await expect(agentsTrigger).toBeVisible({ timeout: 10_000 });
+    const expanded = await agentsTrigger
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await agentsTrigger.click();
+      await expect(agentsTrigger).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 5_000,
+      });
+    }
+
+    const myAgents = sidebar.getByRole('button', {
+      name: 'My Agents',
+      exact: true,
+    });
+    await expect(myAgents).toBeVisible({ timeout: 10_000 });
+    await myAgents.click();
+
+    const settingsDialog = this.page
+      .getByRole('dialog')
+      .filter({ hasText: 'Showing the list of agents available in your tenant' });
+    await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
+
+    // Agents list is fetched server-side with pagination — on tenants with
+    // many agents the first page can take a while to arrive. Wait for the
+    // first row to render before reaching for the clickable name inside it.
+    const agentRows = settingsDialog.locator('tbody tr');
+    await expect(agentRows.first()).toBeVisible({ timeout: 90_000 });
+
+    // Mentor names live in a `div` with `cursor-pointer` inside the first
+    // cell of each row (see `components/modals/settings-modal.tsx`).
+    const firstAgentName = settingsDialog
+      .locator('tbody tr td:first-child div.cursor-pointer')
+      .first();
+    await expect(firstAgentName).toBeVisible({ timeout: 30_000 });
+    await firstAgentName.click();
+
+    // The Edit dialog opens on top of the still-open settings list, which
+    // leaves it aria-hidden. Repair the a11y tree before role-based queries.
+    await this.unhideEditDialog();
+
+    await expect(this.dialog).toBeVisible({ timeout: 35_000 });
   }
 
   async navigateToTab(tabName: string): Promise<void> {
@@ -224,6 +355,12 @@ export class EditMentorPage {
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
     await this.closeButton.click();
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The SDK dialog frequently leaves the app shell `aria-hidden="true"`
+    // after closing, hiding the navbar/chat chrome from the a11y tree and
+    // breaking role-based queries that callers run right after close()
+    // (e.g. the chat "Prompts" button, the User-mode switch). Restore it.
+    await this.restoreAppChrome();
   }
 
   async isOpen(): Promise<boolean> {
