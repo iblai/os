@@ -415,7 +415,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ## Journey 26: Projects (17 checkpoints) — `journeys/26-projects.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat-new.tsx`, `components/modals/no-mentor-selected-modal.tsx`
 
 - [x] A new project can be created from the sidebar
 - [x] Project landing page shows the assigned mentor list and action buttons
