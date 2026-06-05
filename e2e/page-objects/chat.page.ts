@@ -23,10 +23,7 @@ export class ChatPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.chatInput = page.getByRole('textbox', {
-      name: 'Ask anything',
-      exact: true,
-    });
+    this.chatInput = page.locator('#chat-input-textarea');
     this.sendButton = page.getByRole('button', { name: 'Send message' });
     this.newChatButton = page.getByRole('button', { name: 'New Chat' });
     this.userMessages = page.locator('.chat-user-message-query');
