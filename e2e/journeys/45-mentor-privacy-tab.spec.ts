@@ -128,25 +128,32 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
 
     // EntityChip's `disabled` prop tracks the form save state — the chip
     // briefly renders disabled after setRouterEnabled while the save settles.
-    // Without this guard the click would no-op and the aria-checked assertion
-    // would race the save round-trip.
-    await expect(chip).not.toBeDisabled({ timeout: 10_000 });
+    // The chip's `disabled` prop tracks the form save state, and a single
+    // `not.toBeDisabled` guard isn't enough: the chip can re-disable mid-flow
+    // when a save round-trip lands right as we click, swallowing the click so
+    // aria-checked never flips. `toggleChipTo` polls — it clicks only when the
+    // chip is enabled and not yet at the target — so a swallowed click is
+    // simply retried, and once the target is reached it stops (no double
+    // toggle).
+    const toggleChipTo = async (target: 'true' | 'false') => {
+      await expect
+        .poll(
+          async () => {
+            const checked = await chip.getAttribute('aria-checked');
+            if (checked !== target && !(await chip.isDisabled())) {
+              await chip.click().catch(() => {});
+            }
+            return chip.getAttribute('aria-checked');
+          },
+          { timeout: 15_000 },
+        )
+        .toBe(target);
+    };
 
-    await chip.click();
-    await expect(chip).toHaveAttribute(
-      'aria-checked',
-      wasSelected ? 'false' : 'true',
-      { timeout: 10_000 },
-    );
+    await toggleChipTo(wasSelected ? 'false' : 'true');
 
     // Restore the original state so the suite stays idempotent.
-    await expect(chip).not.toBeDisabled({ timeout: 10_000 });
-    await chip.click();
-    await expect(chip).toHaveAttribute(
-      'aria-checked',
-      wasSelected ? 'true' : 'false',
-      { timeout: 10_000 },
-    );
+    await toggleChipTo(wasSelected ? 'true' : 'false');
 
     await editMentorPage.privacy.setRouterEnabled(false);
     await editMentorPage.close();

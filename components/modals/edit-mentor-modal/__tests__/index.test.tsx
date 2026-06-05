@@ -159,6 +159,13 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       () => Promise.resolve({}),
       { isLoading: false },
     ],
+    // Stub the RBAC mutation — same reason as the claw hooks above.
+    // EditMentorModal hydrates the mentor's RBAC permissions on open so
+    // segments aren't filtered against stale page-mentor RBAC.
+    useGetRbacPermissionsMutation: () => [
+      () => ({ unwrap: () => Promise.resolve({}) }),
+      { isLoading: false },
+    ],
   };
 });
 
