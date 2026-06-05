@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.72.1](https://github.com/iblai/os/compare/v0.72.0...v0.72.1) (2026-06-05)
+
+### Bug Fixes
+
+* **e2e:** adding e2e tests for the agent popup fix ([ba84938](https://github.com/iblai/os/commit/ba84938a2def096f414529bcab93c2c68cfa0606))
+* **e2e:** my agents test fix ([dba69fc](https://github.com/iblai/os/commit/dba69fc9d87ac76a6c4bb9b8f0646599f6f54fcb))
+* **mentor:** e2e fixes ([d4c2e92](https://github.com/iblai/os/commit/d4c2e92b5466e688e147617cc5bf3c87a24fb77b))
+
 ## [0.72.0](https://github.com/iblai/os/compare/v0.71.1...v0.72.0) (2026-06-04)
 
 ### Features
