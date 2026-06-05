@@ -51,6 +51,25 @@ _Demo by Miguel Amigot, CTO ibl.ai_
 
 ---
 
+## Available On
+
+<div align="center">
+
+| Platform    | Status                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
+| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
+| **iOS**     | Native mobile app — available on iPhone and iPad                           |
+| **Android** | Native mobile app — available on phones and tablets                        |
+| **Windows** | Native desktop app                                                         |
+| **Linux**   | Native desktop app                                                         |
+
+</div>
+
+One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+
+---
+
 ## Screenshots
 
 <div align="center">
@@ -76,25 +95,6 @@ _Manage agent memory with knowledge gaps, learning goals, and user preferences_
 _Control agent visibility, access permissions, and LTI integration_
 
 </div>
-
----
-
-## Available On
-
-<div align="center">
-
-| Platform    | Status                                                                     |
-| ----------- | -------------------------------------------------------------------------- |
-| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
-| **iOS**     | Native mobile app — available on iPhone and iPad                           |
-| **Android** | Native mobile app — available on phones and tablets                        |
-| **Windows** | Native desktop app                                                         |
-| **Linux**   | Native desktop app                                                         |
-
-</div>
-
-One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
 
 ---
 
