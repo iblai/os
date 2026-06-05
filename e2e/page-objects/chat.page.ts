@@ -16,15 +16,14 @@ export class ChatPage {
   readonly voiceCallButton: Locator;
   readonly voiceInputButton: Locator;
   readonly dragOverlay: Locator;
+  readonly webSearchButton: Locator;
+  readonly stopStreamingButton: Locator;
   readonly promptsButton: Locator;
   readonly promptGalleryDialog: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.chatInput = page.getByRole('textbox', {
-      name: 'Ask anything',
-      exact: true,
-    });
+    this.chatInput = page.locator('#chat-input-textarea');
     this.sendButton = page.getByRole('button', { name: 'Send message' });
     this.newChatButton = page.getByRole('button', { name: 'New Chat' });
     this.userMessages = page.locator('.chat-user-message-query');
@@ -41,6 +40,10 @@ export class ChatPage {
     this.dragOverlay = page.locator(
       '[data-testid="drag-overlay"], [class*="drag-overlay"]',
     );
+    this.webSearchButton = page.locator('button[data-slot="button"]', {
+      hasText: 'Web Search',
+    });
+    this.stopStreamingButton = page.locator('.chat-stop-streaming-button');
     this.promptsButton = page.getByRole('button', {
       name: 'Prompts',
       exact: true,
@@ -71,6 +74,33 @@ export class ChatPage {
   async startNewChat(): Promise<void> {
     await expect(this.newChatButton).toBeVisible({ timeout: 5_000 });
     await this.newChatButton.click();
+  }
+
+  /**
+   * Activate the Web Search session toggle in the chat input bar.
+   */
+  async activateWebSearch(): Promise<void> {
+    await expect(this.webSearchButton).toBeVisible({ timeout: 10_000 });
+    await this.webSearchButton.click();
+  }
+
+  /**
+   * Wait for streaming to complete by watching the stop-streaming button
+   * appear then disappear. Silently succeeds if streaming is already done.
+   */
+  async waitForStreamingComplete(timeout = 120_000): Promise<void> {
+    try {
+      await this.stopStreamingButton.waitFor({
+        state: 'visible',
+        timeout: 5_000,
+      });
+      await this.stopStreamingButton.waitFor({
+        state: 'hidden',
+        timeout,
+      });
+    } catch {
+      // Stop button may have already disappeared or streaming was very fast
+    }
   }
 
   async openPromptGallery(): Promise<void> {

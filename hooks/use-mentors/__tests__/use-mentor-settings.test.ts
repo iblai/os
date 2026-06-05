@@ -82,6 +82,7 @@ describe('useMentorSettings', () => {
     embed_show_voice_call: true,
     embed_show_voice_record: false,
     show_catalogue: false,
+    show_reasoning: true,
     llm_config: { temperature: 0.7 },
   };
 
@@ -211,6 +212,7 @@ describe('useMentorSettings', () => {
         embedShowVoiceCall: true,
         embedShowVoiceRecord: false,
         showCatalogue: false,
+        showReasoning: true,
         llmConfig: { temperature: 0.7 },
       });
     });
@@ -231,6 +233,24 @@ describe('useMentorSettings', () => {
       const { result } = renderHook(() => useMentorSettings());
 
       expect(result.current.data.showCatalogue).toBe(true);
+    });
+
+    it('should default showReasoning to false when absent from settings', () => {
+      const mentorWithoutReasoning = { ...mockMentorSettings };
+      delete (mentorWithoutReasoning as { show_reasoning?: boolean })
+        .show_reasoning;
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: mentorWithoutReasoning,
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showReasoning).toBe(false);
     });
   });
 

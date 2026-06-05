@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-22 | 399 checkpoints (387 active, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-02 | 407 checkpoints (395 active, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -770,6 +770,21 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+
+---
+
+## Journey 46: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/46-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 

@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-05-27",
   "summary": {
-    "totalCheckpoints": 399,
-    "coveredCheckpoints": 387,
+    "totalCheckpoints": 406,
+    "coveredCheckpoints": 394,
     "deprecatedCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 47,
-    "activeJourneys": 46
+    "totalJourneys": 48,
+    "activeJourneys": 47
   },
   "journeys": [
     {
@@ -2036,6 +2036,63 @@
         {
           "id": "cpm-10",
           "description": "Mentor can be copied to a different tenant",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tool-call-indicator-and-reasoning",
+      "name": "Tool Call Indicator & Reasoning Section",
+      "spec": "46-tool-call-indicator-and-reasoning.spec.ts",
+      "sourceFiles": [
+        "components/chat/tool-call-indicator.tsx",
+        "components/chat/tool-call-item.tsx",
+        "components/chat/tool-call-utils.ts",
+        "components/chat/reasoning-section.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/chat-messages/index.tsx",
+        "components/chat/index.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "tcr-01",
+          "description": "Web Search tool pill appears during streaming with tool name and pulse animation",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-02",
+          "description": "Tool call pill is expandable and shows query detail",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-03",
+          "description": "Web Search button is not visible when tool is disabled on mentor",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-04",
+          "description": "Tool call indicator does not appear when Web Search is enabled but not activated in session",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-05",
+          "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-06",
+          "description": "Reasoning section does not appear for non-reasoning model",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-07",
+          "description": "Tool call indicator and reasoning section both render in correct order in same message",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-08",
+          "description": "Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
