@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-29",
+  "lastUpdated": "2026-06-05",
   "summary": {
-    "totalCheckpoints": 408,
-    "coveredCheckpoints": 396,
+    "totalCheckpoints": 412,
+    "coveredCheckpoints": 400,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 47,
@@ -334,6 +334,11 @@
         {
           "id": "mgmt-10",
           "description": "Admin can send a message to a newly created mentor and receive a response",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-11",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)",
           "status": "covered"
         }
       ]
