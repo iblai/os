@@ -20,6 +20,7 @@ export class SettingsTab {
   readonly advancedSandboxToggle: Locator;
   readonly chatAccessCombobox: Locator;
   readonly memoryToggle: Locator;
+  readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
 
@@ -80,6 +81,12 @@ export class SettingsTab {
     // Capabilities sub-tab. Renamed visible label "Remember past conversations".
     this.memoryToggle = dialog.getByRole('switch', {
       name: /remember past conversations/i,
+    });
+    // Capabilities sub-tab. The "Verbose Reasoning" toggle (show_reasoning);
+    // aria-label is "Verbose reasoning enabled" / "Verbose reasoning disabled"
+    // depending on current state.
+    this.verboseReasoningToggle = dialog.getByRole('switch', {
+      name: /^Verbose reasoning /i,
     });
     // Capabilities sub-tab. Renamed visible label "Improve document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
@@ -285,6 +292,50 @@ export class SettingsTab {
     ).toBeVisible({ timeout: 30_000 });
     // Small buffer for RTK Query cache invalidation before the caller
     // closes or re-opens the dialog.
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Returns true when the Verbose Reasoning toggle is ON (aria-checked="true").
+   */
+  async isVerboseReasoningEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.verboseReasoningToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Verbose Reasoning toggle to the desired state and saves the form.
+   * A no-op if the toggle is already in the desired state. Save is called
+   * internally (same as setMemoryEnabled) and we block on the success toast so
+   * callers can immediately send a chat message that relies on the new setting.
+   */
+  async setVerboseReasoning(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.verboseReasoningToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) {
+      return;
+    }
+    await this.verboseReasoningToggle.click();
+    await expect(this.verboseReasoningToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer for RTK Query cache invalidation before the caller closes
+    // or re-opens the dialog.
     await this.page.waitForTimeout(500);
   }
 

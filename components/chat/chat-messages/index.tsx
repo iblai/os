@@ -4,7 +4,10 @@ import dynamic from 'next/dynamic';
 import React, { forwardRef } from 'react';
 
 import { formatRelativeDate } from '@/lib/utils';
-import { Message as BaseMessage } from '@iblai/iblai-js/web-utils';
+import {
+  Message as BaseMessage,
+  type ToolCallInfo,
+} from '@iblai/iblai-js/web-utils';
 import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
 import { useSpeech } from '@/hooks/use-speech';
 // import { useAppSelector } from '@/lib/hooks';
@@ -35,6 +38,11 @@ type Props = {
   tenantKey: string;
   streamingArtifactId?: number;
   isStreaming?: boolean;
+  streamingReasoningContent?: string;
+  streamingToolCalls?: ToolCallInfo[];
+  isReasoning?: boolean;
+  showReasoning?: boolean;
+  currentStreamingMessageId?: string;
   handleHighlightMessage: (messageId: number) => void;
   handleSubmit: (content: string) => void;
   onReply?: (message: Message) => void;
@@ -56,6 +64,11 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
       onOpenCanvas,
       streamingArtifactId,
       isStreaming = false,
+      streamingReasoningContent,
+      streamingToolCalls,
+      isReasoning,
+      showReasoning,
+      currentStreamingMessageId,
     },
     ref,
   ) {
@@ -148,6 +161,29 @@ export const ChatMessages = forwardRef<HTMLButtonElement, Props>(
                 tenantKey={tenantKey}
                 onOpenCanvas={onOpenCanvas}
                 streamingArtifactId={streamingArtifactId}
+                // Use streaming data if this is the active streaming message, otherwise use persisted data
+                reasoningContent={
+                  message.id === currentStreamingMessageId
+                    ? streamingReasoningContent
+                    : message.reasoningContent
+                }
+                toolCalls={
+                  message.id === currentStreamingMessageId
+                    ? streamingToolCalls
+                    : message.toolCalls
+                }
+                isReasoning={
+                  message.id === currentStreamingMessageId ? isReasoning : false
+                }
+                showReasoning={showReasoning}
+                // Only "currently streaming" while a stream is actually active.
+                // currentStreamingMessageId keeps pointing at the last assistant
+                // message after the stream ends, so without the isStreaming gate
+                // the tool-call indicator's bounce dots never stop and the action
+                // toolbar stays hidden once the response completes.
+                isCurrentlyStreaming={
+                  isStreaming && message.id === currentStreamingMessageId
+                }
               />
             </div>
           ),

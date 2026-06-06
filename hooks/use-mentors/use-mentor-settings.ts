@@ -283,6 +283,16 @@ export function useMentorSettings({
         effectiveSettings?.voice_provider ??
         // @ts-ignore - voice_provider may not be exposed on the typed settings shape
         effectivePublicSettings?.voice_provider,
+
+      // show_reasoning ("Verbose Reasoning") gates the reasoning steps and tool
+      // call UI in chat. Exists in the API response but not the published type;
+      // defaults to false so the verbose UI stays hidden when unset.
+      showReasoning:
+        (effectiveSettings as { show_reasoning?: boolean } | undefined)
+          ?.show_reasoning ??
+        (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
+          ?.show_reasoning ??
+        false,
     },
   };
 }

@@ -94,6 +94,7 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  show_reasoning: boolean;
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
@@ -206,6 +207,8 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - show_reasoning exists in API response but not in type
+      show_reasoning: mentor?.show_reasoning ?? false,
       // @ts-ignore - enable_claw exists in API response but not in type
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
@@ -263,6 +266,10 @@ export function SettingsTab() {
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
+      }
+
+      if (value.show_reasoning !== undefined) {
+        values.show_reasoning = value.show_reasoning;
       }
 
       if (value.enable_claw !== undefined) {
@@ -1077,6 +1084,42 @@ export function SettingsTab() {
                         disabled={isDisabled}
                         aria-label="Remember past conversations"
                         aria-checked={field.state.value}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="show_reasoning">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Verbose Reasoning
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              type="button"
+                              aria-label="More info about verbose reasoning"
+                            >
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Show the agent’s reasoning steps while it
+                                responds.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={isDisabled}
+                        aria-label={`Verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
                       />
                     </div>
                   )}

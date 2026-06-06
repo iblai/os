@@ -18,6 +18,7 @@ export class DisclaimersTab {
     this.activeStatus = dialog.getByText('Active').first();
     // H20 fix: buttons are just "Edit" — first is User Agreement, second is Advisory
     this.editButtons = dialog.getByRole('button', { name: 'Edit' });
+    this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
   }
 
   async enableUserAgreement(): Promise<void> {
@@ -46,6 +47,14 @@ export class DisclaimersTab {
         { timeout: 10_000 },
       );
     }
+  }
+
+  async isUserAgreementEnabled(): Promise<boolean> {
+    return (
+      (await this.userAgreementSwitch
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
   }
 
   // H20 fix: open the Edit User Agreement modal (first Edit button)
