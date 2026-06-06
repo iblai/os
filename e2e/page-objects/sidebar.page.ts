@@ -17,6 +17,9 @@ export class SidebarPage {
   readonly newChatButton: Locator;
   readonly newProjectButton: Locator;
   readonly inviteUsersButton: Locator;
+  readonly managementButton: Locator;
+  readonly integrationsButton: Locator;
+  readonly monetizationButton: Locator;
   readonly workflowsButton: Locator;
   readonly settingsButton: Locator;
   readonly helpButton: Locator;
@@ -97,8 +100,22 @@ export class SidebarPage {
     //   "Invite Users" → "Invites"
     //   "Settings"     → "Advanced" (opens the Account dialog at the
     //                    advanced tab; no longer a direct modal trigger)
+    // Trial-gated footer items shown to main-tenant non-admins when
+    // `showTrialGatedAdminMenu` is true (stripe + pre-free/advertising mode).
     this.inviteUsersButton = this.sidebar.getByRole('button', {
       name: 'Invites',
+      exact: true,
+    });
+    this.managementButton = this.sidebar.getByRole('button', {
+      name: 'Management',
+      exact: true,
+    });
+    this.integrationsButton = this.sidebar.getByRole('button', {
+      name: 'Integrations',
+      exact: true,
+    });
+    this.monetizationButton = this.sidebar.getByRole('button', {
+      name: 'Monetization',
       exact: true,
     });
     this.workflowsButton = this.sidebar.getByRole('button', {

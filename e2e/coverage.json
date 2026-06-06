@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-05-22",
   "summary": {
-    "totalCheckpoints": 399,
-    "coveredCheckpoints": 387,
+    "totalCheckpoints": 400,
+    "coveredCheckpoints": 388,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 47,
@@ -95,7 +95,8 @@
       "name": "New User UI & Profile Dropdown",
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -115,7 +116,12 @@
         },
         {
           "id": "ui-04",
-          "description": "Sidebar admin-only buttons show upgrade dialog for non-admins",
+          "description": "Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible",
+          "status": "covered"
+        },
+        {
+          "id": "ui-05",
+          "description": "Main-tenant non-admin sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]

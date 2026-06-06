@@ -1568,8 +1568,30 @@ export function AppSidebar() {
     navigateToNotifications,
   } = useNavigate();
 
-  const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
-    useShowFreeTrialDialog();
+  const {
+    executeWithTrialCheck,
+    FreeTrialDialog,
+    closeModal,
+    isModalOpen,
+    isNewlyUserOnPreFreeOrAdvertisingMode,
+  } = useShowFreeTrialDialog();
+
+  // A non-admin user sitting in the MAIN tenant should see the FULL
+  // admin sidebar — agents, workflows, analytics, and every footer
+  // action — but each entry routes to the free-trial upgrade dialog
+  // instead of the real action. We reuse the trial gate's OWN predicate
+  // (`isNewlyUserOnPreFreeOrAdvertisingMode`, which already requires
+  // stripe-activated + non-admin + main/advertising tenant) so an item
+  // is only ever shown when clicking it will actually pop the dialog —
+  // the handlers all wrap their work in `executeWithTrialCheck`. When
+  // the gate wouldn't fire we fall back to the OLD `isLiveAdmin` hiding,
+  // so a real admin action never leaks to a student. We additionally
+  // require the MAIN tenant here (excluding advertising-only tenants)
+  // to keep the "rest stays hidden" behavior for everyone else.
+  const isMainTenant =
+    (currentTenant?.key ?? tenantKey) === config.mainTenantKey();
+  const showTrialGatedAdminMenu =
+    isMainTenant && !!isNewlyUserOnPreFreeOrAdvertisingMode(true);
 
   const { state, open, openMobile, setOpenMobile, toggleSidebar, isMobile } =
     useSidebar();
@@ -1734,20 +1756,29 @@ export function AppSidebar() {
   // the user called out.
   const agentsMenu: NavMenuConfig = React.useMemo(() => {
     const items: NavMenuItem[] = [];
-    if (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsNew))
+    // `showTrialGatedAdminMenu` surfaces these for main-tenant non-admins
+    // (trial-gated on click); otherwise the OLD live-admin + RBAC gate.
+    if (
+      showTrialGatedAdminMenu ||
+      (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsNew))
+    )
       items.push({ id: 'agents-new', label: 'New Agent' });
-    if (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsMy))
+    if (
+      showTrialGatedAdminMenu ||
+      (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsMy))
+    )
       items.push({ id: 'agents-my', label: 'My Agents' });
     // Explore is open to STUDENT/VISITING too, so it doesn't need the
     // live-admin guard — `isUserTypeAllowed` is sufficient.
     if (isUserTypeAllowed(PERMISSION_GATES.agentsExplore))
       items.push({ id: 'agents-explore', label: 'Explore' });
     return { id: 'agents', label: 'Agents', icon: Globe2, items };
-  }, [isLiveAdmin, isUserTypeAllowed]);
+  }, [isLiveAdmin, isUserTypeAllowed, showTrialGatedAdminMenu]);
 
   const workflowsMenu: NavMenuConfig = React.useMemo(() => {
     const allowed =
-      isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.workflows);
+      showTrialGatedAdminMenu ||
+      (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.workflows));
     return {
       id: 'workflows',
       label: 'Workflows',
@@ -1759,12 +1790,12 @@ export function AppSidebar() {
           ]
         : [],
     };
-  }, [isLiveAdmin, isUserTypeAllowed]);
+  }, [isLiveAdmin, isUserTypeAllowed, showTrialGatedAdminMenu]);
 
   const analyticsAllowed =
     config.hideAnalytics() !== 'true' &&
-    isLiveAdmin &&
-    isUserTypeAllowed(PERMISSION_GATES.analytics);
+    (showTrialGatedAdminMenu ||
+      (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.analytics)));
 
   const footerActions = React.useMemo<FooterAction[]>(() => {
     const actions: FooterAction[] = [];
@@ -1846,11 +1877,32 @@ export function AppSidebar() {
         label: 'Advanced',
         icon: Settings,
       });
+    } else if (showTrialGatedAdminMenu) {
+      // Main-tenant non-admins get the FULL admin cluster, every entry
+      // trial-gated. We skip the RBAC checks the live-admin branch does
+      // because a trial/student user holds none of those permissions —
+      // clicking any of these opens the upgrade dialog (see
+      // `handleFooterActionClick` → `executeWithTrialCheck`) instead of
+      // the real surface.
+      actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
+      actions.push({ id: 'footer-users', label: 'Management', icon: Users });
+      actions.push({ id: 'footer-api', label: 'Integrations', icon: KeyRound });
+      actions.push({
+        id: 'footer-monetization',
+        label: 'Monetization',
+        icon: Coins,
+      });
+      actions.push({
+        id: 'footer-settings',
+        label: 'Advanced',
+        icon: Settings,
+      });
     }
     return actions;
   }, [
     embedMode,
     isLiveAdmin,
+    showTrialGatedAdminMenu,
     currentTenant,
     tenantKey,
     rbacPermissions,
