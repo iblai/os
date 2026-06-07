@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.2](https://github.com/iblai/os/compare/v0.73.1...v0.73.2) (2026-06-07)
+
+### Chores
+
+* add iblai-mentor scheme to redirectToAuthSpa from sdk ([49bea52](https://github.com/iblai/os/commit/49bea520dd98487d361f36f85989191e6a79214f))
+
 ## [0.73.1](https://github.com/iblai/os/compare/v0.73.0...v0.73.1) (2026-06-05)
 
 ### Documentation
