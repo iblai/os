@@ -263,7 +263,9 @@ export class EditMentorPage {
 
     const settingsDialog = this.page
       .getByRole('dialog')
-      .filter({ hasText: 'Showing the list of agents available in your tenant' });
+      .filter({
+        hasText: 'Showing the list of agents available in your tenant',
+      });
     await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
 
     // Agents list is fetched server-side with pagination — on tenants with
