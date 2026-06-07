@@ -18,7 +18,10 @@ import { Switch } from '@/components/ui/switch';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useUserIsStudent, useUsername } from '@/hooks/use-user';
+import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
+import { useAppSelector } from '@/lib/hooks';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 import { formatDateString, getLLMProviderDetails } from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -47,6 +50,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   } = useNavigate();
   const username = useUsername();
   const userIsStudent = useUserIsStudent();
+  const isAdmin = useIsAdmin();
+  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  // A non-admin who holds `/mentors/#create` ("Student Mentor Creation")
+  // can also EDIT the agents they made. The list below is already scoped
+  // to their own agents (`createdBy`), so every row here is theirs to edit
+  // — mirror the sidebar's `studentCanCreateMentors` capability gate so a
+  // student mentor-creator gets the Edit Agent dialog on row click.
+  const studentCanCreateMentors =
+    !isAdmin && checkRbacPermission(rbacPermissions, '/mentors/#create');
+  const canEditMentors = !userIsStudent || studentCanCreateMentors;
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const [editMentorAndRefresh, { isLoading: isEditingMentor }] =
     useEditMentorAndRefreshListMutation();
@@ -60,7 +73,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     currentPage,
     totalPages,
     handlePageChange,
-  } = useMentorsWithPagination();
+  } = useMentorsWithPagination(5, {
+    // Non-admins (e.g. students with "Student Mentor Creation" enabled)
+    // only see the agents THEY created — never others' in the tenant.
+    // Admins keep the full tenant list.
+    createdBy: !isAdmin ? (username ?? undefined) : undefined,
+  });
 
   async function toggleMentorFeaturedStatus(
     mentorId: string,
@@ -177,7 +195,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               <div
                                 className="max-w-[200px] cursor-pointer truncate text-sm font-medium text-blue-600 hover:text-blue-800"
                                 onClick={() => {
-                                  if (userIsStudent) return;
+                                  if (!canEditMentors) return;
 
                                   openEditMentorModal(
                                     MODALS.EDIT_MENTOR.tabs.settings,

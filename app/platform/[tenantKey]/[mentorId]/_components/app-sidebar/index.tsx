@@ -1593,6 +1593,20 @@ export function AppSidebar() {
   const showTrialGatedAdminMenu =
     isMainTenant && !!isNewlyUserOnPreFreeOrAdvertisingMode(true);
 
+  // "Student Mentor Creation" (Advanced tenant settings →
+  // `allow_students_to_create_mentors`) adds the tenant's students group
+  // to the mentor-creators RBAC policy, i.e. it grants `/mentors/#create`.
+  // Honor that here so a GENUINE non-admin (`is_admin === false`) in such
+  // a tenant sees New Agent / My Agents and can actually create + manage
+  // mentors. We require `!isAdmin` so an admin toggled into learner mode —
+  // who holds the permission via their admin role — stays excluded, which
+  // keeps the `isLiveAdmin` learner-mode fix below intact.
+  // `checkRbacPermission` already factors in `config.enableRBAC()`, so
+  // this is inert when RBAC is disabled. (`/mentors/#create` mirrors
+  // `PERMISSION_GATES.agentsNew.rbacResource`.)
+  const studentCanCreateMentors =
+    !isAdmin && checkRbacPermission(rbacPermissions, '/mentors/#create');
+
   const { state, open, openMobile, setOpenMobile, toggleSidebar, isMobile } =
     useSidebar();
 
@@ -1756,15 +1770,21 @@ export function AppSidebar() {
   // the user called out.
   const agentsMenu: NavMenuConfig = React.useMemo(() => {
     const items: NavMenuItem[] = [];
-    // `showTrialGatedAdminMenu` surfaces these for main-tenant non-admins
-    // (trial-gated on click); otherwise the OLD live-admin + RBAC gate.
+    // New Agent / My Agents are shown when ANY of:
+    //  - `showTrialGatedAdminMenu`: main-tenant non-admins (trial-gated
+    //    on click),
+    //  - `studentCanCreateMentors`: genuine students in a tenant where
+    //    "Student Mentor Creation" is enabled (real create flow on click),
+    //  - the OLD live-admin + RBAC gate (real admins).
     if (
       showTrialGatedAdminMenu ||
+      studentCanCreateMentors ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsNew))
     )
       items.push({ id: 'agents-new', label: 'New Agent' });
     if (
       showTrialGatedAdminMenu ||
+      studentCanCreateMentors ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsMy))
     )
       items.push({ id: 'agents-my', label: 'My Agents' });
@@ -1773,7 +1793,12 @@ export function AppSidebar() {
     if (isUserTypeAllowed(PERMISSION_GATES.agentsExplore))
       items.push({ id: 'agents-explore', label: 'Explore' });
     return { id: 'agents', label: 'Agents', icon: Globe2, items };
-  }, [isLiveAdmin, isUserTypeAllowed, showTrialGatedAdminMenu]);
+  }, [
+    isLiveAdmin,
+    isUserTypeAllowed,
+    showTrialGatedAdminMenu,
+    studentCanCreateMentors,
+  ]);
 
   const workflowsMenu: NavMenuConfig = React.useMemo(() => {
     const allowed =
@@ -1792,9 +1817,22 @@ export function AppSidebar() {
     };
   }, [isLiveAdmin, isUserTypeAllowed, showTrialGatedAdminMenu]);
 
+  // When "Student Mentor Creation" is on, a student also gets Analytics —
+  // but ONLY for the mentor currently opened, and only when that mentor is
+  // theirs (`created_by === username`) OR they hold the per-mentor
+  // `/mentors/{id}/#view_analytics` permission (the RBAC branch of
+  // `isUserTypeAllowed`). With no mentor open, or someone else's mentor and
+  // no permission, Analytics stays hidden exactly as before.
+  const studentOwnsOpenedMentor =
+    !!username && !!mentorId && mentorPublicSettings?.created_by === username;
+  const studentCanViewOpenedMentorAnalytics =
+    studentCanCreateMentors &&
+    (studentOwnsOpenedMentor || isUserTypeAllowed(PERMISSION_GATES.analytics));
+
   const analyticsAllowed =
     config.hideAnalytics() !== 'true' &&
     (showTrialGatedAdminMenu ||
+      studentCanViewOpenedMentorAnalytics ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.analytics)));
 
   const footerActions = React.useMemo<FooterAction[]>(() => {

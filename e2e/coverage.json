@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-06-07",
   "summary": {
-    "totalCheckpoints": 400,
-    "coveredCheckpoints": 388,
+    "totalCheckpoints": 407,
+    "coveredCheckpoints": 392,
     "deprecatedCheckpoints": 12,
+    "notReproducibleCheckpoints": 3,
     "percent": 100,
     "totalJourneys": 47,
     "activeJourneys": 46
@@ -96,7 +97,8 @@
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/settings-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -289,7 +291,10 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
-        "app/create-mentor/page.tsx"
+        "app/create-mentor/page.tsx",
+        "components/modals/settings-modal.tsx",
+        "hooks/use-mentors.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -344,8 +349,23 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
           "status": "covered"
+        },
+        {
+          "id": "mgmt-12",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-13",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-14",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
         }
       ]
     },

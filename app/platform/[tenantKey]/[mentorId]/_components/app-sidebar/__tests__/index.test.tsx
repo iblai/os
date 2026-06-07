@@ -107,9 +107,21 @@ const FreeTrialDialogStub: React.FC<{
   onClose: () => void;
   isOpen: boolean;
 }> | null = null;
+// Drives `showTrialGatedAdminMenu` — the trial gate's own predicate that
+// surfaces the full admin sidebar to a main-tenant non-admin (each entry
+// trial-gated on click). Default off so existing tests are unaffected.
+let mockIsNewlyUserOnPreFreeOrAdvertisingMode = false;
 
 // Permission stub
 let mockIsUserTypeAllowed: (input?: unknown) => boolean = () => true;
+// Controllable RBAC check — drives `studentCanCreateMentors` (the
+// "Student Mentor Creation" tenant toggle, surfaced via the
+// `/mentors/#create` permission). Defaults to granting everything so the
+// footer admin-cluster tests keep their previous behavior.
+let mockCheckRbacPermission: (
+  perms: unknown,
+  resource: string,
+) => boolean = () => true;
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -438,7 +450,8 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (perms: unknown, resource: string) =>
+    mockCheckRbacPermission(perms, resource),
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
@@ -451,6 +464,8 @@ vi.mock('@/hooks/user-user-actions', () => ({
     FreeTrialDialog: FreeTrialDialogStub,
     closeModal: closeFreeTrialModalMock,
     isModalOpen: mockFreeTrialModalOpen,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
+      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
   }),
 }));
 
@@ -592,7 +607,9 @@ function resetState() {
   mockUserName = 'Admin User';
   mockEmbedMode = false;
   mockFreeTrialModalOpen = false;
+  mockIsNewlyUserOnPreFreeOrAdvertisingMode = false;
   mockIsUserTypeAllowed = () => true;
+  mockCheckRbacPermission = () => true;
   mockSidebarState = {
     state: 'expanded',
     open: true,
@@ -838,6 +855,57 @@ describe('AppSidebar — Agents section', () => {
     // Explore is still visible (open to STUDENT user type).
     expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
   });
+
+  it('shows New Agent / My Agents for a genuine non-admin when "Student Mentor Creation" grants /mentors/#create', () => {
+    // Non-admin student in a NON-main tenant where the tenant admin
+    // enabled "Student Mentor Creation" → they hold `/mentors/#create`.
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps New Agent / My Agents hidden for a non-admin when /mentors/#create is NOT granted', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = () => false;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
+  });
+
+  it('does NOT surface New Agent via /mentors/#create for an admin in learner mode (preserves the live-admin guard)', () => {
+    // Admin (is_admin === true) toggled into learner mode holds
+    // `/mentors/#create` via their admin role — but `studentCanCreateMentors`
+    // is gated on `!isAdmin`, so the agent items stay hidden.
+    mockIsAdmin = true;
+    mockUserIsStudent = true;
+    mockCheckRbacPermission = () => true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe('AppSidebar — Workflows section', () => {
@@ -900,6 +968,69 @@ describe('AppSidebar — Analytics section', () => {
       // sidebar still renders (gives us a useful baseline assertion).
       return !(spec && Array.isArray(spec.userTypes) && spec.rbacResource);
     };
+    renderSidebar();
+    expect(
+      screen.queryByRole('button', { name: 'Analytics' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Analytics for a student mentor-creator when the opened mentor is theirs (created_by === username)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    // Grants `/mentors/#create` (studentCanCreateMentors) but the
+    // analytics gate is denied below — visibility must come from ownership.
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'student-user',
+    };
+    mockIsUserTypeAllowed = (spec: any) => !spec?.rbacResource;
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows Analytics for a student mentor-creator who holds the per-mentor view_analytics permission (even if not the owner)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = () => true;
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'someone-else',
+    };
+    // The analytics gate (isUserTypeAllowed) resolves true via the RBAC
+    // view_analytics branch.
+    mockIsUserTypeAllowed = () => true;
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('keeps Analytics hidden for a student mentor-creator when the mentor is not theirs and they lack permission', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'someone-else',
+    };
+    mockIsUserTypeAllowed = (spec: any) => !spec?.rbacResource;
     renderSidebar();
     expect(
       screen.queryByRole('button', { name: 'Analytics' }),
@@ -1230,6 +1361,72 @@ describe('AppSidebar — Permission gating', () => {
     expect(
       screen.queryByRole('button', { name: 'New Workflow' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — main-tenant non-admin (trial-gated full admin menu)', () => {
+  // A genuine non-admin sitting in the MAIN tenant sees the FULL admin
+  // sidebar; every entry is trial-gated on click. RBAC is left denying
+  // here so we prove the items come from `showTrialGatedAdminMenu`, not
+  // the `studentCanCreateMentors` path.
+  function setupMainTenantNonAdmin() {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'main', is_admin: false };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = true;
+    mockCheckRbacPermission = () => false;
+  }
+
+  it('reveals New Agent / My Agents', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+  });
+
+  it('reveals the Workflows section', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Workflows' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Workflow' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Workflows' }),
+    ).toBeInTheDocument();
+  });
+
+  it('reveals the Analytics section', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Advanced)', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it('routes a trial-gated entry through executeWithTrialCheck on click', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(executeWithTrialCheckMock).toHaveBeenCalled();
   });
 });
 

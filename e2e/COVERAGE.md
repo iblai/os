@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-07 | 400 checkpoints (388 active, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-07 | 407 checkpoints (392 covered, 3 not-reproducible in default env, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -43,7 +43,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 3: New User UI & Profile Dropdown (5 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/settings-modal.tsx`
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
@@ -94,9 +94,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (11 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (14 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -108,7 +108,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin can edit the system prompt in the Prompts tab
 - [x] Admin can send a message to a newly created mentor and receive a response
 - [x] Admin can delete a mentor from the Settings tab
-- [x] Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)
+- [x] Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin `canEditMentors` guard unchanged
+- [ ] _(not-reproducible — RBAC off in default env)_ My Agents list scoped to `created_by=username` for non-admins via `useMentorsWithPagination({ createdBy })`; admin still sees full list — unit-covered in `settings-modal.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
+- [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered
 
 ---
 
