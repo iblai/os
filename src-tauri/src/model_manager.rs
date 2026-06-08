@@ -1,6 +1,7 @@
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::Path;
@@ -148,13 +149,13 @@ pub fn check_ollama_installed() -> bool {
 
 /// Check if Ollama server is running by pinging the API
 pub async fn is_ollama_running() -> bool {
-    let client = Client::new();
-    client
-        .get(format!("{}/api/version", OLLAMA_API_URL))
-        .timeout(std::time::Duration::from_secs(2))
-        .send()
-        .await
-        .is_ok()
+    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else { return false };
+    let Ok(json) = resp.json::<Value>().await else { return false };
+
+    let status = json.get("version").is_some_and(Value::is_string);
+
+    println!("[Ollama] running: {}", status);
+    status
 }
 
 /// Poll until Ollama is actually answering its API, up to `timeout_secs`.
@@ -170,13 +171,11 @@ pub async fn wait_for_ollama_ready(timeout_secs: u64) -> bool {
     const GRACE: std::time::Duration = std::time::Duration::from_secs(1);
     for _ in 0..timeout_secs.max(1) {
         if is_ollama_running().await {
-            tokio::time::sleep(GRACE).await;
             return true;
         }
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
     if is_ollama_running().await {
-        tokio::time::sleep(GRACE).await;
         true
     } else {
         false
@@ -365,9 +364,12 @@ pub fn get_system_memory() -> SystemMemory {
     {
         let mut sys = System::new();
         sys.refresh_memory();
+        let ram = sys.total_memory();
+        let vram = get_vram_total();
+        println!("RAM: {ram}, VRAM: {vram}", );
         SystemMemory {
-            ram_total: sys.total_memory(),
-            vram_total: get_vram_total(),
+            ram_total: ram,
+            vram_total: vram,
         }
     }
 

@@ -25,6 +25,14 @@ const LOCAL_STORAGE_KEY = 'model_download_state';
 const FIRST_LAUNCH_DISMISSED_KEY = 'model_download_prompt_dismissed';
 const MAX_LOGS = 100;
 
+// Manager/download status is authoritative from Tauri, never the persisted
+// snapshot. This flips true the first time any hook instance mounts in a page
+// session so we wipe the persisted state exactly once — clearing a stale
+// `managerInstalling`/`downloading`/`checking` flag (e.g. left behind by an
+// operation interrupted by an app reload) that would otherwise wedge the UI in
+// a permanent "loading" state — then fall back to a fresh backend status check.
+let didResetPersistedState = false;
+
 /**
  * Hook to manage Phi3 Mini model download via Ollama through Tauri
  *
@@ -234,6 +242,15 @@ export function useModelDownload() {
         '[useModelDownload] First mount (or after reset) - calling checkStatus',
       );
       hasCheckedStatus.current = true;
+
+      // Wipe any stale persisted manager/download state once per page load, so a
+      // leftover `managerInstalling`/`downloading` flag can't keep the toggle or
+      // status card stuck "loading". Tauri is the source of truth from here on.
+      if (!didResetPersistedState) {
+        didResetPersistedState = true;
+        setState(initialModelDownloadState);
+      }
+
       checkStatus();
 
       // Get OS type

@@ -723,7 +723,7 @@ async fn install_ollama() -> Result<String, String> {
         if !is_ollama_running().await {
             start_ollama_server().map_err(|e| e.to_string())?;
             // Wait until the server actually answers its API before returning.
-            wait_for_ollama_ready(30).await;
+            wait_for_ollama_ready(5).await;
         }
         return Ok("Model manager is installed and running".into());
     }
@@ -732,7 +732,7 @@ async fn install_ollama() -> Result<String, String> {
 
     // Start Ollama server using the correct path
     start_ollama_server().map_err(|e| e.to_string())?;
-    wait_for_ollama_ready(30).await;
+    wait_for_ollama_ready(5).await;
 
     Ok("Model manager installed and started".into())
 }
