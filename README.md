@@ -21,7 +21,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR) by Miguel Amigot, CTO at ibl.ai_
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Contributing](#contributing)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Testing](#testing) · [Contributing](#contributing)
 
 </div>
 
@@ -206,6 +206,34 @@ its static assets. Two common causes:
   assets next to the wrong path and `server-wrapper.js` can't find the server.
   This repo pins `outputFileTracingRoot` in `next.config.ts` to prevent it; if
   you still hit nesting, remove the stray parent lockfile and rebuild.
+
+---
+
+## Testing
+
+This project is covered by Playwright end-to-end tests in [`e2e/`](e2e/). **Run the E2E suite for any change** so nothing regresses:
+
+```bash
+make e2e-ui
+```
+
+`make e2e-ui` launches Playwright in interactive UI mode — watch the journeys run, step through them, and re-run individual tests. The first time, install the browsers once:
+
+```bash
+make e2e-install
+```
+
+Other useful targets:
+
+| Command                 | What it does                               |
+| ----------------------- | ------------------------------------------ |
+| `make e2e`              | Run the full suite headless (all browsers) |
+| `make e2e-headed`       | Run with a visible browser                 |
+| `make e2e-chrome`       | Run on Chrome only                         |
+| `make e2e-journey J=01` | Run a single journey spec                  |
+| `make e2e-report`       | Open the last HTML report                  |
+
+See [e2e/COVERAGE.md](e2e/COVERAGE.md) for current coverage. Coverage must not regress — add or update a journey whenever you change user-facing behavior.
 
 ---
 
