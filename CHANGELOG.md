@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.3](https://github.com/iblai/os/compare/v0.73.2...v0.73.3) (2026-06-08)
+
+### Documentation
+
+* update demo link to YouTube playlist ([49f4ece](https://github.com/iblai/os/commit/49f4ecec7c2d36279cfc55d892c969d856c91bd8))
+
 ## [0.73.2](https://github.com/iblai/os/compare/v0.73.1...v0.73.2) (2026-06-07)
 
 ### Chores
