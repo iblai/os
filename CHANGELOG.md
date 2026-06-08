@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.4](https://github.com/iblai/os/compare/v0.73.3...v0.73.4) (2026-06-08)
+
+### Chores
+
+* remove stale workflows that have not run successfully in months ([9cf8114](https://github.com/iblai/os/commit/9cf8114e83d8401855293164a65132f45dbd1f51))
+
 ## [0.73.3](https://github.com/iblai/os/compare/v0.73.2...v0.73.3) (2026-06-08)
 
 ### Documentation
