@@ -1931,8 +1931,10 @@ export function AppSidebar() {
           {/* Header */}
           <div
             className={cn(
-              'shrink-0 pt-[18px] pb-[25px]',
-              railCollapsed ? 'px-2' : 'px-[10px]',
+              'shrink-0',
+              railCollapsed
+                ? 'px-2 pt-[18px] pb-[25px]'
+                : 'px-[10px] py-[10px]',
             )}
           >
             <div
@@ -1942,9 +1944,15 @@ export function AppSidebar() {
               )}
             >
               {!railCollapsed && (
-                <div className="flex min-w-0 flex-1 items-center">
-                  <Logo className="max-h-[30px] w-auto object-contain" />
-                </div>
+                <>
+                  {/* Spacer matching the collapse button's width so the logo
+                      sits at the true horizontal center of the header rather
+                      than being pushed left by the button on the right. */}
+                  <span className="size-7 shrink-0" aria-hidden />
+                  <div className="flex min-w-0 flex-1 items-center justify-center">
+                    <Logo className="h-[51px] max-h-none w-auto max-w-full object-contain" />
+                  </div>
+                </>
               )}
               <SidebarCollapsedLabelFlyout
                 label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
