@@ -101,7 +101,12 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { config } from '@/lib/config';
-import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import {
+  ANONYMOUS_USERNAME,
+  LOCAL_STORAGE_KEYS,
+  UserType,
+} from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
 import { getUserEmail, getUserName } from '@/features/utils';
 import Markdown from '@/components/markdown';
@@ -1017,7 +1022,7 @@ function ChatThreeDotMenu({
 function ChatRowItem({
   row,
   active,
-  href,
+  onSelect,
   isPinned,
   isLoading,
   onPinToggle,
@@ -1026,24 +1031,18 @@ function ChatRowItem({
 }: {
   row: ChatRow;
   active: boolean;
-  href: string | undefined;
+  onSelect: () => void;
   isPinned: boolean;
   isLoading: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
 }) {
-  const router = useRouter();
-  const { onAfterNav } = useSidebarNavCallback();
   return (
     <div className="group relative">
       <button
         type="button"
-        onClick={() => {
-          if (!href) return;
-          router.push(href);
-          onAfterNav?.();
-        }}
+        onClick={onSelect}
         className={cn(
           'flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 pr-8 text-left text-[14px] font-normal transition-colors',
           active
@@ -1090,6 +1089,18 @@ function SidebarChatsSection({
   const { onAfterNav } = useSidebarNavCallback();
   const appSessionId = useAppSelector(selectSessionId);
   const resolvedUserId = username ?? getUserName();
+  // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
+  // `cachedSessionId[mentorId]` (backed by localStorage `session_id`). Row
+  // clicks must write this value or the panel never repopulates — selecting
+  // an existing chat would otherwise only update the URL (issue #1881).
+  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
+    Record<string, string>
+  >(
+    LOCAL_STORAGE_KEYS.SESSION_ID,
+    {},
+    /* istanbul ignore next -- @preserve localStorage deserializer */
+    { deserializer: (value) => JSON.parse(value) },
+  );
 
   const [pinMessage] = useAddPinnedMessageMutation();
   const [unpinMessage] = useUnPinMessageMutation();
@@ -1208,6 +1219,43 @@ function SidebarChatsSection({
     return `/platform/${tenantKey}/${m}?session=${encodeURIComponent(
       String(row.session_id),
     )}`;
+  };
+
+  // Selecting an existing chat. Navigating (`router.push(?session=...)`) is
+  // NOT enough on its own — nothing reads the query param back into state.
+  // We must also point the chat slice + the cached session id at the picked
+  // session so the loader effect re-fires and repaints the message panel.
+  // Clicking the already-active chat is a no-op for state (we only navigate /
+  // close the flyout) to avoid thrashing the in-flight session.
+  const handleSelectRow = (row: ChatRow) => {
+    const href = navHrefFor(row);
+    if (!href) return;
+
+    if (row.session_id !== appSessionId) {
+      // Different session: tear down any in-flight streaming/typing state and
+      // file context from the previous chat before pointing everything at the
+      // newly selected session.
+      dispatch(clearFiles(undefined));
+      eventBus.emit(RemoteEvents.stopChatGenerating);
+      dispatch(chatActions.resetIsTyping(undefined));
+      dispatch(chatActions.setStreaming(false));
+      dispatch(chatActions.resetCurrentStreamingMessage(undefined));
+      dispatch(chatActions.setActiveTab('chat'));
+      dispatch(chatActions.updateSessionIds(row.session_id));
+      dispatch(chatActions.setShouldStartNewChat(false));
+
+      // The localStorage `session_id` value the loader effect watches. This
+      // is the dependency that triggers getChats() → setNewMessages.
+      if (mentorId) {
+        saveCachedSessionId({
+          ...cachedSessionId,
+          [mentorId]: row.session_id,
+        });
+      }
+    }
+
+    router.push(href);
+    onAfterNav?.();
   };
 
   const handlePin = async (row: ChatRow) => {
@@ -1353,7 +1401,7 @@ function SidebarChatsSection({
       key={`${kind}-${row.session_id}`}
       row={row}
       active={row.session_id === appSessionId}
-      href={navHrefFor(row)}
+      onSelect={() => handleSelectRow(row)}
       isPinned={kind === 'pinned'}
       isLoading={actingSessionId === row.session_id}
       onPinToggle={() =>
@@ -1403,11 +1451,7 @@ function SidebarChatsSection({
                   <button
                     key={`flyout-pinned-${row.session_id}`}
                     type="button"
-                    onClick={() => {
-                      const href = navHrefFor(row);
-                      if (href) router.push(href);
-                      onAfterNav?.();
-                    }}
+                    onClick={() => handleSelectRow(row)}
                     className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
                     style={{ color: FLYOUT_ITEM_COLOR }}
                   >
@@ -1429,11 +1473,7 @@ function SidebarChatsSection({
                 <button
                   key={`flyout-recent-${row.session_id}`}
                   type="button"
-                  onClick={() => {
-                    const href = navHrefFor(row);
-                    if (href) router.push(href);
-                    onAfterNav?.();
-                  }}
+                  onClick={() => handleSelectRow(row)}
                   className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
                   style={{ color: FLYOUT_ITEM_COLOR }}
                 >
