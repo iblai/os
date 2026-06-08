@@ -106,7 +106,7 @@ jobs:
   summary:
     needs: [build-app-image, build-playwright-image, run-tests]
     if: always()
-    runs-on: iblai-stg-runner
+    runs-on: ubuntu-latest
     steps:
       - name: Results
         run: |
