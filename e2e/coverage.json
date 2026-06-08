@@ -335,6 +335,11 @@
           "id": "mgmt-10",
           "description": "Admin can send a message to a newly created mentor and receive a response",
           "status": "covered"
+        },
+        {
+          "id": "mgmt-11",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)",
+          "status": "covered"
         }
       ]
     },
