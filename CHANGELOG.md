@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.73.8](https://github.com/iblai/os/compare/v0.73.7...v0.73.8) (2026-06-08)
+
+### Chores
+
+* bump iblai-js to 1.17.19 ([fb3da86](https://github.com/iblai/os/commit/fb3da86d95a28198a0ca9ca952bf580a8807c498))
+
+### CI
+
+* skip PR workflows for external pull requests ([29aca2e](https://github.com/iblai/os/commit/29aca2e6e8fa57ab68ea9183b5d8f05d41125cb8))
+
 ## [0.73.7](https://github.com/iblai/os/compare/v0.73.6...v0.73.7) (2026-06-08)
 
 ### CI
