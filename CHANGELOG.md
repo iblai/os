@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.73.5](https://github.com/iblai/os/compare/v0.73.4...v0.73.5) (2026-06-08)
+
+### Bug Fixes
+
+* **deploy:** pin outputFileTracingRoot so standalone builds stay un-nested ([535fdde](https://github.com/iblai/os/commit/535fdde8f1e52f58e0833cc9ace0f5728030cd52))
+
+### Chores
+
+* remove idle workflow_dispatch-only workflows ([fb9b9d7](https://github.com/iblai/os/commit/fb9b9d74a2aa036780375a348f47beeebd688224))
+
 ## [0.73.4](https://github.com/iblai/os/compare/v0.73.3...v0.73.4) (2026-06-08)
 
 ### Chores
