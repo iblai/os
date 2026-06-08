@@ -21,7 +21,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR) by Miguel Amigot, CTO at ibl.ai_
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Contributing](#contributing)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Contributing](#contributing)
 
 </div>
 
@@ -153,6 +153,13 @@ If you already have an ibl.ai tenant (organization key):
    PORT=3000 node server-wrapper.js
    ```
 
+   The build emits a self-contained server under `.next/standalone/` (Next.js
+   [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output)).
+   `next.config.ts` pins `outputFileTracingRoot` to the project directory so the
+   output always lands at `.next/standalone/server.js` with its static assets
+   alongside it. See [Troubleshooting](#troubleshooting) if the app loads to a
+   blank screen.
+
 ### Option B: Enterprise Deployment
 
 If you need full backend infrastructure:
@@ -172,6 +179,33 @@ If you need full backend infrastructure:
 See [docs/development.md](docs/development.md) for native app build instructions.
 
 Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
+
+### Troubleshooting
+
+**The app loads to a blank page or stays stuck on the loading spinner (no redirect to login).**
+
+Open your browser's DevTools → Network tab and reload. If every request under
+`/_next/static/...` and `/env.js` returns `404`/`503`, the server isn't finding
+its static assets. Two common causes:
+
+- **A duplicate or stale server is bound to the port.** An older `node`/`next`
+  process from a previous run can keep listening on `:3000` and shadow the new
+  one (a process bound to a specific address such as `127.0.0.1` wins over a
+  wildcard bind). Find and stop strays before starting fresh:
+
+  ```bash
+  lsof -nP -iTCP:3000 -sTCP:LISTEN   # list listeners on the port
+  kill <PID>                         # stop the stale one
+  ```
+
+- **The standalone output was nested under an unexpected path.** Next.js infers
+  the file-tracing root from the nearest lockfile. A stray lockfile in a _parent_
+  directory (e.g. `~/package-lock.json`) makes it treat your home directory as
+  the workspace root and emit the server at `.next/standalone/<path-to-project>/server.js`
+  instead of `.next/standalone/server.js` — `post-build.sh` then copies static
+  assets next to the wrong path and `server-wrapper.js` can't find the server.
+  This repo pins `outputFileTracingRoot` in `next.config.ts` to prevent it; if
+  you still hit nesting, remove the stray parent lockfile and rebuild.
 
 ---
 
