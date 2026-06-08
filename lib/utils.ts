@@ -105,6 +105,7 @@ export async function redirectToAuthSpa(
     preserveTokenKey: 'edx_jwt_token',
     authRedirectProxy: '/api/auth-redirect',
     isNativeApp: () => isTauriApp(),
+    scheme: 'iblai-mentor',
   });
 }
 
