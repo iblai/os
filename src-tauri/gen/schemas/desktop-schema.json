@@ -609,6 +609,12 @@
           "markdownDescription": "Enables installing Ollama"
         },
         {
+          "description": "Allow logging to stdout",
+          "type": "string",
+          "const": "allow-log-stdout",
+          "markdownDescription": "Allow logging to stdout"
+        },
+        {
           "description": "Enables navigating to a URL in the webview",
           "type": "string",
           "const": "allow-navigate-to",

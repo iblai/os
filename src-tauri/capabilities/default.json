@@ -16,6 +16,7 @@
     ]
   },
   "permissions": [
+    "allow-log-stdout",
     "allow-check-ollama-status",
     "allow-download-phi3-model",
     "allow-download-model",

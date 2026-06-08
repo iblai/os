@@ -522,6 +522,14 @@ async fn download_model(app: AppHandle, model: Option<String>) -> Result<(), Str
     download_ollama_model(app, model).await
 }
 
+#[command]
+async fn log_stdout(s: Option<String>) -> Result<(), String> {
+    if let Some(val) = s {
+        println!("[ibl.ai OS Frontend] {val}");
+    }
+    Ok(())
+}
+
 /// Shared implementation: pull an Ollama model, emitting progress/log/disk events.
 async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), String> {
     let app_progress = Arc::new(app.clone());
