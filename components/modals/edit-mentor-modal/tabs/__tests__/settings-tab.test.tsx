@@ -500,6 +500,28 @@ describe('SettingsTab', () => {
       ).toBeInTheDocument();
     });
 
+    it('renders Prompt Caching toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enable prompt caching')).toBeInTheDocument();
+    });
+
+    it('renders Prompt Caching tooltip text', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(/Caches large or long system prompts/i),
+      ).toBeInTheDocument();
+    });
+
+    it('renders tooltip trigger for Prompt Caching', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enable prompt caching'),
+      ).toBeInTheDocument();
+    });
+
     it('renders the Image upload section', () => {
       render(<SettingsTab />);
 
@@ -702,6 +724,19 @@ describe('SettingsTab', () => {
       fireEvent.click(ragSwitch);
 
       expect(ragSwitch).toBeChecked();
+    });
+
+    it('toggles prompt caching switch', () => {
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      expect(promptCachingSwitch).not.toBeChecked();
+
+      fireEvent.click(promptCachingSwitch);
+
+      expect(promptCachingSwitch).toBeChecked();
     });
   });
 
@@ -940,6 +975,60 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               enable_multi_query_rag: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching as true after toggling ON', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      fireEvent.click(promptCachingSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching as false after toggling OFF', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      fireEvent.click(promptCachingSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: false,
             }),
           }),
         );
@@ -1503,6 +1592,39 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Improve document retrieval'),
       ).not.toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching true in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching false in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
+    });
+
+    it('defaults enable_prompt_caching to false when undefined', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: undefined },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
     });
   });
 

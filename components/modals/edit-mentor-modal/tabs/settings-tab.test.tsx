@@ -1255,6 +1255,96 @@ describe('SettingsTab', () => {
     });
   });
 
+  describe('Prompt caching toggle', () => {
+    it('renders the Prompt caching toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enable prompt caching')).toBeInTheDocument();
+    });
+
+    it('defaults to unchecked when enable_prompt_caching is unset', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching=true from mentor settings as checked', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('toggles the Prompt caching switch', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable prompt caching');
+      fireEvent.click(toggle);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('submits enable_prompt_caching=true when toggled on and saved', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Enable prompt caching'));
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching=false when toggled off and saved', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Enable prompt caching'));
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('has tooltip with description', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enable prompt caching'),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('Copy Mentor Button', () => {
     it('renders Copy button when mentor is forkable', () => {
       render(<SettingsTab />);
