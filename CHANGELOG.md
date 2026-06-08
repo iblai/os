@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.7](https://github.com/iblai/os/compare/v0.73.6...v0.73.7) (2026-06-08)
+
+### CI
+
+* run summary job on github-hosted runner ([bf89f2c](https://github.com/iblai/os/commit/bf89f2ccc271013a9b5a571532eb8a3dcff576d5))
+
 ## [0.73.6](https://github.com/iblai/os/compare/v0.73.5...v0.73.6) (2026-06-08)
 
 ### Documentation
