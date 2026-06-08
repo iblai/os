@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.73.6](https://github.com/iblai/os/compare/v0.73.5...v0.73.6) (2026-06-08)
+
+### Documentation
+
+* **readme:** add Testing section — run E2E with `make e2e-ui` ([72c26aa](https://github.com/iblai/os/commit/72c26aab4b117fdb8fce6243ce64c4a942d63337))
+
 ## [0.73.5](https://github.com/iblai/os/compare/v0.73.4...v0.73.5) (2026-06-08)
 
 ### Bug Fixes
