@@ -111,6 +111,13 @@ const FreeTrialDialogStub: React.FC<{
 // Permission stub
 let mockIsUserTypeAllowed: (input?: unknown) => boolean = () => true;
 
+// Chat session selection (issue #1881). `selectSessionId` returns the active
+// session; the Chats-section row click must repopulate the panel by writing
+// the cached session id (localStorage `session_id`) the loader effect watches.
+let mockActiveSessionId = 'sess-active';
+let mockCachedSessionId: Record<string, string> = {};
+const saveCachedSessionIdMock = vi.fn();
+
 // Data sources
 let mockMentorPublicSettings: any = {
   mentor_id: 42,
@@ -221,7 +228,17 @@ vi.mock('sonner', () => {
 
 vi.mock('@/lib/eventBus', () => ({
   default: { emit: (...args: unknown[]) => eventBusEmitMock(...args) },
-  RemoteEvents: { newChat: 'newChat' },
+  RemoteEvents: {
+    newChat: 'newChat',
+    stopChatGenerating: 'stopChatGenerating',
+  },
+}));
+
+vi.mock('@/hooks/use-local-storage', () => ({
+  useLocalStorage: () => [
+    mockCachedSessionId,
+    (...args: unknown[]) => saveCachedSessionIdMock(...args),
+  ],
 }));
 
 // Replace the dynamic-loaded modals with stub fragments controlled by props
@@ -365,9 +382,29 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       type: 'chat/setShouldStartNewChat',
       payload: a,
     }),
+    updateSessionIds: (...a: unknown[]) => ({
+      type: 'chat/updateSessionIds',
+      payload: a,
+    }),
+    resetIsTyping: (...a: unknown[]) => ({
+      type: 'chat/resetIsTyping',
+      payload: a,
+    }),
+    setStreaming: (...a: unknown[]) => ({
+      type: 'chat/setStreaming',
+      payload: a,
+    }),
+    resetCurrentStreamingMessage: (...a: unknown[]) => ({
+      type: 'chat/resetCurrentStreamingMessage',
+      payload: a,
+    }),
+    setActiveTab: (...a: unknown[]) => ({
+      type: 'chat/setActiveTab',
+      payload: a,
+    }),
   },
   clearFiles: (...a: unknown[]) => ({ type: 'chat/clearFiles', payload: a }),
-  selectSessionId: () => 'sess-active',
+  selectSessionId: () => mockActiveSessionId,
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -572,6 +609,9 @@ function resetState() {
   setOpenMobileMock.mockReset();
   closeFreeTrialModalMock.mockReset();
   updateQueryDataMock.mockClear();
+  saveCachedSessionIdMock.mockReset();
+  mockActiveSessionId = 'sess-active';
+  mockCachedSessionId = {};
 
   mockPathname = '/platform/tenant-a/mentor-1';
   mockSearchParams = new URLSearchParams();
@@ -610,6 +650,7 @@ function resetState() {
       {
         id: 'p-1',
         session_id: 'sess-pinned-1',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Pinned message one' } },
@@ -623,6 +664,7 @@ function resetState() {
       {
         id: 'r-1',
         session_id: 'sess-recent-1',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Recent message one' } },
@@ -632,6 +674,7 @@ function resetState() {
       {
         id: 'r-2',
         session_id: 'sess-recent-2',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Recent message two' } },
@@ -947,6 +990,72 @@ describe('AppSidebar — Chats section', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     expect(screen.getAllByText('Pinned message one')).toHaveLength(1);
     expect(screen.getByText('Recent only row')).toBeInTheDocument();
+  });
+
+  // --- Issue #1881 regression: selecting an existing chat must repopulate
+  // the message panel, not just change the URL. The loader effect keys on the
+  // cached session id (localStorage `session_id`), so a row click MUST write
+  // it AND point the chat slice at the selected session. ---
+
+  it('clicking a recent row navigates AND selects the session (updateSessionIds + cached session id)', () => {
+    mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message two').closest('button')!);
+
+    // URL push still happens.
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-recent-2'),
+    );
+    // Redux session pointer is updated so the active highlight + dependent
+    // queries follow the selection.
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/updateSessionIds' }),
+    );
+    // The cached session id — the loader effect's dependency — is written.
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-recent-2',
+    });
+  });
+
+  it('merges the selected session into any existing cached session ids', () => {
+    mockCachedSessionId = { 'other-mentor': 'keep-me' };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message one').closest('button')!);
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'other-mentor': 'keep-me',
+      'mentor-1': 'sess-recent-1',
+    });
+  });
+
+  it('clicking a pinned row also selects the session', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-pinned-1'),
+    );
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-pinned-1',
+    });
+  });
+
+  it('clicking the already-active chat is a no-op for state (still navigates)', () => {
+    mockActiveSessionId = 'sess-recent-1';
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message one').closest('button')!);
+
+    // Navigation/flyout-close still fires.
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-recent-1'),
+    );
+    // But no session-selection side effects are dispatched / persisted.
+    expect(saveCachedSessionIdMock).not.toHaveBeenCalled();
+    expect(dispatchMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/updateSessionIds' }),
+    );
   });
 
   it("opens a row's three-dot menu and shows Pin/Export/Delete for a recent row", async () => {
