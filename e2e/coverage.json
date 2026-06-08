@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-07",
+  "lastUpdated": "2026-06-08",
   "summary": {
-    "totalCheckpoints": 407,
-    "coveredCheckpoints": 392,
+    "totalCheckpoints": 408,
+    "coveredCheckpoints": 393,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 3,
     "percent": 100,
@@ -123,7 +123,7 @@
         },
         {
           "id": "ui-05",
-          "description": "Main-tenant non-admin sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]
@@ -648,7 +648,8 @@
         "components/logo.tsx",
         "hooks/use-mentors/use-mentor-settings.ts",
         "hooks/use-embed-mode.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -689,6 +690,11 @@
         {
           "id": "emb-08",
           "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-09",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         }
       ]

@@ -130,8 +130,8 @@ export class SidebarPage {
     this.logoutButton = page.getByRole('menuitem', { name: /log out/i });
   }
 
-  async toggle(): Promise<void> {
-    await expect(this.toggleButton).toBeVisible({ timeout: 10_000 });
+  async toggle(timeoutMs = 10_000): Promise<void> {
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
     await this.toggleButton.click();
   }
 
@@ -191,16 +191,58 @@ export class SidebarPage {
   }
 
   /**
+   * Returns true if the given section trigger is present in the sidebar DOM
+   * within the given timeout. Uses `waitFor` (not the snapshot `isVisible()`)
+   * so the timeout is actually honoured.
+   *
+   * Primarily used by embed-mode assertions where Agents / Workflows /
+   * Analytics / Projects sections must be ABSENT. Pass a short timeout so
+   * the check fails fast when the element is correctly hidden.
+   */
+  async isSectionTriggerVisible(
+    name: string,
+    timeoutMs = 3_000,
+  ): Promise<boolean> {
+    const trigger = this.sidebar.getByRole('button', { name, exact: true });
+    try {
+      await trigger.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the Support / docs link (ibl.ai/docs) is present in the
+   * sidebar footer. Uses `waitFor` with a short timeout so the check fast-
+   * fails when the footer is correctly hidden in embed mode.
+   */
+  async isSupportLinkVisible(timeoutMs = 3_000): Promise<boolean> {
+    // The link renders as an <a> with visible text "Support" (expanded) or
+    // aria-label="Support" (rail-collapsed). Both are caught by getByRole.
+    const link = this.sidebar.getByRole('link', { name: /support/i });
+    try {
+      await link.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Expands the sidebar if collapsed. While collapsed (icon mode) the header
    * logo container is `hidden`, so the logo must be revealed before asserting
    * on its clickability.
    */
-  async ensureExpanded(): Promise<void> {
+  async ensureExpanded(timeoutMs = 10_000): Promise<void> {
     const visible = await this.logoImage
       .isVisible({ timeout: 3_000 })
       .catch(() => false);
     if (visible) return;
-    await this.toggle();
-    await expect(this.logoImage).toBeVisible({ timeout: 10_000 });
+    // The embedded layout blocks rendering until mentor settings load, which
+    // can be slow against the embed backend — callers (e.g. the embed Show
+    // Catalogue tests) pass a generous timeout so the sidebar has time to mount.
+    await this.toggle(timeoutMs);
+    await expect(this.logoImage).toBeVisible({ timeout: timeoutMs });
   }
 }

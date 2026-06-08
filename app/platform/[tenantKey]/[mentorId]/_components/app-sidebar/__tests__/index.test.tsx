@@ -65,6 +65,9 @@ const executeWithTrialCheckMock = vi.fn((fn?: () => void) => {
   fn?.();
   return undefined;
 });
+// Auth-redirect helpers (the login affordance for anonymous users).
+const redirectToAuthSpaMock = vi.fn();
+const redirectToAuthSpaJoinTenantMock = vi.fn();
 const eventBusEmitMock = vi.fn();
 const exportMessagesToXlsxMock = vi.fn();
 
@@ -79,6 +82,9 @@ let mockParams: Record<string, string | undefined> = {
 
 // User identity
 let mockUsername: string | null = 'admin-user';
+// `isLoggedIn()` (axd_token) — the canonical "logged in" signal used by
+// showChats and the New Chat RBAC gate. Defaults to logged-in.
+let mockIsLoggedIn = true;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockCurrentTenant: any = {
@@ -478,6 +484,10 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     getFirstMessageWithContent: (msgs: any[]) =>
       msgs?.find((m: any) => m?.message?.data?.content)?.message?.data
         ?.content ?? '',
+    isLoggedIn: () => mockIsLoggedIn,
+    redirectToAuthSpa: (...args: unknown[]) => redirectToAuthSpaMock(...args),
+    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
+      redirectToAuthSpaJoinTenantMock(...args),
   };
 });
 
@@ -576,6 +586,8 @@ function resetState() {
   addPinnedMessageMock.mockClear();
   unpinMessageMock.mockClear();
   deleteMessageMock.mockClear();
+  redirectToAuthSpaMock.mockReset();
+  redirectToAuthSpaJoinTenantMock.mockReset();
   executeWithTrialCheckMock.mockClear();
   executeWithTrialCheckMock.mockImplementation((fn?: () => void) => {
     fn?.();
@@ -596,6 +608,7 @@ function resetState() {
     projectId: undefined,
   };
   mockUsername = 'admin-user';
+  mockIsLoggedIn = true;
   mockIsAdmin = true;
   mockUserIsStudent = false;
   mockCurrentTenant = {
@@ -776,9 +789,10 @@ describe('AppSidebar — rendering', () => {
   });
 
   it('hides footer actions in embed mode (Invites / Notifications / Advanced)', () => {
-    // Embed mode short-circuits `footerActions` to an empty list so the
-    // bottom strip stays clean for iframe-embedded views. Section triggers
-    // still render so the navigation works.
+    // Embed mode renders a MINIMAL sidebar (New Chat + chat history only),
+    // matching the pre-rewrite UI: the whole footer is hidden and the
+    // Agents/Workflows/Analytics/Projects sections don't render (covered in
+    // the "embed mode sections" block below).
     mockEmbedMode = true;
     renderSidebar();
     expect(
@@ -790,6 +804,82 @@ describe('AppSidebar — rendering', () => {
     expect(
       screen.queryByRole('button', { name: 'Advanced' }),
     ).not.toBeInTheDocument();
+    // The Support/docs link lives in the (now hidden) footer too.
+    expect(
+      screen.queryByRole('link', { name: 'Support' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Chats, but no Agents/Workflows/Analytics/Projects', () => {
+    // Default mock state is a logged-in ADMIN (mockUsername set) — without
+    // embed gating they would see the full nav. Embed must hide it
+    // regardless of role, while keeping New Chat + (logged-in) Chats.
+    mockEmbedMode = true;
+    renderSidebar();
+
+    // Kept: New Chat (standalone button) + Chats history section.
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Chats' }).length,
+    ).toBeGreaterThan(0);
+
+    // Hidden: every admin/full-app nav section.
+    expect(
+      screen.queryByRole('button', { name: 'Agents' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Workflows' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Analytics' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Projects' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides Chats in embed mode when the user is NOT logged in (only New Chat remains)', () => {
+    // Per the embed spec: in embed mode Chats is only shown to a logged-in
+    // user (keyed on isLoggedIn()/axd_token). An anonymous embed viewer sees
+    // just the New Chat button (anonymous bypasses the New Chat RBAC gate).
+    mockEmbedMode = true;
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Chats' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides New Chat for a logged-in user lacking /mentors/{id}/#chat permission (mirrors the original RBAC gate)', () => {
+    // Original behavior: a logged-in user without chat permission on the
+    // opened mentor was filtered out of New Chat. Anonymous users bypass it.
+    mockIsLoggedIn = true;
+    mockCheckRbacPermission = (_perms, resource) => !resource.includes('#chat'); // deny only the chat permission
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'New Chat' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows New Chat for an anonymous user even without chat permission (RBAC bypassed when not logged in)', () => {
+    mockIsLoggedIn = false;
+    mockCheckRbacPermission = () => false;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -1364,15 +1454,31 @@ describe('AppSidebar — Permission gating', () => {
   });
 });
 
-describe('AppSidebar — main-tenant non-admin (trial-gated full admin menu)', () => {
-  // A genuine non-admin sitting in the MAIN tenant sees the FULL admin
-  // sidebar; every entry is trial-gated on click. RBAC is left denying
-  // here so we prove the items come from `showTrialGatedAdminMenu`, not
-  // the `studentCanCreateMentors` path.
+describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertising tenant)', () => {
+  // A genuine non-admin in the MAIN tenant OR an ADVERTISING tenant sees
+  // the FULL admin sidebar; every entry is trial-gated on click. RBAC is
+  // left denying here so we prove the items come from
+  // `showTrialGatedAdminMenu`, not the `studentCanCreateMentors` path.
   function setupMainTenantNonAdmin() {
     mockIsAdmin = false;
     mockUserIsStudent = true;
     mockCurrentTenant = { key: 'main', is_admin: false };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = true;
+    mockCheckRbacPermission = () => false;
+  }
+
+  // Advertising tenant: a NON-main tenant key flagged `is_advertising`.
+  // The trial gate fires for these too, so the full menu must show — this
+  // is the regression guard against re-adding an `isMainTenant` clamp.
+  function setupAdvertisingTenantNonAdmin() {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = {
+      key: 'acme-ads',
+      is_admin: false,
+      is_advertising: true,
+    };
+    mockParams = { tenantKey: 'acme-ads', mentorId: 'mentor-1' };
     mockIsNewlyUserOnPreFreeOrAdvertisingMode = true;
     mockCheckRbacPermission = () => false;
   }
@@ -1421,12 +1527,113 @@ describe('AppSidebar — main-tenant non-admin (trial-gated full admin menu)', (
     );
   });
 
-  it('routes a trial-gated entry through executeWithTrialCheck on click', () => {
-    setupMainTenantNonAdmin();
+  it('routes a trial-gated entry through executeWithTrialCheck on click (logged-in user)', () => {
+    setupMainTenantNonAdmin(); // mockIsLoggedIn defaults to true
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
     expect(executeWithTrialCheckMock).toHaveBeenCalled();
+    expect(redirectToAuthSpaJoinTenantMock).not.toHaveBeenCalled();
+  });
+
+  it('prompts LOGIN (not the upgrade dialog) when an ANONYMOUS user clicks a trial-gated admin item', () => {
+    // Mirrors the original AuthPopover affordance: the admin cluster is
+    // shown to an anonymous main/advertising-tenant visitor, but clicking
+    // routes to login instead of running the action / showing the upgrade
+    // dialog (they can't upgrade without an account).
+    setupMainTenantNonAdmin();
+    mockIsLoggedIn = false; // anonymous
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
+    expect(executeWithTrialCheckMock).not.toHaveBeenCalled();
+  });
+
+  it('also reveals the full admin sidebar for a non-admin in an ADVERTISING (non-main) tenant', () => {
+    setupAdvertisingTenantNonAdmin();
+    renderSidebar();
+    // Agents cluster
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+    // Workflows + Analytics + footer cluster all surface too
+    expect(
+      screen.getAllByRole('button', { name: 'Workflows' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+});
+
+describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clicks route to auth SPA', () => {
+  // Mirrors the ORIGINAL behavior: an anonymous user SEES all admin options
+  // (in any tenant — no trial gate, no RBAC) and clicking any of them routes
+  // to the auth SPA login instead of running the action.
+  function setupAnonymous() {
+    mockIsLoggedIn = false;
+    mockUsername = null; // truly anonymous — no user_nicename
+    mockIsAdmin = false;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = false; // NOT trial-gated
+    mockCheckRbacPermission = () => false; // no RBAC
+  }
+
+  it('reveals the full admin menu (Agents/Workflows/Analytics + footer cluster) in a regular tenant', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Workflows' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it('routes a clicked admin item to the auth SPA (not the upgrade dialog / real action)', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
+    expect(executeWithTrialCheckMock).not.toHaveBeenCalled();
+    expect(openCreateMentorModalMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the Projects section to an anonymous user; "New Project" routes to the auth SPA', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    const newProjectBtn = screen.getByRole('button', { name: 'New Project' });
+    expect(newProjectBtn).toBeInTheDocument();
+    fireEvent.click(newProjectBtn);
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
   });
 });
 

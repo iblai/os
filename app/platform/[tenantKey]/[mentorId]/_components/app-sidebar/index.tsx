@@ -96,6 +96,9 @@ import {
   cn,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
+  isLoggedIn,
+  redirectToAuthSpa,
+  redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { config } from '@/lib/config';
 import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
@@ -483,6 +486,16 @@ function SidebarNavCollapsibleSection({
   );
 }
 
+// Mirrors the original `AuthPopover.handleLogin`: send a not-logged-in
+// (anonymous) user to the auth SPA when they trigger a gated action.
+function redirectToLogin(tenantKey: string | undefined) {
+  if (!tenantKey) {
+    redirectToAuthSpa('/', tenantKey, undefined, true, true);
+    return;
+  }
+  redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
+}
+
 type SdkProject = {
   id: number | string;
   name?: string | null;
@@ -568,8 +581,16 @@ function SidebarProjectsSection({
     onNavigate?.();
   };
 
-  const handleCreateClick = () =>
+  // Mirrors the original ProjectsSidebarDropdown: an anonymous user sees
+  // the Projects section, but "New Project" routes to the auth SPA login
+  // instead of opening the create modal.
+  const handleCreateClick = () => {
+    if (!isLoggedIn()) {
+      redirectToLogin(tenantKey);
+      return;
+    }
     executeWithTrialCheck(() => setCreateOpen(true));
+  };
 
   if (collapsed) {
     return (
@@ -1576,22 +1597,18 @@ export function AppSidebar() {
     isNewlyUserOnPreFreeOrAdvertisingMode,
   } = useShowFreeTrialDialog();
 
-  // A non-admin user sitting in the MAIN tenant should see the FULL
-  // admin sidebar — agents, workflows, analytics, and every footer
-  // action — but each entry routes to the free-trial upgrade dialog
-  // instead of the real action. We reuse the trial gate's OWN predicate
-  // (`isNewlyUserOnPreFreeOrAdvertisingMode`, which already requires
-  // stripe-activated + non-admin + main/advertising tenant) so an item
-  // is only ever shown when clicking it will actually pop the dialog —
-  // the handlers all wrap their work in `executeWithTrialCheck`. When
-  // the gate wouldn't fire we fall back to the OLD `isLiveAdmin` hiding,
-  // so a real admin action never leaks to a student. We additionally
-  // require the MAIN tenant here (excluding advertising-only tenants)
-  // to keep the "rest stays hidden" behavior for everyone else.
-  const isMainTenant =
-    (currentTenant?.key ?? tenantKey) === config.mainTenantKey();
-  const showTrialGatedAdminMenu =
-    isMainTenant && !!isNewlyUserOnPreFreeOrAdvertisingMode(true);
+  // A non-admin user in the MAIN tenant OR an ADVERTISING tenant should
+  // see the FULL admin sidebar — agents, workflows, analytics, and every
+  // footer action — but each entry routes to the free-trial upgrade dialog
+  // (Stripe) instead of the real action. We mirror the trial gate's OWN
+  // predicate (`isNewlyUserOnPreFreeOrAdvertisingMode`, which already
+  // requires stripe-activated + non-admin + main-OR-advertising tenant)
+  // 1:1, so an item is only ever shown when clicking it will actually pop
+  // the dialog — the handlers all wrap their work in `executeWithTrialCheck`.
+  // When the gate wouldn't fire we fall back to the OLD `isLiveAdmin`
+  // hiding, so a real admin action never leaks to a student, and non-admins
+  // in ordinary (non-main, non-advertising) tenants stay hidden as before.
+  const showTrialGatedAdminMenu = !!isNewlyUserOnPreFreeOrAdvertisingMode(true);
 
   // "Student Mentor Creation" (Advanced tenant settings →
   // `allow_students_to_create_mentors`) adds the tenant's students group
@@ -1606,6 +1623,15 @@ export function AppSidebar() {
   // `PERMISSION_GATES.agentsNew.rbacResource`.)
   const studentCanCreateMentors =
     !isAdmin && checkRbacPermission(rbacPermissions, '/mentors/#create');
+
+  // Original behavior: a NOT-logged-in (anonymous) user SEES the admin
+  // sidebar items in every tenant; clicking any of them routes to the auth
+  // SPA login (handled by `runAdminAction`). Mirrors the old sidebar where
+  // `isUserTypeAllowed` admitted the ANONYMOUS user type and admin actions
+  // were wrapped in AuthPopover. Embed mode still hides everything (its own
+  // `!embedMode` gates short-circuit first), so this only affects the normal
+  // sidebar.
+  const showAnonymousAdminMenu = !isLoggedIn();
 
   const { state, open, openMobile, setOpenMobile, toggleSidebar, isMobile } =
     useSidebar();
@@ -1657,15 +1683,33 @@ export function AppSidebar() {
     onAfterNav,
   ]);
 
+  // Mirrors the ORIGINAL `AuthPopover` affordance: a NOT-logged-in user can
+  // only reach these admin actions via the trial-gated menu in a main/
+  // advertising tenant — for them, prompt LOGIN (instead of the trial /
+  // upgrade dialog they can't act on without an account), matching the old
+  // sidebar's anonymous "click → log in" behavior. Logged-in users keep the
+  // existing trial-check behavior unchanged. Returns the trial-check result
+  // (or null when we redirect) so href-driven rows can swallow navigation.
+  const runAdminAction = React.useCallback(
+    (action: () => void): unknown => {
+      if (!isLoggedIn()) {
+        redirectToLogin(tenantKey);
+        return null;
+      }
+      return executeWithTrialCheck(action);
+    },
+    [executeWithTrialCheck, tenantKey],
+  );
+
   const handleAgentMenuSelect = React.useCallback(
     (itemId: string): boolean | void => {
       if (itemId === 'agents-new') {
-        executeWithTrialCheck(() => openCreateMentorModal());
+        runAdminAction(() => openCreateMentorModal());
         onAfterNav();
         return;
       }
       if (itemId === 'agents-my') {
-        executeWithTrialCheck(() => openSettingsModal());
+        runAdminAction(() => openSettingsModal());
         onAfterNav();
         return;
       }
@@ -1676,7 +1720,7 @@ export function AppSidebar() {
       }
     },
     [
-      executeWithTrialCheck,
+      runAdminAction,
       openCreateMentorModal,
       openSettingsModal,
       navigateToExplore,
@@ -1691,14 +1735,14 @@ export function AppSidebar() {
           openNoMentorSelectedModal();
           return;
         }
-        executeWithTrialCheck(() => navigateToWorkflows());
+        runAdminAction(() => navigateToWorkflows());
         onAfterNav();
         return;
       }
     },
     [
       mentorId,
-      executeWithTrialCheck,
+      runAdminAction,
       navigateToWorkflows,
       openNoMentorSelectedModal,
       onAfterNav,
@@ -1750,11 +1794,11 @@ export function AppSidebar() {
       // `null` when it has blocked the action — in that case we return
       // `false` so `CollapsibleSubNavItem` swallows the nav and the
       // trial modal opens instead.
-      const result = executeWithTrialCheck(() => {});
+      const result = runAdminAction(() => {});
       if (result === null) return false;
       onAfterNav();
     },
-    [executeWithTrialCheck, onAfterNav],
+    [runAdminAction, onAfterNav],
   );
 
   // Filter per-item visibility — admin-only items combine `isLiveAdmin`
@@ -1770,21 +1814,28 @@ export function AppSidebar() {
   // the user called out.
   const agentsMenu: NavMenuConfig = React.useMemo(() => {
     const items: NavMenuItem[] = [];
+    // Embed mode shows a minimal sidebar (New Chat + chat history only),
+    // mirroring the pre-rewrite behavior — no Agents section at all.
+    if (embedMode)
+      return { id: 'agents', label: 'Agents', icon: Globe2, items };
     // New Agent / My Agents are shown when ANY of:
     //  - `showTrialGatedAdminMenu`: main-tenant non-admins (trial-gated
     //    on click),
     //  - `studentCanCreateMentors`: genuine students in a tenant where
     //    "Student Mentor Creation" is enabled (real create flow on click),
+    //  - `showAnonymousAdminMenu`: anonymous users (click → auth SPA login),
     //  - the OLD live-admin + RBAC gate (real admins).
     if (
       showTrialGatedAdminMenu ||
       studentCanCreateMentors ||
+      showAnonymousAdminMenu ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsNew))
     )
       items.push({ id: 'agents-new', label: 'New Agent' });
     if (
       showTrialGatedAdminMenu ||
       studentCanCreateMentors ||
+      showAnonymousAdminMenu ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsMy))
     )
       items.push({ id: 'agents-my', label: 'My Agents' });
@@ -1794,16 +1845,21 @@ export function AppSidebar() {
       items.push({ id: 'agents-explore', label: 'Explore' });
     return { id: 'agents', label: 'Agents', icon: Globe2, items };
   }, [
+    embedMode,
     isLiveAdmin,
     isUserTypeAllowed,
     showTrialGatedAdminMenu,
     studentCanCreateMentors,
+    showAnonymousAdminMenu,
   ]);
 
   const workflowsMenu: NavMenuConfig = React.useMemo(() => {
+    // Hidden entirely in embed mode (minimal sidebar).
     const allowed =
-      showTrialGatedAdminMenu ||
-      (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.workflows));
+      !embedMode &&
+      (showTrialGatedAdminMenu ||
+        showAnonymousAdminMenu ||
+        (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.workflows)));
     return {
       id: 'workflows',
       label: 'Workflows',
@@ -1815,7 +1871,13 @@ export function AppSidebar() {
           ]
         : [],
     };
-  }, [isLiveAdmin, isUserTypeAllowed, showTrialGatedAdminMenu]);
+  }, [
+    embedMode,
+    isLiveAdmin,
+    isUserTypeAllowed,
+    showTrialGatedAdminMenu,
+    showAnonymousAdminMenu,
+  ]);
 
   // When "Student Mentor Creation" is on, a student also gets Analytics —
   // but ONLY for the mentor currently opened, and only when that mentor is
@@ -1830,10 +1892,39 @@ export function AppSidebar() {
     (studentOwnsOpenedMentor || isUserTypeAllowed(PERMISSION_GATES.analytics));
 
   const analyticsAllowed =
+    !embedMode &&
     config.hideAnalytics() !== 'true' &&
     (showTrialGatedAdminMenu ||
+      showAnonymousAdminMenu ||
       studentCanViewOpenedMentorAnalytics ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.analytics)));
+
+  // Projects are part of the full sidebar and hidden in embed mode. Shown
+  // to logged-in users (who have projects) AND to anonymous users — for
+  // anonymous, "New Project" routes to the auth SPA login (mirrors the
+  // original ProjectsSidebarDropdown's AuthPopover affordance).
+  const projectsAllowed = !embedMode && (!!username || showAnonymousAdminMenu);
+
+  // In embed mode the Chats history (and its divider) is only shown to a
+  // logged-in user — anonymous embed viewers get just the New Chat button.
+  // We key on `isLoggedIn()` (the axd_token) — the canonical "logged in"
+  // signal the rest of the sidebar uses — NOT `username` (user_nicename),
+  // which is a separate localStorage key that can diverge. Outside embed
+  // mode the Chats section is always available, as before.
+  const showChats = !embedMode || isLoggedIn();
+
+  // New Chat mirrors the ORIGINAL `/mentors/{mentor_id}/#chat` gate: an
+  // anonymous user bypasses RBAC (shown); a logged-in user must hold chat
+  // permission on the opened mentor. No-op when not logged in, when no
+  // mentor is open, or when RBAC is disabled (`checkRbacPermission` already
+  // factors `config.enableRBAC()`).
+  const newChatAllowed =
+    !isLoggedIn() ||
+    !mentorId ||
+    checkRbacPermission(
+      rbacPermissions,
+      `/mentors/${mentorPublicSettings?.mentor_id}/#chat`,
+    );
 
   const footerActions = React.useMemo<FooterAction[]>(() => {
     const actions: FooterAction[] = [];
@@ -1915,13 +2006,13 @@ export function AppSidebar() {
         label: 'Advanced',
         icon: Settings,
       });
-    } else if (showTrialGatedAdminMenu) {
-      // Main-tenant non-admins get the FULL admin cluster, every entry
-      // trial-gated. We skip the RBAC checks the live-admin branch does
-      // because a trial/student user holds none of those permissions —
-      // clicking any of these opens the upgrade dialog (see
-      // `handleFooterActionClick` → `executeWithTrialCheck`) instead of
-      // the real surface.
+    } else if (showTrialGatedAdminMenu || showAnonymousAdminMenu) {
+      // Main-tenant non-admins (and anonymous users) get the FULL admin
+      // cluster. We skip the RBAC checks the live-admin branch does because
+      // these users hold none of those permissions — clicking any of these
+      // either opens the upgrade dialog (trial users) or routes to the auth
+      // SPA login (anonymous users), via `handleFooterActionClick` →
+      // `runAdminAction`, instead of the real surface.
       actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
       actions.push({ id: 'footer-users', label: 'Management', icon: Users });
       actions.push({ id: 'footer-api', label: 'Integrations', icon: KeyRound });
@@ -1941,6 +2032,7 @@ export function AppSidebar() {
     embedMode,
     isLiveAdmin,
     showTrialGatedAdminMenu,
+    showAnonymousAdminMenu,
     currentTenant,
     tenantKey,
     rbacPermissions,
@@ -1949,12 +2041,12 @@ export function AppSidebar() {
 
   const openAccountTab = React.useCallback(
     (tab: AccountTab) => {
-      const result = executeWithTrialCheck(() => {
+      const result = runAdminAction(() => {
         setAccountDialogTab(tab);
       });
       if (result !== null) onAfterNav();
     },
-    [executeWithTrialCheck, onAfterNav],
+    [runAdminAction, onAfterNav],
   );
 
   const handleFooterActionClick = React.useCallback(
@@ -1965,7 +2057,7 @@ export function AppSidebar() {
           onAfterNav();
           return;
         case 'footer-invites':
-          executeWithTrialCheck(() => openInviteUserModal());
+          runAdminAction(() => openInviteUserModal());
           onAfterNav();
           return;
         case 'footer-users':
@@ -1983,7 +2075,7 @@ export function AppSidebar() {
       }
     },
     [
-      executeWithTrialCheck,
+      runAdminAction,
       navigateToNotifications,
       openAccountTab,
       openInviteUserModal,
@@ -2070,16 +2162,18 @@ export function AppSidebar() {
               className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pt-1 pb-2"
               aria-label="Main navigation"
             >
-              <SidebarCollapsedLabelFlyout label="New Chat">
-                <button
-                  type="button"
-                  onClick={startNewChat}
-                  className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[#e0e0e2] bg-white transition-colors hover:bg-[#f8f8f9]"
-                  aria-label="New chat"
-                >
-                  <SquarePen className="size-4 shrink-0" strokeWidth={1.5} />
-                </button>
-              </SidebarCollapsedLabelFlyout>
+              {newChatAllowed && (
+                <SidebarCollapsedLabelFlyout label="New Chat">
+                  <button
+                    type="button"
+                    onClick={startNewChat}
+                    className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[#e0e0e2] bg-white transition-colors hover:bg-[#f8f8f9]"
+                    aria-label="New chat"
+                  >
+                    <SquarePen className="size-4 shrink-0" strokeWidth={1.5} />
+                  </button>
+                </SidebarCollapsedLabelFlyout>
+              )}
 
               {agentsMenu.items.length > 0 && (
                 <SidebarNavCollapsibleSection
@@ -2102,19 +2196,23 @@ export function AppSidebar() {
                 />
               )}
 
-              <SidebarNavDivider />
+              {showChats && (
+                <>
+                  <SidebarNavDivider />
 
-              <SidebarChatsSection
-                collapsed
-                open={openNavSection === 'chats'}
-                onOpenChange={handleNavSectionChange('chats')}
-                onCollapsedIconClick={() => expandFromRail('chats')}
-                tenantKey={tenantKey}
-                mentorId={mentorId}
-                username={username}
-              />
+                  <SidebarChatsSection
+                    collapsed
+                    open={openNavSection === 'chats'}
+                    onOpenChange={handleNavSectionChange('chats')}
+                    onCollapsedIconClick={() => expandFromRail('chats')}
+                    tenantKey={tenantKey}
+                    mentorId={mentorId}
+                    username={username}
+                  />
+                </>
+              )}
 
-              {username && (
+              {projectsAllowed && (
                 <SidebarProjectsSection
                   collapsed
                   tenantKey={tenantKey}
@@ -2140,20 +2238,22 @@ export function AppSidebar() {
           ) : (
             <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2">
               <div className="space-y-0.5">
-                <div className="px-0 pb-0.5">
-                  <button
-                    type="button"
-                    onClick={startNewChat}
-                    className="inline-flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-[8px] border border-[#e0e0e2] bg-white px-2 text-[14px] font-normal text-[#687482] antialiased transition-colors hover:bg-[#f8f8f9] active:bg-[#f2f2f3]"
-                  >
-                    <SquarePen
-                      className="size-4 shrink-0"
-                      strokeWidth={1.5}
-                      aria-hidden
-                    />
-                    <span>New Chat</span>
-                  </button>
-                </div>
+                {newChatAllowed && (
+                  <div className="px-0 pb-0.5">
+                    <button
+                      type="button"
+                      onClick={startNewChat}
+                      className="inline-flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-[8px] border border-[#e0e0e2] bg-white px-2 text-[14px] font-normal text-[#687482] antialiased transition-colors hover:bg-[#f8f8f9] active:bg-[#f2f2f3]"
+                    >
+                      <SquarePen
+                        className="size-4 shrink-0"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
+                      <span>New Chat</span>
+                    </button>
+                  </div>
+                )}
 
                 {agentsMenu.items.length > 0 && (
                   <SidebarNavCollapsibleSection
@@ -2174,18 +2274,22 @@ export function AppSidebar() {
                   />
                 )}
 
-                <SidebarNavDivider />
+                {showChats && (
+                  <>
+                    <SidebarNavDivider />
 
-                <SidebarChatsSection
-                  collapsed={false}
-                  open={openNavSection === 'chats'}
-                  onOpenChange={handleNavSectionChange('chats')}
-                  tenantKey={tenantKey}
-                  mentorId={mentorId}
-                  username={username}
-                />
+                    <SidebarChatsSection
+                      collapsed={false}
+                      open={openNavSection === 'chats'}
+                      onOpenChange={handleNavSectionChange('chats')}
+                      tenantKey={tenantKey}
+                      mentorId={mentorId}
+                      username={username}
+                    />
+                  </>
+                )}
 
-                {username && (
+                {projectsAllowed && (
                   <SidebarProjectsSection
                     collapsed={false}
                     tenantKey={tenantKey}
@@ -2209,81 +2313,83 @@ export function AppSidebar() {
             </nav>
           )}
 
-          {/* Footer */}
-          {railCollapsed ? (
-            <div className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3">
-              {footerActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <SidebarCollapsedLabelFlyout
-                    key={action.id}
-                    label={action.label}
+          {/* Footer — fully hidden in embed mode (minimal sidebar:
+              only New Chat + chat history, matching the pre-rewrite UI). */}
+          {!embedMode &&
+            (railCollapsed ? (
+              <div className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3">
+                {footerActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <SidebarCollapsedLabelFlyout
+                      key={action.id}
+                      label={action.label}
+                    >
+                      <button
+                        type="button"
+                        className="inline-flex size-10 cursor-pointer items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
+                        aria-label={action.label}
+                        onClick={() => handleFooterActionClick(action.id)}
+                      >
+                        <Icon className="size-4 shrink-0" strokeWidth={1.5} />
+                      </button>
+                    </SidebarCollapsedLabelFlyout>
+                  );
+                })}
+                <SidebarCollapsedLabelFlyout label={DOCUMENTATION_MENU.label}>
+                  <a
+                    href="https://ibl.ai/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
+                    aria-label={DOCUMENTATION_MENU.label}
                   >
+                    <DOCUMENTATION_MENU.icon
+                      className="size-4 shrink-0"
+                      strokeWidth={1.5}
+                    />
+                  </a>
+                </SidebarCollapsedLabelFlyout>
+              </div>
+            ) : (
+              <div className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2">
+                {footerActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
                     <button
+                      key={action.id}
                       type="button"
-                      className="inline-flex size-10 cursor-pointer items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                      aria-label={action.label}
+                      className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
                       onClick={() => handleFooterActionClick(action.id)}
                     >
-                      <Icon className="size-4 shrink-0" strokeWidth={1.5} />
+                      <Icon
+                        className="size-4 shrink-0"
+                        style={{ color: NAV_MUTED }}
+                        strokeWidth={1.5}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {action.label}
+                      </span>
                     </button>
-                  </SidebarCollapsedLabelFlyout>
-                );
-              })}
-              <SidebarCollapsedLabelFlyout label={DOCUMENTATION_MENU.label}>
+                  );
+                })}
                 <a
                   href="https://ibl.ai/docs"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                  aria-label={DOCUMENTATION_MENU.label}
+                  className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
                 >
                   <DOCUMENTATION_MENU.icon
                     className="size-4 shrink-0"
+                    style={{ color: NAV_MUTED }}
                     strokeWidth={1.5}
                   />
+                  <span className="min-w-0 flex-1 truncate">
+                    {DOCUMENTATION_MENU.label}
+                  </span>
                 </a>
-              </SidebarCollapsedLabelFlyout>
-            </div>
-          ) : (
-            <div className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2">
-              {footerActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
-                    onClick={() => handleFooterActionClick(action.id)}
-                  >
-                    <Icon
-                      className="size-4 shrink-0"
-                      style={{ color: NAV_MUTED }}
-                      strokeWidth={1.5}
-                    />
-                    <span className="min-w-0 flex-1 truncate">
-                      {action.label}
-                    </span>
-                  </button>
-                );
-              })}
-              <a
-                href="https://ibl.ai/docs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
-              >
-                <DOCUMENTATION_MENU.icon
-                  className="size-4 shrink-0"
-                  style={{ color: NAV_MUTED }}
-                  strokeWidth={1.5}
-                />
-                <span className="min-w-0 flex-1 truncate">
-                  {DOCUMENTATION_MENU.label}
-                </span>
-              </a>
-            </div>
-          )}
+              </div>
+            ))}
         </aside>
       </Sidebar>
 

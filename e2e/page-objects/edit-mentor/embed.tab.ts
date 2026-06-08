@@ -87,15 +87,40 @@ export class EmbedTab {
 
   /** Closes the generated "Embedded Code" dialog if it is showing. */
   async dismissEmbedCodeDialog(): Promise<void> {
-    try {
-      await this.embedCodeDialog.waitFor({ state: 'visible', timeout: 8_000 });
-    } catch {
-      // No dialog appeared (e.g. the submit was rejected by validation).
+    // The embed-code generation API can be slow; use a generous timeout so we
+    // don't give up before the dialog appears and leave it open (which would
+    // block all subsequent interactions with the Edit Agent dialog).
+    const appeared = await this.embedCodeDialog
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!appeared) {
+      // No dialog appeared (e.g. the submit was rejected by validation or the
+      // dialog uses a different accessible name than expected). As a last-resort
+      // fallback, press Escape to dismiss any portal dialog that may be blocking
+      // the Edit Agent modal, then bail out.
+      await this.page.keyboard.press('Escape').catch(() => {});
+      await this.page.waitForTimeout(300);
       return;
     }
-    await this.embedCodeDialog
-      .getByRole('button', { name: 'Close', exact: true })
-      .click();
+
+    // First try clicking the Close button inside the named dialog.
+    const closeBtn = this.embedCodeDialog.getByRole('button', {
+      name: 'Close',
+      exact: true,
+    });
+    const closeBtnVisible = await closeBtn
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+
+    if (closeBtnVisible) {
+      await closeBtn.click();
+    } else {
+      // Fallback: dismiss via Escape (Radix dialogs respond to Escape).
+      await this.page.keyboard.press('Escape').catch(() => {});
+    }
+
     await expect(this.embedCodeDialog).toBeHidden({ timeout: 5_000 });
   }
 }
