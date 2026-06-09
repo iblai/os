@@ -16,7 +16,8 @@
     ]
   },
   "permissions": [
-    "allow-log-stdout",
+    "allow-get-system-memory",
+    "allow-log-fe",
     "allow-check-ollama-status",
     "allow-download-phi3-model",
     "allow-download-model",

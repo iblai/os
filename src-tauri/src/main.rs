@@ -523,7 +523,7 @@ async fn download_model(app: AppHandle, model: Option<String>) -> Result<(), Str
 }
 
 #[command]
-async fn log_stdout(s: Option<String>) -> Result<(), String> {
+async fn log_fe(s: Option<String>) -> Result<(), String> {
     if let Some(val) = s {
         println!("[ibl.ai OS Frontend] {val}");
     }
@@ -1950,7 +1950,16 @@ fn main() {
         }
     }
 
-    tauri::Builder::default()
+    // CrabNebula DevTools (debug builds only) — initialize before the builder so
+    // its tracing subscriber is installed first.
+    #[cfg(debug_assertions)]
+    let devtools = tauri_plugin_devtools::init();
+    #[cfg(debug_assertions)]
+    let base = tauri::Builder::default().plugin(devtools);
+    #[cfg(not(debug_assertions))]
+    let base = tauri::Builder::default();
+
+    base
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())

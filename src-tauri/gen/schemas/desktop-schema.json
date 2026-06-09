@@ -603,16 +603,22 @@
           "markdownDescription": "Enables getting the OS type"
         },
         {
+          "description": "Allow getting system memory",
+          "type": "string",
+          "const": "allow-get-system-memory",
+          "markdownDescription": "Allow getting system memory"
+        },
+        {
           "description": "Enables installing Ollama",
           "type": "string",
           "const": "allow-install-ollama",
           "markdownDescription": "Enables installing Ollama"
         },
         {
-          "description": "Allow logging to stdout",
+          "description": "Allow logging from frontend",
           "type": "string",
-          "const": "allow-log-stdout",
-          "markdownDescription": "Allow logging to stdout"
+          "const": "allow-log-fe",
+          "markdownDescription": "Allow logging from frontend"
         },
         {
           "description": "Enables navigating to a URL in the webview",
