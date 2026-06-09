@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.74.0](https://github.com/iblai/os/compare/v0.73.8...v0.74.0) (2026-06-09)
+
+### Features
+
+* **sidebar:** enlarge and center the platform logo in the header ([b9055cc](https://github.com/iblai/os/commit/b9055cc5fa3e96597593cdcfefcfcd977bcddd59))
+
+### Bug Fixes
+
+* **mentor:** adding fixes for the sidebar ([5ee8df5](https://github.com/iblai/os/commit/5ee8df5d5f28cf37b9dac2a835386820371eb9d9))
+* **mentor:** fixes for the sidebar ([f5540c3](https://github.com/iblai/os/commit/f5540c34a0085c8739736e75752d7bc7d8ac7a18))
+* **mentor:** fixing unit test ([d19dd18](https://github.com/iblai/os/commit/d19dd18d2c92298976260678a8b162f66f1a4e6f))
+* **mentor:** load selected chat messages when switching chats from the sidebar ([d72a52b](https://github.com/iblai/os/commit/d72a52b0f754f1099f5ae8e459f7b39108e90c90))
+* **mentor:** sidebar fixes for the embed, advertising agent and anonymous tenat ([4a9f2c3](https://github.com/iblai/os/commit/4a9f2c326464a4926386bc58a91262143711792a))
+
 ## [0.73.8](https://github.com/iblai/os/compare/v0.73.7...v0.73.8) (2026-06-08)
 
 ### Chores
