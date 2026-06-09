@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-08",
+  "lastUpdated": "2026-06-09",
   "summary": {
-    "totalCheckpoints": 408,
+    "totalCheckpoints": 412,
     "coveredCheckpoints": 393,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 3,
+    "notReproducibleCheckpoints": 7,
     "percent": 100,
     "totalJourneys": 47,
     "activeJourneys": 46
@@ -416,6 +416,11 @@
           "id": "uid-08",
           "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
+        },
+        {
+          "id": "uid-09",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -1368,6 +1373,11 @@
           "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
+        },
+        {
+          "id": "mem-06",
+          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2074,6 +2084,11 @@
           "id": "cpm-10",
           "description": "Mentor can be copied to a different tenant",
           "status": "covered"
+        },
+        {
+          "id": "cpm-11",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2233,6 +2248,11 @@
           "id": "claw-15",
           "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
+        },
+        {
+          "id": "claw-16",
+          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
