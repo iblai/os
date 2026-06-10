@@ -204,14 +204,38 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
   }) => {
     test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
     await goToAnonymousMentor(page);
-    const mentorsButton = page.getByRole('button', {
+    // "Explore" lives inside the collapsible "Agents" section in the new
+    // sidebar. Clicking "Agents" only toggles the section open — it does
+    // NOT navigate — so expand it (idempotently, via aria-expanded) and
+    // then click the inner "Explore" item to actually navigate. Scope to
+    // the <aside> so page-content text ("Explore Agents") can't collide.
+    const sidebar = page.locator('aside').first();
+    const agentsButton = sidebar.getByRole('button', {
       name: 'Agents',
       exact: true,
     });
-    await expect(mentorsButton).toBeVisible({ timeout: 10_000 });
-    await mentorsButton.click();
-    await safeWaitForURL(page, (url) => url.pathname.endsWith('/explore'), {
-      timeout: 15_000,
+    await expect(agentsButton).toBeVisible({ timeout: 10_000 });
+    const expanded = await agentsButton
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await agentsButton.click();
+    }
+    const exploreItem = sidebar.getByRole('button', {
+      name: 'Explore',
+      exact: true,
+    });
+    await expect(exploreItem).toBeVisible({ timeout: 10_000 });
+    await exploreItem.click();
+    // Wait for the explore page to actually render, not for the URL. This is
+    // a SPA client-side navigation (router.push), so there's no document
+    // load event — `waitForURL({ waitUntil: 'domcontentloaded' })` can miss
+    // the same-document transition and time out even though navigation
+    // succeeded. The always-rendered `<div id="main-content"
+    // aria-label="Agent exploration page">` is the deterministic signal, and
+    // matching by aria-label survives any stale aria-hidden on the shell.
+    await expect(page.getByLabel('Agent exploration page')).toBeVisible({
+      timeout: 30_000,
     });
     await expect(page).toHaveURL(/explore/);
   });

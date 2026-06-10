@@ -70,7 +70,13 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
       { timeout: 120_000 },
     );
 
-    await page.waitForLoadState("networkidle", {});
+    // Bounded + non-fatal: this lands on the mentor SPA, whose long-lived
+    // streaming/polling connections keep the network from ever idling, so
+    // an unbounded networkidle would hang. The redirect above already
+    // confirmed signup completed.
+    await page
+      .waitForLoadState("networkidle", { timeout: 15_000 })
+      .catch(() => {});
   });
 
   test("newly signed-up non-admin goes to mentor platform and logs in after signup", async ({

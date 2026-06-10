@@ -38,7 +38,9 @@ jobs:
   # GATE — only run when the `run-tests` label is present
   # ============================================================
   gate:
-    if: contains(github.event.pull_request.labels.*.name, 'run-tests')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'run-tests') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: iblai-stg-runner
     steps:
       - run: echo "run-tests label detected — proceeding"
@@ -106,7 +108,7 @@ jobs:
   summary:
     needs: [build-app-image, build-playwright-image, run-tests]
     if: always()
-    runs-on: iblai-stg-runner
+    runs-on: ubuntu-latest
     steps:
       - name: Results
         run: |
@@ -120,5 +122,5 @@ jobs:
           echo "Mode: skip-infra-launch — tests ran against the pre-existing stg1 instance." >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if tests did not pass
-        if: needs.run-tests.result != 'success'
+        if: needs.run-tests.result != 'success' && needs.run-tests.result != 'skipped'
         run: exit 1

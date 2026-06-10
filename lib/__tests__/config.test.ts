@@ -247,12 +247,24 @@ describe('config', () => {
         const result = config.appBannerLink();
         expect(typeof result).toBe('string');
       });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLink();
+        expect(result).toBe('https://ibl.ai/docs');
+      });
     });
 
     describe('appBannerLinkText', () => {
       it('should return app banner link text', () => {
         const result = config.appBannerLinkText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLinkText();
+        expect(result).toBe('Check out');
       });
     });
 
@@ -267,6 +279,12 @@ describe('config', () => {
       it('should return app banner text', () => {
         const result = config.appBannerText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerText();
+        expect(result).toBe('Explore our latest features');
       });
     });
 
@@ -355,6 +373,27 @@ describe('config', () => {
       it('should return platform base domain', () => {
         const result = config.platformBaseDomain();
         expect(typeof result).toBe('string');
+      });
+    });
+
+    describe('defaultSupportPhoneNumber', () => {
+      it('should return default support phone number', () => {
+        const result = config.defaultSupportPhoneNumber();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should have a default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('(571) 293-0242');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER: '+1 (800) 555-0199',
+        };
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('+1 (800) 555-0199');
       });
     });
   });

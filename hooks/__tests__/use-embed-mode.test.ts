@@ -86,6 +86,30 @@ describe('useEmbedMode', () => {
     });
   });
 
+  describe('window.location fallback (transient empty searchParams)', () => {
+    it('falls back to the live URL when useSearchParams is empty but ?embed=true is in the URL', () => {
+      mockGet.mockReturnValue(null); // useSearchParams momentarily empty
+      window.history.replaceState({}, '', '/platform/main/m1?embed=true');
+
+      const { result } = renderHook(() => useEmbedMode());
+
+      expect(result.current).toBe(true);
+
+      window.history.replaceState({}, '', '/'); // reset
+    });
+
+    it('returns false when neither searchParams nor the URL have embed=true', () => {
+      mockGet.mockReturnValue(null);
+      window.history.replaceState({}, '', '/platform/main/m1');
+
+      const { result } = renderHook(() => useEmbedMode());
+
+      expect(result.current).toBe(false);
+
+      window.history.replaceState({}, '', '/'); // reset
+    });
+  });
+
   describe('re-render behavior', () => {
     it('should update when search params change', () => {
       mockGet.mockReturnValue(null);

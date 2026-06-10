@@ -217,9 +217,22 @@ vi.mock('@/components/ui/tooltip', () => ({
   ),
 }));
 
+// Mutable RBAC switch shared by the config + withPermissions mocks so tests
+// can flip field-level permission gating on per-case. Hoisted so it exists
+// before the (hoisted) vi.mock factories below run.
+const rbacState = vi.hoisted(() => ({ enabled: false }));
+
+// Mirror the essential WithFormPermissions behaviour: a present permission
+// entry's `write` flag is authoritative regardless of the RBAC config flag, so
+// an explicit `write:false` always disables the control. Fields the map omits
+// stay enabled here (matching the previous passthrough mock) so object-level
+// Save/Delete gating is unaffected.
 vi.mock('@/hoc/withPermissions', () => ({
-  default: ({ children }: any) =>
-    children({ disabled: false, canDelete: true }),
+  default: ({ name, permissions, children }: any) => {
+    const entry = permissions?.[name];
+    const disabled = entry ? entry.write !== true : false;
+    return children({ disabled, canDelete: true });
+  },
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -231,7 +244,7 @@ vi.mock('@/lib/config', () => ({
     mainTenantKey: () => 'main',
     iblTemplateMentor: () => 'ai-mentor',
     environment: () => 'test',
-    enableRBAC: () => false,
+    enableRBAC: () => rbacState.enabled,
   },
 }));
 
@@ -282,6 +295,7 @@ describe('SettingsTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    rbacState.enabled = false;
 
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
@@ -374,25 +388,27 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
+      expect(screen.getByText('Allow LTI launches')).toBeInTheDocument();
     });
 
     it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('File Attachments')).toBeInTheDocument();
+      expect(
+        screen.getByText('Allow file attachments in chat'),
+      ).toBeInTheDocument();
     });
 
     it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Voice Calls')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice calls')).toBeInTheDocument();
     });
 
     it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Voice Recordings')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice recordings')).toBeInTheDocument();
     });
 
     it('renders Image upload section', () => {
@@ -423,10 +439,10 @@ describe('SettingsTab', () => {
         'More info about chat access',
       );
       const otherTriggers = [
-        screen.getByLabelText('More info about lti accessibility'),
-        screen.getByLabelText('More info about file attachments'),
-        screen.getByLabelText('More info about voice calls'),
-        screen.getByLabelText('More info about voice recordings'),
+        screen.getByLabelText('More info about allow lti launches'),
+        screen.getByLabelText('More info about allow file attachments in chat'),
+        screen.getByLabelText('More info about enable voice calls'),
+        screen.getByLabelText('More info about enable voice recordings'),
       ];
 
       [...chatAccessTriggers, ...otherTriggers].forEach((trigger) => {
@@ -452,7 +468,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about lti accessibility',
+        'More info about allow lti launches',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -465,7 +481,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about file attachments',
+        'More info about allow file attachments in chat',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -478,7 +494,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about voice calls',
+        'More info about enable voice calls',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -491,7 +507,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about voice recordings',
+        'More info about enable voice recordings',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -569,67 +585,67 @@ describe('SettingsTab', () => {
     it('reflects show_attachment checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('File attachments enabled');
+      const toggle = screen.getByLabelText('Allow file attachments in chat');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_call checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Voice calls enabled');
+      const toggle = screen.getByLabelText('Enable voice calls');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_voice_record unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Voice recordings disabled');
+      const toggle = screen.getByLabelText('Enable voice recordings');
       expect(toggle).not.toBeChecked();
     });
 
     it('reflects is_lti_accessible unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Lti accessible disabled');
+      const toggle = screen.getByLabelText('Allow LTI launches');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_attachment switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('File attachments enabled');
+      const toggle = screen.getByLabelText('Allow file attachments in chat');
       fireEvent.click(toggle);
 
       expect(
-        screen.getByLabelText('File attachments disabled'),
+        screen.getByLabelText('Allow file attachments in chat'),
       ).not.toBeChecked();
     });
 
     it('toggles show_voice_call switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Voice calls enabled');
+      const toggle = screen.getByLabelText('Enable voice calls');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Voice calls disabled')).not.toBeChecked();
+      expect(screen.getByLabelText('Enable voice calls')).not.toBeChecked();
     });
 
     it('toggles show_voice_record switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Voice recordings disabled');
+      const toggle = screen.getByLabelText('Enable voice recordings');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Voice recordings enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
     });
 
     it('toggles is_lti_accessible switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Lti accessible disabled');
+      const toggle = screen.getByLabelText('Allow LTI launches');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeChecked();
     });
   });
 
@@ -637,7 +653,9 @@ describe('SettingsTab', () => {
     it('renders the Memory switch as disabled when enable_memory_component is unset', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Memory disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Remember past conversations'),
+      ).not.toBeChecked();
     });
 
     it('renders the Memory tooltip describing the agent (not mentor)', () => {
@@ -658,13 +676,15 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Memory enabled')).toBeChecked();
+      expect(
+        screen.getByLabelText('Remember past conversations'),
+      ).toBeChecked();
     });
 
     it('does not call editMentor immediately when the Memory toggle is clicked', () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Memory disabled'));
+      fireEvent.click(screen.getByLabelText('Remember past conversations'));
 
       expect(mockEditMentor).not.toHaveBeenCalled();
     });
@@ -672,7 +692,7 @@ describe('SettingsTab', () => {
     it('submits enable_memory_component: true on Save when the user enabled it', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Memory disabled'));
+      fireEvent.click(screen.getByLabelText('Remember past conversations'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -694,7 +714,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Memory enabled'));
+      fireEvent.click(screen.getByLabelText('Remember past conversations'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1018,15 +1038,13 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('File attachments enabled'),
+        screen.getByLabelText('Allow file attachments in chat'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Voice calls enabled')).toBeInTheDocument();
+      expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Voice recordings disabled'),
+        screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Lti accessible disabled'),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeInTheDocument();
     });
 
     it('has proper region label for settings form content', () => {
@@ -1041,16 +1059,16 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about lti accessibility'),
+        screen.getByLabelText('More info about allow lti launches'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about file attachments'),
+        screen.getByLabelText('More info about allow file attachments in chat'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about voice calls'),
+        screen.getByLabelText('More info about enable voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about voice recordings'),
+        screen.getByLabelText('More info about enable voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -1132,7 +1150,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Toggle show_voice_record from false to true
-      const toggle = screen.getByLabelText('Voice recordings disabled');
+      const toggle = screen.getByLabelText('Enable voice recordings');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1177,13 +1195,17 @@ describe('SettingsTab', () => {
     it('renders Copies toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Copies')).toBeInTheDocument();
+      expect(
+        screen.getByText('Allow other admins to clone this agent'),
+      ).toBeInTheDocument();
     });
 
     it('reflects forkable checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Copies enabled');
+      const toggle = screen.getByLabelText(
+        'Allow other admins to clone this agent',
+      );
       expect(toggle).toBeChecked();
     });
 
@@ -1195,23 +1217,31 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Copies disabled');
+      const toggle = screen.getByLabelText(
+        'Allow other admins to clone this agent',
+      );
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles forkable switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Copies enabled');
+      const toggle = screen.getByLabelText(
+        'Allow other admins to clone this agent',
+      );
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Copies disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Allow other admins to clone this agent'),
+      ).not.toBeChecked();
     });
 
     it('submits forkable value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Copies enabled');
+      const toggle = screen.getByLabelText(
+        'Allow other admins to clone this agent',
+      );
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1232,7 +1262,9 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about copies'),
+        screen.getByLabelText(
+          'More info about allow other admins to clone this agent',
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -1305,7 +1337,7 @@ describe('SettingsTab', () => {
     it('renders the Sandbox toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Sandbox')).toBeInTheDocument();
+      expect(screen.getByText('Enable advanced sandbox')).toBeInTheDocument();
     });
 
     it('reflects enable_claw=true from mentor settings as checked', () => {
@@ -1316,29 +1348,31 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable advanced sandbox')).toBeChecked();
     });
 
     it('reflects enable_claw=false (or missing) from mentor settings as unchecked', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Sandbox disabled')).not.toBeChecked();
+      expect(
+        screen.getByLabelText('Enable advanced sandbox'),
+      ).not.toBeChecked();
     });
 
     it('toggle is enabled regardless of claw config state (admin intent)', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Sandbox disabled');
+      const toggle = screen.getByLabelText('Enable advanced sandbox');
       expect(toggle).not.toBeDisabled();
     });
 
     it('flipping the toggle does not immediately call editMentor', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Sandbox enabled')).toBeChecked();
+        expect(screen.getByLabelText('Enable advanced sandbox')).toBeChecked();
       });
       expect(mockEditMentor).not.toHaveBeenCalled();
     });
@@ -1346,7 +1380,7 @@ describe('SettingsTab', () => {
     it('on Save, includes enable_claw=true in the editMentor formData when toggled on', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1368,7 +1402,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1446,7 +1480,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip OFF → ON, save
-      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1474,7 +1508,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip ON → OFF, save
-      fireEvent.click(screen.getByLabelText('Sandbox enabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1495,7 +1529,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1536,7 +1570,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Sandbox disabled'));
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1555,6 +1589,160 @@ describe('SettingsTab', () => {
       });
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  // ==========================================================================
+  // RBAC field-level permissions
+  //
+  // When RBAC is enabled, fields the user can only READ must be (1) gated in
+  // the UI (the control is disabled) and (2) omitted from the PUT payload so
+  // the endpoint doesn't reject the save with
+  // "No permission to write field: <name>".
+  // ==========================================================================
+  describe('RBAC field permissions', () => {
+    const withFieldPerms = (overrides: Record<string, any>) => ({
+      ...defaultMentorSettings,
+      permissions: {
+        field: {
+          ...defaultMentorSettings.permissions.field,
+          ...overrides,
+        },
+      },
+    });
+
+    it('disables the Advanced Sandbox toggle when enable_claw is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ enable_claw: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable advanced sandbox')).toBeDisabled();
+    });
+
+    it('disables the Memory toggle when enable_memory_component is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          enable_memory_component: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Remember past conversations'),
+      ).toBeDisabled();
+    });
+
+    it('disables the Allow Copies toggle when forkable is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ forkable: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Allow other admins to clone this agent'),
+      ).toBeDisabled();
+    });
+
+    it('keeps the Advanced Sandbox toggle enabled when enable_claw is writable', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ enable_claw: { read: true, write: true } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable advanced sandbox'),
+      ).not.toBeDisabled();
+    });
+
+    it('omits read-only fields from the PUT payload on Save', async () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          mentor_visibility: { read: true, write: false },
+          enable_claw: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      expect(formData).not.toHaveProperty('enable_claw');
+      // Writable fields are still sent.
+      expect(formData).toHaveProperty('mentor_name', 'Test Mentor');
+      expect(formData).toHaveProperty('allow_anonymous');
+    });
+
+    it('keeps writable fields in the PUT payload when RBAC is enabled', async () => {
+      rbacState.enabled = true;
+      // Default fixture marks mentor_visibility as writable.
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).toHaveProperty(
+        'mentor_visibility',
+        'viewable_by_anyone',
+      );
+    });
+
+    it('strips an explicit read-only field from the payload even when the RBAC config flag is off', async () => {
+      // The endpoint can return field permissions independently of the
+      // NEXT_PUBLIC_ENABLE_RBAC flag. WithFormPermissions still disables a
+      // write:false control in that case, so the payload must omit it too —
+      // otherwise the save fails with "No permission to write field: ...".
+      // rbacState.enabled stays false (reset in beforeEach).
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          mentor_visibility: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      // The "Who Can View?" select (mentor_visibility) is the first select and
+      // is disabled even with the RBAC flag off.
+      expect(screen.getAllByTestId('select-root')[0]).toHaveAttribute(
+        'data-disabled',
+        'true',
+      );
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      // Writable fields are still sent.
+      expect(formData).toHaveProperty('mentor_name', 'Test Mentor');
     });
   });
 });

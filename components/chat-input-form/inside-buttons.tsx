@@ -84,40 +84,33 @@ export const InsideButtons = ({
       name: 'Memory',
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
-      action: () => onOptionClick(TOOLS.MEMORY),
+      // Memory uses <MemoryButton> in visible mode and a popover handler in
+      // the hidden dropdown, so this `action` lambda is unreachable.
+      action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
       isEnabled: memoryEnabled && !embedMode && !!username,
     },
   ].filter((item) => item.isEnabled);
 
-  // Get visible inside buttons based on screen size
-  // Active buttons are always visible, inactive ones are hidden based on available width
+  // Get visible inside buttons based on screen size.
+  // Below the desktop breakpoint (800px) we collapse ALL tool buttons —
+  // including active ones — into the overflow dropdown. Active pills render
+  // as `icon + label + ✕`, so even two of them blow the inline row's width
+  // and push the outside buttons / send control out of alignment on
+  // small/tablet viewports. See issue #1533.
   const getVisibleInsideButtons = () => {
-    const activeButtons = allInsideButtons.filter((btn) => btn.isActive);
-    const inactiveButtons = allInsideButtons.filter((btn) => !btn.isActive);
     const minButtonWidth = 120;
 
     if (allInsideButtons.length === 1 && containerWidth > minButtonWidth) {
       return { visible: allInsideButtons, hidden: [] };
     }
 
-    if (containerWidth < 600) {
-      // Mobile: show only active buttons, hide all inactive ones
-      return {
-        visible: activeButtons,
-        hidden: inactiveButtons,
-      };
-    } else if (containerWidth < 800) {
-      // Tablet: show active buttons + first inactive one if space allows
-      const visibleInactive =
-        activeButtons.length === 0 ? inactiveButtons.slice(0, 1) : [];
-      return {
-        visible: [...activeButtons, ...visibleInactive],
-        hidden: inactiveButtons.filter((btn) => !visibleInactive.includes(btn)),
-      };
-    } else {
-      // Desktop: show all buttons
-      return { visible: allInsideButtons, hidden: [] };
+    if (containerWidth < 800) {
+      // Mobile + tablet: nothing inline, everything in the dropdown.
+      return { visible: [], hidden: allInsideButtons };
     }
+
+    // Desktop: show all buttons inline.
+    return { visible: allInsideButtons, hidden: [] };
   };
 
   const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } =
@@ -245,7 +238,11 @@ export const InsideButtons = ({
             align="start"
             className="w-96 rounded-lg border border-gray-200 bg-white p-0 shadow-xl"
             onOpenAutoFocus={(e) => e.preventDefault()}
-            onFocusOutside={(e) => e.preventDefault()}
+            // Radix wires this onto a global focus-outside listener that
+            // jsdom cannot reliably trigger from a unit test.
+            onFocusOutside={
+              /* istanbul ignore next */ (e) => e.preventDefault()
+            }
           >
             <MemoryMenu
               onClose={() => setHiddenMemoryPopoverOpen(false)}

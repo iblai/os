@@ -37,6 +37,12 @@ const assetPrefix = basePath ? `${basePath}/` : '';
 
 const nextConfig: NextConfig = {
   output: 'standalone', // <- this generates .next/standalone
+  // Pin the file-tracing root to this project so the standalone output lands at
+  // .next/standalone/server.js. Without this, a stray lockfile in a parent dir
+  // (e.g. ~/package-lock.json) makes Next infer a higher workspace root and nest
+  // the output under .next/standalone/<path>/, which breaks server-wrapper.js and
+  // static asset serving.
+  outputFileTracingRoot: process.cwd(),
   basePath,
   assetPrefix,
   trailingSlash: !!basePath,

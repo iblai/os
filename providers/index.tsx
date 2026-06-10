@@ -31,7 +31,7 @@ import {
   TokenResponse,
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { hasNonExpiredAuthToken, redirectToAuthSpa } from '@/lib/utils';
+import { redirectToAuthSpa } from '@/lib/utils';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
@@ -470,14 +470,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
           redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
         }}
-        hasNonExpiredAuthToken={() => {
-          // In Tauri offline mode, always return true to skip auth checks
-          /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-          if (isTauriOffline) {
-            return true;
-          }
-          return hasNonExpiredAuthToken();
-        }}
         username={username || ''}
         middleware={middleware}
         pathname={fullPathname}
@@ -508,6 +500,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             saveRedirect: boolean,
             useCurrentDomain = true,
           ) => {
+            console.log('[TenantProvider] handling tenant switching');
             if (!showingSharedChat)
               await handleTenantSwitch(
                 tenant,
