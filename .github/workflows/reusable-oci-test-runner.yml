@@ -1,0 +1,1012 @@
+# Vendored from iblai/iblai-web-ops (.github/workflows/reusable-oci-test-runner.yml).
+# This repo is public; reusable workflows in private repos cannot be called from
+# public repos ("workflow was not found"), so the workflow lives here and is
+# called via a local path. Contains no secrets — all credentials resolve from
+# this repo/org's Actions secrets at runtime. Keep in sync with the
+# iblai-web-ops copy until that copy is retired.
+name: OCI Test Runner
+
+on:
+  workflow_call:
+    inputs:
+      domain-number:
+        description: "Domain number to test against (1-6)"
+        required: true
+        type: string
+      app-type:
+        description: "App type being tested (skills, mentor, auth)"
+        required: true
+        type: string
+      playwright-image:
+        description: "Full Playwright Docker image URI (e.g., iad.ocir.io/idcwyla5j5cr/ibl-mentor-playwright:pr-42-abc1234)"
+        required: true
+        type: string
+      max-wait:
+        description: "Maximum wait time for tests in seconds"
+        required: false
+        type: number
+        default: 2400
+      total-shards:
+        description: "Total number of shards: 1=single chrome, 4=main/flaky (4 browsers x 1 shard each), 8=(4 browsers x 2), 16=(4 browsers x 4)"
+        required: false
+        type: number
+        default: 1
+      run-type:
+        description: "Type of test run: main (full suite) or flaky-iter-N (flaky iteration)"
+        required: false
+        type: string
+        default: "main"
+      browsers:
+        description: "Comma-separated list of browsers to run (e.g., chrome,firefox,safari,edge). Defaults to all browsers."
+        required: false
+        type: string
+        default: "chrome,firefox,safari,edge"
+      pr-number:
+        description: "Pull request number for test result caching (enables test resumption)"
+        required: false
+        type: string
+        default: ""
+      test-files:
+        description: "Comma-separated test files for selective execution (test-file-level resumption). Empty = full suite."
+        required: false
+        type: string
+        default: ""
+      workers:
+        description: "Number of Playwright workers. Empty = use config default (1 in CI)."
+        required: false
+        type: string
+        default: ""
+      ec2-host:
+        description: "EC2 instance hostname or IP to SSH into. Leave empty to skip the ec2-ssh job."
+        required: false
+        type: string
+        default: ""
+      ec2-user:
+        description: "SSH username for the EC2 instance"
+        required: false
+        type: string
+        default: "ubuntu"
+      ec2-commands:
+        description: "Shell commands to execute on the EC2 instance"
+        required: false
+        type: string
+        default: "echo 'Connected successfully'"
+      ec2-ssh-key:
+        description: "SSH private key for EC2 access"
+        required: false
+        type: string
+        default: ""
+      registry-type:
+        description: "Registry type (ecr or ocir)"
+        required: false
+        type: string
+        default: "ocir"
+      runs-on:
+        description: "Runner label for workflow jobs"
+        required: false
+        type: string
+        default: "ubuntu-latest"
+    outputs:
+      result:
+        description: "Test result (success, partial, timeout)"
+        value: ${{ jobs.run-tests.outputs.result }}
+      passed:
+        description: "Number of passed shards"
+        value: ${{ jobs.run-tests.outputs.passed }}
+      failed:
+        description: "Number of failed shards"
+        value: ${{ jobs.run-tests.outputs.failed }}
+      total:
+        description: "Total number of shards launched"
+        value: ${{ jobs.run-tests.outputs.total }}
+      shards-per-browser:
+        description: "Number of shards per browser (for log URL construction)"
+        value: ${{ jobs.run-tests.outputs.shards-per-browser }}
+      log-urls:
+        description: "JSON array of log URLs with browser, shard, exit code info"
+        value: ${{ jobs.run-tests.outputs.log-urls }}
+      run-id:
+        description: "Unique run identifier for S3 paths"
+        value: ${{ jobs.run-tests.outputs.run-id }}
+    secrets:
+      ssh-private-key:
+        required: false
+
+jobs:
+  ec2-ssh:
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      OCIR_REGISTRY: iad.ocir.io
+      OCIR_NAMESPACE: idcwyla5j5cr
+    if: ${{ inputs.ec2-host != '' }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Setup SSH
+        uses: ./.ops/.github/actions/setup-ssh
+        with:
+          ssh-private-key: ${{ secrets.STG1_SSH_KEY }}
+
+      - name: Log in to OCIR on EC2
+        if: inputs.registry-type == 'ocir'
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=30 \
+              -i ~/.ssh/iblai-org-manager2.key \
+              "${{ inputs.ec2-user }}@${{ inputs.ec2-host }}" \
+              "echo '${{ secrets.OCIR_AUTH_TOKEN }}' | docker login ${{ env.OCIR_REGISTRY }} -u '${{ env.OCIR_NAMESPACE }}/${{ secrets.OCIR_USERNAME }}' --password-stdin"
+
+      - name: Run commands on EC2
+        run: |
+          echo "Connecting to ${{ inputs.ec2-user }}@${{ inputs.ec2-host }}..."
+
+          ssh -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o ConnectTimeout=30 \
+              -i ~/.ssh/iblai-org-manager2.key \
+              "${{ inputs.ec2-user }}@${{ inputs.ec2-host }}" \
+              "${{ inputs.ec2-commands }}"
+
+  run-tests:
+    needs: ec2-ssh
+    if: ${{ !failure() }}
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 200
+    outputs:
+      result: ${{ steps.monitor.outputs.result }}
+      passed: ${{ steps.monitor.outputs.passed }}
+      failed: ${{ steps.monitor.outputs.failed }}
+      total: ${{ steps.monitor.outputs.total }}
+      shards-per-browser: ${{ steps.launch.outputs.shards-per-browser }}
+      log-urls: ${{ steps.report.outputs.log-urls }}
+      run-id: ${{ steps.launch.outputs.run-id }}
+    steps:
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace..."
+          cd ${{ github.workspace }}
+          rm -rf * .[^.]* 2>/dev/null || true
+
+          if [ "$(ls -A ${{ github.workspace }})" ]; then
+            echo "Workspace not empty after cleanup, forcing removal..."
+            cd /tmp
+            rm -rf ${{ github.workspace }}
+            mkdir -p ${{ github.workspace }}
+          fi
+
+          echo "Workspace cleaned: ${{ github.workspace }}"
+
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Install jq
+        run: |
+          if command -v jq >/dev/null 2>&1; then
+            echo "jq already installed: $(which jq)"
+          else
+            echo "Installing jq..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Configure OCI CLI
+        run: |
+          mkdir -p ~/.oci
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=~/.oci/key.pem
+          EOF
+
+          echo "${{ secrets.OCI_API_KEY }}" > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem
+          chmod 600 ~/.oci/config
+
+      - name: Setup OCI CLI
+        run: |
+          if [ -d "$HOME/lib/oracle-cli" ]; then
+            echo "OCI CLI already installed"
+            export PATH="$HOME/bin:$PATH"
+            oci --version
+          else
+            echo "Installing OCI CLI..."
+            curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh -o install.sh
+            bash install.sh --accept-all-defaults
+          fi
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Determine test user and domains
+        id: config
+        uses: ./.ops/.github/actions/determine-test-user
+        with:
+          domain-number: ${{ inputs.domain-number }}
+          app-type: ${{ inputs.app-type }}
+
+      - name: Set Playwright image
+        id: playwright-image
+        run: |
+          PLAYWRIGHT_IMAGE="${{ inputs.playwright-image }}"
+
+          if [[ -z "$PLAYWRIGHT_IMAGE" ]]; then
+            echo "ERROR: Playwright image URI is empty. This input is required."
+            exit 1
+          fi
+
+          echo "Using Playwright image: $PLAYWRIGHT_IMAGE"
+          echo "image=$PLAYWRIGHT_IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Setup environment
+        run: |
+          echo "Setting up environment in: ${{ github.workspace }}"
+
+          # Map app-type to PLATFORM (must match platform name in playwright.config.ts)
+          PLATFORM_VALUE="${{ inputs.app-type }}"
+
+          # Create .env.oci from GitHub secrets
+          cat > .env.oci <<EOF
+          OCI_USER_OCID=${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT=${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY_OCID=${{ secrets.OCI_TENANCY_OCID }}
+          OCI_REGION=${{ secrets.OCI_REGION }}
+          COMPARTMENT_OCID=${{ secrets.OCI_COMPARTMENT_OCID }}
+          AVAILABILITY_DOMAIN=${{ secrets.OCI_AVAILABILITY_DOMAIN }}
+          SUBNET_OCID=${{ secrets.OCI_SUBNET_OCID }}
+          PLAYWRIGHT_USERNAME=${{ steps.config.outputs.username }}
+          PLAYWRIGHT_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}
+          AUTH_HOST=${{ steps.config.outputs.auth-domain }}
+          SKILLS_HOST=${{ steps.config.outputs.skills-domain }}
+          MENTOR_NEXTJS_HOST=${{ steps.config.outputs.mentor-domain }}
+          PLATFORM=$PLATFORM_VALUE
+          AUTH_FLOW=${{ vars.AUTH_FLOW }}
+          AUTH_IDP=${{ vars.AUTH_IDP }}
+          S3_BUCKET=${{ secrets.S3_LOGS_BUCKET }}
+          AWS_ACCESS_KEY_ID=${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ vars.AWS_REGION }}
+          CLOUDFRONT_DOMAIN=${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}
+          EOF
+
+          # PR number for test result caching (enables test resumption)
+          if [ -n "${{ inputs.pr-number }}" ]; then
+            echo "PR_NUMBER=${{ inputs.pr-number }}" >> .env.oci
+          fi
+
+          # Test files for selective execution (test-file-level resumption)
+          if [ -n "${{ inputs.test-files }}" ]; then
+            echo "TEST_FILES=${{ inputs.test-files }}" >> .env.oci
+          fi
+
+          # Worker count override
+          if [ -n "${{ inputs.workers }}" ]; then
+            echo "WORKERS=${{ inputs.workers }}" >> .env.oci
+          fi
+
+          # Per-browser credentials (for parallel-browsers mode; also available in sequential)
+          echo "PLAYWRIGHT_USERNAME_CHROME=${{ steps.config.outputs.username-chrome }}" >> .env.oci
+          echo "PLAYWRIGHT_PASSWORD_CHROME=${{ secrets.TEST_USER_PASSWORD }}" >> .env.oci
+          echo "PLAYWRIGHT_USERNAME_FIREFOX=${{ steps.config.outputs.username-firefox }}" >> .env.oci
+          echo "PLAYWRIGHT_PASSWORD_FIREFOX=${{ secrets.TEST_USER_PASSWORD }}" >> .env.oci
+          echo "PLAYWRIGHT_USERNAME_SAFARI=${{ steps.config.outputs.username-safari }}" >> .env.oci
+          echo "PLAYWRIGHT_PASSWORD_SAFARI=${{ secrets.TEST_USER_PASSWORD }}" >> .env.oci
+          echo "PLAYWRIGHT_USERNAME_EDGE=${{ steps.config.outputs.username-edge }}" >> .env.oci
+          echo "PLAYWRIGHT_PASSWORD_EDGE=${{ secrets.TEST_USER_PASSWORD }}" >> .env.oci
+
+          # ── Mentor-specific env vars ──────────────────────────────────────
+          echo "PLAYWRIGHT_NONADMIN_USERNAME=stg${{ inputs.domain-number }}user@ibleducation.com" >> .env.oci
+          echo "PLAYWRIGHT_NONADMIN_PASSWORD=${{ secrets.PLAYWRIGHT_NONADMIN_PASSWORD || secrets.TEST_USER_PASSWORD }}" >> .env.oci
+          echo "AUTH_NEXTJS_HOST=${{ steps.config.outputs.auth-domain }}" >> .env.oci
+          echo "MENTOR_NEXTJS_STRIPE_HOST=${{ vars.MENTOR_NEXTJS_STRIPE_HOST }}" >> .env.oci
+          echo "DM_URL=${{ vars.DM_URL }}" >> .env.oci
+          echo "ECOMMERCE_CREDIT_CLEANUP_TOKEN=${{ secrets.ECOMMERCE_CREDIT_CLEANUP_TOKEN }}" >> .env.oci
+          echo "EXTERNAL_STRIPE_PRICING_URL=${{ vars.EXTERNAL_STRIPE_PRICING_URL }}" >> .env.oci
+          echo "IBL_MENTOR_DISABLED_TABS=${{ vars.IBL_MENTOR_DISABLED_TABS }}" >> .env.oci
+          echo "NEW_MENTOR_NAME=${{ vars.NEW_MENTOR_NAME }}" >> .env.oci
+          echo "NEW_MENTOR_DESCRIPTION=${{ vars.NEW_MENTOR_DESCRIPTION }}" >> .env.oci
+          echo "WCAG_RANGE=${{ vars.WCAG_RANGE }}" >> .env.oci
+          echo "ENABLE_STRIPE_TEST=${{ vars.ENABLE_STRIPE_TEST }}" >> .env.oci
+          echo "FORDHAM_HOST=${{ vars.FORDHAM_HOST }}" >> .env.oci
+          echo "PLAYWRIGHT_TENANT_KEY=${{ vars.PLAYWRIGHT_TENANT_KEY }}" >> .env.oci
+          echo "ENABLE_ADVERTISING_LOGIN_TEST=${{ vars.ENABLE_ADVERTISING_LOGIN_TEST }}" >> .env.oci
+          echo "TEST_TIMEOUT=${{ vars.TEST_TIMEOUT }}" >> .env.oci
+          echo "TEST_RETRIES=${{ vars.TEST_RETRIES }}" >> .env.oci
+
+          # ── Shared optional env vars (mentor + skills) ────────────────────
+          echo "EMBED_URL=${{ vars.EMBED_URL }}" >> .env.oci
+          echo "INVITE_USERNAME=${{ secrets.INVITE_USERNAME }}" >> .env.oci
+          echo "INVITE_USER_PASSWORD=${{ secrets.INVITE_USER_PASSWORD }}" >> .env.oci
+
+          # ── Mentor Canvas LMS env vars ────────────────────────────────────
+          echo "CANVAS_URL=${{ vars.E2E_TEST_CANVAS_URL }}" >> .env.oci
+          echo "CANVAS_EMAIL=${{ vars.E2E_TEST_CANVAS_EMAIL }}" >> .env.oci
+          echo "CANVAS_PASSWORD=${{ secrets.E2E_TEST_CANVAS_PASSWORD }}" >> .env.oci
+          echo "CANVAS_PATH_WITH_LTI_MENTOR=${{ vars.E2E_TEST_CANVAS_PATH_WITH_LTI_MENTOR }}" >> .env.oci
+
+          # ── Auth app env vars (AUTH_E2E_* prefix) ─────────────────────────
+          echo "AUTH_E2E_BASE_URL=${{ steps.config.outputs.auth-domain }}" >> .env.oci
+          echo "AUTH_E2E_MENTOR_URL=${{ steps.config.outputs.mentor-domain }}" >> .env.oci
+          echo "AUTH_E2E_SKILLS_URL=${{ steps.config.outputs.skills-domain }}" >> .env.oci
+          echo "AUTH_E2E_REDIRECT_TO=${{ vars.AUTH_E2E_REDIRECT_TO || steps.config.outputs.skills-domain }}" >> .env.oci
+          echo "AUTH_E2E_APP=${{ vars.AUTH_E2E_APP || 'skills' }}" >> .env.oci
+          echo "AUTH_E2E_TENANT=${{ vars.AUTH_E2E_TENANT || 'main' }}" >> .env.oci
+          echo "AUTH_E2E_EMAIL=${{ steps.config.outputs.username }}" >> .env.oci
+          echo "AUTH_E2E_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> .env.oci
+          echo "MAILSAC_API_KEY=${{ secrets.MAILSAC_API_KEY }}" >> .env.oci
+          echo "AUTH_E2E_BUY_PRODUCT_ID=${{ vars.AUTH_E2E_BUY_PRODUCT_ID }}" >> .env.oci
+
+          # Create .ocir-config
+          OCIR_IMAGE_URL="${{ steps.playwright-image.outputs.image }}"
+          cat > .ocir-config <<EOF
+          OCIR_IMAGE_URL=${OCIR_IMAGE_URL}
+          OCIR_REGION=${{ secrets.OCI_REGION }}
+          EOF
+
+          echo "Environment configured"
+          echo "  Playwright Image: ${OCIR_IMAGE_URL}"
+          echo "  App Type: ${{ inputs.app-type }}"
+          echo "  Platform: $PLATFORM_VALUE"
+
+      - name: Launch all shards
+        id: launch
+        run: |
+          echo "============================================================================"
+          echo "Launching ${{ inputs.app-type }} Tests - All Shards"
+          echo "============================================================================"
+          echo ""
+
+          # Load configuration
+          set -a
+          source .env.oci
+          source .ocir-config
+          set +a
+
+          # Extract image tag
+          IMAGE_TAG=$(echo "$OCIR_IMAGE_URL" | awk -F':' '{print $NF}')
+          IMAGE_TAG="${IMAGE_TAG:-unknown}"
+
+          # Platform must match the name in playwright.config.ts
+          PLATFORM_VAL="${{ inputs.app-type }}"
+
+          # Use input parameter or default to all browsers
+          BROWSERS_CSV="${{ inputs.browsers }}"
+
+          echo "Configuration:"
+          echo "  Browsers: $BROWSERS_CSV"
+          echo "  Platform: $PLATFORM_VAL"
+          echo "  Image: $OCIR_IMAGE_URL"
+          echo ""
+
+          # Resource configuration
+          SHAPE="CI.Standard.E4.Flex"
+          OCPUS="4.0"
+          MEMORY_GB="16.0"
+
+          # Generate unique run ID with run-type for S3 organization
+          RUN_TYPE="${{ inputs.run-type }}"
+          RUN_ID="${{ github.run_id }}-${{ github.run_attempt }}/${RUN_TYPE}"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+          # Instance tracking
+          INSTANCE_LOG="launched-instances-${{ inputs.app-type }}-${TIMESTAMP}.txt"
+          touch "$INSTANCE_LOG"
+
+          # Sanitize browser list for display name
+          BROWSER_SLUG=$(echo "$BROWSERS_CSV" | tr ',' '-')
+          DISPLAY_NAME="playwright-${{ inputs.app-type }}-${BROWSER_SLUG}-${TIMESTAMP}"
+
+          echo "Launching container instance for ${{ inputs.app-type }} ($BROWSERS_CSV)..."
+          echo ""
+
+          LAUNCH_SUCCESS=0
+
+          # Create temp dir
+          TEMP_DIR=$(mktemp -d)
+
+          ENTRYPOINT_CMD="/docker-entrypoint.sh"
+
+          # Create environment variables JSON
+          cat > "$TEMP_DIR/env-vars.json" <<EOF
+          {
+            "BROWSERS": "$BROWSERS_CSV",
+            "PLATFORM": "$PLATFORM_VAL",
+            "PLAYWRIGHT_USERNAME": "${PLAYWRIGHT_USERNAME:-}",
+            "PLAYWRIGHT_PASSWORD": "${PLAYWRIGHT_PASSWORD:-}",
+            "PLAYWRIGHT_USERNAME_CHROME": "${PLAYWRIGHT_USERNAME_CHROME:-}",
+            "PLAYWRIGHT_PASSWORD_CHROME": "${PLAYWRIGHT_PASSWORD_CHROME:-}",
+            "PLAYWRIGHT_USERNAME_FIREFOX": "${PLAYWRIGHT_USERNAME_FIREFOX:-}",
+            "PLAYWRIGHT_PASSWORD_FIREFOX": "${PLAYWRIGHT_PASSWORD_FIREFOX:-}",
+            "PLAYWRIGHT_USERNAME_SAFARI": "${PLAYWRIGHT_USERNAME_SAFARI:-}",
+            "PLAYWRIGHT_PASSWORD_SAFARI": "${PLAYWRIGHT_PASSWORD_SAFARI:-}",
+            "PLAYWRIGHT_USERNAME_EDGE": "${PLAYWRIGHT_USERNAME_EDGE:-}",
+            "PLAYWRIGHT_PASSWORD_EDGE": "${PLAYWRIGHT_PASSWORD_EDGE:-}",
+            "AUTH_HOST": "${AUTH_HOST:-}",
+            "SKILLS_HOST": "${SKILLS_HOST:-}",
+            "MENTOR_NEXTJS_HOST": "${MENTOR_NEXTJS_HOST:-}",
+            "AUTH_FLOW": "${AUTH_FLOW:-}",
+            "AUTH_IDP": "${AUTH_IDP:-}",
+            "DEBUG": "${DEBUG:-}",
+            "CI": "true",
+            "NODE_ENV": "production",
+            "S3_BUCKET": "${S3_BUCKET:-}",
+            "AWS_ACCESS_KEY_ID": "${AWS_ACCESS_KEY_ID:-}",
+            "AWS_SECRET_ACCESS_KEY": "${AWS_SECRET_ACCESS_KEY:-}",
+            "AWS_REGION": "${AWS_REGION:-us-east-1}",
+            "RUN_ID": "$RUN_ID",
+            "IMAGE_TAG": "$IMAGE_TAG",
+            "CLOUDFRONT_DOMAIN": "${CLOUDFRONT_DOMAIN:-tests.iblai.app}",
+            "PR_NUMBER": "${PR_NUMBER:-}",
+            "TEST_FILES": "${TEST_FILES:-}",
+            "WORKERS": "${WORKERS:-}",
+            "PLAYWRIGHT_NONADMIN_USERNAME": "${PLAYWRIGHT_NONADMIN_USERNAME:-}",
+            "PLAYWRIGHT_NONADMIN_PASSWORD": "${PLAYWRIGHT_NONADMIN_PASSWORD:-}",
+            "AUTH_NEXTJS_HOST": "${AUTH_NEXTJS_HOST:-}",
+            "MENTOR_NEXTJS_STRIPE_HOST": "${MENTOR_NEXTJS_STRIPE_HOST:-}",
+            "DM_URL": "${DM_URL:-}",
+            "ECOMMERCE_CREDIT_CLEANUP_TOKEN": "${ECOMMERCE_CREDIT_CLEANUP_TOKEN:-}",
+            "EXTERNAL_STRIPE_PRICING_URL": "${EXTERNAL_STRIPE_PRICING_URL:-}",
+            "IBL_MENTOR_DISABLED_TABS": "${IBL_MENTOR_DISABLED_TABS:-}",
+            "NEW_MENTOR_NAME": "${NEW_MENTOR_NAME:-}",
+            "NEW_MENTOR_DESCRIPTION": "${NEW_MENTOR_DESCRIPTION:-}",
+            "WCAG_RANGE": "${WCAG_RANGE:-}",
+            "ENABLE_STRIPE_TEST": "${ENABLE_STRIPE_TEST:-}",
+            "FORDHAM_HOST": "${FORDHAM_HOST:-}",
+            "PLAYWRIGHT_TENANT_KEY": "${PLAYWRIGHT_TENANT_KEY:-}",
+            "ENABLE_ADVERTISING_LOGIN_TEST": "${ENABLE_ADVERTISING_LOGIN_TEST:-}",
+            "TEST_TIMEOUT": "${TEST_TIMEOUT:-}",
+            "TEST_RETRIES": "${TEST_RETRIES:-}",
+            "EMBED_URL": "${EMBED_URL:-}",
+            "INVITE_USERNAME": "${INVITE_USERNAME:-}",
+            "INVITE_USER_PASSWORD": "${INVITE_USER_PASSWORD:-}",
+            "CANVAS_URL": "${CANVAS_URL:-}",
+            "CANVAS_EMAIL": "${CANVAS_EMAIL:-}",
+            "CANVAS_PASSWORD": "${CANVAS_PASSWORD:-}",
+            "AUTH_E2E_BASE_URL": "${AUTH_E2E_BASE_URL:-}",
+            "AUTH_E2E_MENTOR_URL": "${AUTH_E2E_MENTOR_URL:-}",
+            "AUTH_E2E_SKILLS_URL": "${AUTH_E2E_SKILLS_URL:-}",
+            "AUTH_E2E_REDIRECT_TO": "${AUTH_E2E_REDIRECT_TO:-}",
+            "AUTH_E2E_APP": "${AUTH_E2E_APP:-}",
+            "AUTH_E2E_TENANT": "${AUTH_E2E_TENANT:-}",
+            "AUTH_E2E_EMAIL": "${AUTH_E2E_EMAIL:-}",
+            "AUTH_E2E_PASSWORD": "${AUTH_E2E_PASSWORD:-}",
+            "MAILSAC_API_KEY": "${MAILSAC_API_KEY:-}",
+            "AUTH_E2E_BUY_PRODUCT_ID": "${AUTH_E2E_BUY_PRODUCT_ID:-}"
+          }
+          EOF
+
+          # Remove empty values
+          jq 'with_entries(select(.value != ""))' "$TEMP_DIR/env-vars.json" > "$TEMP_DIR/env-vars-clean.json"
+
+          # Create containers configuration
+          cat > "$TEMP_DIR/containers.json" <<EOF
+          [{
+            "displayName": "playwright-${{ inputs.app-type }}-${BROWSER_SLUG}",
+            "imageUrl": "$OCIR_IMAGE_URL",
+            "command": ["$ENTRYPOINT_CMD"],
+            "arguments": ["test"],
+            "environmentVariables": $(cat "$TEMP_DIR/env-vars-clean.json")
+          }]
+          EOF
+
+          # Image pull secrets for private OCIR registry (values must be base64 encoded)
+          OCIR_REGISTRY=$(echo "$OCIR_IMAGE_URL" | cut -d'/' -f1)
+          OCIR_NAMESPACE=$(echo "$OCIR_IMAGE_URL" | cut -d'/' -f2)
+          OCIR_USER_B64=$(echo -n "${OCIR_NAMESPACE}/${{ secrets.OCIR_USERNAME }}" | base64 -w0)
+          OCIR_PASS_B64=$(echo -n "${{ secrets.OCIR_AUTH_TOKEN }}" | base64 -w0)
+          cat > "$TEMP_DIR/image-pull-secrets.json" <<IPSEOF
+          [{"registryEndpoint": "${OCIR_REGISTRY}", "secretType": "BASIC", "username": "${OCIR_USER_B64}", "password": "${OCIR_PASS_B64}"}]
+          IPSEOF
+
+          # Launch container instance with retry logic
+          MAX_RETRIES=3
+          LAUNCH_SUCCEEDED=false
+
+          for ATTEMPT in $(seq 1 $MAX_RETRIES); do
+            RETRY_DELAY=$((5 * (2 ** (ATTEMPT - 1))))
+
+            if [ $ATTEMPT -gt 1 ]; then
+              echo "  Retry attempt $ATTEMPT/$MAX_RETRIES"
+            fi
+
+            RESULT=$(oci container-instances container-instance create \
+              --compartment-id "$COMPARTMENT_OCID" \
+              --availability-domain "$AVAILABILITY_DOMAIN" \
+              --shape "$SHAPE" \
+              --shape-config "{\"ocpus\":$OCPUS,\"memoryInGBs\":$MEMORY_GB}" \
+              --vnics "[{\"subnetId\":\"$SUBNET_OCID\"}]" \
+              --containers "file://$TEMP_DIR/containers.json" \
+              --image-pull-secrets "file://$TEMP_DIR/image-pull-secrets.json" \
+              --container-restart-policy "NEVER" \
+              --display-name "$DISPLAY_NAME" 2>&1) && EXIT_CODE=0 || EXIT_CODE=$?
+
+            if [ $EXIT_CODE -eq 0 ]; then
+              INSTANCE_ID=$(echo "$RESULT" | jq -r '.data.id' 2>/dev/null)
+
+              if [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "null" ]; then
+                echo "  Launched: $INSTANCE_ID"
+                echo "$INSTANCE_ID|$BROWSERS_CSV|1|$DISPLAY_NAME" >> "$INSTANCE_LOG"
+                LAUNCH_SUCCESS=1
+                LAUNCH_SUCCEEDED=true
+                break
+              fi
+              echo "  Attempt $ATTEMPT/$MAX_RETRIES failed: Could not extract instance ID from response"
+              echo "      Response: $(echo "$RESULT" | head -c 200)"
+            else
+              ERROR_MSG=$(echo "$RESULT" | jq -r '.message // .code // empty' 2>/dev/null || echo "")
+              if [ -n "$ERROR_MSG" ]; then
+                echo "  Attempt $ATTEMPT/$MAX_RETRIES failed: $ERROR_MSG"
+              else
+                echo "  Attempt $ATTEMPT/$MAX_RETRIES failed: OCI API error (exit code: $EXIT_CODE)"
+                echo "      Response: $(echo "$RESULT" | head -c 200)"
+              fi
+            fi
+
+            if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+              echo "  Waiting ${RETRY_DELAY}s before retry..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          if [ "$LAUNCH_SUCCEEDED" = false ]; then
+            echo "  FAILED: Could not launch container after $MAX_RETRIES attempts"
+            echo "      Last error: $(echo "$RESULT" | head -c 300)"
+          fi
+
+          # Cleanup temp dir
+          rm -rf "$TEMP_DIR"
+
+          echo ""
+          echo "============================================================================"
+          echo "Launch Summary: $LAUNCH_SUCCESS/1 instances launched"
+          echo "============================================================================"
+
+          if [ "$LAUNCH_SUCCESS" -eq 0 ]; then
+            echo "No instances launched successfully"
+            exit 1
+          fi
+
+          echo "instance-log=$INSTANCE_LOG" >> $GITHUB_OUTPUT
+          echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "total-shards=1" >> $GITHUB_OUTPUT
+          echo "shards-per-browser=1" >> $GITHUB_OUTPUT
+
+      - name: Monitor test execution
+        id: monitor
+        run: |
+          INSTANCE_LOG="${{ steps.launch.outputs.instance-log }}"
+          RUN_ID="${{ steps.launch.outputs.run-id }}"
+          TOTAL_SHARDS="${{ steps.launch.outputs.total-shards }}"
+          CLOUDFRONT_DOMAIN="${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}"
+
+          # Helper function to safely write to GITHUB_OUTPUT
+          safe_output() {
+            local key="$1"
+            local value="$2"
+            if [ -n "$GITHUB_OUTPUT" ]; then
+              mkdir -p "$(dirname "$GITHUB_OUTPUT")" 2>/dev/null || true
+              touch "$GITHUB_OUTPUT" 2>/dev/null || true
+              echo "${key}=${value}" >> "$GITHUB_OUTPUT" 2>/dev/null || echo "Warning: Could not write output ${key}"
+            fi
+          }
+
+          if [ -z "$INSTANCE_LOG" ] || [ ! -f "$INSTANCE_LOG" ]; then
+            echo "No instance log found"
+            exit 1
+          fi
+
+          # Determine app name for S3/CloudFront paths
+          if [ "${{ inputs.app-type }}" = "mentor" ]; then
+            APP_NAME="mentor"
+          else
+            APP_NAME="${{ inputs.app-type }}"
+          fi
+
+          LIVE_LOG_URL="https://${CLOUDFRONT_DOMAIN}/runs/${RUN_ID}/${APP_NAME}/logs/test-run.log"
+
+          echo "============================================================================"
+          echo "Monitoring Test Execution via OCI API"
+          echo "============================================================================"
+          echo "Instance log: $INSTANCE_LOG"
+          echo ""
+          echo "============================================================================"
+          echo "LIVE LOGS: $LIVE_LOG_URL"
+          echo "============================================================================"
+          echo "(Logs update every ~15s — refresh to see latest test output)"
+          echo ""
+
+          # Read instance IDs from log file
+          declare -A INSTANCE_STATUS
+          declare -A INSTANCE_BROWSER
+          declare -A INSTANCE_SHARD
+          declare -A CONTAINER_EXIT_CODE
+          declare -A CONTAINER_IDS
+
+          TOTAL_INSTANCES=0
+          while IFS='|' read -r instance_id browser shard display_name; do
+            INSTANCE_STATUS[$instance_id]="RUNNING"
+            INSTANCE_BROWSER[$instance_id]="$browser"
+            INSTANCE_SHARD[$instance_id]="$shard"
+            CONTAINER_EXIT_CODE[$instance_id]="null"
+
+            CONTAINER_ID=$(oci container-instances container-instance get \
+              --container-instance-id "$instance_id" \
+              --query 'data.containers[0]."container-id"' \
+              --raw-output 2>/dev/null || echo "")
+
+            CONTAINER_IDS[$instance_id]="$CONTAINER_ID"
+            TOTAL_INSTANCES=$((TOTAL_INSTANCES + 1))
+          done < "$INSTANCE_LOG"
+
+          echo "Monitoring $TOTAL_INSTANCES container instances..."
+          echo ""
+
+          # Monitor until all complete or timeout
+          MAX_WAIT=${{ inputs.max-wait }}
+          ELAPSED=0
+          CHECK_INTERVAL=30
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            echo "--- Status Check (${ELAPSED}s elapsed) ---"
+
+            RUNNING_COUNT=0
+            SUCCEEDED_COUNT=0
+            FAILED_COUNT=0
+
+            for instance_id in "${!INSTANCE_STATUS[@]}"; do
+              browser="${INSTANCE_BROWSER[$instance_id]}"
+              shard="${INSTANCE_SHARD[$instance_id]}"
+              container_id="${CONTAINER_IDS[$instance_id]}"
+
+              if [ "${INSTANCE_STATUS[$instance_id]}" = "SUCCEEDED" ] || [ "${INSTANCE_STATUS[$instance_id]}" = "FAILED" ]; then
+                if [ "${INSTANCE_STATUS[$instance_id]}" = "SUCCEEDED" ]; then
+                  SUCCEEDED_COUNT=$((SUCCEEDED_COUNT + 1))
+                else
+                  FAILED_COUNT=$((FAILED_COUNT + 1))
+                fi
+                continue
+              fi
+
+              if [ -n "$container_id" ]; then
+                CONTAINER_RESPONSE=$(oci container-instances container get \
+                  --container-id "$container_id" \
+                  --output json 2>/dev/null || echo '{"data":{}}')
+
+                CONTAINER_STATE=$(echo "$CONTAINER_RESPONSE" | jq -r '.data."lifecycle-state" // "UNKNOWN"')
+                EXIT_CODE=$(echo "$CONTAINER_RESPONSE" | jq -r '.data."exit-code" // null')
+              else
+                INSTANCE_RESPONSE=$(oci container-instances container-instance get \
+                  --container-instance-id "$instance_id" \
+                  --output json 2>/dev/null || echo '{"data":{}}')
+
+                CONTAINER_STATE=$(echo "$INSTANCE_RESPONSE" | jq -r '.data.containers[0]."lifecycle-state" // "UNKNOWN"')
+                EXIT_CODE=$(echo "$INSTANCE_RESPONSE" | jq -r '.data.containers[0]."exit-code" // null')
+              fi
+
+              if [ "$CONTAINER_STATE" = "ACTIVE" ]; then
+                echo "  $browser $shard - RUNNING"
+                RUNNING_COUNT=$((RUNNING_COUNT + 1))
+              elif [ "$CONTAINER_STATE" = "INACTIVE" ]; then
+                if [ "$EXIT_CODE" = "0" ]; then
+                  echo "  $browser $shard - PASSED (exit: $EXIT_CODE)"
+                  INSTANCE_STATUS[$instance_id]="SUCCEEDED"
+                  CONTAINER_EXIT_CODE[$instance_id]="$EXIT_CODE"
+                  SUCCEEDED_COUNT=$((SUCCEEDED_COUNT + 1))
+                else
+                  echo "  $browser $shard - FAILED (exit: ${EXIT_CODE:-unknown})"
+                  INSTANCE_STATUS[$instance_id]="FAILED"
+                  CONTAINER_EXIT_CODE[$instance_id]="${EXIT_CODE:-1}"
+                  FAILED_COUNT=$((FAILED_COUNT + 1))
+                fi
+              elif [ "$CONTAINER_STATE" = "FAILED" ]; then
+                echo "  $browser $shard - FAILED (container failed)"
+                INSTANCE_STATUS[$instance_id]="FAILED"
+                CONTAINER_EXIT_CODE[$instance_id]="${EXIT_CODE:-1}"
+                FAILED_COUNT=$((FAILED_COUNT + 1))
+              else
+                echo "  $browser $shard - RUNNING (state: $CONTAINER_STATE)"
+                RUNNING_COUNT=$((RUNNING_COUNT + 1))
+              fi
+            done
+
+            echo ""
+            echo "Summary: Total: $TOTAL_INSTANCES | Running: $RUNNING_COUNT | Passed: $SUCCEEDED_COUNT | Failed: $FAILED_COUNT"
+            echo "Live logs: $LIVE_LOG_URL"
+            echo ""
+
+            if [ $RUNNING_COUNT -eq 0 ]; then
+              echo "All tests completed!"
+
+              if [ $FAILED_COUNT -eq 0 ]; then
+                safe_output "result" "success"
+              else
+                safe_output "result" "partial"
+              fi
+              safe_output "passed" "$SUCCEEDED_COUNT"
+              safe_output "failed" "$FAILED_COUNT"
+              safe_output "total" "$TOTAL_INSTANCES"
+              break
+            fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo ""
+            echo "Timeout: Tests did not complete within ${MAX_WAIT} seconds"
+            safe_output "result" "timeout"
+            safe_output "passed" "$SUCCEEDED_COUNT"
+            safe_output "failed" "$FAILED_COUNT"
+            safe_output "total" "$TOTAL_INSTANCES"
+          fi
+
+      - name: Generate test report
+        if: always()
+        id: report
+        env:
+          S3_BUCKET: ${{ secrets.S3_LOGS_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          CLOUDFRONT_DOMAIN: ${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}
+        run: |
+          # Helper function to safely write to GITHUB_OUTPUT
+          safe_output() {
+            local key="$1"
+            local value="$2"
+            if [ -n "$GITHUB_OUTPUT" ]; then
+              mkdir -p "$(dirname "$GITHUB_OUTPUT")" 2>/dev/null || true
+              touch "$GITHUB_OUTPUT" 2>/dev/null || true
+              echo "${key}=${value}" >> "$GITHUB_OUTPUT" 2>/dev/null || echo "Warning: Could not write output ${key}"
+            fi
+          }
+
+          RESULT="${{ steps.monitor.outputs.result }}"
+          PASSED="${{ steps.monitor.outputs.passed }}"
+          FAILED="${{ steps.monitor.outputs.failed }}"
+          TOTAL="${{ steps.monitor.outputs.total }}"
+          RUN_ID="${{ steps.launch.outputs.run-id }}"
+          APP_TYPE="${{ inputs.app-type }}"
+          DOMAIN_NUMBER="${{ inputs.domain-number }}"
+          INSTANCE_LOG="${{ steps.launch.outputs.instance-log }}"
+
+          # Normalize app name for S3 paths
+          if [ "$APP_TYPE" = "mentor" ]; then
+            APP_NAME="mentor"
+          else
+            APP_NAME="$APP_TYPE"
+          fi
+
+          # Determine target URL based on app type
+          if [ "$APP_TYPE" = "skills" ]; then
+            TARGET_URL="https://skillsai${DOMAIN_NUMBER}.stg.iblai.app"
+          elif [ "$APP_TYPE" = "mentor" ]; then
+            TARGET_URL="https://mentorai${DOMAIN_NUMBER}.stg.iblai.app"
+          elif [ "$APP_TYPE" = "auth" ]; then
+            TARGET_URL="https://authai${DOMAIN_NUMBER}.stg.iblai.app"
+          else
+            TARGET_URL="https://${APP_TYPE}${DOMAIN_NUMBER}.stg.iblai.app"
+          fi
+
+          echo "============================================================================"
+          echo "Generating Test Report"
+          echo "============================================================================"
+          echo ""
+          echo "Result: $RESULT"
+          echo "Passed: $PASSED"
+          echo "Failed: $FAILED"
+          echo "Total: $TOTAL"
+          echo "Run ID: $RUN_ID"
+          echo "App Name: $APP_NAME"
+          echo "Target: $TARGET_URL"
+          echo ""
+
+          # Initialize files
+          echo "" > /tmp/final-report.txt
+          echo "" > /tmp/trace-urls.txt
+          echo "[]" > /tmp/log-urls.json
+
+          if [ -f "$INSTANCE_LOG" ]; then
+            LOG_URLS_JSON="["
+            FIRST_ENTRY=true
+
+            while IFS='|' read -r instance_id browser shard display_name; do
+              CONTAINER_ID=$(oci container-instances container-instance get \
+                --container-instance-id "$instance_id" \
+                --query 'data.containers[0]."container-id"' \
+                --raw-output 2>/dev/null || echo "")
+
+              if [ -n "$CONTAINER_ID" ]; then
+                CONTAINER_RESPONSE=$(oci container-instances container get \
+                  --container-id "$CONTAINER_ID" \
+                  --output json 2>/dev/null || echo '{"data":{}}')
+                EXIT_CODE=$(echo "$CONTAINER_RESPONSE" | jq -r '.data."exit-code" // "unknown"')
+                CONTAINER_STATE=$(echo "$CONTAINER_RESPONSE" | jq -r '.data."lifecycle-state" // "UNKNOWN"')
+              else
+                EXIT_CODE="unknown"
+                CONTAINER_STATE="UNKNOWN"
+              fi
+
+              if [ "$CONTAINER_STATE" = "ACTIVE" ]; then
+                STATUS="RUNNING"
+                STATUS_SIMPLE="running"
+              elif [ "$CONTAINER_STATE" = "INACTIVE" ]; then
+                if [ "$EXIT_CODE" = "0" ]; then
+                  STATUS="PASSED"
+                  STATUS_SIMPLE="passed"
+                else
+                  STATUS="FAILED"
+                  STATUS_SIMPLE="failed"
+                fi
+              elif [ "$CONTAINER_STATE" = "FAILED" ]; then
+                STATUS="FAILED"
+                STATUS_SIMPLE="failed"
+              else
+                STATUS="RUNNING"
+                STATUS_SIMPLE="running"
+              fi
+
+              LOG_URL="https://${CLOUDFRONT_DOMAIN}/runs/${RUN_ID}/${APP_NAME}/logs/test-run.log"
+
+              if [ "$FIRST_ENTRY" = true ]; then
+                FIRST_ENTRY=false
+              else
+                LOG_URLS_JSON="${LOG_URLS_JSON},"
+              fi
+              LOG_URLS_JSON="${LOG_URLS_JSON}{\"browser\":\"${browser}\",\"shard\":\"${shard}\",\"exit_code\":\"${EXIT_CODE}\",\"status\":\"${STATUS_SIMPLE}\",\"log_url\":\"${LOG_URL}\"}"
+
+              echo "----------------------------------------" >> /tmp/final-report.txt
+              echo "Browser: $browser | Shard: $shard | Status: $STATUS | Exit: $EXIT_CODE" >> /tmp/final-report.txt
+              echo "Log: $LOG_URL" >> /tmp/final-report.txt
+
+              if [[ "$STATUS" == *"FAILED"* ]] && [ -n "$S3_BUCKET" ] && [ -n "$AWS_ACCESS_KEY_ID" ]; then
+                TRACE_PREFIX="runs/${RUN_ID}/${APP_NAME}/traces/"
+                echo "  Checking for traces: s3://${S3_BUCKET}/${TRACE_PREFIX}"
+
+                TRACE_FILES=$(aws s3 ls "s3://${S3_BUCKET}/${TRACE_PREFIX}" --region "$AWS_REGION" 2>/dev/null | awk '{print $4}' | grep -E '\.zip$' || echo "")
+
+                if [ -n "$TRACE_FILES" ]; then
+                  echo "  Found traces: $TRACE_FILES"
+                  for trace_file in $TRACE_FILES; do
+                    TRACE_URL="https://${CLOUDFRONT_DOMAIN}/${TRACE_PREFIX}${trace_file}"
+                    echo "- [${trace_file}](${TRACE_URL})" >> /tmp/trace-urls.txt
+                  done
+                fi
+              fi
+            done < "$INSTANCE_LOG"
+
+            LOG_URLS_JSON="${LOG_URLS_JSON}]"
+            echo "$LOG_URLS_JSON" > /tmp/log-urls.json
+          fi
+
+          safe_output "log-urls" "$(cat /tmp/log-urls.json)"
+
+          echo ""
+          cat /tmp/final-report.txt
+
+          # Create GitHub summary
+          {
+            echo "## ${APP_TYPE^} Test Results"
+            echo ""
+            echo "**Target:** $TARGET_URL"
+            echo "**Run ID:** \`${RUN_ID}\`"
+            echo ""
+            if [ "$RESULT" = "success" ]; then
+              echo "### Result: ALL PASSED"
+            else
+              echo "### Result: SOME FAILED"
+            fi
+            echo ""
+            echo "| Status | Passed | Failed | Total |"
+            echo "|:------:|:------:|:------:|:-----:|"
+            if [ "$RESULT" = "success" ]; then
+              echo "| PASS | $PASSED | $FAILED | $TOTAL |"
+            else
+              echo "| FAIL | $PASSED | $FAILED | $TOTAL |"
+            fi
+            echo ""
+            echo "### Shard Details"
+            echo ""
+            echo "| Browser | Shard | Exit Code | Logs |"
+            echo "|---------|:-----:|:---------:|:----:|"
+          } >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "$INSTANCE_LOG" ]; then
+            while IFS='|' read -r instance_id browser shard display_name; do
+              CONTAINER_ID=$(oci container-instances container-instance get \
+                --container-instance-id "$instance_id" \
+                --query 'data.containers[0]."container-id"' \
+                --raw-output 2>/dev/null || echo "")
+
+              if [ -n "$CONTAINER_ID" ]; then
+                CONTAINER_RESPONSE=$(oci container-instances container get \
+                  --container-id "$CONTAINER_ID" \
+                  --output json 2>/dev/null || echo '{"data":{}}')
+                EXIT_CODE=$(echo "$CONTAINER_RESPONSE" | jq -r '.data."exit-code" // "?"')
+              else
+                EXIT_CODE="?"
+              fi
+
+              LOG_URL="https://${CLOUDFRONT_DOMAIN}/runs/${RUN_ID}/${APP_NAME}/logs/test-run.log"
+
+              if [ "$EXIT_CODE" = "0" ]; then
+                STATUS_EMOJI="PASS"
+              elif [ "$EXIT_CODE" = "?" ] || [ "$EXIT_CODE" = "unknown" ]; then
+                STATUS_EMOJI="PENDING"
+              else
+                STATUS_EMOJI="FAIL"
+              fi
+
+              echo "| ${browser} | ${shard} | ${STATUS_EMOJI} ${EXIT_CODE} | [Logs](${LOG_URL}) |" >> $GITHUB_STEP_SUMMARY
+            done < "$INSTANCE_LOG"
+          fi
+
+          if [ -s /tmp/trace-urls.txt ]; then
+            {
+              echo ""
+              echo "### Trace Downloads (Failed Tests)"
+              echo ""
+            } >> $GITHUB_STEP_SUMMARY
+            while IFS= read -r line; do
+              echo "$line" >> $GITHUB_STEP_SUMMARY
+            done < /tmp/trace-urls.txt
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo "*Tests executed on OCI Container Instances*"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup instances
+        if: always()
+        run: |
+          INSTANCE_LOG="${{ steps.launch.outputs.instance-log }}"
+
+          if [ -z "$INSTANCE_LOG" ] || [ ! -f "$INSTANCE_LOG" ]; then
+            echo "No instance log found - skipping cleanup"
+            exit 0
+          fi
+
+          echo "============================================================================"
+          echo "Cleaning Up Instances"
+          echo "============================================================================"
+          echo ""
+
+          while IFS='|' read -r instance_id browser shard display_name; do
+            echo "Deleting: $instance_id ($browser $shard)"
+            oci container-instances container-instance delete \
+              --container-instance-id "$instance_id" \
+              --force 2>&1 || echo "  Failed to delete (may already be deleted)"
+          done < "$INSTANCE_LOG"
+
+          echo ""
+          echo "Cleanup complete"
+
+      - name: Set final status
+        if: always()
+        run: |
+          RESULT="${{ steps.monitor.outputs.result }}"
+          FAILED="${{ steps.monitor.outputs.failed }}"
+
+          if [ "$RESULT" = "success" ]; then
+            echo "All tests passed!"
+            exit 0
+          elif [ "$RESULT" = "timeout" ]; then
+            echo "Tests timed out"
+            exit 1
+          else
+            echo "Some tests failed (${FAILED} shards)"
+            exit 1
+          fi

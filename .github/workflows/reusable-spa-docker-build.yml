@@ -1,0 +1,155 @@
+# Vendored from iblai/iblai-web-ops (.github/workflows/reusable-spa-docker-build.yml).
+# This repo is public; reusable workflows in private repos cannot be called from
+# public repos ("workflow was not found"), so the workflow lives here and is
+# called via a local path. Contains no secrets — all credentials resolve from
+# this repo/org's Actions secrets at runtime. Keep in sync with the
+# iblai-web-ops copy until that copy is retired.
+name: Reusable SPA Docker Build
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        description: 'SPA app name (mentor, skills, etc.)'
+        required: true
+        type: string
+      source_repo:
+        description: 'Source repository to clone (e.g., iblai/mentorai)'
+        required: true
+        type: string
+      source_ref:
+        description: 'Git ref to build (tag, branch, or commit SHA)'
+        required: true
+        type: string
+      version:
+        description: 'Version for the Docker image tag'
+        required: true
+        type: string
+      next_image_patterns:
+        description: 'Comma-separated allowed image domains for Next.js (passed as NEXT_IMAGE_PATTERNS build arg)'
+        required: false
+        type: string
+        default: ''
+
+env:
+  ECR_REGISTRY: 765174860755.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  build-and-push:
+    name: "Build & push ${{ inputs.app_name }} ${{ inputs.version }}"
+    runs-on: oci-runner-1
+    steps:
+      - name: Clone source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.source_repo }}
+          ref: ${{ inputs.source_ref }}
+          token: ${{ secrets.GIT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Determine image name and build args
+        id: config
+        run: |
+          APP="${{ inputs.app_name }}"
+
+          case "$APP" in
+            mentor)
+              echo "image_name=iblai-mentor-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+            skills)
+              echo "image_name=iblai-skills-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+            auth)
+              echo "image_name=iblai-auth-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+            courseai)
+              echo "image_name=iblai-courseai-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+            videoai)
+              echo "image_name=iblai-videoai-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "image_name=ibl-${APP}-spa-pro" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+          echo "App: $APP"
+          echo "Image name: $(grep image_name $GITHUB_OUTPUT | cut -d= -f2)"
+
+      - name: Build Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ inputs.version }}
+          IMAGE_NAME: ${{ steps.config.outputs.image_name }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          FULL_URI="$REGISTRY/$IMAGE_NAME:$VERSION"
+
+          echo "=== Building Docker Image ==="
+          echo "Image: $FULL_URI"
+          echo "Source: ${{ inputs.source_repo }} @ ${{ inputs.source_ref }}"
+
+          # Build args vary per app. Use an array so values with
+          # whitespace or shell metachars are passed through intact.
+          BUILD_ARGS=()
+
+          if [ "${{ inputs.app_name }}" = "mentor" ]; then
+            if [ -n "${{ inputs.next_image_patterns }}" ]; then
+              BUILD_ARGS+=(--build-arg "NEXT_IMAGE_PATTERNS=${{ inputs.next_image_patterns }}")
+            fi
+            if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+              BUILD_ARGS+=(--build-arg "SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN")
+            fi
+          fi
+
+          docker build \
+            -f Dockerfile \
+            "${BUILD_ARGS[@]}" \
+            -t "$FULL_URI" \
+            --no-cache \
+            .
+
+          echo "full_uri=$FULL_URI" >> $GITHUB_OUTPUT
+
+      - name: Push Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ inputs.version }}
+          IMAGE_NAME: ${{ steps.config.outputs.image_name }}
+        run: |
+          FULL_URI="$REGISTRY/$IMAGE_NAME:$VERSION"
+
+          docker push "$FULL_URI"
+
+          # Also tag and push as latest
+          docker tag "$FULL_URI" "$REGISTRY/$IMAGE_NAME:latest"
+          docker push "$REGISTRY/$IMAGE_NAME:latest"
+
+          echo "Pushed: $FULL_URI"
+          echo "Pushed: $REGISTRY/$IMAGE_NAME:latest"
+
+      - name: Build summary
+        if: always()
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_NAME: ${{ steps.config.outputs.image_name }}
+        run: |
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **App** | ${{ inputs.app_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image** | \`$REGISTRY/$IMAGE_NAME:${{ inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Source** | ${{ inputs.source_repo }} @ \`${{ inputs.source_ref }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ inputs.version }} |" >> $GITHUB_STEP_SUMMARY

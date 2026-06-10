@@ -1,0 +1,179 @@
+# Vendored from iblai/iblai-web-ops (.github/workflows/reusable-pr-docker-build.yml).
+# This repo is public; reusable workflows in private repos cannot be called from
+# public repos ("workflow was not found"), so the workflow lives here and is
+# called via a local path. Contains no secrets — all credentials resolve from
+# this repo/org's Actions secrets at runtime. Keep in sync with the
+# iblai-web-ops copy until that copy is retired.
+name: PR Docker Build and Push
+
+on:
+  workflow_call:
+    inputs:
+      dockerfile-path:
+        description: "Path to Dockerfile (relative to build-context or repo root)"
+        required: true
+        type: string
+      image-name:
+        description: "Image name (e.g., ibl-mentor-spa-pro or ibl-mentor-playwright)"
+        required: true
+        type: string
+      registry-type:
+        description: "Registry type (ecr or ocir)"
+        required: true
+        type: string
+      build-context:
+        description: "Docker build context directory"
+        required: false
+        type: string
+        default: "."
+      image-tag:
+        description: "Image tag to use (if not provided, will be generated from PR)"
+        required: false
+        type: string
+        default: ""
+      event-name:
+        description: "GitHub event name (for tag generation)"
+        required: false
+        type: string
+        default: "pull_request"
+      pr-number:
+        description: "PR number (for tag generation)"
+        required: false
+        type: string
+        default: ""
+      runs-on:
+        description: "Runner to use"
+        required: false
+        type: string
+        default: "ubuntu-22.04"
+    outputs:
+      image-uri:
+        description: "Full image URI (registry/repo:tag)"
+        value: ${{ jobs.build.outputs.image-uri }}
+      image-tag:
+        description: "Image tag"
+        value: ${{ jobs.build.outputs.image-tag }}
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      OCIR_REGISTRY: iad.ocir.io
+      OCIR_NAMESPACE: idcwyla5j5cr
+    outputs:
+      image-uri: ${{ steps.set-outputs.outputs.image-uri }}
+      image-tag: ${{ steps.set-outputs.outputs.image-tag }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+
+      - name: Checkout ops actions
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate or use image tag
+        id: tag
+        uses: ./.ops/.github/actions/generate-image-tag
+        with:
+          event-name: ${{ inputs.event-name }}
+          pr-number: ${{ inputs.pr-number }}
+
+      - name: Use provided tag if available
+        id: final-tag
+        run: |
+          if [ -n "${{ inputs.image-tag }}" ]; then
+            echo "tag=${{ inputs.image-tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ steps.tag.outputs.tag }}" >> $GITHUB_OUTPUT
+          fi
+
+      # ECR Login and Build
+      - name: Configure AWS Credentials
+        if: inputs.registry-type == 'ecr'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        if: inputs.registry-type == 'ecr'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build ECR image URI
+        if: inputs.registry-type == 'ecr'
+        id: build-ecr
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.final-tag.outputs.tag }}
+        run: |
+          FULL_IMAGE_URI="$REGISTRY/${{ inputs.image-name }}:$IMAGE_TAG"
+          echo "image-uri=$FULL_IMAGE_URI" >> $GITHUB_OUTPUT
+
+      # OCIR Login and Build
+      - name: Log in to OCIR
+        if: inputs.registry-type == 'ocir'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.OCIR_REGISTRY }}
+          username: ${{ env.OCIR_NAMESPACE }}/${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
+
+      - name: Build OCIR image URI
+        if: inputs.registry-type == 'ocir'
+        id: build-ocir
+        env:
+          IMAGE_TAG: ${{ steps.final-tag.outputs.tag }}
+        run: |
+          FULL_IMAGE_URI="${{ env.OCIR_REGISTRY }}/${{ env.OCIR_NAMESPACE }}/${{ inputs.image-name }}:$IMAGE_TAG"
+          echo "image-uri=$FULL_IMAGE_URI" >> $GITHUB_OUTPUT
+
+      # Check if image exists (caching)
+      - name: Check if image exists
+        id: check-image
+        uses: ./.ops/.github/actions/check-image-exists
+        with:
+          image-uri: ${{ steps.build-ecr.outputs.image-uri || steps.build-ocir.outputs.image-uri }}
+
+      # Build and push if image doesn't exist
+      - name: Build and push Docker image
+        if: steps.check-image.outputs.exists != 'true'
+        env:
+          IMAGE_URI: ${{ steps.build-ecr.outputs.image-uri || steps.build-ocir.outputs.image-uri }}
+          IMAGE_TAG: ${{ steps.final-tag.outputs.tag }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          echo "Building Docker image: $IMAGE_URI"
+          echo "Dockerfile: ${{ inputs.dockerfile-path }}"
+          echo "Context: ${{ inputs.build-context }}"
+
+          BUILD_ARGS="--build-arg APP_VERSION=$IMAGE_TAG"
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+            BUILD_ARGS="$BUILD_ARGS --build-arg SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN"
+          fi
+
+          docker build -f "${{ inputs.dockerfile-path }}" -t $IMAGE_URI --no-cache $BUILD_ARGS "${{ inputs.build-context }}"
+          docker push $IMAGE_URI
+          echo "Image built and pushed: $IMAGE_URI"
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          IMAGE_URI="${{ steps.build-ecr.outputs.image-uri || steps.build-ocir.outputs.image-uri }}"
+          IMAGE_TAG="${{ steps.final-tag.outputs.tag }}"
+
+          echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+          if [[ "${{ steps.check-image.outputs.exists }}" == "true" ]]; then
+            echo "Using existing image: $IMAGE_URI"
+          else
+            echo "Using newly built image: $IMAGE_URI"
+          fi
