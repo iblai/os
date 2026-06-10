@@ -145,10 +145,14 @@ export function SettingsTab() {
 
   // Fetch the claw-config for this mentor. Returns null when no config exists
   // (the data-layer normalises 404 → null) — that's how we know the mentor is
-  // not yet wired to a Claw instance.
+  // not yet wired to a Claw instance. Only meaningful when the advanced sandbox
+  // is enabled, so skip the request entirely for mentors with it turned off
+  // (otherwise every modal open fires a 404-producing call-config request).
+  // @ts-ignore - enable_claw exists in API response but not in type
+  const isClawEnabled: boolean = mentor?.enable_claw ?? false;
   const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
     { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !tenantKey || !mentorUuid },
+    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
   );
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();

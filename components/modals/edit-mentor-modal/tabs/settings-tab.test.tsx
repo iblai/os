@@ -1472,9 +1472,9 @@ describe('SettingsTab', () => {
       mentor_unique_id: 'mentor-uuid-123',
     };
 
-    it('queries claw-config with org and mentor_unique_id from mentor settings', () => {
+    it('queries claw-config with org and mentor_unique_id when the sandbox is enabled', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
-        data: settingsWithUuid,
+        data: { ...settingsWithUuid, enable_claw: true },
         isLoading: false,
       });
 
@@ -1483,6 +1483,23 @@ describe('SettingsTab', () => {
       expect(mockGetClawMentorConfigQuery).toHaveBeenCalledWith(
         { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
         expect.objectContaining({ skip: false }),
+      );
+    });
+
+    it('skips the claw-config query when the sandbox is disabled', () => {
+      // Mentors with the advanced sandbox turned off are never wired to a Claw
+      // instance, so fetching claw-config only produces a wasted 404-retry
+      // burst on every modal open. Gate the request on enable_claw.
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...settingsWithUuid, enable_claw: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(mockGetClawMentorConfigQuery).toHaveBeenCalledWith(
+        { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
+        expect.objectContaining({ skip: true }),
       );
     });
 
