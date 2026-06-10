@@ -70,4 +70,34 @@ describe('ImageMessage', () => {
     expect(screen.getByTestId('file-card')).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
+
+  it('recovers and shows the image when a good url arrives after an earlier error', () => {
+    // A camera/file attachment can first render with a non-viewable presigned
+    // PUT upload url (the <img> errors), then re-render with a viewable url
+    // (local object-URL preview or processed server file_url). The error state
+    // must not be sticky.
+    const { rerender } = render(
+      <ImageMessage
+        url="blob:non-viewable-presigned-put"
+        fileName="camera-photo.jpg"
+        setPreviewImage={vi.fn()}
+      />,
+    );
+
+    fireEvent.error(screen.getByRole('img', { name: 'camera-photo.jpg' }));
+    expect(screen.getByTestId('file-card')).toBeInTheDocument();
+
+    rerender(
+      <ImageMessage
+        url="blob:good-local-preview"
+        fileName="camera-photo.jpg"
+        setPreviewImage={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('file-card')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'camera-photo.jpg' }),
+    ).toHaveAttribute('src', 'blob:good-local-preview');
+  });
 });

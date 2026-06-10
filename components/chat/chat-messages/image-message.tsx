@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { FileCard } from './file-card';
 
@@ -12,6 +12,17 @@ type Props = {
 
 export function ImageMessage({ url, fileName, setPreviewImage }: Props) {
   const [hasError, setHasError] = useState(false);
+
+  // Reset the error state whenever the url changes. The first url an attachment
+  // renders with can be a non-viewable presigned PUT upload URL (which makes the
+  // <img> fire onError); a viewable url (the local object-URL preview, or the
+  // server's processed file_url) often arrives a moment later via a re-render.
+  // Without this reset, hasError stays sticky and the message is stuck showing
+  // the FileCard fallback forever even though a good url is now available. This
+  // is what made camera-captured images render as a card.
+  useEffect(() => {
+    setHasError(false);
+  }, [url]);
 
   if (hasError || !url) {
     return <FileCard fileName={fileName} fileType="image/*" />;
