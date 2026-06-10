@@ -7,33 +7,46 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus } from 'lucide-react';
+import { Camera, Plus } from 'lucide-react';
 
 import { UploadIcon } from '@/components/icons/svg-icons';
 import { useShowAttachment } from '@/hooks/use-show-attachment';
+import { useIsMobileOS } from '@/hooks/use-is-mobile-os';
+import { useCameraSupported } from '@/hooks/use-camera-supported';
 
 interface UploadMenuProps {
   onFileInputTrigger: () => void;
+  onCameraTrigger: () => void;
   disabled?: boolean;
 }
 
 export const UploadMenu = ({
   onFileInputTrigger,
+  onCameraTrigger,
   disabled = false,
 }: UploadMenuProps) => {
   const showAttachment = useShowAttachment();
+  const isMobileOS = useIsMobileOS();
+  const cameraSupported = useCameraSupported();
+  // Mobile uses the native `capture` file input (no secure context needed);
+  // desktop uses an in-app webcam dialog, which requires `getUserMedia`.
+  const showCamera = isMobileOS || cameraSupported;
 
   const uploadMenuItems = [
-    // {
-    //   name: 'Upload from phone',
-    //   icon: <Smartphone className="h-5 w-5 text-gray-600" />,
-    //   action: () => console.log('Upload from phone clicked'),
-    // },
     {
       name: 'Upload File',
       icon: <UploadIcon className="h-5 w-5 text-gray-600" />,
       action: onFileInputTrigger,
     },
+    ...(showCamera
+      ? [
+          {
+            name: 'Camera',
+            icon: <Camera className="h-5 w-5 text-gray-600" />,
+            action: onCameraTrigger,
+          },
+        ]
+      : []),
     // {
     //   name: 'Google Drive',
     //   icon: (

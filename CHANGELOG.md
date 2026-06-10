@@ -4,59 +4,59 @@
 
 ### Features
 
-* **sidebar:** enlarge and center the platform logo in the header ([b9055cc](https://github.com/iblai/os/commit/b9055cc5fa3e96597593cdcfefcfcd977bcddd59))
+- **sidebar:** enlarge and center the platform logo in the header ([b9055cc](https://github.com/iblai/os/commit/b9055cc5fa3e96597593cdcfefcfcd977bcddd59))
 
 ### Bug Fixes
 
-* **mentor:** adding fixes for the sidebar ([5ee8df5](https://github.com/iblai/os/commit/5ee8df5d5f28cf37b9dac2a835386820371eb9d9))
-* **mentor:** fixes for the sidebar ([f5540c3](https://github.com/iblai/os/commit/f5540c34a0085c8739736e75752d7bc7d8ac7a18))
-* **mentor:** fixing unit test ([d19dd18](https://github.com/iblai/os/commit/d19dd18d2c92298976260678a8b162f66f1a4e6f))
-* **mentor:** load selected chat messages when switching chats from the sidebar ([d72a52b](https://github.com/iblai/os/commit/d72a52b0f754f1099f5ae8e459f7b39108e90c90))
-* **mentor:** sidebar fixes for the embed, advertising agent and anonymous tenat ([4a9f2c3](https://github.com/iblai/os/commit/4a9f2c326464a4926386bc58a91262143711792a))
+- **mentor:** adding fixes for the sidebar ([5ee8df5](https://github.com/iblai/os/commit/5ee8df5d5f28cf37b9dac2a835386820371eb9d9))
+- **mentor:** fixes for the sidebar ([f5540c3](https://github.com/iblai/os/commit/f5540c34a0085c8739736e75752d7bc7d8ac7a18))
+- **mentor:** fixing unit test ([d19dd18](https://github.com/iblai/os/commit/d19dd18d2c92298976260678a8b162f66f1a4e6f))
+- **mentor:** load selected chat messages when switching chats from the sidebar ([d72a52b](https://github.com/iblai/os/commit/d72a52b0f754f1099f5ae8e459f7b39108e90c90))
+- **mentor:** sidebar fixes for the embed, advertising agent and anonymous tenat ([4a9f2c3](https://github.com/iblai/os/commit/4a9f2c326464a4926386bc58a91262143711792a))
 
 ## [0.73.8](https://github.com/iblai/os/compare/v0.73.7...v0.73.8) (2026-06-08)
 
 ### Chores
 
-* bump iblai-js to 1.17.19 ([fb3da86](https://github.com/iblai/os/commit/fb3da86d95a28198a0ca9ca952bf580a8807c498))
+- bump iblai-js to 1.17.19 ([fb3da86](https://github.com/iblai/os/commit/fb3da86d95a28198a0ca9ca952bf580a8807c498))
 
 ### CI
 
-* skip PR workflows for external pull requests ([29aca2e](https://github.com/iblai/os/commit/29aca2e6e8fa57ab68ea9183b5d8f05d41125cb8))
+- skip PR workflows for external pull requests ([29aca2e](https://github.com/iblai/os/commit/29aca2e6e8fa57ab68ea9183b5d8f05d41125cb8))
 
 ## [0.73.7](https://github.com/iblai/os/compare/v0.73.6...v0.73.7) (2026-06-08)
 
 ### CI
 
-* run summary job on github-hosted runner ([bf89f2c](https://github.com/iblai/os/commit/bf89f2ccc271013a9b5a571532eb8a3dcff576d5))
+- run summary job on github-hosted runner ([bf89f2c](https://github.com/iblai/os/commit/bf89f2ccc271013a9b5a571532eb8a3dcff576d5))
 
 ## [0.73.6](https://github.com/iblai/os/compare/v0.73.5...v0.73.6) (2026-06-08)
 
 ### Documentation
 
-* **readme:** add Testing section — run E2E with `make e2e-ui` ([72c26aa](https://github.com/iblai/os/commit/72c26aab4b117fdb8fce6243ce64c4a942d63337))
+- **readme:** add Testing section — run E2E with `make e2e-ui` ([72c26aa](https://github.com/iblai/os/commit/72c26aab4b117fdb8fce6243ce64c4a942d63337))
 
 ## [0.73.5](https://github.com/iblai/os/compare/v0.73.4...v0.73.5) (2026-06-08)
 
 ### Bug Fixes
 
-* **deploy:** pin outputFileTracingRoot so standalone builds stay un-nested ([535fdde](https://github.com/iblai/os/commit/535fdde8f1e52f58e0833cc9ace0f5728030cd52))
+- **deploy:** pin outputFileTracingRoot so standalone builds stay un-nested ([535fdde](https://github.com/iblai/os/commit/535fdde8f1e52f58e0833cc9ace0f5728030cd52))
 
 ### Chores
 
-* remove idle workflow_dispatch-only workflows ([fb9b9d7](https://github.com/iblai/os/commit/fb9b9d74a2aa036780375a348f47beeebd688224))
+- remove idle workflow_dispatch-only workflows ([fb9b9d7](https://github.com/iblai/os/commit/fb9b9d74a2aa036780375a348f47beeebd688224))
 
 ## [0.73.4](https://github.com/iblai/os/compare/v0.73.3...v0.73.4) (2026-06-08)
 
 ### Chores
 
-* remove stale workflows that have not run successfully in months ([9cf8114](https://github.com/iblai/os/commit/9cf8114e83d8401855293164a65132f45dbd1f51))
+- remove stale workflows that have not run successfully in months ([9cf8114](https://github.com/iblai/os/commit/9cf8114e83d8401855293164a65132f45dbd1f51))
 
 ## [0.73.3](https://github.com/iblai/os/compare/v0.73.2...v0.73.3) (2026-06-08)
 
 ### Documentation
 
-* update demo link to YouTube playlist ([49f4ece](https://github.com/iblai/os/commit/49f4ecec7c2d36279cfc55d892c969d856c91bd8))
+- update demo link to YouTube playlist ([49f4ece](https://github.com/iblai/os/commit/49f4ecec7c2d36279cfc55d892c969d856c91bd8))
 
 ## [0.73.2](https://github.com/iblai/os/compare/v0.73.1...v0.73.2) (2026-06-07)
 

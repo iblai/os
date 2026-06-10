@@ -37,6 +37,7 @@ import {
   parsePrompt,
   markdownToHtml,
   getUserOS,
+  isMobileOS,
   saveUserObjectToLocalStorage,
   maxDatasetFileSizeInMegaBytes,
   formatDateToYYYYMMDD,
@@ -1566,6 +1567,95 @@ describe('getUserOS function', () => {
       configurable: true,
     });
     expect(getUserOS()).toBe('Unknown OS');
+  });
+});
+
+describe('isMobileOS function', () => {
+  const setNavigator = (ua: string, platform = '', maxTouchPoints = 0) => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: ua,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'platform', {
+      value: platform,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      value: maxTouchPoints,
+      writable: true,
+      configurable: true,
+    });
+  };
+
+  afterEach(() => {
+    setNavigator(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Win32',
+      0,
+    );
+  });
+
+  it('returns true for an Android user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36',
+      'Linux armv8l',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns true for an iPhone user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+      'iPhone',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns true for iPadOS presenting a desktop Mac UA (MacIntel + touch)', () => {
+    setNavigator(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15',
+      'MacIntel',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns false for a desktop Chrome user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120',
+      'Win32',
+      0,
+    );
+    expect(isMobileOS()).toBe(false);
+  });
+
+  it('returns false for a real (non-touch) Mac desktop', () => {
+    setNavigator(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15',
+      'MacIntel',
+      0,
+    );
+    expect(isMobileOS()).toBe(false);
+  });
+
+  it('returns false when navigator is undefined (SSR)', () => {
+    const originalNavigator = globalThis.navigator;
+    // Simulate a server environment where navigator is not defined.
+    Object.defineProperty(globalThis, 'navigator', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+    expect(isMobileOS()).toBe(false);
+    Object.defineProperty(globalThis, 'navigator', {
+      value: originalNavigator,
+      writable: true,
+      configurable: true,
+    });
   });
 });
 
