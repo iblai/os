@@ -17,11 +17,11 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 [![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
-[![Demo by Miguel Amigot, CTO at ibl.ai](https://img.youtube.com/vi/P2ph8FAB0nI/maxresdefault.jpg)](https://youtu.be/P2ph8FAB0nI)
+[![Demo by Miguel Amigot, CTO at ibl.ai](https://img.youtube.com/vi/5LOAZyTbRQs/maxresdefault.jpg)](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)
 
-_Demo by Miguel Amigot, CTO at ibl.ai_
+_[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR) by Miguel Amigot, CTO at ibl.ai_
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Contributing](#contributing)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Testing](#testing) · [Contributing](#contributing)
 
 </div>
 
@@ -153,6 +153,13 @@ If you already have an ibl.ai tenant (organization key):
    PORT=3000 node server-wrapper.js
    ```
 
+   The build emits a self-contained server under `.next/standalone/` (Next.js
+   [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output)).
+   `next.config.ts` pins `outputFileTracingRoot` to the project directory so the
+   output always lands at `.next/standalone/server.js` with its static assets
+   alongside it. See [Troubleshooting](#troubleshooting) if the app loads to a
+   blank screen.
+
 ### Option B: Enterprise Deployment
 
 If you need full backend infrastructure:
@@ -172,6 +179,61 @@ If you need full backend infrastructure:
 See [docs/development.md](docs/development.md) for native app build instructions.
 
 Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
+
+### Troubleshooting
+
+**The app loads to a blank page or stays stuck on the loading spinner (no redirect to login).**
+
+Open your browser's DevTools → Network tab and reload. If every request under
+`/_next/static/...` and `/env.js` returns `404`/`503`, the server isn't finding
+its static assets. Two common causes:
+
+- **A duplicate or stale server is bound to the port.** An older `node`/`next`
+  process from a previous run can keep listening on `:3000` and shadow the new
+  one (a process bound to a specific address such as `127.0.0.1` wins over a
+  wildcard bind). Find and stop strays before starting fresh:
+
+  ```bash
+  lsof -nP -iTCP:3000 -sTCP:LISTEN   # list listeners on the port
+  kill <PID>                         # stop the stale one
+  ```
+
+- **The standalone output was nested under an unexpected path.** Next.js infers
+  the file-tracing root from the nearest lockfile. A stray lockfile in a _parent_
+  directory (e.g. `~/package-lock.json`) makes it treat your home directory as
+  the workspace root and emit the server at `.next/standalone/<path-to-project>/server.js`
+  instead of `.next/standalone/server.js` — `post-build.sh` then copies static
+  assets next to the wrong path and `server-wrapper.js` can't find the server.
+  This repo pins `outputFileTracingRoot` in `next.config.ts` to prevent it; if
+  you still hit nesting, remove the stray parent lockfile and rebuild.
+
+---
+
+## Testing
+
+This project is covered by Playwright end-to-end tests in [`e2e/`](e2e/). **Run the E2E suite for any change** so nothing regresses:
+
+```bash
+make e2e-ui
+```
+
+`make e2e-ui` launches Playwright in interactive UI mode — watch the journeys run, step through them, and re-run individual tests. The first time, install the browsers once:
+
+```bash
+make e2e-install
+```
+
+Other useful targets:
+
+| Command                 | What it does                               |
+| ----------------------- | ------------------------------------------ |
+| `make e2e`              | Run the full suite headless (all browsers) |
+| `make e2e-headed`       | Run with a visible browser                 |
+| `make e2e-chrome`       | Run on Chrome only                         |
+| `make e2e-journey J=01` | Run a single journey spec                  |
+| `make e2e-report`       | Open the last HTML report                  |
+
+See [e2e/COVERAGE.md](e2e/COVERAGE.md) for current coverage. Coverage must not regress — add or update a journey whenever you change user-facing behavior.
 
 ---
 

@@ -269,11 +269,9 @@ export class EditMentorPage {
     await expect(myAgents).toBeVisible({ timeout: 10_000 });
     await myAgents.click();
 
-    const settingsDialog = this.page
-      .getByRole('dialog')
-      .filter({
-        hasText: 'Showing the list of agents available in your tenant',
-      });
+    const settingsDialog = this.page.getByRole('dialog').filter({
+      hasText: 'Showing the list of agents available in your tenant',
+    });
     await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
 
     // Agents list is fetched server-side with pagination — on tenants with
@@ -361,20 +359,34 @@ export class EditMentorPage {
 
     // The Edit Mentor dialog hosts portal-rendered child modals (New Skill,
     // Edit Skill, Delete Skill, New/Edit Instance, Disconnect Instance,
-    // etc.). When a child modal is left open, its Radix overlay
-    // (`[data-iblai-dialog-interaction-layer]`) covers the parent and
-    // intercepts pointer events — making the parent's Close button
-    // appear "visible, enabled and stable" yet unclickable. Dismiss any
-    // leftover child modals first via Escape so cleanup can proceed
-    // even when an earlier API call left a modal stuck open.
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const overlay = this.page.locator(
+    // generated Embed Code dialog, etc.). When a child modal is left open,
+    // its overlay covers the parent and intercepts pointer events — making
+    // the parent's Close button appear "visible, enabled and stable" yet
+    // unclickable. Dismiss any leftover child modals first via Escape so
+    // cleanup can proceed even when an earlier API call left a modal stuck open.
+    //
+    // Two overlay patterns exist:
+    //   1. SDK custom layers: [data-iblai-dialog-interaction-layer][data-state="open"]
+    //   2. Standard Radix dialogs (e.g. the "Embedded Code" dialog rendered by
+    //      `components/ui/dialog.tsx`) that use a plain `[data-state="open"]`
+    //      overlay without the SDK custom attribute.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const sdkOverlay = this.page.locator(
         '[data-iblai-dialog-interaction-layer][data-state="open"]',
       );
-      const overlayCount = await overlay.count().catch(() => 0);
-      if (overlayCount === 0) break;
+      const sdkOverlayCount = await sdkOverlay.count().catch(() => 0);
+
+      // Count open dialogs; if more than one is present the extra ones are
+      // child/portal modals that need to be dismissed before we can click the
+      // Edit Agent Close button.
+      const allDialogCount = await this.page
+        .getByRole('dialog')
+        .count()
+        .catch(() => 0);
+
+      if (sdkOverlayCount === 0 && allDialogCount <= 1) break;
       await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.waitForTimeout(250);
+      await this.page.waitForTimeout(300);
     }
 
     // The parent might have been closed by a stray Escape that propagated

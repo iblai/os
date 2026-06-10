@@ -1,32 +1,104 @@
 # Changelog
 
+## [0.74.1](https://github.com/iblai/os/pull/235)
+
+## [0.74.0](https://github.com/iblai/os/compare/v0.73.8...v0.74.0) (2026-06-09)
+
+### Features
+
+- **sidebar:** enlarge and center the platform logo in the header ([b9055cc](https://github.com/iblai/os/commit/b9055cc5fa3e96597593cdcfefcfcd977bcddd59))
+
+### Bug Fixes
+
+- **mentor:** adding fixes for the sidebar ([5ee8df5](https://github.com/iblai/os/commit/5ee8df5d5f28cf37b9dac2a835386820371eb9d9))
+- **mentor:** fixes for the sidebar ([f5540c3](https://github.com/iblai/os/commit/f5540c34a0085c8739736e75752d7bc7d8ac7a18))
+- **mentor:** fixing unit test ([d19dd18](https://github.com/iblai/os/commit/d19dd18d2c92298976260678a8b162f66f1a4e6f))
+- **mentor:** load selected chat messages when switching chats from the sidebar ([d72a52b](https://github.com/iblai/os/commit/d72a52b0f754f1099f5ae8e459f7b39108e90c90))
+- **mentor:** sidebar fixes for the embed, advertising agent and anonymous tenat ([4a9f2c3](https://github.com/iblai/os/commit/4a9f2c326464a4926386bc58a91262143711792a))
+
+## [0.73.8](https://github.com/iblai/os/compare/v0.73.7...v0.73.8) (2026-06-08)
+
+### Chores
+
+- bump iblai-js to 1.17.19 ([fb3da86](https://github.com/iblai/os/commit/fb3da86d95a28198a0ca9ca952bf580a8807c498))
+
+### CI
+
+- skip PR workflows for external pull requests ([29aca2e](https://github.com/iblai/os/commit/29aca2e6e8fa57ab68ea9183b5d8f05d41125cb8))
+
+## [0.73.7](https://github.com/iblai/os/compare/v0.73.6...v0.73.7) (2026-06-08)
+
+### CI
+
+- run summary job on github-hosted runner ([bf89f2c](https://github.com/iblai/os/commit/bf89f2ccc271013a9b5a571532eb8a3dcff576d5))
+
+## [0.73.6](https://github.com/iblai/os/compare/v0.73.5...v0.73.6) (2026-06-08)
+
+### Documentation
+
+- **readme:** add Testing section — run E2E with `make e2e-ui` ([72c26aa](https://github.com/iblai/os/commit/72c26aab4b117fdb8fce6243ce64c4a942d63337))
+
+## [0.73.5](https://github.com/iblai/os/compare/v0.73.4...v0.73.5) (2026-06-08)
+
+### Bug Fixes
+
+- **deploy:** pin outputFileTracingRoot so standalone builds stay un-nested ([535fdde](https://github.com/iblai/os/commit/535fdde8f1e52f58e0833cc9ace0f5728030cd52))
+
+### Chores
+
+- remove idle workflow_dispatch-only workflows ([fb9b9d7](https://github.com/iblai/os/commit/fb9b9d74a2aa036780375a348f47beeebd688224))
+
+## [0.73.4](https://github.com/iblai/os/compare/v0.73.3...v0.73.4) (2026-06-08)
+
+### Chores
+
+- remove stale workflows that have not run successfully in months ([9cf8114](https://github.com/iblai/os/commit/9cf8114e83d8401855293164a65132f45dbd1f51))
+
+## [0.73.3](https://github.com/iblai/os/compare/v0.73.2...v0.73.3) (2026-06-08)
+
+### Documentation
+
+- update demo link to YouTube playlist ([49f4ece](https://github.com/iblai/os/commit/49f4ecec7c2d36279cfc55d892c969d856c91bd8))
+
+## [0.73.2](https://github.com/iblai/os/compare/v0.73.1...v0.73.2) (2026-06-07)
+
+### Chores
+
+- add iblai-mentor scheme to redirectToAuthSpa from sdk ([49bea52](https://github.com/iblai/os/commit/49bea520dd98487d361f36f85989191e6a79214f))
+
+## [0.73.1](https://github.com/iblai/os/compare/v0.73.0...v0.73.1) (2026-06-05)
+
+### Documentation
+
+- update YouTube demo video link and hyperlink label ([458b66d](https://github.com/iblai/os/commit/458b66d4552ad885a8eda74326785afbacbc1bf4))
+
 ## [0.73.0](https://github.com/iblai/os/compare/v0.72.1...v0.73.0) (2026-06-05)
 
 ### Features
 
-* add /setup skill for guided tenant configuration ([26641e1](https://github.com/iblai/os/commit/26641e1265905547d9bb6cc0019e3c3583f636ee))
+- add /setup skill for guided tenant configuration ([26641e1](https://github.com/iblai/os/commit/26641e1265905547d9bb6cc0019e3c3583f636ee))
 
 ### Chores
 
-* add NEXT_PUBLIC_TENANT to .env.example, fix demo alt text ([2606b4b](https://github.com/iblai/os/commit/2606b4ba85128d8f4ca32298d57bc248873e607e))
-* bump iblai-js to 1.17.17 ([157cb24](https://github.com/iblai/os/commit/157cb24a07423839d25cc670de7a6519d90fdbba))
-* bump Tauri version to 1.1.19 ([c0e20bd](https://github.com/iblai/os/commit/c0e20bdef96beaef0e3935352176b3d9e13774ea))
+- add NEXT_PUBLIC_TENANT to .env.example, fix demo alt text ([2606b4b](https://github.com/iblai/os/commit/2606b4ba85128d8f4ca32298d57bc248873e607e))
+- bump iblai-js to 1.17.17 ([157cb24](https://github.com/iblai/os/commit/157cb24a07423839d25cc670de7a6519d90fdbba))
+- bump Tauri version to 1.1.19 ([c0e20bd](https://github.com/iblai/os/commit/c0e20bdef96beaef0e3935352176b3d9e13774ea))
 
 ### Documentation
 
-* add cross-platform availability section to README ([9eaa79e](https://github.com/iblai/os/commit/9eaa79efb02df3e1a361fe5cee127d3d000a34ef))
-* add MIT LICENSE file ([9f79cf1](https://github.com/iblai/os/commit/9f79cf1485719637985c024501306791eff0e810))
-* add product screenshots to README ([8a2ce4b](https://github.com/iblai/os/commit/8a2ce4bbd65291f3be6706cdd0c68d170d12c8ed))
-* add YouTube demo link to README header ([b7dbadd](https://github.com/iblai/os/commit/b7dbadd0e2b7386ca8717c39088f0068f6905e99))
-* merge enterprise section into features in README ([d5daab0](https://github.com/iblai/os/commit/d5daab07435d4d6c4ee889c4d86f3f707a4bbaba))
-* move screenshots section below Available On ([59e5a2c](https://github.com/iblai/os/commit/59e5a2c94ad24c477c46ac9ef6d2245f902cacdc))
-* remove Desktop & Mobile badge ([b2f6fa1](https://github.com/iblai/os/commit/b2f6fa1cc9620cce071a70516e1c427f778ccc06))
-* rename Option B to Enterprise Deployment ([ab66b8e](https://github.com/iblai/os/commit/ab66b8ea9c89e355920e136947583ed040f0db0d))
-* replace YouTube badge with video thumbnail preview ([e064dd7](https://github.com/iblai/os/commit/e064dd7727720d5be0d227645c4e9b331ea3cc33))
-* revamp deployment section and update README badges ([bc21ba7](https://github.com/iblai/os/commit/bc21ba72e94a99a256be2cdbf7e8c5f88478a7ec))
-* revamp README to be marketing-focused, move developer content to docs/ ([a5565e2](https://github.com/iblai/os/commit/a5565e23abdc5a6b9a2308c70d119f2060fdc55f))
-* simplify tenant configuration to single env var ([579752a](https://github.com/iblai/os/commit/579752a3de60de3d323bf2e66277bddceccfc41c))
-* update Enterprise Deployment with contact and infra CLI info ([24a8b78](https://github.com/iblai/os/commit/24a8b78605d95932c7d70036c6c3715784261be9))
+- add cross-platform availability section to README ([9eaa79e](https://github.com/iblai/os/commit/9eaa79efb02df3e1a361fe5cee127d3d000a34ef))
+- add MIT LICENSE file ([9f79cf1](https://github.com/iblai/os/commit/9f79cf1485719637985c024501306791eff0e810))
+- add product screenshots to README ([8a2ce4b](https://github.com/iblai/os/commit/8a2ce4bbd65291f3be6706cdd0c68d170d12c8ed))
+- add YouTube demo link to README header ([b7dbadd](https://github.com/iblai/os/commit/b7dbadd0e2b7386ca8717c39088f0068f6905e99))
+- merge enterprise section into features in README ([d5daab0](https://github.com/iblai/os/commit/d5daab07435d4d6c4ee889c4d86f3f707a4bbaba))
+- move screenshots section below Available On ([59e5a2c](https://github.com/iblai/os/commit/59e5a2c94ad24c477c46ac9ef6d2245f902cacdc))
+- remove Desktop & Mobile badge ([b2f6fa1](https://github.com/iblai/os/commit/b2f6fa1cc9620cce071a70516e1c427f778ccc06))
+- rename Option B to Enterprise Deployment ([ab66b8e](https://github.com/iblai/os/commit/ab66b8ea9c89e355920e136947583ed040f0db0d))
+- replace YouTube badge with video thumbnail preview ([e064dd7](https://github.com/iblai/os/commit/e064dd7727720d5be0d227645c4e9b331ea3cc33))
+- revamp deployment section and update README badges ([bc21ba7](https://github.com/iblai/os/commit/bc21ba72e94a99a256be2cdbf7e8c5f88478a7ec))
+- revamp README to be marketing-focused, move developer content to docs/ ([a5565e2](https://github.com/iblai/os/commit/a5565e23abdc5a6b9a2308c70d119f2060fdc55f))
+- simplify tenant configuration to single env var ([579752a](https://github.com/iblai/os/commit/579752a3de60de3d323bf2e66277bddceccfc41c))
+- update Enterprise Deployment with contact and infra CLI info ([24a8b78](https://github.com/iblai/os/commit/24a8b78605d95932c7d70036c6c3715784261be9))
 
 ## [0.72.1](https://github.com/iblai/os/compare/v0.72.0...v0.72.1) (2026-06-05)
 

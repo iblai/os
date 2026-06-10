@@ -1,10 +1,16 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-06-09",
   "summary": {
+<<<<<<< HEAD
     "totalCheckpoints": 418,
     "coveredCheckpoints": 406,
+=======
+    "totalCheckpoints": 412,
+    "coveredCheckpoints": 393,
+>>>>>>> 034419048b77a21bc421fa309a98ac91ecfd5c8e
     "deprecatedCheckpoints": 12,
+    "notReproducibleCheckpoints": 7,
     "percent": 100,
     "totalJourneys": 49,
     "activeJourneys": 48
@@ -95,7 +101,9 @@
       "name": "New User UI & Profile Dropdown",
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/settings-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -115,7 +123,12 @@
         },
         {
           "id": "ui-04",
-          "description": "Sidebar admin-only buttons show upgrade dialog for non-admins",
+          "description": "Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible",
+          "status": "covered"
+        },
+        {
+          "id": "ui-05",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]
@@ -283,7 +296,10 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
-        "app/create-mentor/page.tsx"
+        "app/create-mentor/page.tsx",
+        "components/modals/settings-modal.tsx",
+        "hooks/use-mentors.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -338,8 +354,23 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
           "status": "covered"
+        },
+        {
+          "id": "mgmt-12",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-13",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-14",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -390,6 +421,11 @@
           "id": "uid-08",
           "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
+        },
+        {
+          "id": "uid-09",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -622,7 +658,8 @@
         "components/logo.tsx",
         "hooks/use-mentors/use-mentor-settings.ts",
         "hooks/use-embed-mode.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -663,6 +700,11 @@
         {
           "id": "emb-08",
           "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-09",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         }
       ]
@@ -1336,6 +1378,11 @@
           "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
+        },
+        {
+          "id": "mem-06",
+          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2042,6 +2089,11 @@
           "id": "cpm-10",
           "description": "Mentor can be copied to a different tenant",
           "status": "covered"
+        },
+        {
+          "id": "cpm-11",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2201,6 +2253,11 @@
           "id": "claw-15",
           "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
+        },
+        {
+          "id": "claw-16",
+          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
