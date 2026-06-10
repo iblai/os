@@ -46,6 +46,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
     mainTenantKey: () => 'main',
   },
 }));
