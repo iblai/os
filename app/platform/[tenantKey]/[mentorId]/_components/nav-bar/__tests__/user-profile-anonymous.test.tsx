@@ -84,6 +84,7 @@ vi.mock('@/lib/config', () => ({
     enableGravatarOnProfilePic: () => 'true',
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
     enableRBAC: () => false,
     iblTemplateMentor: () => 'default-mentor',
   },

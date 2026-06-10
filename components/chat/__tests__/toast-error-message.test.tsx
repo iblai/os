@@ -372,6 +372,101 @@ describe('ToastErrorMessage Component', () => {
     });
   });
 
+  describe('Support Phone', () => {
+    it('should not render a phone link by default (useSupportPhone defaults to false)', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          supportPhone="(571) 293-0242"
+        />,
+      );
+
+      expect(
+        screen.queryByRole('link', { name: '(571) 293-0242' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/text us at/)).not.toBeInTheDocument();
+    });
+
+    it('should not render a phone link when useSupportPhone is true but no phone is provided', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          useSupportPhone
+        />,
+      );
+
+      expect(screen.queryByText(/text us at/)).not.toBeInTheDocument();
+    });
+
+    it('should render a tel link when useSupportPhone is true and a phone is provided', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          supportPhone="(571) 293-0242"
+          useSupportPhone
+        />,
+      );
+
+      expect(screen.getByText(/text us at/)).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: '(571) 293-0242' });
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', 'tel:(571) 293-0242');
+    });
+
+    it('should apply correct styling to the phone link', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          supportPhone="(571) 293-0242"
+          useSupportPhone
+        />,
+      );
+
+      const link = screen.getByRole('link', { name: '(571) 293-0242' });
+      expect(link).toHaveClass('text-blue-600');
+      expect(link).toHaveClass('hover:text-blue-800');
+      expect(link).toHaveClass('toast-wrapped-contact-tag');
+    });
+
+    it('should not render a phone link when useSupportPhone is explicitly false', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          supportPhone="(571) 293-0242"
+          useSupportPhone={false}
+        />,
+      );
+
+      expect(
+        screen.queryByRole('link', { name: '(571) 293-0242' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should still render the support email link alongside the phone link', () => {
+      render(
+        <ToastErrorMessage
+          message="Error"
+          supportEmail="support@example.com"
+          supportPhone="(571) 293-0242"
+          useSupportPhone
+        />,
+      );
+
+      expect(screen.getByRole('link', { name: 'contact us' })).toHaveAttribute(
+        'href',
+        'mailto:support@example.com',
+      );
+      expect(
+        screen.getByRole('link', { name: '(571) 293-0242' }),
+      ).toHaveAttribute('href', 'tel:(571) 293-0242');
+    });
+  });
+
   describe('Message Content Edge Cases', () => {
     it('should handle message with only whitespace', () => {
       render(

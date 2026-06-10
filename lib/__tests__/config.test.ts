@@ -375,6 +375,27 @@ describe('config', () => {
         expect(typeof result).toBe('string');
       });
     });
+
+    describe('defaultSupportPhoneNumber', () => {
+      it('should return default support phone number', () => {
+        const result = config.defaultSupportPhoneNumber();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should have a default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('(571) 293-0242');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER: '+1 (800) 555-0199',
+        };
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('+1 (800) 555-0199');
+      });
+    });
   });
 
   describe('window.__ENV__ priority', () => {
