@@ -7,6 +7,8 @@ export interface OllamaStatus {
   installed: boolean;
   running: boolean;
   model_installed: boolean;
+  /** All model tags installed in Ollama (e.g. "llama3.2:latest", "phi3:mini"). */
+  installed_models?: string[];
 }
 
 /**
@@ -40,6 +42,17 @@ export interface DiskSpaceError {
 }
 
 /**
+ * Total memory the host can bring to bear on running a model, in bytes.
+ * `vram_total` is the largest single GPU's memory (0 when no discrete GPU is
+ * detected — integrated graphics or Apple unified memory — where `ram_total` is
+ * the figure to size a model against).
+ */
+export interface SystemMemory {
+  ram_total: number;
+  vram_total: number;
+}
+
+/**
  * Model download state for persistence across app restarts
  */
 export interface ModelDownloadState {
@@ -55,6 +68,11 @@ export interface ModelDownloadState {
   logs: InstallationLog[];
   lastUpdated: string;
   error?: string;
+  /** Ollama id of the model the active download targets (survives reopen). */
+  activeModel?: string;
+  /** True while the model manager (Ollama) is being installed/started. */
+  managerInstalling?: boolean;
+  managerInstallProgress?: number;
 }
 
 /**
@@ -93,9 +111,11 @@ export const TAURI_EVENTS = {
  */
 export const TAURI_COMMANDS = {
   INSTALL_OLLAMA: 'install_ollama',
+  STOP_OLLAMA: 'stop_ollama',
   CHECK_OLLAMA_STATUS: 'check_ollama_status',
   CHECK_DISK_SPACE: 'check_disk_space_for_model',
-  DOWNLOAD_MODEL: 'download_phi3_model',
+  GET_SYSTEM_MEMORY: 'get_system_memory',
+  DOWNLOAD_MODEL: 'download_model',
   CANCEL_DOWNLOAD: 'cancel_model_download',
   CHECK_NETWORK_STATUS: 'check_network_status',
   GET_OS_TYPE: 'get_os_type',

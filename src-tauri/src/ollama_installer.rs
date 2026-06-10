@@ -4,6 +4,8 @@ use std::fs;
 use std::path::Path;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::process::Command;
+#[cfg(target_os = "linux")]
+use crate::model_manager::can_sudo;
 
 /// Create a Command with hidden console window on Windows
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -122,12 +124,48 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
     // =========================
     #[cfg(target_os = "linux")]
     {
-        println!("[Ollama] Running installation script...");
-        create_command("sh")
-            .arg("-c")
-            .arg("curl -fsSL https://ollama.com/install.sh | sh")
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        // Prefer the distro package manager via sudo (bypassing the upstream
+        // install script), but only when sudo is non-interactive. If sudo isn't
+        // available, the package manager isn't present, or the install fails,
+        // fall back to the upstream script.
+        let sudo_ok = can_sudo();
+        let has_pacman = Path::new("/usr/bin/pacman").exists();
+        let has_dnf = Path::new("/usr/bin/dnf").exists();
+
+        let installed_via_pkg = if sudo_ok && has_pacman {
+            // Arch Linux
+            println!("[Ollama] Installing via pacman...");
+            create_command("sudo")
+                .args(["pacman", "-Sy", "ollama", "--noconfirm"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        } else if sudo_ok && has_dnf {
+            // Fedora / RHEL family
+            println!("[Ollama] Installing via dnf...");
+            create_command("sudo")
+                .args(["dnf", "install", "ollama", "-y"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        if !installed_via_pkg {
+            println!("[Ollama] Installing via upstream script...");
+            let status = create_command("sh")
+                .arg("-c")
+                .arg("curl -fsSL https://ollama.com/install.sh | sh")
+                .status()
+                .map_err(|e| e.to_string())?;
+            if !status.success() {
+                return Err(format!(
+                    "Ollama install failed (exit {:?})",
+                    status.code()
+                ));
+            }
+        }
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
