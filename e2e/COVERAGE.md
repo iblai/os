@@ -1,10 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-<<<<<<< HEAD
-> Last updated: 2026-06-06 | 418 checkpoints (406 active, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
-=======
-> Last updated: 2026-06-09 | 412 checkpoints (393 covered, 7 not-reproducible in default env, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
->>>>>>> 034419048b77a21bc421fa309a98ac91ecfd5c8e
+> Last updated: 2026-06-10 | 427 checkpoints (415 active, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
