@@ -10,48 +10,48 @@ on:
   workflow_call:
     inputs:
       dockerfile-path:
-        description: "Path to Dockerfile (relative to build-context or repo root)"
+        description: 'Path to Dockerfile (relative to build-context or repo root)'
         required: true
         type: string
       image-name:
-        description: "Image name (e.g., ibl-mentor-spa-pro or ibl-mentor-playwright)"
+        description: 'Image name (e.g., ibl-mentor-spa-pro or ibl-mentor-playwright)'
         required: true
         type: string
       registry-type:
-        description: "Registry type (ecr or ocir)"
+        description: 'Registry type (ecr or ocir)'
         required: true
         type: string
       build-context:
-        description: "Docker build context directory"
+        description: 'Docker build context directory'
         required: false
         type: string
-        default: "."
+        default: '.'
       image-tag:
-        description: "Image tag to use (if not provided, will be generated from PR)"
+        description: 'Image tag to use (if not provided, will be generated from PR)'
         required: false
         type: string
-        default: ""
+        default: ''
       event-name:
-        description: "GitHub event name (for tag generation)"
+        description: 'GitHub event name (for tag generation)'
         required: false
         type: string
-        default: "pull_request"
+        default: 'pull_request'
       pr-number:
-        description: "PR number (for tag generation)"
+        description: 'PR number (for tag generation)'
         required: false
         type: string
-        default: ""
+        default: ''
       runs-on:
-        description: "Runner to use"
+        description: 'Runner to use'
         required: false
         type: string
-        default: "ubuntu-22.04"
+        default: 'ubuntu-22.04'
     outputs:
       image-uri:
-        description: "Full image URI (registry/repo:tag)"
+        description: 'Full image URI (registry/repo:tag)'
         value: ${{ jobs.build.outputs.image-uri }}
       image-tag:
-        description: "Image tag"
+        description: 'Image tag'
         value: ${{ jobs.build.outputs.image-tag }}
 
 jobs:
