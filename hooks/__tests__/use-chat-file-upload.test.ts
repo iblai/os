@@ -27,6 +27,10 @@ const mocked = vi.hoisted(() => ({
     payload,
   })),
   selectSessionId: vi.fn(),
+  setImagePreview: vi.fn((payload: any) => ({
+    type: 'setImagePreview',
+    payload,
+  })),
 }));
 
 // ---- Mock dependencies ----
@@ -48,6 +52,10 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   updateFileMetadata: mocked.updateFileMetadata,
   updateFileRetryCount: mocked.updateFileRetryCount,
   uploadToS3: mocked.uploadToS3,
+}));
+
+vi.mock('@/features/image-previews/image-previews-slice', () => ({
+  setImagePreview: mocked.setImagePreview,
 }));
 
 describe('useChatFileUpload', () => {
@@ -92,6 +100,13 @@ describe('useChatFileUpload', () => {
 
     // Mock Math.random for consistent file IDs
     vi.spyOn(Math, 'random').mockReturnValue(0.123456789);
+
+    // Mock object URL creation (not implemented in jsdom)
+    global.URL.createObjectURL = vi
+      .fn()
+      .mockReturnValue(
+        'blob:mock-url',
+      ) as unknown as typeof URL.createObjectURL;
   });
 
   afterEach(() => {
@@ -674,6 +689,91 @@ describe('useChatFileUpload', () => {
         });
 
         expect(mockErrorHandler).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('image previews', () => {
+    it('should dispatch setImagePreview with the fileId and a created object URL for an image', async () => {
+      const { result } = renderHook(() => useChatFileUpload(defaultProps));
+
+      const imageFile = mockFile('photo.png', 1024, 'image/png');
+      await result.current.uploadFiles([imageFile]);
+
+      await waitFor(() => {
+        expect(mocked.setImagePreview).toHaveBeenCalled();
+      });
+
+      expect(global.URL.createObjectURL).toHaveBeenCalledWith(imageFile);
+      expect(mocked.setImagePreview).toHaveBeenCalledWith({
+        fileId: 'test-file-id',
+        url: 'blob:mock-url',
+      });
+    });
+
+    it('should NOT dispatch setImagePreview for a non-image file', async () => {
+      const { result } = renderHook(() => useChatFileUpload(defaultProps));
+
+      const pdfFile = mockFile('doc.pdf', 1024, 'application/pdf');
+      await result.current.uploadFiles([pdfFile]);
+
+      await waitFor(() => {
+        expect(mocked.uploadToS3).toHaveBeenCalled();
+      });
+
+      expect(mocked.setImagePreview).not.toHaveBeenCalled();
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    });
+
+    it('should NOT dispatch setImagePreview when the backend returns no file_id', async () => {
+      mocked.getFileUploadUrl.mockReturnValue({
+        unwrap: vi.fn().mockResolvedValue({
+          upload_url: 'https://s3.example.com/upload',
+          file_key: 'test-file-key',
+          file_id: undefined,
+        }),
+      });
+
+      const { result } = renderHook(() => useChatFileUpload(defaultProps));
+
+      const imageFile = mockFile('photo.png', 1024, 'image/png');
+      await result.current.uploadFiles([imageFile]);
+
+      await waitFor(() => {
+        expect(mocked.uploadToS3).toHaveBeenCalled();
+      });
+
+      expect(mocked.setImagePreview).not.toHaveBeenCalled();
+    });
+
+    it('should dispatch setImagePreview on the retry path for an image', async () => {
+      const { result } = renderHook(() => useChatFileUpload(defaultProps));
+
+      const imageFile = mockFile('photo.png', 1024, 'image/png');
+      await result.current.uploadFiles([imageFile]);
+
+      await waitFor(() => {
+        expect(mocked.addFiles).toHaveBeenCalled();
+      });
+
+      const fileId = mocked.addFiles.mock.calls[0][0][0].id;
+
+      vi.clearAllMocks();
+      global.URL.createObjectURL = vi
+        .fn()
+        .mockReturnValue(
+          'blob:retry-url',
+        ) as unknown as typeof URL.createObjectURL;
+
+      await result.current.retryUpload(fileId);
+
+      await waitFor(() => {
+        expect(mocked.setImagePreview).toHaveBeenCalled();
+      });
+
+      expect(mocked.setImagePreview).toHaveBeenCalledWith({
+        fileId: 'test-file-id',
+        url: 'blob:retry-url',
       });
     });
   });
