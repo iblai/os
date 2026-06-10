@@ -7,6 +7,8 @@ import { ImageMessage } from './image-message';
 import { cn } from '@/lib/utils';
 import { Message as BaseMessage } from '@iblai/iblai-js/web-utils';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
+import { useAppSelector } from '@/lib/hooks';
+import { selectImagePreviews } from '@/features/image-previews/image-previews-slice';
 
 interface Message extends BaseMessage {
   replyTo?: Message | null;
@@ -31,6 +33,10 @@ export function UserMessageBubble({
   onHighlightMessage,
   onPreviewImage,
 }: Props) {
+  // Local object URLs for images the user just uploaded, keyed by backend
+  // fileId. Read the whole map once (hooks can't be called inside `.map`).
+  const imagePreviews = useAppSelector(selectImagePreviews);
+
   return (
     <div
       className={`message-container mb-4 flex flex-col items-end transition-all duration-300 ${
@@ -42,10 +48,13 @@ export function UserMessageBubble({
         <div className="mb-2 flex flex-col items-end gap-2">
           {message.fileAttachments.map((attachment, idx) => {
             if (attachment.fileType.startsWith('image/')) {
+              const localPreviewUrl = attachment.fileId
+                ? imagePreviews[attachment.fileId]
+                : undefined;
               return (
                 <ImageMessage
                   key={`${message.id}-attachment-${idx}`}
-                  url={attachment.uploadUrl || ''}
+                  url={localPreviewUrl || attachment.uploadUrl || ''}
                   fileName={attachment.fileName}
                   setPreviewImage={onPreviewImage}
                 />
