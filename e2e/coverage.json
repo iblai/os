@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-08",
+  "lastUpdated": "2026-06-10",
   "summary": {
-    "totalCheckpoints": 408,
-    "coveredCheckpoints": 393,
+    "totalCheckpoints": 415,
+    "coveredCheckpoints": 400,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 3,
     "percent": 100,
-    "totalJourneys": 47,
-    "activeJourneys": 46
+    "totalJourneys": 48,
+    "activeJourneys": 47
   },
   "journeys": [
     {
@@ -425,7 +425,8 @@
       "spec": "08-chat-file-upload.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/upload-menu.tsx",
-        "hooks/use-chat-file-upload.ts"
+        "hooks/use-chat-file-upload.ts",
+        "hooks/use-show-attachment.ts"
       ],
       "checkpoints": [
         {
@@ -2608,6 +2609,58 @@
         {
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-upload-camera-and-image-display",
+      "name": "Chat Upload — Camera Option & Image Display",
+      "spec": "46-chat-upload-camera-and-image-display.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form/upload-menu.tsx",
+        "components/chat-input-form/camera-capture-dialog.tsx",
+        "components/chat-input-form.tsx",
+        "components/chat/chat-messages/image-message.tsx",
+        "components/chat/chat-messages/user-message-bubble.tsx",
+        "features/image-previews/image-previews-slice.ts",
+        "hooks/use-show-attachment.ts",
+        "hooks/use-is-mobile-os.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "cam-01",
+          "description": "Upload menu shows both 'Upload File' and 'Camera' items when file attachments are enabled on the mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cam-02",
+          "description": "Disabling the 'Allow file attachments in chat' toggle hides the + (Attach file) button entirely",
+          "status": "covered"
+        },
+        {
+          "id": "cam-03",
+          "description": "Hidden native camera input element is present in the DOM with accept='image/*' and capture='environment' (mobile-OS branch)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-04",
+          "description": "Clicking 'Camera' from the upload menu opens the 'Take a photo' dialog with a live video preview ([data-testid='camera-video']) and a Capture button; Retake/Use Photo are not shown yet (Chromium-only: requires fake media stream)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-05",
+          "description": "Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename",
+          "status": "covered"
+        },
+        {
+          "id": "cam-06",
+          "description": "Sending a message with an image attachment renders the image as an <img> element with cursor:pointer in the sent message bubble (not a FileCard icon)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-07",
+          "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
           "status": "covered"
         }
       ]
