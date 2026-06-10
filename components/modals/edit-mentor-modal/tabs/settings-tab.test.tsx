@@ -217,9 +217,22 @@ vi.mock('@/components/ui/tooltip', () => ({
   ),
 }));
 
+// Mutable RBAC switch shared by the config + withPermissions mocks so tests
+// can flip field-level permission gating on per-case. Hoisted so it exists
+// before the (hoisted) vi.mock factories below run.
+const rbacState = vi.hoisted(() => ({ enabled: false }));
+
+// Mirror the essential WithFormPermissions behaviour: a present permission
+// entry's `write` flag is authoritative regardless of the RBAC config flag, so
+// an explicit `write:false` always disables the control. Fields the map omits
+// stay enabled here (matching the previous passthrough mock) so object-level
+// Save/Delete gating is unaffected.
 vi.mock('@/hoc/withPermissions', () => ({
-  default: ({ children }: any) =>
-    children({ disabled: false, canDelete: true }),
+  default: ({ name, permissions, children }: any) => {
+    const entry = permissions?.[name];
+    const disabled = entry ? entry.write !== true : false;
+    return children({ disabled, canDelete: true });
+  },
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -231,7 +244,7 @@ vi.mock('@/lib/config', () => ({
     mainTenantKey: () => 'main',
     iblTemplateMentor: () => 'ai-mentor',
     environment: () => 'test',
-    enableRBAC: () => false,
+    enableRBAC: () => rbacState.enabled,
   },
 }));
 
@@ -282,6 +295,7 @@ describe('SettingsTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+    rbacState.enabled = false;
 
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
@@ -1575,6 +1589,160 @@ describe('SettingsTab', () => {
       });
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  // ==========================================================================
+  // RBAC field-level permissions
+  //
+  // When RBAC is enabled, fields the user can only READ must be (1) gated in
+  // the UI (the control is disabled) and (2) omitted from the PUT payload so
+  // the endpoint doesn't reject the save with
+  // "No permission to write field: <name>".
+  // ==========================================================================
+  describe('RBAC field permissions', () => {
+    const withFieldPerms = (overrides: Record<string, any>) => ({
+      ...defaultMentorSettings,
+      permissions: {
+        field: {
+          ...defaultMentorSettings.permissions.field,
+          ...overrides,
+        },
+      },
+    });
+
+    it('disables the Advanced Sandbox toggle when enable_claw is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ enable_claw: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable advanced sandbox')).toBeDisabled();
+    });
+
+    it('disables the Memory toggle when enable_memory_component is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          enable_memory_component: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Remember past conversations'),
+      ).toBeDisabled();
+    });
+
+    it('disables the Allow Copies toggle when forkable is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ forkable: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Allow other admins to clone this agent'),
+      ).toBeDisabled();
+    });
+
+    it('keeps the Advanced Sandbox toggle enabled when enable_claw is writable', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ enable_claw: { read: true, write: true } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable advanced sandbox'),
+      ).not.toBeDisabled();
+    });
+
+    it('omits read-only fields from the PUT payload on Save', async () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          mentor_visibility: { read: true, write: false },
+          enable_claw: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      expect(formData).not.toHaveProperty('enable_claw');
+      // Writable fields are still sent.
+      expect(formData).toHaveProperty('mentor_name', 'Test Mentor');
+      expect(formData).toHaveProperty('allow_anonymous');
+    });
+
+    it('keeps writable fields in the PUT payload when RBAC is enabled', async () => {
+      rbacState.enabled = true;
+      // Default fixture marks mentor_visibility as writable.
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).toHaveProperty(
+        'mentor_visibility',
+        'viewable_by_anyone',
+      );
+    });
+
+    it('strips an explicit read-only field from the payload even when the RBAC config flag is off', async () => {
+      // The endpoint can return field permissions independently of the
+      // NEXT_PUBLIC_ENABLE_RBAC flag. WithFormPermissions still disables a
+      // write:false control in that case, so the payload must omit it too —
+      // otherwise the save fails with "No permission to write field: ...".
+      // rbacState.enabled stays false (reset in beforeEach).
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({
+          mentor_visibility: { read: true, write: false },
+        }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      // The "Who Can View?" select (mentor_visibility) is the first select and
+      // is disabled even with the RBAC flag off.
+      expect(screen.getAllByTestId('select-root')[0]).toHaveAttribute(
+        'data-disabled',
+        'true',
+      );
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+
+      const formData = mockEditMentor.mock.calls[0][0].formData;
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      // Writable fields are still sent.
+      expect(formData).toHaveProperty('mentor_name', 'Test Mentor');
     });
   });
 });
