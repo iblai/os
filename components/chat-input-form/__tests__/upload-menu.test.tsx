@@ -3,12 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UploadMenu } from '../upload-menu';
 import * as useShowAttachmentModule from '@/hooks/use-show-attachment';
-import * as useIsMobileOSModule from '@/hooks/use-is-mobile-os';
-import * as useCameraSupportedModule from '@/hooks/use-camera-supported';
 
 vi.mock('@/hooks/use-show-attachment');
-vi.mock('@/hooks/use-is-mobile-os');
-vi.mock('@/hooks/use-camera-supported');
 
 describe('UploadMenu', () => {
   const mockOnFileInputTrigger = vi.fn();
@@ -17,18 +13,10 @@ describe('UploadMenu', () => {
     useShowAttachmentModule,
     'useShowAttachment',
   );
-  const mockUseIsMobileOS = vi.spyOn(useIsMobileOSModule, 'useIsMobileOS');
-  const mockUseCameraSupported = vi.spyOn(
-    useCameraSupportedModule,
-    'useCameraSupported',
-  );
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseShowAttachment.mockReturnValue(true);
-    // Default to mobile so the "Camera" item is present for the shared tests.
-    mockUseIsMobileOS.mockReturnValue(true);
-    mockUseCameraSupported.mockReturnValue(false);
   });
 
   describe('visibility based on useShowAttachment', () => {
@@ -306,7 +294,7 @@ describe('UploadMenu', () => {
         expect(screen.getByText('Upload File')).toBeInTheDocument();
       });
 
-      // Camera is also available on mobile
+      // Camera shows whenever the upload menu does
       expect(screen.getByText('Camera')).toBeInTheDocument();
 
       // These options should NOT be present (they're commented out)
@@ -318,8 +306,7 @@ describe('UploadMenu', () => {
   });
 
   describe('camera menu item', () => {
-    it('should display "Camera" menu item below "Upload File" on mobile', async () => {
-      mockUseIsMobileOS.mockReturnValue(true);
+    it('should display "Camera" menu item below "Upload File"', async () => {
       const user = userEvent.setup();
       render(
         <UploadMenu
@@ -349,68 +336,6 @@ describe('UploadMenu', () => {
     });
 
     it('should call onCameraTrigger when "Camera" is clicked', async () => {
-      mockUseIsMobileOS.mockReturnValue(true);
-      const user = userEvent.setup();
-      render(
-        <UploadMenu
-          onFileInputTrigger={mockOnFileInputTrigger}
-          onCameraTrigger={mockOnCameraTrigger}
-        />,
-      );
-
-      const button = screen.getByRole('button');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Camera')).toBeInTheDocument();
-      });
-
-      const cameraItem = screen.getByText('Camera');
-      await user.click(cameraItem);
-
-      expect(mockOnCameraTrigger).toHaveBeenCalledTimes(1);
-      expect(mockOnFileInputTrigger).not.toHaveBeenCalled();
-    });
-
-    it('should not render "Camera" when useShowAttachment returns false', () => {
-      mockUseShowAttachment.mockReturnValue(false);
-
-      render(
-        <UploadMenu
-          onFileInputTrigger={mockOnFileInputTrigger}
-          onCameraTrigger={mockOnCameraTrigger}
-        />,
-      );
-
-      expect(screen.queryByText('Camera')).not.toBeInTheDocument();
-    });
-
-    it('should NOT render "Camera" on desktop when getUserMedia is unsupported', async () => {
-      mockUseIsMobileOS.mockReturnValue(false);
-      mockUseCameraSupported.mockReturnValue(false);
-      const user = userEvent.setup();
-      render(
-        <UploadMenu
-          onFileInputTrigger={mockOnFileInputTrigger}
-          onCameraTrigger={mockOnCameraTrigger}
-        />,
-      );
-
-      const button = screen.getByRole('button');
-      await user.click(button);
-
-      // "Upload File" still renders on desktop
-      await waitFor(() => {
-        expect(screen.getByText('Upload File')).toBeInTheDocument();
-      });
-
-      // "Camera" must be absent when neither mobile nor camera-supported
-      expect(screen.queryByText('Camera')).not.toBeInTheDocument();
-    });
-
-    it('should render "Camera" on desktop when getUserMedia is supported', async () => {
-      mockUseIsMobileOS.mockReturnValue(false);
-      mockUseCameraSupported.mockReturnValue(true);
       const user = userEvent.setup();
       render(
         <UploadMenu
@@ -427,13 +352,14 @@ describe('UploadMenu', () => {
       });
 
       await user.click(screen.getByText('Camera'));
+
       expect(mockOnCameraTrigger).toHaveBeenCalledTimes(1);
+      expect(mockOnFileInputTrigger).not.toHaveBeenCalled();
     });
 
-    it('should render "Camera" on mobile even without getUserMedia support', async () => {
-      mockUseIsMobileOS.mockReturnValue(true);
-      mockUseCameraSupported.mockReturnValue(false);
-      const user = userEvent.setup();
+    it('should not render "Camera" when useShowAttachment returns false', () => {
+      mockUseShowAttachment.mockReturnValue(false);
+
       render(
         <UploadMenu
           onFileInputTrigger={mockOnFileInputTrigger}
@@ -441,12 +367,7 @@ describe('UploadMenu', () => {
         />,
       );
 
-      const button = screen.getByRole('button');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(screen.getByText('Camera')).toBeInTheDocument();
-      });
+      expect(screen.queryByText('Camera')).not.toBeInTheDocument();
     });
   });
 
