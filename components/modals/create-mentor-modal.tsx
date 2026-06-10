@@ -19,9 +19,12 @@ export function CreateMentorModal({
   onClose,
   initialValues,
 }: CreateMentorModalProps) {
+  const contentClassName =
+    'mx-auto max-h-[85vh] w-full max-w-5xl overflow-y-auto';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="mx-auto max-h-[85vh] w-full max-w-5xl overflow-y-auto">
+      <DialogContent className={contentClassName}>
         <CreateMentorForm variant="dialog" initialValues={initialValues} />
       </DialogContent>
     </Dialog>
