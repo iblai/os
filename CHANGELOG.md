@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.74.1](https://github.com/iblai/os/pull/235)
+
 ## [0.74.0](https://github.com/iblai/os/compare/v0.73.8...v0.74.0) (2026-06-09)
 
 ### Features
