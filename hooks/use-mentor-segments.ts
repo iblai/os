@@ -232,12 +232,16 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     value: MODALS.EDIT_MENTOR.tabs.tasks,
     label: 'Tasks',
     icon: CalendarClock,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    // Platform-admin-only until the backend exposes an RBAC resource for
+    // periodic agents. No `rbacResource` set — the userTypes filter alone
+    // gates visibility (mirroring Sandbox / Access).
+    userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,

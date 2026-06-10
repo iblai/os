@@ -36,6 +36,7 @@ const TAB_CATEGORY: Record<
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
+  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
   Tools: 'Configurations',
   MCP: 'Integrations',
