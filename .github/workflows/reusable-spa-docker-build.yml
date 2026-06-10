@@ -44,7 +44,7 @@ jobs:
         with:
           repository: ${{ inputs.source_repo }}
           ref: ${{ inputs.source_ref }}
-          token: ${{ secrets.GIT_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN || github.token }}
           fetch-depth: 1
 
       - name: Configure AWS credentials
