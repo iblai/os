@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-10 | 415 checkpoints (400 covered, 3 not-reproducible in default env, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-10 | 419 checkpoints (400 covered, 7 not-reproducible in default env, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -115,7 +115,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (8 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (9 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -127,6 +127,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Enhanced RAG toggle is visible with correct label and defaults to OFF
 - [x] Enhanced RAG tooltip contains wording about multiple search queries
 - [x] Enhanced RAG toggle persists ON and OFF across save/reopen cycles
+- [ ] _(not-reproducible — RBAC off in default env)_ Read-only settings fields (e.g. `mentor_visibility`) are gated in the UI and omitted from the settings PUT payload when the user lacks write access — unit-covered in `settings-tab.test.tsx` and `hoc/utils/__tests__/index.test.ts`
 
 ---
 
@@ -397,7 +398,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 24: Mentor Memory Tab (5 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (6 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -406,6 +407,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
 - [x] CP-24.4: Admin manages memory categories (create, rename, delete)
 - [x] CP-24.5: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
+- [ ] _(not-reproducible — RBAC off in default env)_ Memory toggle (`enable_memory_component`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
 
 ---
 
@@ -589,7 +591,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 36: Copy Mentor (10 checkpoints) — `journeys/36-copy-mentor.spec.ts`
+## Journey 36: Copy Mentor (11 checkpoints) — `journeys/36-copy-mentor.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx`
 
@@ -603,6 +605,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Mentor copied with training data has datasets on the copy
 - [x] Mentor copied without training data has no datasets on the copy
 - [x] Mentor can be copied to a different tenant _(env-gated: requires user with multiple admin tenants)_
+- [ ] _(not-reproducible — RBAC off in default env)_ Allow Copies toggle (`forkable`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
 
 ---
 
@@ -711,7 +714,7 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (15 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 44: CLAW Advanced Sandbox (16 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
@@ -730,6 +733,7 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
 - [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
 - [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
+- [ ] _(not-reproducible — RBAC off in default env)_ Advanced Sandbox toggle (`enable_claw`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
 
 ---
 

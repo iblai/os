@@ -13,7 +13,7 @@ import {
 import { config } from '@/lib/config';
 import { usePathname } from 'next/navigation';
 
-interface CreateMentorForm {
+export interface CreateMentorFormValues {
   name: string;
   description: string;
   category: number | null;
@@ -26,7 +26,7 @@ interface CreateMentorForm {
   mentorVisibility: string;
 }
 
-const defaultCreateMentor: CreateMentorForm = {
+const defaultCreateMentor: CreateMentorFormValues = {
   name: '',
   description: '',
   category: null,
@@ -39,7 +39,10 @@ const defaultCreateMentor: CreateMentorForm = {
   mentorVisibility: MENTOR_VISIBILITY[1].value,
 };
 
-export function useCreateMentor() {
+export function useCreateMentor(
+  initialValues?: Partial<CreateMentorFormValues>,
+  onCreated?: () => void,
+) {
   const username = useUsername();
   const { tenant: tenantKey = '' } = useTenantKey();
   const { navigateToMentor } = useNavigate();
@@ -51,7 +54,7 @@ export function useCreateMentor() {
     useCreateMentorMutation();
 
   const form = useForm({
-    defaultValues: defaultCreateMentor,
+    defaultValues: { ...defaultCreateMentor, ...initialValues },
     onSubmit: async ({ value }) => {
       try {
         const mentor = await createMentorWithSettings({
@@ -85,6 +88,7 @@ export function useCreateMentor() {
             isCreateMentorPage ? (tenantKey ?? undefined) : undefined,
           );
         }
+        onCreated?.();
       } catch (error: any) {
         const errorMessage = error?.error?.error || 'Failed to create agent';
         toast.error(errorMessage);

@@ -7,9 +7,13 @@ import { markdownToPlainText } from '@iblai/iblai-js/web-utils';
 export const ToastErrorMessage = ({
   message,
   supportEmail,
+  supportPhone,
+  useSupportPhone = false,
 }: {
   message: string;
   supportEmail: string;
+  supportPhone?: string;
+  useSupportPhone?: boolean;
 }) => {
   const params = useParams<TenantKeyMentorIdParams>();
   const tenantKey = params?.tenantKey;
@@ -34,6 +38,19 @@ export const ToastErrorMessage = ({
           contact us
         </a>
         .
+        {useSupportPhone && supportPhone ? (
+          <>
+            {' '}
+            If you prefer, text us at{' '}
+            <a
+              className="toast-wrapped-contact-tag text-blue-600 hover:text-blue-800"
+              href={`tel:${supportPhone}`}
+            >
+              {supportPhone}
+            </a>
+            .
+          </>
+        ) : null}
       </span>
     </div>
   );
