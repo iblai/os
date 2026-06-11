@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef } from 'react';
 import { StopStreamingButton } from '../stop-streaming-button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
@@ -73,20 +72,28 @@ describe('StopStreamingButton', () => {
     expect(tooltip).toHaveTextContent('Stop Streaming');
   });
 
-  // Issue #576 — the tooltip should NOT flash when focus lands on this
-  // button as a side-effect (submit → stop button swap, programmatic
-  // .focus()). Keyboard Tab navigation still opens the tooltip normally.
-  it('does not show tooltip when focus is programmatic (issue #576)', () => {
+  // Issue #1904 — clicking Stop must not pull focus off the chat textarea.
+  it('prevents default on mousedown so it does not steal focus', () => {
     renderButton({ stopGenerating: vi.fn() });
 
     const button = screen.getByRole('button', { name: 'Stop streaming' });
-    button.focus();
-    expect(button).toHaveFocus();
-
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    // fireEvent returns false when defaultPrevented was set
+    expect(fireEvent.mouseDown(button)).toBe(false);
   });
 
-  it('still shows tooltip when focus arrives via keyboard Tab (issue #576)', async () => {
+  it('still fires stopGenerating on click despite preventing focus theft', () => {
+    const stopGenerating = vi.fn();
+    renderButton({ stopGenerating });
+
+    const button = screen.getByRole('button', { name: 'Stop streaming' });
+    expect(fireEvent.mouseDown(button)).toBe(false);
+    fireEvent.click(button);
+    expect(stopGenerating).toHaveBeenCalledTimes(1);
+  });
+
+  // Issue #1904 — the button is a plain component with no onFocus guard;
+  // keyboard Tab navigation opens the tooltip as expected.
+  it('shows tooltip when focus arrives via keyboard Tab', async () => {
     const user = userEvent.setup();
     renderButton({ stopGenerating: vi.fn() });
 
@@ -96,56 +103,5 @@ describe('StopStreamingButton', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Stop Streaming');
-  });
-
-  // Issue #576 — exercise the preventDefault branch by mocking
-  // `matches(':focus-visible')` to false (simulating non-keyboard focus in
-  // a real browser). JSDOM otherwise treats any focused element as
-  // focus-visible, leaving the suppression branch unreachable in tests.
-  it('exercises the preventDefault branch on non-focus-visible focus (issue #576)', async () => {
-    renderButton({ stopGenerating: vi.fn() });
-    const button = screen.getByRole('button', { name: 'Stop streaming' });
-
-    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
-      selector === ':focus-visible'
-        ? false
-        : Element.prototype.matches.call(button, selector),
-    );
-
-    button.focus();
-    expect(button).toHaveFocus();
-
-    // Give Radix's delayed open a chance to run; it should stay suppressed.
-    await new Promise((r) => setTimeout(r, 50));
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-  });
-
-  it('skips the preventDefault branch when :focus-visible is matched (issue #576)', () => {
-    renderButton({ stopGenerating: vi.fn() });
-    const button = screen.getByRole('button', { name: 'Stop streaming' });
-
-    vi.spyOn(button, 'matches').mockImplementation((selector: string) =>
-      selector === ':focus-visible'
-        ? true
-        : Element.prototype.matches.call(button, selector),
-    );
-
-    button.focus();
-    expect(button).toHaveFocus();
-  });
-
-  it('forwards ref to the button element', () => {
-    const ref = createRef<HTMLButtonElement>();
-
-    render(
-      <TooltipProvider>
-        <StopStreamingButton ref={ref} stopGenerating={vi.fn()} />
-      </TooltipProvider>,
-    );
-
-    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
-    expect(ref.current).toBe(
-      screen.getByRole('button', { name: 'Stop streaming' }),
-    );
   });
 });

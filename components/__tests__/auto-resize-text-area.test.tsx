@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -821,6 +822,77 @@ describe('AutoResizeTextarea', () => {
     });
   });
 
+  describe('focus on mount', () => {
+    it('should focus the textarea on mount when enabled', () => {
+      renderWithRedux(
+        <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).toBe(textarea);
+    });
+
+    it('should focus on mount when allowAnonymousAccess is true without a session', () => {
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId={null}
+          allowAnonymousAccess={true}
+        />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).toBe(textarea);
+    });
+
+    it('should NOT focus on mount when disabled prop is true', () => {
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId="session-123"
+          disabled={true}
+        />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).not.toBe(textarea);
+    });
+
+    it('should NOT focus on mount when there is no session and no anonymous access', () => {
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId={null}
+          allowAnonymousAccess={false}
+        />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).not.toBe(textarea);
+    });
+
+    it('should NOT focus on mount in preview mode without anonymous access', () => {
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId="session-123"
+          isPreviewMode={true}
+          allowAnonymousAccess={false}
+        />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).not.toBe(textarea);
+    });
+
+    it('should NOT focus on mount in embed mode even when enabled', () => {
+      renderWithRedux(
+        <AutoResizeTextarea
+          {...defaultProps}
+          sessionId="session-123"
+          embedMode={true}
+        />,
+      );
+      const textarea = screen.getByRole('textbox');
+      expect(document.activeElement).not.toBe(textarea);
+    });
+  });
+
   describe('component ref', () => {
     it('should forward ref to textarea element', () => {
       // Note: The component uses an internal ref, not forwardRef
@@ -828,6 +900,29 @@ describe('AutoResizeTextarea', () => {
       renderWithRedux(<AutoResizeTextarea {...defaultProps} />);
       const textarea = screen.getByRole('textbox');
       expect(textarea.tagName).toBe('TEXTAREA');
+    });
+  });
+
+  describe('null textarea ref guards', () => {
+    it('should not throw when the textarea ref is null on mount/resize', () => {
+      // Force the internal textareaRef to stay null so both early-return
+      // guards (adjustHeight and the ResizeObserver effect) execute. The ref
+      // ignores writes to `current` so React's mount assignment can't replace
+      // the null value before the effects run.
+      const nullRef = Object.defineProperty({}, 'current', {
+        get: () => null,
+        set: () => {},
+        configurable: true,
+      }) as React.RefObject<HTMLTextAreaElement>;
+      const useRefSpy = vi.spyOn(React, 'useRef').mockReturnValue(nullRef);
+
+      expect(() => {
+        renderWithRedux(
+          <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+        );
+      }).not.toThrow();
+
+      useRefSpy.mockRestore();
     });
   });
 });
