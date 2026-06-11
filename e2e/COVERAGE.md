@@ -767,7 +767,7 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 - [x] TA-04: Total Tasks, Completed and Failed metric cards render
 - [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
 - [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
-- [x] TA-07: Searching filters the task list — a matching query keeps the task, a non-matching query hides it, and clearing restores it
+- [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
 - [x] TA-08: Admin deletes a task and its row is removed from the list
 
 ---

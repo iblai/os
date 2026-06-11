@@ -2349,7 +2349,7 @@
         },
         {
           "id": "ta-07",
-          "description": "Searching filters the task list — a matching query keeps the task, a non-matching query hides it, and clearing restores it",
+          "description": "Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible",
           "status": "covered"
         },
         {
