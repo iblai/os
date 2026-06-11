@@ -22,6 +22,8 @@ export class SettingsTab {
   readonly memoryToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
+  readonly promptCachingToggle: Locator;
+  readonly promptCachingTooltipTrigger: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -87,6 +89,13 @@ export class SettingsTab {
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about improve document retrieval',
+    });
+    // Capabilities sub-tab. Label: "Enable prompt caching".
+    this.promptCachingToggle = dialog.getByRole('switch', {
+      name: /enable prompt caching/i,
+    });
+    this.promptCachingTooltipTrigger = dialog.getByRole('button', {
+      name: 'More info about enable prompt caching',
     });
   }
 
@@ -374,6 +383,45 @@ export class SettingsTab {
     await expect(
       this.page.getByText(/agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
+  }
+
+  async isPromptCachingEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.promptCachingToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Prompt Caching toggle to the desired state and saves the form.
+   * Waits for the success toast before returning so callers can rely on the
+   * persisted state immediately (e.g. close → reopen → assert).
+   */
+  async setPromptCaching(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.promptCachingToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked !== target) {
+      await this.promptCachingToggle.click();
+      await expect(this.promptCachingToggle).toHaveAttribute(
+        'aria-checked',
+        String(target),
+        { timeout: 10_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Buffer for RTK Query cache invalidation: the mutation response triggers
+    // an invalidate tag, but the refetch is async. 2 s is enough for the
+    // follow-on GET to land and React to re-render before close+reopen.
+    await this.page.waitForTimeout(2_000);
   }
 
   async deleteMentor(): Promise<void> {

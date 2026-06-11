@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-22",
+  "lastUpdated": "2026-06-08",
   "summary": {
-    "totalCheckpoints": 399,
-    "coveredCheckpoints": 387,
+    "totalCheckpoints": 402,
+    "coveredCheckpoints": 390,
     "deprecatedCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 47,
@@ -1518,12 +1518,12 @@
         },
         {
           "id": "ov-11",
-          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to ≤100px",
+          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to \u2264100px",
           "status": "covered"
         },
         {
           "id": "ov-12",
-          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
+          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays \u2264150px",
           "status": "covered"
         }
       ]
@@ -2575,7 +2575,32 @@
         },
         {
           "id": "upi-05",
-          "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "description": "URL-encoded prompt (%20 \u2192 space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "prompt-caching-toggle",
+      "name": "Prompt Caching Toggle",
+      "spec": "46-prompt-caching-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pc-01",
+          "description": "Fresh mentor: Settings \u2192 Capabilities \u2014 \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "status": "covered"
+        },
+        {
+          "id": "pc-02",
+          "description": "Toggle ON \u2192 Save: switch reflects ON, \"Agent updated successfully\" toast appears, and switch stays ON in the same open dialog after save. Persistence across close/reopen is not asserted (enable_prompt_caching not yet in SDK type).",
+          "status": "covered"
+        },
+        {
+          "id": "pc-03",
+          "description": "Toggle ON \u2192 click OFF \u2192 aria-checked=false immediately in UI \u2192 Save \u2192 success toast (verifies toggle interaction and API round-trip; persistence of false via multipart is a pre-existing backend limitation shared with enable_multi_query_rag)",
           "status": "covered"
         }
       ]

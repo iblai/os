@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-05 | 400 checkpoints (388 active, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-08 | 403 checkpoints (391 active, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -775,3 +775,15 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 ---
 
 > **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
+
+---
+
+## Journey: Prompt Caching Toggle (3 checkpoints) — `journeys/46-prompt-caching-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+
+Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
+
+- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
+- [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
+- [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
