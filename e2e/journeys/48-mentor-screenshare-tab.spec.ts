@@ -3,7 +3,7 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 /**
- * Journey 47 — Mentor Screen Share Tab.
+ * Journey 48 — Mentor Screen Share Tab.
  *
  * The Screen Share top-level tab is rendered by the SDK's
  * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`). It's
@@ -22,7 +22,7 @@ import { waitForPageReady } from '../utils/resilient';
  * No CSS class selectors anywhere — every locator survives style
  * refactors on either side.
  */
-test.describe('Journey 47: Mentor Screen Share Tab', () => {
+test.describe('Journey 48: Mentor Screen Share Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);

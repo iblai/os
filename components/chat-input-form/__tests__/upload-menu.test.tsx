@@ -8,6 +8,7 @@ vi.mock('@/hooks/use-show-attachment');
 
 describe('UploadMenu', () => {
   const mockOnFileInputTrigger = vi.fn();
+  const mockOnCameraTrigger = vi.fn();
   const mockUseShowAttachment = vi.spyOn(
     useShowAttachmentModule,
     'useShowAttachment',
@@ -22,7 +23,12 @@ describe('UploadMenu', () => {
     it('should render when useShowAttachment returns true', () => {
       mockUseShowAttachment.mockReturnValue(true);
 
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
@@ -31,7 +37,10 @@ describe('UploadMenu', () => {
       mockUseShowAttachment.mockReturnValue(false);
 
       const { container } = render(
-        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />,
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -41,7 +50,12 @@ describe('UploadMenu', () => {
 
   describe('trigger button rendering', () => {
     it('should render trigger button with Plus icon', () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
@@ -52,14 +66,24 @@ describe('UploadMenu', () => {
     });
 
     it('should have screen reader text "Attach file"', () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       expect(screen.getByText('Attach file')).toBeInTheDocument();
       expect(screen.getByText('Attach file')).toHaveClass('sr-only');
     });
 
     it('should expose accessible name "Attach file" via aria-label', () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       expect(
         screen.getByRole('button', { name: 'Attach file' }),
@@ -67,7 +91,12 @@ describe('UploadMenu', () => {
     });
 
     it('should have correct styling classes on trigger button', () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       expect(button).toHaveClass('h-8');
@@ -79,7 +108,12 @@ describe('UploadMenu', () => {
   describe('dropdown menu interactions', () => {
     it('should open dropdown menu when trigger button is clicked', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -91,7 +125,12 @@ describe('UploadMenu', () => {
 
     it('should display "Upload File" menu item', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -104,7 +143,12 @@ describe('UploadMenu', () => {
 
     it('should call onFileInputTrigger when "Upload File" is clicked', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -121,7 +165,12 @@ describe('UploadMenu', () => {
 
     it('should close dropdown menu after menu item is clicked', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -141,7 +190,10 @@ describe('UploadMenu', () => {
       render(
         <div>
           <div data-testid="outside">Outside</div>
-          <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />
+          <UploadMenu
+            onFileInputTrigger={mockOnFileInputTrigger}
+            onCameraTrigger={mockOnCameraTrigger}
+          />
         </div>,
       );
 
@@ -162,7 +214,12 @@ describe('UploadMenu', () => {
 
     it('should open dropdown when trigger is clicked', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
 
@@ -183,7 +240,12 @@ describe('UploadMenu', () => {
   describe('menu item rendering', () => {
     it('should render menu item with upload icon', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -198,7 +260,12 @@ describe('UploadMenu', () => {
 
     it('should have correct styling on menu items', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -211,9 +278,14 @@ describe('UploadMenu', () => {
       });
     });
 
-    it('should only show Upload File option (other options are commented out)', async () => {
+    it('should only show Upload File and Camera options (other options are commented out)', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -221,6 +293,9 @@ describe('UploadMenu', () => {
       await waitFor(() => {
         expect(screen.getByText('Upload File')).toBeInTheDocument();
       });
+
+      // Camera shows whenever the upload menu does
+      expect(screen.getByText('Camera')).toBeInTheDocument();
 
       // These options should NOT be present (they're commented out)
       expect(screen.queryByText('Upload from phone')).not.toBeInTheDocument();
@@ -230,9 +305,80 @@ describe('UploadMenu', () => {
     });
   });
 
+  describe('camera menu item', () => {
+    it('should display "Camera" menu item below "Upload File"', async () => {
+      const user = userEvent.setup();
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText('Camera')).toBeInTheDocument();
+      });
+
+      // Ensure ordering: "Upload File" appears before "Camera"
+      const menuItems = screen.getAllByRole('menuitem');
+      const labels = menuItems.map((item) => item.textContent);
+      const uploadIndex = labels.findIndex((label) =>
+        label?.includes('Upload File'),
+      );
+      const cameraIndex = labels.findIndex((label) =>
+        label?.includes('Camera'),
+      );
+      expect(uploadIndex).toBeGreaterThanOrEqual(0);
+      expect(cameraIndex).toBeGreaterThan(uploadIndex);
+    });
+
+    it('should call onCameraTrigger when "Camera" is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
+
+      const button = screen.getByRole('button');
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByText('Camera')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Camera'));
+
+      expect(mockOnCameraTrigger).toHaveBeenCalledTimes(1);
+      expect(mockOnFileInputTrigger).not.toHaveBeenCalled();
+    });
+
+    it('should not render "Camera" when useShowAttachment returns false', () => {
+      mockUseShowAttachment.mockReturnValue(false);
+
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
+
+      expect(screen.queryByText('Camera')).not.toBeInTheDocument();
+    });
+  });
+
   describe('accessibility', () => {
     it('should be keyboard accessible', async () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       button.focus();
@@ -241,7 +387,12 @@ describe('UploadMenu', () => {
     });
 
     it('should open dropdown with Enter key', async () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       button.focus();
@@ -254,7 +405,12 @@ describe('UploadMenu', () => {
     });
 
     it('should open dropdown with Space key', async () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       button.focus();
@@ -268,7 +424,12 @@ describe('UploadMenu', () => {
 
     it('should have appropriate role attributes', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -284,7 +445,12 @@ describe('UploadMenu', () => {
 
   describe('edge cases', () => {
     it('should handle rapid clicks on trigger button', async () => {
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
 
@@ -299,7 +465,12 @@ describe('UploadMenu', () => {
 
     it('should handle null/undefined onFileInputTrigger gracefully', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={undefined as any} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={undefined as any}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);
@@ -311,7 +482,10 @@ describe('UploadMenu', () => {
 
     it('should handle being rendered and unmounted multiple times', () => {
       const { unmount } = render(
-        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />,
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
       );
 
       expect(screen.getByRole('button')).toBeInTheDocument();
@@ -320,7 +494,12 @@ describe('UploadMenu', () => {
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
       // Re-render with a new render call
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
 
@@ -330,7 +509,10 @@ describe('UploadMenu', () => {
       const mockOnFileInputTrigger2 = vi.fn();
 
       const { rerender } = render(
-        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger1} />,
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger1}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
       );
 
       const button = screen.getByRole('button');
@@ -346,7 +528,12 @@ describe('UploadMenu', () => {
       expect(mockOnFileInputTrigger1).toHaveBeenCalledTimes(1);
       expect(mockOnFileInputTrigger2).not.toHaveBeenCalled();
 
-      rerender(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger2} />);
+      rerender(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger2}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       await user.click(button);
 
@@ -367,13 +554,21 @@ describe('UploadMenu', () => {
       mockUseShowAttachment.mockReturnValue(true);
 
       const { rerender, container } = render(
-        <UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />,
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
       );
 
       expect(screen.getByRole('button')).toBeInTheDocument();
 
       mockUseShowAttachment.mockReturnValue(false);
-      rerender(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      rerender(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       expect(container.firstChild).toBeNull();
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -383,7 +578,12 @@ describe('UploadMenu', () => {
   describe('z-index and positioning', () => {
     it('should have z-50 on dropdown content for proper layering', async () => {
       const user = userEvent.setup();
-      render(<UploadMenu onFileInputTrigger={mockOnFileInputTrigger} />);
+      render(
+        <UploadMenu
+          onFileInputTrigger={mockOnFileInputTrigger}
+          onCameraTrigger={mockOnCameraTrigger}
+        />,
+      );
 
       const button = screen.getByRole('button');
       await user.click(button);

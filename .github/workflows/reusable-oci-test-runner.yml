@@ -10,103 +10,103 @@ on:
   workflow_call:
     inputs:
       domain-number:
-        description: "Domain number to test against (1-6)"
+        description: 'Domain number to test against (1-6)'
         required: true
         type: string
       app-type:
-        description: "App type being tested (skills, mentor, auth)"
+        description: 'App type being tested (skills, mentor, auth)'
         required: true
         type: string
       playwright-image:
-        description: "Full Playwright Docker image URI (e.g., iad.ocir.io/idcwyla5j5cr/ibl-mentor-playwright:pr-42-abc1234)"
+        description: 'Full Playwright Docker image URI (e.g., iad.ocir.io/idcwyla5j5cr/ibl-mentor-playwright:pr-42-abc1234)'
         required: true
         type: string
       max-wait:
-        description: "Maximum wait time for tests in seconds"
+        description: 'Maximum wait time for tests in seconds'
         required: false
         type: number
         default: 2400
       total-shards:
-        description: "Total number of shards: 1=single chrome, 4=main/flaky (4 browsers x 1 shard each), 8=(4 browsers x 2), 16=(4 browsers x 4)"
+        description: 'Total number of shards: 1=single chrome, 4=main/flaky (4 browsers x 1 shard each), 8=(4 browsers x 2), 16=(4 browsers x 4)'
         required: false
         type: number
         default: 1
       run-type:
-        description: "Type of test run: main (full suite) or flaky-iter-N (flaky iteration)"
+        description: 'Type of test run: main (full suite) or flaky-iter-N (flaky iteration)'
         required: false
         type: string
-        default: "main"
+        default: 'main'
       browsers:
-        description: "Comma-separated list of browsers to run (e.g., chrome,firefox,safari,edge). Defaults to all browsers."
+        description: 'Comma-separated list of browsers to run (e.g., chrome,firefox,safari,edge). Defaults to all browsers.'
         required: false
         type: string
-        default: "chrome,firefox,safari,edge"
+        default: 'chrome,firefox,safari,edge'
       pr-number:
-        description: "Pull request number for test result caching (enables test resumption)"
+        description: 'Pull request number for test result caching (enables test resumption)'
         required: false
         type: string
-        default: ""
+        default: ''
       test-files:
-        description: "Comma-separated test files for selective execution (test-file-level resumption). Empty = full suite."
+        description: 'Comma-separated test files for selective execution (test-file-level resumption). Empty = full suite.'
         required: false
         type: string
-        default: ""
+        default: ''
       workers:
-        description: "Number of Playwright workers. Empty = use config default (1 in CI)."
+        description: 'Number of Playwright workers. Empty = use config default (1 in CI).'
         required: false
         type: string
-        default: ""
+        default: ''
       ec2-host:
-        description: "EC2 instance hostname or IP to SSH into. Leave empty to skip the ec2-ssh job."
+        description: 'EC2 instance hostname or IP to SSH into. Leave empty to skip the ec2-ssh job.'
         required: false
         type: string
-        default: ""
+        default: ''
       ec2-user:
-        description: "SSH username for the EC2 instance"
+        description: 'SSH username for the EC2 instance'
         required: false
         type: string
-        default: "ubuntu"
+        default: 'ubuntu'
       ec2-commands:
-        description: "Shell commands to execute on the EC2 instance"
+        description: 'Shell commands to execute on the EC2 instance'
         required: false
         type: string
         default: "echo 'Connected successfully'"
       ec2-ssh-key:
-        description: "SSH private key for EC2 access"
+        description: 'SSH private key for EC2 access'
         required: false
         type: string
-        default: ""
+        default: ''
       registry-type:
-        description: "Registry type (ecr or ocir)"
+        description: 'Registry type (ecr or ocir)'
         required: false
         type: string
-        default: "ocir"
+        default: 'ocir'
       runs-on:
-        description: "Runner label for workflow jobs"
+        description: 'Runner label for workflow jobs'
         required: false
         type: string
-        default: "ubuntu-latest"
+        default: 'ubuntu-latest'
     outputs:
       result:
-        description: "Test result (success, partial, timeout)"
+        description: 'Test result (success, partial, timeout)'
         value: ${{ jobs.run-tests.outputs.result }}
       passed:
-        description: "Number of passed shards"
+        description: 'Number of passed shards'
         value: ${{ jobs.run-tests.outputs.passed }}
       failed:
-        description: "Number of failed shards"
+        description: 'Number of failed shards'
         value: ${{ jobs.run-tests.outputs.failed }}
       total:
-        description: "Total number of shards launched"
+        description: 'Total number of shards launched'
         value: ${{ jobs.run-tests.outputs.total }}
       shards-per-browser:
-        description: "Number of shards per browser (for log URL construction)"
+        description: 'Number of shards per browser (for log URL construction)'
         value: ${{ jobs.run-tests.outputs.shards-per-browser }}
       log-urls:
-        description: "JSON array of log URLs with browser, shard, exit code info"
+        description: 'JSON array of log URLs with browser, shard, exit code info'
         value: ${{ jobs.run-tests.outputs.log-urls }}
       run-id:
-        description: "Unique run identifier for S3 paths"
+        description: 'Unique run identifier for S3 paths'
         value: ${{ jobs.run-tests.outputs.run-id }}
     secrets:
       ssh-private-key:

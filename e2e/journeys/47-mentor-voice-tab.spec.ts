@@ -3,7 +3,7 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 /**
- * Journey 46 — Mentor Voice Tab.
+ * Journey 47 — Mentor Voice Tab.
  *
  * The Voice tab is rendered by `AgentVoiceTab` from `@iblai/web-containers`.
  * All selectors flow through the SDK's official Playwright helpers
@@ -19,7 +19,7 @@ import { waitForPageReady } from '../utils/resilient';
  *                             LLM/TTS/STT providers, function-calling and
  *                             screen-share toggles).
  */
-test.describe('Journey 46: Mentor Voice Tab', () => {
+test.describe('Journey 47: Mentor Voice Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
