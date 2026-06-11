@@ -33,7 +33,7 @@ import {
   useCreateCallConfigurationMutation,
   useUpdateCallConfigurationMutation,
 } from '@iblai/iblai-js/data-layer';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 
 import {
   Select,
@@ -142,18 +142,6 @@ export function SettingsTab() {
   const mentorUuid: string | undefined =
     // @ts-ignore mentor_unique_id is on the API response but not the public type
     mentor?.mentor_unique_id ?? activeMentorId;
-
-  // Fetch the claw-config for this mentor. Returns null when no config exists
-  // (the data-layer normalises 404 → null) — that's how we know the mentor is
-  // not yet wired to a Claw instance. Only meaningful when the advanced sandbox
-  // is enabled, so skip the request entirely for mentors with it turned off
-  // (otherwise every modal open fires a 404-producing call-config request).
-  // @ts-ignore - enable_claw exists in API response but not in type
-  const isClawEnabled: boolean = mentor?.enable_claw ?? false;
-  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
-    { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
-  );
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
@@ -430,6 +418,26 @@ export function SettingsTab() {
       }
     },
   });
+
+  // Fetch the claw-config for this mentor. Returns null when no config exists
+  // (the data-layer normalises 404 → null) — that's how we know the mentor is
+  // not yet wired to a Claw instance. The request only makes sense once the
+  // advanced sandbox is on, so we gate it: skip entirely when the sandbox is
+  // off (otherwise every modal open fires a wasted 404-retry burst). We watch
+  // the LIVE form toggle (not just the saved value) so flipping it on fetches
+  // the config immediately, letting Save sync claw-config in the same click —
+  // even for a mentor that was previously wired but currently disabled.
+  // @ts-ignore - enable_claw exists in API response but not in type
+  const savedEnableClaw: boolean = mentor?.enable_claw ?? false;
+  const liveEnableClaw = useStore(
+    form.store,
+    (state) => (state as any).values.enable_claw,
+  );
+  const isClawEnabled = savedEnableClaw || Boolean(liveEnableClaw);
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
+  );
 
   return (
     <>

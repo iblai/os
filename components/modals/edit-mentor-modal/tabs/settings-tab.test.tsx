@@ -1497,10 +1497,44 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(mockGetClawMentorConfigQuery).toHaveBeenCalledWith(
+      expect(mockGetClawMentorConfigQuery).toHaveBeenLastCalledWith(
         { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
         expect.objectContaining({ skip: true }),
       );
+      // The request must never fire on open for a disabled mentor.
+      expect(mockGetClawMentorConfigQuery).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ skip: false }),
+      );
+    });
+
+    it('fetches claw-config as soon as the sandbox toggle is switched on', async () => {
+      // Live-value gating: opening a disabled mentor sends no claw-config
+      // request, but flipping the toggle on fetches the config immediately so
+      // Save can sync claw-config in the same click — even for a mentor that
+      // was wired before but is currently disabled.
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...settingsWithUuid, enable_claw: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      // Nothing requested while the sandbox is off.
+      expect(mockGetClawMentorConfigQuery).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ skip: false }),
+      );
+
+      // Flipping the toggle on fetches the config (skip becomes false).
+      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+
+      await waitFor(() => {
+        expect(mockGetClawMentorConfigQuery).toHaveBeenLastCalledWith(
+          { org: 'test-tenant', mentorUniqueId: 'mentor-uuid-123' },
+          expect.objectContaining({ skip: false }),
+        );
+      });
     });
 
     it('PATCHes claw-config when toggle changed AND claw-config exists', async () => {
