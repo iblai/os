@@ -235,6 +235,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
   // to prevent it from redirecting when the URL's mentorId changes during navigation.
   const isWorkflowPage = /\/workflows\//.test(pathname);
+  // The onboarding route is self-contained; keep MentorProvider from redirecting a
+  // brand-new admin (who has no mentors yet) off it to /create-mentor.
+  const isOnboardingPage = /^\/onboarding(\/|$)/.test(pathname);
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -258,14 +261,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToNoMentorsPage() {
+    if (isOnboardingPage) return;
     router.push(`/platform/${tenantKey}/explore`);
   }
 
   function redirectToCreateMentor() {
+    if (isOnboardingPage) return;
     router.push('/create-mentor');
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
+    if (isOnboardingPage) return;
     router.push(`/platform/${tenantKey}/${mentorId}`);
   }
 
