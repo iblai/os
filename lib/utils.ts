@@ -105,6 +105,7 @@ export async function redirectToAuthSpa(
     preserveTokenKey: 'edx_jwt_token',
     authRedirectProxy: '/api/auth-redirect',
     isNativeApp: () => isTauriApp(),
+    scheme: 'iblai-mentor',
   });
 }
 
@@ -1481,6 +1482,18 @@ export function getUserOS() {
     return 'Android';
   }
   return 'Unknown OS';
+}
+
+export function isMobileOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // iPadOS 13+ presents a desktop Safari UA; detect via a touch-capable Mac
+  const isIPadOS =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return (
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    isIPadOS
+  );
 }
 
 /**

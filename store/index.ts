@@ -28,6 +28,7 @@ import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { analyticsReducer } from '@/features/analytics/slice';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
+import imagePreviewsReducer from '@/features/image-previews/image-previews-slice';
 
 // Bridge: the data layer's `updateMemsearchConfig` mutation only invalidates
 // the MEMSEARCH_PLATFORM_CONFIG tag, but our app reads memsearch state via
@@ -64,6 +65,7 @@ export const store = configureStore({
     chatInput: chatInputSliceReducer,
     app: appSlice.reducer,
     rbac: rbacReducer,
+    imagePreviews: imagePreviewsReducer,
 
     [mentorsApiSlice.reducerPath]: mentorsApiSlice.reducer,
     [messagesApiSlice.reducerPath]: messagesApiSlice.reducer,

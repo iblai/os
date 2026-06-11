@@ -66,6 +66,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn } from '@/lib/utils';
 import WithFormPermissions from '@/hoc/withPermissions';
+import { pickWritableFields, type FieldPermissions } from '@/hoc/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -295,6 +296,20 @@ export function SettingsTab() {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
       }
 
+      // Drop any field the user only has read access to. Field-level RBAC
+      // permissions come from the settings endpoint; including a read-only
+      // field makes the PUT fail (e.g. "No permission to write field:
+      // mentor_visibility"). A few payload keys are gated under a differently
+      // named permission key, so map those explicitly.
+      // @ts-ignore - permissions exists on the API response but not the type
+      const fieldPermissions: FieldPermissions = mentor?.permissions?.field;
+      const writableValues = pickWritableFields(values, fieldPermissions, {
+        fieldNameMap: {
+          uploaded_profile_image: 'profile_image',
+          categories: 'metadata',
+        },
+      });
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -302,7 +317,7 @@ export function SettingsTab() {
           // @ts-ignore
           userId: username ?? '',
           formData: {
-            ...values,
+            ...writableValues,
           },
         }).unwrap();
 
@@ -1015,79 +1030,95 @@ export function SettingsTab() {
                   )}
                 </WithFormPermissions>
 
-                <form.Field name="enable_claw">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Enable advanced sandbox
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about enable advanced sandbox"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Sandbox mode for configuring agent settings,
-                                prompts, and skills.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Enable advanced sandbox"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
+                <WithFormPermissions
+                  name="enable_claw"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="enable_claw">
+                      {(field) => (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#646464]">
+                              Enable advanced sandbox
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about enable advanced sandbox"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>
+                                    Sandbox mode for configuring agent settings,
+                                    prompts, and skills.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Switch
+                            checked={field.state.value}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(checked)
+                            }
+                            disabled={isDisabled || disabled}
+                            aria-label="Enable advanced sandbox"
+                            aria-checked={field.state.value}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
+                </WithFormPermissions>
 
-                <form.Field name="enable_memory_component">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Remember past conversations
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about remember past conversations"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow this agent to remember and reference
-                                information from past conversations.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Remember past conversations"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
+                <WithFormPermissions
+                  name="enable_memory_component"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="enable_memory_component">
+                      {(field) => (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#646464]">
+                              Remember past conversations
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about remember past conversations"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>
+                                    Allow this agent to remember and reference
+                                    information from past conversations.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Switch
+                            checked={field.state.value}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(checked)
+                            }
+                            disabled={isDisabled || disabled}
+                            aria-label="Remember past conversations"
+                            aria-checked={field.state.value}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
+                </WithFormPermissions>
 
                 <form.Field name="show_reasoning">
                   {(field) => (
@@ -1175,42 +1206,50 @@ export function SettingsTab() {
                   )}
                 </WithFormPermissions>
 
-                <form.Field name="forkable">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Allow other admins to clone this agent
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about allow other admins to clone this agent"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow other admins to create a copy of this
-                                agent.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Allow other admins to clone this agent"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
+                <WithFormPermissions
+                  name="forkable"
+                  // @ts-ignore
+                  permissions={mentor?.permissions?.field}
+                >
+                  {({ disabled }) => (
+                    <form.Field name="forkable">
+                      {(field) => (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[#646464]">
+                              Allow other admins to clone this agent
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  type="button"
+                                  aria-label="More info about allow other admins to clone this agent"
+                                >
+                                  <Info className="h-4 w-4 text-gray-400" />
+                                </TooltipTrigger>
+                                <TooltipContent className="ibl-tooltip-content">
+                                  <p>
+                                    Allow other admins to create a copy of this
+                                    agent.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <Switch
+                            checked={field.state.value}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(checked)
+                            }
+                            disabled={isDisabled || disabled}
+                            aria-label="Allow other admins to clone this agent"
+                            aria-checked={field.state.value}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
+                </WithFormPermissions>
               </div>
             </TabsContent>
           </Tabs>

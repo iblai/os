@@ -1,13 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-06",
+  "lastUpdated": "2026-06-11",
   "summary": {
-    "totalCheckpoints": 420,
-    "coveredCheckpoints": 408,
+    "totalCheckpoints": 436,
+    "coveredCheckpoints": 417,
     "deprecatedCheckpoints": 12,
+    "notReproducibleCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 48,
-    "activeJourneys": 47
+    "totalJourneys": 49,
+    "activeJourneys": 48
   },
   "journeys": [
     {
@@ -95,7 +96,9 @@
       "name": "New User UI & Profile Dropdown",
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/settings-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -115,7 +118,12 @@
         },
         {
           "id": "ui-04",
-          "description": "Sidebar admin-only buttons show upgrade dialog for non-admins",
+          "description": "Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible",
+          "status": "covered"
+        },
+        {
+          "id": "ui-05",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]
@@ -283,7 +291,10 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
-        "app/create-mentor/page.tsx"
+        "app/create-mentor/page.tsx",
+        "components/modals/settings-modal.tsx",
+        "hooks/use-mentors.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -338,8 +349,23 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy)",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
           "status": "covered"
+        },
+        {
+          "id": "mgmt-12",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-13",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-14",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -390,6 +416,11 @@
           "id": "uid-08",
           "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
+        },
+        {
+          "id": "uid-09",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -399,7 +430,8 @@
       "spec": "08-chat-file-upload.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/upload-menu.tsx",
-        "hooks/use-chat-file-upload.ts"
+        "hooks/use-chat-file-upload.ts",
+        "hooks/use-show-attachment.ts"
       ],
       "checkpoints": [
         {
@@ -622,7 +654,8 @@
         "components/logo.tsx",
         "hooks/use-mentors/use-mentor-settings.ts",
         "hooks/use-embed-mode.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -663,6 +696,11 @@
         {
           "id": "emb-08",
           "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-09",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         }
       ]
@@ -1336,6 +1374,11 @@
           "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
+        },
+        {
+          "id": "mem-06",
+          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2092,13 +2135,18 @@
           "id": "cpm-10",
           "description": "Mentor can be copied to a different tenant",
           "status": "covered"
+        },
+        {
+          "id": "cpm-11",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
     {
       "id": "tool-call-indicator-and-reasoning",
       "name": "Tool Call Indicator & Reasoning Section",
-      "spec": "46-tool-call-indicator-and-reasoning.spec.ts",
+      "spec": "47-tool-call-indicator-and-reasoning.spec.ts",
       "sourceFiles": [
         "components/chat/tool-call-indicator.tsx",
         "components/chat/tool-call-item.tsx",
@@ -2308,6 +2356,11 @@
           "id": "claw-15",
           "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
+        },
+        {
+          "id": "claw-16",
+          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2683,6 +2736,58 @@
         {
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-upload-camera-and-image-display",
+      "name": "Chat Upload — Camera Option & Image Display",
+      "spec": "46-chat-upload-camera-and-image-display.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form/upload-menu.tsx",
+        "components/chat-input-form/camera-capture-dialog.tsx",
+        "components/chat-input-form.tsx",
+        "components/chat/chat-messages/image-message.tsx",
+        "components/chat/chat-messages/user-message-bubble.tsx",
+        "features/image-previews/image-previews-slice.ts",
+        "hooks/use-show-attachment.ts",
+        "hooks/use-is-mobile-os.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "cam-01",
+          "description": "Upload menu shows both 'Upload File' and 'Camera' items when file attachments are enabled on the mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cam-02",
+          "description": "Disabling the 'Allow file attachments in chat' toggle hides the + (Attach file) button entirely",
+          "status": "covered"
+        },
+        {
+          "id": "cam-03",
+          "description": "Hidden native camera input element is present in the DOM with accept='image/*' and capture='environment' (mobile-OS branch)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-04",
+          "description": "Clicking 'Camera' from the upload menu opens the 'Take a photo' dialog with a live video preview ([data-testid='camera-video']) and a Capture button; Retake/Use Photo are not shown yet (Chromium-only: requires fake media stream)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-05",
+          "description": "Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename",
+          "status": "covered"
+        },
+        {
+          "id": "cam-06",
+          "description": "Sending a message with an image attachment renders the image as an <img> element with cursor:pointer in the sent message bubble (not a FileCard icon)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-07",
+          "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
           "status": "covered"
         }
       ]

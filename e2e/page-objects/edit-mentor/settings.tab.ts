@@ -23,6 +23,8 @@ export class SettingsTab {
   readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
+  /** "Allow file attachments in chat" toggle (Capabilities sub-tab, feat/1902) */
+  readonly allowFileAttachmentsToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -94,6 +96,10 @@ export class SettingsTab {
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about improve document retrieval',
+    });
+    // Capabilities sub-tab. Labelled "Allow file attachments in chat" (feat/1902).
+    this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
+      name: /allow file attachments in chat/i,
     });
   }
 
@@ -425,6 +431,64 @@ export class SettingsTab {
     await expect(
       this.page.getByText(/agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
+  }
+
+  /**
+   * Enables "Allow file attachments in chat" and saves the form.
+   * A no-op if the toggle is already on. (feat/1902)
+   */
+  async enableFileAttachments(): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.allowFileAttachmentsToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.allowFileAttachmentsToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true';
+    if (!isChecked) {
+      await this.allowFileAttachmentsToggle.click();
+      await expect(this.allowFileAttachmentsToggle).toHaveAttribute(
+        'aria-checked',
+        'true',
+        { timeout: 10_000 },
+      );
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click();
+      await expect(
+        this.page.getByText(/agent updated successfully/i).first(),
+      ).toBeVisible({ timeout: 30_000 });
+      await this.page.waitForTimeout(500);
+    }
+  }
+
+  /**
+   * Disables "Allow file attachments in chat" and saves the form.
+   * A no-op if the toggle is already off. (feat/1902)
+   */
+  async disableFileAttachments(): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.allowFileAttachmentsToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.allowFileAttachmentsToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true';
+    if (isChecked) {
+      await this.allowFileAttachmentsToggle.click();
+      await expect(this.allowFileAttachmentsToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click();
+      await expect(
+        this.page.getByText(/agent updated successfully/i).first(),
+      ).toBeVisible({ timeout: 30_000 });
+      await this.page.waitForTimeout(500);
+    }
   }
 
   async deleteMentor(): Promise<void> {

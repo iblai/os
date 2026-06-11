@@ -393,6 +393,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -464,6 +468,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );

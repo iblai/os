@@ -44,6 +44,8 @@ const env = {
     process.env.NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS,
   NEXT_PUBLIC_PLATFORM_BASE_DOMAIN:
     process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN,
+  NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER:
+    process.env.NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER,
 };
 
 const runtimeEnv = () =>
@@ -137,4 +139,6 @@ export const config = {
     ),
   platformBaseDomain: () =>
     getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app'),
+  defaultSupportPhoneNumber: () =>
+    getEnv('NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER', '(571) 293-0242'),
 };

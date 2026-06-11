@@ -65,6 +65,9 @@ const executeWithTrialCheckMock = vi.fn((fn?: () => void) => {
   fn?.();
   return undefined;
 });
+// Auth-redirect helpers (the login affordance for anonymous users).
+const redirectToAuthSpaMock = vi.fn();
+const redirectToAuthSpaJoinTenantMock = vi.fn();
 const eventBusEmitMock = vi.fn();
 const exportMessagesToXlsxMock = vi.fn();
 
@@ -79,6 +82,9 @@ let mockParams: Record<string, string | undefined> = {
 
 // User identity
 let mockUsername: string | null = 'admin-user';
+// `isLoggedIn()` (axd_token) — the canonical "logged in" signal used by
+// showChats and the New Chat RBAC gate. Defaults to logged-in.
+let mockIsLoggedIn = true;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockCurrentTenant: any = {
@@ -107,9 +113,28 @@ const FreeTrialDialogStub: React.FC<{
   onClose: () => void;
   isOpen: boolean;
 }> | null = null;
+// Drives `showTrialGatedAdminMenu` — the trial gate's own predicate that
+// surfaces the full admin sidebar to a main-tenant non-admin (each entry
+// trial-gated on click). Default off so existing tests are unaffected.
+let mockIsNewlyUserOnPreFreeOrAdvertisingMode = false;
 
 // Permission stub
 let mockIsUserTypeAllowed: (input?: unknown) => boolean = () => true;
+// Controllable RBAC check — drives `studentCanCreateMentors` (the
+// "Student Mentor Creation" tenant toggle, surfaced via the
+// `/mentors/#create` permission). Defaults to granting everything so the
+// footer admin-cluster tests keep their previous behavior.
+let mockCheckRbacPermission: (
+  perms: unknown,
+  resource: string,
+) => boolean = () => true;
+
+// Chat session selection (issue #1881). `selectSessionId` returns the active
+// session; the Chats-section row click must repopulate the panel by writing
+// the cached session id (localStorage `session_id`) the loader effect watches.
+let mockActiveSessionId = 'sess-active';
+let mockCachedSessionId: Record<string, string> = {};
+const saveCachedSessionIdMock = vi.fn();
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -221,7 +246,17 @@ vi.mock('sonner', () => {
 
 vi.mock('@/lib/eventBus', () => ({
   default: { emit: (...args: unknown[]) => eventBusEmitMock(...args) },
-  RemoteEvents: { newChat: 'newChat' },
+  RemoteEvents: {
+    newChat: 'newChat',
+    stopChatGenerating: 'stopChatGenerating',
+  },
+}));
+
+vi.mock('@/hooks/use-local-storage', () => ({
+  useLocalStorage: () => [
+    mockCachedSessionId,
+    (...args: unknown[]) => saveCachedSessionIdMock(...args),
+  ],
 }));
 
 // Replace the dynamic-loaded modals with stub fragments controlled by props
@@ -365,9 +400,29 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       type: 'chat/setShouldStartNewChat',
       payload: a,
     }),
+    updateSessionIds: (...a: unknown[]) => ({
+      type: 'chat/updateSessionIds',
+      payload: a,
+    }),
+    resetIsTyping: (...a: unknown[]) => ({
+      type: 'chat/resetIsTyping',
+      payload: a,
+    }),
+    setStreaming: (...a: unknown[]) => ({
+      type: 'chat/setStreaming',
+      payload: a,
+    }),
+    resetCurrentStreamingMessage: (...a: unknown[]) => ({
+      type: 'chat/resetCurrentStreamingMessage',
+      payload: a,
+    }),
+    setActiveTab: (...a: unknown[]) => ({
+      type: 'chat/setActiveTab',
+      payload: a,
+    }),
   },
   clearFiles: (...a: unknown[]) => ({ type: 'chat/clearFiles', payload: a }),
-  selectSessionId: () => 'sess-active',
+  selectSessionId: () => mockActiveSessionId,
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -438,7 +493,8 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (perms: unknown, resource: string) =>
+    mockCheckRbacPermission(perms, resource),
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
@@ -451,6 +507,8 @@ vi.mock('@/hooks/user-user-actions', () => ({
     FreeTrialDialog: FreeTrialDialogStub,
     closeModal: closeFreeTrialModalMock,
     isModalOpen: mockFreeTrialModalOpen,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
+      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
   }),
 }));
 
@@ -463,6 +521,10 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     getFirstMessageWithContent: (msgs: any[]) =>
       msgs?.find((m: any) => m?.message?.data?.content)?.message?.data
         ?.content ?? '',
+    isLoggedIn: () => mockIsLoggedIn,
+    redirectToAuthSpa: (...args: unknown[]) => redirectToAuthSpaMock(...args),
+    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
+      redirectToAuthSpaJoinTenantMock(...args),
   };
 });
 
@@ -561,6 +623,8 @@ function resetState() {
   addPinnedMessageMock.mockClear();
   unpinMessageMock.mockClear();
   deleteMessageMock.mockClear();
+  redirectToAuthSpaMock.mockReset();
+  redirectToAuthSpaJoinTenantMock.mockReset();
   executeWithTrialCheckMock.mockClear();
   executeWithTrialCheckMock.mockImplementation((fn?: () => void) => {
     fn?.();
@@ -572,6 +636,9 @@ function resetState() {
   setOpenMobileMock.mockReset();
   closeFreeTrialModalMock.mockReset();
   updateQueryDataMock.mockClear();
+  saveCachedSessionIdMock.mockReset();
+  mockActiveSessionId = 'sess-active';
+  mockCachedSessionId = {};
 
   mockPathname = '/platform/tenant-a/mentor-1';
   mockSearchParams = new URLSearchParams();
@@ -581,6 +648,7 @@ function resetState() {
     projectId: undefined,
   };
   mockUsername = 'admin-user';
+  mockIsLoggedIn = true;
   mockIsAdmin = true;
   mockUserIsStudent = false;
   mockCurrentTenant = {
@@ -592,7 +660,9 @@ function resetState() {
   mockUserName = 'Admin User';
   mockEmbedMode = false;
   mockFreeTrialModalOpen = false;
+  mockIsNewlyUserOnPreFreeOrAdvertisingMode = false;
   mockIsUserTypeAllowed = () => true;
+  mockCheckRbacPermission = () => true;
   mockSidebarState = {
     state: 'expanded',
     open: true,
@@ -610,6 +680,7 @@ function resetState() {
       {
         id: 'p-1',
         session_id: 'sess-pinned-1',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Pinned message one' } },
@@ -623,6 +694,7 @@ function resetState() {
       {
         id: 'r-1',
         session_id: 'sess-recent-1',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Recent message one' } },
@@ -632,6 +704,7 @@ function resetState() {
       {
         id: 'r-2',
         session_id: 'sess-recent-2',
+        mentor: { unique_id: 'mentor-1' },
         messages: [
           {
             message: { data: { type: 'user', content: 'Recent message two' } },
@@ -759,9 +832,10 @@ describe('AppSidebar — rendering', () => {
   });
 
   it('hides footer actions in embed mode (Invites / Notifications / Advanced)', () => {
-    // Embed mode short-circuits `footerActions` to an empty list so the
-    // bottom strip stays clean for iframe-embedded views. Section triggers
-    // still render so the navigation works.
+    // Embed mode renders a MINIMAL sidebar (New Chat + chat history only),
+    // matching the pre-rewrite UI: the whole footer is hidden and the
+    // Agents/Workflows/Analytics/Projects sections don't render (covered in
+    // the "embed mode sections" block below).
     mockEmbedMode = true;
     renderSidebar();
     expect(
@@ -773,6 +847,82 @@ describe('AppSidebar — rendering', () => {
     expect(
       screen.queryByRole('button', { name: 'Advanced' }),
     ).not.toBeInTheDocument();
+    // The Support/docs link lives in the (now hidden) footer too.
+    expect(
+      screen.queryByRole('link', { name: 'Support' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Chats, but no Agents/Workflows/Analytics/Projects', () => {
+    // Default mock state is a logged-in ADMIN (mockUsername set) — without
+    // embed gating they would see the full nav. Embed must hide it
+    // regardless of role, while keeping New Chat + (logged-in) Chats.
+    mockEmbedMode = true;
+    renderSidebar();
+
+    // Kept: New Chat (standalone button) + Chats history section.
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Chats' }).length,
+    ).toBeGreaterThan(0);
+
+    // Hidden: every admin/full-app nav section.
+    expect(
+      screen.queryByRole('button', { name: 'Agents' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Workflows' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Analytics' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Projects' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides Chats in embed mode when the user is NOT logged in (only New Chat remains)', () => {
+    // Per the embed spec: in embed mode Chats is only shown to a logged-in
+    // user (keyed on isLoggedIn()/axd_token). An anonymous embed viewer sees
+    // just the New Chat button (anonymous bypasses the New Chat RBAC gate).
+    mockEmbedMode = true;
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Chats' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides New Chat for a logged-in user lacking /mentors/{id}/#chat permission (mirrors the original RBAC gate)', () => {
+    // Original behavior: a logged-in user without chat permission on the
+    // opened mentor was filtered out of New Chat. Anonymous users bypass it.
+    mockIsLoggedIn = true;
+    mockCheckRbacPermission = (_perms, resource) => !resource.includes('#chat'); // deny only the chat permission
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'New Chat' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows New Chat for an anonymous user even without chat permission (RBAC bypassed when not logged in)', () => {
+    mockIsLoggedIn = false;
+    mockCheckRbacPermission = () => false;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -837,6 +987,57 @@ describe('AppSidebar — Agents section', () => {
     ).not.toBeInTheDocument();
     // Explore is still visible (open to STUDENT user type).
     expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
+  });
+
+  it('shows New Agent / My Agents for a genuine non-admin when "Student Mentor Creation" grants /mentors/#create', () => {
+    // Non-admin student in a NON-main tenant where the tenant admin
+    // enabled "Student Mentor Creation" → they hold `/mentors/#create`.
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps New Agent / My Agents hidden for a non-admin when /mentors/#create is NOT granted', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = () => false;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
+  });
+
+  it('does NOT surface New Agent via /mentors/#create for an admin in learner mode (preserves the live-admin guard)', () => {
+    // Admin (is_admin === true) toggled into learner mode holds
+    // `/mentors/#create` via their admin role — but `studentCanCreateMentors`
+    // is gated on `!isAdmin`, so the agent items stay hidden.
+    mockIsAdmin = true;
+    mockUserIsStudent = true;
+    mockCheckRbacPermission = () => true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -905,6 +1106,69 @@ describe('AppSidebar — Analytics section', () => {
       screen.queryByRole('button', { name: 'Analytics' }),
     ).not.toBeInTheDocument();
   });
+
+  it('shows Analytics for a student mentor-creator when the opened mentor is theirs (created_by === username)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    // Grants `/mentors/#create` (studentCanCreateMentors) but the
+    // analytics gate is denied below — visibility must come from ownership.
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'student-user',
+    };
+    mockIsUserTypeAllowed = (spec: any) => !spec?.rbacResource;
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows Analytics for a student mentor-creator who holds the per-mentor view_analytics permission (even if not the owner)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = () => true;
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'someone-else',
+    };
+    // The analytics gate (isUserTypeAllowed) resolves true via the RBAC
+    // view_analytics branch.
+    mockIsUserTypeAllowed = () => true;
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('keeps Analytics hidden for a student mentor-creator when the mentor is not theirs and they lack permission', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockUsername = 'student-user';
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource === '/mentors/#create';
+    mockMentorPublicSettings = {
+      mentor_id: 42,
+      mentor_unique_id: 'mentor-1',
+      platform_key: 'tenant-a',
+      created_by: 'someone-else',
+    };
+    mockIsUserTypeAllowed = (spec: any) => !spec?.rbacResource;
+    renderSidebar();
+    expect(
+      screen.queryByRole('button', { name: 'Analytics' }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe('AppSidebar — Chats section', () => {
@@ -947,6 +1211,72 @@ describe('AppSidebar — Chats section', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     expect(screen.getAllByText('Pinned message one')).toHaveLength(1);
     expect(screen.getByText('Recent only row')).toBeInTheDocument();
+  });
+
+  // --- Issue #1881 regression: selecting an existing chat must repopulate
+  // the message panel, not just change the URL. The loader effect keys on the
+  // cached session id (localStorage `session_id`), so a row click MUST write
+  // it AND point the chat slice at the selected session. ---
+
+  it('clicking a recent row navigates AND selects the session (updateSessionIds + cached session id)', () => {
+    mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message two').closest('button')!);
+
+    // URL push still happens.
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-recent-2'),
+    );
+    // Redux session pointer is updated so the active highlight + dependent
+    // queries follow the selection.
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/updateSessionIds' }),
+    );
+    // The cached session id — the loader effect's dependency — is written.
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-recent-2',
+    });
+  });
+
+  it('merges the selected session into any existing cached session ids', () => {
+    mockCachedSessionId = { 'other-mentor': 'keep-me' };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message one').closest('button')!);
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'other-mentor': 'keep-me',
+      'mentor-1': 'sess-recent-1',
+    });
+  });
+
+  it('clicking a pinned row also selects the session', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-pinned-1'),
+    );
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-pinned-1',
+    });
+  });
+
+  it('clicking the already-active chat is a no-op for state (still navigates)', () => {
+    mockActiveSessionId = 'sess-recent-1';
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message one').closest('button')!);
+
+    // Navigation/flyout-close still fires.
+    expect(pushMock).toHaveBeenCalledWith(
+      expect.stringContaining('session=sess-recent-1'),
+    );
+    // But no session-selection side effects are dispatched / persisted.
+    expect(saveCachedSessionIdMock).not.toHaveBeenCalled();
+    expect(dispatchMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/updateSessionIds' }),
+    );
   });
 
   it("opens a row's three-dot menu and shows Pin/Export/Delete for a recent row", async () => {
@@ -1237,6 +1567,189 @@ describe('AppSidebar — Permission gating', () => {
     expect(
       screen.queryByRole('button', { name: 'New Workflow' }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertising tenant)', () => {
+  // A genuine non-admin in the MAIN tenant OR an ADVERTISING tenant sees
+  // the FULL admin sidebar; every entry is trial-gated on click. RBAC is
+  // left denying here so we prove the items come from
+  // `showTrialGatedAdminMenu`, not the `studentCanCreateMentors` path.
+  function setupMainTenantNonAdmin() {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = { key: 'main', is_admin: false };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = true;
+    mockCheckRbacPermission = () => false;
+  }
+
+  // Advertising tenant: a NON-main tenant key flagged `is_advertising`.
+  // The trial gate fires for these too, so the full menu must show — this
+  // is the regression guard against re-adding an `isMainTenant` clamp.
+  function setupAdvertisingTenantNonAdmin() {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockCurrentTenant = {
+      key: 'acme-ads',
+      is_admin: false,
+      is_advertising: true,
+    };
+    mockParams = { tenantKey: 'acme-ads', mentorId: 'mentor-1' };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = true;
+    mockCheckRbacPermission = () => false;
+  }
+
+  it('reveals New Agent / My Agents', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+  });
+
+  it('reveals the Workflows section', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Workflows' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Workflow' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Workflows' }),
+    ).toBeInTheDocument();
+  });
+
+  it('reveals the Analytics section', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Advanced)', () => {
+    setupMainTenantNonAdmin();
+    renderSidebar();
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it('routes a trial-gated entry through executeWithTrialCheck on click (logged-in user)', () => {
+    setupMainTenantNonAdmin(); // mockIsLoggedIn defaults to true
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(executeWithTrialCheckMock).toHaveBeenCalled();
+    expect(redirectToAuthSpaJoinTenantMock).not.toHaveBeenCalled();
+  });
+
+  it('prompts LOGIN (not the upgrade dialog) when an ANONYMOUS user clicks a trial-gated admin item', () => {
+    // Mirrors the original AuthPopover affordance: the admin cluster is
+    // shown to an anonymous main/advertising-tenant visitor, but clicking
+    // routes to login instead of running the action / showing the upgrade
+    // dialog (they can't upgrade without an account).
+    setupMainTenantNonAdmin();
+    mockIsLoggedIn = false; // anonymous
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
+    expect(executeWithTrialCheckMock).not.toHaveBeenCalled();
+  });
+
+  it('also reveals the full admin sidebar for a non-admin in an ADVERTISING (non-main) tenant', () => {
+    setupAdvertisingTenantNonAdmin();
+    renderSidebar();
+    // Agents cluster
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+    // Workflows + Analytics + footer cluster all surface too
+    expect(
+      screen.getAllByRole('button', { name: 'Workflows' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+});
+
+describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clicks route to auth SPA', () => {
+  // Mirrors the ORIGINAL behavior: an anonymous user SEES all admin options
+  // (in any tenant — no trial gate, no RBAC) and clicking any of them routes
+  // to the auth SPA login instead of running the action.
+  function setupAnonymous() {
+    mockIsLoggedIn = false;
+    mockUsername = null; // truly anonymous — no user_nicename
+    mockIsAdmin = false;
+    mockCurrentTenant = { key: 'tenant-a', is_admin: false };
+    mockIsNewlyUserOnPreFreeOrAdvertisingMode = false; // NOT trial-gated
+    mockCheckRbacPermission = () => false; // no RBAC
+  }
+
+  it('reveals the full admin menu (Agents/Workflows/Analytics + footer cluster) in a regular tenant', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'My Agents' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Workflows' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
+      (label) => {
+        expect(
+          screen.getAllByRole('button', { name: label }).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it('routes a clicked admin item to the auth SPA (not the upgrade dialog / real action)', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'New Agent' }));
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
+    expect(executeWithTrialCheckMock).not.toHaveBeenCalled();
+    expect(openCreateMentorModalMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the Projects section to an anonymous user; "New Project" routes to the auth SPA', () => {
+    setupAnonymous();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    const newProjectBtn = screen.getByRole('button', { name: 'New Project' });
+    expect(newProjectBtn).toBeInTheDocument();
+    fireEvent.click(newProjectBtn);
+    expect(redirectToAuthSpaJoinTenantMock).toHaveBeenCalled();
   });
 });
 

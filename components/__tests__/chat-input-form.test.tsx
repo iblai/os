@@ -221,11 +221,39 @@ vi.mock('@/components/chat-input-form/file-attachments-list', () => ({
 }));
 
 vi.mock('@/components/chat-input-form/upload-menu', () => ({
-  UploadMenu: ({ onFileInputTrigger }: any) => (
-    <button data-testid="upload-menu" onClick={onFileInputTrigger}>
-      Upload
-    </button>
+  UploadMenu: ({ onFileInputTrigger, onCameraTrigger }: any) => (
+    <>
+      <button data-testid="upload-menu" onClick={onFileInputTrigger}>
+        Upload
+      </button>
+      <button data-testid="camera-menu" onClick={onCameraTrigger}>
+        Camera
+      </button>
+    </>
   ),
+}));
+
+let mockIsMobileOS = false;
+vi.mock('@/hooks/use-is-mobile-os', () => ({
+  useIsMobileOS: vi.fn(() => mockIsMobileOS),
+}));
+
+vi.mock('@/components/chat-input-form/camera-capture-dialog', () => ({
+  CameraCaptureDialog: ({ open, onCapture }: any) =>
+    open ? (
+      <div data-testid="camera-capture-dialog">
+        <button
+          data-testid="camera-use-photo"
+          onClick={() =>
+            onCapture(
+              new File(['img'], 'camera-photo-1.jpg', { type: 'image/jpeg' }),
+            )
+          }
+        >
+          Use Photo
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/chat-input-form/outside-buttons', () => ({
@@ -355,6 +383,7 @@ describe('ChatInputForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsTabletOrMobile = false;
+    mockIsMobileOS = false;
     mockIsAccessingPublicRoute = false;
     mockIsLoggedIn = true;
     mockEmbedMode = false;
@@ -766,6 +795,139 @@ describe('ChatInputForm', () => {
 
       const fileInput = container.querySelector('input[type="file"]');
       expect(fileInput).toHaveAttribute('multiple');
+    });
+  });
+
+  describe('camera input', () => {
+    it('should have a hidden camera input that accepts images via the device camera', () => {
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+
+      const cameraInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      );
+      expect(cameraInput).toBeInTheDocument();
+      expect(cameraInput).toHaveClass('hidden');
+      expect(cameraInput).toHaveAttribute('capture', 'environment');
+    });
+
+    it('should not allow multiple files on the camera input', () => {
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+
+      const cameraInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      );
+      expect(cameraInput).not.toHaveAttribute('multiple');
+    });
+
+    it('should disable the camera input when there is no session', () => {
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} sessionId="" />,
+      );
+
+      const cameraInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      );
+      expect(cameraInput).toBeDisabled();
+    });
+
+    it('should route a photo selected on the camera input through the same upload path', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const mockUploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: mockUploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+
+      const cameraInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      ) as HTMLInputElement;
+      const photo = new File(['photo content'], 'photo.jpg', {
+        type: 'image/jpeg',
+      });
+
+      Object.defineProperty(cameraInput, 'files', {
+        value: [photo],
+        writable: false,
+      });
+
+      fireEvent.change(cameraInput);
+
+      await waitFor(() => {
+        expect(mockUploadFiles).toHaveBeenCalledWith([photo]);
+      });
+    });
+
+    it('should open the in-app camera dialog on desktop when Camera is clicked', () => {
+      mockIsMobileOS = false;
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId('camera-capture-dialog'),
+      ).not.toBeInTheDocument();
+
+      const cameraMenu = screen.getByTestId('camera-menu');
+      fireEvent.click(cameraMenu);
+
+      // Click goes through executeWithTrialCheck wrapper
+      expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      // Desktop opens the webcam dialog rather than the native file input.
+      expect(screen.getByTestId('camera-capture-dialog')).toBeInTheDocument();
+    });
+
+    it('should trigger the native camera input on mobile when Camera is clicked', () => {
+      mockIsMobileOS = true;
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+
+      const cameraInput = container.querySelector(
+        'input[type="file"][accept="image/*"]',
+      ) as HTMLInputElement;
+      const clickSpy = vi.spyOn(cameraInput, 'click');
+
+      fireEvent.click(screen.getByTestId('camera-menu'));
+
+      expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      expect(clickSpy).toHaveBeenCalled();
+      // The webcam dialog must NOT open on mobile.
+      expect(
+        screen.queryByTestId('camera-capture-dialog'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should route a desktop webcam capture through the same upload path', async () => {
+      mockIsMobileOS = false;
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const mockUploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: mockUploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      fireEvent.click(screen.getByTestId('camera-menu'));
+      fireEvent.click(screen.getByTestId('camera-use-photo'));
+
+      await waitFor(() => {
+        expect(mockUploadFiles).toHaveBeenCalledTimes(1);
+      });
+      const uploaded = mockUploadFiles.mock.calls[0][0];
+      expect(uploaded).toHaveLength(1);
+      expect(uploaded[0]).toBeInstanceOf(File);
+      expect(uploaded[0].type).toBe('image/jpeg');
     });
   });
 
