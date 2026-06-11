@@ -12,6 +12,7 @@ import {
 import { uploadToS3 } from '@iblai/iblai-js/web-utils';
 import { useCallback, useRef } from 'react';
 import { RootState } from '@/store';
+import { setImagePreview } from '@/features/image-previews/image-previews-slice';
 
 interface FileUploadCapabilities {
   supportsFileUpload: boolean;
@@ -167,6 +168,17 @@ export function useChatFileUpload({
           }),
         );
 
+        // For images, store a local object URL keyed by the backend file_id so
+        // the sent message can render the actual image immediately, instead of
+        // waiting for a viewable URL (the presigned PUT upload URL can't be
+        // loaded via GET in an <img> tag).
+        if (file.type.startsWith('image/') && response.file_id) {
+          const previewUrl = URL.createObjectURL(file);
+          dispatch(
+            setImagePreview({ fileId: response.file_id, url: previewUrl }),
+          );
+        }
+
         return { fileId, file, response, success: true };
       } catch (error) {
         console.error(`Failed to get upload URL for ${file.name}:`, error);
@@ -249,6 +261,14 @@ export function useChatFileUpload({
             fileId: response.file_id,
           }),
         );
+
+        // Mirror the primary upload path: store a local preview URL for images.
+        if (file.type.startsWith('image/') && response.file_id) {
+          const previewUrl = URL.createObjectURL(file);
+          dispatch(
+            setImagePreview({ fileId: response.file_id, url: previewUrl }),
+          );
+        }
 
         // Step 2: Upload to S3
         dispatch(updateFileStatus({ id: fileId, status: 'uploading' }));

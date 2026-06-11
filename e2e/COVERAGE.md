@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-09 | 412 checkpoints (393 covered, 7 not-reproducible in default env, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-10 | 419 checkpoints (400 covered, 7 not-reproducible in default env, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -133,7 +133,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 8: Chat File Upload (9 checkpoints) — `journeys/08-chat-file-upload.spec.ts`
 
-**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`
+**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`, `hooks/use-show-attachment.ts`
 
 - [x] Image, PDF, and text files can be uploaded via the upload button
 - [x] File input `accept` attribute correctly includes supported and excludes unsupported types
@@ -800,6 +800,24 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+
+---
+
+## Journey 46: Chat Upload — Camera Option & Image Display (7 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
+
+**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/camera-capture-dialog.tsx`, `components/chat-input-form.tsx`, `components/chat/chat-messages/image-message.tsx`, `components/chat/chat-messages/user-message-bubble.tsx`, `features/image-previews/image-previews-slice.ts`, `hooks/use-show-attachment.ts`, `hooks/use-is-mobile-os.ts`
+
+Covers the two user-facing features added in [iblai-platform#1902](https://github.com/iblai/iblai-platform/issues/1902): the **Camera** option in the chat composer upload menu, and uploaded images rendering as `<img>` elements (not FileCard icons) in sent message bubbles.
+
+**Camera dialog (CAM-04) is Chromium-only** — uses `--use-fake-device-for-media-stream` / `--use-fake-ui-for-media-stream` to stub `navigator.mediaDevices.getUserMedia` with a black-frame fake video track. All other checkpoints are cross-browser.
+
+- [x] CAM-01: Upload menu shows both "Upload File" and "Camera" items when `show_attachment` is enabled on the mentor
+- [x] CAM-02: Disabling "Allow file attachments in chat" hides the entire `+` (Attach file) button (UploadMenu returns null)
+- [x] CAM-03: Hidden native camera `<input type="file" accept="image/*" capture="environment">` is present in the DOM (mobile-OS branch path in `chat-input-form.tsx`)
+- [x] CAM-04: Clicking "Camera" opens the `CameraCaptureDialog` ("Take a photo" title, `[data-testid="camera-video"]`, "Capture" button visible; Retake/Use Photo absent before capture) — Chromium-only
+- [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
+- [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
+- [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
 
 ---
 

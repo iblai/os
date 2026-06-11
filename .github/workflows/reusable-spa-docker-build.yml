@@ -36,7 +36,7 @@ env:
 
 jobs:
   build-and-push:
-    name: "Build & push ${{ inputs.app_name }} ${{ inputs.version }}"
+    name: 'Build & push ${{ inputs.app_name }} ${{ inputs.version }}'
     runs-on: oci-runner-1
     steps:
       - name: Clone source repo
