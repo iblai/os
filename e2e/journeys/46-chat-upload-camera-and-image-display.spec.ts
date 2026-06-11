@@ -5,7 +5,7 @@
  *
  *  1. Camera option in the chat composer upload menu (upload-menu.tsx)
  *     - "Camera" menu item appears alongside "Upload File" in the + dropdown
- *       when "Allow file attachments in chat" is enabled on the mentor
+ *       when "Enable file attachments" is enabled on the mentor
  *     - Camera menu item is absent when the upload menu itself is hidden
  *       (i.e. show_attachment toggle is off)
  *     - Clicking "Camera" on a desktop (non-mobile) Chromium context opens

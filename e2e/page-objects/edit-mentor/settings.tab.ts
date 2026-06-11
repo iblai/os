@@ -34,7 +34,7 @@ export class SettingsTab {
    * Screen Share top-level tab appear in the modal sidebar.
    */
   readonly enableVideoToggle: Locator;
-  /** "Allow file attachments in chat" toggle (Capabilities sub-tab, feat/1902) */
+  /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
@@ -71,10 +71,10 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     // Renamed in the Capabilities sub-tab: aria-label is now
-    // "Allow other admins to clone this agent" (no enabled/disabled
+    // "Enable copies" (no enabled/disabled
     // suffix — state is exposed via aria-checked).
     this.allowCopiesToggle = dialog.getByRole('switch', {
-      name: /allow other admins to clone this agent/i,
+      name: /enable copies/i,
     });
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
@@ -84,9 +84,9 @@ export class SettingsTab {
     this.showVoiceCallToggle = dialog.getByRole('switch', {
       name: /enable voice calls/i,
     });
-    // Capabilities sub-tab. Renamed visible label "Enable advanced sandbox".
+    // Capabilities sub-tab. Renamed visible label "Enable dedicated sandbox".
     this.advancedSandboxToggle = dialog.getByRole('switch', {
-      name: /enable advanced sandbox/i,
+      name: /enable dedicated sandbox/i,
     });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
@@ -95,20 +95,20 @@ export class SettingsTab {
     this.memoryToggle = dialog.getByRole('switch', {
       name: /remember past conversations/i,
     });
-    // Capabilities sub-tab. Renamed visible label "Improve document retrieval".
+    // Capabilities sub-tab. Renamed visible label "Enhanced document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /improve document retrieval/i,
+      name: /enhanced document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about improve document retrieval',
+      name: 'More info about enhanced document retrieval',
     });
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
     );
     this.enableVideoToggle = dialog.getByTestId('settings-enable-video-switch');
-    // Capabilities sub-tab. Labelled "Allow file attachments in chat" (feat/1902).
+    // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
-      name: /allow file attachments in chat/i,
+      name: /enable file attachments/i,
     });
   }
 
@@ -123,18 +123,18 @@ export class SettingsTab {
     return attr === 'true';
   }
 
-  /** Whether the "Look things up only when needed" toggle is currently on. */
+  /** Whether the "Smart document retrieval" toggle is currently on. */
   async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
     return this.readSwitchState(this.useFunctionCallingForRagToggle);
   }
 
-  /** Whether the "Allow screen sharing on a call" toggle is currently on. */
+  /** Whether the "Enable screen sharing" toggle is currently on. */
   async isEnableVideoEnabled(): Promise<boolean> {
     return this.readSwitchState(this.enableVideoToggle);
   }
 
   /**
-   * Idempotently set the "Allow screen sharing on a call" toggle to the
+   * Idempotently set the "Enable screen sharing" toggle to the
    * target state and click Save. This is the host-side trigger that
    * flips `call_configuration.enable_video`, which in turn gates the
    * Screen Share top-level tab's visibility via `MENTOR_SEGMENTS`.
@@ -165,7 +165,7 @@ export class SettingsTab {
     );
   }
 
-  /** Idempotently toggle "Look things up only when needed" + Save. */
+  /** Idempotently toggle "Smart document retrieval" + Save. */
   async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
     // Lives in the Capabilities sub-tab — switch there before interacting.
     await this.selectSubTab('Capabilities');
@@ -476,7 +476,7 @@ export class SettingsTab {
   }
 
   /**
-   * Enables "Allow file attachments in chat" and saves the form.
+   * Enables "Enable file attachments" and saves the form.
    * A no-op if the toggle is already on. (feat/1902)
    */
   async enableFileAttachments(): Promise<void> {
@@ -505,7 +505,7 @@ export class SettingsTab {
   }
 
   /**
-   * Disables "Allow file attachments in chat" and saves the form.
+   * Disables "Enable file attachments" and saves the form.
    * A no-op if the toggle is already off. (feat/1902)
    */
   async disableFileAttachments(): Promise<void> {

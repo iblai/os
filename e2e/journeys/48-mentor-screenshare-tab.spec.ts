@@ -8,7 +8,7 @@ import { waitForPageReady } from '../utils/resilient';
  * The Screen Share top-level tab is rendered by the SDK's
  * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`). It's
  * gated in the host by `call_configuration.enable_video`, which is the
- * same value the "Allow screen sharing on a call" toggle on the
+ * same value the "Enable screen sharing" toggle on the
  * Settings tab writes to.
  *
  * Selector policy:
@@ -36,7 +36,7 @@ test.describe('Journey 48: Mentor Screen Share Tab', () => {
 
   // SS-01: With screen sharing off in Settings, the Screen Share top-level
   // tab is hidden entirely from the sidebar.
-  test('Screen Share tab is hidden when "Allow screen sharing on a call" is off', async ({
+  test('Screen Share tab is hidden when "Enable screen sharing" is off', async ({
     editMentorPage,
   }) => {
     // Force the precondition: enable_video = false. The helper is a

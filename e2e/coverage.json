@@ -2361,7 +2361,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Look things up only when needed, Allow screen sharing on a call)",
+          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
           "status": "covered"
         },
         {
@@ -2395,7 +2395,7 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Allow screen sharing on a call' toggle is off",
+          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Enable screen sharing' toggle is off",
           "status": "covered"
         },
         {
@@ -2759,7 +2759,7 @@
         },
         {
           "id": "cam-02",
-          "description": "Disabling the 'Allow file attachments in chat' toggle hides the + (Attach file) button entirely",
+          "description": "Disabling the 'Enable file attachments' toggle hides the + (Attach file) button entirely",
           "status": "covered"
         },
         {

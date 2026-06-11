@@ -410,9 +410,7 @@ describe('SettingsTab', () => {
     it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(
-        screen.getByText('Allow file attachments in chat'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Enable file attachments')).toBeInTheDocument();
     });
 
     it('renders Voice Calls toggle', () => {
@@ -456,7 +454,7 @@ describe('SettingsTab', () => {
       );
       const otherTriggers = [
         screen.getByLabelText('More info about allow lti launches'),
-        screen.getByLabelText('More info about allow file attachments in chat'),
+        screen.getByLabelText('More info about enable file attachments'),
         screen.getByLabelText('More info about enable voice calls'),
         screen.getByLabelText('More info about enable voice recordings'),
       ];
@@ -497,7 +495,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about allow file attachments in chat',
+        'More info about enable file attachments',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -601,7 +599,7 @@ describe('SettingsTab', () => {
     it('reflects show_attachment checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow file attachments in chat');
+      const toggle = screen.getByLabelText('Enable file attachments');
       expect(toggle).toBeChecked();
     });
 
@@ -629,11 +627,11 @@ describe('SettingsTab', () => {
     it('toggles show_attachment switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow file attachments in chat');
+      const toggle = screen.getByLabelText('Enable file attachments');
       fireEvent.click(toggle);
 
       expect(
-        screen.getByLabelText('Allow file attachments in chat'),
+        screen.getByLabelText('Enable file attachments'),
       ).not.toBeChecked();
     });
 
@@ -1054,7 +1052,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Allow file attachments in chat'),
+        screen.getByLabelText('Enable file attachments'),
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
@@ -1078,7 +1076,7 @@ describe('SettingsTab', () => {
         screen.getByLabelText('More info about allow lti launches'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about allow file attachments in chat'),
+        screen.getByLabelText('More info about enable file attachments'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about enable voice calls'),
@@ -1211,17 +1209,13 @@ describe('SettingsTab', () => {
     it('renders Copies toggle', () => {
       render(<SettingsTab />);
 
-      expect(
-        screen.getByText('Allow other admins to clone this agent'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Enable copies')).toBeInTheDocument();
     });
 
     it('reflects forkable checked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Allow other admins to clone this agent',
-      );
+      const toggle = screen.getByLabelText('Enable copies');
       expect(toggle).toBeChecked();
     });
 
@@ -1233,31 +1227,23 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Allow other admins to clone this agent',
-      );
+      const toggle = screen.getByLabelText('Enable copies');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles forkable switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Allow other admins to clone this agent',
-      );
+      const toggle = screen.getByLabelText('Enable copies');
       fireEvent.click(toggle);
 
-      expect(
-        screen.getByLabelText('Allow other admins to clone this agent'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Enable copies')).not.toBeChecked();
     });
 
     it('submits forkable value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Allow other admins to clone this agent',
-      );
+      const toggle = screen.getByLabelText('Enable copies');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1278,9 +1264,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText(
-          'More info about allow other admins to clone this agent',
-        ),
+        screen.getByLabelText('More info about enable copies'),
       ).toBeInTheDocument();
     });
   });
@@ -1346,14 +1330,14 @@ describe('SettingsTab', () => {
   });
 
   // ==========================================================================
-  // ADVANCED SANDBOX (CLAW)
+  // DEDICATED SANDBOX (CLAW)
   // ==========================================================================
 
   describe('Sandbox toggle', () => {
     it('renders the Sandbox toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Enable advanced sandbox')).toBeInTheDocument();
+      expect(screen.getByText('Enable dedicated sandbox')).toBeInTheDocument();
     });
 
     it('reflects enable_claw=true from mentor settings as checked', () => {
@@ -1364,31 +1348,31 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Enable advanced sandbox')).toBeChecked();
+      expect(screen.getByLabelText('Enable dedicated sandbox')).toBeChecked();
     });
 
     it('reflects enable_claw=false (or missing) from mentor settings as unchecked', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable advanced sandbox'),
+        screen.getByLabelText('Enable dedicated sandbox'),
       ).not.toBeChecked();
     });
 
     it('toggle is enabled regardless of claw config state (admin intent)', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Enable advanced sandbox');
+      const toggle = screen.getByLabelText('Enable dedicated sandbox');
       expect(toggle).not.toBeDisabled();
     });
 
     it('flipping the toggle does not immediately call editMentor', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Enable advanced sandbox')).toBeChecked();
+        expect(screen.getByLabelText('Enable dedicated sandbox')).toBeChecked();
       });
       expect(mockEditMentor).not.toHaveBeenCalled();
     });
@@ -1396,7 +1380,7 @@ describe('SettingsTab', () => {
     it('on Save, includes enable_claw=true in the editMentor formData when toggled on', async () => {
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1418,7 +1402,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1487,7 +1471,7 @@ describe('SettingsTab', () => {
     });
 
     it('skips the claw-config query when the sandbox is disabled', () => {
-      // Mentors with the advanced sandbox turned off are never wired to a Claw
+      // Mentors with the dedicated sandbox turned off are never wired to a Claw
       // instance, so fetching claw-config only produces a wasted 404-retry
       // burst on every modal open. Gate the request on enable_claw.
       mockGetMentorSettingsQuery.mockReturnValue({
@@ -1527,7 +1511,7 @@ describe('SettingsTab', () => {
       );
 
       // Flipping the toggle on fetches the config (skip becomes false).
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
 
       await waitFor(() => {
         expect(mockGetClawMentorConfigQuery).toHaveBeenLastCalledWith(
@@ -1547,7 +1531,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip OFF → ON, save
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1575,7 +1559,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       // Flip ON → OFF, save
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1596,7 +1580,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1637,7 +1621,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(screen.getByLabelText('Enable advanced sandbox'));
+      fireEvent.click(screen.getByLabelText('Enable dedicated sandbox'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1660,21 +1644,17 @@ describe('SettingsTab', () => {
   });
 
   describe('Voice-call toggles (CallConfiguration sync)', () => {
-    it('renders the "Look things up only when needed" toggle defaulting to off when no call config exists', () => {
+    it('renders the "Smart document retrieval" toggle defaulting to off when no call config exists', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Look things up only when needed disabled',
-      );
+      const toggle = screen.getByLabelText('Smart document retrieval disabled');
       expect(toggle).not.toBeChecked();
     });
 
-    it('renders the "Allow screen sharing on a call" toggle defaulting to off when no call config exists', () => {
+    it('renders the "Enable screen sharing" toggle defaulting to off when no call config exists', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Allow screen sharing on a call disabled',
-      );
+      const toggle = screen.getByLabelText('Enable screen sharing disabled');
       expect(toggle).not.toBeChecked();
     });
 
@@ -1694,10 +1674,10 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Look things up only when needed enabled'),
+        screen.getByLabelText('Smart document retrieval enabled'),
       ).toBeChecked();
       expect(
-        screen.getByLabelText('Allow screen sharing on a call enabled'),
+        screen.getByLabelText('Enable screen sharing enabled'),
       ).toBeChecked();
     });
 
@@ -1717,7 +1697,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Look things up only when needed disabled'),
+        screen.getByLabelText('Smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 
@@ -1752,9 +1732,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      fireEvent.click(
-        screen.getByLabelText('Allow screen sharing on a call disabled'),
-      );
+      fireEvent.click(screen.getByLabelText('Enable screen sharing disabled'));
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
@@ -1782,7 +1760,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Look things up only when needed disabled'),
+        screen.getByLabelText('Smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 
@@ -1821,7 +1799,7 @@ describe('SettingsTab', () => {
       },
     });
 
-    it('disables the Advanced Sandbox toggle when enable_claw is read-only', () => {
+    it('disables the Dedicated Sandbox toggle when enable_claw is read-only', () => {
       rbacState.enabled = true;
       mockGetMentorSettingsQuery.mockReturnValue({
         data: withFieldPerms({ enable_claw: { read: true, write: false } }),
@@ -1830,7 +1808,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Enable advanced sandbox')).toBeDisabled();
+      expect(screen.getByLabelText('Enable dedicated sandbox')).toBeDisabled();
     });
 
     it('disables the Memory toggle when enable_memory_component is read-only', () => {
@@ -1858,12 +1836,10 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Allow other admins to clone this agent'),
-      ).toBeDisabled();
+      expect(screen.getByLabelText('Enable copies')).toBeDisabled();
     });
 
-    it('keeps the Advanced Sandbox toggle enabled when enable_claw is writable', () => {
+    it('keeps the Dedicated Sandbox toggle enabled when enable_claw is writable', () => {
       rbacState.enabled = true;
       mockGetMentorSettingsQuery.mockReturnValue({
         data: withFieldPerms({ enable_claw: { read: true, write: true } }),
@@ -1873,7 +1849,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable advanced sandbox'),
+        screen.getByLabelText('Enable dedicated sandbox'),
       ).not.toBeDisabled();
     });
 

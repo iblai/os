@@ -206,7 +206,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Tab is gated by the "Allow screen sharing on a call" toggle in
+    // Tab is gated by the "Enable screen sharing" toggle in
     // Settings, which writes `enable_video` on the CallConfiguration. The
     // SDK's <AgentScreenShareTab/> still renders an off-state hint when
     // `enable_video` is false, but at the host level we hide the tab

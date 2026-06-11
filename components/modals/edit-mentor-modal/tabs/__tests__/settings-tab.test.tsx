@@ -474,9 +474,7 @@ describe('SettingsTab', () => {
     it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(
-        screen.getByText('Allow file attachments in chat'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Enable file attachments')).toBeInTheDocument();
     });
 
     it('renders Voice Calls toggle', () => {
@@ -495,7 +493,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByText('Improve document retrieval'),
+        screen.getByText('Enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -504,7 +502,7 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByText(
-          /Generates multiple search queries from a single user question/i,
+          /Runs several search queries per question to pull more relevant documents/i,
         ),
       ).toBeInTheDocument();
     });
@@ -513,7 +511,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about improve document retrieval'),
+        screen.getByLabelText('More info about enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -585,7 +583,7 @@ describe('SettingsTab', () => {
         screen.getByLabelText('More info about allow lti launches'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about allow file attachments in chat'),
+        screen.getByLabelText('More info about enable file attachments'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about enable voice calls'),
@@ -676,9 +674,7 @@ describe('SettingsTab', () => {
     it('toggles file attachments switch', () => {
       render(<SettingsTab />);
 
-      const attachmentSwitch = screen.getByLabelText(
-        'Allow file attachments in chat',
-      );
+      const attachmentSwitch = screen.getByLabelText('Enable file attachments');
       expect(attachmentSwitch).toBeChecked();
 
       fireEvent.click(attachmentSwitch);
@@ -713,7 +709,7 @@ describe('SettingsTab', () => {
     it('toggles rag switch', () => {
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Improve document retrieval');
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       expect(ragSwitch).not.toBeChecked();
 
       fireEvent.click(ragSwitch);
@@ -921,7 +917,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Improve document retrieval');
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -946,7 +942,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText('Improve document retrieval');
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -1413,7 +1409,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Allow file attachments in chat'),
+        screen.getByLabelText('Enable file attachments'),
       ).not.toBeChecked();
     });
 
@@ -1447,9 +1443,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Allow file attachments in chat'),
-      ).toBeChecked();
+      expect(screen.getByLabelText('Enable file attachments')).toBeChecked();
     });
 
     it('defaults show_voice_call to true when undefined', () => {
@@ -1493,7 +1487,9 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Improve document retrieval')).toBeChecked();
+      expect(
+        screen.getByLabelText('Enhanced document retrieval'),
+      ).toBeChecked();
     });
 
     it('reflects enable_multi_query_rag false in switch', () => {
@@ -1505,7 +1501,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Improve document retrieval'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
 
@@ -1518,7 +1514,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Improve document retrieval'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
   });
@@ -1531,7 +1527,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Allow file attachments in chat'),
+        screen.getByLabelText('Enable file attachments'),
       ).toBeInTheDocument();
       expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
@@ -1648,9 +1644,7 @@ describe('SettingsTab', () => {
       // also `forceMount`-ed).
       render(<SettingsTab />);
 
-      const allowCopiesSwitch = screen.getByLabelText(
-        'Allow other admins to clone this agent',
-      );
+      const allowCopiesSwitch = screen.getByLabelText('Enable copies');
       fireEvent.click(allowCopiesSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });

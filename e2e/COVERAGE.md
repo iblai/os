@@ -793,7 +793,7 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 **Camera dialog (CAM-04) is Chromium-only** — uses `--use-fake-device-for-media-stream` / `--use-fake-ui-for-media-stream` to stub `navigator.mediaDevices.getUserMedia` with a black-frame fake video track. All other checkpoints are cross-browser.
 
 - [x] CAM-01: Upload menu shows both "Upload File" and "Camera" items when `show_attachment` is enabled on the mentor
-- [x] CAM-02: Disabling "Allow file attachments in chat" hides the entire `+` (Attach file) button (UploadMenu returns null)
+- [x] CAM-02: Disabling "Enable file attachments" hides the entire `+` (Attach file) button (UploadMenu returns null)
 - [x] CAM-03: Hidden native camera `<input type="file" accept="image/*" capture="environment">` is present in the DOM (mobile-OS branch path in `chat-input-form.tsx`)
 - [x] CAM-04: Clicking "Camera" opens the `CameraCaptureDialog` ("Take a photo" title, `[data-testid="camera-video"]`, "Capture" button visible; Retake/Use Photo absent before capture) — Chromium-only
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
@@ -831,7 +831,7 @@ The Settings tab also surfaces two voice-call toggles (`use_function_calling_for
 
 Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The host gates visibility on `call_configuration.enable_video` — the toggle on the Settings tab. When the toggle is off, the tab is hidden from the sidebar entirely (the SDK still renders its own off-state hint, but at host level the tab itself goes away to keep the sidebar clean). The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
 
-- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Allow screen sharing on a call" toggle is off
+- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Enable screen sharing" toggle is off
 - [x] SS-02: Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar
 - [x] SS-03: Switching to the Screen Share tab renders the SDK heading and body
 
