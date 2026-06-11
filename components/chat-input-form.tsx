@@ -27,6 +27,8 @@ import { ScreenSharingButton } from './chat-input-form/screen-sharing-button';
 import AutoResizeTextarea from './auto-resize-text-area';
 import { OutsideButtons } from './chat-input-form/outside-buttons';
 import { UploadMenu } from './chat-input-form/upload-menu';
+import { CameraCaptureDialog } from './chat-input-form/camera-capture-dialog';
+import { useIsMobileOS } from '@/hooks/use-is-mobile-os';
 import {
   chatInputSliceActions,
   chatInputSliceSelectors,
@@ -158,7 +160,10 @@ export function ChatInputForm({
   const [fileAddedNotification, setFileAddedNotification] = useState<
     string | null
   >(null);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const fileUploadInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isMobileOS = useIsMobileOS();
   const isTabletOrMobile = useMediaQuery({ maxWidth: 1023 });
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const userIsVisiting = useVisitingTenant();
@@ -223,35 +228,55 @@ export function ChatInputForm({
     dispatch(removeFile(id));
   };
 
+  const processFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    // Show notification
+    setFileAddedNotification(
+      `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`,
+    );
+
+    // Upload files (validation happens inside the hook)
+    await uploadFiles(files);
+
+    // Hide notification after upload completes
+    setTimeout(() => {
+      setFileAddedNotification(null);
+    }, 3000);
+  };
+
   const handleFileInputChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
+      await processFiles(Array.from(e.target.files));
 
-      // Show notification
-      setFileAddedNotification(
-        `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`,
-      );
-
-      // Upload files (validation happens inside the hook)
-      await uploadFiles(files);
-
-      // Hide notification after upload completes
-      setTimeout(() => {
-        setFileAddedNotification(null);
-      }, 3000);
-
-      // Reset the file input so the same file can be uploaded again if needed
-      if (fileUploadInputRef.current) {
-        fileUploadInputRef.current.value = '';
-      }
+      // Reset the input that fired so the same file/photo can be selected again if needed
+      e.target.value = '';
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    void processFiles([file]);
   };
 
   const triggerFileInput = () => {
     if (fileUploadInputRef.current) {
       fileUploadInputRef.current.click();
+    }
+  };
+
+  const triggerCameraInput = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    }
+  };
+
+  const handleCameraClick = () => {
+    if (isMobileOS) {
+      triggerCameraInput();
+    } else {
+      setIsCameraDialogOpen(true);
     }
   };
 
@@ -369,6 +394,9 @@ export function ChatInputForm({
                   onFileInputTrigger={() =>
                     executeWithTrialCheck(triggerFileInput)
                   }
+                  onCameraTrigger={() =>
+                    executeWithTrialCheck(handleCameraClick)
+                  }
                   disabled={isChatDisabledByRbac || !sessionId}
                 />
               )}
@@ -450,6 +478,16 @@ export function ChatInputForm({
             multiple
             disabled={isChatDisabledByRbac || !sessionId}
           />
+
+          <input
+            type="file"
+            ref={cameraInputRef}
+            className="hidden"
+            onChange={handleFileInputChange}
+            accept="image/*"
+            capture="environment"
+            disabled={isChatDisabledByRbac || !sessionId}
+          />
         </div>
 
         {visibleToLoggedInUsersOnly && !compactMode && (
@@ -486,6 +524,12 @@ export function ChatInputForm({
           onClose={closeFreeTrialModal}
         />
       )}
+      <CameraCaptureDialog
+        open={isCameraDialogOpen}
+        onOpenChange={setIsCameraDialogOpen}
+        onCapture={handleCameraCapture}
+        facingMode={isMobileOS ? 'environment' : 'user'}
+      />
     </>
   );
 }
