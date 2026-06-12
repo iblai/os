@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source "../node_modules/@iblai/web-containers/dist";
 @import 'tw-animate-css';
 @tailwind utilities;
 
