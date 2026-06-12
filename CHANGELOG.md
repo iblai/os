@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.75.0](https://github.com/iblai/os/compare/v0.74.4...v0.75.0) (2026-06-12)
+
+### Features
+
+* bumped iblai-js to 1.18.1 ([ab1e3f7](https://github.com/iblai/os/commit/ab1e3f7c8c9b063963d96789e8e4bb79590a9408))
+* **mentor:** adding tasks for edit mentor, unit and playwright tests ([9687dc1](https://github.com/iblai/os/commit/9687dc163c6f38ab0d7a44e2b1904151fc31d196))
+* **mentorai:** adding version bump for iblai-js ([01d3879](https://github.com/iblai/os/commit/01d3879bc4ac8b4f487aeb97031ec8fe5420d96a))
+
+### Bug Fixes
+
+* **e2e:** adding more playwright tests for task tab ([1ab2118](https://github.com/iblai/os/commit/1ab2118a49b86f674e0c16858561d28f67d26554))
+* **mentor:** adding fix for the pnpm-lock ([030bfec](https://github.com/iblai/os/commit/030bfec8fb1539a099bc1e49865b45a91ddd87b2))
+* **mentor:** adding fix for the task test ([dc06129](https://github.com/iblai/os/commit/dc06129aefc959d2e66b15064caaf5fc7bd90bfa))
+* **mentor:** fix for the tasks tab ([50ec103](https://github.com/iblai/os/commit/50ec103424ab255d4818bd9f4009539d06a86b22))
+* **mentor:** pnpm-lock changes ([9edd14a](https://github.com/iblai/os/commit/9edd14acabda4bb82fc95ab12c5e00b41e9f6771))
+
+### Chores
+
+* **mentor:** version bump for iblai-js ([d7247b7](https://github.com/iblai/os/commit/d7247b7e437fe601875b297e79c6580b0709723d))
+
 ## [0.74.4]
 
 - bumped iblai-js version to 1.17.25
