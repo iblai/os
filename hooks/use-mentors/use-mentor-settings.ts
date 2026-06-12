@@ -251,6 +251,15 @@ export function useMentorSettings({
         effectiveSettings?.embed_show_voice_record ??
         effectivePublicSettings?.embed_show_voice_record,
 
+      // show_catalogue exists in the API response but not yet in the published
+      // type — defaults to true so the catalogue stays available when unset.
+      showCatalogue:
+        (effectiveSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ??
+        (effectivePublicSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ??
+        true,
+
       // @ts-ignore
       llmConfig:
         effectiveSettings?.llm_config ?? effectivePublicSettings?.llm_config,

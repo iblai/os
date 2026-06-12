@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
-import { waitForPageReady } from '../utils/resilient';
+import { waitForPageReady, reliableClick } from '../utils/resilient';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -44,9 +44,27 @@ export class CreateMentorPage {
   }
 
   /**
-   * Open the Create Mentor modal via the sidebar "New Mentor" button.
+   * Open the Create Mentor modal via the sidebar "New Agent" entry.
+   *
+   * In the new sidebar, "New Agent" lives inside the collapsible
+   * "Agents" section (alongside "My Agents" and "Explore"). Radix
+   * Collapsible hides items when the section is closed, so we expand
+   * Agents first and only then click New Agent.
    */
   async open(): Promise<void> {
+    const agentsTrigger = this.page.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    if (await agentsTrigger.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      const expanded = await agentsTrigger
+        .getAttribute('aria-expanded')
+        .catch(() => null);
+      if (expanded !== 'true') {
+        await agentsTrigger.click();
+      }
+    }
+
     const newMentorBtn = this.page.getByRole('button', {
       name: 'New Agent',
       exact: true,
@@ -67,11 +85,13 @@ export class CreateMentorPage {
       description || `E2E test mentor created at ${Date.now()}`,
     );
 
-    // Select first available category
+    // Select first available category. The cmdk option list re-renders as
+    // categories stream in, detaching the first <div role="option"> mid-click
+    // ("element is not stable / detached from the DOM"). reliableClick waits
+    // for stability and retries the whole click, so a detach just re-runs.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
-    await expect(firstCategory).toBeVisible({ timeout: 5_000 });
-    await firstCategory.click();
+    await reliableClick(this.page, firstCategory, 5_000);
 
     // Wait for Next button to become enabled
     await expect(this.nextButton).toBeEnabled({ timeout: 5_000 });

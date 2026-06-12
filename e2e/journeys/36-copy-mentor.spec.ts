@@ -252,11 +252,25 @@ test.describe('Journey 36: Copy Mentor', () => {
     await copyMentorDialog.submitCopy();
     logger.info('Mentor copied with training data');
 
-    // Verify the copied mentor has datasets (dialog stays open after copy)
-    await editMentorPage.navigateToTab('Datasets');
-    await waitForPageReady(page);
-    const copiedHasDatasets = await editMentorPage.datasets.hasDatasets();
-    expect(copiedHasDatasets).toBe(true);
+    // Verify the copied mentor has datasets (dialog stays open after copy).
+    // The copy is an async server-side job — datasets are materialized on the
+    // copied mentor in a background worker, so they may not be visible on the
+    // first read. Poll over a 60s window (re-navigating to Datasets each
+    // iteration so the RTK Query tag refetch fires) until materialization
+    // settles or the budget is exhausted.
+    await expect
+      .poll(
+        async () => {
+          await editMentorPage.navigateToTab('Datasets');
+          await waitForPageReady(page);
+          return editMentorPage.datasets.hasDatasets();
+        },
+        {
+          timeout: 60_000,
+          intervals: [2_000, 5_000, 5_000],
+        },
+      )
+      .toBe(true);
     logger.info('Copied mentor has datasets — training data was included');
     await editMentorPage.close();
   });
@@ -365,7 +379,13 @@ test.describe('Journey 36: Copy Mentor', () => {
       { timeout: 120_000 },
     );
 
-    await page.waitForLoadState('networkidle');
+    // Bounded + non-fatal: the destination SPA keeps long-lived connections
+    // open (streaming/polling) so it may never idle. `safeWaitForURL` above
+    // already confirmed the cross-tenant redirect; cap networkidle so it
+    // can't hang, and let `waitForPageReady` settle the new page.
+    await page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
     await waitForPageReady(page);
 
     logger.info(`Tenant switch completed — landed at: ${page.url()}`);

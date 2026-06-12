@@ -124,6 +124,10 @@ export class PromptsTab {
     promptText: string,
     options: { visibility?: 'Anyone' | 'Students' | 'Administrators' } = {},
   ): Promise<void> {
+    // Capture the count before adding so we can confirm the new prompt
+    // actually rendered before returning (see the poll at the end).
+    const countBefore = await this.getSuggestedPromptCount();
+
     await expect(this.addNewPromptButton).toBeVisible({ timeout: 10_000 });
     await this.addNewPromptButton.click();
 
@@ -170,6 +174,14 @@ export class PromptsTab {
 
     // Wait for the dialog to close
     await expect(addDialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The dialog closes immediately on submit, but the Suggested Prompts
+    // list only repaints once RTK Query invalidates and refetches — which
+    // can take well over 10s under CI load. Wait for the new prompt to
+    // actually render so callers can assert against it without flaking.
+    await expect
+      .poll(() => this.getSuggestedPromptCount(), { timeout: 30_000 })
+      .toBeGreaterThan(countBefore);
   }
 
   /**

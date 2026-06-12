@@ -28,8 +28,12 @@ jobs:
   coverage-bot:
     name: E2E Coverage Bot
     runs-on: ubuntu-latest
-    # Skip commits made by the bot itself (prevent loops) and Dependabot PRs (no secret access)
-    if: github.actor != 'mamigot' && github.actor != 'dependabot[bot]'
+    # Skip commits made by the bot itself (prevent loops), Dependabot PRs (no secret
+    # access), and PRs opened from forks (no secret access either).
+    if: |
+      github.actor != 'mamigot' &&
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write # allow Claude to commit coverage file updates
       pull-requests: write # allow gh pr review to post reviews

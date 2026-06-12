@@ -151,7 +151,7 @@ export const AIMessageBubble = forwardRef<
                 />
               )}
 
-              {isLoggedIn() && !showingSharedChat && (
+              {!showingSharedChat && (
                 <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
               )}
 

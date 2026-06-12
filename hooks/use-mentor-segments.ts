@@ -20,6 +20,8 @@ import {
   Container,
   Sparkles,
   ScrollText,
+  Volume2,
+  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -54,7 +56,42 @@ export type MentorSegmentConfigFlags = {
   isMemoryComponentEnabled: boolean;
   /** True when `enable_privacy_router` is on for this mentor. */
   isPrivacyEnabled: boolean;
+  /**
+   * True when the mentor's CallConfiguration has `enable_video` on — the
+   * toggle that's surfaced in the Settings tab. Gates the standalone
+   * Screen share top-level tab.
+   */
+  isScreenshareEnabled: boolean;
+  /**
+   * True when "Enable voice calls" (`show_voice_call`) is on in Settings.
+   * Gates the standalone Voice top-level tab — turning voice calls off
+   * removes the Voice tab from the sidebar entirely.
+   */
+  isVoiceCallEnabled: boolean;
 };
+
+/**
+ * Visual grouping shared by the platform NavBar dropdown (3 columns / mobile
+ * accordion) and the EditMentorModal sidebar (3 category tabs). Optional on
+ * a segment so ad-hoc/hidden tabs can omit it and fall through to a default.
+ */
+export type MentorSegmentNavCategory =
+  | 'configurations'
+  | 'integrations'
+  | 'analytics';
+
+/**
+ * Category order + display titles. Drives the left-to-right column order
+ * in the nav-bar dropdown and the tab order in the EditMentorModal sidebar.
+ */
+export const MENTOR_SEGMENT_NAV_CATEGORIES: ReadonlyArray<{
+  key: MentorSegmentNavCategory;
+  title: string;
+}> = [
+  { key: 'configurations', title: 'Configurations' },
+  { key: 'integrations', title: 'Integrations' },
+  { key: 'analytics', title: 'Analytics' },
+];
 
 export type MentorSegment = {
   /** Stable identifier — matches MODALS.EDIT_MENTOR.tabs.* for tab segments */
@@ -71,6 +108,8 @@ export type MentorSegment = {
    * to leave the segment always config-enabled.
    */
   enabledThroughConfig?: (flags: MentorSegmentConfigFlags) => boolean;
+  /** Which NavBar dropdown column / modal sidebar tab this segment lives in. */
+  navCategory?: MentorSegmentNavCategory;
 };
 
 /**
@@ -101,6 +140,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.sandbox,
@@ -113,6 +153,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     enabledThroughConfig: (flags) => flags.isClawEnabled,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.access,
@@ -122,6 +163,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
@@ -134,6 +176,45 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.voice,
+    label: 'Voice',
+    icon: Volume2,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
+    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
+    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Tab is gated by the "Enable voice calls" toggle (`show_voice_call`) in
+    // Settings. Turning voice calls off hides the Voice tab from the sidebar
+    // entirely — it configures voice providers + call settings, which are
+    // meaningless when voice calls are disabled.
+    enabledThroughConfig: (flags) => flags.isVoiceCallEnabled,
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.screenshare,
+    label: 'Screen Share',
+    icon: MonitorPlay,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Tab is gated by the "Enable screen sharing" toggle in
+    // Settings, which writes `enable_video` on the CallConfiguration. The
+    // SDK's <AgentScreenShareTab/> still renders an off-state hint when
+    // `enable_video` is false, but at the host level we hide the tab
+    // entirely so the sidebar stays clean.
+    enabledThroughConfig: (flags) => flags.isScreenshareEnabled,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
@@ -151,6 +232,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.skills,
@@ -166,6 +248,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // Sandbox tab itself is shown earlier so admins can connect first.
     enabledThroughConfig: (flags) =>
       flags.isClawEnabled && flags.clawConfigExists,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
@@ -184,6 +267,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.privacy,
@@ -196,6 +280,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
@@ -209,6 +294,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
@@ -222,6 +308,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,
@@ -234,6 +321,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.memory,
@@ -248,6 +336,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     ],
     enabledThroughConfig: (flags) =>
       flags.isMemsearchEnabled && flags.isMemoryComponentEnabled,
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.history,
@@ -260,6 +349,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.audit_log,
@@ -269,6 +359,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.datasets,
@@ -281,6 +372,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.api,
@@ -293,6 +385,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.embed,
@@ -305,6 +398,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'integrations',
   },
 ];
 
@@ -450,6 +544,21 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isPrivacyEnabled =
     // @ts-ignore - enable_privacy_router exists on API but not typed
     mentorSettings?.enable_privacy_router ?? false;
+
+  // CallConfiguration is embedded directly in the mentor-settings response.
+  // The host gates the Screen share tab on `enable_video` so it only shows
+  // up after an admin flips the toggle in Settings.
+  // @ts-ignore - call_configuration exists on API but not typed
+  const isScreenshareEnabled: boolean =
+    // @ts-ignore - call_configuration exists on API but not typed
+    mentorSettings?.call_configuration?.enable_video ?? false;
+
+  // The Voice tab is gated on "Enable voice calls". Default to true to match
+  // the Settings form (`show_voice_call ?? true`) so a mentor that never
+  // explicitly set the flag still surfaces the tab.
+  const isVoiceCallEnabled: boolean =
+    // @ts-ignore - show_voice_call exists on API but not typed
+    mentorSettings?.show_voice_call ?? true;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -470,6 +579,8 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isClawEnabled,
         clawConfigExists,
         isPrivacyEnabled,
+        isScreenshareEnabled,
+        isVoiceCallEnabled,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -483,6 +594,8 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       clawConfigExists,
       isMemoryComponentEnabled,
       isPrivacyEnabled,
+      isScreenshareEnabled,
+      isVoiceCallEnabled,
     ],
   );
 

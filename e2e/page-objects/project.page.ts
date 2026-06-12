@@ -28,20 +28,42 @@ export class ProjectPage {
   }
 
   async createFromSidebar(name: string): Promise<void> {
-    const newProjectButton = this.page.getByRole('button', {
+    const sidebar = this.page.locator('aside').first();
+    const newProjectButton = sidebar.getByRole('button', {
       name: 'New Project',
       exact: true,
     });
 
-    // Expand sidebar if collapsed — "New Project" only renders when sidebar is open
+    // Expand the rail if collapsed — items only render when the sidebar
+    // is open. The toggle's aria-label is "Expand sidebar" when collapsed.
     const isVisible = await newProjectButton
       .isVisible({ timeout: 2_000 })
       .catch(() => false);
     if (!isVisible) {
-      const toggle = this.page.getByRole('button', { name: /toggle sidebar/i });
-      if (await toggle.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await toggle.click();
+      const expandToggle = sidebar.getByRole('button', {
+        name: 'Expand sidebar',
+        exact: true,
+      });
+      if (await expandToggle.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await expandToggle.click();
       }
+    }
+
+    // "New Project" is inside the collapsible "Projects" section in the
+    // new sidebar — expand it idempotently before clicking the inner item.
+    const projectsTrigger = sidebar.getByRole('button', {
+      name: 'Projects',
+      exact: true,
+    });
+    await expect(projectsTrigger).toBeVisible({ timeout: 10_000 });
+    const projectsExpanded = await projectsTrigger
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (projectsExpanded !== 'true') {
+      await projectsTrigger.click();
+      await expect(projectsTrigger).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 5_000,
+      });
     }
 
     await expect(newProjectButton).toBeVisible({ timeout: 15_000 });
@@ -69,30 +91,44 @@ export class ProjectPage {
     return this.page.url().includes('/projects/');
   }
 
+  /**
+   * The new sidebar's per-project context menu is a left-click
+   * DropdownMenu (Radix), NOT the old right-click context menu. The
+   * trigger is a hover-revealed three-dot button with
+   * `aria-label="Project actions"` inside each project's `<li>`.
+   *
+   * Scoping rules: we constrain the search to the sidebar `<aside>`,
+   * then narrow to `<li>` rows that contain BOTH a "Project actions"
+   * button AND a name button whose accessible name matches exactly.
+   * That eliminates ambiguity from generic `<li>` matches anywhere
+   * else on the page (e.g. menu items, dropdown options).
+   */
+  private async openProjectActions(name: string): Promise<void> {
+    const sidebar = this.page.locator('aside').first();
+    const projectRow = sidebar
+      .locator('li')
+      .filter({
+        has: this.page.getByRole('button', { name: 'Project actions' }),
+      })
+      .filter({
+        has: this.page.getByRole('button', { name, exact: true }),
+      });
+    await expect(projectRow).toHaveCount(1, { timeout: 10_000 });
+    await projectRow.hover();
+    const actionsBtn = projectRow.getByRole('button', {
+      name: 'Project actions',
+    });
+    await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
+    await actionsBtn.click();
+  }
+
   async rename(newName: string): Promise<void> {
-    const projectText = this.page.getByText(newName.replace(' Renamed', ''));
-    await projectText.hover();
+    const oldName = newName.replace(' Renamed', '');
+    await this.openProjectActions(oldName);
 
     const renameMenuItem = this.page.getByRole('menuitem', { name: /rename/i });
-    await projectText.click({ button: 'right' });
-
-    const ctxVisible = await renameMenuItem
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-
-    if (!ctxVisible) {
-      await this.page.keyboard.press('Escape');
-      const optionsBtn = this.page
-        .locator('button[aria-label*="options"], button[aria-label*="Options"]')
-        .first();
-      if (await optionsBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await optionsBtn.click();
-        await expect(renameMenuItem).toBeVisible({ timeout: 5_000 });
-        await renameMenuItem.click();
-      }
-    } else {
-      await renameMenuItem.click();
-    }
+    await expect(renameMenuItem).toBeVisible({ timeout: 5_000 });
+    await renameMenuItem.click();
 
     const dialog = this.page.getByRole('dialog', { name: 'Rename Project' });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
@@ -104,29 +140,11 @@ export class ProjectPage {
   }
 
   async delete(name: string): Promise<void> {
-    const projectText = this.page.getByText(name).first();
-    await projectText.hover();
+    await this.openProjectActions(name);
 
     const deleteMenuItem = this.page.getByRole('menuitem', { name: /delete/i });
-    await projectText.click({ button: 'right' });
-
-    const ctxVisible = await deleteMenuItem
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-
-    if (!ctxVisible) {
-      await this.page.keyboard.press('Escape');
-      const optionsBtn = this.page
-        .locator('button[aria-label*="options"], button[aria-label*="Options"]')
-        .first();
-      if (await optionsBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await optionsBtn.click();
-        await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
-        await deleteMenuItem.click();
-      }
-    } else {
-      await deleteMenuItem.click();
-    }
+    await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
+    await deleteMenuItem.click();
 
     const dialog = this.page.getByRole('dialog', { name: 'Delete Project' });
     await expect(dialog).toBeVisible({ timeout: 10_000 });

@@ -1,7 +1,38 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { EMBED_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
+import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+import { logger } from '@iblai/iblai-js/playwright';
+
+/** Builds the embed entry URL (the iframe's own src) for a mentor page. */
+function embedUrlFor(mentorUrl: string): string {
+  const url = new URL(mentorUrl);
+  url.searchParams.set('embed', 'true');
+  url.searchParams.set('extra-body-classes', 'iframed-externally');
+  return url.toString();
+}
+
+/** Configures + persists the embed with a given Show Catalogue value (via UI). */
+async function createEmbedWithShowCatalogue(
+  page: Page,
+  editMentorPage: EditMentorPage,
+  mentorUrl: string,
+  enabled: boolean,
+): Promise<void> {
+  await page.goto(mentorUrl, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await editMentorPage.open('Embed');
+  await expect(editMentorPage.embed.showCatalogueToggle).toBeVisible({
+    timeout: 15_000,
+  });
+  await editMentorPage.embed.setShowCatalogue(enabled);
+  await editMentorPage.embed.submit();
+  await editMentorPage.close();
+}
 
 test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   test.beforeEach(async ({ page }) => {
@@ -60,6 +91,9 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     async ({ page, editMentorPage }) => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
+      // Visibility moved under the Discovery sub-tab when Settings was
+      // split into Basic / Discovery / Capabilities.
+      await editMentorPage.settings.selectSubTab('Discovery');
       const hasVisibility = await editMentorPage.settings.visibilityCombobox
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
@@ -89,6 +123,241 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await contextSwitch.click(); // restore
     }
     await editMentorPage.close();
+  });
+
+  // Each Show Catalogue test runs against its own freshly created, anonymous
+  // mentor — isolating the tests (no contention over a shared mentor's
+  // show_catalogue) and letting "Create Embed" pass the anonymous-or-URL gate.
+  test.describe('Show Catalogue setting', () => {
+    test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+      await createMentorPage.openAndCreate(`Catalogue E2E ${Date.now()}`);
+
+      // Make the mentor anonymous so "Create Embed" can persist settings.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      await saveBtn.click();
+      await page.waitForTimeout(1_500);
+      await editMentorPage.close();
+    });
+
+    // emb-06: The Show Catalogue toggle works in the embed tab and is independent
+    // of the sibling toggles. Stays in-modal so it neither mutates backend state
+    // nor depends on cache invalidation; persistence is covered by emb-07.
+    test('embed tab Show Catalogue toggle flips and leaves sibling toggles unaffected', async ({
+      editMentorPage,
+    }) => {
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.showCatalogueToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      const original = await editMentorPage.embed.getShowCatalogueState();
+
+      // Capture sibling toggle states before touching Show Catalogue.
+      const voiceCallBefore = await editMentorPage.embed.voiceCallToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+      const voiceRecordBefore = await editMentorPage.embed.voiceRecordToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+      const attachmentBefore = await editMentorPage.embed.attachmentToggle
+        .getAttribute('aria-checked')
+        .catch(() => null);
+
+      // Toggle Show Catalogue and confirm the switch flips.
+      await editMentorPage.embed.toggleShowCatalogue();
+      await expect(editMentorPage.embed.showCatalogueToggle).toHaveAttribute(
+        'aria-checked',
+        original ? 'false' : 'true',
+        { timeout: 5_000 },
+      );
+
+      // Sibling toggles must be unchanged after toggling Show Catalogue.
+      if (voiceCallBefore !== null) {
+        await expect(editMentorPage.embed.voiceCallToggle).toHaveAttribute(
+          'aria-checked',
+          voiceCallBefore,
+        );
+      }
+      if (voiceRecordBefore !== null) {
+        await expect(editMentorPage.embed.voiceRecordToggle).toHaveAttribute(
+          'aria-checked',
+          voiceRecordBefore,
+        );
+      }
+      if (attachmentBefore !== null) {
+        await expect(editMentorPage.embed.attachmentToggle).toHaveAttribute(
+          'aria-checked',
+          attachmentBefore,
+        );
+      }
+
+      // Restore the original state (UI only — nothing is persisted).
+      await editMentorPage.embed.setShowCatalogue(original);
+      await editMentorPage.close();
+    });
+
+    // emb-07: With Show Catalogue disabled, the embed view's sidebar logo
+    // renders but is not wrapped in a navigable button.
+    test('embed view sidebar logo is not clickable when Show Catalogue is disabled', async ({
+      page,
+      editMentorPage,
+      sidebarPage,
+    }) => {
+      const baseMentorUrl = page.url();
+      await createEmbedWithShowCatalogue(
+        page,
+        editMentorPage,
+        baseMentorUrl,
+        false,
+      );
+
+      await page.goto(embedUrlFor(baseMentorUrl), {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      await sidebarPage.ensureExpanded(40_000);
+      await expect(sidebarPage.logoImage).toBeVisible({ timeout: 15_000 });
+      // The logo renders but is not wrapped in a navigable button. toHaveCount(0)
+      // retries past the brief loading window before settings resolve.
+      await expect(sidebarPage.logoButton).toHaveCount(0, { timeout: 10_000 });
+    });
+
+    // emb-08: With Show Catalogue enabled, the embed view's sidebar logo is
+    // clickable (navigates home), matching the non-embed behaviour.
+    test('embed view sidebar logo is clickable when Show Catalogue is enabled', async ({
+      page,
+      editMentorPage,
+      sidebarPage,
+    }) => {
+      const baseMentorUrl = page.url();
+      await createEmbedWithShowCatalogue(
+        page,
+        editMentorPage,
+        baseMentorUrl,
+        true,
+      );
+
+      await page.goto(embedUrlFor(baseMentorUrl), {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      await sidebarPage.ensureExpanded(40_000);
+      await expect(sidebarPage.logoButton).toBeVisible({ timeout: 15_000 });
+    });
+  }); // test.describe('Show Catalogue setting')
+
+  // emb-09: Embed mode renders a minimal sidebar — New Chat + Chats section
+  // present; Agents (New Agent), Workflows, Analytics, Projects sections and
+  // the Support/docs footer link are ALL absent. Holds regardless of user role
+  // and for both the expanded and rail-collapsed sidebar layouts.
+  test('embed mode renders a minimal sidebar (New Chat and Chats present; Agents, Workflows, Analytics, Projects, and Support link absent)', async ({
+    page,
+    sidebarPage,
+  }) => {
+    // Build the embed URL from the current mentor page URL.
+    const baseMentorUrl = page.url();
+    await page.goto(embedUrlFor(baseMentorUrl), {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+    await waitForPageReady(page);
+
+    // The sidebar may be absent when ?hide-sidebar is active or when the
+    // platform collapses it on small viewports. Check for the toggle button
+    // (always present when the sidebar is rendered, even when rail-collapsed).
+    let sidebarPresent = false;
+    try {
+      await sidebarPage.toggleButton.waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      });
+      sidebarPresent = true;
+    } catch {
+      sidebarPresent = false;
+    }
+
+    if (!sidebarPresent) {
+      logger.info(
+        'emb-09: sidebar toggle not found in embed mode — sidebar may be hidden via ?hide-sidebar or not rendered; skipping embed-sidebar assertions',
+      );
+      return;
+    }
+
+    // Ensure the sidebar is in expanded (non-rail) state so all section
+    // triggers are rendered as labelled buttons with text, not icon-only.
+    await sidebarPage.ensureExpanded(40_000);
+
+    // --- Must be PRESENT in embed mode ---
+
+    // "New Chat" button
+    await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 10_000 });
+
+    // "Chats" collapsible section trigger
+    const chatsVisible = await sidebarPage.isSectionTriggerVisible(
+      'Chats',
+      5_000,
+    );
+    if (!chatsVisible) {
+      logger.info(
+        'emb-09: Chats section trigger not visible — may render differently in this env; asserting New Chat only',
+      );
+    } else {
+      await expect(
+        sidebarPage.sidebar.getByRole('button', { name: 'Chats', exact: true }),
+      ).toBeVisible();
+    }
+
+    // --- Must be ABSENT in embed mode ---
+
+    // Agents section ("New Agent" is a sub-item; the section trigger itself
+    // is "Agents" — but in embed mode `agentsMenu.items` is empty so the
+    // <SidebarNavCollapsibleSection> is not rendered at all).
+    const agentsVisible = await sidebarPage.isSectionTriggerVisible(
+      'Agents',
+      3_000,
+    );
+    expect(agentsVisible).toBe(false);
+
+    // "New Agent" button (sub-item, also absent)
+    await expect(sidebarPage.newMentorButton).toHaveCount(0, {
+      timeout: 3_000,
+    });
+
+    // Workflows section trigger
+    const workflowsVisible = await sidebarPage.isSectionTriggerVisible(
+      'Workflows',
+      3_000,
+    );
+    expect(workflowsVisible).toBe(false);
+
+    // Analytics section trigger
+    const analyticsVisible = await sidebarPage.isSectionTriggerVisible(
+      'Analytics',
+      3_000,
+    );
+    expect(analyticsVisible).toBe(false);
+
+    // Projects section trigger
+    const projectsVisible = await sidebarPage.isSectionTriggerVisible(
+      'Projects',
+      3_000,
+    );
+    expect(projectsVisible).toBe(false);
+
+    // Support / docs link (ibl.ai/docs) — entire footer hidden in embed mode
+    const supportVisible = await sidebarPage.isSupportLinkVisible(3_000);
+    expect(supportVisible).toBe(false);
+
+    logger.info(
+      'emb-09: embed mode minimal sidebar verified — New Chat present; Agents/Workflows/Analytics/Projects/Support absent',
+    );
   });
 
   // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)

@@ -203,6 +203,7 @@ vi.mock('@/lib/config', () => ({
     baseWsUrl: () => 'wss://test.com',
     supportEmail: () => 'support@test.com',
     iblTemplateMentor: () => 'default-agent',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
   },
 }));
 

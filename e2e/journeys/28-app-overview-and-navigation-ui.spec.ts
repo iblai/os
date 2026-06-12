@@ -40,6 +40,10 @@ test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
     nonadminPage,
     nonadminSidebarPage,
   }) => {
+    // "Explore" moved inside the collapsible "Agents" section in the new
+    // sidebar — expand it first so the inner item resolves. Notifications
+    // is a footer action and stays visible without expansion.
+    await nonadminSidebarPage.expandSection('Agents');
     await expect(nonadminSidebarPage.exploreLink).toBeVisible({
       timeout: 10_000,
     });
