@@ -195,6 +195,10 @@ vi.mock('./tabs', () => ({
   SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
   SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
+  VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
+  ScreenShareTab: () => (
+    <div data-testid="screenshare-tab">Screen Share Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({

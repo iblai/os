@@ -87,10 +87,7 @@ const useGoogleDrivePicker = () => {
             refresh_token: 'test-refresh token',
             client_id: credentials.client_id,
             token: authToken?.access_token,
-            scopes: [
-              'https://www.googleapis.com/auth/drive.metadata.readonly',
-              'https://www.googleapis.com/auth/drive.readonly',
-            ],
+            scopes: ['https://www.googleapis.com/auth/drive.file'],
             token_type: authToken?.token_type,
             expiry_date: new Date(
               Date.now() + (authToken?.expires_in || 0) * 1000,
@@ -133,10 +130,7 @@ const useGoogleDrivePicker = () => {
       openPicker({
         clientId: credentials.client_id,
         developerKey: credentials.developer_key,
-        customScopes: [
-          'https://www.googleapis.com/auth/drive.metadata.readonly',
-          'https://www.googleapis.com/auth/drive.readonly',
-        ],
+        customScopes: ['https://www.googleapis.com/auth/drive.file'],
         token: authToken,
         showUploadView: true,
         showUploadFolders: true,

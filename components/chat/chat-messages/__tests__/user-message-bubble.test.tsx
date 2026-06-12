@@ -1,6 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { UserMessageBubble } from '../user-message-bubble';
+
+// Mock the typed selector hook so the component can read the image-previews map
+// without a real redux store. By default there are no local previews.
+const mockedHooks = vi.hoisted(() => ({
+  imagePreviews: {} as Record<string, string>,
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppSelector: (selector: any) =>
+    selector({ imagePreviews: { urls: mockedHooks.imagePreviews } }),
+}));
 
 /**
  * Test suite for the UserMessageBubble component
@@ -29,6 +40,10 @@ const defaultProps = {
 };
 
 describe('UserMessageBubble Component', () => {
+  beforeEach(() => {
+    mockedHooks.imagePreviews = {};
+  });
+
   describe('Basic Rendering', () => {
     it('should render message content', () => {
       render(<UserMessageBubble {...defaultProps} />);
@@ -205,6 +220,119 @@ describe('UserMessageBubble Component', () => {
       expect(screen.getByText('document.pdf')).toBeInTheDocument();
     });
 
+    it('should use the local preview URL for an image when one exists for its fileId', () => {
+      mockedHooks.imagePreviews = { 'file-123': 'blob:local-preview' };
+
+      const messageWithImage = {
+        ...defaultProps,
+        message: {
+          id: '1',
+          role: 'user' as const,
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+          fileAttachments: [
+            {
+              fileName: 'test-image.png',
+              fileType: 'image/png',
+              fileSize: 1024,
+              fileId: 'file-123',
+              uploadUrl: 'https://s3.example.com/put-url',
+            },
+          ],
+        },
+      };
+
+      const { container } = render(<UserMessageBubble {...messageWithImage} />);
+      const img = container.querySelector('img');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('src', 'blob:local-preview');
+    });
+
+    it('should fall back to uploadUrl when there is no local preview for the fileId', () => {
+      mockedHooks.imagePreviews = {};
+
+      const messageWithImage = {
+        ...defaultProps,
+        message: {
+          id: '1',
+          role: 'user' as const,
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+          fileAttachments: [
+            {
+              fileName: 'test-image.png',
+              fileType: 'image/png',
+              fileSize: 1024,
+              fileId: 'file-999',
+              uploadUrl: 'https://s3.example.com/view-url.png',
+            },
+          ],
+        },
+      };
+
+      const { container } = render(<UserMessageBubble {...messageWithImage} />);
+      const img = container.querySelector('img');
+      expect(img).toHaveAttribute('src', 'https://s3.example.com/view-url.png');
+    });
+
+    it('should fall back to uploadUrl when the attachment has no fileId', () => {
+      mockedHooks.imagePreviews = { 'file-123': 'blob:local-preview' };
+
+      const messageWithImage = {
+        ...defaultProps,
+        message: {
+          id: '1',
+          role: 'user' as const,
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+          fileAttachments: [
+            {
+              fileName: 'legacy-image.png',
+              fileType: 'image/png',
+              fileSize: 1024,
+              uploadUrl: 'https://s3.example.com/legacy.png',
+            },
+          ],
+        },
+      };
+
+      const { container } = render(<UserMessageBubble {...messageWithImage} />);
+      const img = container.querySelector('img');
+      expect(img).toHaveAttribute('src', 'https://s3.example.com/legacy.png');
+    });
+
+    it('should render a FileCard fallback when an image has neither a local preview nor an uploadUrl', () => {
+      mockedHooks.imagePreviews = {};
+
+      const messageWithImage = {
+        ...defaultProps,
+        message: {
+          id: '1',
+          role: 'user' as const,
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+          fileAttachments: [
+            {
+              fileName: 'broken-image.png',
+              fileType: 'image/png',
+              fileSize: 1024,
+              fileId: 'file-no-url',
+              uploadUrl: '',
+            },
+          ],
+        },
+      };
+
+      const { container } = render(<UserMessageBubble {...messageWithImage} />);
+      // Empty url -> ImageMessage falls back to FileCard (no <img>).
+      expect(container.querySelector('img')).not.toBeInTheDocument();
+      expect(screen.getByText('broken-image.png')).toBeInTheDocument();
+    });
+
     it('should render multiple file attachments', () => {
       const messageWithMultipleFiles = {
         ...defaultProps,
@@ -262,6 +390,82 @@ describe('UserMessageBubble Component', () => {
         screen.getByText('Original assistant message'),
       ).toBeInTheDocument();
       expect(screen.getByText('This is my reply')).toBeInTheDocument();
+    });
+
+    it('should highlight and scroll to the original message when reply context is clicked', () => {
+      const onHighlightMessage = vi.fn();
+      const original = {
+        id: '1',
+        role: 'assistant' as const,
+        content: 'Original message',
+        timestamp: new Date().toISOString(),
+        visible: true,
+      };
+      const reply = {
+        id: '2',
+        role: 'user' as const,
+        content: 'My reply',
+        timestamp: new Date().toISOString(),
+        visible: true,
+        replyTo: original,
+      };
+
+      const { container } = render(
+        <UserMessageBubble
+          {...defaultProps}
+          message={reply}
+          messages={[original, reply]}
+          onHighlightMessage={onHighlightMessage}
+        />,
+      );
+
+      // Provide a matching DOM element so scrollIntoView is exercised.
+      const containers = container.querySelectorAll('.message-container');
+      const scrollIntoView = vi.fn();
+      containers.forEach((el) => {
+        (el as HTMLElement).scrollIntoView = scrollIntoView;
+      });
+
+      const replyContext = container.querySelector('.cursor-pointer');
+      fireEvent.click(replyContext!);
+
+      expect(onHighlightMessage).toHaveBeenCalledWith(0);
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+
+    it('should not highlight when the original message is not found', () => {
+      const onHighlightMessage = vi.fn();
+      const reply = {
+        id: '2',
+        role: 'user' as const,
+        content: 'My reply',
+        timestamp: new Date().toISOString(),
+        visible: true,
+        replyTo: {
+          id: '1',
+          role: 'assistant' as const,
+          content: 'A message not present in the list',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+      };
+
+      const { container } = render(
+        <UserMessageBubble
+          {...defaultProps}
+          message={reply}
+          messages={[reply]}
+          onHighlightMessage={onHighlightMessage}
+        />,
+      );
+
+      const replyContext = container.querySelector('.cursor-pointer');
+      fireEvent.click(replyContext!);
+
+      expect(onHighlightMessage).not.toHaveBeenCalled();
     });
 
     it('should display mentor name in reply context', () => {
