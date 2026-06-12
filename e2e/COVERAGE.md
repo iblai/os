@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-09 | 412 checkpoints (393 covered, 7 not-reproducible in default env, 12 deprecated) | 47 journeys (46 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-12 | 418 checkpoints (399 covered, 7 not-reproducible in default env, 12 deprecated) | 48 journeys (47 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -781,6 +781,21 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+
+---
+
+## Journey 46: Onboarding (6 checkpoints) — `journeys/46-onboarding.spec.ts`
+
+**Source files:** `app/onboarding/page.tsx`, `components/onboarding/onboarding-create-agent-step.tsx`
+
+The `/onboarding` route renders the SDK onboarding wizard (`OnboardingWizard` from `@iblai/iblai-js/web-containers`) with an OS-local create-agent final step. Flow: Organization → Sector → Invite team → first agent. The wizard persists the answers itself (under the user's platform metadata `onboarding` key — no `onAnswersSubmit` is passed); on completion the page redirects to `/platform/<tenant>/<agentId>/explore`. Tests walk the flow without submitting the final create (no throwaway agent / redirect side-effect).
+
+- [x] onboarding-01: The `/onboarding` route renders the wizard — progress bar and the Organization step (org-name input + Continue) are visible
+- [x] onboarding-02: Organization step — Continue is disabled until an organization name is entered, then enabled
+- [x] onboarding-03: Sector step — multiple sectors render as radios; Continue is disabled until one is selected
+- [x] onboarding-04: Invite step — the embedded team-invite block renders (collaborate copy + Continue)
+- [x] onboarding-05: Back navigation returns to the previous step and preserves the typed organization name
+- [x] onboarding-06: Final step — the create-agent form (Name prefilled from the chosen sector + Description + "Create agent") renders _(admin-only; persists answers to platform metadata first)_
 
 ---
 

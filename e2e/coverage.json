@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-09",
+  "lastUpdated": "2026-06-12",
   "summary": {
-    "totalCheckpoints": 412,
-    "coveredCheckpoints": 393,
+    "totalCheckpoints": 418,
+    "coveredCheckpoints": 399,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 47,
-    "activeJourneys": 46
+    "totalJourneys": 48,
+    "activeJourneys": 47
   },
   "journeys": [
     {
@@ -211,7 +211,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery \u2014 Explore Page",
+      "name": "Mentor Discovery — Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -287,7 +287,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management \u2014 Admin",
+      "name": "Mentor Management — Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -354,24 +354,24 @@
         },
         {
           "id": "mgmt-12",
-          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx — not e2e-reproducible without RBAC seeding",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-13",
-          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-14",
-          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         }
       ]
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab \u2014 Unique ID",
+      "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
@@ -516,7 +516,7 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
           "status": "covered"
         },
         {
@@ -528,7 +528,7 @@
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas \u2014 AI Document Editor",
+      "name": "Canvas — AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": ["components/canvas/canvas-component.tsx"],
       "checkpoints": [
@@ -591,7 +591,7 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas \u2014 Embed",
+      "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
@@ -1572,7 +1572,7 @@
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility \u2014 WCAG 2.1 AA",
+      "name": "Accessibility — WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
@@ -1687,21 +1687,21 @@
         },
         {
           "id": "a11y-21",
-          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Reflow refactor reverted as out-of-scope; only WCAG 4.1.2 (button aria-labels) is in scope for #1596. Track WCAG 1.4.10 separately."
         },
         {
           "id": "a11y-22",
-          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Duplicate-composer removal reverted with the reflow refactor; out of scope for #1596."
         },
         {
           "id": "a11y-23",
-          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea — WCAG 2.4.1 (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Skip-link added by the reflow refactor reverted as out-of-scope; track WCAG 2.4.1 separately."
@@ -2412,7 +2412,7 @@
         },
         {
           "id": "ac-03",
-          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
+          "description": "Access tab shows roles table or empty state — never a blank crash screen",
           "status": "covered"
         },
         {
@@ -2628,6 +2628,47 @@
         {
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "onboarding",
+      "name": "Onboarding",
+      "spec": "46-onboarding.spec.ts",
+      "sourceFiles": [
+        "app/onboarding/page.tsx",
+        "components/onboarding/onboarding-create-agent-step.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "onboarding-01",
+          "description": "The /onboarding route renders the wizard with a progress bar and the organization step",
+          "status": "covered"
+        },
+        {
+          "id": "onboarding-02",
+          "description": "Organization step: Continue is disabled until an organization name is entered",
+          "status": "covered"
+        },
+        {
+          "id": "onboarding-03",
+          "description": "Sector step lists selectable sectors and gates Continue until one is chosen",
+          "status": "covered"
+        },
+        {
+          "id": "onboarding-04",
+          "description": "Invite step embeds the team-invite block",
+          "status": "covered"
+        },
+        {
+          "id": "onboarding-05",
+          "description": "Back navigation returns to the previous step and preserves the organization name",
+          "status": "covered"
+        },
+        {
+          "id": "onboarding-06",
+          "description": "Final step shows the create-agent form prefilled from the chosen sector",
           "status": "covered"
         }
       ]

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useCreateMentorMutation,
@@ -47,6 +47,9 @@ export function OnboardingCreateAgentStep({
   const [description, setDescription] = useState(
     suggestedAgent?.description ?? '',
   );
+  // Flipped on submit so the form is swapped for a loading state while the page
+  // redirects to the new workspace (creation itself is fire-and-forget).
+  const [submitting, setSubmitting] = useState(false);
   const [createMentor, { isLoading }] = useCreateMentorMutation();
 
   // Any existing agent's id, fetched up front — what the page redirects to the
@@ -64,7 +67,9 @@ export function OnboardingCreateAgentStep({
 
   const submit = () => {
     if (!canCreate) return;
-    // Fire-and-forget: kick the (slow) create off and leave immediately.
+    // Swap to the loading state up front, then kick the (slow) create off and
+    // leave immediately — the redirect happens while this spinner is showing.
+    setSubmitting(true);
     createMentor({
       org: tenant,
       formData: {
@@ -91,6 +96,29 @@ export function OnboardingCreateAgentStep({
       });
     complete(anyAgentId);
   };
+
+  if (submitting) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex flex-col items-center justify-center gap-4 py-16 text-center"
+      >
+        <Loader2
+          className="h-10 w-10 animate-spin text-[#2563EB]"
+          aria-hidden="true"
+        />
+        <div>
+          <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+            Creating your agent…
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Taking you to your workspace.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

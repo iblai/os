@@ -31,7 +31,7 @@ import { OnboardingCreateAgentStep } from '../onboarding-create-agent-step';
 const baseContext = {
   tenant: 'acme',
   username: 'tester',
-  answers: { organizationName: 'Acme', sector: 'higher_education' },
+  answers: { organizationName: 'Acme', segment: 'higher_education' },
   suggestedAgent: { name: 'Campus Assistant', description: 'Helps students.' },
   goBack: vi.fn(),
 };
@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe('OnboardingCreateAgentStep', () => {
-  it('prefills name + description from the sector suggestion', () => {
+  it('prefills name + description from the segment suggestion', () => {
     render(<OnboardingCreateAgentStep {...baseContext} complete={vi.fn()} />);
     expect(screen.getByText('Make your first agent')).toBeInTheDocument();
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe(
@@ -94,5 +94,22 @@ describe('OnboardingCreateAgentStep', () => {
     render(<OnboardingCreateAgentStep {...baseContext} complete={complete} />);
     fireEvent.click(screen.getByRole('button', { name: 'Create agent' }));
     expect(complete).toHaveBeenCalledWith(null);
+  });
+
+  it('swaps the form for a loading state once submitted', () => {
+    // Slow endpoint that never resolves — the loading state must show regardless.
+    mockUnwrap.mockReturnValue(new Promise(() => {}));
+    render(<OnboardingCreateAgentStep {...baseContext} complete={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create agent' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Creating your agent…',
+    );
+    // The form is replaced.
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create agent' }),
+    ).not.toBeInTheDocument();
   });
 });
