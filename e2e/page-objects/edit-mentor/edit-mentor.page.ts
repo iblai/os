@@ -12,6 +12,7 @@ import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
+import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
 
@@ -37,6 +38,7 @@ const TAB_CATEGORY: Record<
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
+  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
   Tools: 'Configurations',
   MCP: 'Integrations',
@@ -68,6 +70,7 @@ export class EditMentorPage {
   readonly embed: EmbedTab;
   readonly access: AccessTab;
   readonly privacy: PrivacyTab;
+  readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
   readonly copyMentorDialog: CopyMentorPage;
@@ -92,6 +95,7 @@ export class EditMentorPage {
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
     this.privacy = new PrivacyTab(page, this.dialog);
+    this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);

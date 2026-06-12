@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-11",
+  "lastUpdated": "2026-06-12",
   "summary": {
-    "totalCheckpoints": 434,
-    "coveredCheckpoints": 415,
+    "totalCheckpoints": 442,
+    "coveredCheckpoints": 423,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 50,
-    "activeJourneys": 49
+    "totalJourneys": 51,
+    "activeJourneys": 50
   },
   "journeys": [
     {
@@ -2302,6 +2302,60 @@
         {
           "id": "pr-07",
           "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tasks-tab",
+      "name": "Mentor Tasks Tab",
+      "spec": "49-mentor-tasks-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/tasks-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ta-01",
+          "description": "Tasks tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ta-02",
+          "description": "Tasks tab heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ta-03",
+          "description": "Toolbar exposes the task search input and the Schedule Task button",
+          "status": "covered"
+        },
+        {
+          "id": "ta-04",
+          "description": "Total Tasks, Completed and Failed metric cards render",
+          "status": "covered"
+        },
+        {
+          "id": "ta-05",
+          "description": "Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting",
+          "status": "covered"
+        },
+        {
+          "id": "ta-06",
+          "description": "Admin schedules a new daily periodic task and it appears in the task list",
+          "status": "covered"
+        },
+        {
+          "id": "ta-07",
+          "description": "Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible",
+          "status": "covered"
+        },
+        {
+          "id": "ta-08",
+          "description": "Admin deletes a task and its row is removed from the list",
           "status": "covered"
         }
       ]

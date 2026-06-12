@@ -47,6 +47,7 @@ export const MODALS = {
       tools: 'tools',
       safety: 'safety',
       privacy: 'privacy',
+      tasks: 'tasks',
       disclaimer: 'disclaimer',
       access: 'access',
       memory: 'memory',
