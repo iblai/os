@@ -64,6 +64,42 @@ let mockFreeTrialState: {
 };
 
 /**
+ * Mock RBAC / mentor identity plumbing
+ */
+const mockUseParams = vi.fn();
+let mockUsername: string | null = 'test-user';
+const mockGetMentorId = vi.fn();
+const mockGetMentorSettingsQuery = vi.fn();
+const mockWithPermissionsHasPermission = vi.fn();
+const mockWithPermissionsRbacResource = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useParams: () => mockUseParams(),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => mockUsername,
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({
+    getMentorId: mockGetMentorId,
+  }),
+}));
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+}));
+
+vi.mock('@/hoc/withPermissions', () => ({
+  WithPermissions: ({ rbacResource, children }: any) => {
+    mockWithPermissionsRbacResource(rbacResource);
+    return children({ hasPermission: mockWithPermissionsHasPermission() });
+  },
+}));
+
+/**
  * Mock custom hooks
  */
 vi.mock('@/hooks/use-datasets', () => ({
@@ -238,6 +274,23 @@ describe('DatasetsTab', () => {
 
     // Default behavior: execute callback immediately
     mockExecuteWithTrialCheck.mockImplementation((callback) => callback());
+
+    // Default RBAC / mentor identity state
+    mockUseParams.mockReset();
+    mockGetMentorId.mockReset();
+    mockGetMentorSettingsQuery.mockReset();
+    mockWithPermissionsHasPermission.mockReset();
+    mockWithPermissionsRbacResource.mockReset();
+    mockUsername = 'test-user';
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'mentor-1',
+    });
+    mockGetMentorId.mockReturnValue(null);
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
+    mockWithPermissionsHasPermission.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -558,6 +611,132 @@ describe('DatasetsTab', () => {
   });
 
   // --------------------------------------------------------------------------
+  // RBAC Permission Gating Tests
+  // --------------------------------------------------------------------------
+
+  describe('RBAC Permission Gating', () => {
+    /**
+     * Test: Button should render when the user has documents create permission
+     * Verifies the permission-granted branch of WithPermissions
+     */
+    it('renders "Add Resource" button when user has create permission', () => {
+      mockWithPermissionsHasPermission.mockReturnValue(true);
+
+      render(<DatasetsTab />);
+
+      expect(screen.getByText('Add Resource')).toBeInTheDocument();
+    });
+
+    /**
+     * Test: Button should be hidden when the user lacks documents create
+     * permission (issue #1924)
+     * Verifies the permission-denied branch renders nothing
+     */
+    it('hides "Add Resource" button when user lacks create permission', () => {
+      mockWithPermissionsHasPermission.mockReturnValue(false);
+
+      render(<DatasetsTab />);
+
+      expect(screen.queryByText('Add Resource')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('plus-icon')).not.toBeInTheDocument();
+    });
+
+    /**
+     * Test: WithPermissions should receive the documents create resource for
+     * the mentor's DB id
+     * Verifies the rbacResource string is built from mentorSettings.mentor_id
+     */
+    it('checks the documents create permission for the mentor DB id', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { mentor_id: 42 },
+      });
+
+      render(<DatasetsTab />);
+
+      expect(mockWithPermissionsRbacResource).toHaveBeenCalledWith(
+        '/mentors/42/documents/#create',
+      );
+    });
+
+    /**
+     * Test: Permission check still renders while mentor settings are loading
+     * Verifies the optional chaining on mentorSettings does not crash
+     */
+    it('handles missing mentor settings gracefully', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({ data: undefined });
+
+      render(<DatasetsTab />);
+
+      expect(mockWithPermissionsRbacResource).toHaveBeenCalledWith(
+        '/mentors/undefined/documents/#create',
+      );
+    });
+
+    /**
+     * Test: Mentor settings query should prefer the modal mentor id
+     * Verifies getMentorId() takes precedence over the route param
+     */
+    it('fetches mentor settings for the modal mentor id when set', () => {
+      mockGetMentorId.mockReturnValue('modal-mentor');
+
+      render(<DatasetsTab />);
+
+      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mentor: 'modal-mentor',
+          org: 'test-tenant',
+          userId: 'test-user',
+        }),
+        { skip: false },
+      );
+    });
+
+    /**
+     * Test: Mentor settings query should fall back to the route mentor id
+     * Verifies the getMentorId() || mentorId fallback
+     */
+    it('falls back to the route mentor id when no modal mentor id is set', () => {
+      mockGetMentorId.mockReturnValue(null);
+
+      render(<DatasetsTab />);
+
+      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ mentor: 'mentor-1' }),
+        { skip: false },
+      );
+    });
+
+    /**
+     * Test: Mentor settings query should be skipped without a username
+     * Verifies the skip condition and the username fallback to ''
+     */
+    it('skips the mentor settings query when username is missing', () => {
+      mockUsername = null;
+
+      render(<DatasetsTab />);
+
+      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+        { skip: true },
+      );
+    });
+
+    /**
+     * Test: Clicking the button when permitted still goes through trial check
+     * Verifies the gated button keeps its original behavior
+     */
+    it('keeps trial check behavior on the permission-gated button', () => {
+      mockWithPermissionsHasPermission.mockReturnValue(true);
+
+      render(<DatasetsTab />);
+
+      fireEvent.click(screen.getByText('Add Resource'));
+
+      expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // Pagination Tests
   // --------------------------------------------------------------------------
 
@@ -768,6 +947,18 @@ describe('DatasetsTab', () => {
       render(<DatasetsTab />);
 
       expect(screen.getByTestId('dataset-item-list')).toBeInTheDocument();
+    });
+
+    /**
+     * Test: Should support being called without a props object
+     * Verifies the default `= {}` parameter branch
+     */
+    it('renders when called without a props object', () => {
+      const Wrapper = () => DatasetsTab();
+
+      render(<Wrapper />);
+
+      expect(screen.getByText('Datasets')).toBeInTheDocument();
     });
 
     /**
