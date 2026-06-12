@@ -88,8 +88,13 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await editMentorPage.close();
   });
 
-  // PR-06: Selecting Block reveals the block-message textarea
-  test('choosing Block reveals the block-message textarea and choosing Redact hides it', async ({
+  // PR-06: User can edit a custom Block Message when (and only when) the
+  // "When PII is detected" action is set to Block. Asserts the editable
+  // contract — the SDK currently renders the textarea conditionally
+  // (`action === 'block' && <Textarea>`), but `expectBlockMessageUneditable`
+  // also tolerates a future render-and-disable shape so this checkpoint
+  // doesn't fail on a benign SDK refactor.
+  test('Block Message textarea is editable only while the action is Block', async ({
     editMentorPage,
   }) => {
     await editMentorPage.privacy.setRouterEnabled(true);
@@ -98,11 +103,12 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await expect(editMentorPage.privacy.blockMessageTextarea).toBeVisible({
       timeout: 10_000,
     });
-
-    await editMentorPage.privacy.selectAction('Redact');
-    await expect(editMentorPage.privacy.blockMessageTextarea).not.toBeVisible({
+    await expect(editMentorPage.privacy.blockMessageTextarea).toBeEnabled({
       timeout: 5_000,
     });
+
+    await editMentorPage.privacy.selectAction('Redact');
+    await editMentorPage.privacy.expectBlockMessageUneditable();
 
     await editMentorPage.privacy.setRouterEnabled(false);
     await editMentorPage.close();

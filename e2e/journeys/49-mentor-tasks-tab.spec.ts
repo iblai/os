@@ -4,7 +4,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { TasksTab } from '../page-objects/edit-mentor/tasks.tab';
 
 /**
- * Journey 46 — Mentor Tasks Tab.
+ * Journey 49 — Mentor Tasks Tab.
  *
  * The Tasks tab is the local `TasksTab` wrapper around the SDK's
  * `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). All task
@@ -16,7 +16,7 @@ import { TasksTab } from '../page-objects/edit-mentor/tasks.tab';
  * periodic agent and delete it in a `finally` block, so every spec is
  * independent, retry-safe and leaves no orphaned tasks on the mentor.
  */
-test.describe('Journey 46: Mentor Tasks Tab', () => {
+test.describe('Journey 49: Mentor Tasks Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);

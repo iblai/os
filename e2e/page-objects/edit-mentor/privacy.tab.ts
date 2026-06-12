@@ -88,6 +88,20 @@ export class PrivacyTab {
     const item = this.page.getByRole('option', { name: option, exact: true });
     await expect(item).toBeVisible({ timeout: 5_000 });
     await item.click();
+    // Radix Select renders options inside a portal. When the portal panel
+    // is layered above neighbouring fields (e.g. the Block Message
+    // textarea), an `pointerup` on the option can occasionally land on
+    // the underlying field instead and silently no-op the selection.
+    // Block until the trigger's visible text reflects the new option so
+    // the next assertion can trust the action state has actually
+    // changed. Re-click once if it didn't — that recovers the race
+    // without making every call pay the cost.
+    try {
+      await expect(this.actionSelect).toContainText(option, { timeout: 2_000 });
+    } catch {
+      await item.click({ trial: false }).catch(() => {});
+      await expect(this.actionSelect).toContainText(option, { timeout: 5_000 });
+    }
   }
 
   /** Reads the currently selected action label. */
@@ -95,6 +109,27 @@ export class PrivacyTab {
     return (
       (await this.actionSelect.textContent().catch(() => ''))?.trim() ?? ''
     );
+  }
+
+  /**
+   * Asserts that the Block Message field is currently un-editable — i.e.
+   * the user cannot type a custom block message. Tolerates either SDK
+   * shape: (a) the textarea isn't mounted at all (current behaviour:
+   * `action === 'block' && <Textarea>`), or (b) it's mounted with
+   * `disabled` set. Both satisfy the user-visible contract this
+   * checkpoint exists to protect.
+   */
+  async expectBlockMessageUneditable(timeout = 5_000): Promise<void> {
+    const stillRendered = await this.blockMessageTextarea
+      .first()
+      .isVisible({ timeout })
+      .catch(() => false);
+    if (!stillRendered) {
+      // Conditionally-rendered shape — textarea unmounted on non-block actions.
+      return;
+    }
+    // Render-and-disable shape — assert the field is locked.
+    await expect(this.blockMessageTextarea).toBeDisabled({ timeout });
   }
 
   /** Returns the chip locator for the given entity (e.g. "EMAIL_ADDRESS"). */

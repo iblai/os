@@ -223,12 +223,30 @@ describe('AIMessageBubble', () => {
       expect(screen.getByTestId('ai-message-copy')).toBeInTheDocument();
     });
 
-    it('should render share button when not in shared chat', () => {
+    it('should render share button when logged in and not in shared chat', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
     });
 
-    it('should not render share button when in shared chat', () => {
+    // Issue #1546: anonymous users (opened a chat via a ?token= shareable
+    // link, not logged in) must still be able to share.
+    it('should render share button when NOT logged in and not in shared chat', async () => {
+      const { isLoggedIn } = await import('@/lib/utils');
+      vi.mocked(isLoggedIn).mockReturnValue(false);
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
+    });
+
+    it('should not render share button when in shared chat (logged in)', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
+      mockShowingSharedChat = false; // Reset for other tests
+    });
+
+    it('should not render share button when in shared chat (anonymous)', async () => {
+      const { isLoggedIn } = await import('@/lib/utils');
+      vi.mocked(isLoggedIn).mockReturnValue(false);
       mockShowingSharedChat = true;
       renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();

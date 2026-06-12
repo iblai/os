@@ -61,6 +61,8 @@ export const MODALS = {
       sandbox: 'sandbox',
       skills: 'skills',
       audit_log: 'audit_log',
+      voice: 'voice',
+      screenshare: 'screenshare',
     },
   },
   ADD_PROMPT: { name: 'add_prompt' },
