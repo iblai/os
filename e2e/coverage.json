@@ -2,13 +2,13 @@
   "version": 2,
   "lastUpdated": "2026-06-12",
   "summary": {
-    "totalCheckpoints": 424,
-    "coveredCheckpoints": 405,
+    "totalCheckpoints": 439,
+    "coveredCheckpoints": 420,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 48,
-    "activeJourneys": 47
+    "totalJourneys": 50,
+    "activeJourneys": 49
   },
   "journeys": [
     {
@@ -2323,12 +2323,116 @@
         },
         {
           "id": "pr-06",
-          "description": "Selecting Block reveals the block-message textarea and selecting Redact hides it",
+          "description": "Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)",
           "status": "covered"
         },
         {
           "id": "pr-07",
           "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-voice-tab",
+      "name": "Mentor Voice Tab",
+      "spec": "47-mentor-voice-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "vo-01",
+          "description": "Voice tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "vo-02",
+          "description": "Voice tab heading renders correctly",
+          "status": "covered"
+        },
+        {
+          "id": "vo-03",
+          "description": "Voice and Voice call sub-tab pills are both visible",
+          "status": "covered"
+        },
+        {
+          "id": "vo-04",
+          "description": "All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab",
+          "status": "covered"
+        },
+        {
+          "id": "vo-05",
+          "description": "Selecting the OpenAI provider marks the card active and reveals the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-06",
+          "description": "Selecting the Browser provider hides the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-07",
+          "description": "Switching to the Voice call sub-tab renders the call configuration form",
+          "status": "covered"
+        },
+        {
+          "id": "vo-08",
+          "description": "Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered",
+          "status": "covered"
+        },
+        {
+          "id": "vo-09",
+          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
+          "status": "covered"
+        },
+        {
+          "id": "vo-10",
+          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "status": "covered"
+        },
+        {
+          "id": "VO-11",
+          "description": "Voice tab is hidden from the sidebar when \"Enable voice calls\" (show_voice_call) is off",
+          "status": "covered"
+        },
+        {
+          "id": "VO-12",
+          "description": "Re-enabling \"Enable voice calls\" reveals the Voice tab in the sidebar after the settings refetch",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-screenshare-tab",
+      "name": "Mentor Screen Share Tab",
+      "spec": "48-mentor-screenshare-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ss-01",
+          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Enable screen sharing' toggle is off",
+          "status": "covered"
+        },
+        {
+          "id": "ss-02",
+          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ss-03",
+          "description": "Switching to the Screen Share tab renders the SDK heading and body",
           "status": "covered"
         }
       ]
@@ -2682,7 +2786,7 @@
         },
         {
           "id": "cam-02",
-          "description": "Disabling the 'Allow file attachments in chat' toggle hides the + (Attach file) button entirely",
+          "description": "Disabling the 'Enable file attachments' toggle hides the + (Attach file) button entirely",
           "status": "covered"
         },
         {

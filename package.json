@@ -33,7 +33,7 @@
   "dependencies": {
     "@iblai/agent-ai": "2.5.2",
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "1.17.19",
+    "@iblai/iblai-js": "1.17.24",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",

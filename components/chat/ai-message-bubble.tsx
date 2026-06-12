@@ -144,7 +144,7 @@ export function AIMessageBubble({
                 />
               )}
 
-              {isLoggedIn() && !showingSharedChat && (
+              {!showingSharedChat && (
                 <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
               )}
 

@@ -142,7 +142,7 @@
 }
 
 .ibl-tooltip-content {
-  @apply rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm transition-opacity duration-300;
+  @apply max-w-xs rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium break-words text-white shadow-sm transition-opacity duration-300;
 }
 
 /* LOGO styling from old mentor */
