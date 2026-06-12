@@ -856,6 +856,8 @@ packages:
 
   '@iblai/mcp@1.5.8':
     resolution: {integrity: sha512-OSb2gYXzfZItOFOnk/Lrw8yfv5oU4bLOzis07+XFGrA124DsNx21ymsHhv+nxbT08K2IpZ6nQDLSpOF+cdWGWQ==}
+  '@iblai/mcp@1.5.8':
+    resolution: {integrity: sha512-OSb2gYXzfZItOFOnk/Lrw8yfv5oU4bLOzis07+XFGrA124DsNx21ymsHhv+nxbT08K2IpZ6nQDLSpOF+cdWGWQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -9784,6 +9786,7 @@ snapshots:
       - supports-color
       - typescript
 
+  '@iblai/mcp@1.5.8':
   '@iblai/mcp@1.5.8':
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
