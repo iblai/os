@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-11 | 434 checkpoints (415 covered, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-12 | 439 checkpoints (420 covered, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -468,9 +468,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (28 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/submit-message-button.tsx`, `components/auto-resize-text-area.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -487,14 +487,19 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] History dialog is accessible
 - [x] Safety dialog is accessible
 - [x] API key dialog is accessible
-- [x] Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)
-- [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
-- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
+- [x] While streaming, textarea stays focused and stop-streaming button is NOT focused (issue #576 updated by #1904)
+- [x] After streaming ends, textarea stays focused and copy button is NOT focused (issue #576 updated by #1904)
+- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme pending Radix :focus-visible CI verification)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
 - [x] Plus / Microphone / Send composer buttons expose accessible names via `aria-label` (WCAG 4.1.2, issue #1596)
 - [x] ~~Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)~~ _(deprecated — reflow refactor reverted as out-of-scope; WCAG 1.4.10 tracked separately)_
 - [x] ~~Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)~~ _(deprecated — reverted with the reflow refactor)_
 - [x] ~~Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)~~ _(deprecated — skip-link reverted as out-of-scope; WCAG 2.4.1 tracked separately)_
+- [x] Chat textarea has focus on mount when the composer is enabled and not in embed mode (issue #1904)
+- [x] Press Enter to send — textarea retains focus during streaming; stop button is NOT focused (issue #1904)
+- [x] Click Send button — textarea retains focus; `onMouseDown` `preventDefault` prevents focus theft (issue #1904)
+- [x] After streaming ends, textarea retains focus and copy button is NOT focused (issue #1904)
+- [x] Stop-streaming button is NOT focused while streaming is active (issue #1904)
 
 ---
 

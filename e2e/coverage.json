@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-11",
+  "lastUpdated": "2026-06-12",
   "summary": {
-    "totalCheckpoints": 434,
-    "coveredCheckpoints": 415,
+    "totalCheckpoints": 439,
+    "coveredCheckpoints": 420,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "percent": 100,
@@ -1578,6 +1578,8 @@
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
         "components/chat/stop-streaming-button.tsx",
+        "components/chat/submit-message-button.tsx",
+        "components/auto-resize-text-area.tsx",
         "components/chat/ai-message-copy.tsx",
         "components/chat-input-form/voice-chat-button.tsx",
         "components/chat-input-form/upload-menu.tsx"
@@ -1660,17 +1662,17 @@
         },
         {
           "id": "a11y-17",
-          "description": "Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)",
+          "description": "While streaming, textarea stays focused and stop-streaming button is NOT focused (issue #576 updated by #1904)",
           "status": "covered"
         },
         {
           "id": "a11y-18",
-          "description": "Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)",
+          "description": "After streaming ends, textarea stays focused and copy button is NOT focused (issue #576 updated by #1904)",
           "status": "covered"
         },
         {
           "id": "a11y-19",
-          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
+          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme pending CI verification of Radix tooltip :focus-visible)",
           "status": "covered"
         },
         {
@@ -1685,6 +1687,31 @@
           "description": "Plus / Microphone / Send composer buttons expose accessible names via aria-label (WCAG 4.1.2, issue #1596)",
           "status": "covered",
           "specFile": "journeys/29-accessibility-wcag.spec.ts"
+        },
+        {
+          "id": "a11y-24",
+          "description": "Chat textarea has focus on mount when the composer is enabled and not in embed mode (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-25",
+          "description": "Press Enter to send — textarea retains focus during streaming; stop button is NOT focused (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-26",
+          "description": "Click Send button — textarea retains focus; onMouseDown preventDefault prevents focus theft (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-27",
+          "description": "After streaming ends, textarea retains focus and copy button is NOT focused (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-28",
+          "description": "Stop-streaming button is NOT focused while streaming is active (issue #1904)",
+          "status": "covered"
         },
         {
           "id": "a11y-21",
