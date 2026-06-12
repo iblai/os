@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 
-import { PrivacyTab } from './privacy-tab';
+import { ScreenShareTab } from './screenshare-tab';
 
 // ============================================================================
 // MOCKS
@@ -11,7 +11,7 @@ import { PrivacyTab } from './privacy-tab';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseUsername = vi.fn();
-const mockAgentPrivacyTab = vi.fn();
+const mockAgentScreenShareTab = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -27,21 +27,19 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-// PrivacyTab imports from `@iblai/iblai-js/web-containers/next` (the
-// Next-only entry — that's where AgentPrivacyTab is actually exported).
-// Vitest keys mocks by module specifier, so we mock the exact path the
-// source uses, not the underlying `@iblai/iblai-js/web-containers/next`.
+// ScreenShareTab imports `AgentScreenShareTab` from `@iblai/iblai-js/web-containers/next`
+// directly. Vitest keys mocks by module specifier — match the source path.
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  AgentPrivacyTab: (props: any) => {
-    mockAgentPrivacyTab(props);
+  AgentScreenShareTab: (props: any) => {
+    mockAgentScreenShareTab(props);
     return (
       <div
-        data-testid="agent-privacy-tab"
+        data-testid="agent-screenshare-tab"
         data-tenant-key={props.tenantKey}
         data-mentor-id={props.mentorId}
         data-username={props.username}
       >
-        AgentPrivacyTab
+        AgentScreenShareTab
       </div>
     );
   },
@@ -51,7 +49,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 // TESTS
 // ============================================================================
 
-describe('PrivacyTab', () => {
+describe('ScreenShareTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -69,15 +67,15 @@ describe('PrivacyTab', () => {
   });
 
   describe('Rendering', () => {
-    it('forwards tenantKey, mentorId and username from URL params to AgentPrivacyTab', () => {
-      render(<PrivacyTab />);
+    it('forwards tenantKey, mentorId and username from URL params to AgentScreenShareTab', () => {
+      render(<ScreenShareTab />);
 
-      const agent = screen.getByTestId('agent-privacy-tab');
+      const agent = screen.getByTestId('agent-screenshare-tab');
       expect(agent).toHaveAttribute('data-tenant-key', 'test-tenant');
       expect(agent).toHaveAttribute('data-mentor-id', 'test-mentor');
       expect(agent).toHaveAttribute('data-username', 'test-user');
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentScreenShareTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -89,9 +87,9 @@ describe('PrivacyTab', () => {
     it('prefers getMentorId() from navigate hook when provided', () => {
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
 
-      render(<PrivacyTab />);
+      render(<ScreenShareTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentScreenShareTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',
@@ -101,9 +99,9 @@ describe('PrivacyTab', () => {
     it('falls back to params.mentorId when getMentorId() returns null', () => {
       mockGetMentorId.mockReturnValue(null);
 
-      render(<PrivacyTab />);
+      render(<ScreenShareTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentScreenShareTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -113,9 +111,9 @@ describe('PrivacyTab', () => {
     it('falls back to params.mentorId when getMentorId() returns undefined', () => {
       mockGetMentorId.mockReturnValue(undefined);
 
-      render(<PrivacyTab />);
+      render(<ScreenShareTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentScreenShareTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -130,10 +128,10 @@ describe('PrivacyTab', () => {
         mentorId: 'test-mentor',
       });
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<ScreenShareTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentScreenShareTab).not.toHaveBeenCalled();
     });
 
     it('renders nothing when both mentorId and getMentorId() are missing', () => {
@@ -143,32 +141,32 @@ describe('PrivacyTab', () => {
       });
       mockGetMentorId.mockReturnValue(null);
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<ScreenShareTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentScreenShareTab).not.toHaveBeenCalled();
     });
 
     it('renders nothing when username is missing', () => {
       mockUseUsername.mockReturnValue(undefined);
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<ScreenShareTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentScreenShareTab).not.toHaveBeenCalled();
     });
 
-    it('renders the tab when getMentorId() provides an id but params.mentorId is missing', () => {
+    it('renders when getMentorId() provides an id but params.mentorId is missing', () => {
       mockUseParams.mockReturnValue({
         tenantKey: 'test-tenant',
         mentorId: undefined,
       });
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
 
-      render(<PrivacyTab />);
+      render(<ScreenShareTab />);
 
-      expect(screen.getByTestId('agent-privacy-tab')).toBeInTheDocument();
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(screen.getByTestId('agent-screenshare-tab')).toBeInTheDocument();
+      expect(mockAgentScreenShareTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',

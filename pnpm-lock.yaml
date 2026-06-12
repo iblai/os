@@ -39,8 +39,8 @@ importers:
         specifier: 4.166.0-ai
         version: 4.166.0-ai
       '@iblai/iblai-js':
-        specifier: 1.17.19
-        version: 1.17.19(42ea00cef529f8d05a76c6945e050e01)
+        specifier: 1.17.24
+        version: 1.17.24(42ea00cef529f8d05a76c6945e050e01)
       '@iblai/iblai-web-mentor':
         specifier: 1.3.4
         version: 1.3.4(@babel/core@7.29.0)(@types/babel__core@7.20.5)(rollup@4.60.2)(typescript@5.9.3)
@@ -829,8 +829,8 @@ packages:
   '@iblai/iblai-api@4.166.0-ai':
     resolution: {integrity: sha512-dY9Jv+CkXEyTxRsOQFay5YvYe8K2LSQluJJvtssGQV2RbrxPPzONaKfnhcyarDs7Ft35Xqk1fuErjhUwNG3OIg==}
 
-  '@iblai/iblai-js@1.17.19':
-    resolution: {integrity: sha512-iZM1Oz4QOGc4v2g2PFIreGWnykyUOrZS9re9WDTbRhQrJ2/dG611nucMGjRR80b58ZcRruBRI4QYpIToKhFGOQ==}
+  '@iblai/iblai-js@1.17.24':
+    resolution: {integrity: sha512-uPZ0gnhDE/0/wu0HlmG1mrTZKfdnpkGgq4AUZ+VORfND7JqDRfIVQc00hVKl+W4f8WyYDLYrMHlqM+nQ4sH0Jw==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -854,18 +854,18 @@ packages:
   '@iblai/iblai-web-mentor@1.3.4':
     resolution: {integrity: sha512-w0K22cQl/LquXDDnVi7DgiOeuS+iha85poZxuLCtJqvwyCxAMLch1DWN3LbNCxw+YGhrV7BOEENp8s7bZ+7ZGw==}
 
-  '@iblai/mcp@1.5.6':
-    resolution: {integrity: sha512-RZH84CMTDaSmjeo0S3ODtL660KGGJ4zpGhtL298R2X9uQHrmXcFzgcM5MscDkCrdWrZl9Ag8xZhuCoWvu8puBg==}
+  '@iblai/mcp@1.5.8':
+    resolution: {integrity: sha512-OSb2gYXzfZItOFOnk/Lrw8yfv5oU4bLOzis07+XFGrA124DsNx21ymsHhv+nxbT08K2IpZ6nQDLSpOF+cdWGWQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@iblai/web-containers@1.8.14':
-    resolution: {integrity: sha512-XNJQj5Rc2lpokc2j4H4DHelTsfEVI44lKy0h783YBzG5oFCHDjJnmujdUbeqzCaqyY5Gm7ndzCsyjCCWm9iYUQ==}
+  '@iblai/web-containers@1.8.18':
+    resolution: {integrity: sha512-kcRY1q8G0vLTPqrIAug92KNMC8xaBOe3L+Sfl4EYNZaDl8uwE4MtFh6f7H727mg4eSqzl1/69azKunz2ArJ83Q==}
     engines: {node: 25.3.0}
     peerDependencies:
       '@iblai/data-layer': 1.7.5
       '@iblai/iblai-api': 4.166.0-ai
-      '@iblai/web-utils': 1.10.9
+      '@iblai/web-utils': 1.10.10
       '@livekit/components-react': 2.8.1
       '@radix-ui/react-dialog': ^1.1.7
       '@reduxjs/toolkit': 2.7.0
@@ -9737,12 +9737,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@iblai/iblai-js@1.17.19(42ea00cef529f8d05a76c6945e050e01)':
+  '@iblai/iblai-js@1.17.24(42ea00cef529f8d05a76c6945e050e01)':
     dependencies:
       '@iblai/data-layer': 1.7.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
-      '@iblai/mcp': 1.5.6
-      '@iblai/web-containers': 1.8.14(36d99ee0aeb6baaa6de38156728aa49a)
+      '@iblai/mcp': 1.5.8
+      '@iblai/web-containers': 1.8.18(36d99ee0aeb6baaa6de38156728aa49a)
       '@iblai/web-utils': 1.10.10(@iblai/data-layer@1.7.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.11.0)(@tauri-apps/plugin-os@2.3.2)(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       '@radix-ui/react-dialog': 1.1.7(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -9784,7 +9784,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@iblai/mcp@1.5.6':
+  '@iblai/mcp@1.5.8':
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
       zod: 4.3.6
@@ -9792,7 +9792,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@iblai/web-containers@1.8.14(36d99ee0aeb6baaa6de38156728aa49a)':
+  '@iblai/web-containers@1.8.18(36d99ee0aeb6baaa6de38156728aa49a)':
     dependencies:
       '@iblai/data-layer': 1.7.5(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai

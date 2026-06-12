@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 
-import { PrivacyTab } from './privacy-tab';
+import { VoiceTab } from './voice-tab';
 
 // ============================================================================
 // MOCKS
@@ -11,7 +11,7 @@ import { PrivacyTab } from './privacy-tab';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseUsername = vi.fn();
-const mockAgentPrivacyTab = vi.fn();
+const mockAgentVoiceTab = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -27,21 +27,20 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-// PrivacyTab imports from `@iblai/iblai-js/web-containers/next` (the
-// Next-only entry — that's where AgentPrivacyTab is actually exported).
-// Vitest keys mocks by module specifier, so we mock the exact path the
-// source uses, not the underlying `@iblai/iblai-js/web-containers/next`.
+// VoiceTab imports AgentVoiceTab from `@iblai/iblai-js/web-containers/next` directly
+// (bypassing the `@iblai/iblai-js` re-export). Vitest keys mocks by module
+// specifier — mock the exact path the source uses.
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  AgentPrivacyTab: (props: any) => {
-    mockAgentPrivacyTab(props);
+  AgentVoiceTab: (props: any) => {
+    mockAgentVoiceTab(props);
     return (
       <div
-        data-testid="agent-privacy-tab"
+        data-testid="agent-voice-tab"
         data-tenant-key={props.tenantKey}
         data-mentor-id={props.mentorId}
         data-username={props.username}
       >
-        AgentPrivacyTab
+        AgentVoiceTab
       </div>
     );
   },
@@ -51,7 +50,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 // TESTS
 // ============================================================================
 
-describe('PrivacyTab', () => {
+describe('VoiceTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -69,15 +68,15 @@ describe('PrivacyTab', () => {
   });
 
   describe('Rendering', () => {
-    it('forwards tenantKey, mentorId and username from URL params to AgentPrivacyTab', () => {
-      render(<PrivacyTab />);
+    it('forwards tenantKey, mentorId and username from URL params to AgentVoiceTab', () => {
+      render(<VoiceTab />);
 
-      const agent = screen.getByTestId('agent-privacy-tab');
+      const agent = screen.getByTestId('agent-voice-tab');
       expect(agent).toHaveAttribute('data-tenant-key', 'test-tenant');
       expect(agent).toHaveAttribute('data-mentor-id', 'test-mentor');
       expect(agent).toHaveAttribute('data-username', 'test-user');
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentVoiceTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -89,9 +88,9 @@ describe('PrivacyTab', () => {
     it('prefers getMentorId() from navigate hook when provided', () => {
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
 
-      render(<PrivacyTab />);
+      render(<VoiceTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentVoiceTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',
@@ -101,9 +100,9 @@ describe('PrivacyTab', () => {
     it('falls back to params.mentorId when getMentorId() returns null', () => {
       mockGetMentorId.mockReturnValue(null);
 
-      render(<PrivacyTab />);
+      render(<VoiceTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentVoiceTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -113,9 +112,9 @@ describe('PrivacyTab', () => {
     it('falls back to params.mentorId when getMentorId() returns undefined', () => {
       mockGetMentorId.mockReturnValue(undefined);
 
-      render(<PrivacyTab />);
+      render(<VoiceTab />);
 
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(mockAgentVoiceTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
@@ -130,10 +129,10 @@ describe('PrivacyTab', () => {
         mentorId: 'test-mentor',
       });
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<VoiceTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentVoiceTab).not.toHaveBeenCalled();
     });
 
     it('renders nothing when both mentorId and getMentorId() are missing', () => {
@@ -143,19 +142,19 @@ describe('PrivacyTab', () => {
       });
       mockGetMentorId.mockReturnValue(null);
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<VoiceTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentVoiceTab).not.toHaveBeenCalled();
     });
 
     it('renders nothing when username is missing', () => {
       mockUseUsername.mockReturnValue(undefined);
 
-      const { container } = render(<PrivacyTab />);
+      const { container } = render(<VoiceTab />);
 
       expect(container.firstChild).toBeNull();
-      expect(mockAgentPrivacyTab).not.toHaveBeenCalled();
+      expect(mockAgentVoiceTab).not.toHaveBeenCalled();
     });
 
     it('renders the tab when getMentorId() provides an id but params.mentorId is missing', () => {
@@ -165,10 +164,10 @@ describe('PrivacyTab', () => {
       });
       mockGetMentorId.mockReturnValue('nav-mentor-xyz');
 
-      render(<PrivacyTab />);
+      render(<VoiceTab />);
 
-      expect(screen.getByTestId('agent-privacy-tab')).toBeInTheDocument();
-      expect(mockAgentPrivacyTab).toHaveBeenCalledWith({
+      expect(screen.getByTestId('agent-voice-tab')).toBeInTheDocument();
+      expect(mockAgentVoiceTab).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',
