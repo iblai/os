@@ -25,17 +25,160 @@ import {
   EmbedFormValues,
 } from './hooks/useEmbedTab';
 
+/**
+ * Returns true when the given string is an inline data URL (base64 image
+ * preview produced by `FileReader.readAsDataURL`), as opposed to a resolved
+ * remote URL or a relative asset path.
+ */
+export function isDataUrl(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.startsWith('data:');
+}
+
+/**
+ * Converts a base64 data URL (e.g. the preview produced when a user uploads a
+ * custom launcher icon) into a real `File` so it can be sent to the backend as
+ * the multipart `embed_custom_image` field. Returns `null` when the input is
+ * not a data URL.
+ */
+export function dataUrlToFile(
+  dataUrl: string,
+  filename = 'embed-custom-image',
+): File | null {
+  if (!isDataUrl(dataUrl)) return null;
+
+  const [header, base64Data] = dataUrl.split(',');
+  if (!base64Data) return null;
+
+  const mimeMatch = header.match(/data:([^;]+)/);
+  const mime = mimeMatch?.[1] ?? 'application/octet-stream';
+
+  const binary = atob(base64Data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  // Derive a sensible extension from the mime type (e.g. image/png -> png).
+  // `mime` always contains a "/" (parsed value or the octet-stream fallback),
+  // so the subtype is always present.
+  const extension = mime.split('/')[1].split('+')[0];
+  const safeName = filename.includes('.')
+    ? filename
+    : `${filename}.${extension}`;
+
+  return new File([bytes], safeName, { type: mime });
+}
+
+/**
+ * Builds the persisted icon-selection JSON map from a
+ * `CustomFloatingBubbleConfig` (everything except the raw image binary). The map
+ * is stored in `embed_icon_selection_data` and the image in `embed_custom_image`,
+ * and the pair round-trips back via `buildFloatingBubbleConfigFromSettings`.
+ *
+ * Note: we intentionally do NOT embed an `icon_selection` key here. The
+ * custom-vs-default mode is now derived from the *existence* of this JSON map
+ * (present => custom, absent/cleared => default), so storing the mode inside the
+ * map would be redundant data that could drift out of sync with reality.
+ */
+export function buildEmbedIconSelectionData(
+  config: CustomFloatingBubbleConfig,
+): Record<string, unknown> {
+  const { image: _image, ...rest } = config;
+  return { ...rest };
+}
+
+/**
+ * Single source of truth for "did the user choose a custom launcher icon?".
+ *
+ * The custom-vs-default mode is derived from the persisted
+ * `embed_icon_selection_data` JSON map. The mode is 'custom' ONLY when that
+ * value is a NON-EMPTY object (at least one own key); a `null`, an empty object
+ * `{}`, an empty string, or any non-object value all mean 'default'.
+ *
+ * Why non-empty (not mere existence): the backend clears this field by storing
+ * an empty JSON object `{}` (see `syncEmbedSettings`). Verified live behavior of
+ * the multipart PUT for `embed_icon_selection_data`:
+ *   - `''`   -> HTTP 400 ("Value must be valid JSON").
+ *   - `null` (JSON null) -> HTTP 200 but the field is NOT changed; DRF's
+ *     partial-update silently ignores JSON null, so the old custom JSON persists.
+ *   - `{}`   -> HTTP 200 and the field IS set to `{}` (the only working clear).
+ * So a cleared field reads back as `{}`, which must derive to 'default'. The
+ * mode must depend ONLY on this JSON, never on `embed_custom_image` (a stale
+ * image URL may linger after switching to default and must not force 'custom').
+ */
+export function hasCustomIconData(value: unknown): boolean {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    Object.keys(value as Record<string, unknown>).length > 0
+  );
+}
+
+/**
+ * Reconstructs a `CustomFloatingBubbleConfig` from persisted mentor settings.
+ * The `embed_icon_selection_data` JSON map holds every field except the raw
+ * image, which is supplied separately by `embed_custom_image` (a resolved URL).
+ * Falls back to the provided defaults for any missing field so an older /
+ * partial payload still hydrates cleanly. Returns `null` when there is no
+ * persisted icon-selection data to hydrate from.
+ *
+ * The returned `iconSelection` is derived via `hasCustomIconData`: a NON-EMPTY
+ * object map means the user chose 'custom'; a cleared map (empty object `{}`,
+ * null, empty string, non-object) means 'default'. This makes a cleared field
+ * (which the backend stores as `{}`) unambiguously mean default, so switching
+ * custom -> default and reloading correctly shows default — even if a stale
+ * `embed_custom_image` URL still lingers.
+ */
+export function buildFloatingBubbleConfigFromSettings(
+  defaults: CustomFloatingBubbleConfig,
+  iconSelectionData: unknown,
+  customImage: string | null | undefined,
+): { config: CustomFloatingBubbleConfig; iconSelection: string } | null {
+  const data =
+    iconSelectionData && typeof iconSelectionData === 'object'
+      ? (iconSelectionData as Record<string, unknown>)
+      : null;
+
+  if (!data && !customImage) return null;
+
+  // Tolerate a legacy `icon_selection` key that older payloads may still carry
+  // inside the JSON — it is no longer authoritative, so we drop it.
+  const {
+    icon_selection: _legacyIconSelection,
+    image: _persistedImage,
+    ...rest
+  } = data ?? {};
+
+  const config: CustomFloatingBubbleConfig = {
+    ...defaults,
+    ...(rest as Partial<CustomFloatingBubbleConfig>),
+    image: customImage || defaults.image,
+  };
+
+  return {
+    config,
+    // A NON-EMPTY JSON map is the source of truth for the mode; an empty `{}`
+    // (the backend's cleared state) derives to 'default'.
+    iconSelection: hasCustomIconData(iconSelectionData) ? 'custom' : 'default',
+  };
+}
+
 const getBubbleImage = async (tenant: string) => {
   let bubbleImg = `/images/ibl-logo-animated.gif`;
 
-  const url = `${config.axdUrl()}/api/core/orgs/${tenant}/thumbnail/`;
+  // The thumbnail is a DM (manager) endpoint, so we build it from dmUrl().
+  // On the unified API gateway, axdUrl() resolves to an invalid `/axd` prefix
+  // (HTTP 404), whereas dmUrl() -> `/dm/...` returns 200. In the legacy config
+  // (no API base URL) axdUrl() and dmUrl() are identical, so behavior is
+  // unchanged there. This matches the live-preview default in useEmbedTab.ts.
+  const url = `${config.dmUrl()}/api/core/orgs/${tenant}/thumbnail/`;
   try {
     const response = await fetch(url);
     if (response.ok) {
       bubbleImg = url;
     } else {
       if (tenant !== 'main') {
-        const url2 = `${config.axdUrl()}/api/core/orgs/main/thumbnail/`;
+        const url2 = `${config.dmUrl()}/api/core/orgs/main/thumbnail/`;
         const response2 = await fetch(url2);
         if (response2.ok) {
           bubbleImg = url2;
