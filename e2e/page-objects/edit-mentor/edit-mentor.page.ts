@@ -12,6 +12,9 @@ import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
+import { TasksTab } from './tasks.tab';
+import { VoiceTab } from './voice.tab';
+import { ScreenShareTab } from './screenshare.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -35,12 +38,15 @@ const TAB_CATEGORY: Record<
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
+  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
   Tools: 'Configurations',
   MCP: 'Integrations',
   Datasets: 'Integrations',
   API: 'Integrations',
   Embed: 'Integrations',
+  Voice: 'Configurations',
+  'Screen Share': 'Configurations',
   Memory: 'Analytics',
   History: 'Analytics',
   Audit: 'Analytics',
@@ -64,6 +70,9 @@ export class EditMentorPage {
   readonly embed: EmbedTab;
   readonly access: AccessTab;
   readonly privacy: PrivacyTab;
+  readonly tasks: TasksTab;
+  readonly voice: VoiceTab;
+  readonly screenshare: ScreenShareTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -86,6 +95,9 @@ export class EditMentorPage {
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
     this.privacy = new PrivacyTab(page, this.dialog);
+    this.tasks = new TasksTab(page, this.dialog);
+    this.voice = new VoiceTab(page, this.dialog);
+    this.screenshare = new ScreenShareTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
@@ -310,7 +322,27 @@ export class EditMentorPage {
       }
     }
 
-    const tab = this.dialog.getByRole('tab', { name: tabName, exact: true });
+    // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
+    // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
+    // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
+    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
+    // generated `radix-*` id, so filtering on that prefix isolates the sidebar
+    // tab without needing to know each segment's value.
+    //
+    // `:visible` additionally excludes the host's hidden responsive twin —
+    // every sidebar trigger is rendered twice (desktop `#desktop-tab-<value>`
+    // + compact `#tab-<value>`); both own the same `aria-controls`, so without
+    // the visibility filter the locator resolves to two elements and `.click`
+    // hangs waiting for the strict-mode collision to resolve itself.
+    const tab = this.dialog
+      .getByRole('tab', { name: tabName, exact: true })
+      .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+    // Wait for the tab to actually appear before reaching for its state.
+    // The modal renders a loading spinner until mentor-settings + RBAC have
+    // hydrated; segment-list tabs only mount once both resolve. Using waitFor
+    // here means callers don't have to know about that timing.
+    await tab.waitFor({ state: 'visible', timeout: 15_000 });
     const isActive =
       (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {

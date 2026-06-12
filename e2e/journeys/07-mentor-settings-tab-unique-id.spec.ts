@@ -194,11 +194,11 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
   test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
     editMentorPage,
   }) => {
-    // Renamed from "Enhanced RAG" → "Improve document retrieval" and moved
+    // Renamed from "Enhanced RAG" → "Enhanced document retrieval" and moved
     // into the Capabilities sub-tab when Settings was split.
     await editMentorPage.settings.selectSubTab('Capabilities');
     const label = editMentorPage.dialog.getByText(
-      'Improve document retrieval',
+      'Enhanced document retrieval',
       {
         exact: true,
       },

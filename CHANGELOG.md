@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.74.4]
+
+- bumped iblai-js version to 1.17.25
+
 ## [0.74.3](https://github.com/iblai/os/pull/244)
 
 ## [0.74.2](https://github.com/iblai/os/pull/235)

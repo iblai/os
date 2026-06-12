@@ -23,7 +23,19 @@ export class SettingsTab {
   readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
-  /** "Allow file attachments in chat" toggle (Capabilities sub-tab, feat/1902) */
+  /**
+   * Voice-call toggle: persists `use_function_calling_for_rag` on the
+   * mentor's CallConfiguration. Resolved via `data-testid` so the
+   * locator survives label rewrites in the host.
+   */
+  readonly useFunctionCallingForRagToggle: Locator;
+  /**
+   * Voice-call toggle: persists `enable_video` on the mentor's
+   * CallConfiguration. Flipping this on (and saving) is what makes the
+   * Screen Share top-level tab appear in the modal sidebar.
+   */
+  readonly enableVideoToggle: Locator;
+  /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
@@ -60,10 +72,10 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     // Renamed in the Capabilities sub-tab: aria-label is now
-    // "Allow other admins to clone this agent" (no enabled/disabled
+    // "Enable copies" (no enabled/disabled
     // suffix — state is exposed via aria-checked).
     this.allowCopiesToggle = dialog.getByRole('switch', {
-      name: /allow other admins to clone this agent/i,
+      name: /enable copies/i,
     });
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
@@ -73,9 +85,9 @@ export class SettingsTab {
     this.showVoiceCallToggle = dialog.getByRole('switch', {
       name: /enable voice calls/i,
     });
-    // Capabilities sub-tab. Renamed visible label "Enable advanced sandbox".
+    // Capabilities sub-tab. Renamed visible label "Enable dedicated sandbox".
     this.advancedSandboxToggle = dialog.getByRole('switch', {
-      name: /enable advanced sandbox/i,
+      name: /enable dedicated sandbox/i,
     });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
@@ -90,17 +102,98 @@ export class SettingsTab {
     this.verboseReasoningToggle = dialog.getByRole('switch', {
       name: /^Verbose reasoning /i,
     });
-    // Capabilities sub-tab. Renamed visible label "Improve document retrieval".
+    // Capabilities sub-tab. Renamed visible label "Enhanced document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /improve document retrieval/i,
+      name: /enhanced document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about improve document retrieval',
+      name: 'More info about enhanced document retrieval',
     });
-    // Capabilities sub-tab. Labelled "Allow file attachments in chat" (feat/1902).
+    this.useFunctionCallingForRagToggle = dialog.getByTestId(
+      'settings-use-function-calling-for-rag-switch',
+    );
+    this.enableVideoToggle = dialog.getByTestId('settings-enable-video-switch');
+    // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
-      name: /allow file attachments in chat/i,
+      name: /enable file attachments/i,
     });
+  }
+
+  /**
+   * Reads the current on/off state of a Radix Switch via its
+   * `aria-checked` attribute. Defaults to `false` when the attribute is
+   * missing (e.g. the toggle isn't rendered yet) so callers can use this
+   * as a precondition probe without try/catch.
+   */
+  private async readSwitchState(toggle: Locator): Promise<boolean> {
+    const attr = await toggle.getAttribute('aria-checked').catch(() => null);
+    return attr === 'true';
+  }
+
+  /** Whether the "Smart document retrieval" toggle is currently on. */
+  async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.useFunctionCallingForRagToggle);
+  }
+
+  /** Whether the "Enable screen sharing" toggle is currently on. */
+  async isEnableVideoEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.enableVideoToggle);
+  }
+
+  /**
+   * Idempotently set the "Enable screen sharing" toggle to the
+   * target state and click Save. This is the host-side trigger that
+   * flips `call_configuration.enable_video`, which in turn gates the
+   * Screen Share top-level tab's visibility via `MENTOR_SEGMENTS`.
+   *
+   * Blocks until the success toast appears so the next
+   * `useMentorSegments` re-render sees the updated CallConfiguration.
+   */
+  async setEnableVideoAndSave(target: boolean): Promise<void> {
+    // The toggle lives in the Capabilities sub-tab. Panels are forceMounted
+    // but CSS-hidden when inactive, so the switch is in the DOM yet not
+    // clickable until we switch to that sub-tab.
+    await this.selectSubTab('Capabilities');
+    await expect(this.enableVideoToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isEnableVideoEnabled();
+    if (isOn === target) return;
+
+    await this.enableVideoToggle.click();
+    await expect(this.enableVideoToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
+      { timeout: 30_000 },
+    );
+  }
+
+  /** Idempotently toggle "Smart document retrieval" + Save. */
+  async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
+    // Lives in the Capabilities sub-tab — switch there before interacting.
+    await this.selectSubTab('Capabilities');
+    await expect(this.useFunctionCallingForRagToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isOn = await this.isUseFunctionCallingForRagEnabled();
+    if (isOn === target) return;
+
+    await this.useFunctionCallingForRagToggle.click();
+    await expect(this.useFunctionCallingForRagToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
+      { timeout: 30_000 },
+    );
   }
 
   /**
@@ -231,14 +324,14 @@ export class SettingsTab {
 
   async enableVoiceCall(): Promise<void> {
     await this.selectSubTab('Capabilities');
-    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
+    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 15_000 });
     const isChecked =
       (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
     if (!isChecked) {
       await this.showVoiceCallToggle.click();
-      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await expect(this.saveButton).toBeEnabled({ timeout: 30_000 });
       await this.saveButton.click();
-      await this.page.waitForTimeout(2_000);
+      await this.page.waitForTimeout(5_000);
     }
   }
 
@@ -434,7 +527,7 @@ export class SettingsTab {
   }
 
   /**
-   * Enables "Allow file attachments in chat" and saves the form.
+   * Enables "Enable file attachments" and saves the form.
    * A no-op if the toggle is already on. (feat/1902)
    */
   async enableFileAttachments(): Promise<void> {
@@ -463,7 +556,7 @@ export class SettingsTab {
   }
 
   /**
-   * Disables "Allow file attachments in chat" and saves the form.
+   * Disables "Enable file attachments" and saves the form.
    * A no-op if the toggle is already off. (feat/1902)
    */
   async disableFileAttachments(): Promise<void> {

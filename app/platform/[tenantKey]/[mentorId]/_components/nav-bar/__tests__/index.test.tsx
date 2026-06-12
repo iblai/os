@@ -962,6 +962,8 @@ const buildContext = (
     isMemoryComponentEnabled: true,
     isClawEnabled: false,
     clawConfigExists: false,
+    isScreenshareEnabled: false,
+    isVoiceCallEnabled: true,
   },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
@@ -1208,6 +1210,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1228,6 +1232,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1248,6 +1254,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1265,6 +1273,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );

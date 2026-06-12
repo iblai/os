@@ -187,6 +187,7 @@ vi.mock('./tabs', () => ({
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
+  TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
@@ -195,6 +196,10 @@ vi.mock('./tabs', () => ({
   SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
   SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
+  VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
+  ScreenShareTab: () => (
+    <div data-testid="screenshare-tab">Screen Share Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({
@@ -693,6 +698,7 @@ describe('EditMentorModal', () => {
       { t: MODALS.EDIT_MENTOR.tabs.prompts, id: 'prompts-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.safety, id: 'safety-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.privacy, id: 'privacy-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.tasks, id: 'tasks-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },

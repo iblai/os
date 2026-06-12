@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-11 | 436 checkpoints (417 covered, 7 not-reproducible in default env, 12 deprecated) | 49 journeys (48 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-12 | 459 checkpoints (440 covered, 7 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -757,8 +757,27 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 - [x] PR-03: Master Privacy Router switch is visible
 - [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
 - [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
-- [x] PR-06: Selecting Block reveals the block-message textarea and selecting Redact hides it
+- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
 - [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+
+---
+
+## Journey 49: Mentor Tasks Tab (8 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Tasks tab is a thin wrapper around the SDK's `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). Unlike most tabs, `AgentTasksTab` has no tenant/mentor/username props — it reads them from the nearest `AgentSettingsProvider` and throws when rendered without one, so the wrapper wraps it in `AgentSettingsProvider` (identity from URL params + navigate hook, `enableRBAC` from `config`).
+
+The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js/playwright` (`scheduleTask`, `searchTasks`, `deleteTask`, `expectTaskInList`, …) — resolving elements by accessible name/placeholder/role rather than CSS classes. The lifecycle checkpoints (TA-06..TA-08) each create a uniquely-named periodic agent and delete it in a `finally` block, so every spec is independent, retry-safe and leaves no orphaned task behind.
+
+- [x] TA-01: Tasks tab label is visible in the Edit Mentor modal sidebar
+- [x] TA-02: Tasks tab heading and description render correctly
+- [x] TA-03: Toolbar exposes the task search input and the Schedule Task button
+- [x] TA-04: Total Tasks, Completed and Failed metric cards render
+- [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
+- [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
+- [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
+- [x] TA-08: Admin deletes a task and its row is removed from the list
 
 ---
 
@@ -802,7 +821,7 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 **Camera dialog (CAM-04) is Chromium-only** — uses `--use-fake-device-for-media-stream` / `--use-fake-ui-for-media-stream` to stub `navigator.mediaDevices.getUserMedia` with a black-frame fake video track. All other checkpoints are cross-browser.
 
 - [x] CAM-01: Upload menu shows both "Upload File" and "Camera" items when `show_attachment` is enabled on the mentor
-- [x] CAM-02: Disabling "Allow file attachments in chat" hides the entire `+` (Attach file) button (UploadMenu returns null)
+- [x] CAM-02: Disabling "Enable file attachments" hides the entire `+` (Attach file) button (UploadMenu returns null)
 - [x] CAM-03: Hidden native camera `<input type="file" accept="image/*" capture="environment">` is present in the DOM (mobile-OS branch path in `chat-input-form.tsx`)
 - [x] CAM-04: Clicking "Camera" opens the `CameraCaptureDialog` ("Take a photo" title, `[data-testid="camera-video"]`, "Capture" button visible; Retake/Use Photo absent before capture) — Chromium-only
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
@@ -823,6 +842,41 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+
+---
+
+## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
+
+The Settings tab also surfaces two voice-call toggles (`use_function_calling_for_rag`, `enable_video`) so admins can flip them without leaving the main configuration panel. Save routes those two fields through the same `/call-configurations/` endpoint the SDK's Voice tab uses — POSTing a new config (mode=`realtime`) when none exists, PATCHing otherwise.
+
+- [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar
+- [x] VO-02: Voice tab heading renders correctly
+- [x] VO-03: Voice and Voice call sub-tab pills are both visible
+- [x] VO-04: All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab
+- [x] VO-05: Selecting the OpenAI provider marks the card active and reveals the voice picker trigger
+- [x] VO-06: Selecting the Browser provider hides the voice picker trigger
+- [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
+- [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
+- [x] VO-09: Settings tab surfaces both voice-call toggles
+- [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
+- [x] VO-11: Voice tab is hidden from the sidebar when "Enable voice calls" (`show_voice_call`) is turned off in Settings
+- [x] VO-12: Re-enabling "Enable voice calls" brings the Voice tab back into the sidebar after the settings refetch
+
+---
+
+## Journey 48: Mentor Screen Share Tab (3 checkpoints) — `journeys/48-mentor-screenshare-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The host gates visibility on `call_configuration.enable_video` — the toggle on the Settings tab. When the toggle is off, the tab is hidden from the sidebar entirely (the SDK still renders its own off-state hint, but at host level the tab itself goes away to keep the sidebar clean). The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
+
+- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Enable screen sharing" toggle is off
+- [x] SS-02: Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar
+- [x] SS-03: Switching to the Screen Share tab renders the SDK heading and body
 
 ---
 

@@ -16,7 +16,7 @@ test.describe.serial("Journey 1: Authentication — Sign Up & Password Reset", (
   test.use({ storageState: { cookies: [], origins: [] } });
 
   const timestamp = Date.now();
-  const email = `test+${timestamp}@gmail.com`;
+  const email = `test+${timestamp}@ibleducation.com`;
   const username = `test${timestamp}`;
   const password = "test-password";
   const newPassword = "new_test_password";
