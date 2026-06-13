@@ -1,6 +1,6 @@
-# Contributing to mentorAI
+# Contributing to iblai/os
 
-Thank you for your interest in contributing to mentorAI! This guide will help you get set up and understand our development workflow.
+Thank you for your interest in contributing to iblai/os! This guide will help you get set up and understand our development workflow.
 
 ## Table of Contents
 
@@ -265,7 +265,7 @@ End-to-end tests use **Playwright**. See the `docs/` directory for E2E test setu
 
 ## Accessibility
 
-mentorAI targets **WCAG 2.1 AA** compliance. All contributions should meet these standards:
+iblai/os targets **WCAG 2.1 AA** compliance. All contributions should meet these standards:
 
 ### Requirements
 
@@ -366,4 +366,4 @@ We are committed to providing a welcoming and inclusive experience for everyone.
 
 If you have questions about contributing, open a [Discussion](https://github.com/iblai/mentor-ai/discussions) or reach out to the maintainers.
 
-Thank you for helping make mentorAI better!
+Thank you for helping make iblai/os better!
