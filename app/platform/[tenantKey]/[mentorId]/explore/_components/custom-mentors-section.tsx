@@ -159,7 +159,7 @@ export function CustomMentorsSection() {
                           </h3>
                           <p className="mb-3 text-sm leading-relaxed text-gray-600">
                             Build your own custom agent tailored to your
-                            specific learning needs
+                            specific needs
                           </p>
                           <p className="text-xs text-gray-500">
                             Get started today

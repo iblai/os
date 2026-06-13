@@ -600,6 +600,38 @@ describe('NavBar', () => {
 
       expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
     });
+
+    it('hides the LLM model selector on the tenant-scoped projects index page', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/projects';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('still shows the LLM model selector on a project chat route', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/projects/409/mentor456';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
   });
 
   // --------------------------------------------------------------------------

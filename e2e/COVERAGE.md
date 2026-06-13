@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-11 | 434 checkpoints (415 covered, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-12 | 459 checkpoints (440 covered, 7 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -422,18 +422,27 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 26: Projects (8 checkpoints) — `journeys/26-projects.spec.ts`
+## Journey 26: Projects (17 checkpoints) — `journeys/26-projects.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/projects/project-landing-page.tsx`, `components/projects/create-project-modal.tsx`, `components/projects/project-mentors-list.tsx`, `components/projects/project-action-buttons.tsx`, `components/projects/project-files-modal.tsx`, `components/projects/project-instructions-modal.tsx`, `components/projects/rename-project-modal.tsx`, `components/projects/delete-project-modal.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat-new.tsx`, `components/modals/no-mentor-selected-modal.tsx`
 
 - [x] A new project can be created from the sidebar
 - [x] Project landing page shows the assigned mentor list and action buttons
 - [x] A mentor can be added to a project
 - [x] Project instructions (system prompt) can be set and saved
-- [x] Project files modal opens with search input and Add Files button
+- [x] Project files modal opens cleanly (no crash) with Add Files button and either empty-state "No files found" or a populated table
 - [x] Chatting within a project creates a session
 - [x] A project can be renamed
 - [x] A project can be deleted
+- [x] Projects index page renders with h1 "Projects", subtitle, "Search projects..." input, and gradient "New Project" button when reached via the sidebar "Projects" nav button (no redirect back to chat) _(feat-1821)_
+- [x] Projects index shows either project cards (name + agent count) or the empty-state "No projects found" / "Create your first project" _(feat-1821)_
+- [x] "New Project" button on the index page opens the create-project modal _(feat-1821)_
+- [x] Project cards show the project name and agent count; intentionally NO description and NO "Updated …" timestamp; kebab button aria-label="Project actions" shows Rename and Delete items _(feat-1821)_
+- [x] Clicking a project card navigates to the project chat route /platform/\<tenantKey\>/projects/\<projectId\>/\<mentorId\> _(feat-1821)_
+- [x] Kebab Rename flow on index page: modal accepts new name and card updates _(feat-1821)_
+- [x] Kebab Delete flow on index page: confirmation dialog removes the card _(feat-1821)_
+- [x] "LLM Model Selector" navbar button is visible on a mentor chat page but hidden on the projects index (isProjectsIndexPage guard) _(feat-1821)_
+- [x] On projects index with no mentorId, clicking "New Chat" shows "No Agent Selected" modal; "Explore Agents" button navigates to /explore _(feat-1821)_
 
 ---
 
@@ -818,6 +827,21 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
 - [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
 - [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
+
+---
+
+## Journey 47: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/47-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 

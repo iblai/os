@@ -89,13 +89,25 @@ vi.mock('@/components/welcome-chat', () => ({
   ),
 }));
 
-vi.mock('@/components/projects/project-landing-page', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   ProjectLandingPage: (props: any) => (
     <div data-testid="project-landing-page">
       <div data-testid="project-name">{props.project?.name}</div>
       <div data-testid="session-id">{props.sessionId}</div>
     </div>
   ),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUserIsStudent: () => false,
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({ navigateToProject: vi.fn() }),
+}));
+
+vi.mock('@/hooks/use-anonymous-mentor', () => ({
+  useAccessingPublicRoute: () => false,
 }));
 
 vi.mock('@/components/welcome-chat/app-sync-banner', () => ({

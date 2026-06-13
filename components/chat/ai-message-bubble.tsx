@@ -17,6 +17,7 @@ import {
   selectShowingSharedChat,
   useTenantMetadata as useTenantMetadataHook,
   type Message,
+  type ToolCallInfo,
 } from '@iblai/iblai-js/web-utils';
 import { AIMessageRating } from './ai-message-rating';
 import { AIMessageReportInappropriateContent } from './ai-message-report-inappropriate-content';
@@ -26,6 +27,8 @@ import { Button } from '../ui/button';
 import { useAppSelector } from '@/lib/hooks';
 import { MessagePreview } from './chat-messages/message-preview';
 import type { CanvasOpenPayload } from './chat-messages/types';
+import { ReasoningSection } from './reasoning-section';
+import { ToolCallIndicator } from './tool-call-indicator';
 import { config } from '@/lib/config';
 
 // Check if message has artifact versions
@@ -61,6 +64,11 @@ interface AIMessageBubbleProps {
   onReply?: () => void;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
   streamingArtifactId?: number;
+  reasoningContent?: string;
+  toolCalls?: ToolCallInfo[];
+  isReasoning?: boolean;
+  isCurrentlyStreaming?: boolean;
+  showReasoning?: boolean;
 }
 
 export const AIMessageBubble = forwardRef<
@@ -80,6 +88,11 @@ export const AIMessageBubble = forwardRef<
     tenantKey,
     onOpenCanvas,
     streamingArtifactId,
+    reasoningContent,
+    toolCalls,
+    isReasoning,
+    isCurrentlyStreaming,
+    showReasoning,
   },
   ref,
 ) {
@@ -90,6 +103,30 @@ export const AIMessageBubble = forwardRef<
   const isMentorInappropriateContentEnabled =
     tenantMetadata?.mentor_report_inappropriate_content !== false;
   const supportEmail = tenantMetadata?.support_email || config.supportEmail();
+
+  // The reasoning section and tool-call indicator are gated by showReasoning.
+  // While that's off, an assistant message that is still streaming has no text
+  // yet — without the verbose surfaces there would be nothing to show, so the
+  // bubble would render as an empty gray box. Skip rendering entirely until the
+  // bubble has something visible (text, a visible verbose surface, actions, or
+  // an artifact preview); the typing indicator covers the interim.
+  const hasReasoningToShow = !!(showReasoning && reasoningContent);
+  const hasToolCallsToShow = !!(
+    showReasoning &&
+    toolCalls &&
+    toolCalls.length > 0
+  );
+  const hasVisibleContent =
+    (content ?? '').trim().length > 0 ||
+    hasReasoningToShow ||
+    hasToolCallsToShow ||
+    !!message?.actions?.length ||
+    hasArtifactVersions(message);
+
+  if (!hasVisibleContent) {
+    return null;
+  }
+
   return (
     <TooltipProvider>
       <div className="mb-4">
@@ -116,6 +153,19 @@ export const AIMessageBubble = forwardRef<
                 hasArtifactVersions(message) && 'bg-white p-0',
               )}
             >
+              {showReasoning && reasoningContent && (
+                <ReasoningSection
+                  reasoningContent={reasoningContent}
+                  isReasoning={isReasoning ?? false}
+                  isCurrentlyStreaming={isCurrentlyStreaming}
+                />
+              )}
+              {showReasoning && toolCalls && toolCalls.length > 0 && (
+                <ToolCallIndicator
+                  toolCalls={toolCalls}
+                  isCurrentlyStreaming={isCurrentlyStreaming}
+                />
+              )}
               <div className="overflow-x-auto text-sm/6 text-gray-800 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_em]:italic [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-gray-200 [&_pre]:p-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4">
                 <MessagePreview
                   content={content}
@@ -138,7 +188,16 @@ export const AIMessageBubble = forwardRef<
                 </div>
               )}
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Action toolbar (copy, rating, share, report, retry) — hidden
+                while this message is still streaming; only meaningful once the
+                response is complete. Kept mounted (not unmounted) so the
+                copy-button ref stays valid for post-stream focus handling. */}
+            <div
+              className={cn(
+                'flex items-center space-x-4',
+                isCurrentlyStreaming && 'hidden',
+              )}
+            >
               <AIMessageCopy ref={ref} content={content} />
 
               {isLoggedIn() && !showingSharedChat && (

@@ -79,10 +79,18 @@ async function expectTabHidden(
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 test.describe('Journey 44: CLAW Advanced Sandbox', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) test.skip(true, 'CLAW Sandbox requires admin access');
+    if (!isAdmin) {
+      test.skip(true, 'CLAW Sandbox requires admin access');
+      return;
+    }
+
+    // Create a fresh agent for each test so the Sandbox/Skills flows run
+    // against a clean mentor (independent of whatever claw state a prior
+    // run or the default mentor was left in).
+    await createMentorPage.openAndCreate();
   });
 
   // ── TC01: Toggle is present in Settings tab ───────────────────────────────
@@ -461,10 +469,18 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 // Sandbox disappear — all within the same modal session (no reopen).
 
 test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) test.skip(true, 'CLAW Sandbox requires admin access');
+    if (!isAdmin) {
+      test.skip(true, 'CLAW Sandbox requires admin access');
+      return;
+    }
+
+    // Create a fresh agent for each test so the Sandbox/Skills flows run
+    // against a clean mentor (independent of whatever claw state a prior
+    // run or the default mentor was left in).
+    await createMentorPage.openAndCreate();
   });
 
   test('admin toggles Sandbox ON then OFF and Sandbox tab appears then disappears in the same session', async ({

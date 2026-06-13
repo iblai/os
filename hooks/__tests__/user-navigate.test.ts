@@ -166,6 +166,7 @@ vi.mock('lucide-react', () => ({
   Settings: () => null,
   LucideMail: () => null,
   Workflow: () => null,
+  FolderKanban: () => null,
 }));
 
 describe('user-navigate', () => {
@@ -550,6 +551,31 @@ describe('user-navigate', () => {
 
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Cannot navigate to workflows'),
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('navigateToProjects - should navigate to projects with tenantKey', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToProjects();
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/projects',
+        );
+      });
+
+      it('navigateToProjects - should warn when tenantKey is missing', () => {
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
+        mocked.useParams.mockReturnValue({});
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToProjects();
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot navigate to projects'),
         );
         consoleWarnSpy.mockRestore();
       });
@@ -1628,6 +1654,35 @@ describe('user-navigate', () => {
       const calledWith = mocked.push.mock.calls[0]![0] as string;
       expect(calledWith).toContain('modal=');
       expect(calledWith).not.toContain('/workflows');
+    });
+
+    it('should have Projects in content items', () => {
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const projectsItem = result.current.contentItems.find(
+        (item) => item.label === 'Projects',
+      );
+      expect(projectsItem).toBeDefined();
+    });
+
+    it('Projects onClick - should execute with trial check and navigate', () => {
+      const executeWithTrialCheck = vi.fn((fn) => fn());
+      mocked.useShowFreeTrialDialog.mockReturnValue({
+        executeWithTrialCheck,
+        isNewlyUserOnPreFreeOrAdvertisingMode: () => false,
+      });
+
+      const { result } = renderHook(() => useSidebarNavigation());
+
+      const projectsItem = result.current.contentItems.find(
+        (item) => item.label === 'Projects',
+      );
+      projectsItem?.onClick();
+
+      expect(executeWithTrialCheck).toHaveBeenCalled();
+      expect(mocked.push).toHaveBeenCalledWith(
+        '/platform/test-tenant/projects',
+      );
     });
 
     it('New Chat rbacResource - returns chat resource path when mentorId is present', () => {

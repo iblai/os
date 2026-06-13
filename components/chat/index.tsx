@@ -34,6 +34,10 @@ import {
   selectToken,
   selectTokenEnabled,
   selectShowingSharedChat,
+  selectStreamingReasoningContent,
+  selectIsReasoning,
+  selectStreamingToolCalls,
+  selectCurrentStreamingMessage,
   useMentorTools,
   useTenantContext,
   useTenantMetadata as useTenantMetadataHook,
@@ -300,6 +304,13 @@ export function Chat({
   const attachedFiles = useAppSelector(
     (state: RootState) => state.files.attachedFiles || [],
   );
+  // Reasoning and tool call selectors
+  const streamingReasoningContent = useAppSelector(
+    selectStreamingReasoningContent,
+  );
+  const isReasoning = useAppSelector(selectIsReasoning);
+  const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
+  const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
 
   // Offline mode detection (for Tauri desktop app)
@@ -1583,6 +1594,39 @@ export function Chat({
     [enabledGuidedPrompts, tenantKey, sessionId, username, handleSubmit],
   );
 
+  // Gate for the "Just a sec..." loading placeholder.
+  // It must only appear in the brief window where a response is pending but
+  // nothing has rendered yet. Without the checks below, an unstable socket
+  // that retries/duplicates a generation renders "Just a sec..." next to an
+  // answer that is already streaming (or finished) in the current/previous
+  // bubble — the duplicate "stream showing while another stream is incoming"
+  // bug. So also hide it when the current stream already has reasoning/tool
+  // output, or when the last assistant message already shows any output.
+  const lastMessage =
+    messages.length > 0 ? messages[messages.length - 1] : undefined;
+  // Reasoning steps and tool calls only count as visible "output" when Verbose
+  // Reasoning is enabled. With it off those surfaces are hidden in the bubble,
+  // so they must not suppress the typing indicator — otherwise the user sees
+  // nothing while the agent reasons before any text streams in.
+  const verboseReasoningEnabled = mentorSettings.showReasoning;
+  const lastAssistantHasOutput =
+    lastMessage?.role === 'assistant' &&
+    ((lastMessage.content ?? '').trim().length > 0 ||
+      (verboseReasoningEnabled &&
+        ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
+          (lastMessage.toolCalls?.length ?? 0) > 0)) ||
+      (lastMessage.artifactVersions?.length ?? 0) > 0);
+  const currentStreamHasOutput =
+    (currentStreamingMessage?.content ?? '').trim().length > 0 ||
+    (verboseReasoningEnabled &&
+      (isReasoning ||
+        (streamingReasoningContent ?? '').trim().length > 0 ||
+        (streamingToolCalls?.length ?? 0) > 0));
+  const showLoadingMessage =
+    (isPending || isStreaming) &&
+    !currentStreamHasOutput &&
+    !lastAssistantHasOutput;
+
   return (
     <div
       className={cn(
@@ -1790,6 +1834,11 @@ export function Chat({
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
                       isStreaming={isStreaming}
+                      streamingReasoningContent={streamingReasoningContent}
+                      streamingToolCalls={streamingToolCalls}
+                      isReasoning={isReasoning}
+                      showReasoning={mentorSettings.showReasoning}
+                      currentStreamingMessageId={currentStreamingMsg?.id}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -1808,21 +1857,13 @@ export function Chat({
                     {mentorAccessibilityMessage}
                   </div>
 
-                  {/* Loading indicator - hide if last message has canvas preview */}
-                  {(isPending || isStreaming) &&
-                    !currentStreamingMessage?.content &&
-                    !(
-                      messages.length > 0 &&
-                      messages[messages.length - 1]?.role === 'assistant' &&
-                      messages[messages.length - 1]?.artifactVersions &&
-                      (messages[messages.length - 1]?.artifactVersions
-                        ?.length ?? 0) > 0
-                    ) && (
-                      <LoadingMessage
-                        mentorName={mentorName}
-                        profileImage={profileImage}
-                      />
-                    )}
+                  {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
+                  {showLoadingMessage && (
+                    <LoadingMessage
+                      mentorName={mentorName}
+                      profileImage={profileImage}
+                    />
+                  )}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -2028,26 +2069,23 @@ export function Chat({
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
                   isStreaming={isStreaming}
+                  streamingReasoningContent={streamingReasoningContent}
+                  streamingToolCalls={streamingToolCalls}
+                  isReasoning={isReasoning}
+                  showReasoning={mentorSettings.showReasoning}
+                  currentStreamingMessageId={currentStreamingMsg?.id}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
                 </div>
 
-                {/* Loading indicator - hide if last message has canvas preview */}
-                {(isPending || isStreaming) &&
-                  !currentStreamingMessage?.content &&
-                  !(
-                    messages.length > 0 &&
-                    messages[messages.length - 1]?.role === 'assistant' &&
-                    messages[messages.length - 1]?.artifactVersions &&
-                    (messages[messages.length - 1]?.artifactVersions?.length ??
-                      0) > 0
-                  ) && (
-                    <LoadingMessage
-                      mentorName={mentorName}
-                      profileImage={profileImage}
-                    />
-                  )}
+                {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
+                {showLoadingMessage && (
+                  <LoadingMessage
+                    mentorName={mentorName}
+                    profileImage={profileImage}
+                  />
+                )}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}

@@ -159,9 +159,8 @@ export class SkillsTab {
     // both — i.e. the row card itself, not the panel/wrapper above it.
     return this.dialog
       .locator('div')
-      .filter({ has: toggle })
-      .filter({ has: actionsBtn })
-      .last();
+      .filter({ hasText: new RegExp(`^${escapeRegex(name)}v1\\.0\\.0$`, 'i') })
+      .first();
   }
 
   /**

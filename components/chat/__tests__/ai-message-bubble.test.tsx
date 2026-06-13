@@ -94,6 +94,43 @@ vi.mock('@/components/chat/chat-messages/message-preview', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/reasoning-section', () => ({
+  ReasoningSection: ({
+    reasoningContent,
+    isReasoning,
+    isCurrentlyStreaming,
+  }: {
+    reasoningContent: string;
+    isReasoning: boolean;
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="reasoning-section"
+      data-reasoning-content={reasoningContent}
+      data-is-reasoning={isReasoning}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    >
+      {reasoningContent}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/chat/tool-call-indicator', () => ({
+  ToolCallIndicator: ({
+    toolCalls,
+    isCurrentlyStreaming,
+  }: {
+    toolCalls: unknown[];
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="tool-call-indicator"
+      data-tool-calls-count={toolCalls.length}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    />
+  ),
+}));
+
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
@@ -104,6 +141,15 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     redirectToAuthSpaJoinTenant: vi.fn(),
   };
 });
+
+vi.mock('@/lib/config', () => ({
+  config: {
+    supportEmail: () => 'support@default.com',
+    iblTemplateMentor: () => 'default-agent',
+    authUrl: () => 'https://auth.test',
+    iblPlatform: () => 'mentor',
+  },
+}));
 
 const createMockStore = (showingSharedChat = false) =>
   configureStore({
@@ -150,6 +196,7 @@ describe('AIMessageBubble', () => {
     onRetry: mockOnRetry,
     onReply: mockOnReply,
     onOpenCanvas: mockOnOpenCanvas,
+    showReasoning: true,
   };
 
   beforeEach(async () => {
@@ -203,8 +250,6 @@ describe('AIMessageBubble', () => {
       if (avatarImg) {
         expect(avatarImg).toBeInTheDocument();
       } else {
-        // Fallback: Avatar might not show img if image fails to load
-        // Check that avatar container exists
         const avatar = container.querySelector('[data-slot="avatar"]');
         expect(avatar || screen.getByText('TE')).toBeTruthy();
       }
@@ -462,9 +507,6 @@ describe('AIMessageBubble', () => {
 
       const messagePreview = screen.getByTestId('message-preview');
       fireEvent.click(messagePreview);
-
-      // The mock MessagePreview calls onOpenCanvas on click
-      // This tests the prop is passed through
     });
 
     it('should pass artifactVersions to MessagePreview', () => {
@@ -500,6 +542,257 @@ describe('AIMessageBubble', () => {
       );
 
       expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+  });
+
+  describe('reasoning section', () => {
+    it('should render ReasoningSection when reasoningContent is provided', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-reasoning-content',
+        'Let me think...',
+      );
+    });
+
+    it('should not render ReasoningSection when reasoningContent is empty', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} reasoningContent="" />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should not render ReasoningSection when reasoningContent is undefined', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should pass isReasoning to ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="thinking"
+          isReasoning={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-reasoning',
+        'true',
+      );
+    });
+
+    it('should default isReasoning to false for ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} reasoningContent="done thinking" />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-reasoning',
+        'false',
+      );
+    });
+
+    it('should pass isCurrentlyStreaming to ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="thinking"
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('should not render ReasoningSection when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={false}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should not render ReasoningSection when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={undefined}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('empty bubble suppression', () => {
+    const mockToolCalls = [
+      { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+    ];
+
+    it('renders nothing while streaming with no text and verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      // No text, and both verbose surfaces are gated off -> nothing to show.
+      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByTestId('message-preview')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders when there is text content even with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content="Here is the answer"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+
+    it('renders when the reasoning section is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="visible thoughts"
+          showReasoning={true}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('renders when the tool-call indicator is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={mockToolCalls}
+          showReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+    });
+
+    it('renders an empty-text message that carries actions', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          showReasoning={false}
+          message={{
+            ...mockMessages[1],
+            content: '',
+            actions: [
+              {
+                actionType: 'redirectToAuthSpaJoinTenant',
+                text: 'Join',
+                type: 'primary',
+              },
+            ],
+          }}
+        />,
+      );
+      expect(screen.getByText('Join')).toBeInTheDocument();
+    });
+  });
+
+  describe('tool call indicator', () => {
+    const mockToolCalls = [
+      { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+      { id: 'tc2', name: 'vector_search', log: '', result: '' },
+    ];
+
+    it('should render ToolCallIndicator when toolCalls are provided', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={mockToolCalls} />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+        'data-tool-calls-count',
+        '2',
+      );
+    });
+
+    it('should not render ToolCallIndicator when toolCalls is empty', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} toolCalls={[]} />);
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when toolCalls is undefined', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should pass isCurrentlyStreaming to ToolCallIndicator', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={undefined}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
     });
   });
 });
