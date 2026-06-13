@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.75.1](https://github.com/iblai/os/compare/v0.75.0...v0.75.1) (2026-06-13)
+
 ## [0.75.0](https://github.com/iblai/os/compare/v0.74.4...v0.75.0) (2026-06-12)
 
 ### Features
