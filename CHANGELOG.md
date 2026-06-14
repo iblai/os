@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.75.2](https://github.com/iblai/os/compare/v0.75.1...v0.75.2) (2026-06-14)
+
+### Bug Fixes
+
+* **workflows:** drop "and learning experiences" from page subheading ([3c2d021](https://github.com/iblai/os/commit/3c2d021bdbb5ddad578f9677817ed6d16db2798e))
+
+### Chores
+
+* normalize CHANGELOG bullet style to prettier ([148cb25](https://github.com/iblai/os/commit/148cb254f282d3370d6255728fef31045528412e))
+
+### Tests
+
+* **e2e:** assert workflows subheading with exact match ([43a7cc0](https://github.com/iblai/os/commit/43a7cc06c9230feb9dd405b1af294a1a083680a4))
+
 ## [0.75.1](https://github.com/iblai/os/compare/v0.75.0...v0.75.1) (2026-06-13)
 
 ## [0.75.0](https://github.com/iblai/os/compare/v0.74.4...v0.75.0) (2026-06-12)
