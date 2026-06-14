@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-12",
+  "lastUpdated": "2026-06-14",
   "summary": {
-    "totalCheckpoints": 442,
+    "totalCheckpoints": 443,
     "coveredCheckpoints": 423,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
@@ -88,6 +88,11 @@
           "id": "nav-07",
           "description": "Suggested prompts authored with Markdown (links, bold, etc.) render via the Markdown component, not as literal text (issue #1179, fixme until a seeded mentor fixture is available)",
           "status": "covered"
+        },
+        {
+          "id": "nav-08",
+          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code)",
+          "status": "pending"
         }
       ]
     },
