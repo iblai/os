@@ -140,5 +140,6 @@ export const config = {
   platformBaseDomain: () =>
     getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app'),
   defaultSupportPhoneNumber: () =>
-    getEnv('NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER', '(571) 293-0242'),
+    getEnv('NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER', '(571) 293-0242') ||
+    '(571) 293-0242',
 };
