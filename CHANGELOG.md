@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.75.4](https://github.com/iblai/os/compare/v0.75.3...v0.75.4) (2026-06-15)
+
+### Bug Fixes
+
+* support phone number defaults even when env not set ([31205a5](https://github.com/iblai/os/commit/31205a546bb1c35eb16b2ea8b503db0795062969))
+
 ## [0.75.3](https://github.com/iblai/os/compare/v0.75.2...v0.75.3) (2026-06-14)
 
 ### Bug Fixes
