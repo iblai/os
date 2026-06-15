@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.75.4](https://github.com/iblai/os/compare/v0.75.3...v0.75.4) (2026-06-15)
+
+### Bug Fixes
+
+- support phone number defaults even when env not set ([31205a5](https://github.com/iblai/os/commit/31205a546bb1c35eb16b2ea8b503db0795062969))
+
+## [0.75.3](https://github.com/iblai/os/compare/v0.75.2...v0.75.3) (2026-06-14)
+
+### Bug Fixes
+
+- **chat:** dedupe newChat and stopChatGenerating event listeners ([1bd448f](https://github.com/iblai/os/commit/1bd448fc618c627f841340ef2f75a185d60005bb))
+
+### Chores
+
+- normalize CHANGELOG bullet formatting via prettier ([d19a255](https://github.com/iblai/os/commit/d19a255f2fa23d5d3880dfa73e19647d87b85741))
+
+### Tests
+
+- **chat:** cover single newChat/stopChatGenerating listener registration ([0b0b973](https://github.com/iblai/os/commit/0b0b9737ad97c889d3363ef97d02474af7ae5cb2))
+- **e2e:** add parked New Chat single-session regression guard ([#1002](https://github.com/iblai/os/issues/1002)) ([7352c21](https://github.com/iblai/os/commit/7352c213b108edbd259d6c0fa536dd4da538c785))
+
+## [0.75.2](https://github.com/iblai/os/compare/v0.75.1...v0.75.2) (2026-06-14)
+
+### Bug Fixes
+
+- **workflows:** drop "and learning experiences" from page subheading ([3c2d021](https://github.com/iblai/os/commit/3c2d021bdbb5ddad578f9677817ed6d16db2798e))
+
+### Chores
+
+- normalize CHANGELOG bullet style to prettier ([148cb25](https://github.com/iblai/os/commit/148cb254f282d3370d6255728fef31045528412e))
+
+### Tests
+
+- **e2e:** assert workflows subheading with exact match ([43a7cc0](https://github.com/iblai/os/commit/43a7cc06c9230feb9dd405b1af294a1a083680a4))
+
+## [0.75.1](https://github.com/iblai/os/compare/v0.75.0...v0.75.1) (2026-06-13)
+
+## [0.75.0](https://github.com/iblai/os/compare/v0.74.4...v0.75.0) (2026-06-12)
+
+### Features
+
+- bumped iblai-js to 1.18.1 ([ab1e3f7](https://github.com/iblai/os/commit/ab1e3f7c8c9b063963d96789e8e4bb79590a9408))
+- **mentor:** adding tasks for edit mentor, unit and playwright tests ([9687dc1](https://github.com/iblai/os/commit/9687dc163c6f38ab0d7a44e2b1904151fc31d196))
+- **mentorai:** adding version bump for iblai-js ([01d3879](https://github.com/iblai/os/commit/01d3879bc4ac8b4f487aeb97031ec8fe5420d96a))
+
+### Bug Fixes
+
+- **e2e:** adding more playwright tests for task tab ([1ab2118](https://github.com/iblai/os/commit/1ab2118a49b86f674e0c16858561d28f67d26554))
+- **mentor:** adding fix for the pnpm-lock ([030bfec](https://github.com/iblai/os/commit/030bfec8fb1539a099bc1e49865b45a91ddd87b2))
+- **mentor:** adding fix for the task test ([dc06129](https://github.com/iblai/os/commit/dc06129aefc959d2e66b15064caaf5fc7bd90bfa))
+- **mentor:** fix for the tasks tab ([50ec103](https://github.com/iblai/os/commit/50ec103424ab255d4818bd9f4009539d06a86b22))
+- **mentor:** pnpm-lock changes ([9edd14a](https://github.com/iblai/os/commit/9edd14acabda4bb82fc95ab12c5e00b41e9f6771))
+
+### Chores
+
+- **mentor:** version bump for iblai-js ([d7247b7](https://github.com/iblai/os/commit/d7247b7e437fe601875b297e79c6580b0709723d))
+
+## [0.74.4]
+
+- bumped iblai-js version to 1.17.25
+
 ## [0.74.3](https://github.com/iblai/os/pull/244)
 
 ## [0.74.2](https://github.com/iblai/os/pull/235)

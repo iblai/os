@@ -145,8 +145,7 @@ export default function WorkflowsPage() {
               Workflows
             </h1>
             <p className="text-sm text-gray-600">
-              Create and manage automated workflows for your agents and learning
-              experiences
+              Create and manage automated workflows for your agents
             </p>
           </div>
 

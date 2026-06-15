@@ -89,6 +89,7 @@ describe('mentor constants', () => {
       expect(MODALS.EDIT_MENTOR.tabs.tools).toBe('tools');
       expect(MODALS.EDIT_MENTOR.tabs.safety).toBe('safety');
       expect(MODALS.EDIT_MENTOR.tabs.privacy).toBe('privacy');
+      expect(MODALS.EDIT_MENTOR.tabs.tasks).toBe('tasks');
       expect(MODALS.EDIT_MENTOR.tabs.disclaimer).toBe('disclaimer');
       expect(MODALS.EDIT_MENTOR.tabs.access).toBe('access');
       expect(MODALS.EDIT_MENTOR.tabs.memory).toBe('memory');
