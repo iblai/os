@@ -4,30 +4,30 @@
 
 ### Bug Fixes
 
-* **chat:** dedupe newChat and stopChatGenerating event listeners ([1bd448f](https://github.com/iblai/os/commit/1bd448fc618c627f841340ef2f75a185d60005bb))
+- **chat:** dedupe newChat and stopChatGenerating event listeners ([1bd448f](https://github.com/iblai/os/commit/1bd448fc618c627f841340ef2f75a185d60005bb))
 
 ### Chores
 
-* normalize CHANGELOG bullet formatting via prettier ([d19a255](https://github.com/iblai/os/commit/d19a255f2fa23d5d3880dfa73e19647d87b85741))
+- normalize CHANGELOG bullet formatting via prettier ([d19a255](https://github.com/iblai/os/commit/d19a255f2fa23d5d3880dfa73e19647d87b85741))
 
 ### Tests
 
-* **chat:** cover single newChat/stopChatGenerating listener registration ([0b0b973](https://github.com/iblai/os/commit/0b0b9737ad97c889d3363ef97d02474af7ae5cb2))
-* **e2e:** add parked New Chat single-session regression guard ([#1002](https://github.com/iblai/os/issues/1002)) ([7352c21](https://github.com/iblai/os/commit/7352c213b108edbd259d6c0fa536dd4da538c785))
+- **chat:** cover single newChat/stopChatGenerating listener registration ([0b0b973](https://github.com/iblai/os/commit/0b0b9737ad97c889d3363ef97d02474af7ae5cb2))
+- **e2e:** add parked New Chat single-session regression guard ([#1002](https://github.com/iblai/os/issues/1002)) ([7352c21](https://github.com/iblai/os/commit/7352c213b108edbd259d6c0fa536dd4da538c785))
 
 ## [0.75.2](https://github.com/iblai/os/compare/v0.75.1...v0.75.2) (2026-06-14)
 
 ### Bug Fixes
 
-* **workflows:** drop "and learning experiences" from page subheading ([3c2d021](https://github.com/iblai/os/commit/3c2d021bdbb5ddad578f9677817ed6d16db2798e))
+- **workflows:** drop "and learning experiences" from page subheading ([3c2d021](https://github.com/iblai/os/commit/3c2d021bdbb5ddad578f9677817ed6d16db2798e))
 
 ### Chores
 
-* normalize CHANGELOG bullet style to prettier ([148cb25](https://github.com/iblai/os/commit/148cb254f282d3370d6255728fef31045528412e))
+- normalize CHANGELOG bullet style to prettier ([148cb25](https://github.com/iblai/os/commit/148cb254f282d3370d6255728fef31045528412e))
 
 ### Tests
 
-* **e2e:** assert workflows subheading with exact match ([43a7cc0](https://github.com/iblai/os/commit/43a7cc06c9230feb9dd405b1af294a1a083680a4))
+- **e2e:** assert workflows subheading with exact match ([43a7cc0](https://github.com/iblai/os/commit/43a7cc06c9230feb9dd405b1af294a1a083680a4))
 
 ## [0.75.1](https://github.com/iblai/os/compare/v0.75.0...v0.75.1) (2026-06-13)
 
