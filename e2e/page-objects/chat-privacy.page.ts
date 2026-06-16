@@ -8,7 +8,6 @@ import {
   clickChatPrivacyToggle,
   getChatPrivacyConfirmDialog,
   expectChatPrivacyConfirmDialogOpen,
-  confirmEnableChatPrivacyMidSession,
   cancelEnableChatPrivacyMidSession,
   isPrivateModeTabVisible,
   getPrivateModeCard,
@@ -321,6 +320,67 @@ export class ChatPrivacyPage {
     await clickChatPrivacyToggle(this.page);
   }
 
+  /**
+   * Robust click + wait for the toggle's `data-state` to settle to
+   * `targetState`. Use this instead of `clickHeaderToggle` whenever the
+   * test cares about the post-click state — it folds the
+   *
+   *   1. wait-for-toggle-to-actually-be-interactive,
+   *   2. click,
+   *   3. wait-for-state-to-flip,
+   *   4. wait-for-the-toggle-to-settle-into-its-new-interactive-state
+   *
+   * race together, with a budget generous enough for cold-cache
+   * `chat-privacy-effective` refetches. The SDK's `clickChatPrivacyToggle`
+   * + `expectChatPrivacyState` pair has hard 10 s budgets on each step
+   * that race the post-mutation refetch — cp-header-02/03/06 were timing
+   * out on exactly that race.
+   *
+   * `targetSource` (optional) lets the caller also assert `data-source`
+   * with the same generous timeout in the same call.
+   */
+  async clickToggleAndWaitFor(
+    targetState: ChatPrivacyToggleState,
+    targetSource?: ChatPrivacySource,
+  ): Promise<void> {
+    const toggle = this.headerToggle();
+
+    // Phase 1: ensure the toggle is mounted, visible, and interactive
+    // before clicking. Playwright's default click auto-waits, but if the
+    // SDK's mid-mutation `disabled` lingers we want a wider budget than
+    // the default actionTimeout. 20 s is enough for cold-cache hydration.
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await expect(toggle).toBeEnabled({ timeout: 20_000 });
+
+    // Phase 2: click via the SDK helper (handles `aria-disabled` quirks
+    // around the locked pill and emits the correct logger lines).
+    await clickChatPrivacyToggle(this.page);
+
+    // Phase 3: wait for `data-state` to flip. The post-click sequence is
+    // click → POST /sessions/ → dispatch updateSessionIds → React
+    // re-render → data-state changes. On slow envs that round-trip can
+    // exceed 10 s, so use 30 s.
+    await expect(toggle).toHaveAttribute('data-state', targetState, {
+      timeout: 30_000,
+    });
+
+    // Phase 4 (optional): same generous budget for `data-source`. We do
+    // this with `toHaveAttribute` rather than the SDK's
+    // `expectChatPrivacySource` because the SDK helper is hard-capped at
+    // 10 s and races the same refetch.
+    if (targetSource) {
+      await expect(toggle).toHaveAttribute('data-source', targetSource, {
+        timeout: 30_000,
+      });
+    }
+
+    // Phase 5: wait for the toggle to be enabled again. This is the
+    // signal that any in-flight mutation has settled, which protects the
+    // NEXT caller (e.g. cp-header-03 clicks twice in series; the second
+    // click would silently no-op if the first hadn't settled).
+    await expect(toggle).toBeEnabled({ timeout: 20_000 });
+  }
+
   /** Locator for the mid-session confirmation AlertDialog. */
   confirmDialog(): Locator {
     return getChatPrivacyConfirmDialog(this.page);
@@ -331,9 +391,43 @@ export class ChatPrivacyPage {
     await expectChatPrivacyConfirmDialogOpen(this.page, open);
   }
 
-  /** Click the toggle to open the confirm dialog and then confirm it. */
+  /**
+   * Click the toggle to open the confirm dialog and then confirm it.
+   *
+   * Bypasses the SDK helper because it does a bare `clickChatPrivacyToggle`
+   * without waiting for the toggle to be interactive, then assumes the
+   * dialog opens within 10 s and the confirm action is enabled within
+   * another 10 s. On a chat that's mid-stream the toggle is briefly
+   * disabled, the dialog opens slowly, and the confirm button stays
+   * disabled until the mutation hook is ready — all of which can blow
+   * past the SDK's hard budgets.
+   *
+   * Our flow:
+   *   1. Wait for the toggle to be visible AND interactive (covers
+   *      mid-stream disable, hydration races, etc.).
+   *   2. Click the toggle.
+   *   3. Wait up to 30 s for the dialog to appear (cold cache + slow
+   *      env).
+   *   4. Wait for the confirm action to be visible + enabled, then
+   *      click it.
+   *   5. Wait up to 30 s for the dialog to close — that's the
+   *      authoritative "mutation succeeded" signal.
+   */
   async enablePrivacyMidSession(): Promise<void> {
-    await confirmEnableChatPrivacyMidSession(this.page);
+    const toggle = this.headerToggle();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await expect(toggle).toBeEnabled({ timeout: 20_000 });
+    await toggle.click();
+
+    const dialog = this.confirmDialog();
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    const action = this.page.getByTestId('chat-privacy-confirm-action');
+    await expect(action).toBeVisible({ timeout: 15_000 });
+    await expect(action).toBeEnabled({ timeout: 15_000 });
+    await action.click();
+
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
   }
 
   /** Click the toggle to open the confirm dialog and then cancel. */

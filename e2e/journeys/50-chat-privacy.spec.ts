@@ -531,17 +531,10 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
 
       const chatPrivacy = new ChatPrivacyPage(page);
-
-      await chatPrivacy.clickHeaderToggle();
-
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 10_000,
-        },
-      );
-      await chatPrivacy.assertHeaderStateAndSource('on', 'session');
+      // Robust click: waits for visible/enabled BEFORE the click and for
+      // the post-mutation state + source to settle AFTER it, all with
+      // generous-enough budgets to outlast a cold-cache refetch.
+      await chatPrivacy.clickToggleAndWaitFor('on', 'session');
     });
 
     // cp-header-03: Clicking the toggle again (still no messages, session is on)
@@ -555,25 +548,11 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       const chatPrivacy = new ChatPrivacyPage(page);
 
-      // Enable.
-      await chatPrivacy.clickHeaderToggle();
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 10_000,
-        },
-      );
-
-      // Disable — this is a fresh session so no confirm dialog.
-      await chatPrivacy.clickHeaderToggle();
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'off',
-        {
-          timeout: 10_000,
-        },
-      );
+      // Enable, then disable. Each call waits for the toggle to be
+      // interactive again before returning, so the second click can't
+      // race the first click's in-flight mutation.
+      await chatPrivacy.clickToggleAndWaitFor('on');
+      await chatPrivacy.clickToggleAndWaitFor('off');
     });
 
     // cp-header-04: Send a message FIRST, then click toggle → confirm dialog appears.
@@ -626,20 +605,30 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
 
-      // Enable mid-session.
+      // Wait for the chat surface to settle before clicking the toggle.
+      // After sendMessage the SDK can briefly disable the toggle while
+      // the assistant response streams in; clicking during that window
+      // can either silently no-op or open the dialog late, racing the
+      // SDK helper's 10 s budget for the dialog to appear. Waiting for
+      // `toBeEnabled` here proves any in-flight chat-side mutation has
+      // settled and the toggle is interactive.
+      const toggle = chatPrivacy.headerToggle();
+      await expect(toggle).toBeEnabled({ timeout: 30_000 });
+
+      // Mid-session enable. Our `enablePrivacyMidSession` already has
+      // generous internal budgets (toggle interactive → click → dialog
+      // visible → action enabled → click → dialog hidden), but the
+      // outer-level wait above ensures we don't enter that flow on a
+      // briefly-disabled toggle.
       await chatPrivacy.enablePrivacyMidSession();
 
-      // Confirm dialog must close before proceeding.
-      await chatPrivacy.assertConfirmDialogOpen(false);
-
-      // Toggle is on and locked — session is one-way.
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 10_000,
-        },
-      );
+      // Toggle is on AND locked — session is one-way per spec.
+      // Use direct attribute assertions with generous timeouts rather
+      // than the SDK helpers; the post-mutation refetch can take a few
+      // seconds beyond the SDK's hard-coded 10 s.
+      await expect(toggle).toHaveAttribute('data-state', 'on', {
+        timeout: 30_000,
+      });
       await chatPrivacy.assertHeaderLocked(true);
     });
 
@@ -654,15 +643,12 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       const chatPrivacy = new ChatPrivacyPage(page);
 
-      // Enable without a mid-session message so no confirm dialog is needed.
-      await chatPrivacy.clickHeaderToggle();
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 10_000,
-        },
-      );
+      // Enable + wait for the click to fully settle BEFORE reloading.
+      // If we reload while the mutation is still in flight, the
+      // localStorage cache that the SDK hydrates from on the next page
+      // load may not have the new private session id yet — which is
+      // exactly the persistence guarantee this test exists to verify.
+      await chatPrivacy.clickToggleAndWaitFor('on');
 
       // Reload the page.
       const browserName = page.context().browser()?.browserType().name();
@@ -673,14 +659,17 @@ test.describe('Journey 50: Chat Privacy', () => {
       await page.reload({ waitUntil, timeout: 60_000 });
       await waitForPageReady(page);
 
-      // The toggle must still be on after hydration.
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 15_000,
-        },
-      );
+      // After reload the SDK component remounts. Wait for it to be
+      // both visible AND interactive — those two together prove the
+      // hydration effect (cache → redux → chat-privacy-effective
+      // refetch) has finished. Then assert state with a budget that
+      // covers a cold-cache effective-mode fetch.
+      const toggle = chatPrivacy.headerToggle();
+      await expect(toggle).toBeVisible({ timeout: 30_000 });
+      await expect(toggle).toBeEnabled({ timeout: 30_000 });
+      await expect(toggle).toHaveAttribute('data-state', 'on', {
+        timeout: 30_000,
+      });
     });
   });
 
