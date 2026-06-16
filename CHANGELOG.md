@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.75.5](https://github.com/iblai/os/compare/v0.75.4...v0.75.5) (2026-06-16)
+
+### Bug Fixes
+
+* **android:** route iblai-mentor:// SSO deep link back into the app ([d472ad4](https://github.com/iblai/os/commit/d472ad49f009e4346812665c0930c10f7576c377))
+
+### Refactors
+
+* **tenant-switch:** consume cross-tab tenant switch from the SDK ([367da66](https://github.com/iblai/os/commit/367da6672f03cf55ee977263b8138434f25e95e7))
+
 ## [0.75.4](https://github.com/iblai/os/compare/v0.75.3...v0.75.4) (2026-06-15)
 
 ### Bug Fixes
