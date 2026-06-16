@@ -10,6 +10,7 @@ import {
   Wrench,
   Shield,
   ShieldCheck,
+  CalendarClock,
   Clock,
   Grid,
   Key,
@@ -280,6 +281,21 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.tasks,
+    label: 'Tasks',
+    icon: CalendarClock,
+    // Platform-admin-only until the backend exposes an RBAC resource for
+    // periodic agents. No `rbacResource` set — the userTypes filter alone
+    // gates visibility (mirroring Sandbox / Access).
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
     navCategory: 'configurations',
   },
   {

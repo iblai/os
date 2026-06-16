@@ -581,20 +581,17 @@ export function Chat({
   }, [isStreaming, isPending]);
 
   useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const newChatEventHandler = () => {
-      // Reset showingSharedChat — a shared-chat view is read-only, the
-      // "new chat" action implicitly exits it.
+      // Reset showingSharedChat when user starts a new chat
       if (showingSharedChat) {
         dispatch(chatActions.setShowingSharedChat(false));
       }
-      // Close canvas when starting a new chat.
+      // Close canvas when starting a new chat
       if (isCanvasOpen) {
         handleCloseCanvas();
       }
       startNewChat();
     };
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
@@ -617,14 +614,14 @@ export function Chat({
       eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
   }, [
-    dispatch,
-    isCanvasOpen,
     showingSharedChat,
+    isCanvasOpen,
     startNewChat,
     stopGenerating,
     handleCloseCanvas,
     sendMessage,
     activeTab,
+    dispatch,
   ]);
 
   // Resize state for canvas/chat split view

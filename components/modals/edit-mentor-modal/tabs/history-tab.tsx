@@ -237,7 +237,7 @@ export function HistoryTab() {
               {/* Row 1: Search + Date (Mobile/Tablet) | All filters (Desktop) */}
               <div className="flex flex-1 flex-wrap gap-3">
                 <div className="relative min-w-[200px] flex-1">
-                  <Popover>
+                  <Popover modal>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"

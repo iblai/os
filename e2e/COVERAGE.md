@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-16 | 454 checkpoints (434 covered, 8 not-reproducible in default env, 12 deprecated) | 51 journeys (50 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-14 | 443 checkpoints (423 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -38,6 +38,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs link in a new tab
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
+- [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
 ---
 
@@ -750,6 +751,25 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 - [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
 - [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
 - [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+
+---
+
+## Journey 49: Mentor Tasks Tab (8 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Tasks tab is a thin wrapper around the SDK's `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). Unlike most tabs, `AgentTasksTab` has no tenant/mentor/username props — it reads them from the nearest `AgentSettingsProvider` and throws when rendered without one, so the wrapper wraps it in `AgentSettingsProvider` (identity from URL params + navigate hook, `enableRBAC` from `config`).
+
+The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js/playwright` (`scheduleTask`, `searchTasks`, `deleteTask`, `expectTaskInList`, …) — resolving elements by accessible name/placeholder/role rather than CSS classes. The lifecycle checkpoints (TA-06..TA-08) each create a uniquely-named periodic agent and delete it in a `finally` block, so every spec is independent, retry-safe and leaves no orphaned task behind.
+
+- [x] TA-01: Tasks tab label is visible in the Edit Mentor modal sidebar
+- [x] TA-02: Tasks tab heading and description render correctly
+- [x] TA-03: Toolbar exposes the task search input and the Schedule Task button
+- [x] TA-04: Total Tasks, Completed and Failed metric cards render
+- [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
+- [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
+- [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
+- [x] TA-08: Admin deletes a task and its row is removed from the list
 
 ---
 
