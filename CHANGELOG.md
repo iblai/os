@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.75.8](https://github.com/iblai/os/compare/v0.75.7...v0.75.8) (2026-06-16)
+
+### Bug Fixes
+
+* **mentor:** genericize explore page heading copy ([a9f47d2](https://github.com/iblai/os/commit/a9f47d291aca38048cb631ebdff9047c736524d2))
+
+### Tests
+
+* **e2e:** update stale explore heading comments ([730c04b](https://github.com/iblai/os/commit/730c04b8db81c0ffa43a2542e00715f2a25032e3))
+
 ## [0.75.7](https://github.com/iblai/os/compare/v0.75.6...v0.75.7) (2026-06-16)
 
 ### Bug Fixes
