@@ -69,6 +69,24 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetCallConfigurationsQuery(...args),
   useCreateCallConfigurationMutation: () => [mockCreateCallConfig, {}],
   useUpdateCallConfigurationMutation: () => [mockUpdateCallConfig, {}],
+  chatPrivacyApiSlice: {
+    util: {
+      invalidateTags: vi.fn(() => ({ type: 'rtk/invalidateTags' })),
+    },
+  },
+  // settings-tab.tsx reads the tenant "Allow users to control chat privacy"
+  // gate to decide whether to render the "Enable private mode" agent kill
+  // switch. Return `allow_user_chat_privacy_control: true` so the row stays
+  // visible in the existing test cases that assert on it.
+  useGetTenantChatPrivacyConfigQuery: () => ({
+    data: { allow_user_chat_privacy_control: true },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+vi.mock('react-redux', () => ({
+  useDispatch: () => vi.fn(),
 }));
 
 vi.mock('@sentry/nextjs', () => ({

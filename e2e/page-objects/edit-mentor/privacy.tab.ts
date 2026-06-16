@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { reliableClick } from '../../utils/resilient';
+import type { SettingsTab } from './settings.tab';
 
 /**
  * Page object for the Privacy tab inside the Edit Mentor modal.
@@ -9,17 +10,35 @@ import { reliableClick } from '../../utils/resilient';
  * documented in `AGENT_PRIVACY_TAB_LABELS` and the aria-labels emitted by
  * the SDK. If labels are overridden via the `labels` prop, update the
  * locators in this file to match.
+ *
+ * The MASTER `enable_privacy_router` switch was removed from the SDK
+ * Privacy tab body and now lives only in Settings → Capabilities as the
+ * "Filter PII from messages" row. `setRouterEnabled` / `isRouterEnabled`
+ * therefore DELEGATE to the SettingsTab page-object below — they navigate
+ * to Settings, flip the switch, save, and navigate back. Callers in
+ * journey 45 don't need to change.
  */
 export class PrivacyTab {
   readonly page: Page;
   readonly dialog: Locator;
+  /**
+   * Sibling SettingsTab page-object used to drive the moved master switch.
+   * Injected after construction via `bindSettingsTab` so the EditMentorPage
+   * can resolve the cross-tab dependency once, without circular imports at
+   * page-object construction time.
+   */
+  private settingsTab: SettingsTab | null = null;
+  /**
+   * `navigateToTab(name)` from the parent EditMentorPage. Provided after
+   * construction so this tab can return focus to "Privacy" after flipping
+   * the moved switch in Settings → Capabilities.
+   */
+  private navigateToTab: ((name: string) => Promise<void>) | null = null;
 
   /** "Privacy" heading rendered at the top of the tab panel. */
   readonly heading: Locator;
   /** Description line below the heading. */
   readonly description: Locator;
-  /** Master toggle — `enable_privacy_router`. */
-  readonly routerSwitch: Locator;
   /** Dropdown trigger for `privacy_action`. */
   readonly actionSelect: Locator;
   /** Textarea for `privacy_response` (only visible when action === "block"). */
@@ -30,6 +49,10 @@ export class PrivacyTab {
   readonly emptyEntitiesHint: Locator;
   /** Toggle for `enable_privacy_output_filter`. */
   readonly outputFilterSwitch: Locator;
+  /** Body container that only renders when `enable_privacy_router` is on.
+   *  Use this to assert the "router on" / "router off" rendering shape
+   *  without depending on the removed master switch. */
+  readonly body: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -39,9 +62,7 @@ export class PrivacyTab {
     this.description = dialog.getByText(
       /Detect and filter personally identifiable information from chat messages\./i,
     );
-    this.routerSwitch = dialog.getByRole('switch', {
-      name: /Privacy router (enabled|disabled)/i,
-    });
+    this.body = dialog.getByTestId('privacy-tab-body');
     this.actionSelect = dialog.getByRole('combobox', {
       name: /When PII is detected/i,
     });
@@ -55,28 +76,69 @@ export class PrivacyTab {
     });
   }
 
-  /** Returns true when the master router toggle is on. */
-  async isRouterEnabled(): Promise<boolean> {
-    const state = await this.routerSwitch
-      .getAttribute('aria-checked')
-      .catch(() => null);
-    return state === 'true';
+  /**
+   * Wire up the cross-tab delegation. EditMentorPage calls this once after
+   * both PrivacyTab and SettingsTab have been constructed so the Privacy
+   * helpers below can drive the moved master switch.
+   */
+  bindSettingsTab(
+    settingsTab: SettingsTab,
+    navigateToTab: (name: string) => Promise<void>,
+  ): void {
+    this.settingsTab = settingsTab;
+    this.navigateToTab = navigateToTab;
   }
 
   /**
-   * Flips the master router toggle. When `enable` is provided, only flips it
-   * when the current state differs (idempotent). Waits for the visible state
-   * to change before resolving so dependent locators are stable.
+   * Returns true when `enable_privacy_router` is on, inferred from the
+   * SDK's body-rendering invariant: when `enable_privacy_router` is true
+   * the action select is mounted; otherwise the body is empty. Falls back
+   * to reading the moved Settings → Capabilities switch when navigation
+   * has been bound, since the body is only mounted while we are actually
+   * on the Privacy tab.
+   */
+  async isRouterEnabled(): Promise<boolean> {
+    if (this.settingsTab && this.navigateToTab) {
+      // Authoritative read — go to Capabilities where the switch lives.
+      await this.navigateToTab('Settings');
+      const value = await this.settingsTab.isEnablePrivacyRouterEnabled();
+      await this.navigateToTab('Privacy');
+      return value;
+    }
+    // Fallback: best-effort visual probe on the Privacy tab body.
+    const visible = await this.actionSelect
+      .isVisible({ timeout: 1_500 })
+      .catch(() => false);
+    return visible;
+  }
+
+  /**
+   * Idempotently set the master `enable_privacy_router` toggle.
+   *
+   * Delegates to the Settings → Capabilities "Filter PII from messages"
+   * switch (the SDK removed the in-tab master switch). After the save
+   * toast, navigates back to the Privacy tab so subsequent assertions
+   * read the new render shape.
    */
   async setRouterEnabled(enable: boolean): Promise<void> {
-    const currently = await this.isRouterEnabled();
-    if (currently === enable) return;
-    await reliableClick(this.page, this.routerSwitch);
-    await expect(this.routerSwitch).toHaveAttribute(
-      'aria-checked',
-      enable ? 'true' : 'false',
-      { timeout: 10_000 },
-    );
+    if (!this.settingsTab || !this.navigateToTab) {
+      throw new Error(
+        'PrivacyTab.setRouterEnabled requires bindSettingsTab() to be called ' +
+          'first — invoked from EditMentorPage so the helper can drive the ' +
+          'moved master switch in Settings → Capabilities.',
+      );
+    }
+    await this.navigateToTab('Settings');
+    await this.settingsTab.setEnablePrivacyRouterAndSave(enable);
+    await this.navigateToTab('Privacy');
+
+    // Sanity-check the new render shape. When `enable` is true the SDK
+    // mounts the action select; when false the body is empty.
+    if (enable) {
+      await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
+    } else {
+      await expect(this.actionSelect).not.toBeVisible({ timeout: 5_000 });
+    }
   }
 
   /**

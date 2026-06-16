@@ -38,14 +38,46 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await editMentorPage.close();
   });
 
-  // PR-03: Master Privacy Router toggle is visible
-  test('admin sees the master Privacy Router switch', async ({
+  // PR-03: The master `enable_privacy_router` switch was removed from the
+  //        SDK Privacy tab body — flipping it now lives ONLY in Settings →
+  //        Capabilities ("Filter PII from messages"). This checkpoint now
+  //        asserts the contract that survived the move: the Privacy tab
+  //        does NOT render the action select / output filter when the
+  //        router is off (it gates on the new value), and DOES render them
+  //        when the router is on. The page-object `setRouterEnabled` now
+  //        delegates through the Capabilities switch automatically, so
+  //        every other PR-* test below continues to work unchanged.
+  test('Privacy tab body tracks the master `enable_privacy_router` value flipped from Capabilities', async ({
     editMentorPage,
   }) => {
-    await expect(editMentorPage.privacy.routerSwitch).toBeVisible({
-      timeout: 10_000,
-    });
-    await editMentorPage.close();
+    // Capture the original state so this test is idempotent.
+    const originalEnabled = await editMentorPage.privacy.isRouterEnabled();
+
+    try {
+      // Router OFF → body is empty (no action select, no output filter).
+      await editMentorPage.privacy.setRouterEnabled(false);
+      await expect(editMentorPage.privacy.actionSelect).not.toBeVisible({
+        timeout: 5_000,
+      });
+      await expect(editMentorPage.privacy.outputFilterSwitch).not.toBeVisible({
+        timeout: 5_000,
+      });
+
+      // Router ON → body renders the conditional fields.
+      await editMentorPage.privacy.setRouterEnabled(true);
+      await expect(editMentorPage.privacy.actionSelect).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(editMentorPage.privacy.outputFilterSwitch).toBeVisible({
+        timeout: 5_000,
+      });
+    } finally {
+      // Restore so subsequent tests inherit the world we found.
+      await editMentorPage.privacy
+        .setRouterEnabled(originalEnabled)
+        .catch(() => undefined);
+      await editMentorPage.close();
+    }
   });
 
   // PR-04: Conditional fields are hidden when router is off

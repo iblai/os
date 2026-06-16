@@ -88,7 +88,6 @@ import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { ToastErrorMessage } from './toast-error-message';
-import { ChatPrivacyToggle } from './chat-privacy-menu';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useServiceWorker } from '@/components/service-worker-provider';
@@ -505,23 +504,6 @@ export function Chat({
     // isFirstCanvasOpenRef.current = true;
   }, []);
 
-  useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const newChatEventHandler = () => {
-      // Reset showingSharedChat when user starts a new chat
-      if (showingSharedChat) {
-        dispatch(chatActions.setShowingSharedChat(false));
-      }
-      startNewChat();
-    };
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const stopGeneratingChatHandler = () => {
-      stopGenerating();
-    };
-    eventBus.on(RemoteEvents.newChat, newChatEventHandler);
-    eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
-  }, [showingSharedChat]);
-
   const isAdvancedMode = mode === 'advanced';
   const [isPhoneCallModalOpen, setIsPhoneCallModalOpen] = useState(false);
   const [isScreenSharingModalOpen, setIsScreenSharingModalOpen] =
@@ -601,7 +583,12 @@ export function Chat({
   useEffect(() => {
     /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const newChatEventHandler = () => {
-      // Close canvas when starting a new chat
+      // Reset showingSharedChat — a shared-chat view is read-only, the
+      // "new chat" action implicitly exits it.
+      if (showingSharedChat) {
+        dispatch(chatActions.setShowingSharedChat(false));
+      }
+      // Close canvas when starting a new chat.
       if (isCanvasOpen) {
         handleCloseCanvas();
       }
@@ -630,7 +617,9 @@ export function Chat({
       eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
   }, [
+    dispatch,
     isCanvasOpen,
+    showingSharedChat,
     startNewChat,
     stopGenerating,
     handleCloseCanvas,
@@ -1607,11 +1596,6 @@ export function Chat({
         </div>
       )}
 
-      {/* Temporary-chat / privacy toggle, anchored to the chat's top-right
-       * corner so it's visible from both the welcome state and an active
-       * conversation. The component renders nothing when the tenant gate is
-       * off, so this slot stays empty for workspaces that don't use it. */}
-      <ChatPrivacyToggle className="absolute top-2 right-2 z-30" />
       <div
         className={cn({
           // Fill available space when the messages section won't render

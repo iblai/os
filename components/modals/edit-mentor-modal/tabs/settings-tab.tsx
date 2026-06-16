@@ -22,6 +22,7 @@ const CopyMentorModal = dynamic(
 );
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 
 import {
   useGetMentorSettingsQuery,
@@ -32,6 +33,8 @@ import {
   useGetCallConfigurationsQuery,
   useCreateCallConfigurationMutation,
   useUpdateCallConfigurationMutation,
+  useGetTenantChatPrivacyConfigQuery,
+  chatPrivacyApiSlice,
 } from '@iblai/iblai-js/data-layer';
 import { useForm, useStore } from '@tanstack/react-form';
 
@@ -106,6 +109,12 @@ interface SettingsForm {
    * PII-rules configuration UI) — when off, the Privacy tab is hidden.
    */
   enable_privacy_router: boolean;
+  /**
+   * Mentor-level "private mode" kill switch. When on, every conversation
+   * with this mentor is treated as private — no chat history is stored
+   * regardless of the user / tenant / session tier. Maps to `mentor.disable_chathistory`.
+   */
+  disable_chathistory: boolean;
   /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
   use_function_calling_for_rag: boolean;
   /** Voice-call: enable screen sharing. Persisted on CallConfiguration, not MentorSettings. */
@@ -139,6 +148,21 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+  const dispatch = useDispatch();
+
+  // Tenant-level "Allow users to control chat privacy" gate. When the
+  // tenant admin disables this in Account Settings, the agent-level
+  // "Enable private mode" kill switch becomes meaningless — every chat
+  // is forced to the tenant default regardless of what an agent owner
+  // toggles here. Hide the row entirely so admins aren't presented with
+  // a control that has no effect.
+  const { data: tenantChatPrivacyConfig } = useGetTenantChatPrivacyConfigQuery(
+    // @ts-ignore - userId is not part of the public query args type
+    { org: tenantKey ?? '', userId: username ?? '' },
+    { skip: !tenantKey || !username },
+  );
+  const tenantAllowsChatPrivacyControl =
+    !!tenantChatPrivacyConfig?.allow_user_chat_privacy_control;
 
   // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
   // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
@@ -239,6 +263,8 @@ export function SettingsTab() {
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
       // @ts-ignore - enable_privacy_router exists on API but not in the public type yet
       enable_privacy_router: mentor?.enable_privacy_router ?? false,
+      // @ts-ignore - disable_chathistory exists on the mentor object but not in the public type yet
+      disable_chathistory: mentor?.disable_chathistory ?? false,
       use_function_calling_for_rag:
         existingCallConfig?.use_function_calling_for_rag ?? false,
       enable_video: existingCallConfig?.enable_video ?? false,
@@ -324,6 +350,10 @@ export function SettingsTab() {
         values.enable_privacy_router = value.enable_privacy_router;
       }
 
+      if (value.disable_chathistory !== undefined) {
+        values.disable_chathistory = value.disable_chathistory;
+      }
+
       // Drop any field the user only has read access to. Field-level RBAC
       // permissions come from the settings endpoint; including a read-only
       // field makes the PUT fail (e.g. "No permission to write field:
@@ -338,6 +368,16 @@ export function SettingsTab() {
         },
       });
 
+      // Capture this BEFORE awaiting the edit — once the mentor query
+      // invalidates and refetches, `mentor.disable_chathistory` will reflect
+      // the new value and a change check would always read false.
+      const previousDisableChatHistory: boolean =
+        // @ts-ignore - disable_chathistory not in public mentor type yet
+        (mentor?.disable_chathistory as boolean | undefined) ?? false;
+      const disableChatHistoryChanged =
+        value.disable_chathistory !== undefined &&
+        value.disable_chathistory !== previousDisableChatHistory;
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -348,6 +388,16 @@ export function SettingsTab() {
             ...writableValues,
           },
         }).unwrap();
+
+        // The nav-bar's chat-privacy toggle reads from `chat-privacy-effective`,
+        // which is keyed on mentor and NOT invalidated by the mentor-settings
+        // mutation. Without this, flipping "Enable private mode" in settings
+        // doesn't reflect in the header until a page refresh.
+        if (disableChatHistoryChanged) {
+          dispatch(
+            chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
+          );
+        }
 
         if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
           try {
@@ -1406,6 +1456,61 @@ export function SettingsTab() {
                       </form.Field>
                     )}
                   </WithFormPermissions>
+
+                  {/* Gated on the tenant-level "Allow users to control chat
+                      privacy" switch. When the tenant has disabled chat-
+                      privacy control, this agent-level kill switch has no
+                      effect (the tenant default wins), so hide the row
+                      entirely to avoid surfacing a no-op control. */}
+                  {tenantAllowsChatPrivacyControl && (
+                    <WithFormPermissions
+                      name="disable_chathistory"
+                      // @ts-ignore - disable_chathistory not in permissions type yet
+                      permissions={mentor?.permissions?.field}
+                    >
+                      {({ disabled }) => (
+                        <form.Field name="disable_chathistory">
+                          {(field) => (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-[#646464]">
+                                  Enable private mode
+                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      type="button"
+                                      aria-label="More info about enable private mode"
+                                    >
+                                      <Info className="h-4 w-4 text-gray-400" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="ibl-tooltip-content">
+                                      <p>
+                                        When on, every conversation with this
+                                        agent runs in private mode — no chat
+                                        history or memory is stored for any
+                                        user. Use this for sensitive or
+                                        compliance-bound deployments.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <Switch
+                                checked={field.state.value}
+                                onCheckedChange={(checked) =>
+                                  field.handleChange(checked)
+                                }
+                                disabled={isDisabled || disabled}
+                                aria-label="Enable private mode"
+                                aria-checked={field.state.value}
+                              />
+                            </div>
+                          )}
+                        </form.Field>
+                      )}
+                    </WithFormPermissions>
+                  )}
 
                   <WithFormPermissions
                     name="forkable"

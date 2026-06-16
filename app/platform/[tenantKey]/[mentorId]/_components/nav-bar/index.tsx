@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/tooltip';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import {
+  ChatPrivacyToggle,
   CreditBalance,
   NotificationDropdown,
 } from '@iblai/iblai-js/web-containers';
@@ -629,6 +630,13 @@ export function NavBar() {
             </div>
           )}
           <div className="flex items-center gap-2">
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <ChatPrivacyToggle
+                org={tenantKey}
+                userId={username ?? ''}
+                mentor={mentorId}
+              />
+            )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
                 tenant={tenantKey}

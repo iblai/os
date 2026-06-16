@@ -117,6 +117,31 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     () => ({ unwrap: () => Promise.resolve({}) }),
     { isLoading: false },
   ],
+  // settings-tab.tsx dispatches `chatPrivacyApiSlice.util.invalidateTags`
+  // after saving disable_chathistory so the nav-bar's privacy toggle picks
+  // up the new lock state without a refresh. Stub the slice util so the
+  // dispatch is a no-op in unit tests.
+  chatPrivacyApiSlice: {
+    util: {
+      invalidateTags: vi.fn(() => ({ type: 'rtk/invalidateTags' })),
+    },
+  },
+  // settings-tab.tsx reads the tenant "Allow users to control chat privacy"
+  // gate to decide whether to render the "Enable private mode" agent kill
+  // switch. Return `allow_user_chat_privacy_control: true` so the row is
+  // visible in the existing test cases that assert on it.
+  useGetTenantChatPrivacyConfigQuery: () => ({
+    data: { allow_user_chat_privacy_control: true },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+// Stub react-redux so `useDispatch()` works without a real Provider —
+// the test doesn't exercise any reducer behavior, only that the dispatch
+// call doesn't crash and (where asserted) is invoked with the right tag.
+vi.mock('react-redux', () => ({
+  useDispatch: () => vi.fn(),
 }));
 
 // Mock sonner
