@@ -7,15 +7,26 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { ChatHistoryFilter } from '@/hooks/use-history';
 import { REPORT_NAME } from '@/lib/constants';
+import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { useUsername } from '../use-user';
 
 export function useExportChatHistory() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
+  const username = useUsername();
   const activeMentorId = getMentorId() || mentorId;
+
+  const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery({
+    mentor: activeMentorId,
+    org: tenantKey,
+    // @ts-ignore
+    userId: username ?? ANONYMOUS_USERNAME,
+  });
 
   const { initializeReportDownload, isGenerating } = useReports({
     tenantKey,
     selectedMentorId: activeMentorId,
+    selectedMentorDbId: String(mentorPublicSettings?.mentor_id),
   });
 
   const handleExport = useCallback(
