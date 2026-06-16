@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-14",
+  "lastUpdated": "2026-06-17",
   "summary": {
-    "totalCheckpoints": 443,
-    "coveredCheckpoints": 423,
+    "totalCheckpoints": 463,
+    "coveredCheckpoints": 442,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 51,
-    "activeJourneys": 50
+    "totalJourneys": 52,
+    "activeJourneys": 52
   },
   "journeys": [
     {
@@ -2854,7 +2854,7 @@
     {
       "id": "chat-privacy",
       "name": "Chat Privacy",
-      "spec": "49-chat-privacy.spec.ts",
+      "spec": "50-chat-privacy.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"

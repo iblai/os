@@ -1,5 +1,5 @@
 /**
- * Journey 49 — Chat Privacy
+ * Journey 50 — Chat Privacy
  *
  * Covers the four user-facing surfaces of the chat-privacy feature end-to-end:
  *
@@ -76,7 +76,7 @@ async function goToChatPage(
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-test.describe('Journey 49: Chat Privacy', () => {
+test.describe('Journey 50: Chat Privacy', () => {
   // The whole journey runs on a single worker, and every test gets 3
   // minutes (vs the repo default 120 s). See the isolation rationale in
   // the file-level doc-comment for why serial is non-negotiable. The

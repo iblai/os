@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-14 | 443 checkpoints (423 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-17 | 463 checkpoints (442 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -857,7 +857,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 49: Chat Privacy (20 checkpoints) — `journeys/49-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (20 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
