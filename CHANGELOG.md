@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.75.6](https://github.com/iblai/os/compare/v0.75.5...v0.75.6) (2026-06-16)
+
+### Bug Fixes
+
+* **mentor:** scroll history user-search list inside dialog ([41a22df](https://github.com/iblai/os/commit/41a22dfc0eb3c242c145c3d68a2b9c09506cfb1f))
+
+### Tests
+
+* **history-tab:** add unit coverage for HistoryTab ([b4c3173](https://github.com/iblai/os/commit/b4c31734a095c22bd4e433599163a451ff11751b))
+
 ## [0.75.5](https://github.com/iblai/os/compare/v0.75.4...v0.75.5) (2026-06-16)
 
 ### Bug Fixes
