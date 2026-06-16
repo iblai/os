@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.75.9](https://github.com/iblai/os/compare/v0.75.8...v0.75.9) (2026-06-16)
+
+### Bug Fixes
+
+* **ci:** pin coverage-bot to claude-sonnet-4-6 ([0148c32](https://github.com/iblai/os/commit/0148c324b294864c849bf5f0a988f6ebbe10441b))
+* **msix:** correct Store package identity name to ibl.ai.ibl.ai ([4f73626](https://github.com/iblai/os/commit/4f736267defda500464c0ddebd6c5dadff36048f))
+
 ## [0.75.8](https://github.com/iblai/os/compare/v0.75.7...v0.75.8) (2026-06-16)
 
 ### Bug Fixes
