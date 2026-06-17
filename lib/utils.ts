@@ -24,7 +24,13 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
-import { redirectToAuthSpa as sdkRedirectToAuthSpa } from '@iblai/iblai-js/web-utils/auth';
+// NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
+// (not statically) — the main web-utils entry pulls in React providers, which
+// would break this module when it's loaded in a React Server Component.
+import {
+  redirectToAuthSpa as sdkRedirectToAuthSpa,
+  handleTenantSwitch as sdkHandleTenantSwitch,
+} from '@iblai/iblai-js/web-utils/auth';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -591,83 +597,29 @@ export function canSwitchProvider(providers: Provider[], name: string) {
   return !!provider?.chat_models && provider.chat_models.length > 0;
 }
 
+// Cross-tab tenant switching now lives in the SDK
+// (@iblai/iblai-js/web-utils). This thin wrapper injects mentorai's config;
+// all coordination (TTL lock + BroadcastChannel) is handled in the SDK.
 export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
   broadcastTenantSwitching = true,
-) => {
-  console.log('############### HANDLE TENANT SWITCHING ###############', {
-    broadcastTenantSwitching,
+): Promise<void> => {
+  // Lazy import: the main web-utils entry pulls in React providers, so importing
+  // it at module top-level would break this file inside a Server Component.
+  const { clearCurrentTenantCookie } = await import(
+    '@iblai/iblai-js/web-utils'
+  );
+  return sdkHandleTenantSwitch(tenant, {
+    authUrl: config.authUrl(),
+    redirectPathStorageKey: REDIRECT_PATH_LOCAL_STORAGE_KEY,
+    queryParams: { redirectTo: REDIRECT_PATH_LOCAL_STORAGE_KEY },
+    clearCurrentTenantCookie,
+    saveRedirect,
+    redirectUrl,
+    broadcast: broadcastTenantSwitching,
   });
-  // Signal to the app that a tenant switch is in progress
-  if (
-    document.cookie.includes('ibl_tenant_switching') &&
-    broadcastTenantSwitching
-  ) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
-    );
-    return;
-  }
-  if (tenant === localStorage.getItem('tenant')) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
-    );
-    console.log(
-      `[handleTenantSwitch] Switching from ${localStorage.getItem('tenant')} to ${tenant}`,
-    );
-    return;
-  }
-
-  if (broadcastTenantSwitching) {
-    setCookieForAuth('ibl_tenant_switching', 'true');
-  }
-  // Notify other tabs/windows that a tenant switch is starting
-  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
-    const channel = new BroadcastChannel('ibl-tenant-switch');
-    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
-    channel.close();
-  }
-  if (broadcastTenantSwitching) {
-    // Clear current tenant cookie before switching
-    const { clearCurrentTenantCookie } = await import(
-      '@iblai/iblai-js/web-utils'
-    );
-    clearCurrentTenantCookie();
-  }
-  // Preserve the current path before clearing localStorage
-  const currentPath = `${window.location.pathname}${window.location.search}`;
-  // Get JWT token before clearing localStorage
-  const jwtToken = localStorage.getItem('edx_jwt_token');
-  console.log('[handleTenantSwitch] clearing local storage', {
-    tenant,
-    currentTenant: localStorage.getItem('tenant'),
-  });
-  if (broadcastTenantSwitching) {
-    console.log('[handleTenantSwitch] clearing local storage');
-    localStorage.clear();
-  }
-  const url = `${config.authUrl()}/login/complete`;
-  const params: Record<string, string> = {
-    tenant,
-    [REDIRECT_PATH_LOCAL_STORAGE_KEY]: redirectUrl ?? window.location.origin,
-  };
-
-  // Add token if it exists
-  if (jwtToken) {
-    params.token = jwtToken;
-  }
-
-  const param = new URLSearchParams(params).toString();
-
-  localStorage.setItem('tenant', tenant);
-  if (saveRedirect) {
-    // Restore the redirect path after setting tenant
-    localStorage.setItem(REDIRECT_PATH_LOCAL_STORAGE_KEY, currentPath);
-  }
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  window.location.href = `${url}?${param}`;
 };
 
 export const canSwitchLLm = (llm: {
@@ -1482,6 +1434,18 @@ export function getUserOS() {
     return 'Android';
   }
   return 'Unknown OS';
+}
+
+export function isMobileOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // iPadOS 13+ presents a desktop Safari UA; detect via a touch-capable Mac
+  const isIPadOS =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return (
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    isIPadOS
+  );
 }
 
 /**

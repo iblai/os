@@ -128,6 +128,10 @@ let mockCheckRbacPermission: (
   perms: unknown,
   resource: string,
 ) => boolean = () => true;
+// Controllable `config.enableRBAC()` — required to exercise the non-admin
+// footer-permission branch (which only runs when RBAC is enabled). Defaults
+// to false to match the previous test behavior.
+let mockEnableRBAC = false;
 
 // Chat session selection (issue #1881). `selectSessionId` returns the active
 // session; the Chats-section row click must repopulate the panel by writing
@@ -538,7 +542,7 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
     hideAnalytics: () => 'false',
-    enableRBAC: () => false,
+    enableRBAC: () => mockEnableRBAC,
     stripeEnabled: () => 'true',
     mentorTrainingMaximumFileSize: () => '60',
   },
@@ -663,6 +667,7 @@ function resetState() {
   mockIsNewlyUserOnPreFreeOrAdvertisingMode = false;
   mockIsUserTypeAllowed = () => true;
   mockCheckRbacPermission = () => true;
+  mockEnableRBAC = false;
   mockSidebarState = {
     state: 'expanded',
     open: true,
@@ -1107,6 +1112,35 @@ describe('AppSidebar — Analytics section', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows Analytics for a NON-admin who holds the view_analytics RBAC permission (no admin requirement, mirrors the original)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    // `isUserTypeAllowed` returns true ONLY for the analytics gate — i.e. the
+    // user holds the per-mentor `/mentors/{id}/#view_analytics` permission but
+    // nothing else. A non-admin with this permission must see Analytics.
+    mockIsUserTypeAllowed = (spec: any) =>
+      !!spec?.rbacResource &&
+      String(spec.rbacResource(1)).includes('view_analytics');
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Analytics' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('still hides Analytics for an admin toggled into learner mode even with the view_analytics permission', () => {
+    // Admin in learner mode: is_admin === true but acting as a student. The
+    // `!isAdmin` guard keeps Analytics hidden, preserving the learner-mode fix.
+    mockIsAdmin = true;
+    mockUserIsStudent = true;
+    mockIsUserTypeAllowed = (spec: any) =>
+      !!spec?.rbacResource &&
+      String(spec.rbacResource(1)).includes('view_analytics');
+    renderSidebar();
+    expect(
+      screen.queryByRole('button', { name: 'Analytics' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows Analytics for a student mentor-creator when the opened mentor is theirs (created_by === username)', () => {
     mockIsAdmin = false;
     mockUserIsStudent = true;
@@ -1473,6 +1507,80 @@ describe('AppSidebar — Footer actions', () => {
     renderSidebar();
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows ONLY the footer items a NON-admin holds the RBAC permission for (RBAC enabled)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockEnableRBAC = true;
+    // Grant only the Management permission (can_manage_users).
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource.includes('can_manage_users');
+    renderSidebar();
+
+    // Management shows (permission held)…
+    expect(
+      screen.getAllByRole('button', { name: 'Management' }).length,
+    ).toBeGreaterThan(0);
+    // …but the items they DON'T hold a permission for stay hidden, and
+    // Integrations/Advanced (no dedicated permission) remain admin-only.
+    expect(
+      screen.queryByRole('button', { name: 'Invites' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Monetization' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Integrations' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Advanced' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Monetization to a non-admin with can_sell_items when monetization is enabled (RBAC enabled)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockEnableRBAC = true;
+    mockCurrentTenant = {
+      is_admin: false,
+      is_advertising: false,
+      enable_monetization: true,
+    };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource.includes('can_sell_items');
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Monetization' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('does NOT show footer admin items to a non-admin when RBAC is DISABLED (even though checkRbacPermission returns true)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockEnableRBAC = false; // RBAC off → branch must not run
+    mockCheckRbacPermission = () => true; // matches the real fn (returns true when RBAC off)
+    renderSidebar();
+    expect(
+      screen.queryByRole('button', { name: 'Management' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Invites' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Monetization' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does NOT show footer admin items to an admin-in-learner-mode even with permissions (preserves the isLiveAdmin guard)', () => {
+    mockIsAdmin = true; // is_admin true…
+    mockUserIsStudent = true; // …but toggled into learner mode
+    mockEnableRBAC = true;
+    mockCheckRbacPermission = () => true;
+    renderSidebar();
+    expect(
+      screen.queryByRole('button', { name: 'Management' }),
     ).not.toBeInTheDocument();
   });
 });

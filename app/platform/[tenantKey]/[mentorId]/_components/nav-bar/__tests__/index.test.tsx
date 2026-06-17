@@ -243,6 +243,7 @@ vi.mock('@/lib/config', () => ({
     iblPlatform: () => 'mentor',
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
     iblTemplateMentor: () => 'ai-mentor',
     environment: () => 'test',
     lmsUrl: () => 'https://learn.example.com',
@@ -929,6 +930,8 @@ const buildContext = (
     isMemoryComponentEnabled: true,
     isClawEnabled: false,
     clawConfigExists: false,
+    isScreenshareEnabled: false,
+    isVoiceCallEnabled: true,
   },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
@@ -1175,6 +1178,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1195,6 +1200,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1215,6 +1222,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );
@@ -1232,6 +1241,8 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
             clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
           },
         }),
       );

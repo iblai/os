@@ -73,6 +73,10 @@ src-tauri/gen/apple/
 .yalc.lock
 yalc.lock
 
+# signing artifacts (never commit provisioning profiles)
+*.provisionprofile
+src-tauri/embedded.provisionprofile
+
 # playwright
 test-results
 playwright-report

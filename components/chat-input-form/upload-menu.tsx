@@ -7,32 +7,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus } from 'lucide-react';
+import { Camera, Plus } from 'lucide-react';
 
 import { UploadIcon } from '@/components/icons/svg-icons';
 import { useShowAttachment } from '@/hooks/use-show-attachment';
 
 interface UploadMenuProps {
   onFileInputTrigger: () => void;
+  onCameraTrigger: () => void;
   disabled?: boolean;
 }
 
 export const UploadMenu = ({
   onFileInputTrigger,
+  onCameraTrigger,
   disabled = false,
 }: UploadMenuProps) => {
   const showAttachment = useShowAttachment();
 
   const uploadMenuItems = [
-    // {
-    //   name: 'Upload from phone',
-    //   icon: <Smartphone className="h-5 w-5 text-gray-600" />,
-    //   action: () => console.log('Upload from phone clicked'),
-    // },
     {
       name: 'Upload File',
       icon: <UploadIcon className="h-5 w-5 text-gray-600" />,
       action: onFileInputTrigger,
+    },
+    {
+      name: 'Camera',
+      icon: <Camera className="h-5 w-5 text-gray-600" />,
+      action: onCameraTrigger,
     },
     // {
     //   name: 'Google Drive',

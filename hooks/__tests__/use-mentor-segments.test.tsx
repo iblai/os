@@ -98,6 +98,8 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 // AgentPrivacyTab component used by PrivacyTab.
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
+  AgentTasksTab: () => null,
+  AgentSettingsProvider: () => null,
 }));
 
 // ----------------------------------------------------------------------------
@@ -135,10 +137,11 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 17 mentor segments unfiltered', () => {
+  it('returns the canonical 20 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(17);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
+    expect(MENTOR_SEGMENTS).toHaveLength(20);
   });
 
   it('places the Sandbox segment right after Settings', () => {

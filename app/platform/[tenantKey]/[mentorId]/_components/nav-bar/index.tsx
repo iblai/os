@@ -518,7 +518,7 @@ export function NavBar() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? 'Select LLM Model' : selectedMentorName}
+                  {isAdmin ? 'Select Model' : selectedMentorName}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -706,6 +706,7 @@ export function NavBar() {
           currentSPA={config.iblPlatform() || 'mentor'}
           authURL={config.authUrl()}
           currentPlatformBaseDomain={config.platformBaseDomain()}
+          defaultSupportPhone={config.defaultSupportPhoneNumber()}
           localLLMProps={{
             isAvailable: isLocalLLMAvailable,
             state: localLLMState,

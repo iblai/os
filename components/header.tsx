@@ -579,6 +579,7 @@ export function Header({
         }}
         authURL={config.authUrl()}
         currentPlatformBaseDomain={config.platformBaseDomain()}
+        defaultSupportPhone={config.defaultSupportPhoneNumber()}
         localLLMProps={{
           isAvailable: isLocalLLMAvailable,
           state: localLLMState,

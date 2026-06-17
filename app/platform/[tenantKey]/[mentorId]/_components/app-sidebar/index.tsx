@@ -1931,12 +1931,24 @@ export function AppSidebar() {
     studentCanCreateMentors &&
     (studentOwnsOpenedMentor || isUserTypeAllowed(PERMISSION_GATES.analytics));
 
+  // A genuine non-admin who holds the per-mentor `/mentors/{id}/#view_analytics`
+  // RBAC permission can see Analytics — restoring the ORIGINAL behavior, where
+  // the sidebar/footer gated Analytics on `isUserTypeAllowed` ALONE (which
+  // includes the view_analytics RBAC check) with no admin requirement. We gate
+  // on `!isAdmin` so an admin-in-learner-mode stays excluded (preserving the
+  // `isLiveAdmin` learner-mode guard); for a non-admin, `isUserTypeAllowed`
+  // returns true here only via the RBAC view_analytics check, since STUDENT is
+  // not in the analytics `userTypes`.
+  const nonAdminCanViewAnalytics =
+    !isAdmin && isUserTypeAllowed(PERMISSION_GATES.analytics);
+
   const analyticsAllowed =
     !embedMode &&
     config.hideAnalytics() !== 'true' &&
     (showTrialGatedAdminMenu ||
       showAnonymousAdminMenu ||
       studentCanViewOpenedMentorAnalytics ||
+      nonAdminCanViewAnalytics ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.analytics)));
 
   // Projects are part of the full sidebar and hidden in embed mode. Shown
@@ -1985,37 +1997,42 @@ export function AppSidebar() {
     // rather than the static `useIsAdmin`, so flipping the navbar
     // User/Admin toggle hides/shows these in real time. Mirrors the
     // SDK `Account` component's per-feature gating.
+    //
+    // The platform-level RBAC permission flags are computed up here (not
+    // only inside the `isLiveAdmin` branch) so a GENUINE non-admin who holds
+    // them can also see the corresponding footer item — see the
+    // `!isAdmin && config.enableRBAC()` branch below.
+    const tenantKeyForRbac = currentTenant?.key ?? tenantKey;
+
+    const hasInviteUserPermission = checkRbacPermission(
+      rbacPermissions,
+      `/platforms/${tenantKeyForRbac}/#can_invite`,
+    );
+
+    // Management surfaces a row when ANY of its sub-tab permissions
+    // resolves true — matches the SDK's `hasManagementPermissions`.
+    const hasManagementPermissions =
+      checkRbacPermission(
+        rbacPermissions,
+        `/platforms/${tenantKeyForRbac}/#can_manage_users`,
+      ) ||
+      checkRbacPermission(rbacPermissions, `/groups/#list`) ||
+      checkRbacPermission(rbacPermissions, `/policies/#list`) ||
+      checkRbacPermission(rbacPermissions, `/roles/#list`) ||
+      checkRbacPermission(
+        rbacPermissions,
+        `/usergroups/#list|/platforms/${tenantKeyForRbac}/#can_invite`,
+      ) ||
+      checkRbacPermission(rbacPermissions, `/watchedgroups/#list`);
+
+    const hasMonetizationPermission = checkRbacPermission(
+      rbacPermissions,
+      `/platforms/${tenantKeyForRbac}/#can_sell_items`,
+    );
+    const canMonetize =
+      !!currentTenant?.enable_monetization && hasMonetizationPermission;
+
     if (isLiveAdmin) {
-      const tenantKeyForRbac = currentTenant?.key ?? tenantKey;
-
-      const hasInviteUserPermission = checkRbacPermission(
-        rbacPermissions,
-        `/platforms/${tenantKeyForRbac}/#can_invite`,
-      );
-
-      // Management surfaces a row when ANY of its sub-tab permissions
-      // resolves true — matches the SDK's `hasManagementPermissions`.
-      const hasManagementPermissions =
-        checkRbacPermission(
-          rbacPermissions,
-          `/platforms/${tenantKeyForRbac}/#can_manage_users`,
-        ) ||
-        checkRbacPermission(rbacPermissions, `/groups/#list`) ||
-        checkRbacPermission(rbacPermissions, `/policies/#list`) ||
-        checkRbacPermission(rbacPermissions, `/roles/#list`) ||
-        checkRbacPermission(
-          rbacPermissions,
-          `/usergroups/#list|/platforms/${tenantKeyForRbac}/#can_invite`,
-        ) ||
-        checkRbacPermission(rbacPermissions, `/watchedgroups/#list`);
-
-      const hasMonetizationPermission = checkRbacPermission(
-        rbacPermissions,
-        `/platforms/${tenantKeyForRbac}/#can_sell_items`,
-      );
-      const canMonetize =
-        !!currentTenant?.enable_monetization && hasMonetizationPermission;
-
       if (
         hasInviteUserPermission &&
         isUserTypeAllowed(PERMISSION_GATES.invites)
@@ -2052,7 +2069,9 @@ export function AppSidebar() {
       // these users hold none of those permissions — clicking any of these
       // either opens the upgrade dialog (trial users) or routes to the auth
       // SPA login (anonymous users), via `handleFooterActionClick` →
-      // `runAdminAction`, instead of the real surface.
+      // `runAdminAction`, instead of the real surface. Checked BEFORE the
+      // permission branch below so a trial/advertising non-admin still gets
+      // the full (trial-gated) cluster rather than only their held permissions.
       actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
       actions.push({ id: 'footer-users', label: 'Management', icon: Users });
       actions.push({ id: 'footer-api', label: 'Integrations', icon: KeyRound });
@@ -2066,10 +2085,36 @@ export function AppSidebar() {
         label: 'Advanced',
         icon: Settings,
       });
+    } else if (!isAdmin && config.enableRBAC()) {
+      // A GENUINE non-admin in an RBAC-enabled tenant sees ONLY the footer
+      // items whose platform permission they actually hold — mirroring the
+      // Analytics permission gate. We MUST guard on `config.enableRBAC()`
+      // because `checkRbacPermission` returns true when RBAC is off, which
+      // would otherwise expose these to every non-admin. `!isAdmin` keeps an
+      // admin-in-learner-mode excluded. Integrations and Advanced have no
+      // dedicated RBAC permission, so they stay admin/trial/anonymous-only.
+      if (hasInviteUserPermission) {
+        actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
+      }
+      if (hasManagementPermissions) {
+        actions.push({
+          id: 'footer-users',
+          label: 'Management',
+          icon: Users,
+        });
+      }
+      if (canMonetize) {
+        actions.push({
+          id: 'footer-monetization',
+          label: 'Monetization',
+          icon: Coins,
+        });
+      }
     }
     return actions;
   }, [
     embedMode,
+    isAdmin,
     isLiveAdmin,
     showTrialGatedAdminMenu,
     showAnonymousAdminMenu,

@@ -50,7 +50,7 @@ jobs:
   # ============================================================
   build-app-image:
     needs: gate
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: ./.github/workflows/reusable-pr-docker-build.yml
     secrets: inherit
     with:
       dockerfile-path: Dockerfile
@@ -65,7 +65,7 @@ jobs:
   # ============================================================
   build-playwright-image:
     needs: gate
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-pr-docker-build.yml@main
+    uses: ./.github/workflows/reusable-pr-docker-build.yml
     secrets: inherit
     with:
       dockerfile-path: e2e/Dockerfile
@@ -81,7 +81,7 @@ jobs:
   # ============================================================
   run-tests:
     needs: [build-app-image, build-playwright-image]
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-oci-test-runner.yml@main
+    uses: ./.github/workflows/reusable-oci-test-runner.yml
     secrets: inherit
     with:
       domain-number: '1'
