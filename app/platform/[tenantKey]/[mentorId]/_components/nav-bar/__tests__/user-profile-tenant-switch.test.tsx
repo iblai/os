@@ -233,12 +233,14 @@ describe('UserProfile - Tenant Already Exists', () => {
       expect(mockSaveUserTenants).not.toHaveBeenCalled();
     });
 
-    it('should not show tenant switcher for non-admin users', () => {
+    it('shows tenant switcher for non-admin users with other non-main tenants', () => {
       render(<UserProfile />);
 
-      // useIsAdmin returns false in this test file
+      // useIsAdmin returns false, but userTenants includes 'other-tenant',
+      // which is neither 'main' nor the current tenantKey ('existing-tenant').
+      // Per the tenant-switcher feature, the switcher is shown in this case.
       expect(screen.getByTestId('show-tenant-switcher')).toHaveTextContent(
-        'false',
+        'true',
       );
     });
   });
