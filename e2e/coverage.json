@@ -536,7 +536,10 @@
       "id": "canvas-ai-document-editor",
       "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
-      "sourceFiles": ["components/canvas/canvas-component.tsx"],
+      "sourceFiles": [
+        "components/canvas/canvas-component.tsx",
+        "components/canvas/canvas-controls.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cvs-01",
