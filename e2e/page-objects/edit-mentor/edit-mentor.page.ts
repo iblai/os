@@ -420,7 +420,28 @@ export class EditMentorPage {
     if (stillOpen === 0) return;
 
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
-    await this.closeButton.click();
+    // The Edit Agent dialog's top-right Close (X) can be occluded at its exact
+    // pixel by a stacked, aria-hidden sibling "Edit Agent" dialog. In the My
+    // Agents flow the global `showEditMentorModal` flag drives TWO mounted
+    // EditMentorModal instances at once (nav-bar/index.tsx and the one the open
+    // SettingsModal renders, settings-modal.tsx). Both portal a layout-identical
+    // DialogContent to <body> with the X at the same `absolute top-4 right-4`.
+    // Radix's hideOthers() marks the backgrounded duplicate aria-hidden — so
+    // getByRole resolves `closeButton` to the single foreground one — but
+    // aria-hidden only drops a node from the a11y tree; it stays in layout and
+    // remains a valid pointer hit-test target, so the duplicate's X (or the
+    // Settings overlay) can sit on top and intercept the click, timing it out.
+    //
+    // Dispatch a native click straight onto the resolved Close button instead of
+    // click()'s hit-testing. Radix DialogClose closes purely via React onClick
+    // (no onPointerDown/onMouseDown — @radix-ui/react-dialog), and the dialog
+    // portals under React's root container, so the bubbling DOM click reaches
+    // React's delegated listener and fires onOpenChange(false) → onClose
+    // regardless of what is painted on top. The toBeVisible() above guarantees
+    // `closeButton` is the single mounted, attached Edit Agent Close before we
+    // dispatch. On the non-stacked open() path (one dialog, no occlusion) this
+    // behaves identically to a normal click.
+    await this.closeButton.dispatchEvent('click');
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
 
     // The SDK dialog frequently leaves the app shell `aria-hidden="true"`

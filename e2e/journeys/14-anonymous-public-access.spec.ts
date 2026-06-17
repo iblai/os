@@ -249,20 +249,48 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     );
     await goToAnonymousMentor(page);
 
-    const analyticsBtn = page.getByRole('button', {
+    // "Analytics" is now a collapsible section header in the new sidebar (like
+    // "Agents" in the test above) — clicking it only toggles the section open,
+    // it does NOT navigate or trip the auth gate. The gate fires on the inner
+    // items: an anonymous user clicking "Overview" hits `handleAnalyticsMenuSelect`
+    // → `runAdminAction`, which calls `redirectToLogin` and sends them to the
+    // auth SPA. So expand the section (idempotently, via aria-expanded) and
+    // click the inner item to exercise the real admin-action gate. Scope to the
+    // <aside> so page-content text can't collide.
+    const sidebar = page.locator('aside').first();
+    const analyticsButton = sidebar.getByRole('button', {
       name: 'Analytics',
       exact: true,
     });
-    if (await analyticsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await analyticsBtn.click();
-      await page.waitForTimeout(2_000);
-      const isRedirected =
-        page.url().includes(AUTH_HOST) || page.url().includes('login');
-      const hasModal = await page
-        .getByRole('dialog')
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      expect(isRedirected || hasModal).toBe(true);
+    await expect(analyticsButton).toBeVisible({ timeout: 10_000 });
+    const expanded = await analyticsButton
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await analyticsButton.click();
     }
+    const overviewItem = sidebar.getByRole('button', {
+      name: 'Overview',
+      exact: true,
+    });
+    await expect(overviewItem).toBeVisible({ timeout: 10_000 });
+    await overviewItem.click();
+
+    // The anonymous click on a gated admin item redirects to the auth SPA.
+    // Some tenants surface a login/trial modal instead, so accept either
+    // signal. `safeWaitForURL` throws on timeout, so coerce it to a boolean
+    // rather than letting a redirect-less (modal) path fail the await.
+    const isRedirected = await safeWaitForURL(
+      page,
+      (url) => url.href.includes(AUTH_HOST) || url.href.includes('login'),
+      { timeout: 30_000 },
+    )
+      .then(() => true)
+      .catch(() => false);
+    const hasModal = await page
+      .getByRole('dialog')
+      .isVisible({ timeout: 3_000 })
+      .catch(() => false);
+    expect(isRedirected || hasModal).toBe(true);
   });
 });

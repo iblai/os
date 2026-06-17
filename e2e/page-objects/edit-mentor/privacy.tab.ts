@@ -14,9 +14,11 @@ import type { SettingsTab } from './settings.tab';
  * The MASTER `enable_privacy_router` switch was removed from the SDK
  * Privacy tab body and now lives only in Settings → Capabilities as the
  * "Filter PII from messages" row. `setRouterEnabled` / `isRouterEnabled`
- * therefore DELEGATE to the SettingsTab page-object below — they navigate
- * to Settings, flip the switch, save, and navigate back. Callers in
- * journey 45 don't need to change.
+ * therefore DELEGATE to the SettingsTab page-object below. Additionally,
+ * the SDK now filters the Privacy sidebar segment entirely when the router is
+ * off — the tab trigger is absent from the sidebar (not an empty body), so
+ * `setRouterEnabled(false)` does NOT navigate back to Privacy afterward.
+ * `setRouterEnabled(true)` navigates to Privacy and asserts the body rendered.
  */
 export class PrivacyTab {
   readonly page: Page;
@@ -90,35 +92,50 @@ export class PrivacyTab {
   }
 
   /**
-   * Returns true when `enable_privacy_router` is on, inferred from the
-   * SDK's body-rendering invariant: when `enable_privacy_router` is true
-   * the action select is mounted; otherwise the body is empty. Falls back
-   * to reading the moved Settings → Capabilities switch when navigation
-   * has been bound, since the body is only mounted while we are actually
-   * on the Privacy tab.
+   * Returns true when `enable_privacy_router` is on. Reads the authoritative
+   * value from Settings → Capabilities where the switch now lives.
+   *
+   * NOTE: After this call the focus is on the Settings tab (not Privacy).
+   * The caller is responsible for navigating to the right tab afterward if
+   * needed. We deliberately do NOT navigate back to Privacy here because when
+   * the value is false the Privacy sidebar segment is unmounted entirely, so
+   * a `navigateToTab('Privacy')` would time out.
    */
   async isRouterEnabled(): Promise<boolean> {
     if (this.settingsTab && this.navigateToTab) {
       // Authoritative read — go to Capabilities where the switch lives.
       await this.navigateToTab('Settings');
       const value = await this.settingsTab.isEnablePrivacyRouterEnabled();
-      await this.navigateToTab('Privacy');
+      // Only navigate back to Privacy when the tab will actually be present.
+      if (value) {
+        await this.navigateToTab('Privacy');
+      }
       return value;
     }
     // Fallback: best-effort visual probe on the Privacy tab body.
-    const visible = await this.actionSelect
-      .isVisible({ timeout: 1_500 })
-      .catch(() => false);
-    return visible;
+    let isVisible = false;
+    try {
+      await this.actionSelect.waitFor({ state: 'visible', timeout: 1_500 });
+      isVisible = true;
+    } catch {
+      isVisible = false;
+    }
+    return isVisible;
   }
 
   /**
    * Idempotently set the master `enable_privacy_router` toggle.
    *
    * Delegates to the Settings → Capabilities "Filter PII from messages"
-   * switch (the SDK removed the in-tab master switch). After the save
-   * toast, navigates back to the Privacy tab so subsequent assertions
-   * read the new render shape.
+   * switch (the SDK removed the in-tab master switch).
+   *
+   * When `enable` is true: saves, navigates to the Privacy tab, and
+   * asserts the action select is visible (tab is now present and populated).
+   *
+   * When `enable` is false: saves, then asserts the Privacy sidebar segment
+   * is ABSENT from the dialog (the SDK filters it out entirely when the
+   * router is off — there is no empty-body state anymore). Does NOT attempt
+   * to navigate back to Privacy because the tab no longer exists in the DOM.
    */
   async setRouterEnabled(enable: boolean): Promise<void> {
     if (!this.settingsTab || !this.navigateToTab) {
@@ -130,14 +147,19 @@ export class PrivacyTab {
     }
     await this.navigateToTab('Settings');
     await this.settingsTab.setEnablePrivacyRouterAndSave(enable);
-    await this.navigateToTab('Privacy');
 
-    // Sanity-check the new render shape. When `enable` is true the SDK
-    // mounts the action select; when false the body is empty.
     if (enable) {
+      // Privacy tab is now present — navigate to it and confirm the body rendered.
+      await this.navigateToTab('Privacy');
       await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
     } else {
-      await expect(this.actionSelect).not.toBeVisible({ timeout: 5_000 });
+      // Privacy sidebar segment is entirely removed when the router is off.
+      // Assert the tab trigger is gone from the sidebar — do NOT navigate to
+      // Privacy (the tab no longer exists and navigateToTab would time out).
+      const privacyTabTrigger = this.dialog
+        .getByRole('tab', { name: 'Privacy', exact: true })
+        .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+      await expect(privacyTabTrigger).toHaveCount(0, { timeout: 10_000 });
     }
   }
 

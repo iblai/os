@@ -388,15 +388,25 @@ test.describe('Journey 50: Chat Privacy', () => {
       await editMentorPage.close();
 
       // Header toggle must be on, locked, and source=mentor.
-      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
-        'data-state',
-        'on',
-        {
-          timeout: 10_000,
-        },
-      );
-      await chatPrivacy.assertHeaderStateAndSource('on', 'mentor');
-      await chatPrivacy.assertHeaderLocked(true);
+      //
+      // We bypass the SDK helpers (`assertHeaderStateAndSource`,
+      // `assertHeaderLocked`) here because all three delegate to SDK
+      // functions that are hard-capped at 10 s. The invalidateTags →
+      // refetch → React re-render chain for `chat-privacy-effective` can
+      // routinely take longer than 10 s on staging (cold cache + backend
+      // read-after-write lag) — the same race that required 30 s budgets
+      // in `clickToggleAndWaitFor` and the cp-header-05/06 assertions.
+      // Use `toHaveAttribute` directly at 30 s, matching those patterns.
+      const toggle = chatPrivacy.headerToggle();
+      await expect(toggle).toHaveAttribute('data-state', 'on', {
+        timeout: 30_000,
+      });
+      await expect(toggle).toHaveAttribute('data-source', 'mentor', {
+        timeout: 30_000,
+      });
+      await expect(toggle).toHaveAttribute('aria-disabled', 'true', {
+        timeout: 30_000,
+      });
 
       // Restore.
       await editMentorPage.open('Settings');
