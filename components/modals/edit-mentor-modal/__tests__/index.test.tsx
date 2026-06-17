@@ -238,6 +238,7 @@ vi.mock('../tabs', () => ({
   FlowTab: () => <div data-testid="flow-tab">Flow Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
+  EvaluationTab: () => <div data-testid="evaluation-tab">Evaluation Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,

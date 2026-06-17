@@ -51,6 +51,7 @@ const TAB_CATEGORY: Record<
   Memory: 'Analytics',
   History: 'Analytics',
   Audit: 'Analytics',
+  Evals: 'Analytics',
 };
 
 export class EditMentorPage {

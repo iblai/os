@@ -396,6 +396,11 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    // Without a navCategory the new categorized layout (modal sidebar +
+    // nav-bar dropdown) silently drops this segment — both consumers skip
+    // any segment lacking a category. Agent evaluation reports on run
+    // performance, so it belongs in Analytics alongside History/Audit.
+    navCategory: 'analytics',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.api,

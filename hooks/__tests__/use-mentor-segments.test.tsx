@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
-import { useMentorSegments, MENTOR_SEGMENTS } from '../use-mentor-segments';
+import {
+  useMentorSegments,
+  MENTOR_SEGMENTS,
+  MENTOR_SEGMENT_NAV_CATEGORIES,
+} from '../use-mentor-segments';
 import { MODALS, UserType } from '@/lib/constants';
 import { EDIT_MENTOR_TAB_COMPONENTS } from '@/components/modals/edit-mentor-modal';
 
@@ -137,11 +141,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 20 mentor segments unfiltered', () => {
+  it('returns the canonical 21 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
-    expect(MENTOR_SEGMENTS).toHaveLength(20);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
+    // (feat/mentor/715) + Evals (feat/1178).
+    expect(MENTOR_SEGMENTS).toHaveLength(21);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -475,5 +480,26 @@ describe('EDIT_MENTOR_TAB_COMPONENTS coverage', () => {
     expect(MENTOR_SEGMENTS.find((s) => s.label === 'Memory')?.value).toBe(
       MODALS.EDIT_MENTOR.tabs.memory,
     );
+  });
+
+  it('gives every canonical segment a navCategory', () => {
+    // The categorized layout (modal sidebar + nav-bar dropdown) silently
+    // skips any segment without a navCategory — see the early `continue`
+    // in EditMentorModal's bucketing and the `.filter((s) => s.navCategory)`
+    // in the NavBar. A canonical segment missing one renders nowhere. This
+    // guards the regression where Evals shipped without a category and
+    // disappeared from both consumers.
+    const uncategorized = MENTOR_SEGMENTS.filter((s) => !s.navCategory);
+    expect(uncategorized.map((s) => s.label)).toEqual([]);
+  });
+
+  it('assigns the Evals segment a known nav category', () => {
+    // Which bucket Evals lives in is a product call; what matters for the
+    // layout is that it has one (covered above too). Assert the value is a
+    // recognised category rather than pinning a specific bucket.
+    const evals = MENTOR_SEGMENTS.find((s) => s.label === 'Evals');
+    const known = MENTOR_SEGMENT_NAV_CATEGORIES.map((c) => c.key);
+    expect(evals?.navCategory).toBeDefined();
+    expect(known).toContain(evals?.navCategory);
   });
 });
