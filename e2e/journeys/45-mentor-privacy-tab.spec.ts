@@ -16,11 +16,13 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await editMentorPage.open();
     await waitForPageReady(page);
     // Enable the router via Settings → Capabilities so the Privacy tab segment
-    // is mounted in the sidebar, then navigate to it. `setEnablePrivacyRouterAndSave`
-    // handles the sub-tab switch internally.
-    await editMentorPage.navigateToTab('Settings');
-    await editMentorPage.settings.setEnablePrivacyRouterAndSave(true);
-    await editMentorPage.navigateToTab('Privacy');
+    // is mounted in the sidebar, then land on it. `setRouterEnabled(true)`
+    // centralizes the enable→save→wait-for-segment→navigate flow, including a
+    // generous wait for the post-save mentor-settings refetch to surface the
+    // gated Privacy segment. A raw navigateToTab('Privacy') here was racy: the
+    // segment can mount a few seconds after the "Agent updated" toast, so the
+    // 15s waitFor inside navigateToTab intermittently timed out.
+    await editMentorPage.privacy.setRouterEnabled(true);
   });
 
   test.afterEach(async ({ editMentorPage }) => {

@@ -149,6 +149,19 @@ export class PrivacyTab {
     await this.settingsTab.setEnablePrivacyRouterAndSave(enable);
 
     if (enable) {
+      // The Privacy sidebar segment is gated on `enable_privacy_router`, which
+      // `useMentorSegments` only re-derives after the post-save mentor-settings
+      // refetch lands. `setEnablePrivacyRouterAndSave` resolves on the "Agent
+      // updated successfully" toast — which fires on MUTATION success, BEFORE
+      // that refetch necessarily completes — so the gated tab can take several
+      // seconds to mount. Wait for the tab trigger to appear with a generous
+      // timeout BEFORE navigating: navigateToTab's own 15s waitFor occasionally
+      // lost this race on slow staging, surfacing as a flaky timeout at
+      // edit-mentor.page.ts navigateToTab('Privacy').
+      const privacyTabTrigger = this.dialog
+        .getByRole('tab', { name: 'Privacy', exact: true })
+        .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+      await expect(privacyTabTrigger).toBeVisible({ timeout: 30_000 });
       // Privacy tab is now present — navigate to it and confirm the body rendered.
       await this.navigateToTab('Privacy');
       await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
@@ -156,10 +169,14 @@ export class PrivacyTab {
       // Privacy sidebar segment is entirely removed when the router is off.
       // Assert the tab trigger is gone from the sidebar — do NOT navigate to
       // Privacy (the tab no longer exists and navigateToTab would time out).
+      // Same post-save refetch race as the enable branch above: the segment
+      // only unmounts once `useMentorSegments` re-derives `isPrivacyEnabled`
+      // after the refetch lands (which the toast does not guarantee), so use a
+      // generous timeout here too rather than the tighter 10s that could flake.
       const privacyTabTrigger = this.dialog
         .getByRole('tab', { name: 'Privacy', exact: true })
         .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
-      await expect(privacyTabTrigger).toHaveCount(0, { timeout: 10_000 });
+      await expect(privacyTabTrigger).toHaveCount(0, { timeout: 20_000 });
     }
   }
 

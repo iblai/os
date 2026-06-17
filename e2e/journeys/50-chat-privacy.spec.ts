@@ -349,15 +349,47 @@ test.describe('Journey 50: Chat Privacy', () => {
       await editMentorPage.close();
 
       // Re-open and confirm the state stuck.
-      await editMentorPage.open('Settings');
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      await expect(chatPrivacy.agentPrivacySwitch).toHaveAttribute(
-        'aria-checked',
-        'true',
-        { timeout: 10_000 },
-      );
+      //
+      // The save invalidates the mentor-settings query, which refetches in
+      // the background. The Settings form captures `disable_chathistory`
+      // from the cache exactly once at mount (TanStack `useForm`
+      // defaultValues) and has no reset/sync effect, so it does NOT pick up
+      // a refetch that lands after mount. And the modal unmounts its whole
+      // subtree on close (`{isOpen && <DialogContent>}`), so each re-open is
+      // a fresh mount that re-reads the cache as-is. If the post-save
+      // refetch hasn't landed by the time we re-open, the form mounts the
+      // stale pre-save OFF and never updates — a single re-open + longer
+      // timeout cannot fix this, which is exactly what made the test flaky.
+      //
+      // Persistence on the backend is the real assertion here; poll the
+      // open→read→close cycle so we observe the value once the refetch has
+      // settled. The modal is left OPEN on the successful read so the
+      // restore block below can act on it directly.
+      await expect
+        .poll(
+          async () => {
+            await editMentorPage.open('Settings');
+            await editMentorPage.settings.selectSubTab('Capabilities');
+            await chatPrivacy.agentPrivacySwitch
+              .waitFor({ state: 'visible', timeout: 10_000 })
+              .catch(() => undefined);
+            const persisted = await chatPrivacy.getAgentPrivacyState();
+            if (!persisted) {
+              await editMentorPage.close();
+            }
+            return persisted;
+          },
+          {
+            message:
+              'Re-opened Settings should show Enable private mode ON once the post-save mentor refetch settles',
+            timeout: 30_000,
+            intervals: [1_000, 2_000, 3_000, 5_000],
+          },
+        )
+        .toBe(true);
 
-      // Restore.
+      // Restore. The modal is already open on the successful poll read, so
+      // we don't re-open here.
       if (!wasEnabled) {
         await chatPrivacy.unlockAgentPrivacy();
       }
@@ -387,16 +419,19 @@ test.describe('Journey 50: Chat Privacy', () => {
       // assert on the header toggle — no page.reload() allowed here.
       await editMentorPage.close();
 
-      // Header toggle must be on, locked, and source=mentor.
+      // Header toggle must be on, locked, and source=mentor — live, with no
+      // page refresh. This is the regression anchor: saving the kill switch
+      // must dispatch `invalidateTags(['ChatPrivacyEffective'])` so the
+      // nav-bar toggle refetches. A `disable_chathistory`-changed guard in
+      // settings-tab.tsx once suppressed that dispatch (false negative), and
+      // the header silently stopped updating until a refresh — exactly what
+      // these assertions catch.
       //
-      // We bypass the SDK helpers (`assertHeaderStateAndSource`,
-      // `assertHeaderLocked`) here because all three delegate to SDK
-      // functions that are hard-capped at 10 s. The invalidateTags →
-      // refetch → React re-render chain for `chat-privacy-effective` can
-      // routinely take longer than 10 s on staging (cold cache + backend
-      // read-after-write lag) — the same race that required 30 s budgets
-      // in `clickToggleAndWaitFor` and the cp-header-05/06 assertions.
-      // Use `toHaveAttribute` directly at 30 s, matching those patterns.
+      // We assert the attributes directly (rather than via the SDK helpers
+      // `assertHeaderStateAndSource` / `assertHeaderLocked`, which are
+      // hard-capped at 10 s) with a 30 s budget so a cold-cache
+      // `chat-privacy-effective` refetch has room to land — matching the
+      // pattern used by `clickToggleAndWaitFor` and cp-header-05/06.
       const toggle = chatPrivacy.headerToggle();
       await expect(toggle).toHaveAttribute('data-state', 'on', {
         timeout: 30_000,

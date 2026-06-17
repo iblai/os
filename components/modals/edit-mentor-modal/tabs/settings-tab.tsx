@@ -368,16 +368,6 @@ export function SettingsTab() {
         },
       });
 
-      // Capture this BEFORE awaiting the edit — once the mentor query
-      // invalidates and refetches, `mentor.disable_chathistory` will reflect
-      // the new value and a change check would always read false.
-      const previousDisableChatHistory: boolean =
-        // @ts-ignore - disable_chathistory not in public mentor type yet
-        (mentor?.disable_chathistory as boolean | undefined) ?? false;
-      const disableChatHistoryChanged =
-        value.disable_chathistory !== undefined &&
-        value.disable_chathistory !== previousDisableChatHistory;
-
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -390,14 +380,21 @@ export function SettingsTab() {
         }).unwrap();
 
         // The nav-bar's chat-privacy toggle reads from `chat-privacy-effective`,
-        // which is keyed on mentor and NOT invalidated by the mentor-settings
-        // mutation. Without this, flipping "Enable private mode" in settings
-        // doesn't reflect in the header until a page refresh.
-        if (disableChatHistoryChanged) {
-          dispatch(
-            chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
-          );
-        }
+        // which is keyed on mentor and is NOT invalidated by the mentor-settings
+        // mutation. Without an explicit invalidation here, flipping "Enable
+        // private mode" in settings does not reflect in the header until a page
+        // refresh.
+        //
+        // We invalidate unconditionally on every successful save. An earlier
+        // optimization only invalidated when `disable_chathistory` was detected
+        // as changed (comparing the form value against `mentor.disable_chathistory`),
+        // but that guard produced false negatives in the real save flow — it
+        // read equal and silently skipped the dispatch, so the header stopped
+        // updating live. The cost of an extra ChatPrivacyEffective refetch on an
+        // unrelated save is negligible, so we drop the guard for correctness.
+        dispatch(
+          chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
+        );
 
         if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
           try {
