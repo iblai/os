@@ -6,7 +6,7 @@ export class ExplorePage {
   readonly heading: Locator;
   /**
    * The always-rendered page title/description `<h1>` ("Discover and create
-   * academic agents …"). Unlike `heading` (the "All Agents" `<h2>`, which is
+   * agents …"). Unlike `heading` (the "All Agents" `<h2>`, which is
    * a data-conditional SECTION heading that disappears when
    * `DefaultMentorsSection` renders `<EmptyState />`), this `<h1>` renders as
    * soon as `ExplorePageContent` mounts — so it's the correct signal for
