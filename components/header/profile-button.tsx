@@ -18,6 +18,7 @@ import { useUserTenants } from '@/hooks/use-user';
 import { useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { config } from '@/lib/config';
 
 interface ProfileButtonProps {
   userImage: string;
@@ -91,6 +92,7 @@ export function ProfileButton({
               onTenantChange={handleTenantSwitch}
               setHideTenantSwitcher={setHideTenantSwitcher}
               rbacPermissions={rbacPermissions}
+              enableRbac={config.enableRBAC()}
             />
           </>
         )}
