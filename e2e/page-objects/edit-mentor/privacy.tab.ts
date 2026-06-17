@@ -183,64 +183,63 @@ export class PrivacyTab {
    * Opens the Action select and chooses the option matching the visible
    * label. The SDK names the options "Redact", "Mask", and "Block".
    *
-   * The Privacy panel and this combobox are gated on `mentorSettings`
-   * (`useMentorSegments` re-derives `filteredSegments` from it), and the
-   * SDK's onValueChange itself fires a PUT + `refetchMentorSettings` that
-   * produces a NEW `mentorSettings` reference — which can transiently
-   * remount/detach the panel right as we assert. The select is also
-   * server-value-bound, so the trigger text only flips to the new option
-   * AFTER that refetch re-renders. We therefore poll: re-resolve the
-   * combobox and option fresh each iteration, open the trigger only when
-   * it isn't already open (clicking an open Radix trigger toggles it
-   * closed), click the option, and short-circuit as soon as the trigger
-   * text reflects the target — which now reliably implies the server
-   * write + refetch landed. Every await is `.catch`-guarded so a remount
-   * mid-iteration just yields a retry instead of throwing on a detached
-   * node. expect.poll hard-stops at the timeout with a clear assertion
-   * rather than hanging on a stale portal Locator.
+   * The SDK action <Select> is *controlled and server-bound*: its value is
+   * `mentorSettings.privacy_action` and picking an option AUTO-SAVES via
+   * `onValueChange` -> editMentorJson PUT -> refetchMentorSettings (the Select
+   * even disables itself while that save is in flight). There is no optimistic
+   * local update, so the trigger only flips to the new label AFTER the server
+   * round-trip lands. The correct shape is therefore: open -> pick the option
+   * ONCE -> then PATIENTLY wait for the round-trip to re-render the trigger.
+   * Re-poking the Select mid-save just thrashes (it's disabled and won't
+   * reopen) and an earlier poll-and-re-click version hung at the old value as a
+   * result. We retry the whole open+pick only if the value hasn't committed
+   * within a generous window, resetting to a known-closed state in between.
    */
   async selectAction(option: 'Redact' | 'Mask' | 'Block'): Promise<void> {
-    await expect
-      .poll(
-        async () => {
-          // Short-circuit: trigger already shows the target (server write
-          // + refetch landed). Re-read fresh; tolerate a detached node.
-          const current =
-            (await this.actionSelect.textContent().catch(() => '')) ?? '';
-          if (current.includes(option)) return current;
+    const maxAttempts = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Short-circuit: already on target — either the initial state, or a prior
+      // attempt's auto-save round-trip has since landed.
+      const current =
+        (await this.actionSelect.textContent().catch(() => '')) ?? '';
+      if (current.includes(option)) return;
 
-          // Open the trigger only if it isn't already open — clicking an
-          // open Radix Select trigger toggles it CLOSED and thrashes.
-          const expanded =
-            (await this.actionSelect
-              .getAttribute('aria-expanded')
-              .catch(() => null)) === 'true';
-          if (!expanded) {
-            await this.actionSelect.click({ force: true }).catch(() => {});
-          }
+      try {
+        await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
+        await this.actionSelect.click();
 
-          // Options render in a page-level portal (outside the dialog), so
-          // resolve page-scoped and fresh each iteration.
-          const item = this.page.getByRole('option', {
-            name: option,
-            exact: true,
-          });
-          const itemVisible = await item
-            .isVisible({ timeout: 2_000 })
-            .catch(() => false);
-          if (itemVisible) {
-            await item.click().catch(() => {});
-          } else {
-            // Couldn't surface the option (panel remounting / portal gone) —
-            // force a known-closed state before the next iteration retries.
-            await this.page.keyboard.press('Escape').catch(() => {});
-          }
+        // Options render in a page-level portal (outside the dialog). Use
+        // toBeVisible (which POLLS) rather than isVisible (which returns the
+        // current state immediately) so we actually wait for the listbox to
+        // finish opening before clicking.
+        const item = this.page.getByRole('option', {
+          name: option,
+          exact: true,
+        });
+        await expect(item).toBeVisible({ timeout: 6_000 });
+        // Hover first: Radix Select commits the *highlighted* option, and a
+        // bare programmatic click can occasionally land without highlighting it
+        // — the original cause of the flake.
+        await item.hover();
+        await item.click();
 
-          return (await this.actionSelect.textContent().catch(() => '')) ?? '';
-        },
-        { timeout: 25_000 },
-      )
-      .toContain(option);
+        // Patiently wait for the auto-save round-trip to land and re-render the
+        // server-bound trigger. toContainText auto-retries and re-resolves the
+        // locator, so a transient panel re-render mid-wait is tolerated.
+        await expect(this.actionSelect).toContainText(option, {
+          timeout: 12_000,
+        });
+        return;
+      } catch (error) {
+        lastError = error;
+        // Reset to a known-closed state before the next attempt so the next
+        // open starts cleanly (e.g. if the option click missed and left the
+        // listbox open).
+        await this.page.keyboard.press('Escape').catch(() => {});
+      }
+    }
+    throw lastError;
   }
 
   /** Reads the currently selected action label. */

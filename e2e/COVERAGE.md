@@ -897,7 +897,7 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-profile-02: "Private Mode" tab is hidden in `UserProfileModal` when the tenant gate is off
 - [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
 - [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
-- [x] cp-profile-05: Selecting "Normal" reverts the user-tier contribution so `data-source` is not `"user"` on a fresh chat
+- [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
 
 ---
 

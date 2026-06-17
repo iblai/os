@@ -2958,7 +2958,7 @@
         },
         {
           "id": "cp-profile-05",
-          "description": "Selecting Normal reverts the user-tier contribution so header data-source is not user on a fresh chat",
+          "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
           "status": "covered"
         }
       ]

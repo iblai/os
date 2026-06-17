@@ -865,9 +865,21 @@ test.describe('Journey 50: Chat Privacy', () => {
       }
     });
 
-    // cp-profile-05: Selecting "Normal" reverts the user-tier contribution
-    //               so the header data-source is no longer "user".
-    test('cp-profile-05: selecting Normal reverts the user-tier contribution so header source is not user', async ({
+    // cp-profile-05: Selecting "Normal" reverts the resolved mode to
+    //               non-private, so the header toggle reads as off — even
+    //               though the user tier is still the contributing source.
+    //
+    //               "Normal" is an explicit user choice: the profile tab
+    //               always persists a concrete `chat_privacy_mode` and has
+    //               no "clear my preference" affordance, so the backend's
+    //               chat-privacy-effective endpoint keeps data-source="user"
+    //               for Normal exactly as it does for Disabled. The toggle's
+    //               data-state is driven solely by `mode === 'disabled'`, so
+    //               "normal"/"anonymized" read as off while "disabled" reads
+    //               as on. This is the symmetric counterpart to cp-profile-04
+    //               (Disabled → data-state="on"; Normal → data-state="off"),
+    //               both with data-source="user".
+    test('cp-profile-05: selecting Normal reverts the header toggle to off while the user tier stays the source', async ({
       page,
       chatPage,
     }) => {
@@ -886,7 +898,15 @@ test.describe('Journey 50: Chat Privacy', () => {
 
         // Auto-retry so we wait for the chat-privacy-effective refetch to
         // land — a bare getAttribute races the post-mutation re-render.
-        await expect(chatPrivacy.headerToggle()).not.toHaveAttribute(
+        // Normal resolves to a non-private mode, so the toggle reverts to
+        // off (data-state). The user tier is still what set the effective
+        // value, so data-source stays "user".
+        await expect(chatPrivacy.headerToggle()).toHaveAttribute(
+          'data-state',
+          'off',
+          { timeout: 10_000 },
+        );
+        await expect(chatPrivacy.headerToggle()).toHaveAttribute(
           'data-source',
           'user',
           { timeout: 10_000 },
