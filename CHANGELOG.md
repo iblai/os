@@ -1,16 +1,30 @@
 # Changelog
 
+## [0.75.12](https://github.com/iblai/os/compare/v0.75.11...v0.75.12) (2026-06-17)
+
+### Bug Fixes
+
+* **deps:** patch google-drive-picker to drop hardcoded drive.readonly scope ([e4e8698](https://github.com/iblai/os/commit/e4e8698e1e4b75eaca8fa62213b8859de468c01d))
+
+### Tests
+
+* **hooks:** guard google-drive-picker scope patch against regression ([2b76489](https://github.com/iblai/os/commit/2b76489101fa9664bf1ec82eb23851c2dba89082))
+
+### CI
+
+* add .dockerignore to keep docs/agent/VCS files out of the build ([3702d52](https://github.com/iblai/os/commit/3702d5240db74fbb47688b70a1ed7596af3f99aa))
+
 ## [0.75.11](https://github.com/iblai/os/compare/v0.75.10...v0.75.11) (2026-06-17)
 
 ### Bug Fixes
 
-* repair CLAUDE.md symlink (stray newline in target broke the SPA build) ([5c06f03](https://github.com/iblai/os/commit/5c06f0311fa1736641861cd2f953c170abff85de))
+- repair CLAUDE.md symlink (stray newline in target broke the SPA build) ([5c06f03](https://github.com/iblai/os/commit/5c06f0311fa1736641861cd2f953c170abff85de))
 
 ## [0.75.10](https://github.com/iblai/os/compare/v0.75.9...v0.75.10) (2026-06-17)
 
 ### Chores
 
-* **msix:** bump AppxManifest version to 1.1.20.0 ([ff846f1](https://github.com/iblai/os/commit/ff846f1d8fe9a903d6ca2c701250f7bf409093c2))
+- **msix:** bump AppxManifest version to 1.1.20.0 ([ff846f1](https://github.com/iblai/os/commit/ff846f1d8fe9a903d6ca2c701250f7bf409093c2))
 
 ## [0.75.9](https://github.com/iblai/os/compare/v0.75.8...v0.75.9) (2026-06-16)
 

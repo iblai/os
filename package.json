@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.75.11",
+  "version": "0.75.12",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -219,6 +219,9 @@
       "ws": ">=8.20.1",
       "qs": ">=6.15.2",
       "uuid": "11.1.1"
+    },
+    "patchedDependencies": {
+      "google-drive-picker@1.1.29": "patches/google-drive-picker@1.1.29.patch"
     }
   },
   "lint-staged": {
