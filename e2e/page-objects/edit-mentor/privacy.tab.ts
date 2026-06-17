@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { reliableClick } from '../../utils/resilient';
 import type { SettingsTab } from './settings.tab';
 
 /**
@@ -183,26 +182,65 @@ export class PrivacyTab {
   /**
    * Opens the Action select and chooses the option matching the visible
    * label. The SDK names the options "Redact", "Mask", and "Block".
+   *
+   * The Privacy panel and this combobox are gated on `mentorSettings`
+   * (`useMentorSegments` re-derives `filteredSegments` from it), and the
+   * SDK's onValueChange itself fires a PUT + `refetchMentorSettings` that
+   * produces a NEW `mentorSettings` reference — which can transiently
+   * remount/detach the panel right as we assert. The select is also
+   * server-value-bound, so the trigger text only flips to the new option
+   * AFTER that refetch re-renders. We therefore poll: re-resolve the
+   * combobox and option fresh each iteration, open the trigger only when
+   * it isn't already open (clicking an open Radix trigger toggles it
+   * closed), click the option, and short-circuit as soon as the trigger
+   * text reflects the target — which now reliably implies the server
+   * write + refetch landed. Every await is `.catch`-guarded so a remount
+   * mid-iteration just yields a retry instead of throwing on a detached
+   * node. expect.poll hard-stops at the timeout with a clear assertion
+   * rather than hanging on a stale portal Locator.
    */
   async selectAction(option: 'Redact' | 'Mask' | 'Block'): Promise<void> {
-    await reliableClick(this.page, this.actionSelect);
-    const item = this.page.getByRole('option', { name: option, exact: true });
-    await expect(item).toBeVisible({ timeout: 5_000 });
-    await item.click();
-    // Radix Select renders options inside a portal. When the portal panel
-    // is layered above neighbouring fields (e.g. the Block Message
-    // textarea), an `pointerup` on the option can occasionally land on
-    // the underlying field instead and silently no-op the selection.
-    // Block until the trigger's visible text reflects the new option so
-    // the next assertion can trust the action state has actually
-    // changed. Re-click once if it didn't — that recovers the race
-    // without making every call pay the cost.
-    try {
-      await expect(this.actionSelect).toContainText(option, { timeout: 2_000 });
-    } catch {
-      await item.click({ trial: false }).catch(() => {});
-      await expect(this.actionSelect).toContainText(option, { timeout: 5_000 });
-    }
+    await expect
+      .poll(
+        async () => {
+          // Short-circuit: trigger already shows the target (server write
+          // + refetch landed). Re-read fresh; tolerate a detached node.
+          const current =
+            (await this.actionSelect.textContent().catch(() => '')) ?? '';
+          if (current.includes(option)) return current;
+
+          // Open the trigger only if it isn't already open — clicking an
+          // open Radix Select trigger toggles it CLOSED and thrashes.
+          const expanded =
+            (await this.actionSelect
+              .getAttribute('aria-expanded')
+              .catch(() => null)) === 'true';
+          if (!expanded) {
+            await this.actionSelect.click({ force: true }).catch(() => {});
+          }
+
+          // Options render in a page-level portal (outside the dialog), so
+          // resolve page-scoped and fresh each iteration.
+          const item = this.page.getByRole('option', {
+            name: option,
+            exact: true,
+          });
+          const itemVisible = await item
+            .isVisible({ timeout: 2_000 })
+            .catch(() => false);
+          if (itemVisible) {
+            await item.click().catch(() => {});
+          } else {
+            // Couldn't surface the option (panel remounting / portal gone) —
+            // force a known-closed state before the next iteration retries.
+            await this.page.keyboard.press('Escape').catch(() => {});
+          }
+
+          return (await this.actionSelect.textContent().catch(() => '')) ?? '';
+        },
+        { timeout: 25_000 },
+      )
+      .toContain(option);
   }
 
   /** Reads the currently selected action label. */

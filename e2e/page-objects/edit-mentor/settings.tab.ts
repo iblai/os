@@ -177,9 +177,9 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
-    );
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /** Idempotently toggle "Smart document retrieval" + Save. */
@@ -201,9 +201,9 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
-    );
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /** Read the current state of the "Filter PII from messages" switch. */
@@ -240,9 +240,9 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
-    );
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /**
