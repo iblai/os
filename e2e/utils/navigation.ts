@@ -152,7 +152,7 @@ export async function navigateToTenantExplorePage(page: Page): Promise<string> {
   // `<div id="main-content" aria-label="Agent exploration page">` that
   // ALWAYS renders, regardless of how the inner data query resolves.
   // Falling back to either the always-on `<h1>` ("Discover and create
-  // academic agents …") or the dynamic `<h2>` "All Agents" keeps things
+  // agents …") or the dynamic `<h2>` "All Agents" keeps things
   // resilient:
   //
   //   - On a populated tenant the `<h2>` resolves first.
