@@ -28,6 +28,11 @@ overrides:
   qs: '>=6.15.2'
   uuid: 11.1.1
 
+patchedDependencies:
+  google-drive-picker@1.1.29:
+    hash: 92ab8f635a9354b2f28d3bc2ee517ac82159a2747342bd5da1606ef41ad10f4a
+    path: patches/google-drive-picker@1.1.29.patch
+
 importers:
 
   .:
@@ -214,7 +219,7 @@ importers:
         version: 2.0.5
       google-drive-picker:
         specifier: 1.1.29
-        version: 1.1.29
+        version: 1.1.29(patch_hash=92ab8f635a9354b2f28d3bc2ee517ac82159a2747342bd5da1606ef41ad10f4a)
       highlight.js:
         specifier: 11.11.1
         version: 11.11.1
@@ -15267,7 +15272,7 @@ snapshots:
 
   globrex@0.1.2: {}
 
-  google-drive-picker@1.1.29:
+  google-drive-picker@1.1.29(patch_hash=92ab8f635a9354b2f28d3bc2ee517ac82159a2747342bd5da1606ef41ad10f4a):
     dependencies:
       '@types/prop-types': 15.7.15
       '@types/react': 18.3.28
