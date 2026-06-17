@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.75.11](https://github.com/iblai/os/compare/v0.75.10...v0.75.11) (2026-06-17)
+
+### Bug Fixes
+
+* repair CLAUDE.md symlink (stray newline in target broke the SPA build) ([5c06f03](https://github.com/iblai/os/commit/5c06f0311fa1736641861cd2f953c170abff85de))
+
 ## [0.75.10](https://github.com/iblai/os/compare/v0.75.9...v0.75.10) (2026-06-17)
 
 ### Chores
