@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.75.10](https://github.com/iblai/os/compare/v0.75.9...v0.75.10) (2026-06-17)
+
+### Chores
+
+* **msix:** bump AppxManifest version to 1.1.20.0 ([ff846f1](https://github.com/iblai/os/commit/ff846f1d8fe9a903d6ca2c701250f7bf409093c2))
+
 ## [0.75.9](https://github.com/iblai/os/compare/v0.75.8...v0.75.9) (2026-06-16)
 
 ### Bug Fixes
