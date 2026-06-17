@@ -13,6 +13,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy package manifests first (for layer caching)
 COPY package.json .
 COPY pnpm-lock.yaml .
+# pnpm patchedDependencies reference files under patches/ that must exist at
+# install time (pnpm hashes them), so copy them before install.
+COPY patches ./patches
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile

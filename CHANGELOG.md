@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.75.13](https://github.com/iblai/os/compare/v0.75.12...v0.75.13) (2026-06-17)
+
+### Bug Fixes
+
+* **ci:** copy patches/ before pnpm install in app + e2e Dockerfiles ([0422bc1](https://github.com/iblai/os/commit/0422bc13d57de361c2e7f26dd7b5f464b2b6dbc6))
+
 ## [0.75.12](https://github.com/iblai/os/compare/v0.75.11...v0.75.12) (2026-06-17)
 
 ### Bug Fixes
