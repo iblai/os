@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.75.10](https://github.com/iblai/os/compare/v0.75.9...v0.75.10) (2026-06-17)
+
+### Chores
+
+* **msix:** bump AppxManifest version to 1.1.20.0 ([ff846f1](https://github.com/iblai/os/commit/ff846f1d8fe9a903d6ca2c701250f7bf409093c2))
+
+## [0.75.9](https://github.com/iblai/os/compare/v0.75.8...v0.75.9) (2026-06-16)
+
+### Bug Fixes
+
+- **ci:** pin coverage-bot to claude-sonnet-4-6 ([0148c32](https://github.com/iblai/os/commit/0148c324b294864c849bf5f0a988f6ebbe10441b))
+- **msix:** correct Store package identity name to ibl.ai.ibl.ai ([4f73626](https://github.com/iblai/os/commit/4f736267defda500464c0ddebd6c5dadff36048f))
+
+## [0.75.8](https://github.com/iblai/os/compare/v0.75.7...v0.75.8) (2026-06-16)
+
+### Bug Fixes
+
+- **mentor:** genericize explore page heading copy ([a9f47d2](https://github.com/iblai/os/commit/a9f47d291aca38048cb631ebdff9047c736524d2))
+
+### Tests
+
+- **e2e:** update stale explore heading comments ([730c04b](https://github.com/iblai/os/commit/730c04b8db81c0ffa43a2542e00715f2a25032e3))
+
 ## [0.75.7](https://github.com/iblai/os/compare/v0.75.6...v0.75.7) (2026-06-16)
 
 ### Bug Fixes

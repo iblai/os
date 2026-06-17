@@ -17,9 +17,9 @@
       4. Revert Publisher before Store submission
   -->
   <Identity
-    Name="ibl.ai.ibl.aiOS"
+    Name="ibl.ai.ibl.ai"
     Publisher="CN=02D69AED-8E37-4338-A36D-57B9C8A6FA57"
-    Version="1.1.9.0"
+    Version="1.1.20.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
