@@ -525,7 +525,7 @@ export function Header({
             <span
               className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
             >
-              Learner
+              User
             </span>
             <Switch
               checked={isInstructor}
@@ -535,7 +535,7 @@ export function Header({
             <span
               className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
             >
-              Instructor
+              Admin
             </span>
           </div>
         )}
@@ -576,6 +576,7 @@ export function Header({
         }}
         authURL={config.authUrl()}
         currentPlatformBaseDomain={config.platformBaseDomain()}
+        defaultSupportPhone={config.defaultSupportPhoneNumber()}
         localLLMProps={{
           isAvailable: isLocalLLMAvailable,
           state: localLLMState,

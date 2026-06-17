@@ -144,7 +144,13 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 vi.mock('@/components/markdown', () => ({
   default: ({ children }: { children: string }) => (
-    <span>{children?.replace(/<[^>]+>/g, '') ?? ''}</span>
+    <span>
+      {(() => {
+        let t = children ?? '';
+        while (/<[^>]+>/.test(t)) t = t.replace(/<[^>]+>/g, '');
+        return t;
+      })()}
+    </span>
   ),
 }));
 
@@ -183,17 +189,8 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-vi.mock('xlsx', () => ({
-  utils: {
-    json_to_sheet: vi.fn(),
-    book_new: vi.fn(() => ({})),
-    book_append_sheet: vi.fn(),
-  },
-  write: vi.fn(() => new ArrayBuffer(0)),
-}));
-
-vi.mock('file-saver', () => ({
-  saveAs: vi.fn(),
+vi.mock('../export-messages', () => ({
+  exportMessagesToXlsx: vi.fn(),
 }));
 
 const mockEventBusEmit = vi.fn();
@@ -223,7 +220,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
 }));
 
-import { saveAs } from 'file-saver';
+import { exportMessagesToXlsx } from '../export-messages';
 
 // ============================================================================
 // TESTS
@@ -720,7 +717,9 @@ describe('RecentMessages', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
-    expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'messages.xlsx');
+    expect(exportMessagesToXlsx).toHaveBeenCalledWith(
+      mockRecentData.results[0].messages,
+    );
   });
 
   it('refetches recent messages after assistant response completes', async () => {

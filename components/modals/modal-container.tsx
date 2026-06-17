@@ -18,11 +18,12 @@ import { SettingsModal } from '@/components/modals/settings-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
+import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import {
-  setOpenPricingModal,
   setOpenAppleRestrictionModal,
-} from '@/features/subscription/subscription-slice';
-import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
+  type AppleRestrictionState,
+} from '@iblai/iblai-js/web-utils';
+import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
@@ -53,7 +54,9 @@ export const ModalContainer = () => {
 
   const { customAlertDialog } = state.modals;
 
-  const { openPricingModal, openAppleRestrictionModal } = state.subscription;
+  const { openPricingModal } = state.subscription;
+  const { openAppleRestrictionModal } =
+    state.appleRestriction as AppleRestrictionState;
 
   // Use state with selectors
   // const showCreateMentorModal = selectIsModalOpen(MODALS.CREATE_MENTOR.name)(

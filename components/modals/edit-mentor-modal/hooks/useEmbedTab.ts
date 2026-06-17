@@ -42,6 +42,7 @@ export interface EmbedFormValues {
   embed_show_attachment: boolean;
   embed_show_voice_call: boolean;
   embed_show_voice_record: boolean;
+  show_catalogue: boolean;
   starter_prompts: 'guided_prompt' | 'suggested_prompt';
 }
 
@@ -97,6 +98,7 @@ const defaultEmbedFormValues: EmbedFormValues = {
   embed_show_attachment: true,
   embed_show_voice_call: true,
   embed_show_voice_record: true,
+  show_catalogue: true,
   starter_prompts: 'guided_prompt',
 };
 
@@ -272,6 +274,11 @@ const useEmbedTab = () => {
         mentorPublicSettings?.embed_show_voice_call ?? true,
       embed_show_voice_record:
         mentorPublicSettings?.embed_show_voice_record ?? true,
+      // `show_catalogue` is exposed by the backend but not yet reflected in the
+      // published MentorSettingsPublic type — read it via a narrow cast.
+      show_catalogue:
+        (mentorPublicSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ?? true,
       starter_prompts:
         mentorPublicSettings?.starter_prompts === 'suggested_prompt'
           ? 'suggested_prompt'

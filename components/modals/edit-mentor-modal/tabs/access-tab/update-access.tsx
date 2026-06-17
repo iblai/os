@@ -79,6 +79,17 @@ export function RoleAccessPanel({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
+  const groupSearchBlurTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (groupSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(groupSearchBlurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [updateMentorAccess] = useUpdateRbacMentorAccessMutation();
 
@@ -450,7 +461,11 @@ export function RoleAccessPanel({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (groupSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(groupSearchBlurTimeoutRef.current);
+    }
+    groupSearchBlurTimeoutRef.current = setTimeout(() => {
+      groupSearchBlurTimeoutRef.current = null;
       setShowGroupSearchResults(false);
     }, 100);
   }, []);

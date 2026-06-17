@@ -11,7 +11,12 @@ tauri = { version = "2", features = ["protocol-asset", "devtools"] }
 tauri-plugin-shell = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-opener = "2.0.0"
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "blocking", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "stream",
+    "blocking",
+    "rustls-tls",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -40,3 +45,6 @@ block = "0.1"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[patch.crates-io]
+glib = { git = "https://github.com/gtk-rs/gtk-rs-core.git", package = "glib", tag = "0.20.0"}

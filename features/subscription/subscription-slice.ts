@@ -24,7 +24,6 @@ interface SubscriptionStatus {
 
 interface SubscriptionState {
   openPricingModal: boolean;
-  openAppleRestrictionModal: boolean;
   freeTrialUsageOptions: FreeTrialUsageOptions;
   pricingModalData: PricingModalData;
   subscriptionStatus: SubscriptionStatus;
@@ -33,7 +32,6 @@ interface SubscriptionState {
 
 const initialState: SubscriptionState = {
   openPricingModal: false,
-  openAppleRestrictionModal: false,
   freeTrialUsageOptions: {
     count: 0,
     limitReached: false,
@@ -60,9 +58,6 @@ export const subscriptionSlice: Slice = createSlice({
     setOpenPricingModal(state, action: PayloadAction<boolean>) {
       state.openPricingModal = action.payload;
     },
-    setOpenAppleRestrictionModal(state, action: PayloadAction<boolean>) {
-      state.openAppleRestrictionModal = action.payload;
-    },
     setFreeTrialUsageOptions(
       state,
       action: PayloadAction<FreeTrialUsageOptions>,
@@ -83,7 +78,6 @@ export const subscriptionSlice: Slice = createSlice({
 
 export const {
   setOpenPricingModal,
-  setOpenAppleRestrictionModal,
   setFreeTrialUsageOptions,
   setPricingModalData,
   setSubscriptionStatus,

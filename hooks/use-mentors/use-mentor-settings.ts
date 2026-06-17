@@ -251,6 +251,15 @@ export function useMentorSettings({
         effectiveSettings?.embed_show_voice_record ??
         effectivePublicSettings?.embed_show_voice_record,
 
+      // show_catalogue exists in the API response but not yet in the published
+      // type — defaults to true so the catalogue stays available when unset.
+      showCatalogue:
+        (effectiveSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ??
+        (effectivePublicSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ??
+        true,
+
       // @ts-ignore
       llmConfig:
         effectiveSettings?.llm_config ?? effectivePublicSettings?.llm_config,
@@ -268,6 +277,12 @@ export function useMentorSettings({
         (effectiveSettings?.enable_memory_component ??
           effectivePublicSettings?.enable_memory_component ??
           false),
+
+      voiceProvider:
+        // @ts-ignore - voice_provider may not be exposed on the typed settings shape
+        effectiveSettings?.voice_provider ??
+        // @ts-ignore - voice_provider may not be exposed on the typed settings shape
+        effectivePublicSettings?.voice_provider,
     },
   };
 }

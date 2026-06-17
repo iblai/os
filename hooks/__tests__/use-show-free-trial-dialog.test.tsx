@@ -60,6 +60,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       return callbackSpy;
     },
   }),
+  useOS: () => ({ isAppleDevice: false }),
+  setOpenAppleRestrictionModal: vi.fn((val: boolean) => ({
+    type: 'appleRestriction/setOpenAppleRestrictionModal',
+    payload: val,
+  })),
 }));
 
 // The fallback dialog component

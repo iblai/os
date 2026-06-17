@@ -31,13 +31,18 @@ import {
   TokenResponse,
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { hasNonExpiredAuthToken, redirectToAuthSpa } from '@/lib/utils';
+import { redirectToAuthSpa } from '@/lib/utils';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { handleTenantSwitch } from '@/lib/utils';
+import {
+  useTenantSwitchSync,
+  refreshTenantSwitchLock,
+  isTenantSwitchInProgress,
+} from '@iblai/iblai-js/web-utils';
 import {
   AuthProvider,
   TenantProvider,
@@ -78,30 +83,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);
+    // If we just landed from a tenant switch, extend the suppression window
+    // from this load so a stale tab can't revert after the round-trip settles.
+    // (Lock is shared across tabs; refreshTenantSwitchLock is a no-op when no
+    // active lock exists, so normal loads are unaffected.)
+    refreshTenantSwitchLock();
     sendMessageToParentWebsite({
       loaded: true,
       auth: { ...localStorage },
     });
   }, []);
 
-  // Listen for tenant switch events from other tabs/windows via BroadcastChannel
-  useEffect(() => {
-    if (typeof BroadcastChannel === 'undefined') return;
-    const channel = new BroadcastChannel('ibl-tenant-switch');
-
-    channel.onmessage = (event) => {
-      const { type, tenant } = event.data ?? {};
-      if (type === 'TENANT_SWITCHING') {
-        console.log(
-          '[Providers] Received TENANT_SWITCHING from another tab, target:',
-          tenant,
-        );
-        handleTenantSwitch(tenant, false, undefined, false);
-      }
-    };
-
-    return () => channel.close();
-  }, []);
+  // Keep this tab in sync with tenant switches from other tabs (self-echo
+  // filtered, shared lock refreshed). Coordination lives in the SDK.
+  useTenantSwitchSync();
 
   const handlers = useIframeHandlers();
 
@@ -470,14 +465,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
           redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
         }}
-        hasNonExpiredAuthToken={() => {
-          // In Tauri offline mode, always return true to skip auth checks
-          /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-          if (isTauriOffline) {
-            return true;
-          }
-          return hasNonExpiredAuthToken();
-        }}
         username={username || ''}
         middleware={middleware}
         pathname={fullPathname}
@@ -508,6 +495,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             saveRedirect: boolean,
             useCurrentDomain = true,
           ) => {
+            console.log('[TenantProvider] handling tenant switching');
             if (!showingSharedChat)
               await handleTenantSwitch(
                 tenant,
@@ -553,6 +541,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           onLoadPlatformPermissions={onLoadPlatformpermissions}
           skipCustomDomainCheck={window.location.origin === config.mentorUrl()}
           onTenantMismatch={() => {
+            // During a switch window, a stale tab legitimately sees its old
+            // route != the new session tenant. Suppress the revert so tabs
+            // don't ping-pong; once the lock TTL expires and the session is
+            // consistent, a real mismatch resolves normally.
+            if (isTenantSwitchInProgress()) {
+              console.log(
+                '[TenantProvider] Tenant mismatch during switch window — suppressing revert',
+              );
+              return;
+            }
             console.log(
               '[TenantProvider] Tenant mismatch - redirecting to home',
             );

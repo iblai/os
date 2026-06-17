@@ -1,375 +1,259 @@
-<p align="center">
-  <img src="public/iblai-logo.png" alt="mentorAI" width="80" />
-</p>
+<div align="center">
 
-<h1 align="center">mentorAI</h1>
+<a href="https://ibl.ai"><img src="https://ibl.ai/images/iblai-logo.png" alt="ibl.ai" width="300"></a>
 
-<p align="center">
-  <strong>Open-source AI agent platform — build, deploy, and manage intelligent conversational agents in minutes.</strong>
-</p>
+# OS
 
-<p align="center">
-  <a href="#features">Features</a> &bull;
-  <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#deployment">Deployment</a> &bull;
-  <a href="#architecture">Architecture</a> &bull;
-  <a href="#configuration">Configuration</a> &bull;
-  <a href="#contributing">Contributing</a> &bull;
-  <a href="#license">License</a>
-</p>
+**The open-source AI agent platform.**
 
----
+Build, deploy, and manage intelligent conversational agents — from prototype to production — in minutes.
 
-## What is mentorAI?
+[![Website](https://img.shields.io/badge/Website-ibl.ai-blue)](https://ibl.ai)
+[![Docs](https://img.shields.io/badge/Docs-docs.ibl.ai-green)](https://docs.ibl.ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js&logoColor=white)](https://nextjs.org)
+[![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
 
-mentorAI is a production-ready AI chatbot platform that lets you create, customize, and deploy AI agents for education, customer support, enterprise knowledge management, and more. It ships as a modern web application with optional desktop and mobile builds, backed by a powerful multi-tenant API.
+[![Demo by Miguel Amigot, CTO at ibl.ai](https://img.youtube.com/vi/5LOAZyTbRQs/maxresdefault.jpg)](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)
 
-Whether you're a university deploying course assistants, a company building internal knowledge bots, or a developer creating the next AI-powered product — mentorAI gives you the complete stack out of the box.
+_[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR) by Miguel Amigot, CTO at ibl.ai_
+
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Testing](#testing) · [Contributing](#contributing)
+
+</div>
 
 ---
 
 ## Features
 
-### Chat & Conversation
-
-- **Real-time streaming** — token-by-token message streaming with stop/regenerate controls
-- **Voice calls** — built-in WebRTC voice chat powered by LiveKit
-- **Screen sharing** — share your screen directly inside a chat session
-- **Deep research mode** — extended reasoning for complex, multi-step queries
-- **Web search** — ground responses with live web results
-- **File attachments** — drag-and-drop files, images, and documents into chat
-- **Canvas / Artifacts** — generate, edit, and version rich documents alongside chat
-- **Shared chats** — create public shareable links to any conversation
-- **Pinned messages** — pin important messages for quick reference
-- **Chat history** — full session history with search, export (PDF/CSV), and pagination
-- **Message rating** — thumbs up/down feedback on AI responses
-
-### Agent Management
-
-- **Create & customize agents** — name, avatar, system prompt, LLM provider, tools, safety filters
-- **Explore page** — discover public, featured, starred, and custom agents
-- **Agent categories** — organize agents by subject and type
-- **Dataset training** — upload documents, connect Google Drive, OneDrive, Dropbox, or crawl websites to train agents
-- **Prompt library** — save and share reusable prompt templates
-- **Guided prompts** — pre-configured conversation starters for end users
-- **Retrain schedules** — automated periodic retraining of agent knowledge bases
-- **MCP server connections** — extend agent capabilities with Model Context Protocol tool servers
-
-### Analytics
-
-- **Overview dashboard** — usage stats, session counts, and average ratings
-- **User analytics** — per-user activity, engagement heatmaps, and cohort trends
-- **Topic analysis** — most discussed topics and keyword breakdowns
-- **Transcript viewer** — searchable conversation transcripts with message-level detail
-- **Financial reporting** — revenue tracking and billing analytics
-- **Custom reports** — generate and download data reports
-
-### Enterprise & Platform
-
-- **Multi-tenancy** — full tenant isolation with per-org configuration, branding, and user management
-- **Role-based access control (RBAC)** — granular permissions with roles, policies, and group-based access
-- **SSO authentication** — Single Sign-On with configurable identity providers
-- **Stripe billing** — subscription management, free trials, and usage-based pricing
-- **Notifications** — in-app notification system with alert templates
-- **Custom domains** — host agents on your own domain
-- **Embed mode** — embed agents in any website via iframe
-- **API keys** — create and manage API keys for programmatic access
-- **User disclaimers** — configurable terms of service and advisory notices
-- **Memory system** — per-learner and conversation-level memory for personalized experiences
-
-### Projects
-
-- **Collaborative workspaces** — group agents into project-based collections
-- **Project instructions** — set project-wide context and goals
-- **Agent assignment** — add/remove agents from projects dynamically
-
-### Cross-Platform
-
-- **Web** — responsive SPA that works on desktop and mobile browsers
-- **Desktop** — native desktop app via Tauri (macOS, Windows, Linux)
-- **Electron** — alternative desktop build with Electron
-- **Mobile** — dedicated mobile routes with touch-optimized UI
-- **Docker** — production-ready multi-stage Dockerfile
+- **AI Agents** — Create custom agents with configurable LLMs, system prompts, tools, and safety filters
+- **RAG Training** — Upload documents, connect Google Drive, OneDrive, Dropbox, or crawl websites to ground agents in your data
+- **Voice Calls** — Real-time WebRTC voice chat powered by LiveKit
+- **Deep Research** — Extended multi-step reasoning for complex queries
+- **Canvas / Artifacts** — Generate, edit, and version rich documents alongside chat
+- **Screen Sharing** — Share your screen directly inside a chat session
+- **Web Search** — Ground responses with live web results
+- **MCP Servers** — Extend agent capabilities with Model Context Protocol tool servers
+- **Analytics** — Usage dashboards, topic analysis, transcript viewer, and financial reporting
+- **Projects** — Collaborative workspaces to group agents with shared context and goals
+- **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android)
+- **Multi-tenancy** — Full tenant isolation with per-org configuration, branding, and user management
+- **SSO** — Single Sign-On with configurable identity providers (OAuth, OIDC, SAML)
+- **RBAC** — Granular role-based access control with policies and group-based permissions
+- **Stripe Billing** — Subscription management, free trials, and usage-based pricing
+- **Embed Mode** — Embed agents in any website via iframe with custom styling
+- **Custom Domains** — Host agents on your own domain
+- **API Keys** — Programmatic access for integrations and automation
+- **Whitelabeling** — Custom branding, logos, and disclaimers
 
 ---
 
-## Tech Stack
+## Available On
 
-| Layer       | Technology                                                                                                       |
-| ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| Framework   | Next.js 15, React 19, TypeScript                                                                                 |
-| Styling     | Tailwind CSS 4, Radix UI, shadcn/ui                                                                              |
-| State       | Redux Toolkit, React-Redux                                                                                       |
-| Forms       | React Hook Form, Zod                                                                                             |
-| Editor      | Tiptap (rich text), Markdown (react-markdown, remark, rehype)                                                    |
-| Voice/Video | LiveKit (WebRTC)                                                                                                 |
-| Charts      | Recharts                                                                                                         |
-| Desktop     | Tauri, Electron                                                                                                  |
-| Testing     | Vitest, Testing Library, Playwright                                                                              |
-| Monitoring  | Sentry                                                                                                           |
-| SDK         | [@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js) — unified data layer, components, and utilities |
+<div align="center">
+
+| Platform    | Status                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
+| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
+| **iOS**     | Native mobile app — available on iPhone and iPad                           |
+| **Android** | Native mobile app — available on phones and tablets                        |
+| **Windows** | Native desktop app                                                         |
+| **Linux**   | Native desktop app                                                         |
+
+</div>
+
+One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+
+---
+
+## Screenshots
+
+<div align="center">
+
+<img src="docs/images/agent-config.jpeg" alt="Agent Configuration" width="800">
+
+_Configure agents with LLMs, prompts, safety filters, and explore conversation starters_
+
+<img src="docs/images/agent-settings.jpeg" alt="Agent Settings" width="800">
+
+_Customize agent identity, description, and appearance_
+
+<img src="docs/images/mcp-connectors.jpeg" alt="MCP Connectors" width="800">
+
+_Connect to external services via Model Context Protocol — GitHub, Notion, Slack, and more_
+
+<img src="docs/images/memory-settings.jpeg" alt="Memory Settings" width="800">
+
+_Manage agent memory with knowledge gaps, learning goals, and user preferences_
+
+<img src="docs/images/agent-discovery.jpeg" alt="Agent Discovery" width="800">
+
+_Control agent visibility, access permissions, and LTI integration_
+
+</div>
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- **Node.js 25.3.0+** (we recommend using [nvm](https://github.com/nvm-sh/nvm))
-- **pnpm 10+** — `npm install -g pnpm`
-
-### 1. Clone the repository
-
 ```bash
-git clone https://github.com/iblai/mentor-ai.git
-cd mentor-ai
-```
-
-### 2. Install dependencies
-
-```bash
+git clone https://github.com/iblai/os.git
+cd os
 pnpm install
 ```
 
-### 3. Configure environment
+**Using [Claude Code](https://claude.ai/claude-code)?** Run `/setup` — it will walk you through connecting your ibl.ai tenant and configuring `.env.local` automatically.
+
+**Manual setup:** Copy `.env.example` to `.env.local`, then set `NEXT_PUBLIC_MAIN_TENANT_KEY` to your org key from [login.iblai.app/me](https://login.iblai.app/me).
 
 ```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your IBL.ai platform credentials:
-
-```env
-# Required — your IBL.ai platform URLs
-NEXT_PUBLIC_AUTH_URL=https://auth.your-domain.com
-NEXT_PUBLIC_LMS_URL=https://learn.your-domain.com
-NEXT_PUBLIC_DM_URL=https://base.manager.your-domain.com
-NEXT_PUBLIC_AXD_URL=https://base.manager.your-domain.com
-
-# Required — your tenant key
-NEXT_PUBLIC_MAIN_TENANT_KEY=main
-
-# Required — WebSocket and voice servers
-NEXT_PUBLIC_BASE_WS_URL=wss://asgi.data.your-domain.com
-NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL=wss://livekit.call.your-domain.com
-
-# App URLs
-NEXT_PUBLIC_MENTOR_URL=http://localhost:3000
-NEXT_PUBLIC_MENTOR_IFRAME_URL=http://localhost:3000
-
-# Feature flags
-NEXT_PUBLIC_IBL_PLATFORM=mentor
-NEXT_PUBLIC_IBL_TEMPLATE_MENTOR=ai-mentor
-NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER=true
-NEXT_PUBLIC_STRIPE_ENABLED=false
-NEXT_PUBLIC_ENABLE_ADVERTISING=false
-```
-
-### 4. Start the dev server
-
-```bash
+cp .env.example .env.local   # then edit NEXT_PUBLIC_MAIN_TENANT_KEY
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-> **Node.js 25+ note:** The `dev` script already includes `--no-experimental-webstorage` to prevent conflicts with the SDK's browser storage guards. If you customize your scripts, make sure to include `NODE_OPTIONS='--no-experimental-webstorage'`.
+Open [http://localhost:3000](http://localhost:3000). See the full [Development Guide](docs/development.md) for environment variables, scripts, and architecture details.
 
 ---
 
 ## Deployment
 
-### Docker
+OS is the frontend for the ibl.ai platform. Choose your path based on your backend setup:
 
-Build and run with Docker:
+### Option A: Existing ibl.ai Tenant
 
-```bash
-docker build -t mentor-ai .
-docker run -p 5000:5000 --env-file .env.local mentor-ai
-```
+If you already have an ibl.ai tenant (organization key):
 
-The Dockerfile uses a multi-stage build that produces a minimal standalone image (~67% smaller than a full Node.js image).
+1. **Configure your tenant**
 
-#### Build Arguments
+   ```bash
+   cp .env.example .env.local
+   ```
 
-| Argument                | Description                                  |
-| ----------------------- | -------------------------------------------- |
-| `NEXT_IMAGE_PATTERNS`   | Comma-separated allowed image hostnames      |
-| `NEXT_PUBLIC_BASE_PATH` | URL base path (for subdirectory deployments) |
-| `SENTRY_AUTH_TOKEN`     | Sentry auth token for source map uploads     |
+   Update these values with your tenant details:
 
-### Standalone (No Docker)
+   ```bash
+   NEXT_PUBLIC_TENANT=your-tenant
+   ```
 
-```bash
-pnpm build
-PORT=3000 node server-wrapper.js
-```
+2. **Deploy with Docker** (recommended)
 
-The build generates a self-contained `.next/standalone` directory with all dependencies bundled. Copy it to any server with Node.js 25+ installed.
+   ```bash
+   docker build -t os .
+   docker run -p 5000:5000 --env-file .env.local os
+   ```
 
-### Desktop (Tauri)
+   Or **deploy standalone**:
 
-```bash
-# Development
-pnpm tauri:dev
+   ```bash
+   pnpm build
+   PORT=3000 node server-wrapper.js
+   ```
 
-# Production build (macOS, Windows, Linux)
-pnpm tauri:build
-```
+   The build emits a self-contained server under `.next/standalone/` (Next.js
+   [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output)).
+   `next.config.ts` pins `outputFileTracingRoot` to the project directory so the
+   output always lands at `.next/standalone/server.js` with its static assets
+   alongside it. See [Troubleshooting](#troubleshooting) if the app loads to a
+   blank screen.
 
-### Desktop (Electron)
+### Option B: Enterprise Deployment
 
-```bash
-# Development
-pnpm desktop:dev
+If you need full backend infrastructure:
 
-# Production build
-pnpm desktop:build
-```
+1. **Get an enterprise license**
 
----
+   Reach out at [ibl.ai/contact](https://ibl.ai/contact) to get a license of the enterprise platform (full backend codebase).
 
-## Architecture
+2. **Deploy with our infra CLI**
 
-```
-mentor-ai/
-├── app/                        # Next.js App Router
-│   ├── platform/               # Main authenticated routes
-│   │   └── [tenantKey]/        # Multi-tenant routing
-│   │       └── [mentorId]/     # Per-mentor pages
-│   │           ├── page.tsx    # Chat interface
-│   │           ├── analytics/  # Analytics dashboard (5 sub-pages)
-│   │           ├── explore/    # Mentor discovery
-│   │           └── notifications/
-│   ├── share/                  # Public shared chats
-│   ├── sso-login/              # SSO authentication
-│   ├── create-mentor/          # Mentor creation wizard
-│   └── api/                    # API routes (health, monitoring)
-│
-├── components/                 # React components
-│   ├── ui/                     # 56 shadcn/ui primitives
-│   ├── chat/                   # Chat message rendering
-│   ├── advanced-chat/          # Advanced chat builder + tabs
-│   ├── chat-input-form/        # Input controls (voice, search, upload)
-│   ├── canvas/                 # Document canvas
-│   ├── modals/                 # All modal dialogs
-│   │   └── edit-mentor-modal/  # Mentor settings (LLM, datasets, access, etc.)
-│   ├── projects/               # Project management
-│   └── welcome-chat/           # Landing/welcome screen
-│
-├── features/                   # Feature modules (state + logic)
-│   ├── chat/                   # Chat state machine
-│   ├── subscription/           # Billing & subscription
-│   ├── rbac/                   # Role-based access control
-│   ├── analytics/              # Analytics logic
-│   └── ...                     # 17 feature modules total
-│
-├── hooks/                      # 66 custom React hooks
-│   ├── use-voice-chat.ts       # LiveKit voice integration
-│   ├── use-mentors.ts          # Mentor CRUD operations
-│   ├── use-history.ts          # Chat history management
-│   ├── use-datasets.ts         # Training data management
-│   ├── subscription/           # Subscription hooks
-│   └── ...
-│
-├── lib/                        # Utilities and configuration
-├── providers/                  # React context providers
-├── store/                      # Redux store setup
-├── styles/                     # Global CSS
-├── public/                     # Static assets
-├── src-tauri/                  # Tauri desktop app (Rust)
-└── docs/                       # Internal documentation
-```
+   If you already have access to our Docker images, deploy them easily via [iblai/iblai-infra-cli](https://github.com/iblai/iblai-infra-cli).
 
-### Data Flow
+> **Note**: OS requires the ibl.ai backend platform for authentication, AI agent APIs, and data services. The backend is not included in this repository — visit [ibl.ai](https://ibl.ai) to get started.
 
-```
-User → React Components → Custom Hooks → Redux (RTK Query) → IBL.ai API
-                                              ↓
-                                        @iblai/iblai-js SDK
-                                        ├── /data-layer  (API slices, reducers)
-                                        ├── /web-utils   (auth, providers, chat hooks)
-                                        └── /web-containers (shared UI components)
-```
+### Desktop & Mobile
 
-The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)** as its unified SDK, which bundles the data layer, authentication utilities, and shared components under a single package.
+See [docs/development.md](docs/development.md) for native app build instructions.
+
+Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
+
+### Troubleshooting
+
+**The app loads to a blank page or stays stuck on the loading spinner (no redirect to login).**
+
+Open your browser's DevTools → Network tab and reload. If every request under
+`/_next/static/...` and `/env.js` returns `404`/`503`, the server isn't finding
+its static assets. Two common causes:
+
+- **A duplicate or stale server is bound to the port.** An older `node`/`next`
+  process from a previous run can keep listening on `:3000` and shadow the new
+  one (a process bound to a specific address such as `127.0.0.1` wins over a
+  wildcard bind). Find and stop strays before starting fresh:
+
+  ```bash
+  lsof -nP -iTCP:3000 -sTCP:LISTEN   # list listeners on the port
+  kill <PID>                         # stop the stale one
+  ```
+
+- **The standalone output was nested under an unexpected path.** Next.js infers
+  the file-tracing root from the nearest lockfile. A stray lockfile in a _parent_
+  directory (e.g. `~/package-lock.json`) makes it treat your home directory as
+  the workspace root and emit the server at `.next/standalone/<path-to-project>/server.js`
+  instead of `.next/standalone/server.js` — `post-build.sh` then copies static
+  assets next to the wrong path and `server-wrapper.js` can't find the server.
+  This repo pins `outputFileTracingRoot` in `next.config.ts` to prevent it; if
+  you still hit nesting, remove the stray parent lockfile and rebuild.
 
 ---
 
-## Configuration
+## Testing
 
-### Environment Variables
+This project is covered by Playwright end-to-end tests in [`e2e/`](e2e/). **Run the E2E suite for any change** so nothing regresses:
 
-| Variable                                  | Required | Description                                |
-| ----------------------------------------- | -------- | ------------------------------------------ |
-| `NEXT_PUBLIC_AUTH_URL`                    | Yes      | Authentication service URL                 |
-| `NEXT_PUBLIC_LMS_URL`                     | Yes      | LMS platform URL                           |
-| `NEXT_PUBLIC_DM_URL`                      | Yes      | Platform manager URL                       |
-| `NEXT_PUBLIC_AXD_URL`                     | Yes      | API data service URL                       |
-| `NEXT_PUBLIC_MAIN_TENANT_KEY`             | Yes      | Primary tenant identifier                  |
-| `NEXT_PUBLIC_BASE_WS_URL`                 | Yes      | WebSocket server URL                       |
-| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`     | Yes      | LiveKit voice server URL                   |
-| `NEXT_PUBLIC_MENTOR_URL`                  | Yes      | This app's public URL                      |
-| `NEXT_PUBLIC_IBL_PLATFORM`                | Yes      | Platform type (`mentor`)                   |
-| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`         | Yes      | Default mentor template slug               |
-| `NEXT_PUBLIC_STRIPE_ENABLED`              | No       | Enable Stripe billing (`true`/`false`)     |
-| `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER` | No       | Show free trial banner                     |
-| `NEXT_PUBLIC_ENABLE_ADVERTISING`          | No       | Enable advertising features                |
-| `NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL`   | No       | External pricing page URL                  |
-| `NEXT_PUBLIC_BASE_PATH`                   | No       | URL base path for subdirectory deployments |
-| `NEXT_IMAGE_PATTERNS`                     | No       | Comma-separated allowed image hosts        |
-| `SENTRY_AUTH_TOKEN`                       | No       | Sentry auth token (build-time only)        |
+```bash
+make e2e-ui
+```
 
-### Feature Flags
+`make e2e-ui` launches Playwright in interactive UI mode — watch the journeys run, step through them, and re-run individual tests. The first time, install the browsers once:
 
-Feature flags are set via environment variables prefixed with `NEXT_PUBLIC_`. They control which features are visible and active in the application:
+```bash
+make e2e-install
+```
 
-- **Stripe billing** — `NEXT_PUBLIC_STRIPE_ENABLED=true`
-- **Free trial banner** — `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER=true`
-- **Advertising** — `NEXT_PUBLIC_ENABLE_ADVERTISING=true`
-- **Iframe logo** — `NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED=true`
+Other useful targets:
 
----
+| Command                 | What it does                               |
+| ----------------------- | ------------------------------------------ |
+| `make e2e`              | Run the full suite headless (all browsers) |
+| `make e2e-headed`       | Run with a visible browser                 |
+| `make e2e-chrome`       | Run on Chrome only                         |
+| `make e2e-journey J=01` | Run a single journey spec                  |
+| `make e2e-report`       | Open the last HTML report                  |
 
-## Scripts
-
-| Script               | Description                          |
-| -------------------- | ------------------------------------ |
-| `pnpm dev`           | Start development server (port 3000) |
-| `pnpm build`         | Production build (standalone output) |
-| `pnpm start`         | Start production server              |
-| `pnpm lint`          | Run ESLint with auto-fix             |
-| `pnpm typecheck`     | TypeScript type checking             |
-| `pnpm format`        | Format code with Prettier            |
-| `pnpm test`          | Run unit tests (Vitest)              |
-| `pnpm test:watch`    | Run tests in watch mode              |
-| `pnpm test:coverage` | Generate test coverage report        |
-| `pnpm tauri:dev`     | Start Tauri desktop dev mode         |
-| `pnpm tauri:build`   | Build Tauri desktop app              |
-| `pnpm desktop:dev`   | Start Electron desktop dev mode      |
-| `pnpm desktop:build` | Build Electron desktop app           |
-
----
-
-## IBL.ai Platform
-
-mentorAI is built on the [IBL.ai](https://ibl.ai) platform. To use this app, you need access to an IBL.ai backend instance which provides:
-
-- **AI Mentor API** — LLM orchestration, RAG pipeline, tool use, and chat management
-- **Authentication** — SSO, OAuth, JWT-based auth with multi-tenant support
-- **Data Platform** — Analytics, billing, user management, and notification services
-- **LiveKit** — Voice and video call infrastructure
-
-Visit [ibl.ai](https://ibl.ai) to set up your backend or request a hosted instance.
+See [e2e/COVERAGE.md](e2e/COVERAGE.md) for current coverage. Coverage must not regress — add or update a journey whenever you change user-facing behavior.
 
 ---
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. If you'll be working with AI-assisted tooling, read [AGENTS.md](AGENTS.md) first — it documents the formatting, lint, and push protocol rules that the husky hooks enforce.
+
+---
+
+## Resources
+
+- [Documentation](https://docs.ibl.ai)
+- [Development Guide](docs/development.md) — setup, scripts, architecture, configuration
+- [iblai-app-cli](https://github.com/iblai/iblai-app-cli) — CLI for scaffolding ibl.ai apps
+- [@iblai/mcp](https://www.npmjs.com/package/@iblai/mcp) — MCP server for AI-assisted development
+- [Vibe](https://github.com/iblai/vibe) — developer toolkit for building with ibl.ai
+- [Vibe Starter](https://github.com/iblai/vibe-starter) — pre-wired Next.js + ibl.ai SSO template
 
 ---
 
 ## License
 
-ISC License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.

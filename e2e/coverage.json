@@ -1,13 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-05-13",
+  "lastUpdated": "2026-06-14",
   "summary": {
-    "totalCheckpoints": 397,
-    "coveredCheckpoints": 385,
+    "totalCheckpoints": 443,
+    "coveredCheckpoints": 423,
     "deprecatedCheckpoints": 12,
+    "notReproducibleCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 46,
-    "activeJourneys": 45
+    "totalJourneys": 51,
+    "activeJourneys": 50
   },
   "journeys": [
     {
@@ -87,6 +88,11 @@
           "id": "nav-07",
           "description": "Suggested prompts authored with Markdown (links, bold, etc.) render via the Markdown component, not as literal text (issue #1179, fixme until a seeded mentor fixture is available)",
           "status": "covered"
+        },
+        {
+          "id": "nav-08",
+          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code)",
+          "status": "pending"
         }
       ]
     },
@@ -95,7 +101,9 @@
       "name": "New User UI & Profile Dropdown",
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/settings-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -115,7 +123,12 @@
         },
         {
           "id": "ui-04",
-          "description": "Sidebar admin-only buttons show upgrade dialog for non-admins",
+          "description": "Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible",
+          "status": "covered"
+        },
+        {
+          "id": "ui-05",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]
@@ -283,7 +296,10 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
-        "app/create-mentor/page.tsx"
+        "app/create-mentor/page.tsx",
+        "components/modals/settings-modal.tsx",
+        "hooks/use-mentors.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -335,6 +351,26 @@
           "id": "mgmt-10",
           "description": "Admin can send a message to a newly created mentor and receive a response",
           "status": "covered"
+        },
+        {
+          "id": "mgmt-11",
+          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-12",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-13",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-14",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -373,18 +409,23 @@
         },
         {
           "id": "uid-06",
-          "description": "Enhance Document Retrieval toggle is visible with correct label and defaults to OFF",
+          "description": "Enhanced RAG toggle is visible with correct label and defaults to OFF",
           "status": "covered"
         },
         {
           "id": "uid-07",
-          "description": "Enhance Document Retrieval tooltip contains wording about multiple search queries",
+          "description": "Enhanced RAG tooltip contains wording about multiple search queries",
           "status": "covered"
         },
         {
           "id": "uid-08",
-          "description": "Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles",
+          "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "covered"
+        },
+        {
+          "id": "uid-09",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -394,7 +435,8 @@
       "spec": "08-chat-file-upload.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/upload-menu.tsx",
-        "hooks/use-chat-file-upload.ts"
+        "hooks/use-chat-file-upload.ts",
+        "hooks/use-show-attachment.ts"
       ],
       "checkpoints": [
         {
@@ -465,7 +507,7 @@
         },
         {
           "id": "vc-03",
-          "description": "Voice call button hidden when Show voice call toggled off",
+          "description": "Voice call button hidden when Voice Calls toggled off",
           "status": "covered"
         },
         {
@@ -494,7 +536,10 @@
       "id": "canvas-ai-document-editor",
       "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
-      "sourceFiles": ["components/canvas/canvas-component.tsx"],
+      "sourceFiles": [
+        "components/canvas/canvas-component.tsx",
+        "components/canvas/canvas-controls.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cvs-01",
@@ -613,7 +658,12 @@
       "spec": "13-shareable-links-and-embed-integration.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx"
+        "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/logo.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts",
+        "hooks/use-embed-mode.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -639,6 +689,26 @@
         {
           "id": "emb-05",
           "description": "WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage",
+          "status": "covered"
+        },
+        {
+          "id": "emb-06",
+          "description": "Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-07",
+          "description": "Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-08",
+          "description": "Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-09",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         }
       ]
@@ -1312,6 +1382,11 @@
           "id": "mem-05",
           "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
           "status": "covered"
+        },
+        {
+          "id": "mem-06",
+          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -1320,7 +1395,8 @@
       "name": "Mentor MCP Tab",
       "spec": "25-mentor-mcp-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx"
       ],
       "checkpoints": [
         {
@@ -1436,7 +1512,9 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/header.tsx"
+        "components/ui/hover-card.tsx",
+        "components/header.tsx",
+        "components/header/profile-button.tsx"
       ],
       "checkpoints": [
         {
@@ -1968,7 +2046,7 @@
       "checkpoints": [
         {
           "id": "cpm-01",
-          "description": "Allow Copies toggle shows Copy button when enabled and hides it when disabled",
+          "description": "Copies toggle shows Copy button when enabled and hides it when disabled",
           "status": "covered"
         },
         {
@@ -2015,6 +2093,11 @@
           "id": "cpm-10",
           "description": "Mentor can be copied to a different tenant",
           "status": "covered"
+        },
+        {
+          "id": "cpm-11",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2102,12 +2185,12 @@
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens Settings tab and Advanced Sandbox toggle is present",
+          "description": "Admin opens Settings tab and Sandbox toggle is present",
           "status": "covered"
         },
         {
           "id": "claw-02",
-          "description": "Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
+          "description": "Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
           "status": "covered"
         },
         {
@@ -2117,7 +2200,7 @@
         },
         {
           "id": "claw-04",
-          "description": "Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)",
+          "description": "Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)",
           "status": "covered"
         },
         {
@@ -2132,7 +2215,7 @@
         },
         {
           "id": "claw-07",
-          "description": "Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
+          "description": "Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
           "status": "covered"
         },
         {
@@ -2142,7 +2225,7 @@
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
+          "description": "Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
           "status": "covered"
         },
         {
@@ -2173,6 +2256,218 @@
         {
           "id": "claw-15",
           "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
+          "status": "covered"
+        },
+        {
+          "id": "claw-16",
+          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "mentor-privacy-tab",
+      "name": "Mentor Privacy Tab",
+      "spec": "45-mentor-privacy-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/privacy-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "pr-01",
+          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "pr-02",
+          "description": "Privacy tab heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "pr-03",
+          "description": "Master Privacy Router switch is visible",
+          "status": "covered"
+        },
+        {
+          "id": "pr-04",
+          "description": "Action dropdown, entity chips, and output-filter switch are hidden when the router is off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-05",
+          "description": "Enabling the router reveals the action, entity chips and output-filter fields",
+          "status": "covered"
+        },
+        {
+          "id": "pr-06",
+          "description": "Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)",
+          "status": "covered"
+        },
+        {
+          "id": "pr-07",
+          "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tasks-tab",
+      "name": "Mentor Tasks Tab",
+      "spec": "49-mentor-tasks-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/tasks-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ta-01",
+          "description": "Tasks tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ta-02",
+          "description": "Tasks tab heading and description render correctly",
+          "status": "covered"
+        },
+        {
+          "id": "ta-03",
+          "description": "Toolbar exposes the task search input and the Schedule Task button",
+          "status": "covered"
+        },
+        {
+          "id": "ta-04",
+          "description": "Total Tasks, Completed and Failed metric cards render",
+          "status": "covered"
+        },
+        {
+          "id": "ta-05",
+          "description": "Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting",
+          "status": "covered"
+        },
+        {
+          "id": "ta-06",
+          "description": "Admin schedules a new daily periodic task and it appears in the task list",
+          "status": "covered"
+        },
+        {
+          "id": "ta-07",
+          "description": "Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible",
+          "status": "covered"
+        },
+        {
+          "id": "ta-08",
+          "description": "Admin deletes a task and its row is removed from the list",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-voice-tab",
+      "name": "Mentor Voice Tab",
+      "spec": "47-mentor-voice-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "vo-01",
+          "description": "Voice tab label is visible in the Edit Mentor modal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "vo-02",
+          "description": "Voice tab heading renders correctly",
+          "status": "covered"
+        },
+        {
+          "id": "vo-03",
+          "description": "Voice and Voice call sub-tab pills are both visible",
+          "status": "covered"
+        },
+        {
+          "id": "vo-04",
+          "description": "All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab",
+          "status": "covered"
+        },
+        {
+          "id": "vo-05",
+          "description": "Selecting the OpenAI provider marks the card active and reveals the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-06",
+          "description": "Selecting the Browser provider hides the voice picker trigger",
+          "status": "covered"
+        },
+        {
+          "id": "vo-07",
+          "description": "Switching to the Voice call sub-tab renders the call configuration form",
+          "status": "covered"
+        },
+        {
+          "id": "vo-08",
+          "description": "Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered",
+          "status": "covered"
+        },
+        {
+          "id": "vo-09",
+          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
+          "status": "covered"
+        },
+        {
+          "id": "vo-10",
+          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "status": "covered"
+        },
+        {
+          "id": "VO-11",
+          "description": "Voice tab is hidden from the sidebar when \"Enable voice calls\" (show_voice_call) is off",
+          "status": "covered"
+        },
+        {
+          "id": "VO-12",
+          "description": "Re-enabling \"Enable voice calls\" reveals the Voice tab in the sidebar after the settings refetch",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-screenshare-tab",
+      "name": "Mentor Screen Share Tab",
+      "spec": "48-mentor-screenshare-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "ss-01",
+          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Enable screen sharing' toggle is off",
+          "status": "covered"
+        },
+        {
+          "id": "ss-02",
+          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "ss-03",
+          "description": "Switching to the Screen Share tab renders the SDK heading and body",
           "status": "covered"
         }
       ]
@@ -2451,7 +2746,7 @@
         },
         {
           "id": "sp-12",
-          "description": "Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add",
+          "description": "Admin in user mode can see and run admin-created prompts but cannot edit, delete, or add",
           "status": "covered"
         }
       ]
@@ -2528,6 +2823,91 @@
         {
           "id": "vtt-01",
           "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-url-prompt-injection",
+      "name": "Chat URL ?prompt= Auto-Injection",
+      "spec": "chat-url-prompt-injection.spec.ts",
+      "sourceFiles": ["components/chat/index.tsx"],
+      "checkpoints": [
+        {
+          "id": "upi-01",
+          "description": "Fresh session + ?prompt=<text>: user-message bubble for <text> appears automatically and AI responds; location.search still contains prompt= after response settles",
+          "status": "covered"
+        },
+        {
+          "id": "upi-02",
+          "description": "Dedup: reloading the same ?prompt= URL on a cached session produces exactly one user bubble (no duplicate) and leaves localStorage session_id[mentorId] unchanged",
+          "status": "covered"
+        },
+        {
+          "id": "upi-03",
+          "description": "Cached session + different ?prompt=: original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged",
+          "status": "covered"
+        },
+        {
+          "id": "upi-04",
+          "description": "No ?prompt= query string: welcome state is shown, no user-message bubbles appear, chat input is idle; confirmed stable over 3 seconds with no auto-submit",
+          "status": "covered"
+        },
+        {
+          "id": "upi-05",
+          "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-upload-camera-and-image-display",
+      "name": "Chat Upload — Camera Option & Image Display",
+      "spec": "46-chat-upload-camera-and-image-display.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form/upload-menu.tsx",
+        "components/chat-input-form/camera-capture-dialog.tsx",
+        "components/chat-input-form.tsx",
+        "components/chat/chat-messages/image-message.tsx",
+        "components/chat/chat-messages/user-message-bubble.tsx",
+        "features/image-previews/image-previews-slice.ts",
+        "hooks/use-show-attachment.ts",
+        "hooks/use-is-mobile-os.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "cam-01",
+          "description": "Upload menu shows both 'Upload File' and 'Camera' items when file attachments are enabled on the mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cam-02",
+          "description": "Disabling the 'Enable file attachments' toggle hides the + (Attach file) button entirely",
+          "status": "covered"
+        },
+        {
+          "id": "cam-03",
+          "description": "Hidden native camera input element is present in the DOM with accept='image/*' and capture='environment' (mobile-OS branch)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-04",
+          "description": "Clicking 'Camera' from the upload menu opens the 'Take a photo' dialog with a live video preview ([data-testid='camera-video']) and a Capture button; Retake/Use Photo are not shown yet (Chromium-only: requires fake media stream)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-05",
+          "description": "Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename",
+          "status": "covered"
+        },
+        {
+          "id": "cam-06",
+          "description": "Sending a message with an image attachment renders the image as an <img> element with cursor:pointer in the sent message bubble (not a FileCard icon)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-07",
+          "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
           "status": "covered"
         }
       ]

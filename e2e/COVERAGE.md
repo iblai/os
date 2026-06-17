@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-05-11 | 387 checkpoints (375 active, 12 deprecated) | 45 journeys (44 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-14 | 443 checkpoints (423 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -38,17 +38,19 @@ When adding a new page or modifying an existing user flow:
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs link in a new tab
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
+- [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
 ---
 
-## Journey 3: New User UI & Profile Dropdown (4 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
+## Journey 3: New User UI & Profile Dropdown (5 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/settings-modal.tsx`
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
 - [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
-- [x] Sidebar admin-only buttons (Settings, Analytics, New Project, Invite Users, New Mentor) show Stripe/upgrade dialog for non-admins
+- [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
+- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
 ---
 
@@ -93,9 +95,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (10 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (14 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -107,10 +109,14 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin can edit the system prompt in the Prompts tab
 - [x] Admin can send a message to a newly created mentor and receive a response
 - [x] Admin can delete a mentor from the Settings tab
+- [x] Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin `canEditMentors` guard unchanged
+- [ ] _(not-reproducible — RBAC off in default env)_ My Agents list scoped to `created_by=username` for non-admins via `useMentorsWithPagination({ createdBy })`; admin still sees full list — unit-covered in `settings-modal.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
+- [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (8 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (9 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -119,15 +125,16 @@ When adding a new page or modifying an existing user flow:
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
-- [x] Enhance Document Retrieval toggle is visible with correct label and defaults to OFF
-- [x] Enhance Document Retrieval tooltip contains wording about multiple search queries
-- [x] Enhance Document Retrieval toggle persists ON and OFF across save/reopen cycles
+- [x] Enhanced RAG toggle is visible with correct label and defaults to OFF
+- [x] Enhanced RAG tooltip contains wording about multiple search queries
+- [x] Enhanced RAG toggle persists ON and OFF across save/reopen cycles
+- [ ] _(not-reproducible — RBAC off in default env)_ Read-only settings fields (e.g. `mentor_visibility`) are gated in the UI and omitted from the settings PUT payload when the user lacks write access — unit-covered in `settings-tab.test.tsx` and `hoc/utils/__tests__/index.test.ts`
 
 ---
 
 ## Journey 8: Chat File Upload (9 checkpoints) — `journeys/08-chat-file-upload.spec.ts`
 
-**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`
+**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`, `hooks/use-show-attachment.ts`
 
 - [x] Image, PDF, and text files can be uploaded via the upload button
 - [x] File input `accept` attribute correctly includes supported and excludes unsupported types
@@ -147,7 +154,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Voice call dialog opens with heading, mute button, and end-call button (Chromium)
 - [x] Voice call dialog opens correctly on Firefox and WebKit
-- [x] Voice call button is hidden when "Show voice call" is toggled off in settings
+- [x] Voice call button is hidden when "Voice Calls" is toggled off in settings
 - [x] Voice call button reappears after re-enabling the toggle
 - [x] Full voice call flow: user speaks and receives an AI audio response _(mocked: page.route() intercepts call-credentials + STT APIs — Chromium only)_
 - [x] Full voice call with real LiveKit _(skipped — requires real LiveKit server, audio device, and STT pipeline)_
@@ -194,14 +201,19 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (4 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (9 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly
 - [x] Authenticated flow in embed: user can send a message and receive an AI response
 - [x] Advanced anonymous embed (Anyone visibility, no context awareness) renders and allows chatting
 - [x] Advanced anonymous embed with context awareness sends message with injected context
+- [x] WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage
+- [x] Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)
+- [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
+- [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
+- [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
 
 ---
 
@@ -387,7 +399,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 24: Mentor Memory Tab (5 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (6 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -396,6 +408,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
 - [x] CP-24.4: Admin manages memory categories (create, rename, delete)
 - [x] CP-24.5: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
+- [ ] _(not-reproducible — RBAC off in default env)_ Memory toggle (`enable_memory_component`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
 
 ---
 
@@ -579,11 +592,11 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 36: Copy Mentor (10 checkpoints) — `journeys/36-copy-mentor.spec.ts`
+## Journey 36: Copy Mentor (11 checkpoints) — `journeys/36-copy-mentor.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx`
 
-- [x] Allow Copies toggle shows Copy button when enabled and hides it when disabled
+- [x] Copies toggle shows Copy button when enabled and hides it when disabled
 - [x] Copy Mentor modal opens with correct defaults (pre-filled name, training data toggle, Cancel/Copy buttons)
 - [x] Copy Mentor modal closes via Escape key
 - [x] Mentor can be copied with default name and user navigates to the new mentor
@@ -593,6 +606,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Mentor copied with training data has datasets on the copy
 - [x] Mentor copied without training data has no datasets on the copy
 - [x] Mentor can be copied to a different tenant _(env-gated: requires user with multiple admin tenants)_
+- [ ] _(not-reproducible — RBAC off in default env)_ Allow Copies toggle (`forkable`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
 
 ---
 
@@ -678,7 +692,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Admin opens the Prompt Gallery from the chat area
 - [x] Admin sees prompt cards with Delete buttons in the Prompt Gallery
 - [x] Admin deletes a prompt from the Prompt Gallery in the chat area
-- [x] Admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add
+- [x] Admin in user mode can see and run admin-created prompts but cannot edit, delete, or add
 
 ---
 
@@ -701,25 +715,61 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (15 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 44: CLAW Advanced Sandbox (16 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-- [x] Admin opens Settings tab and Advanced Sandbox toggle is present
-- [x] Advanced Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
+- [x] Admin opens Settings tab and Sandbox toggle is present
+- [x] Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
 - [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Advanced Sandbox and saving causes Sandbox tab to appear (right after Settings)
+- [x] Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)
 - [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
 - [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
-- [x] Disabling Advanced Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
+- [x] Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
 - [x] Admin navigates to Sandbox tab and the sandbox config container renders
-- [x] Admin toggles Advanced Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
+- [x] Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
 - [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
 - [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
 - [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
 - [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
+- [ ] _(not-reproducible — RBAC off in default env)_ Advanced Sandbox toggle (`enable_claw`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
+
+---
+
+## Journey 45: Mentor Privacy Tab (7 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly.
+
+- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar
+- [x] PR-02: Privacy tab heading and description render correctly
+- [x] PR-03: Master Privacy Router switch is visible
+- [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
+- [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
+- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
+- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+
+---
+
+## Journey 49: Mentor Tasks Tab (8 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Tasks tab is a thin wrapper around the SDK's `AgentTasksTab` (`@iblai/iblai-js/web-containers/next`). Unlike most tabs, `AgentTasksTab` has no tenant/mentor/username props — it reads them from the nearest `AgentSettingsProvider` and throws when rendered without one, so the wrapper wraps it in `AgentSettingsProvider` (identity from URL params + navigate hook, `enableRBAC` from `config`).
+
+The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js/playwright` (`scheduleTask`, `searchTasks`, `deleteTask`, `expectTaskInList`, …) — resolving elements by accessible name/placeholder/role rather than CSS classes. The lifecycle checkpoints (TA-06..TA-08) each create a uniquely-named periodic agent and delete it in a `finally` block, so every spec is independent, retry-safe and leaves no orphaned task behind.
+
+- [x] TA-01: Tasks tab label is visible in the Edit Mentor modal sidebar
+- [x] TA-02: Tasks tab heading and description render correctly
+- [x] TA-03: Toolbar exposes the task search input and the Schedule Task button
+- [x] TA-04: Total Tasks, Completed and Failed metric cards render
+- [x] TA-05: Schedule Task dialog opens with the name/prompt fields and Cancel dismisses it without persisting
+- [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
+- [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
+- [x] TA-08: Admin deletes a task and its row is removed from the list
 
 ---
 
@@ -749,6 +799,80 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/web-containers` (v1.6.12+) 
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+
+---
+
+## Journey: Chat URL ?prompt= Auto-Injection (5 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
+
+**Source files:** `components/chat/index.tsx`
+
+Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
+
+**Contracts verified:**
+
+- `location.search` retains `?prompt=...` after submission (no `router.replace` is called).
+- The dedup guard scans back for the last user message; if content matches the trimmed prompt, the hook no-ops so no second bubble appears.
+- A new session is NOT created on a dedup reload — `localStorage.session_id[mentorId]` is unchanged.
+- `searchParams.get('prompt')` decodes percent-encoded characters natively (`%20` → space).
+
+- [x] UPI-01: Fresh session + `?prompt=<text>` — user-message bubble appears automatically, AI responds, `location.search` still contains `prompt=` after response settles
+- [x] UPI-02: Dedup — reloading the same `?prompt=` URL on a cached session produces exactly one user bubble (count === 1) and `localStorage.session_id[mentorId]` is unchanged
+- [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
+- [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
+- [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+
+---
+
+## Journey 46: Chat Upload — Camera Option & Image Display (7 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
+
+**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/camera-capture-dialog.tsx`, `components/chat-input-form.tsx`, `components/chat/chat-messages/image-message.tsx`, `components/chat/chat-messages/user-message-bubble.tsx`, `features/image-previews/image-previews-slice.ts`, `hooks/use-show-attachment.ts`, `hooks/use-is-mobile-os.ts`
+
+Covers the two user-facing features added in [iblai-platform#1902](https://github.com/iblai/iblai-platform/issues/1902): the **Camera** option in the chat composer upload menu, and uploaded images rendering as `<img>` elements (not FileCard icons) in sent message bubbles.
+
+**Camera dialog (CAM-04) is Chromium-only** — uses `--use-fake-device-for-media-stream` / `--use-fake-ui-for-media-stream` to stub `navigator.mediaDevices.getUserMedia` with a black-frame fake video track. All other checkpoints are cross-browser.
+
+- [x] CAM-01: Upload menu shows both "Upload File" and "Camera" items when `show_attachment` is enabled on the mentor
+- [x] CAM-02: Disabling "Enable file attachments" hides the entire `+` (Attach file) button (UploadMenu returns null)
+- [x] CAM-03: Hidden native camera `<input type="file" accept="image/*" capture="environment">` is present in the DOM (mobile-OS branch path in `chat-input-form.tsx`)
+- [x] CAM-04: Clicking "Camera" opens the `CameraCaptureDialog` ("Take a photo" title, `[data-testid="camera-video"]`, "Capture" button visible; Retake/Use Photo absent before capture) — Chromium-only
+- [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
+- [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
+- [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
+
+---
+
+## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
+
+The Settings tab also surfaces two voice-call toggles (`use_function_calling_for_rag`, `enable_video`) so admins can flip them without leaving the main configuration panel. Save routes those two fields through the same `/call-configurations/` endpoint the SDK's Voice tab uses — POSTing a new config (mode=`realtime`) when none exists, PATCHing otherwise.
+
+- [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar
+- [x] VO-02: Voice tab heading renders correctly
+- [x] VO-03: Voice and Voice call sub-tab pills are both visible
+- [x] VO-04: All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab
+- [x] VO-05: Selecting the OpenAI provider marks the card active and reveals the voice picker trigger
+- [x] VO-06: Selecting the Browser provider hides the voice picker trigger
+- [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
+- [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
+- [x] VO-09: Settings tab surfaces both voice-call toggles
+- [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
+- [x] VO-11: Voice tab is hidden from the sidebar when "Enable voice calls" (`show_voice_call`) is turned off in Settings
+- [x] VO-12: Re-enabling "Enable voice calls" brings the Voice tab back into the sidebar after the settings refetch
+
+---
+
+## Journey 48: Mentor Screen Share Tab (3 checkpoints) — `journeys/48-mentor-screenshare-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The host gates visibility on `call_configuration.enable_video` — the toggle on the Settings tab. When the toggle is off, the tab is hidden from the sidebar entirely (the SDK still renders its own off-state hint, but at host level the tab itself goes away to keep the sidebar clean). The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
+
+- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Enable screen sharing" toggle is off
+- [x] SS-02: Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar
+- [x] SS-03: Switching to the Screen Share tab renders the SDK heading and body
 
 ---
 

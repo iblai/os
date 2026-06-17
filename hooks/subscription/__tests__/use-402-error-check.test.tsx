@@ -6,6 +6,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { use402ErrorCheck } from '../use-402-error-check';
 import subscriptionSlice from '@/features/subscription/subscription-slice';
 import topBannerSlice from '@/features/top-banner/top-banner-slice';
+import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { toast } from 'sonner';
 
 // Mock sonner toast
@@ -45,16 +46,24 @@ vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: vi.fn(() => mockIsAdmin),
 }));
 
-// Mock useOS hook
+// Mock useOS hook (sourced from @iblai/iblai-js/web-utils alongside
+// setOpenAppleRestrictionModal); use importOriginal so we keep the real
+// action creator and reducer.
 let mockIsAppleDevice = false;
-vi.mock('@/hooks/use-os', () => ({
-  useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useOS: vi.fn(() => ({ isAppleDevice: mockIsAppleDevice })),
+  };
+});
 
 describe('use402ErrorCheck', () => {
   type TestState = {
     subscription: ReturnType<typeof subscriptionSlice.reducer>;
     topBanner: ReturnType<typeof topBannerSlice.reducer>;
+    appleRestriction: ReturnType<typeof appleRestrictionReducer>;
   };
 
   let store: ReturnType<typeof configureStore<TestState>>;
@@ -64,6 +73,7 @@ describe('use402ErrorCheck', () => {
       reducer: {
         subscription: subscriptionSlice.reducer,
         topBanner: topBannerSlice.reducer,
+        appleRestriction: appleRestrictionReducer,
       },
     });
 
@@ -312,7 +322,7 @@ describe('use402ErrorCheck', () => {
       });
 
       const state = store.getState();
-      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+      expect(state.appleRestriction.openAppleRestrictionModal).toBe(true);
       // Should NOT fall through to admin redirect or error dispatch
       expect(mockRouterPush).not.toHaveBeenCalled();
       expect(state.subscription.error402Detected).toBe('');
@@ -344,7 +354,7 @@ describe('use402ErrorCheck', () => {
       // Apple check runs before admin check
       expect(mockRouterPush).not.toHaveBeenCalled();
       const state = store.getState();
-      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+      expect(state.appleRestriction.openAppleRestrictionModal).toBe(true);
     });
 
     it('should prioritise Apple modal over pricing modal when on Apple device', async () => {
@@ -364,7 +374,7 @@ describe('use402ErrorCheck', () => {
       });
 
       const state = store.getState();
-      expect(state.subscription.openAppleRestrictionModal).toBe(true);
+      expect(state.appleRestriction.openAppleRestrictionModal).toBe(true);
       expect(state.subscription.openPricingModal).toBe(false);
     });
 

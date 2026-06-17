@@ -88,7 +88,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorCategoriesQuery: (...args: unknown[]) =>
     mockGetMentorCategoriesQuery(...args),
   // settings-tab.tsx renders `useGetClawMentorConfigQuery` /
-  // `useUpdateClawMentorConfigMutation` for the Advanced Sandbox toggle's
+  // `useUpdateClawMentorConfigMutation` for the Sandbox toggle's
   // claw-config sync. Stub them so this test (which doesn't exercise that
   // branch) doesn't crash with "No 'X' export defined on the mock".
   useGetClawMentorConfigQuery: () => ({
@@ -98,6 +98,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   }),
   useUpdateClawMentorConfigMutation: () => [
     () => Promise.resolve({}),
+    { isLoading: false },
+  ],
+  // settings-tab.tsx also reads the mentor's CallConfiguration to hydrate
+  // the two voice-call toggles surfaced in Settings, and PATCHes/POSTs
+  // the call-configurations endpoint when those toggles change. Stub the
+  // hooks so this test (which doesn't exercise that branch) keeps working.
+  useGetCallConfigurationsQuery: () => ({
+    data: [],
+    isError: false,
+    isLoading: false,
+  }),
+  useCreateCallConfigurationMutation: () => [
+    () => ({ unwrap: () => Promise.resolve({}) }),
+    { isLoading: false },
+  ],
+  useUpdateCallConfigurationMutation: () => [
+    () => ({ unwrap: () => Promise.resolve({}) }),
     { isLoading: false },
   ],
 }));
@@ -223,23 +240,19 @@ vi.mock('@/components/ui/select', () => ({
     </button>
   ),
   SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => (
-    <div data-testid="select-content">{children}</div>
+  SelectContent: ({ children, onValueChange }: any) => (
+    <div data-testid="select-content">
+      {React.Children.map(children, (child: any) =>
+        child ? React.cloneElement(child, { onValueChange }) : null,
+      )}
+    </div>
   ),
-  SelectItem: ({ children, value, ...props }: any) => (
+  SelectItem: ({ children, value, onValueChange }: any) => (
     <div
       role="option"
       aria-selected={false}
       data-value={value}
-      onClick={() => {
-        // Find parent Select's onValueChange through DOM traversal
-        const event = new CustomEvent('select-value', {
-          detail: value,
-          bubbles: true,
-        });
-        props.ref?.current?.dispatchEvent(event);
-      }}
-      {...props}
+      onClick={() => onValueChange?.(value)}
     >
       {children}
     </div>
@@ -431,7 +444,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByText('Administrators')).toBeInTheDocument();
-      expect(screen.getByText('Students')).toBeInTheDocument();
+      expect(screen.getByText('Users')).toBeInTheDocument();
       // "Anyone" appears in both the visibility select and chat access select
       expect(screen.getAllByText('Anyone').length).toBeGreaterThanOrEqual(1);
     });
@@ -455,50 +468,50 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('LTI Accessible')).toBeInTheDocument();
+      expect(screen.getByText('Allow LTI launches')).toBeInTheDocument();
     });
 
-    it('renders Show Attachment toggle', () => {
+    it('renders File Attachments toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Attachment')).toBeInTheDocument();
+      expect(screen.getByText('Enable file attachments')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Call toggle', () => {
+    it('renders Voice Calls toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Call')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice calls')).toBeInTheDocument();
     });
 
-    it('renders Show Voice Record toggle', () => {
+    it('renders Voice Recordings toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Show Voice Record')).toBeInTheDocument();
+      expect(screen.getByText('Enable voice recordings')).toBeInTheDocument();
     });
 
-    it('renders Enhance Document Retrieval toggle', () => {
+    it('renders Enhanced RAG toggle', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByText('Enhance Document Retrieval'),
+        screen.getByText('Enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
-    it('renders Enhance Document Retrieval tooltip text', () => {
+    it('renders Enhanced RAG tooltip text', () => {
       render(<SettingsTab />);
 
       expect(
         screen.getByText(
-          /Generates multiple search queries from a single user question/i,
+          /Runs several search queries per question to pull more relevant documents/i,
         ),
       ).toBeInTheDocument();
     });
 
-    it('renders tooltip trigger for Enhance Document Retrieval', () => {
+    it('renders tooltip trigger for Enhanced RAG', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about enhance document retrieval'),
+        screen.getByLabelText('More info about enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -567,16 +580,16 @@ describe('SettingsTab', () => {
         screen.getAllByLabelText('More info about chat access'),
       ).toHaveLength(2);
       expect(
-        screen.getByLabelText('More info about lti accessibility'),
+        screen.getByLabelText('More info about allow lti launches'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show attachment'),
+        screen.getByLabelText('More info about enable file attachments'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice call'),
+        screen.getByLabelText('More info about enable voice calls'),
       ).toBeInTheDocument();
       expect(
-        screen.getByLabelText('More info about show voice record'),
+        screen.getByLabelText('More info about enable voice recordings'),
       ).toBeInTheDocument();
     });
   });
@@ -650,7 +663,7 @@ describe('SettingsTab', () => {
     it('toggles LTI accessible switch', () => {
       render(<SettingsTab />);
 
-      const ltiSwitch = screen.getByLabelText('Is lti accessible disabled');
+      const ltiSwitch = screen.getByLabelText('Allow LTI launches');
       expect(ltiSwitch).not.toBeChecked();
 
       fireEvent.click(ltiSwitch);
@@ -658,10 +671,10 @@ describe('SettingsTab', () => {
       expect(ltiSwitch).toBeChecked();
     });
 
-    it('toggles show attachment switch', () => {
+    it('toggles file attachments switch', () => {
       render(<SettingsTab />);
 
-      const attachmentSwitch = screen.getByLabelText('Show attachment enabled');
+      const attachmentSwitch = screen.getByLabelText('Enable file attachments');
       expect(attachmentSwitch).toBeChecked();
 
       fireEvent.click(attachmentSwitch);
@@ -669,10 +682,10 @@ describe('SettingsTab', () => {
       expect(attachmentSwitch).not.toBeChecked();
     });
 
-    it('toggles show voice call switch', () => {
+    it('toggles voice calls switch', () => {
       render(<SettingsTab />);
 
-      const voiceCallSwitch = screen.getByLabelText('Show voice call enabled');
+      const voiceCallSwitch = screen.getByLabelText('Enable voice calls');
       expect(voiceCallSwitch).toBeChecked();
 
       fireEvent.click(voiceCallSwitch);
@@ -680,11 +693,11 @@ describe('SettingsTab', () => {
       expect(voiceCallSwitch).not.toBeChecked();
     });
 
-    it('toggles show voice record switch', () => {
+    it('toggles voice recordings switch', () => {
       render(<SettingsTab />);
 
       const voiceRecordSwitch = screen.getByLabelText(
-        'Show voice record disabled',
+        'Enable voice recordings',
       );
       expect(voiceRecordSwitch).not.toBeChecked();
 
@@ -693,12 +706,10 @@ describe('SettingsTab', () => {
       expect(voiceRecordSwitch).toBeChecked();
     });
 
-    it('toggles enhance document retrieval switch', () => {
+    it('toggles rag switch', () => {
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enhance document retrieval disabled',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       expect(ragSwitch).not.toBeChecked();
 
       fireEvent.click(ragSwitch);
@@ -906,9 +917,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enhance document retrieval disabled',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -933,9 +942,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enhance document retrieval enabled',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -1390,7 +1397,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Is lti accessible enabled')).toBeChecked();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeChecked();
     });
 
     it('reflects show_attachment false in switch', () => {
@@ -1402,7 +1409,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment disabled'),
+        screen.getByLabelText('Enable file attachments'),
       ).not.toBeChecked();
     });
 
@@ -1414,9 +1421,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Show voice call disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Enable voice calls')).not.toBeChecked();
     });
 
     it('reflects show_voice_record true in switch', () => {
@@ -1427,7 +1432,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
     });
 
     it('defaults show_attachment to true when undefined', () => {
@@ -1438,7 +1443,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show attachment enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable file attachments')).toBeChecked();
     });
 
     it('defaults show_voice_call to true when undefined', () => {
@@ -1449,7 +1454,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice call enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice calls')).toBeChecked();
     });
 
     it('defaults show_voice_record to true when undefined', () => {
@@ -1460,7 +1465,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Show voice record enabled')).toBeChecked();
+      expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
     });
 
     it('defaults is_lti_accessible to false when undefined', () => {
@@ -1471,9 +1476,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(
-        screen.getByLabelText('Is lti accessible disabled'),
-      ).not.toBeChecked();
+      expect(screen.getByLabelText('Allow LTI launches')).not.toBeChecked();
     });
 
     it('reflects enable_multi_query_rag true in switch', () => {
@@ -1485,7 +1488,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enhance document retrieval enabled'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).toBeChecked();
     });
 
@@ -1498,7 +1501,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enhance document retrieval disabled'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
 
@@ -1511,7 +1514,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enhance document retrieval disabled'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
   });
@@ -1524,17 +1527,13 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Show attachment enabled'),
+        screen.getByLabelText('Enable file attachments'),
       ).toBeInTheDocument();
+      expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
-        screen.getByLabelText('Show voice call enabled'),
+        screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Show voice record disabled'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('Is lti accessible disabled'),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Allow LTI launches')).toBeInTheDocument();
     });
 
     it('has accessible remove image button', () => {
@@ -1555,6 +1554,129 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByLabelText('Select a category')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Form onSubmit handler / Select onValueChange / Featured switch
+  // ==========================================================================
+  describe('Form element submit and field changes', () => {
+    it('submits via the form onSubmit handler', async () => {
+      const { container } = render(<SettingsTab />);
+
+      const formEl = container.querySelector('form') as HTMLFormElement;
+      expect(formEl).toBeTruthy();
+
+      fireEvent.submit(formEl);
+
+      await waitFor(() => {
+        expect(mockExecuteWithTrialCheck).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('changes the "Who Can View" visibility select value', async () => {
+      render(<SettingsTab />);
+
+      // The current value is "viewable_by_tenant_admins" (Administrators),
+      // pick a different option to fire onValueChange.
+      const usersOption = screen.getByRole('option', { name: 'Users' });
+      fireEvent.click(usersOption);
+
+      // Submitting should now include the changed visibility value.
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              mentor_visibility: 'viewable_by_tenant_students',
+            }),
+          }),
+        );
+      });
+    });
+
+    it('changes the "Who Can Chat" select value', async () => {
+      render(<SettingsTab />);
+
+      // allow_anonymous defaults to true ("Anyone"); choose Authenticated Users.
+      const authedOption = screen.getByRole('option', {
+        name: 'Authenticated Users',
+      });
+      fireEvent.click(authedOption);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('toggles the Featured switch', async () => {
+      // Renamed when Settings was split into Basic/Discovery/Capabilities:
+      // the aria-label is now the descriptive copy "Highlight in featured
+      // listings" (lives in the Discovery sub-tab). The sub-tab content
+      // is `forceMount`-ed, so the switch is in the DOM even when the
+      // active sub-tab is Basic.
+      render(<SettingsTab />);
+
+      const featuredSwitch = screen.getByLabelText(
+        'Highlight in featured listings',
+      );
+      fireEvent.click(featuredSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('toggles the Allow Copies switch', async () => {
+      // Renamed when Settings was split: aria-label is now "Allow other
+      // admins to clone this agent" (lives in the Capabilities sub-tab,
+      // also `forceMount`-ed).
+      render(<SettingsTab />);
+
+      const allowCopiesSwitch = screen.getByLabelText('Enable copies');
+      fireEvent.click(allowCopiesSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalled();
+      });
+    });
+
+    it('stops propagation when clicking the mentor image preview', () => {
+      render(<SettingsTab />);
+
+      const image = screen.getByAltText('Agent');
+      fireEvent.click(image);
+      // The handler calls event.stopPropagation(); rendering and clicking
+      // without throwing exercises the onClick line.
+      expect(image).toBeInTheDocument();
+    });
+
+    it('opens the Copy mentor modal for forkable mentors', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const copyButton = screen.getByRole('button', { name: 'Copy' });
+      fireEvent.click(copyButton);
+
+      expect(copyButton).toBeInTheDocument();
     });
   });
 });

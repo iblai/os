@@ -24,6 +24,13 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+// NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
+// (not statically) — the main web-utils entry pulls in React providers, which
+// would break this module when it's loaded in a React Server Component.
+import {
+  redirectToAuthSpa as sdkRedirectToAuthSpa,
+  handleTenantSwitch as sdkHandleTenantSwitch,
+} from '@iblai/iblai-js/web-utils/auth';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,7 +48,7 @@ export function hasNonExpiredAuthToken() {
       '################### [hasNonExpiredAuthToken] axd token is not defined',
       token,
     );
-    return true;
+    return false;
   }
 
   const tokenExpiry = window.localStorage.getItem(
@@ -82,126 +89,30 @@ export async function redirectToAuthSpa(
   platformKey?: string,
   logout?: boolean,
   saveRedirect = true,
+  explicitUserAction = false,
 ) {
-  console.log(
-    '[redirectToAuthSpa] starting redirect to auth spa',
+  return sdkRedirectToAuthSpa({
     redirectTo,
     platformKey,
     logout,
     saveRedirect,
-  );
-  // Skip if a tenant switch is already in progress
-  if (document.cookie.includes('ibl_tenant_switching')) {
-    console.log('[AuthProvider] Tenant switch in progress, skipping redirect');
-    return;
-  }
-
-  // Skip if a login occurred after the last logout (login takes precedence)
-  // but only if this app actually has a valid auth token — otherwise the login
-  // cookie may have been set by a different app on the same domain.
-  const loginTs = getCookieValue('ibl_login_timestamp');
-  const logoutTs = getCookieValue('ibl_logout_timestamp');
-  const hasValidToken = hasNonExpiredAuthToken();
-  console.log('[AuthProvider] Login/logout timestamp check', {
-    loginTs,
-    logoutTs,
-    hasValidToken,
-    loginAhead:
-      loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
+    forceRedirect: explicitUserAction,
+    authUrl: config.authUrl(),
+    appName: config.iblPlatform(),
+    queryParams: {
+      app: QUERY_PARAMS.APP,
+      redirectTo: QUERY_PARAMS.REDIRECT_TO,
+      tenant: QUERY_PARAMS.TENANT,
+    },
+    redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
+    hasNonExpiredAuthToken,
+    isOffline: () =>
+      isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode()),
+    preserveTokenKey: 'edx_jwt_token',
+    authRedirectProxy: '/api/auth-redirect',
+    isNativeApp: () => isTauriApp(),
+    scheme: 'iblai-mentor',
   });
-  if (
-    hasValidToken &&
-    loginTs &&
-    logoutTs &&
-    Number(loginTs) > Number(logoutTs)
-  ) {
-    console.log(
-      '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
-      { loginTs, logoutTs },
-    );
-    return;
-  }
-  // Don't redirect to auth when in Tauri offline mode
-  // Check origin first (most reliable) or Tauri offline flags
-  if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
-    console.log('[redirectToAuthSpa] Skipping redirect - Tauri offline mode', {
-      isOfflineServerOrigin: isOfflineServerOrigin(),
-      isTauriApp: isTauriApp(),
-      isTauriOfflineMode: isTauriOfflineMode(),
-    });
-    return;
-  }
-
-  // Save JWT token before clearing localStorage (needed for Tauri mode)
-  const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-  console.log('[redirectToAuthSpa] clearing local storage');
-  localStorage.clear();
-
-  if (logout || isInIframe()) {
-    // Delete authentication cookies for cross-SPA synchronization
-    const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_current_tenant', currentDomain);
-    deleteCookieOnAllDomains('ibl_user_data', currentDomain);
-    deleteCookieOnAllDomains('ibl_tenant', currentDomain);
-
-    // Set logout timestamp cookie to trigger logout on other SPAs
-    if (!isInIframe()) {
-      setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
-    }
-  }
-
-  if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
-    sendMessageToParentWebsite({ authExpired: true });
-    return;
-  }
-
-  const redirectPath =
-    redirectTo ?? `${window.location.pathname}${window.location.search}`;
-
-  // Never save sso-login routes as redirect paths
-  if (
-    !redirectPath.startsWith('/sso-login') &&
-    !redirectPath.startsWith('/sso-login-complete') &&
-    saveRedirect
-  ) {
-    window.localStorage.setItem(LOCAL_STORAGE_KEYS.REDIRECT_TO, redirectPath);
-  }
-
-  const platform = platformKey ?? getPlatformKey(redirectPath);
-
-  const redirectToUrl = `${window.location.origin}`;
-
-  let authRedirectUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}`;
-
-  authRedirectUrl += `&${QUERY_PARAMS.REDIRECT_TO}=${redirectToUrl}`;
-
-  if (platform) {
-    authRedirectUrl += `&${QUERY_PARAMS.TENANT}=${platform}`;
-  }
-  if (logout) {
-    authRedirectUrl += '&logout=1';
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (isTauriApp()) {
-    // On Tauri (mobile), pass the JWT token as a query param so the auth app can use it
-    if (edxJwtToken) {
-      authRedirectUrl += `&token=${encodeURIComponent(edxJwtToken)}`;
-      console.log('[redirectToAuthSpa] Added edx_jwt_token to auth URL');
-    }
-    // Navigate the main webview directly to the auth URL
-    // This keeps the user within the app
-    console.log(
-      '[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:',
-      authRedirectUrl,
-    );
-    window.location.href = authRedirectUrl;
-  } else {
-    // window.location.href = authRedirectUrl;
-    window.location.href = `/api/auth-redirect?to=${encodeURIComponent(authRedirectUrl)}`;
-    // window.open(authRedirectUrl, "_self");
-  }
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
@@ -222,6 +133,7 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
 export function redirectToAuthSpaJoinTenant(
   tenantKey?: string,
   redirectUrl?: string,
+  explicitUserAction = false,
 ) {
   const resolvedTenant =
     tenantKey || getPlatformKey(window.location.pathname) || '';
@@ -231,7 +143,13 @@ export function redirectToAuthSpaJoinTenant(
       tenantKey,
       redirectUrl,
     });
-    redirectToAuthSpa(redirectUrl);
+    redirectToAuthSpa(
+      redirectUrl,
+      undefined,
+      undefined,
+      true,
+      explicitUserAction,
+    );
     return;
   }
 
@@ -679,80 +597,29 @@ export function canSwitchProvider(providers: Provider[], name: string) {
   return !!provider?.chat_models && provider.chat_models.length > 0;
 }
 
+// Cross-tab tenant switching now lives in the SDK
+// (@iblai/iblai-js/web-utils). This thin wrapper injects mentorai's config;
+// all coordination (TTL lock + BroadcastChannel) is handled in the SDK.
 export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
   broadcastTenantSwitching = true,
-) => {
-  console.log('############### HANDLE TENANT SWITCHING ###############', {
-    broadcastTenantSwitching,
+): Promise<void> => {
+  // Lazy import: the main web-utils entry pulls in React providers, so importing
+  // it at module top-level would break this file inside a Server Component.
+  const { clearCurrentTenantCookie } = await import(
+    '@iblai/iblai-js/web-utils'
+  );
+  return sdkHandleTenantSwitch(tenant, {
+    authUrl: config.authUrl(),
+    redirectPathStorageKey: REDIRECT_PATH_LOCAL_STORAGE_KEY,
+    queryParams: { redirectTo: REDIRECT_PATH_LOCAL_STORAGE_KEY },
+    clearCurrentTenantCookie,
+    saveRedirect,
+    redirectUrl,
+    broadcast: broadcastTenantSwitching,
   });
-  // Signal to the app that a tenant switch is in progress
-  if (
-    document.cookie.includes('ibl_tenant_switching') &&
-    broadcastTenantSwitching
-  ) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
-    );
-    return;
-  }
-  if (tenant === localStorage.getItem('tenant')) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
-    );
-    return;
-  }
-
-  if (broadcastTenantSwitching) {
-    setCookieForAuth('ibl_tenant_switching', 'true');
-  }
-  // Notify other tabs/windows that a tenant switch is starting
-  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
-    const channel = new BroadcastChannel('ibl-tenant-switch');
-    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
-    channel.close();
-  }
-  if (broadcastTenantSwitching) {
-    // Clear current tenant cookie before switching
-    const { clearCurrentTenantCookie } = await import(
-      '@iblai/iblai-js/web-utils'
-    );
-    clearCurrentTenantCookie();
-  }
-  // Preserve the current path before clearing localStorage
-  const currentPath = `${window.location.pathname}${window.location.search}`;
-  // Get JWT token before clearing localStorage
-  const jwtToken = localStorage.getItem('edx_jwt_token');
-  console.log('[handleTenantSwitch] clearing local storage', {
-    tenant,
-    currentTenant: localStorage.getItem('tenant'),
-  });
-  if (broadcastTenantSwitching) {
-    console.log('[handleTenantSwitch] clearing local storage');
-    localStorage.clear();
-  }
-  const url = `${config.authUrl()}/login/complete`;
-  const params: Record<string, string> = {
-    tenant,
-    [REDIRECT_PATH_LOCAL_STORAGE_KEY]: redirectUrl ?? window.location.origin,
-  };
-
-  // Add token if it exists
-  if (jwtToken) {
-    params.token = jwtToken;
-  }
-
-  const param = new URLSearchParams(params).toString();
-
-  localStorage.setItem('tenant', tenant);
-  if (saveRedirect) {
-    // Restore the redirect path after setting tenant
-    localStorage.setItem(REDIRECT_PATH_LOCAL_STORAGE_KEY, currentPath);
-  }
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  window.location.href = `${url}?${param}`;
 };
 
 export const canSwitchLLm = (llm: {
@@ -843,7 +710,15 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) {
+      targetOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // keep '*' if referrer is unavailable or unparseable
+  }
+  window.parent.postMessage(payload, targetOrigin);
 }
 
 export function isLoggedIn() {
@@ -1559,6 +1434,18 @@ export function getUserOS() {
     return 'Android';
   }
   return 'Unknown OS';
+}
+
+export function isMobileOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // iPadOS 13+ presents a desktop Safari UA; detect via a touch-capable Mac
+  const isIPadOS =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return (
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    isIPadOS
+  );
 }
 
 /**

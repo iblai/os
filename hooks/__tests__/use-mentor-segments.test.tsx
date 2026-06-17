@@ -88,10 +88,18 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 // Mocked so EDIT_MENTOR_TAB_COMPONENTS can import SandboxTab/SkillsTab without
 // pulling in @iblai/web-utils -> axios, which fails to resolve in tests.
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
   AgentSkills: () => null,
   AgentConfigPrompts: () => null,
+}));
+
+// Same reasoning as above for the Next-only entrypoint that ships the
+// AgentPrivacyTab component used by PrivacyTab.
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  AgentPrivacyTab: () => null,
+  AgentTasksTab: () => null,
+  AgentSettingsProvider: () => null,
 }));
 
 // ----------------------------------------------------------------------------
@@ -129,10 +137,11 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 16 mentor segments unfiltered', () => {
+  it('returns the canonical 20 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(16);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
+    expect(MENTOR_SEGMENTS).toHaveLength(20);
   });
 
   it('places the Sandbox segment right after Settings', () => {

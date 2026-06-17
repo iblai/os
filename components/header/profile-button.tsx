@@ -68,7 +68,7 @@ export function ProfileButton({
               <span
                 className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
               >
-                Learner
+                User
               </span>
               <Switch
                 checked={isInstructor}
@@ -78,7 +78,7 @@ export function ProfileButton({
               <span
                 className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
               >
-                Instructor
+                Admin
               </span>
             </div>
           </div>

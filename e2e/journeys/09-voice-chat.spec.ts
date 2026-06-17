@@ -85,7 +85,7 @@ test.describe('Journey 9: Voice Chat', () => {
       await navigateToMentorApp(page);
     });
 
-    test('admin goes to mentor settings and hides the voice call button by toggling off Show Voice Call', async ({
+    test('admin goes to mentor settings and hides the voice call button by toggling off Voice Calls', async ({
       page,
       editMentorPage,
       chatPage,
@@ -94,8 +94,11 @@ test.describe('Journey 9: Voice Chat', () => {
       test.skip(!isAdmin, 'Requires admin access');
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
+      // Voice calls toggle moved to the Capabilities sub-tab when Settings
+      // was split into Basic / Discovery / Capabilities — switch first.
+      await editMentorPage.settings.selectSubTab('Capabilities');
       const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /enable voice calls/i,
       });
       const visible = await showVoiceSwitch
         .isVisible({ timeout: 5_000 })
@@ -127,8 +130,9 @@ test.describe('Journey 9: Voice Chat', () => {
       // Restore: toggle back ON, save, close
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
+      await editMentorPage.settings.selectSubTab('Capabilities');
       const switchAgain = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /enable voice calls/i,
       });
       if ((await switchAgain.getAttribute('aria-checked')) === 'false') {
         await switchAgain.click();
@@ -154,8 +158,11 @@ test.describe('Journey 9: Voice Chat', () => {
       test.skip(!isAdmin, 'Requires admin access');
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
+      // Voice calls toggle moved to the Capabilities sub-tab when Settings
+      // was split into Basic / Discovery / Capabilities — switch first.
+      await editMentorPage.settings.selectSubTab('Capabilities');
       const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
+        name: /enable voice calls/i,
       });
       const visible = await showVoiceSwitch
         .isVisible({ timeout: 5_000 })

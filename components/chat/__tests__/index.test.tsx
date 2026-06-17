@@ -121,7 +121,7 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     },
     selectToken: () => null,
     selectTokenEnabled: () => false,
-    selectShowingSharedChat: () => false,
+    selectShowingSharedChat: vi.fn(() => false),
     selectActiveTab: () => 'default',
     useMentorTools: vi.fn(() => ({
       enableWebBrowsing: true,
@@ -203,6 +203,7 @@ vi.mock('@/lib/config', () => ({
     baseWsUrl: () => 'wss://test.com',
     supportEmail: () => 'support@test.com',
     iblTemplateMentor: () => 'default-agent',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
   },
 }));
 
@@ -1081,12 +1082,248 @@ describe('Chat', () => {
   });
 
   describe('event listeners', () => {
+    // Helper: return all handlers registered via eventBus.default.on for a given event
+    const getRegisteredHandlers = (
+      onMock: ReturnType<typeof vi.fn>,
+      event: string,
+    ) =>
+      onMock.mock.calls
+        .filter((call) => call[0] === event)
+        .map((call) => call[1] as (...args: unknown[]) => void);
+
     it('should set up event listeners on mount', async () => {
       const eventBus = await import('@/lib/eventBus');
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       expect(eventBus.default.on).toHaveBeenCalled();
+    });
+
+    // Regression for issue #1002: clicking "New Chat" emitted RemoteEvents.newChat
+    // once but two effects registered the handler, so startNewChat() (and thus the
+    // create-session POST) ran twice. The handler must be registered exactly once.
+    it('registers exactly ONE newChat listener (issue #1002 double-registration)', async () => {
+      const eventBus = await import('@/lib/eventBus');
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const newChatHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'newChat',
+      );
+      expect(newChatHandlers).toHaveLength(1);
+    });
+
+    it('registers exactly ONE stopChatGenerating listener', async () => {
+      const eventBus = await import('@/lib/eventBus');
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const stopHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'stopChatGenerating',
+      );
+      expect(stopHandlers).toHaveLength(1);
+    });
+
+    it('emitting newChat once calls startNewChat EXACTLY once (core #1002 regression)', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const mockStartNewChat = vi.fn();
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: mockStartNewChat,
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const newChatHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'newChat',
+      );
+      expect(newChatHandlers).toHaveLength(1);
+
+      // Simulate the New Chat button emitting the event once
+      act(() => {
+        newChatHandlers[0]();
+      });
+
+      expect(mockStartNewChat).toHaveBeenCalledTimes(1);
+    });
+
+    it('emitting stopChatGenerating once calls stopGenerating exactly once', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const mockStopGenerating = vi.fn();
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: mockStopGenerating,
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const stopHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'stopChatGenerating',
+      );
+      expect(stopHandlers).toHaveLength(1);
+
+      act(() => {
+        stopHandlers[0]();
+      });
+
+      expect(mockStopGenerating).toHaveBeenCalledTimes(1);
+    });
+
+    it('newChat handler resets showingSharedChat when it is true', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const webUtils = await import('@iblai/iblai-js/web-utils');
+      (webUtils.selectShowingSharedChat as any).mockReturnValue(true);
+
+      try {
+        renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+        const newChatHandlers = getRegisteredHandlers(
+          eventBus.default.on as ReturnType<typeof vi.fn>,
+          'newChat',
+        );
+        expect(newChatHandlers).toHaveLength(1);
+
+        act(() => {
+          newChatHandlers[0]();
+        });
+
+        expect(webUtils.chatActions.setShowingSharedChat).toHaveBeenCalledWith(
+          false,
+        );
+      } finally {
+        (webUtils.selectShowingSharedChat as any).mockReturnValue(false);
+      }
+    });
+
+    it('newChat handler does NOT reset showingSharedChat when it is false', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const webUtils = await import('@iblai/iblai-js/web-utils');
+      (webUtils.selectShowingSharedChat as any).mockReturnValue(false);
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const newChatHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'newChat',
+      );
+      act(() => {
+        newChatHandlers[0]();
+      });
+
+      expect(webUtils.chatActions.setShowingSharedChat).not.toHaveBeenCalled();
+    });
+
+    it('newChat handler closes the canvas when it is open', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // Open the canvas so isCanvasOpen becomes true; the effect re-registers
+      // the handler with the latest isCanvasOpen value.
+      act(() => {
+        fireEvent.click(screen.getByTestId('open-canvas-btn'));
+      });
+
+      // Confirm the canvas opened before asserting it closes.
+      await waitFor(() => {
+        expect(screen.getByTestId('canvas-view')).toBeInTheDocument();
+      });
+
+      const newChatHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'newChat',
+      );
+      // Invoke the most recently registered handler (post canvas-open).
+      act(() => {
+        newChatHandlers[newChatHandlers.length - 1]();
+      });
+
+      // Canvas close resets the canvas; the canvas view should no longer render.
+      await waitFor(() => {
+        expect(screen.queryByTestId('canvas-view')).not.toBeInTheDocument();
+      });
+    });
+
+    it('unmount calls eventBus.off for newChat and stopChatGenerating (no leak)', async () => {
+      const eventBus = await import('@/lib/eventBus');
+
+      const { unmount } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      unmount();
+
+      const offMock = eventBus.default.off as ReturnType<typeof vi.fn>;
+      const offEvents = offMock.mock.calls.map((call) => call[0]);
+      expect(offEvents).toContain('newChat');
+      expect(offEvents).toContain('stopChatGenerating');
     });
   });
 
@@ -19046,6 +19283,75 @@ describe('Chat', () => {
       });
 
       mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    });
+  });
+
+  describe('initialPrompt forwarding', () => {
+    // Build a mock searchParams object that returns a value for the `prompt`
+    // key (and null for everything else, so the rest of the component
+    // behaves normally).
+    const mockSearchParamsWith = (params: Record<string, string | null>) => ({
+      get: vi.fn((param: string) => (param in params ? params[param] : null)),
+    });
+
+    const getInitialPromptArg = async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const calls = (useAdvancedChat as any).mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      return calls[calls.length - 1][0].initialPrompt;
+    };
+
+    it('forwards a non-empty prompt to useAdvancedChat', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: 'hello there' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hello there');
+    });
+
+    it('forwards undefined when prompt is the empty string', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('forwards undefined when prompt is whitespace-only', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '   ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
+    });
+
+    it('trims surrounding whitespace from the prompt', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: '  hi  ' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hi');
+    });
+
+    it('forwards undefined when no prompt param is present', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue(mockSearchParamsWith({}));
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBeUndefined();
     });
   });
 });

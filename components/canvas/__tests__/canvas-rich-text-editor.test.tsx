@@ -54,9 +54,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock @/lib/utils
 vi.mock('@/lib/utils', () => ({
-  htmlToMarkdown: vi.fn((html: string) =>
-    (html || '').replace(/<[^>]*>/g, '').trim(),
-  ),
+  htmlToMarkdown: vi.fn((html: string) => {
+    let text = html || '';
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return text.trim();
+  }),
   markdownToHtml: vi.fn((md: string) => `<p>${md || ''}</p>`),
 }));
 
@@ -1866,8 +1868,11 @@ describe('isHtml - Additional Cases', () => {
 });
 
 describe('getInitialEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with html format', () => {
@@ -1914,8 +1919,11 @@ describe('getInitialEditorContent - Additional Cases', () => {
 });
 
 describe('getNextEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with markdown format', () => {
@@ -2324,8 +2332,11 @@ describe('markdownContentMatches', () => {
 // ==========================================================================
 
 describe('getExportValue', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
 
   it('returns html directly when exportFormat is html', () => {
     expect(getExportValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(
@@ -2584,8 +2595,11 @@ describe('shouldProceedWithUpdate', () => {
 // ==========================================================================
 
 describe('getOnChangeValue', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
 
   it('returns html directly for html format', () => {
     expect(getOnChangeValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(

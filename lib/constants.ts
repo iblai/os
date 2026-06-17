@@ -46,6 +46,8 @@ export const MODALS = {
       mcp: 'mcp',
       tools: 'tools',
       safety: 'safety',
+      privacy: 'privacy',
+      tasks: 'tasks',
       disclaimer: 'disclaimer',
       access: 'access',
       memory: 'memory',
@@ -60,6 +62,8 @@ export const MODALS = {
       sandbox: 'sandbox',
       skills: 'skills',
       audit_log: 'audit_log',
+      voice: 'voice',
+      screenshare: 'screenshare',
     },
   },
   ADD_PROMPT: { name: 'add_prompt' },
@@ -68,9 +72,9 @@ export const MODALS = {
 };
 
 export const DEFAULT_PROMPTS = {
-  DEFAULT_SYSTEM_PROMPT: `You are a helpful instructor, ready to answer the student's questions. Answer quickly and concisely.  Offer to go in depth or explain with an example where necessary. Will tip you $200 if the student understands what you say. 
+  DEFAULT_SYSTEM_PROMPT: `You are a helpful instructor, ready to answer the user's questions. Answer quickly and concisely.  Offer to go in depth or explain with an example where necessary. Will tip you $200 if the user understands what you say.
 
-Given this information, help students understand  by providing explanations, examples, analogies. 
+Given this information, help users understand  by providing explanations, examples, analogies.
 Given the data you will receive from the vector store extracted parts of a long document and a question, create a final answer. Do not tell the user how you are going to answer the question. If and ONLY if the current message from the user is  a greeting, greet back and ask them how you may help them. DO NOT needlessly keep greeting or repeating messages to the user. If the there is no data from the document or it is blank, or no chat history, do not tell the user that the document is blank and also do not tell them that you have not asked any questions  just answer normally with your own knowledge
 
 IMPORTANT: You must ONLY reply to the current message from the user.
@@ -101,7 +105,7 @@ export const MENTOR_VISIBILITY = [
     value: MENTOR_VISIBILITY_VALUES.ADMINISTRATORS,
   },
   {
-    label: 'Students',
+    label: 'Users',
     value: MENTOR_VISIBILITY_VALUES.STUDENTS,
   },
   {

@@ -12,6 +12,7 @@ import { EmbedNavBar } from '../embed-nav-bar';
 // ============================================================================
 
 let mockIsPreviewMode = false;
+let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
@@ -26,6 +27,10 @@ const mockEmit = vi.fn();
 
 vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
+}));
+
+vi.mock('@/hooks/use-is-iframed', () => ({
+  useIsIframed: () => mockIsIframed,
 }));
 
 vi.mock('@/hooks/use-chat-mode', () => ({
@@ -111,6 +116,7 @@ describe('EmbedNavBar', () => {
   beforeEach(() => {
     cleanup();
     mockIsPreviewMode = false;
+    mockIsIframed = true;
     mockChatMode = 'default';
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
@@ -151,6 +157,12 @@ describe('EmbedNavBar', () => {
     it('renders close chat button', () => {
       renderEmbedNavBar();
       expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
+    });
+
+    it('does not render close chat button when not iframed', () => {
+      mockIsIframed = false;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
     });
 
     it('renders the avatar container with mentor image ring class', () => {

@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
+// Hoisted mocks
+const mocked = vi.hoisted(() => ({
+  openPicker: vi.fn(),
+  // Mutable holder so individual tests can control the auth response returned
+  // by the GoogleDrivePicker hook before the component renders.
+  state: { authRes: null as unknown },
+}));
+
 // Mock sonner
 vi.mock('sonner', () => ({
   toast: {
@@ -24,9 +32,8 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 }));
 
 // Mock google-drive-picker
-const mockOpenPicker = vi.fn();
 vi.mock('google-drive-picker', () => ({
-  default: () => [mockOpenPicker, null],
+  default: () => [mocked.openPicker, mocked.state.authRes],
 }));
 
 // Mock useUsername
@@ -36,6 +43,7 @@ vi.mock('../use-user', () => ({
 }));
 
 // Mock extractErrorMessage
+import { toast } from 'sonner';
 vi.mock(
   '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils',
   () => ({
@@ -48,6 +56,15 @@ vi.mock(
 
 import useGoogleDrivePicker from '../use-google-drive-picker-v3';
 
+// Helper: grab the picker config passed to the most recent openPicker() call.
+const lastPickerConfig = () =>
+  mocked.openPicker.mock.calls.at(-1)?.[0] as {
+    callbackFunction: (data: {
+      action: string;
+      docs?: Array<{ url: string; type: string }>;
+    }) => void;
+  };
+
 describe('useGoogleDrivePicker v3', () => {
   let mockGapiLoad: ReturnType<typeof vi.fn>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,6 +72,7 @@ describe('useGoogleDrivePicker v3', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocked.state.authRes = null;
     mockUseParams.mockReturnValue({
       tenantKey: 'tenant-1',
       mentorId: 'mentor-1',
@@ -99,6 +117,29 @@ describe('useGoogleDrivePicker v3', () => {
     appendChildSpy.mockRestore();
     delete (window as unknown as { gapi?: unknown }).gapi;
   });
+
+  // Renders the hook and resolves once credentials have been loaded.
+  const renderLoaded = async () => {
+    const view = renderHook(() => useGoogleDrivePicker());
+    await waitFor(() => {
+      expect(view.result.current.credentials.client_id).toBe('test-client-id');
+    });
+    return view;
+  };
+
+  // Fires the appended script's onload handler so the picker reports loaded.
+  const triggerScriptOnload = () => {
+    const scriptCall = appendChildSpy.mock.calls.find(
+      (call: [Node]) =>
+        call[0] instanceof HTMLScriptElement &&
+        (call[0] as HTMLScriptElement).src ===
+          'https://apis.google.com/js/api.js',
+    );
+    const scriptElement = scriptCall?.[0] as HTMLScriptElement | undefined;
+    act(() => {
+      scriptElement?.onload?.(new Event('load'));
+    });
+  };
 
   describe('initialization', () => {
     it('should return handlePickerOpen function', () => {
@@ -155,6 +196,20 @@ describe('useGoogleDrivePicker v3', () => {
 
       expect(result.current.credentials.client_id).toBe('');
     });
+
+    it('should not set credentials when response is undefined', async () => {
+      mockGetCredentials.mockReturnValue({
+        unwrap: () => Promise.resolve(undefined),
+      });
+
+      const { result } = renderHook(() => useGoogleDrivePicker());
+
+      await waitFor(() => {
+        expect(mockGetCredentials).toHaveBeenCalled();
+      });
+
+      expect(result.current.credentials.client_id).toBe('');
+    });
   });
 
   describe('Google API script loading', () => {
@@ -166,11 +221,20 @@ describe('useGoogleDrivePicker v3', () => {
       });
 
       const scriptCall = appendChildSpy.mock.calls.find(
-        (call) =>
+        (call: [Node]) =>
           call[0] instanceof HTMLScriptElement &&
-          call[0].src === 'https://apis.google.com/js/api.js',
+          (call[0] as HTMLScriptElement).src ===
+            'https://apis.google.com/js/api.js',
       );
       expect(scriptCall).toBeDefined();
+    });
+
+    it('should set isPickerLoaded via gapi load when script onload fires', async () => {
+      await renderLoaded();
+
+      triggerScriptOnload();
+
+      expect(mockGapiLoad).toHaveBeenCalledWith('auth', expect.any(Function));
     });
   });
 
@@ -200,70 +264,143 @@ describe('useGoogleDrivePicker v3', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should call openPicker when credentials are loaded', async () => {
-      const { result } = renderHook(() => useGoogleDrivePicker());
+    it('should load the api script then open the picker when not yet loaded', async () => {
+      const { result } = await renderLoaded();
 
-      await waitFor(() => {
-        expect(result.current.credentials.client_id).toBe('test-client-id');
+      // Picker not loaded yet (mount script onload never fired).
+      await act(async () => {
+        await result.current.handlePickerOpen();
       });
 
-      // Simulate picker being loaded
-      const scriptCall = appendChildSpy.mock.calls.find(
-        (call) =>
-          call[0] instanceof HTMLScriptElement &&
-          call[0].src === 'https://apis.google.com/js/api.js',
-      );
-      if (scriptCall) {
-        const scriptElement = scriptCall[0] as HTMLScriptElement;
-        // Trigger the onload handler
+      // handlePickerOpen appended its own script; fire its onload to trigger
+      // gapi.load -> setIsPickerLoaded(true) -> openPickerInternal().
+      const scriptCall = appendChildSpy.mock.calls
+        .reverse()
+        .find(
+          (call: [Node]) =>
+            call[0] instanceof HTMLScriptElement &&
+            (call[0] as HTMLScriptElement).src ===
+              'https://apis.google.com/js/api.js',
+        );
+      const scriptElement = scriptCall?.[0] as HTMLScriptElement;
+      act(() => {
         scriptElement.onload?.(new Event('load'));
-      }
+      });
+
+      expect(mockOpenPickerCalled()).toBe(true);
+    });
+
+    it('should open the picker directly when already loaded', async () => {
+      const { result } = await renderLoaded();
+
+      triggerScriptOnload();
 
       await act(async () => {
         await result.current.handlePickerOpen();
       });
 
-      // Either openPicker is called directly, or a new script is appended
-      expect(
-        mockOpenPicker.mock.calls.length > 0 ||
-          appendChildSpy.mock.calls.length > 1,
-      ).toBe(true);
+      expect(mockOpenPickerCalled()).toBe(true);
     });
   });
 
-  describe('file selection handling', () => {
-    it('should handle empty driveFiles array', async () => {
-      const { result } = renderHook(() => useGoogleDrivePicker());
+  describe('picker callback and file selection', () => {
+    it('should submit a training document when files are picked', async () => {
+      mocked.state.authRes = {
+        access_token: 'token-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      };
 
-      await waitFor(() => {
-        expect(result.current.credentials.client_id).toBe('test-client-id');
+      const { result } = await renderLoaded();
+      triggerScriptOnload();
+
+      await act(async () => {
+        await result.current.handlePickerOpen();
       });
 
-      // No error should occur with empty files
+      // Invoke the picker callback with a picked document.
+      act(() => {
+        lastPickerConfig().callbackFunction({
+          action: 'picked',
+          docs: [{ url: 'https://drive/file-1', type: 'document' }],
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockAddTrainingDocument).toHaveBeenCalled();
+      });
+
+      const payload = mockAddTrainingDocument.mock.calls[0][0];
+      expect(payload.org).toBe('tenant-1');
+      expect(payload.formData.pathway).toBe('mentor-1');
+      expect(payload.formData.url).toBe('https://drive/file-1');
+      expect(payload.formData.google_drive_auth_data.auth.token).toBe(
+        'token-123',
+      );
+    });
+
+    it('should ignore callback actions that are not picked', async () => {
+      mocked.state.authRes = { access_token: 'token-123' };
+
+      const { result } = await renderLoaded();
+      triggerScriptOnload();
+
+      await act(async () => {
+        await result.current.handlePickerOpen();
+      });
+
+      act(() => {
+        lastPickerConfig().callbackFunction({ action: 'cancel' });
+      });
+
       expect(mockAddTrainingDocument).not.toHaveBeenCalled();
     });
-  });
 
-  describe('training document submission', () => {
-    it('should show error toast when training document fails', async () => {
+    it('should show an error toast when the training document fails', async () => {
       const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
+      mocked.state.authRes = {
+        access_token: 'token-123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      };
       mockAddTrainingDocument.mockReturnValue({
         unwrap: () => Promise.reject({ message: 'API Error' }),
       });
 
-      renderHook(() => useGoogleDrivePicker());
+      const { result } = await renderLoaded();
+      triggerScriptOnload();
 
-      await waitFor(() => {
-        expect(mockGetCredentials).toHaveBeenCalled();
+      await act(async () => {
+        await result.current.handlePickerOpen();
       });
 
-      // Training document is only called when files are selected
-      // Testing the error handling path requires triggering the picker callback
-      expect(mockAddTrainingDocument).not.toHaveBeenCalled();
+      act(() => {
+        lastPickerConfig().callbackFunction({
+          action: 'picked',
+          docs: [{ url: 'https://drive/file-1', type: 'document' }],
+        });
+      });
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('API Error');
+      });
 
       consoleSpy.mockRestore();
     });
   });
+
+  describe('file selection handling', () => {
+    it('should not submit when no files are selected', async () => {
+      await renderLoaded();
+
+      expect(mockAddTrainingDocument).not.toHaveBeenCalled();
+    });
+  });
 });
+
+// Convenience matcher kept outside the suite to read cleanly above.
+function mockOpenPickerCalled() {
+  return mocked.openPicker.mock.calls.length > 0;
+}
