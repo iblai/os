@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useParams } from 'next/navigation';
 
 import { Search, Plus } from 'lucide-react';
+
+import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 
 import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -13,6 +16,10 @@ import { useDatasetsWithPagination } from '@/hooks/use-datasets';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { AddResourceModal } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
 import { Spinner } from '@/components/spinner';
+import { WithPermissions } from '@/hoc/withPermissions';
+import { useUsername } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { TenantKeyMentorIdParams } from '@/lib/types';
 import type { Dataset } from './dataset-item';
 
 interface DatasetsTabProps {
@@ -31,6 +38,21 @@ export function DatasetsTab({
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
+
+  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const username = useUsername();
+  const { getMentorId } = useNavigate();
+  const activeMentorId = getMentorId() || mentorId;
+
+  const { data: mentorSettings } = useGetMentorSettingsQuery(
+    {
+      mentor: activeMentorId,
+      org: tenantKey,
+      // @ts-ignore
+      userId: username ?? '',
+    },
+    { skip: !username || !activeMentorId || !tenantKey },
+  );
 
   const {
     datasets,
@@ -76,16 +98,24 @@ export function DatasetsTab({
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
             </div>
-            <Button
-              onClick={() =>
-                executeWithTrialCheck(() => openAddResourceModal())
-              }
-              size="sm"
-              className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+            <WithPermissions
+              rbacResource={`/mentors/${mentorSettings?.mentor_id}/documents/#create`}
             >
-              <Plus className="h-4 w-4" />
-              Add Resource
-            </Button>
+              {({ hasPermission }) =>
+                hasPermission ? (
+                  <Button
+                    onClick={() =>
+                      executeWithTrialCheck(() => openAddResourceModal())
+                    }
+                    size="sm"
+                    className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Resource
+                  </Button>
+                ) : null
+              }
+            </WithPermissions>
           </div>
           <div className="overflow-hidden rounded-md border">
             <div className="overflow-x-auto sm:mx-0">
