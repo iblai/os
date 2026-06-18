@@ -4,19 +4,19 @@
 
 ### Bug Fixes
 
-* **chat:** keep keyboard focus on the message textarea while chatting ([b720bbe](https://github.com/iblai/os/commit/b720bbec495d1ee8151faf1d17cd258c7123a677))
+- **chat:** keep keyboard focus on the message textarea while chatting ([b720bbe](https://github.com/iblai/os/commit/b720bbec495d1ee8151faf1d17cd258c7123a677))
 
 ### Refactors
 
-* **chat:** stop moving focus to stop/copy buttons during streaming ([3361bef](https://github.com/iblai/os/commit/3361befa607a93744b506d47c199f404bc79cb1a)), closes [WCAG-#576](https://github.com/iblai/WCAG-/issues/576)
+- **chat:** stop moving focus to stop/copy buttons during streaming ([3361bef](https://github.com/iblai/os/commit/3361befa607a93744b506d47c199f404bc79cb1a)), closes [WCAG-#576](https://github.com/iblai/WCAG-/issues/576)
 
 ### Chores
 
-* **ci:** normalize quote style in reusable workflows ([5c3fc32](https://github.com/iblai/os/commit/5c3fc32916b1a193e11fa11b8023514882b94d55))
+- **ci:** normalize quote style in reusable workflows ([5c3fc32](https://github.com/iblai/os/commit/5c3fc32916b1a193e11fa11b8023514882b94d55))
 
 ### Tests
 
-* **e2e:** cover textarea focus retention in journey 29 ([#1904](https://github.com/iblai/os/issues/1904)) ([f5009a3](https://github.com/iblai/os/commit/f5009a34088d3ec3b138cda0559fc741ad73141c)), closes [WCAG-#576](https://github.com/iblai/WCAG-/issues/576) [#576](https://github.com/iblai/os/issues/576)
+- **e2e:** cover textarea focus retention in journey 29 ([#1904](https://github.com/iblai/os/issues/1904)) ([f5009a3](https://github.com/iblai/os/commit/f5009a34088d3ec3b138cda0559fc741ad73141c)), closes [WCAG-#576](https://github.com/iblai/WCAG-/issues/576) [#576](https://github.com/iblai/os/issues/576)
 
 ## [0.75.15](https://github.com/iblai/os/compare/v0.75.14...v0.75.15) (2026-06-18)
 
