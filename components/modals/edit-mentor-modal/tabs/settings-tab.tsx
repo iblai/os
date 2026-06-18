@@ -104,16 +104,9 @@ interface SettingsForm {
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
-  /**
-   * Privacy router toggle. Gates the standalone Privacy tab (the dedicated
-   * PII-rules configuration UI) — when off, the Privacy tab is hidden.
-   */
+  /** Gates the standalone Privacy tab (PII-rules UI) — hidden when off. */
   enable_privacy_router: boolean;
-  /**
-   * Mentor-level "private mode" kill switch. When on, every conversation
-   * with this mentor is treated as private — no chat history is stored
-   * regardless of the user / tenant / session tier. Maps to `mentor.disable_chathistory`.
-   */
+  /** Mentor-level private-mode kill switch → `mentor.disable_chathistory`. */
   disable_chathistory: boolean;
   /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
   use_function_calling_for_rag: boolean;
@@ -150,12 +143,7 @@ export function SettingsTab() {
     useEditMentorMutation();
   const dispatch = useDispatch();
 
-  // Tenant-level "Allow users to control chat privacy" gate. When the
-  // tenant admin disables this in Account Settings, the agent-level
-  // "Enable private mode" kill switch becomes meaningless — every chat
-  // is forced to the tenant default regardless of what an agent owner
-  // toggles here. Hide the row entirely so admins aren't presented with
-  // a control that has no effect.
+  // Tenant gate for the agent-level "Enable private mode" row — hidden when off.
   const { data: tenantChatPrivacyConfig } = useGetTenantChatPrivacyConfigQuery(
     // @ts-ignore - userId is not part of the public query args type
     { org: tenantKey ?? '', userId: username ?? '' },
@@ -174,11 +162,7 @@ export function SettingsTab() {
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
-  // CallConfiguration is the source of truth for the two voice-call toggles
-  // surfaced in Settings (`use_function_calling_for_rag` and `enable_video`).
-  // The backend embeds the active config inside the mentor-settings response,
-  // but we still hit the list endpoint as a fallback for older API versions
-  // that don't inline it. Skip the network call when the inline value exists.
+  // Voice-call toggles live on CallConfiguration; use the inlined config, else fetch the list.
   // @ts-ignore call_configuration is on the API response but not typed
   const inlineCallConfig = mentor?.call_configuration ?? undefined;
   const { data: callConfigList } = useGetCallConfigurationsQuery(
@@ -379,19 +363,8 @@ export function SettingsTab() {
           },
         }).unwrap();
 
-        // The nav-bar's chat-privacy toggle reads from `chat-privacy-effective`,
-        // which is keyed on mentor and is NOT invalidated by the mentor-settings
-        // mutation. Without an explicit invalidation here, flipping "Enable
-        // private mode" in settings does not reflect in the header until a page
-        // refresh.
-        //
-        // We invalidate unconditionally on every successful save. An earlier
-        // optimization only invalidated when `disable_chathistory` was detected
-        // as changed (comparing the form value against `mentor.disable_chathistory`),
-        // but that guard produced false negatives in the real save flow — it
-        // read equal and silently skipped the dispatch, so the header stopped
-        // updating live. The cost of an extra ChatPrivacyEffective refetch on an
-        // unrelated save is negligible, so we drop the guard for correctness.
+        // Refresh the nav-bar chat-privacy toggle — the mentor-settings mutation
+        // doesn't invalidate chat-privacy-effective. Unconditional on purpose.
         dispatch(
           chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
         );
@@ -411,12 +384,8 @@ export function SettingsTab() {
           }
         }
 
-        // Sync the voice-call toggles (use_function_calling_for_rag,
-        // enable_video) to the CallConfiguration endpoint. Only fire when
-        // the user actually changed one of them so we don't churn the
-        // backend on no-op saves. If no config exists yet, POST a new one
-        // with mode='realtime' as the default; otherwise PATCH the two
-        // fields against the existing config id.
+        // Sync the voice-call toggles to CallConfiguration only when changed
+        // (POST a new config if none exists, else PATCH).
         const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
           ? true
           : false;
@@ -458,9 +427,7 @@ export function SettingsTab() {
               }).unwrap();
             }
           } catch (callConfigError) {
-            // Mirror the claw-config approach: don't fail the whole save
-            // if the voice-call sync fails — mentor settings already
-            // persisted. Surface a separate toast so admins know.
+            // Settings already saved — surface a separate toast if the voice-call sync fails.
             console.error(
               JSON.stringify({ tenant: tenantKey, callConfigError }),
             );
@@ -1454,11 +1421,7 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
-                  {/* Gated on the tenant-level "Allow users to control chat
-                      privacy" switch. When the tenant has disabled chat-
-                      privacy control, this agent-level kill switch has no
-                      effect (the tenant default wins), so hide the row
-                      entirely to avoid surfacing a no-op control. */}
+                  {/* Hidden when the tenant disables chat-privacy control — the kill switch is a no-op then. */}
                   {tenantAllowsChatPrivacyControl && (
                     <WithFormPermissions
                       name="disable_chathistory"

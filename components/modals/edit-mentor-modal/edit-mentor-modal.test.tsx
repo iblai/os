@@ -71,9 +71,7 @@ function dms() {
     // Default to true so the canonical fully-permitted-mentor case still
     // exposes the Memory tab in tests that don't override settings.
     enable_memory_component: true,
-    // The Privacy tab segment is gated on enable_privacy_router. Default to
-    // true so the fully-permitted-mentor case exposes it for tests that
-    // navigate to the Privacy tab.
+    // Gates the Privacy tab segment; default on so the Privacy tab shows.
     enable_privacy_router: true,
   };
 }
