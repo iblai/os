@@ -1,0 +1,36 @@
+# Exclude files not needed to build the SPA from the Docker build context.
+# Why this matters:
+#  1) The builder does `COPY . .` and Next.js (`output: 'standalone'`) file-tracing
+#     walks the whole project AND follows symlinks. A dangling doc symlink
+#     (CLAUDE.md -> "AGENTS.md\n", a stray newline) crashed `next build` with
+#     `ENOENT stat /app/CLAUDE.md`. Keeping docs/agent files out of the context
+#     removes that entire class of foot-gun.
+#  2) Smaller, faster build context and image.
+# Verified: nothing in next.config or app source reads these. Do NOT add app
+# sources, public/, server-wrapper.js, entrypoint.sh, package.json,
+# pnpm-lock.yaml, or pnpm-workspace.yaml here — the build/runtime need them.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies & build output (reinstalled / regenerated inside the image;
+# excluding node_modules also stops a local copy from clobbering the image's)
+node_modules
+.next
+
+# Agent instructions, docs, CI & editor metadata — not part of the app build
+CLAUDE.md
+AGENTS.md
+.claude
+.github
+docs
+*.md
+.vscode
+.cursor
+.idea
+.editorconfig
+
+# Logs
+*.log

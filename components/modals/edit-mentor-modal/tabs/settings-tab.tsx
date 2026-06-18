@@ -29,8 +29,11 @@ import {
   useEditMentorMutation,
   useGetClawMentorConfigQuery,
   useUpdateClawMentorConfigMutation,
+  useGetCallConfigurationsQuery,
+  useCreateCallConfigurationMutation,
+  useUpdateCallConfigurationMutation,
 } from '@iblai/iblai-js/data-layer';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 
 import {
   Select,
@@ -66,6 +69,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn } from '@/lib/utils';
 import WithFormPermissions from '@/hoc/withPermissions';
+import { pickWritableFields, type FieldPermissions } from '@/hoc/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -98,6 +102,10 @@ interface SettingsForm {
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
   enable_prompt_caching: boolean;
+  /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
+  use_function_calling_for_rag: boolean;
+  /** Voice-call: enable screen sharing. Persisted on CallConfiguration, not MentorSettings. */
+  enable_video: boolean;
 }
 
 export function SettingsTab() {
@@ -136,15 +144,29 @@ export function SettingsTab() {
     // @ts-ignore mentor_unique_id is on the API response but not the public type
     mentor?.mentor_unique_id ?? activeMentorId;
 
-  // Fetch the claw-config for this mentor. Returns null when no config exists
-  // (the data-layer normalises 404 → null) — that's how we know the mentor is
-  // not yet wired to a Claw instance.
-  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
-    { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !tenantKey || !mentorUuid },
-  );
-
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
+
+  // CallConfiguration is the source of truth for the two voice-call toggles
+  // surfaced in Settings (`use_function_calling_for_rag` and `enable_video`).
+  // The backend embeds the active config inside the mentor-settings response,
+  // but we still hit the list endpoint as a fallback for older API versions
+  // that don't inline it. Skip the network call when the inline value exists.
+  // @ts-ignore call_configuration is on the API response but not typed
+  const inlineCallConfig = mentor?.call_configuration ?? undefined;
+  const { data: callConfigList } = useGetCallConfigurationsQuery(
+    { org: tenantKey!, userId: username ?? '', mentor: activeMentorId! },
+    {
+      skip:
+        inlineCallConfig !== undefined ||
+        !tenantKey ||
+        !username ||
+        !activeMentorId,
+    },
+  );
+  const existingCallConfig = inlineCallConfig ?? callConfigList?.[0];
+
+  const [createCallConfig] = useCreateCallConfigurationMutation();
+  const [updateCallConfig] = useUpdateCallConfigurationMutation();
   // @ts-ignore - enable_memory_component exists on API but not typed
   const initialMemoryEnabled: boolean =
     // @ts-ignore - enable_memory_component exists on API but not typed
@@ -213,6 +235,9 @@ export function SettingsTab() {
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
       // @ts-ignore - enable_prompt_caching exists in the API response but not yet in the installed SDK type
       enable_prompt_caching: mentor?.enable_prompt_caching ?? false,
+      use_function_calling_for_rag:
+        existingCallConfig?.use_function_calling_for_rag ?? false,
+      enable_video: existingCallConfig?.enable_video ?? false,
     } as SettingsForm,
     // validators: {
     //   onChange: settingsFormSchema,
@@ -295,6 +320,20 @@ export function SettingsTab() {
         values.enable_prompt_caching = value.enable_prompt_caching;
       }
 
+      // Drop any field the user only has read access to. Field-level RBAC
+      // permissions come from the settings endpoint; including a read-only
+      // field makes the PUT fail (e.g. "No permission to write field:
+      // mentor_visibility"). A few payload keys are gated under a differently
+      // named permission key, so map those explicitly.
+      // @ts-ignore - permissions exists on the API response but not the type
+      const fieldPermissions: FieldPermissions = mentor?.permissions?.field;
+      const writableValues = pickWritableFields(values, fieldPermissions, {
+        fieldNameMap: {
+          uploaded_profile_image: 'profile_image',
+          categories: 'metadata',
+        },
+      });
+
       try {
         await editMentor({
           mentor: activeMentorId,
@@ -302,7 +341,7 @@ export function SettingsTab() {
           // @ts-ignore
           userId: username ?? '',
           formData: {
-            ...values,
+            ...writableValues,
           },
         }).unwrap();
 
@@ -320,6 +359,64 @@ export function SettingsTab() {
             console.error(JSON.stringify({ tenant: tenantKey, clawError }));
           }
         }
+
+        // Sync the voice-call toggles (use_function_calling_for_rag,
+        // enable_video) to the CallConfiguration endpoint. Only fire when
+        // the user actually changed one of them so we don't churn the
+        // backend on no-op saves. If no config exists yet, POST a new one
+        // with mode='realtime' as the default; otherwise PATCH the two
+        // fields against the existing config id.
+        const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
+          ? true
+          : false;
+        const prevEnableVideo = existingCallConfig?.enable_video ? true : false;
+        const callConfigChanged =
+          value.use_function_calling_for_rag !== prevFnCalling ||
+          value.enable_video !== prevEnableVideo;
+
+        if (
+          callConfigChanged &&
+          tenantKey &&
+          username &&
+          activeMentorId !== undefined
+        ) {
+          try {
+            if (existingCallConfig?.id) {
+              await updateCallConfig({
+                org: tenantKey,
+                userId: username,
+                id: existingCallConfig.id,
+                requestBody: {
+                  use_function_calling_for_rag:
+                    value.use_function_calling_for_rag,
+                  enable_video: value.enable_video,
+                },
+              }).unwrap();
+            } else {
+              await createCallConfig({
+                org: tenantKey,
+                userId: username,
+                requestBody: {
+                  mentor: activeMentorId,
+                  mode: 'realtime',
+                  language: 'en',
+                  use_function_calling_for_rag:
+                    value.use_function_calling_for_rag,
+                  enable_video: value.enable_video,
+                },
+              }).unwrap();
+            }
+          } catch (callConfigError) {
+            // Mirror the claw-config approach: don't fail the whole save
+            // if the voice-call sync fails — mentor settings already
+            // persisted. Surface a separate toast so admins know.
+            console.error(
+              JSON.stringify({ tenant: tenantKey, callConfigError }),
+            );
+            toast.error('Voice call settings failed to save');
+          }
+        }
+
         toast.success('Agent updated successfully');
       } catch (error) {
         console.error(JSON.stringify(error));
@@ -328,6 +425,26 @@ export function SettingsTab() {
       }
     },
   });
+
+  // Fetch the claw-config for this mentor. Returns null when no config exists
+  // (the data-layer normalises 404 → null) — that's how we know the mentor is
+  // not yet wired to a Claw instance. The request only makes sense once the
+  // advanced sandbox is on, so we gate it: skip entirely when the sandbox is
+  // off (otherwise every modal open fires a wasted 404-retry burst). We watch
+  // the LIVE form toggle (not just the saved value) so flipping it on fetches
+  // the config immediately, letting Save sync claw-config in the same click —
+  // even for a mentor that was previously wired but currently disabled.
+  // @ts-ignore - enable_claw exists in API response but not in type
+  const savedEnableClaw: boolean = mentor?.enable_claw ?? false;
+  const liveEnableClaw = useStore(
+    form.store,
+    (state) => (state as any).values.enable_claw,
+  );
+  const isClawEnabled = savedEnableClaw || Boolean(liveEnableClaw);
+  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
+    { org: tenantKey!, mentorUniqueId: mentorUuid! },
+    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
+  );
 
   return (
     <>
@@ -881,347 +998,457 @@ export function SettingsTab() {
               className="m-0 data-[state=inactive]:hidden"
             >
               <div className="space-y-6">
-                <WithFormPermissions
-                  name="show_attachment"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="show_attachment">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Allow file attachments in chat
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about allow file attachments in chat"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Show File Attachment Options in Chat
-                                    Interface
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                {/* Chat experience */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    Chat experience
+                  </h4>
+                  <WithFormPermissions
+                    name="show_attachment"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="show_attachment">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable file attachments
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable file attachments"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>Lets users attach files in the chat.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable file attachments"
+                              aria-checked={field.state.value}
+                            />
                           </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Allow file attachments in chat"
-                            aria-checked={field.state.value}
-                          />
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
 
-                <WithFormPermissions
-                  name="show_voice_call"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="show_voice_call">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Enable voice calls
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about enable voice calls"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Show Voice Call Options in Chat Interface
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                  <WithFormPermissions
+                    name="enable_memory_component"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_memory_component">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Remember past conversations
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about remember past conversations"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Allow this agent to remember and reference
+                                      information from past conversations.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Remember past conversations"
+                              aria-checked={field.state.value}
+                            />
                           </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Enable voice calls"
-                            aria-checked={field.state.value}
-                          />
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
 
-                <WithFormPermissions
-                  name="show_voice_record"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="show_voice_record">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Enable voice recordings
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about enable voice recordings"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Show Voice Recording Options in Chat
-                                    Interface
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                  <WithFormPermissions
+                    name="enable_multi_query_rag"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_multi_query_rag">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enhanced document retrieval
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enhanced document retrieval"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Runs several search queries per question
+                                      to pull more relevant documents &mdash;
+                                      more thorough answers, slightly slower.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enhanced document retrieval"
+                              aria-checked={field.state.value}
+                            />
                           </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Enable voice recordings"
-                            aria-checked={field.state.value}
-                          />
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
 
-                <form.Field name="enable_claw">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Enable advanced sandbox
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about enable advanced sandbox"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Sandbox mode for configuring agent settings,
-                                prompts, and skills.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                  <WithFormPermissions
+                    name="enable_prompt_caching"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_prompt_caching">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable prompt caching
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable prompt caching"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Caches large or long system prompts so
+                                      they are reused across requests, reducing
+                                      LLM cost and latency. By default this is
+                                      disabled.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable prompt caching"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+                </div>
+
+                {/* Voice & calls */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    Voice &amp; calls
+                  </h4>
+                  <WithFormPermissions
+                    name="show_voice_call"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="show_voice_call">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable voice calls
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable voice calls"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Lets users start voice calls in the chat.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable voice calls"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="show_voice_record"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="show_voice_record">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable voice recordings
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable voice recordings"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Lets users send voice recordings in the
+                                      chat.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable voice recordings"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <form.Field name="enable_video">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Enable screen sharing
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about enabling screen sharing"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Lets users share their screen during a call.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled}
+                          aria-label={`Enable screen sharing ${field.state.value ? 'enabled' : 'disabled'}`}
+                          data-testid="settings-enable-video-switch"
+                        />
                       </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Enable advanced sandbox"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
+                    )}
+                  </form.Field>
 
-                <form.Field name="enable_memory_component">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Remember past conversations
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about remember past conversations"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow this agent to remember and reference
-                                information from past conversations.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Remember past conversations"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <WithFormPermissions
-                  name="enable_multi_query_rag"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="enable_multi_query_rag">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Improve document retrieval
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about improve document retrieval"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Generates multiple search queries from a
-                                    single user question to retrieve more
-                                    comprehensive and relevant documents.
-                                    Improves answer quality by approaching the
-                                    knowledge base from different angles,
-                                    reducing the chance of missing relevant
-                                    information.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Improve document retrieval"
-                            aria-checked={field.state.value}
-                          />
+                  <form.Field name="use_function_calling_for_rag">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Smart document retrieval
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about smart document retrieval"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  On a call, the agent fetches documents only
+                                  when it needs them instead of on every turn
+                                  &mdash; faster replies. The knowledge base
+                                  stays available either way.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <WithFormPermissions
-                  name="enable_prompt_caching"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="enable_prompt_caching">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Enable prompt caching
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about enable prompt caching"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Caches large or long system prompts so they
-                                    are reused across requests, reducing LLM
-                                    cost and latency. By default this is
-                                    disabled.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Enable prompt caching"
-                            aria-checked={field.state.value}
-                          />
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <form.Field name="forkable">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          Allow other admins to clone this agent
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              type="button"
-                              aria-label="More info about allow other admins to clone this agent"
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Allow other admins to create a copy of this
-                                agent.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled}
+                          aria-label={`Smart document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
+                          data-testid="settings-use-function-calling-for-rag-switch"
+                        />
                       </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={isDisabled}
-                        aria-label="Allow other admins to clone this agent"
-                        aria-checked={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
+                    )}
+                  </form.Field>
+                </div>
+
+                {/* Advanced */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    Advanced
+                  </h4>
+                  <WithFormPermissions
+                    name="enable_claw"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_claw">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable dedicated sandbox
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable dedicated sandbox"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      A dedicated sandbox to securely run your
+                                      agent on independent infrastructure.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable dedicated sandbox"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="forkable"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="forkable">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable copies
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable copies"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Lets other admins make their own copy of
+                                      this agent.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable copies"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

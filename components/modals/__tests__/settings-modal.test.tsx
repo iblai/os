@@ -12,6 +12,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { SettingsModal } from '../settings-modal';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
+import rbacReducer from '@/features/rbac/rbac-slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import { MODALS } from '@/lib/constants';
 
@@ -41,10 +42,23 @@ vi.mock('next/navigation', () => ({
 
 let mockUserIsStudent = false;
 let mockUsernameModal: string | null = 'testuser';
+let mockIsAdminModal = true;
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsernameModal,
   useUserIsStudent: () => mockUserIsStudent,
+  useIsAdmin: () => mockIsAdminModal,
+}));
+
+// Controllable RBAC check — drives whether a non-admin can edit the
+// agents they created (the "Student Mentor Creation" capability).
+let mockCheckRbacPermissionModal: (
+  perms: unknown,
+  resource: string,
+) => boolean = () => false;
+vi.mock('@/hoc/withPermissions', () => ({
+  checkRbacPermission: (perms: unknown, resource: string) =>
+    mockCheckRbacPermissionModal(perms, resource),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -122,19 +136,11 @@ const defaultMentors = [
 ];
 
 let mockMentors = defaultMentors;
+const mockUseMentorsWithPagination = vi.fn();
 
 vi.mock('@/hooks/use-mentors', () => ({
-  useMentorsWithPagination: () => ({
-    mentors: mockMentors,
-    isLoading: false,
-    isFetching: false,
-    searchQuery: '',
-    setSearchQuery: vi.fn(),
-    currentPage: 1,
-    totalPages: 1,
-    handlePageChange: vi.fn(),
-    queryParams: {},
-  }),
+  useMentorsWithPagination: (...args: unknown[]) =>
+    mockUseMentorsWithPagination(...args),
 }));
 
 // Mock EditMentorModal to avoid complex dependencies
@@ -165,6 +171,7 @@ function createTestStore(preloadedStack: ModalInfo[] = []) {
   return configureStore({
     reducer: {
       modals: modalReducer,
+      rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -200,7 +207,21 @@ describe('SettingsModal', () => {
     mockSearchParamsRaw = '';
     mockUserIsStudent = false;
     mockUsernameModal = 'testuser';
+    mockIsAdminModal = true;
+    mockCheckRbacPermissionModal = () => false;
     mockMentors = defaultMentors;
+    mockUseMentorsWithPagination.mockReset();
+    mockUseMentorsWithPagination.mockImplementation(() => ({
+      mentors: mockMentors,
+      isLoading: false,
+      isFetching: false,
+      searchQuery: '',
+      setSearchQuery: vi.fn(),
+      currentPage: 1,
+      totalPages: 1,
+      handlePageChange: vi.fn(),
+      queryParams: {},
+    }));
     mockEditMentorAndRefresh.mockReset();
     mockEditMentorAndRefresh.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({}),
@@ -642,6 +663,69 @@ describe('SettingsModal', () => {
 
       // As student, push should NOT be called (early return)
       expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    it('opens the Edit Agent dialog on row click for a student mentor-creator', () => {
+      // Non-admin holding `/mentors/#create` ("Student Mentor Creation")
+      // — the list is scoped to their own agents, so the row is editable.
+      mockIsAdminModal = false;
+      mockUserIsStudent = true;
+      mockUsernameModal = 'student-user';
+      mockCheckRbacPermissionModal = (_perms, resource) =>
+        resource === '/mentors/#create';
+      const store = createTestStore([]);
+
+      render(
+        <Provider store={store}>
+          <SettingsModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      fireEvent.click(screen.getByText('Test Mentor'));
+
+      expect(pushMock).toHaveBeenCalled();
+      const pushArg = pushMock.mock.calls[0]?.[0] as string;
+      expect(pushArg).toContain('edit_mentor');
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // "My Agents" created_by filter (non-admins only see their own agents)
+  // --------------------------------------------------------------------------
+
+  describe('My Agents created_by filter', () => {
+    it('filters the agent list by the logged-in username for a non-admin', () => {
+      mockIsAdminModal = false;
+      mockUserIsStudent = true;
+      mockUsernameModal = 'student-user';
+      const store = createTestStore([]);
+
+      render(
+        <Provider store={store}>
+          <SettingsModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      expect(mockUseMentorsWithPagination).toHaveBeenCalledWith(5, {
+        createdBy: 'student-user',
+      });
+    });
+
+    it('does NOT filter by created_by for an admin (full tenant list)', () => {
+      mockIsAdminModal = true;
+      mockUserIsStudent = false;
+      mockUsernameModal = 'admin-user';
+      const store = createTestStore([]);
+
+      render(
+        <Provider store={store}>
+          <SettingsModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      expect(mockUseMentorsWithPagination).toHaveBeenCalledWith(5, {
+        createdBy: undefined,
+      });
     });
   });
 

@@ -314,6 +314,7 @@ export function UserProfile() {
       onLogout={handleLogout}
       onTenantChange={handleTenantChange}
       onHelpClick={handleHelpClick}
+      defaultSupportPhone={config.defaultSupportPhoneNumber()}
       // Modal props
       currentPlan={currentPlan}
       userActiveApp={userActiveApp}

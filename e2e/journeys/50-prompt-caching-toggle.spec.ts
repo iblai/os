@@ -1,5 +1,5 @@
 /**
- * Journey 46: Prompt Caching Toggle
+ * Journey 50: Prompt Caching Toggle
  *
  * Covers the "Enable prompt caching" switch added to the Capabilities sub-tab
  * of the Settings panel (iblai-platform#1608).
