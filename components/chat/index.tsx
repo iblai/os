@@ -543,12 +543,7 @@ export function Chat({
   const [canvasState, setCanvasState] = useState<CanvasState>(() =>
     createEmptyCanvasState(),
   );
-  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
-  const lastAIMessageCopyButtonRef = useRef<HTMLButtonElement>(null);
-  const stopStreamingButtonRef = useRef<HTMLButtonElement>(null);
-  const wasIsStreamingRef = useRef(false);
-  const wasStreamingActiveRef = useRef(false);
 
   const [isMdUp, setIsMdUp] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -1028,30 +1023,6 @@ export function Chat({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isStreaming]);
-
-  // Focus management for streaming state transitions (WCAG 2.4.3)
-  // - When isStreaming becomes true: focus the stop streaming button
-  //   (StopStreamingButton renders based on isStreaming, not isPending,
-  //    so we must track isStreaming specifically)
-  // - When both isStreaming and isPending become false: focus the copy button
-  useEffect(() => {
-    // Stop button: track isStreaming directly since it controls rendering
-    if (isStreaming && !wasIsStreamingRef.current) {
-      setTimeout(() => {
-        stopStreamingButtonRef.current?.focus();
-      }, 100);
-    }
-    wasIsStreamingRef.current = isStreaming;
-
-    // Copy button: track combined state so we wait for everything to settle
-    const currentlyActive = isStreaming || isPending;
-    if (wasStreamingActiveRef.current && !currentlyActive) {
-      setTimeout(() => {
-        lastAIMessageCopyButtonRef.current?.focus();
-      }, 100);
-    }
-    wasStreamingActiveRef.current = currentlyActive;
-  }, [isStreaming, isPending]);
 
   // Add scroll event listener
   useEffect(() => {
@@ -1758,7 +1729,6 @@ export function Chat({
                 <ErrorBoundary>
                   {messages.length > 0 ? (
                     <ChatMessages
-                      ref={lastAIMessageCopyButtonRef}
                       messages={messages}
                       highlightedMessageId={highlightedMessageId}
                       profileImage={profileImage}
@@ -1770,10 +1740,6 @@ export function Chat({
                       handleSubmit={handleSubmit}
                       onReply={(message) => {
                         setReplyingToMessage(message);
-                        /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                        if (promptTextareaRef.current) {
-                          promptTextareaRef.current.focus();
-                        }
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
@@ -1870,7 +1836,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 chatAreaMaxWidth={chatAreaMaxWidth}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1970,7 +1935,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 isConnecting={!isConnected}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1992,7 +1956,6 @@ export function Chat({
               <ErrorBoundary>
                 {/* Messages with file attachments */}
                 <ChatMessages
-                  ref={lastAIMessageCopyButtonRef}
                   messages={
                     messages[0].role === 'assistant'
                       ? messages.slice(1)
@@ -2008,10 +1971,6 @@ export function Chat({
                   handleSubmit={handleSubmit}
                   onReply={(message) => {
                     setReplyingToMessage(message);
-                    /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                    if (promptTextareaRef.current) {
-                      promptTextareaRef.current.focus();
-                    }
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
@@ -2130,7 +2089,6 @@ export function Chat({
               artifactsEnabled={artifactsEnabled}
               compactMode={isCompactMode}
               chatAreaMaxWidth={chatAreaMaxWidth}
-              stopStreamingButtonRef={stopStreamingButtonRef}
             />
           </div>
         )}

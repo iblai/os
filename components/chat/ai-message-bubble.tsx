@@ -1,6 +1,5 @@
 'use client';
 
-import { forwardRef } from 'react';
 import { RefreshCcw } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,26 +62,20 @@ interface AIMessageBubbleProps {
   streamingArtifactId?: number;
 }
 
-export const AIMessageBubble = forwardRef<
-  HTMLButtonElement,
-  AIMessageBubbleProps
->(function AIMessageBubble(
-  {
-    content,
-    profileImage,
-    mentorName,
-    timestamp,
-    sessionId,
-    mentorId,
-    onRetry,
-    messages,
-    message,
-    tenantKey,
-    onOpenCanvas,
-    streamingArtifactId,
-  },
-  ref,
-) {
+export function AIMessageBubble({
+  content,
+  profileImage,
+  mentorName,
+  timestamp,
+  sessionId,
+  mentorId,
+  onRetry,
+  messages,
+  message,
+  tenantKey,
+  onOpenCanvas,
+  streamingArtifactId,
+}: AIMessageBubbleProps) {
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
   const { metadata: tenantMetadata } = useTenantMetadataHook({
     org: tenantKey,
@@ -139,7 +132,7 @@ export const AIMessageBubble = forwardRef<
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <AIMessageCopy ref={ref} content={content} />
+              <AIMessageCopy content={content} />
 
               {isLoggedIn() && !showingSharedChat && (
                 <AIMessageRating
@@ -198,4 +191,4 @@ export const AIMessageBubble = forwardRef<
       </div>
     </TooltipProvider>
   );
-});
+}
