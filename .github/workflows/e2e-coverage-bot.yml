@@ -65,6 +65,9 @@ jobs:
       - name: Claude E2E coverage analysis and review
         uses: anthropics/claude-code-action@beta
         with:
+          # Pin a current model — without this the action defaults to a retired
+          # snapshot (claude-sonnet-4-20250514) and every run 404s.
+          model: claude-sonnet-4-6
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.E2E_COVERAGE_BOT_TOKEN }}
           allowed_tools: 'Bash,Read,Write,Edit,Glob,Grep'

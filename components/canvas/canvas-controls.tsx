@@ -43,32 +43,32 @@ const readingLevels: ReadingLevel[] = [
     label: 'Graduate School',
     position: 0,
     prompt:
-      'Rewrite this text at the reading level of a graduate school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at graduate school who has taken a couple of classes in this subject',
   },
   {
     label: 'College',
     position: 1,
     prompt:
-      'Rewrite this text at the reading level of a college student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at college who has taken a couple of classes in this subject',
   },
   {
     label: 'High School',
     position: 2,
     prompt:
-      'Rewrite this text at the reading level of a high school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at high school who has taken a couple of classes in this subject',
   },
   { label: 'Keep current reading level', position: 3, prompt: '' },
   {
     label: 'Middle School',
     position: 4,
     prompt:
-      'Rewrite this text at the reading level of a middle school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at middle school who has taken a couple of classes in this subject',
   },
   {
     label: 'Kindergarten',
     position: 5,
     prompt:
-      'Rewrite this text at the reading level of a kindergarten student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at kindergarten who has taken a couple of classes in this subject',
   },
 ];
 

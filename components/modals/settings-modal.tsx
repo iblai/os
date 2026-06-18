@@ -15,7 +15,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
@@ -42,12 +41,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const {
-    openCreateMentorModal,
-    openEditMentorModal,
-    closeEditMentorModal,
-    showEditMentorModal,
-  } = useNavigate();
+  const { openCreateMentorModal, openEditMentorModal } = useNavigate();
   const username = useUsername();
   const userIsStudent = useUserIsStudent();
   const isAdmin = useIsAdmin();
@@ -269,13 +263,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      {showEditMentorModal && (
-        <EditMentorModal
-          isOpen={showEditMentorModal}
-          onClose={closeEditMentorModal}
-        />
-      )}
     </>
   );
 }

@@ -1,5 +1,172 @@
 # Changelog
 
+## [0.75.15](https://github.com/iblai/os/compare/v0.75.14...v0.75.15) (2026-06-18)
+
+### Bug Fixes
+
+- mentor db id payload passed to reports endpoints ([f2d29f3](https://github.com/iblai/os/commit/f2d29f356964cfb49687ab6e524817e3972265a9))
+- mentor db id payload passed to reports endpoints > test coverage ([e8dba0c](https://github.com/iblai/os/commit/e8dba0cfad7164a226a6ffe7530d5598bd005663))
+
+## [0.75.14](https://github.com/iblai/os/compare/v0.75.13...v0.75.14) (2026-06-18)
+
+### Bug Fixes
+
+- **e2e:** journey 14 anon admin gate clicks Analytics leaf, not the group ([6fd68ac](https://github.com/iblai/os/commit/6fd68ac81812906aa21a50632f6f362b04928b2e))
+- **mentor:** hide Add Resource button without documents create permission ([8a8f259](https://github.com/iblai/os/commit/8a8f259bbd4b7d267d9f8c3d80cf2540d092c45d))
+- **mentor:** render a single Edit Agent modal so its Close isn't intercepted ([738b583](https://github.com/iblai/os/commit/738b583c26a9361a6a20aa71e72076ca542a5f32))
+
+### Tests
+
+- **mentor:** cover RBAC gating of Add Resource button ([235c322](https://github.com/iblai/os/commit/235c3221a8cb35c0b7db42570b598cc01b27d10c))
+
+## [0.75.13](https://github.com/iblai/os/compare/v0.75.12...v0.75.13) (2026-06-17)
+
+### Bug Fixes
+
+- **ci:** copy patches/ before pnpm install in app + e2e Dockerfiles ([0422bc1](https://github.com/iblai/os/commit/0422bc13d57de361c2e7f26dd7b5f464b2b6dbc6))
+
+## [0.75.12](https://github.com/iblai/os/compare/v0.75.11...v0.75.12) (2026-06-17)
+
+### Bug Fixes
+
+- **deps:** patch google-drive-picker to drop hardcoded drive.readonly scope ([e4e8698](https://github.com/iblai/os/commit/e4e8698e1e4b75eaca8fa62213b8859de468c01d))
+
+### Tests
+
+- **hooks:** guard google-drive-picker scope patch against regression ([2b76489](https://github.com/iblai/os/commit/2b76489101fa9664bf1ec82eb23851c2dba89082))
+
+### CI
+
+- add .dockerignore to keep docs/agent/VCS files out of the build ([3702d52](https://github.com/iblai/os/commit/3702d5240db74fbb47688b70a1ed7596af3f99aa))
+
+## [0.75.11](https://github.com/iblai/os/compare/v0.75.10...v0.75.11) (2026-06-17)
+
+### Bug Fixes
+
+- repair CLAUDE.md symlink (stray newline in target broke the SPA build) ([5c06f03](https://github.com/iblai/os/commit/5c06f0311fa1736641861cd2f953c170abff85de))
+
+## [0.75.10](https://github.com/iblai/os/compare/v0.75.9...v0.75.10) (2026-06-17)
+
+### Chores
+
+- **msix:** bump AppxManifest version to 1.1.20.0 ([ff846f1](https://github.com/iblai/os/commit/ff846f1d8fe9a903d6ca2c701250f7bf409093c2))
+
+## [0.75.9](https://github.com/iblai/os/compare/v0.75.8...v0.75.9) (2026-06-16)
+
+### Bug Fixes
+
+- **ci:** pin coverage-bot to claude-sonnet-4-6 ([0148c32](https://github.com/iblai/os/commit/0148c324b294864c849bf5f0a988f6ebbe10441b))
+- **msix:** correct Store package identity name to ibl.ai.ibl.ai ([4f73626](https://github.com/iblai/os/commit/4f736267defda500464c0ddebd6c5dadff36048f))
+
+## [0.75.8](https://github.com/iblai/os/compare/v0.75.7...v0.75.8) (2026-06-16)
+
+### Bug Fixes
+
+- **mentor:** genericize explore page heading copy ([a9f47d2](https://github.com/iblai/os/commit/a9f47d291aca38048cb631ebdff9047c736524d2))
+
+### Tests
+
+- **e2e:** update stale explore heading comments ([730c04b](https://github.com/iblai/os/commit/730c04b8db81c0ffa43a2542e00715f2a25032e3))
+
+## [0.75.7](https://github.com/iblai/os/compare/v0.75.6...v0.75.7) (2026-06-16)
+
+### Bug Fixes
+
+- **mentor:** rename 'Student Success' tools category and reword canvas reading-level prompts ([ae9f787](https://github.com/iblai/os/commit/ae9f78796eee2a51c90a23997c5677c60b6cbaec))
+- **mentor:** replace 'Students' visibility label and default prompt copy with 'Users' ([54fdcf5](https://github.com/iblai/os/commit/54fdcf5dac2314e0eda00c230cde141e5ccccb66))
+- **mentor:** shorten navbar model-selector tooltip to 'Select Model' ([1a2df4c](https://github.com/iblai/os/commit/1a2df4c83db10603facce9326695c49ac5714239))
+
+### Chores
+
+- normalize CHANGELOG formatting via prettier ([abbedcd](https://github.com/iblai/os/commit/abbedcd90223c8f2dccd252edeb202502228dea5))
+
+### Tests
+
+- **e2e:** map canvas-controls to canvas journey; exclude dead tools-section ([48e89e7](https://github.com/iblai/os/commit/48e89e7835508ca742f38850107178037b9258bd))
+- **e2e:** update prompt visibility page-object label Students→Users ([e88b8d1](https://github.com/iblai/os/commit/e88b8d173491f8e2f30d0697040e22567303af9a))
+- **mentor:** update unit tests for Students→Users rename ([2f351e5](https://github.com/iblai/os/commit/2f351e59fea93fdb622299197370bc65ade57ad5))
+
+## [0.75.6](https://github.com/iblai/os/compare/v0.75.5...v0.75.6) (2026-06-16)
+
+### Bug Fixes
+
+- **mentor:** scroll history user-search list inside dialog ([41a22df](https://github.com/iblai/os/commit/41a22dfc0eb3c242c145c3d68a2b9c09506cfb1f))
+
+### Tests
+
+- **history-tab:** add unit coverage for HistoryTab ([b4c3173](https://github.com/iblai/os/commit/b4c31734a095c22bd4e433599163a451ff11751b))
+
+## [0.75.5](https://github.com/iblai/os/compare/v0.75.4...v0.75.5) (2026-06-16)
+
+### Bug Fixes
+
+- **android:** route iblai-mentor:// SSO deep link back into the app ([d472ad4](https://github.com/iblai/os/commit/d472ad49f009e4346812665c0930c10f7576c377))
+
+### Refactors
+
+- **tenant-switch:** consume cross-tab tenant switch from the SDK ([367da66](https://github.com/iblai/os/commit/367da6672f03cf55ee977263b8138434f25e95e7))
+
+## [0.75.4](https://github.com/iblai/os/compare/v0.75.3...v0.75.4) (2026-06-15)
+
+### Bug Fixes
+
+- support phone number defaults even when env not set ([31205a5](https://github.com/iblai/os/commit/31205a546bb1c35eb16b2ea8b503db0795062969))
+
+## [0.75.3](https://github.com/iblai/os/compare/v0.75.2...v0.75.3) (2026-06-14)
+
+### Bug Fixes
+
+- **chat:** dedupe newChat and stopChatGenerating event listeners ([1bd448f](https://github.com/iblai/os/commit/1bd448fc618c627f841340ef2f75a185d60005bb))
+
+### Chores
+
+- normalize CHANGELOG bullet formatting via prettier ([d19a255](https://github.com/iblai/os/commit/d19a255f2fa23d5d3880dfa73e19647d87b85741))
+
+### Tests
+
+- **chat:** cover single newChat/stopChatGenerating listener registration ([0b0b973](https://github.com/iblai/os/commit/0b0b9737ad97c889d3363ef97d02474af7ae5cb2))
+- **e2e:** add parked New Chat single-session regression guard ([#1002](https://github.com/iblai/os/issues/1002)) ([7352c21](https://github.com/iblai/os/commit/7352c213b108edbd259d6c0fa536dd4da538c785))
+
+## [0.75.2](https://github.com/iblai/os/compare/v0.75.1...v0.75.2) (2026-06-14)
+
+### Bug Fixes
+
+- **workflows:** drop "and learning experiences" from page subheading ([3c2d021](https://github.com/iblai/os/commit/3c2d021bdbb5ddad578f9677817ed6d16db2798e))
+
+### Chores
+
+- normalize CHANGELOG bullet style to prettier ([148cb25](https://github.com/iblai/os/commit/148cb254f282d3370d6255728fef31045528412e))
+
+### Tests
+
+- **e2e:** assert workflows subheading with exact match ([43a7cc0](https://github.com/iblai/os/commit/43a7cc06c9230feb9dd405b1af294a1a083680a4))
+
+## [0.75.1](https://github.com/iblai/os/compare/v0.75.0...v0.75.1) (2026-06-13)
+
+## [0.75.0](https://github.com/iblai/os/compare/v0.74.4...v0.75.0) (2026-06-12)
+
+### Features
+
+- bumped iblai-js to 1.18.1 ([ab1e3f7](https://github.com/iblai/os/commit/ab1e3f7c8c9b063963d96789e8e4bb79590a9408))
+- **mentor:** adding tasks for edit mentor, unit and playwright tests ([9687dc1](https://github.com/iblai/os/commit/9687dc163c6f38ab0d7a44e2b1904151fc31d196))
+- **mentorai:** adding version bump for iblai-js ([01d3879](https://github.com/iblai/os/commit/01d3879bc4ac8b4f487aeb97031ec8fe5420d96a))
+
+### Bug Fixes
+
+- **e2e:** adding more playwright tests for task tab ([1ab2118](https://github.com/iblai/os/commit/1ab2118a49b86f674e0c16858561d28f67d26554))
+- **mentor:** adding fix for the pnpm-lock ([030bfec](https://github.com/iblai/os/commit/030bfec8fb1539a099bc1e49865b45a91ddd87b2))
+- **mentor:** adding fix for the task test ([dc06129](https://github.com/iblai/os/commit/dc06129aefc959d2e66b15064caaf5fc7bd90bfa))
+- **mentor:** fix for the tasks tab ([50ec103](https://github.com/iblai/os/commit/50ec103424ab255d4818bd9f4009539d06a86b22))
+- **mentor:** pnpm-lock changes ([9edd14a](https://github.com/iblai/os/commit/9edd14acabda4bb82fc95ab12c5e00b41e9f6771))
+
+### Chores
+
+- **mentor:** version bump for iblai-js ([d7247b7](https://github.com/iblai/os/commit/d7247b7e437fe601875b297e79c6580b0709723d))
+
+## [0.74.4]
+
+- bumped iblai-js version to 1.17.25
+
 ## [0.74.3](https://github.com/iblai/os/pull/244)
 
 ## [0.74.2](https://github.com/iblai/os/pull/235)
