@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.75.14](https://github.com/iblai/os/compare/v0.75.13...v0.75.14) (2026-06-18)
+
+### Bug Fixes
+
+* **e2e:** journey 14 anon admin gate clicks Analytics leaf, not the group ([6fd68ac](https://github.com/iblai/os/commit/6fd68ac81812906aa21a50632f6f362b04928b2e))
+* **mentor:** hide Add Resource button without documents create permission ([8a8f259](https://github.com/iblai/os/commit/8a8f259bbd4b7d267d9f8c3d80cf2540d092c45d))
+* **mentor:** render a single Edit Agent modal so its Close isn't intercepted ([738b583](https://github.com/iblai/os/commit/738b583c26a9361a6a20aa71e72076ca542a5f32))
+
+### Tests
+
+* **mentor:** cover RBAC gating of Add Resource button ([235c322](https://github.com/iblai/os/commit/235c3221a8cb35c0b7db42570b598cc01b27d10c))
+
 ## [0.75.13](https://github.com/iblai/os/compare/v0.75.12...v0.75.13) (2026-06-17)
 
 ### Bug Fixes
