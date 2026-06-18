@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-18 | 448 checkpoints (428 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 51 journeys (50 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-19 | 468 checkpoints (447 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -27,7 +27,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (7 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (8 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 

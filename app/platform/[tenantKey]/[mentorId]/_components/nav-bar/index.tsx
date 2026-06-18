@@ -501,9 +501,7 @@ export function NavBar() {
                     </div>
                     <span
                       className={cn(
-                        // Hidden on phones (< sm) to free nav space — matches
-                        // the sibling agent-name label. The model name stays
-                        // available via the button tooltip below.
+                        // Hidden below sm; the name is shown in the tooltip.
                         'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
                         creditBalanceComponentIsDisplayed
                           ? 'max-w-[100px] md:max-w-[150px]'
@@ -518,8 +516,6 @@ export function NavBar() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {/* Surfaces the model name when its label is hidden on small
-                      screens; falls back to the action/agent label otherwise. */}
                   {selectedMentorCategory ||
                     (isAdmin ? 'Select Model' : selectedMentorName)}
                 </TooltipContent>
@@ -639,13 +635,6 @@ export function NavBar() {
                 org={tenantKey}
                 userId={username ?? ''}
                 mentor={mentorId}
-                // The SDK button is `hidden md:inline-flex` by default, so the
-                // pill disappears below `md`. `cn` is tailwind-merge and the
-                // consumer className wins, so `inline-flex` overrides `hidden`
-                // to keep Private Mode reachable on small screens. When it's
-                // enabled the pill expands with a "Private Mode" label that
-                // would crowd the other nav icons on a phone, so
-                // `max-md:[&>span]:hidden` keeps it icon-only below `md`.
                 className="inline-flex max-md:[&>span]:hidden"
               />
             )}

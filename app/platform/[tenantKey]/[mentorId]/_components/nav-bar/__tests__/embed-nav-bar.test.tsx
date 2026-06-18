@@ -82,8 +82,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
-// Stub the SDK Private Mode pill so we can assert the gating + props without
-// pulling in the real container (which fires chat-privacy API calls).
+// Stub the SDK Private Mode pill (the real one fires chat-privacy API calls).
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   ChatPrivacyToggle: ({ org, userId, mentor, className }: any) => (
     <button
@@ -546,9 +545,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('stays compact on small screens (inline-flex + label hidden)', () => {
-      // `inline-flex` overrides the SDK's `hidden md:inline-flex` so it shows
-      // below `md`; `max-md:[&>span]:hidden` keeps it icon-only there so the
-      // expanded "Private Mode" label can't push the other controls offscreen.
       renderEmbedNavBar();
       const cls = screen.getByTestId('chat-privacy-toggle').className;
       expect(cls).toContain('inline-flex');
@@ -564,8 +560,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('hides the toggle when the user is not logged in', () => {
-      // Private Mode is a logged-in-only affordance. Embed is public-facing,
-      // so an anonymous viewer must not see it even on a non-anonymous mentor.
       mockIsLoggedIn = false;
       renderEmbedNavBar({ isAnonymousMentor: false });
       expect(

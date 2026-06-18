@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-18",
+  "lastUpdated": "2026-06-19",
   "summary": {
-    "totalCheckpoints": 448,
-    "coveredCheckpoints": 428,
+    "totalCheckpoints": 468,
+    "coveredCheckpoints": 447,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
     "totalJourneys": 52,
-    "activeJourneys": 52
+    "activeJourneys": 51
   },
   "journeys": [
     {
