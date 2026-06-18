@@ -3,6 +3,19 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 test.describe('Journey 45: Mentor Privacy Tab', () => {
+  // Run serially in a single worker. Every test toggles `enable_privacy_router`
+  // on the SAME shared mentor — all workers use the same admin storageState and
+  // open the same selected agent — so parallel execution would let one test's
+  // afterEach disable the router mid-interaction in another, guaranteeing
+  // flakes. Serial also hands each test a clean, router-off starting state.
+  //
+  // The widened timeout absorbs the Privacy tab's chained server round-trips:
+  // every field/router change auto-saves (editMentorJson PUT +
+  // refetchMentorSettings) and the 30s success-toast waits stack across
+  // beforeEach + body + afterEach, which can legitimately exceed the default
+  // 120s even on a fully PASSING run on slow staging.
+  test.describe.configure({ mode: 'serial', timeout: 180_000 });
+
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -137,9 +150,13 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await expect(editMentorPage.privacy.outputFilterSwitch).toBeVisible({
       timeout: 5_000,
     });
-    expect(await editMentorPage.privacy.getEntityChipCount()).toBeGreaterThan(
-      0,
-    );
+    // Poll the count rather than reading it once: a late post-enable refetch
+    // can briefly remount the segment, and a one-shot count would see 0.
+    await expect
+      .poll(() => editMentorPage.privacy.getEntityChipCount(), {
+        timeout: 10_000,
+      })
+      .toBeGreaterThan(0);
 
     // Reset to off so the test is idempotent against other tests in the suite.
     await editMentorPage.privacy.setRouterEnabled(false);
@@ -155,8 +172,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
   test('Block Message textarea is editable only while the action is Block', async ({
     editMentorPage,
   }) => {
-    await editMentorPage.privacy.setRouterEnabled(true);
-
+    // beforeEach already enabled the router and landed on Privacy; selectAction
+    // re-settles onto the tab itself, so a redundant (and expensive) enable here
+    // is unnecessary.
     await editMentorPage.privacy.selectAction('Block');
     await expect(editMentorPage.privacy.blockMessageTextarea).toBeVisible({
       timeout: 10_000,
@@ -176,42 +194,28 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
   test('toggling an entity chip flips its selected state and hides the defaults hint', async ({
     editMentorPage,
   }) => {
-    await editMentorPage.privacy.setRouterEnabled(true);
-
+    // beforeEach already enabled the router and landed on Privacy.
     const chip = editMentorPage.privacy.entityChip('EMAIL_ADDRESS');
     await expect(chip).toBeVisible({ timeout: 10_000 });
 
     const wasSelected =
       await editMentorPage.privacy.isEntitySelected('EMAIL_ADDRESS');
 
-    // EntityChip's `disabled` prop tracks the form save state — the chip
-    // briefly renders disabled after setRouterEnabled while the save settles.
-    // The chip's `disabled` prop tracks the form save state, and a single
-    // `not.toBeDisabled` guard isn't enough: the chip can re-disable mid-flow
-    // when a save round-trip lands right as we click, swallowing the click so
-    // aria-checked never flips. `toggleChipTo` polls — it clicks only when the
-    // chip is enabled and not yet at the target — so a swallowed click is
-    // simply retried, and once the target is reached it stops (no double
-    // toggle).
-    const toggleChipTo = async (target: 'true' | 'false') => {
-      await expect
-        .poll(
-          async () => {
-            const checked = await chip.getAttribute('aria-checked');
-            if (checked !== target && !(await chip.isDisabled())) {
-              await chip.click().catch(() => {});
-            }
-            return chip.getAttribute('aria-checked');
-          },
-          { timeout: 15_000 },
-        )
-        .toBe(target);
-    };
-
-    await toggleChipTo(wasSelected ? 'false' : 'true');
+    // `setEntitySelected` owns the resilience: the chip is server-bound and each
+    // click auto-saves (editMentorJson + refetch), which disables the chip
+    // mid-save and can briefly unmount the whole Privacy segment. It re-settles
+    // onto Privacy and polls the server-bound aria-checked until the toggle
+    // commits, asserting the flip internally.
+    await editMentorPage.privacy.setEntitySelected(
+      'EMAIL_ADDRESS',
+      !wasSelected,
+    );
 
     // Restore the original state so the suite stays idempotent.
-    await toggleChipTo(wasSelected ? 'true' : 'false');
+    await editMentorPage.privacy.setEntitySelected(
+      'EMAIL_ADDRESS',
+      wasSelected,
+    );
 
     await editMentorPage.privacy.setRouterEnabled(false);
     await editMentorPage.close();

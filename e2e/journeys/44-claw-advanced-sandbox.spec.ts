@@ -78,6 +78,19 @@ async function expectTabHidden(
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
+// Run the WHOLE file serially in a single worker. Every stateful test here
+// mutates the SAME shared mentor's `enable_claw` / wired ClawMentorConfig — all
+// workers use the same admin storageState and open the same selected agent — so
+// parallel execution lets one test disable Sandbox or disconnect an instance
+// mid-flow in another (e.g. the "connects a sandbox instance" test's Skills tab
+// is gated on a wired claw config), which flakes intermittently. This is
+// declared at the file's top level (not per-describe) ON PURPOSE: separate
+// serial describes would still run in parallel WITH EACH OTHER across workers,
+// so block 1 (toggles enable_claw) could still stomp on the deeper-lifecycle
+// block. A single file-level serial group is the only thing that guarantees no
+// two journey-44 tests touch the shared mentor at once.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
