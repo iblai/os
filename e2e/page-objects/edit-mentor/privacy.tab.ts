@@ -91,6 +91,41 @@ export class PrivacyTab {
   }
 
   /**
+   * Re-settle onto a mounted Privacy tab, waiting out a transient unmount.
+   *
+   * Every privacy field change auto-saves (the SDK's `updateField` fires an
+   * editMentorJson PUT then `refetchMentorSettings`), and the ENTIRE segment is
+   * gated on `enable_privacy_router` read from that same refreshed
+   * mentor-settings object. The post-save refetch can momentarily return
+   * settings without the flag (read-lag right after the master toggle was
+   * enabled in Settings → Capabilities), which unmounts the whole Privacy
+   * segment — blank body, tab gone from the sidebar — before a later read
+   * remounts it. So after ANY interaction we cannot trust the panel to still be
+   * there: navigate back to Privacy (navigateToTab already waits up to 15s for
+   * the (re)appearing trigger) and confirm the body rendered. One retry covers
+   * a slow remount.
+   */
+  private async gotoPrivacy(): Promise<void> {
+    if (!this.navigateToTab) {
+      throw new Error(
+        'PrivacyTab.gotoPrivacy requires bindSettingsTab() to be called first.',
+      );
+    }
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await this.navigateToTab('Privacy');
+        await expect(this.actionSelect).toBeVisible({ timeout: 5_000 });
+        return;
+      } catch (error) {
+        lastError = error;
+        await this.page.waitForTimeout(1_000);
+      }
+    }
+    throw lastError;
+  }
+
+  /**
    * Returns true when `enable_privacy_router` is on. Reads the authoritative
    * value from Settings → Capabilities where the switch now lives.
    *
@@ -184,59 +219,74 @@ export class PrivacyTab {
    * label. The SDK names the options "Redact", "Mask", and "Block".
    *
    * The SDK action <Select> is *controlled and server-bound*: its value is
-   * `mentorSettings.privacy_action` and picking an option AUTO-SAVES via
-   * `onValueChange` -> editMentorJson PUT -> refetchMentorSettings (the Select
-   * even disables itself while that save is in flight). There is no optimistic
-   * local update, so the trigger only flips to the new label AFTER the server
-   * round-trip lands. The correct shape is therefore: open -> pick the option
-   * ONCE -> then PATIENTLY wait for the round-trip to re-render the trigger.
-   * Re-poking the Select mid-save just thrashes (it's disabled and won't
-   * reopen) and an earlier poll-and-re-click version hung at the old value as a
-   * result. We retry the whole open+pick only if the value hasn't committed
-   * within a generous window, resetting to a known-closed state in between.
+   * `mentorSettings.privacy_action` and picking an option AUTO-SAVES
+   * (editMentorJson PUT -> refetchMentorSettings), with no optimistic local
+   * update — so the trigger only flips to the new label AFTER the round-trip
+   * lands, and that same refetch can transiently UNMOUNT the whole segment (see
+   * `gotoPrivacy`). The robust shape is therefore: re-settle onto a mounted
+   * Privacy tab, short-circuit if already on target, wait out any in-flight
+   * save (the trigger disables itself while saving), open the listbox, pick the
+   * option ONCE, then re-settle and confirm the server-bound trigger reflects
+   * the new value (which proves the round-trip committed). The whole cycle is
+   * retried so a missed click or a mid-flight remount simply tries again.
    */
   async selectAction(option: 'Redact' | 'Mask' | 'Block'): Promise<void> {
     const maxAttempts = 3;
     let lastError: unknown;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      // Short-circuit: already on target — either the initial state, or a prior
-      // attempt's auto-save round-trip has since landed.
-      const current =
-        (await this.actionSelect.textContent().catch(() => '')) ?? '';
-      if (current.includes(option)) return;
-
       try {
-        await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
+        // A prior save may have unmounted the segment — re-settle first.
+        await this.gotoPrivacy();
+
+        // Settle any in-flight save BEFORE reading the label: the trigger is
+        // server-bound and disables itself while saving, so reading a stale OLD
+        // label here would skip the short-circuit and double-apply the action.
+        await expect(this.actionSelect).toBeEnabled({ timeout: 10_000 });
+
+        // Short-circuit: already on target (initial state, or a prior attempt's
+        // auto-save round-trip has since landed).
+        const current =
+          (await this.actionSelect.textContent().catch(() => '')) ?? '';
+        if (current.includes(option)) return;
+
         await this.actionSelect.click();
 
         // Options render in a page-level portal (outside the dialog). Use
         // toBeVisible (which POLLS) rather than isVisible (which returns the
-        // current state immediately) so we actually wait for the listbox to
-        // finish opening before clicking.
+        // current state immediately) so we wait for the listbox to finish
+        // opening before clicking.
         const item = this.page.getByRole('option', {
           name: option,
           exact: true,
         });
         await expect(item).toBeVisible({ timeout: 6_000 });
         // Hover first: Radix Select commits the *highlighted* option, and a
-        // bare programmatic click can occasionally land without highlighting it
-        // — the original cause of the flake.
+        // bare programmatic click can occasionally land without highlighting it.
         await item.hover();
         await item.click();
 
-        // Patiently wait for the auto-save round-trip to land and re-render the
-        // server-bound trigger. toContainText auto-retries and re-resolves the
-        // locator, so a transient panel re-render mid-wait is tolerated.
+        // The pick fires editMentorJson + refetch, which can unmount/remount the
+        // whole segment. Re-settle onto Privacy, then confirm the server-bound
+        // trigger reflects the new value (proves the round-trip committed).
+        await this.gotoPrivacy();
         await expect(this.actionSelect).toContainText(option, {
-          timeout: 12_000,
+          timeout: 10_000,
         });
         return;
       } catch (error) {
         lastError = error;
-        // Reset to a known-closed state before the next attempt so the next
-        // open starts cleanly (e.g. if the option click missed and left the
-        // listbox open).
-        await this.page.keyboard.press('Escape').catch(() => {});
+        // Close the listbox before retrying — but press Escape ONLY when an
+        // option is actually visible. A closed Radix Select doesn't consume
+        // Escape, so it would bubble to the Edit Agent Dialog and close it,
+        // dirtying teardown and cascading the remaining attempts.
+        const listboxOpen = await this.page
+          .getByRole('option', { name: option, exact: true })
+          .first()
+          .isVisible()
+          .catch(() => false);
+        if (listboxOpen) {
+          await this.page.keyboard.press('Escape').catch(() => {});
+        }
       }
     }
     throw lastError;
@@ -283,6 +333,54 @@ export class PrivacyTab {
       .getAttribute('aria-checked')
       .catch(() => null);
     return state === 'true';
+  }
+
+  /**
+   * Idempotently set an entity chip to selected/unselected.
+   *
+   * The chip's `aria-checked` is server-bound (`privacy_entities.includes(...)`)
+   * and clicking it auto-saves (editMentorJson + refetch), which disables the
+   * chip mid-save and can transiently unmount the whole Privacy segment (see
+   * `gotoPrivacy`). So we poll: re-settle onto Privacy, return if already at the
+   * target, otherwise wait for the chip to be enabled (not mid-save), click
+   * once, re-settle, and confirm the server-bound state flipped. Retried so a
+   * missed click or a mid-flight remount simply tries again. Re-resolve the
+   * chip locator each step so a remount-detached node never sticks.
+   */
+  async setEntitySelected(entity: string, target: boolean): Promise<void> {
+    const want = target ? 'true' : 'false';
+    const maxAttempts = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.gotoPrivacy();
+        const chip = this.entityChip(entity);
+        await expect(chip).toBeVisible({ timeout: 10_000 });
+        // Settle any in-flight save FIRST — the chip is disabled while saving
+        // and its `aria-checked` isn't repainted until the refetch lands.
+        // Reading it before this gate could see a stale value and fire a
+        // second, state-reverting click (a chip toggle is NOT idempotent).
+        await expect(chip).toBeEnabled({ timeout: 10_000 });
+        if (
+          (await chip.getAttribute('aria-checked').catch(() => null)) === want
+        ) {
+          return;
+        }
+        await chip.click();
+        // Auto-save fires; the segment may remount. Re-settle, then confirm the
+        // server-bound state committed (re-resolve the chip after the remount).
+        await this.gotoPrivacy();
+        await expect(this.entityChip(entity)).toHaveAttribute(
+          'aria-checked',
+          want,
+          { timeout: 10_000 },
+        );
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
   }
 
   /** Returns the number of entity chips rendered (should match PRIVACY_ENTITY_TYPES). */
