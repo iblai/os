@@ -90,8 +90,6 @@ interface ChatInputFormProps {
   chatAreaMaxWidth?: number;
   /** When true, shows a loading state in the submit button indicating the connection is being established */
   isConnecting?: boolean;
-  /** Ref forwarded to the stop streaming button for focus management */
-  stopStreamingButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function ChatInputForm({
@@ -121,7 +119,6 @@ export function ChatInputForm({
   compactMode = false,
   chatAreaMaxWidth,
   isConnecting = false,
-  stopStreamingButtonRef,
 }: ChatInputFormProps) {
   const dispatch = useAppDispatch();
   const mentorSettings = useMentorSettings();
@@ -454,10 +451,7 @@ export function ChatInputForm({
                 )}
 
                 {isStreaming ? (
-                  <StopStreamingButton
-                    ref={stopStreamingButtonRef}
-                    stopGenerating={stopGenerating}
-                  />
+                  <StopStreamingButton stopGenerating={stopGenerating} />
                 ) : (
                   <SubmitMessageButton
                     isPreviewMode={isPreviewMode}
