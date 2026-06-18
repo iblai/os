@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 import {
   BadgeHelp,
@@ -9,6 +10,8 @@ import {
   ShieldQuestion,
   X,
 } from 'lucide-react';
+
+import { ChatPrivacyToggle } from '@iblai/iblai-js/web-containers';
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
@@ -44,6 +47,7 @@ type Props = {
   toggleSidebar: () => void;
   openSidebar: boolean;
   tenantKey: string;
+  mentorId: string;
 };
 
 export function EmbedNavBar({
@@ -54,12 +58,24 @@ export function EmbedNavBar({
   toggleSidebar,
   openSidebar,
   tenantKey,
+  mentorId,
 }: Props) {
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
   const chatMode = useChatMode();
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
+
+  // Mirror the main NavBar's gating so the Private Mode pill obeys the same
+  // checks in every nav-bar version. Embed is normally the chat page, but we
+  // exclude the non-chat routes the same way so the surface stays consistent.
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
+  const isOnChatPage =
+    !pathname?.includes('/prompt-gallery') &&
+    !pathname?.includes('/analytics') &&
+    !pathname?.includes('/explore') &&
+    !isWorkflowsPage;
 
   const { metadata } = useTenantMetadata({
     org: tenantKey,
@@ -190,39 +206,59 @@ export function EmbedNavBar({
           <span className="text-sm font-bold text-gray-800">{mentorName}</span>
         </button>
 
-        {/* Close button */}
-        {chatMode === 'default' ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="ml-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-                aria-label="Open menu options"
-                aria-haspopup="menu"
-              >
-                <EllipsisVertical className="h-5 w-5" />
-                <span className="sr-only">Menu options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {helpItems.map((item) => (
-                <DropdownMenuItem
-                  className="h-10"
-                  key={item.label}
-                  onClick={() => {
-                    // if (isPreviewMode) return;
-                    item.onClick();
-                  }}
+        {/* Right-aligned controls. A single `ml-auto` wrapper keeps the
+            cluster pinned to the right — stacking `ml-auto` on multiple flex
+            children would split the free space and scatter them. */}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Private Mode toggle. The SDK already returns null unless the
+              tenant chat-privacy gate is enabled AND a userId is present, so
+              the effective-settings/precedence logic matches the main NavBar
+              (it's the same SDK component). Embed is the public-facing
+              surface, so we additionally require an explicit logged-in user
+              before mounting it. `inline-flex` overrides the SDK's
+              `hidden md:inline-flex` so the pill shows on small screens;
+              `max-md:[&>span]:hidden` keeps it icon-only there so the expanded
+              "Private Mode" label can't push the other controls off-screen. */}
+          {isOnChatPage && isLoggedIn() && tenantKey && (
+            <ChatPrivacyToggle
+              org={tenantKey}
+              userId={username ?? ''}
+              mentor={mentorId}
+              className="inline-flex max-md:[&>span]:hidden"
+            />
+          )}
+
+          {chatMode === 'default' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  aria-label="Open menu options"
+                  aria-haspopup="menu"
                 >
-                  <item.icon className="h-7 w-7" />
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="ml-auto flex items-center gap-2">
+                  <EllipsisVertical className="h-5 w-5" />
+                  <span className="sr-only">Menu options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {helpItems.map((item) => (
+                  <DropdownMenuItem
+                    className="h-10"
+                    key={item.label}
+                    onClick={() => {
+                      // if (isPreviewMode) return;
+                      item.onClick();
+                    }}
+                  >
+                    <item.icon className="h-7 w-7" />
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -254,23 +290,24 @@ export function EmbedNavBar({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
-        {isIframed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            aria-label="Close chat"
-            onClick={() => {
-              if (isPreviewMode) return;
-              notifyParentOnEmbedClose();
-            }}
-          >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close chat</span>
-          </Button>
-        )}
+          )}
+
+          {isIframed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label="Close chat"
+              onClick={() => {
+                if (isPreviewMode) return;
+                notifyParentOnEmbedClose();
+              }}
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close chat</span>
+            </Button>
+          )}
+        </div>
       </div>
     </nav>
   );

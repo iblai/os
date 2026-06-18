@@ -16,6 +16,7 @@ let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
+let mockPathname = '/platform/tenant123/mentor123';
 let mockMetadata: any = {
   show_help: true,
   help_center_url: 'https://help.example.com',
@@ -77,6 +78,26 @@ vi.mock('@/lib/eventBus', () => ({
   RemoteEvents: { newChat: 'MENTOR:NEW_CHAT' },
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname,
+}));
+
+// Stub the SDK Private Mode pill so we can assert the gating + props without
+// pulling in the real container (which fires chat-privacy API calls).
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  ChatPrivacyToggle: ({ org, userId, mentor, className }: any) => (
+    <button
+      data-testid="chat-privacy-toggle"
+      data-org={org}
+      data-user={userId}
+      data-mentor={mentor}
+      className={className}
+    >
+      Private Mode
+    </button>
+  ),
+}));
+
 // ============================================================================
 // STORE & HELPERS
 // ============================================================================
@@ -97,6 +118,7 @@ const defaultProps = {
   toggleSidebar: vi.fn(),
   openSidebar: false,
   tenantKey: 'tenant123',
+  mentorId: 'mentor123',
 };
 
 function renderEmbedNavBar(props: Partial<typeof defaultProps> = {}) {
@@ -120,6 +142,7 @@ describe('EmbedNavBar', () => {
     mockChatMode = 'default';
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
+    mockPathname = '/platform/tenant123/mentor123';
     mockMetadata = {
       show_help: true,
       help_center_url: 'https://help.example.com',
@@ -502,6 +525,61 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
   // Help Items Config
   // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // Private Mode toggle (parity with the main NavBar)
+  // --------------------------------------------------------------------------
+
+  describe('Private Mode toggle', () => {
+    it('renders the toggle on the chat page for a logged-in user', () => {
+      renderEmbedNavBar();
+      expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    it('passes org, userId and mentor through to the SDK toggle', () => {
+      mockUsername = 'jane';
+      renderEmbedNavBar({ tenantKey: 'acme', mentorId: 'mentor-xyz' });
+      const toggle = screen.getByTestId('chat-privacy-toggle');
+      expect(toggle).toHaveAttribute('data-org', 'acme');
+      expect(toggle).toHaveAttribute('data-user', 'jane');
+      expect(toggle).toHaveAttribute('data-mentor', 'mentor-xyz');
+    });
+
+    it('stays compact on small screens (inline-flex + label hidden)', () => {
+      // `inline-flex` overrides the SDK's `hidden md:inline-flex` so it shows
+      // below `md`; `max-md:[&>span]:hidden` keeps it icon-only there so the
+      // expanded "Private Mode" label can't push the other controls offscreen.
+      renderEmbedNavBar();
+      const cls = screen.getByTestId('chat-privacy-toggle').className;
+      expect(cls).toContain('inline-flex');
+      expect(cls).toContain('max-md:[&>span]:hidden');
+    });
+
+    it('hides the toggle on non-chat routes (e.g. analytics)', () => {
+      mockPathname = '/platform/tenant123/mentor123/analytics';
+      renderEmbedNavBar();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the toggle when the user is not logged in', () => {
+      // Private Mode is a logged-in-only affordance. Embed is public-facing,
+      // so an anonymous viewer must not see it even on a non-anonymous mentor.
+      mockIsLoggedIn = false;
+      renderEmbedNavBar({ isAnonymousMentor: false });
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the toggle when there is no tenant key', () => {
+      renderEmbedNavBar({ tenantKey: '' });
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+  });
 
   describe('Help Items', () => {
     it('uses config fallback when metadata URLs are missing', async () => {

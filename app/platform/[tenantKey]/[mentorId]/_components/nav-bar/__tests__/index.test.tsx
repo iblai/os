@@ -1448,5 +1448,28 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       expect(span!.className).toContain('max-w-[150px]');
       expect(span!.className).not.toContain('max-w-[100px]');
     });
+
+    it('hides the LLM name on phones and reveals it from sm up', () => {
+      // The name label is `hidden` below `sm` to free header space on
+      // phones; the tooltip carries the name there. From `sm` up it shows.
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('hidden');
+      expect(span!.className).toContain('sm:block');
+    });
   });
 });
