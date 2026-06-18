@@ -229,7 +229,7 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
 
     await expect(
       page.getByRole('tooltip', {
-        name: /multiple search queries from a single user question/i,
+        name: /runs several search queries per question to pull more relevant documents/i,
       }),
     ).toBeVisible({ timeout: 5_000 });
     logger.info('uid-07: Enhanced RAG tooltip content is visible');

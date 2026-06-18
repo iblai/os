@@ -220,7 +220,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       expect(
-        screen.getByText(/Discover and create academic agents/i),
+        screen.getByText(/Discover and create agents/i),
       ).toBeInTheDocument();
     });
 

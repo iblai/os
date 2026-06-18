@@ -66,11 +66,8 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> 
         println!("[OAuth Popup] Navigation to: {}", url_str);
 
         // Check if this is a callback URL (auth completed)
-        let is_callback = url_str.contains("login.iblai.app") &&
-            (url_str.contains("/callback") ||
-             url_str.contains("code=") ||
-             url_str.contains("token=") ||
-             url_str.contains("access_token="));
+        let is_callback = url_str.contains("mentorai.iblai.app") ||
+            url_str.starts_with("https://mentorai.iblai.app");
 
         // Also check for custom scheme callbacks
         let is_custom_scheme = url_str.starts_with("iblai-mentor://") ||
@@ -168,7 +165,7 @@ fn get_app_url() -> String {
 
     // Default: localhost for debug, production URL for release
     #[cfg(debug_assertions)]
-    return "https://mentorai.iblai.org".to_string();
+    return "https://mentorai.iblai.app".to_string();
 
     #[cfg(not(debug_assertions))]
     return "https://mentorai.iblai.app".to_string();
