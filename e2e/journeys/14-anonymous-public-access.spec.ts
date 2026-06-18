@@ -253,16 +253,22 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
       name: 'Analytics',
       exact: true,
     });
-    if (await analyticsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await analyticsBtn.click();
-      await page.waitForTimeout(2_000);
-      const isRedirected =
-        page.url().includes(AUTH_HOST) || page.url().includes('login');
-      const hasModal = await page
-        .getByRole('dialog')
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      expect(isRedirected || hasModal).toBe(true);
-    }
+    await expect(analyticsBtn).toBeVisible({ timeout: 10_000 });
+    await analyticsBtn.click();
+
+    const overviewBtn = page.getByRole('button', {
+      name: 'Overview',
+      exact: true,
+    });
+    await expect(overviewBtn).toBeVisible({ timeout: 10_000 });
+    await overviewBtn.click();
+
+    await page.waitForURL(
+      (url) => url.href.includes(AUTH_HOST) || url.href.includes('login'),
+      { timeout: 30_000 },
+    );
+    expect(page.url().includes(AUTH_HOST) || page.url().includes('login')).toBe(
+      true,
+    );
   });
 });
