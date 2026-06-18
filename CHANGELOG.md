@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.75.17](https://github.com/iblai/os/compare/v0.75.16...v0.75.17) (2026-06-18)
+
+### Bug Fixes
+
+* **embed:** remove redundant auth-redirect from embed snippet ([6a464d7](https://github.com/iblai/os/commit/6a464d76fd7b9bbeb48f7a09cea598bd6740d34a))
+
 ## [0.75.16](https://github.com/iblai/os/compare/v0.75.15...v0.75.16) (2026-06-18)
 
 ### Bug Fixes
