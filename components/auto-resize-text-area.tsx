@@ -92,6 +92,22 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     adjustHeight();
   }, [value]);
 
+  // Keep focus on the textarea whenever a composer mounts (e.g. the
+  // messages-view composer that replaces the empty-state composer after the
+  // first message). Only focus when the textarea is actually enabled and not
+  // in embed mode, where stealing focus from a host page is undesirable.
+  useEffect(() => {
+    const isTextareaDisabled =
+      (!sessionId && !allowAnonymousAccess) ||
+      (isPreviewMode && !allowAnonymousAccess) ||
+      disabled;
+
+    if (!isTextareaDisabled && !embedMode) {
+      textareaRef.current?.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>,
   ): void => {

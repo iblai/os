@@ -4,40 +4,40 @@
 
 ### Bug Fixes
 
-* mentor db id payload passed to reports endpoints ([f2d29f3](https://github.com/iblai/os/commit/f2d29f356964cfb49687ab6e524817e3972265a9))
-* mentor db id payload passed to reports endpoints > test coverage ([e8dba0c](https://github.com/iblai/os/commit/e8dba0cfad7164a226a6ffe7530d5598bd005663))
+- mentor db id payload passed to reports endpoints ([f2d29f3](https://github.com/iblai/os/commit/f2d29f356964cfb49687ab6e524817e3972265a9))
+- mentor db id payload passed to reports endpoints > test coverage ([e8dba0c](https://github.com/iblai/os/commit/e8dba0cfad7164a226a6ffe7530d5598bd005663))
 
 ## [0.75.14](https://github.com/iblai/os/compare/v0.75.13...v0.75.14) (2026-06-18)
 
 ### Bug Fixes
 
-* **e2e:** journey 14 anon admin gate clicks Analytics leaf, not the group ([6fd68ac](https://github.com/iblai/os/commit/6fd68ac81812906aa21a50632f6f362b04928b2e))
-* **mentor:** hide Add Resource button without documents create permission ([8a8f259](https://github.com/iblai/os/commit/8a8f259bbd4b7d267d9f8c3d80cf2540d092c45d))
-* **mentor:** render a single Edit Agent modal so its Close isn't intercepted ([738b583](https://github.com/iblai/os/commit/738b583c26a9361a6a20aa71e72076ca542a5f32))
+- **e2e:** journey 14 anon admin gate clicks Analytics leaf, not the group ([6fd68ac](https://github.com/iblai/os/commit/6fd68ac81812906aa21a50632f6f362b04928b2e))
+- **mentor:** hide Add Resource button without documents create permission ([8a8f259](https://github.com/iblai/os/commit/8a8f259bbd4b7d267d9f8c3d80cf2540d092c45d))
+- **mentor:** render a single Edit Agent modal so its Close isn't intercepted ([738b583](https://github.com/iblai/os/commit/738b583c26a9361a6a20aa71e72076ca542a5f32))
 
 ### Tests
 
-* **mentor:** cover RBAC gating of Add Resource button ([235c322](https://github.com/iblai/os/commit/235c3221a8cb35c0b7db42570b598cc01b27d10c))
+- **mentor:** cover RBAC gating of Add Resource button ([235c322](https://github.com/iblai/os/commit/235c3221a8cb35c0b7db42570b598cc01b27d10c))
 
 ## [0.75.13](https://github.com/iblai/os/compare/v0.75.12...v0.75.13) (2026-06-17)
 
 ### Bug Fixes
 
-* **ci:** copy patches/ before pnpm install in app + e2e Dockerfiles ([0422bc1](https://github.com/iblai/os/commit/0422bc13d57de361c2e7f26dd7b5f464b2b6dbc6))
+- **ci:** copy patches/ before pnpm install in app + e2e Dockerfiles ([0422bc1](https://github.com/iblai/os/commit/0422bc13d57de361c2e7f26dd7b5f464b2b6dbc6))
 
 ## [0.75.12](https://github.com/iblai/os/compare/v0.75.11...v0.75.12) (2026-06-17)
 
 ### Bug Fixes
 
-* **deps:** patch google-drive-picker to drop hardcoded drive.readonly scope ([e4e8698](https://github.com/iblai/os/commit/e4e8698e1e4b75eaca8fa62213b8859de468c01d))
+- **deps:** patch google-drive-picker to drop hardcoded drive.readonly scope ([e4e8698](https://github.com/iblai/os/commit/e4e8698e1e4b75eaca8fa62213b8859de468c01d))
 
 ### Tests
 
-* **hooks:** guard google-drive-picker scope patch against regression ([2b76489](https://github.com/iblai/os/commit/2b76489101fa9664bf1ec82eb23851c2dba89082))
+- **hooks:** guard google-drive-picker scope patch against regression ([2b76489](https://github.com/iblai/os/commit/2b76489101fa9664bf1ec82eb23851c2dba89082))
 
 ### CI
 
-* add .dockerignore to keep docs/agent/VCS files out of the build ([3702d52](https://github.com/iblai/os/commit/3702d5240db74fbb47688b70a1ed7596af3f99aa))
+- add .dockerignore to keep docs/agent/VCS files out of the build ([3702d52](https://github.com/iblai/os/commit/3702d5240db74fbb47688b70a1ed7596af3f99aa))
 
 ## [0.75.11](https://github.com/iblai/os/compare/v0.75.10...v0.75.11) (2026-06-17)
 
