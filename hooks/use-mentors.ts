@@ -10,9 +10,16 @@ import {
   useGetPublicMentorsQuery,
 } from '@iblai/iblai-js/data-layer';
 
-export function useMentorsWithPagination(itemsPerPage = 5) {
+export function useMentorsWithPagination(
+  itemsPerPage = 5,
+  options?: { createdBy?: string },
+) {
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
+  // When set, restricts the list to mentors CREATED BY this user (the
+  // `created_by` search filter). Used by "My Agents" for non-admins so a
+  // student only sees the agents they made, not others' in the tenant.
+  const createdBy = options?.createdBy;
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -34,6 +41,7 @@ export function useMentorsWithPagination(itemsPerPage = 5) {
     {
       org: tenantKey,
       username: username ?? '',
+      ...(createdBy ? { createdBy } : {}),
       ...queryParams,
     },
     {

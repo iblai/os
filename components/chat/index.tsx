@@ -382,6 +382,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -453,6 +457,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -496,23 +504,6 @@ export function Chat({
     // isFirstCanvasOpenRef.current = true;
   }, []);
 
-  useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const newChatEventHandler = () => {
-      // Reset showingSharedChat when user starts a new chat
-      if (showingSharedChat) {
-        dispatch(chatActions.setShowingSharedChat(false));
-      }
-      startNewChat();
-    };
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const stopGeneratingChatHandler = () => {
-      stopGenerating();
-    };
-    eventBus.on(RemoteEvents.newChat, newChatEventHandler);
-    eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
-  }, [showingSharedChat]);
-
   const isAdvancedMode = mode === 'advanced';
   const [isPhoneCallModalOpen, setIsPhoneCallModalOpen] = useState(false);
   const [isScreenSharingModalOpen, setIsScreenSharingModalOpen] =
@@ -552,12 +543,7 @@ export function Chat({
   const [canvasState, setCanvasState] = useState<CanvasState>(() =>
     createEmptyCanvasState(),
   );
-  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
-  const lastAIMessageCopyButtonRef = useRef<HTMLButtonElement>(null);
-  const stopStreamingButtonRef = useRef<HTMLButtonElement>(null);
-  const wasIsStreamingRef = useRef(false);
-  const wasStreamingActiveRef = useRef(false);
 
   const [isMdUp, setIsMdUp] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -590,15 +576,17 @@ export function Chat({
   }, [isStreaming, isPending]);
 
   useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const newChatEventHandler = () => {
+      // Reset showingSharedChat when user starts a new chat
+      if (showingSharedChat) {
+        dispatch(chatActions.setShowingSharedChat(false));
+      }
       // Close canvas when starting a new chat
       if (isCanvasOpen) {
         handleCloseCanvas();
       }
       startNewChat();
     };
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
@@ -621,12 +609,14 @@ export function Chat({
       eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
   }, [
+    showingSharedChat,
     isCanvasOpen,
     startNewChat,
     stopGenerating,
     handleCloseCanvas,
     sendMessage,
     activeTab,
+    dispatch,
   ]);
 
   // Resize state for canvas/chat split view
@@ -1033,30 +1023,6 @@ export function Chat({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isStreaming]);
-
-  // Focus management for streaming state transitions (WCAG 2.4.3)
-  // - When isStreaming becomes true: focus the stop streaming button
-  //   (StopStreamingButton renders based on isStreaming, not isPending,
-  //    so we must track isStreaming specifically)
-  // - When both isStreaming and isPending become false: focus the copy button
-  useEffect(() => {
-    // Stop button: track isStreaming directly since it controls rendering
-    if (isStreaming && !wasIsStreamingRef.current) {
-      setTimeout(() => {
-        stopStreamingButtonRef.current?.focus();
-      }, 100);
-    }
-    wasIsStreamingRef.current = isStreaming;
-
-    // Copy button: track combined state so we wait for everything to settle
-    const currentlyActive = isStreaming || isPending;
-    if (wasStreamingActiveRef.current && !currentlyActive) {
-      setTimeout(() => {
-        lastAIMessageCopyButtonRef.current?.focus();
-      }, 100);
-    }
-    wasStreamingActiveRef.current = currentlyActive;
-  }, [isStreaming, isPending]);
 
   // Add scroll event listener
   useEffect(() => {
@@ -1762,7 +1728,6 @@ export function Chat({
                 <ErrorBoundary>
                   {messages.length > 0 ? (
                     <ChatMessages
-                      ref={lastAIMessageCopyButtonRef}
                       messages={messages}
                       highlightedMessageId={highlightedMessageId}
                       profileImage={profileImage}
@@ -1774,10 +1739,6 @@ export function Chat({
                       handleSubmit={handleSubmit}
                       onReply={(message) => {
                         setReplyingToMessage(message);
-                        /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                        if (promptTextareaRef.current) {
-                          promptTextareaRef.current.focus();
-                        }
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
@@ -1874,7 +1835,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 chatAreaMaxWidth={chatAreaMaxWidth}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1974,7 +1934,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 isConnecting={!isConnected}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1996,7 +1955,6 @@ export function Chat({
               <ErrorBoundary>
                 {/* Messages with file attachments */}
                 <ChatMessages
-                  ref={lastAIMessageCopyButtonRef}
                   messages={
                     messages[0].role === 'assistant'
                       ? messages.slice(1)
@@ -2012,10 +1970,6 @@ export function Chat({
                   handleSubmit={handleSubmit}
                   onReply={(message) => {
                     setReplyingToMessage(message);
-                    /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                    if (promptTextareaRef.current) {
-                      promptTextareaRef.current.focus();
-                    }
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
@@ -2134,7 +2088,6 @@ export function Chat({
               artifactsEnabled={artifactsEnabled}
               compactMode={isCompactMode}
               chatAreaMaxWidth={chatAreaMaxWidth}
-              stopStreamingButtonRef={stopStreamingButtonRef}
             />
           </div>
         )}

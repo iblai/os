@@ -37,6 +37,7 @@ import {
   parsePrompt,
   markdownToHtml,
   getUserOS,
+  isMobileOS,
   saveUserObjectToLocalStorage,
   maxDatasetFileSizeInMegaBytes,
   formatDateToYYYYMMDD,
@@ -103,6 +104,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 
 vi.mock('@iblai/iblai-js/web-utils/auth', () => ({
   redirectToAuthSpa: vi.fn(),
+  handleTenantSwitch: vi.fn(),
 }));
 
 // Mock localStorage with spied functions
@@ -1569,6 +1571,95 @@ describe('getUserOS function', () => {
   });
 });
 
+describe('isMobileOS function', () => {
+  const setNavigator = (ua: string, platform = '', maxTouchPoints = 0) => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: ua,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'platform', {
+      value: platform,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      value: maxTouchPoints,
+      writable: true,
+      configurable: true,
+    });
+  };
+
+  afterEach(() => {
+    setNavigator(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Win32',
+      0,
+    );
+  });
+
+  it('returns true for an Android user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36',
+      'Linux armv8l',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns true for an iPhone user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+      'iPhone',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns true for iPadOS presenting a desktop Mac UA (MacIntel + touch)', () => {
+    setNavigator(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15',
+      'MacIntel',
+      5,
+    );
+    expect(isMobileOS()).toBe(true);
+  });
+
+  it('returns false for a desktop Chrome user agent', () => {
+    setNavigator(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120',
+      'Win32',
+      0,
+    );
+    expect(isMobileOS()).toBe(false);
+  });
+
+  it('returns false for a real (non-touch) Mac desktop', () => {
+    setNavigator(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15',
+      'MacIntel',
+      0,
+    );
+    expect(isMobileOS()).toBe(false);
+  });
+
+  it('returns false when navigator is undefined (SSR)', () => {
+    const originalNavigator = globalThis.navigator;
+    // Simulate a server environment where navigator is not defined.
+    Object.defineProperty(globalThis, 'navigator', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
+    expect(isMobileOS()).toBe(false);
+    Object.defineProperty(globalThis, 'navigator', {
+      value: originalNavigator,
+      writable: true,
+      configurable: true,
+    });
+  });
+});
+
 describe('saveUserObjectToLocalStorage function', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', {
@@ -2240,99 +2331,49 @@ describe('handleLogout function', () => {
   });
 });
 
+// handleTenantSwitch is a thin wrapper over the SDK's cross-tab tenant switch
+// (the actual coordination/redirect logic is unit-tested in @iblai/web-utils).
+// These tests assert the wrapper delegates with mentorai's injected config.
 describe('handleTenantSwitch function', () => {
-  let locationHrefSpy: string;
-
   beforeEach(() => {
-    locationHrefSpy = '';
-    // Clear cookies from previous tests
-    document.cookie =
-      'ibl_tenant_switching=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie =
-      'ibl_login_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie =
-      'ibl_logout_timestamp=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-      writable: true,
-      configurable: true,
-    });
-    Object.defineProperty(window, 'location', {
-      value: {
-        origin: 'https://example.com',
-        hostname: 'example.com',
-        pathname: '/current-path',
-        search: '?query=value',
-        set href(value: string) {
-          locationHrefSpy = value;
-        },
-        get href() {
-          return locationHrefSpy || 'https://example.com';
-        },
-      },
-      writable: true,
-      configurable: true,
-    });
-    localStorageMock.clear();
     vi.clearAllMocks();
   });
 
-  it('should switch to new tenant', async () => {
-    await handleTenantSwitch('new-tenant');
-    expect(localStorageMock.getItem('tenant')).toBe('new-tenant');
-    expect(locationHrefSpy).toContain(
-      'https://auth.example.com/login/complete',
+  it('delegates to the SDK handleTenantSwitch with mentorai config', async () => {
+    const { handleTenantSwitch: sdkSwitch } = await import(
+      '@iblai/iblai-js/web-utils/auth'
     );
-  });
-
-  it('should include redirect URL', async () => {
-    await handleTenantSwitch('new-tenant', false, 'https://custom.com');
-    expect(locationHrefSpy).toContain('new-tenant');
-    expect(locationHrefSpy).toContain(encodeURIComponent('https://custom.com'));
-  });
-
-  it('should save redirect path when requested', async () => {
-    await handleTenantSwitch('new-tenant', true);
-    expect(localStorageMock.getItem('redirect-to')).toBe(
-      '/current-path?query=value',
-    );
-  });
-
-  it('should clear localStorage before switching', async () => {
-    localStorageMock.setItem('old-key', 'old-value');
-    await handleTenantSwitch('new-tenant');
-    expect(localStorageMock.getItem('old-key')).toBeNull();
-  });
-
-  it('should include JWT token in URL when token exists in localStorage', async () => {
-    localStorageMock.setItem('edx_jwt_token', 'test-jwt-token-123');
-    await handleTenantSwitch('new-tenant');
-    expect(locationHrefSpy).toContain('token=test-jwt-token-123');
-  });
-
-  it('should not include JWT token in URL when no token in localStorage', async () => {
-    // localStorage is cleared by beforeEach, so no token exists
-    await handleTenantSwitch('new-tenant');
-    expect(locationHrefSpy).not.toContain('token=');
-  });
-
-  it('should preserve JWT token before clearing localStorage', async () => {
-    localStorageMock.setItem('edx_jwt_token', 'preserved-token');
-    localStorageMock.setItem('other-key', 'other-value');
-    await handleTenantSwitch('new-tenant');
-
-    // Other keys should be cleared
-    expect(localStorageMock.getItem('other-key')).toBeNull();
-    // Token should be in the redirect URL
-    expect(locationHrefSpy).toContain('token=preserved-token');
-  });
-
-  it('should call clearCurrentTenantCookie', async () => {
     const { clearCurrentTenantCookie } = await import(
       '@iblai/iblai-js/web-utils'
     );
     await handleTenantSwitch('new-tenant');
-    expect(clearCurrentTenantCookie).toHaveBeenCalled();
+    expect(sdkSwitch).toHaveBeenCalledWith(
+      'new-tenant',
+      expect.objectContaining({
+        authUrl: 'https://auth.example.com',
+        redirectPathStorageKey: 'redirect-to',
+        queryParams: { redirectTo: 'redirect-to' },
+        clearCurrentTenantCookie,
+        saveRedirect: false,
+        redirectUrl: undefined,
+        broadcast: true,
+      }),
+    );
+  });
+
+  it('forwards saveRedirect, redirectUrl and broadcast flags', async () => {
+    const { handleTenantSwitch: sdkSwitch } = await import(
+      '@iblai/iblai-js/web-utils/auth'
+    );
+    await handleTenantSwitch('t', true, 'https://custom.com', false);
+    expect(sdkSwitch).toHaveBeenCalledWith(
+      't',
+      expect.objectContaining({
+        saveRedirect: true,
+        redirectUrl: 'https://custom.com',
+        broadcast: false,
+      }),
+    );
   });
 });
 

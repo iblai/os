@@ -73,6 +73,9 @@ const EXCLUDED_PATTERNS = [
   /\/uploads\/page\.tsx$/,
   // Job Scout — separate feature module, tested independently
   /\/job-scout\//,
+  // Welcome-chat tools section — dead code: <ToolsSection> is commented out in
+  // welcome-chat-new.tsx, so it is never rendered and cannot be E2E-exercised.
+  /\/welcome-chat\/tools-section\.tsx$/,
 ];
 
 // ─── Colors ──────────────────────────────────────────────────────────────────

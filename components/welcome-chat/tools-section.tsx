@@ -32,7 +32,7 @@ const tools: Tool[] = [
       'Generate a lesson plan based on standard, topic, or objective.',
     icon: '/icons/quiz.svg',
     updatedDate: 'February 13, 2025',
-    categories: ['Content', 'Questions', 'Student Success'],
+    categories: ['Content', 'Questions', 'User Success'],
     usageCount: 245,
   },
   {
@@ -93,7 +93,7 @@ const categories = [
   'Grading',
   'Communication',
   'Administrative',
-  'Student Success',
+  'User Success',
 ];
 
 type SortOption = 'most-used' | 'latest' | 'alphabetical' | 'favorites';
@@ -132,6 +132,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
         const bFav = favorites.has(b.id) ? 1 : 0;
         if (aFav !== bFav) return bFav - aFav;
         return b.usageCount - a.usageCount; // Secondary sort by usage
+      /* istanbul ignore next -- defensive default; sortBy is always a valid SortOption */
       default:
         return 0;
     }
@@ -175,6 +176,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
         return 'Alphabetical';
       case 'favorites':
         return 'Favorites';
+      /* istanbul ignore next -- defensive default; option is always a valid SortOption */
       default:
         return 'Sort by Most Used';
     }
