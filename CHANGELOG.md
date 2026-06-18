@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.75.15](https://github.com/iblai/os/compare/v0.75.14...v0.75.15) (2026-06-18)
+
+### Bug Fixes
+
+* mentor db id payload passed to reports endpoints ([f2d29f3](https://github.com/iblai/os/commit/f2d29f356964cfb49687ab6e524817e3972265a9))
+* mentor db id payload passed to reports endpoints > test coverage ([e8dba0c](https://github.com/iblai/os/commit/e8dba0cfad7164a226a6ffe7530d5598bd005663))
+
 ## [0.75.14](https://github.com/iblai/os/compare/v0.75.13...v0.75.14) (2026-06-18)
 
 ### Bug Fixes
