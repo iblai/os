@@ -444,7 +444,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByText('Administrators')).toBeInTheDocument();
-      expect(screen.getByText('Students')).toBeInTheDocument();
+      expect(screen.getByText('Users')).toBeInTheDocument();
       // "Anyone" appears in both the visibility select and chat access select
       expect(screen.getAllByText('Anyone').length).toBeGreaterThanOrEqual(1);
     });
@@ -1582,8 +1582,8 @@ describe('SettingsTab', () => {
 
       // The current value is "viewable_by_tenant_admins" (Administrators),
       // pick a different option to fire onValueChange.
-      const studentsOption = screen.getByRole('option', { name: 'Students' });
-      fireEvent.click(studentsOption);
+      const usersOption = screen.getByRole('option', { name: 'Users' });
+      fireEvent.click(usersOption);
 
       // Submitting should now include the changed visibility value.
       const saveButton = screen.getByRole('button', { name: /save/i });

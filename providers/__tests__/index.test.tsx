@@ -255,6 +255,9 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useTenantSwitchSync: vi.fn(),
+  refreshTenantSwitchLock: vi.fn(),
+  isTenantSwitchInProgress: vi.fn(() => false),
   useTenantMetadata: () => ({
     metadata: mockMetadata,
     platformName: null,

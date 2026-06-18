@@ -34,7 +34,9 @@ test.describe('Journey 34: Workflows', () => {
       page.getByRole('heading', { name: 'Workflows', level: 1, exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText('Create and manage automated workflows for your agents'),
+      page.getByText('Create and manage automated workflows for your agents', {
+        exact: true,
+      }),
     ).toBeVisible();
 
     const createButton = page.getByRole('button', { name: 'Create Workflow' });
