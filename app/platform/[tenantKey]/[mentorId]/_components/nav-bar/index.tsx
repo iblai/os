@@ -30,7 +30,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import {
   ChatPrivacyToggle,
   CreditBalance,
@@ -194,8 +193,6 @@ export function NavBar() {
 
   const {
     openEditMentorModal,
-    showEditMentorModal,
-    closeEditMentorModal,
     showCreateMentorModal,
     closeCreateMentorModal,
     navigateToAnalytics,
@@ -678,17 +675,6 @@ export function NavBar() {
           onClose={() => setIsProviderSelectionOpen(false)}
         />
       )}
-      {/*
-        Radix Dialog must observe the open: true -> false transition to run
-        react-remove-scroll cleanup. Conditional unmount while open=true leaves
-        body[data-scroll-locked] and the sidebar-wrapper aria-hidden set,
-        which blocks subsequent nav-bar interactions (the dropdown remains in
-        the DOM but is invisible to accessibility-tree queries).
-      */}
-      <EditMentorModal
-        isOpen={showEditMentorModal}
-        onClose={closeEditMentorModal}
-      />
       {showCreateMentorModal && (
         <CreateMentorModal
           isOpen={showCreateMentorModal}
