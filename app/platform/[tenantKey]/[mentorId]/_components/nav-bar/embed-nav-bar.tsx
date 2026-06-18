@@ -66,10 +66,6 @@ export function EmbedNavBar({
   const chatMode = useChatMode();
   const dispatch = useAppDispatch();
   const pathname = usePathname();
-
-  // Mirror the main NavBar's gating so the Private Mode pill obeys the same
-  // checks in every nav-bar version. Embed is normally the chat page, but we
-  // exclude the non-chat routes the same way so the surface stays consistent.
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
   const isOnChatPage =
     !pathname?.includes('/prompt-gallery') &&
@@ -206,19 +202,7 @@ export function EmbedNavBar({
           <span className="text-sm font-bold text-gray-800">{mentorName}</span>
         </button>
 
-        {/* Right-aligned controls. A single `ml-auto` wrapper keeps the
-            cluster pinned to the right — stacking `ml-auto` on multiple flex
-            children would split the free space and scatter them. */}
         <div className="ml-auto flex items-center gap-2">
-          {/* Private Mode toggle. The SDK already returns null unless the
-              tenant chat-privacy gate is enabled AND a userId is present, so
-              the effective-settings/precedence logic matches the main NavBar
-              (it's the same SDK component). Embed is the public-facing
-              surface, so we additionally require an explicit logged-in user
-              before mounting it. `inline-flex` overrides the SDK's
-              `hidden md:inline-flex` so the pill shows on small screens;
-              `max-md:[&>span]:hidden` keeps it icon-only there so the expanded
-              "Private Mode" label can't push the other controls off-screen. */}
           {isOnChatPage && isLoggedIn() && tenantKey && (
             <ChatPrivacyToggle
               org={tenantKey}

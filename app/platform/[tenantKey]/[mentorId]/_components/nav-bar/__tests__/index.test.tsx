@@ -1450,8 +1450,6 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
     });
 
     it('hides the LLM name on phones and reveals it from sm up', () => {
-      // The name label is `hidden` below `sm` to free header space on
-      // phones; the tooltip carries the name there. From `sm` up it shows.
       mockCurrentTenant = {
         key: 'no-paywall-tenant',
         is_admin: true,
