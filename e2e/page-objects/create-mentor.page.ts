@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
-import { waitForPageReady } from '../utils/resilient';
+import { waitForPageReady, reliableClick } from '../utils/resilient';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -85,11 +85,13 @@ export class CreateMentorPage {
       description || `E2E test mentor created at ${Date.now()}`,
     );
 
-    // Select first available category
+    // Select first available category. The cmdk option list re-renders as
+    // categories stream in, detaching the first <div role="option"> mid-click
+    // ("element is not stable / detached from the DOM"). reliableClick waits
+    // for stability and retries the whole click, so a detach just re-runs.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
-    await expect(firstCategory).toBeVisible({ timeout: 5_000 });
-    await firstCategory.click();
+    await reliableClick(this.page, firstCategory, 5_000);
 
     // Wait for Next button to become enabled
     await expect(this.nextButton).toBeEnabled({ timeout: 5_000 });

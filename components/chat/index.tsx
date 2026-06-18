@@ -382,6 +382,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -453,6 +457,10 @@ export function Chat({
         <ToastErrorMessage
           message={message}
           supportEmail={metadata?.support_email || config.supportEmail()}
+          supportPhone={
+            metadata?.support_phone || config.defaultSupportPhoneNumber()
+          }
+          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -495,23 +503,6 @@ export function Chat({
     // Reset the first open flag when closing (optional - depends on desired behavior)
     // isFirstCanvasOpenRef.current = true;
   }, []);
-
-  useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const newChatEventHandler = () => {
-      // Reset showingSharedChat when user starts a new chat
-      if (showingSharedChat) {
-        dispatch(chatActions.setShowingSharedChat(false));
-      }
-      startNewChat();
-    };
-    /* istanbul ignore next -- @preserve eventBus handlers */
-    const stopGeneratingChatHandler = () => {
-      stopGenerating();
-    };
-    eventBus.on(RemoteEvents.newChat, newChatEventHandler);
-    eventBus.on(RemoteEvents.stopChatGenerating, stopGeneratingChatHandler);
-  }, [showingSharedChat]);
 
   const isAdvancedMode = mode === 'advanced';
   const [isPhoneCallModalOpen, setIsPhoneCallModalOpen] = useState(false);
@@ -590,15 +581,17 @@ export function Chat({
   }, [isStreaming, isPending]);
 
   useEffect(() => {
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const newChatEventHandler = () => {
+      // Reset showingSharedChat when user starts a new chat
+      if (showingSharedChat) {
+        dispatch(chatActions.setShowingSharedChat(false));
+      }
       // Close canvas when starting a new chat
       if (isCanvasOpen) {
         handleCloseCanvas();
       }
       startNewChat();
     };
-    /* istanbul ignore next -- @preserve eventBus handler tested via mock */
     const stopGeneratingChatHandler = () => {
       stopGenerating();
     };
@@ -621,12 +614,14 @@ export function Chat({
       eventBus.off(RemoteEvents.sendChatMessage, sendChatMessageHandler);
     };
   }, [
+    showingSharedChat,
     isCanvasOpen,
     startNewChat,
     stopGenerating,
     handleCloseCanvas,
     sendMessage,
     activeTab,
+    dispatch,
   ]);
 
   // Resize state for canvas/chat split view

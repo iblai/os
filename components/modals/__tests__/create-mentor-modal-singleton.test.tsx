@@ -11,6 +11,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
+import rbacReducer from '@/features/rbac/rbac-slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import { MODALS } from '@/lib/constants';
 
@@ -164,6 +165,7 @@ function createTestStore(preloadedStack: ModalInfo[] = []) {
   return configureStore({
     reducer: {
       modals: modalReducer,
+      rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>

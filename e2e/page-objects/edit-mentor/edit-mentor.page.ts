@@ -12,6 +12,9 @@ import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
+import { TasksTab } from './tasks.tab';
+import { VoiceTab } from './voice.tab';
+import { ScreenShareTab } from './screenshare.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -35,12 +38,15 @@ const TAB_CATEGORY: Record<
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
+  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
   Tools: 'Configurations',
   MCP: 'Integrations',
   Datasets: 'Integrations',
   API: 'Integrations',
   Embed: 'Integrations',
+  Voice: 'Configurations',
+  'Screen Share': 'Configurations',
   Memory: 'Analytics',
   History: 'Analytics',
   Audit: 'Analytics',
@@ -64,6 +70,9 @@ export class EditMentorPage {
   readonly embed: EmbedTab;
   readonly access: AccessTab;
   readonly privacy: PrivacyTab;
+  readonly tasks: TasksTab;
+  readonly voice: VoiceTab;
+  readonly screenshare: ScreenShareTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -86,6 +95,9 @@ export class EditMentorPage {
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
     this.privacy = new PrivacyTab(page, this.dialog);
+    this.tasks = new TasksTab(page, this.dialog);
+    this.voice = new VoiceTab(page, this.dialog);
+    this.screenshare = new ScreenShareTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
   }
 
@@ -93,17 +105,21 @@ export class EditMentorPage {
    * Opens the Edit Mentor modal via the mentor dropdown menu item.
    * Pass the tab name to navigate directly to a specific tab.
    */
-  async open(tabName?: string): Promise<void> {
-    // Radix/SDK Dialog cleanup can leave behind body[data-scroll-locked],
-    // <body style="pointer-events: none"> and a stale
-    // `[data-slot="sidebar-wrapper"][aria-hidden="true"]` when a previous
-    // Dialog is unmounted while still open. The SDK Edit Agent dialog does
-    // NOT reliably restore these on close, so a passive
-    // `waitFor({ state: 'detached' })` never resolves — it burns its full
-    // timeout and surfaces as a red step even though the test continues.
-    // Restore the page chrome ourselves (the SDK should have), then confirm
-    // the stale markers are gone. This keeps the nav-bar trigger clickable
-    // and visible to the a11y tree, and leaves the trace green.
+  /**
+   * Restore the app chrome the SDK Edit Agent dialog fails to clean up.
+   *
+   * Radix/SDK Dialog teardown can leave `body[data-scroll-locked]`,
+   * `<body style="pointer-events: none">` and a stale
+   * `[data-slot="sidebar-wrapper"][aria-hidden="true"]` behind after the
+   * dialog unmounts. The aria-hidden one is the worst: it drops the entire
+   * app shell (navbar, sidebar, chat chrome) out of the accessibility tree,
+   * so every `getByRole`/role-based query against page chrome returns
+   * nothing even though it's visually present. We remove these ourselves
+   * (the SDK should) and confirm they're gone. Called both before opening
+   * the dialog and after closing it so callers can interact with the page
+   * chrome immediately afterward.
+   */
+  private async restoreAppChrome(): Promise<void> {
     const staleChrome = this.page
       .locator(
         'body[data-scroll-locked="1"], [data-slot="sidebar-wrapper"][aria-hidden="true"]',
@@ -126,6 +142,71 @@ export class EditMentorPage {
         { timeout: 5_000 },
       )
       .catch(() => {});
+  }
+
+  /**
+   * Restore the Edit Agent dialog to the accessibility tree.
+   *
+   * When the Edit Agent modal is opened from the My Agents list, the
+   * SettingsModal dialog stays open underneath it (the modal stack pushes
+   * rather than replaces — see `openEditMentorModal` in
+   * `hooks/user-navigate.ts`). Radix's stacked-dialog `aria-hidden`
+   * management then drops the Edit dialog's subtree out of the a11y tree,
+   * so the dialog renders on screen but every `getByRole` query against it
+   * (the dialog itself and its tabs) returns nothing. We clear the stale
+   * `aria-hidden` from the Edit dialog's ancestor chain so role-based
+   * locators resolve again.
+   *
+   * Locating the dialog uses a raw `[role="dialog"]` CSS query rather than
+   * `getByRole`, because the latter consults the a11y tree we're trying to
+   * repair.
+   */
+  private async unhideEditDialog(): Promise<void> {
+    const editDialog = this.page
+      .locator('[role="dialog"]')
+      .filter({ hasText: 'Edit Agent' })
+      .first();
+    // toBeVisible checks layout (CSS), not the a11y tree, so it resolves even
+    // while the dialog is aria-hidden — confirming the click opened it.
+    await expect(editDialog).toBeVisible({ timeout: 35_000 });
+
+    // A one-time strip doesn't hold: the still-open settings dialog re-runs
+    // Radix's hideOthers and keeps re-applying aria-hidden to the backgrounded
+    // Edit portal. Install a MutationObserver that re-strips it (and inert)
+    // from the Edit dialog's ancestor chain whenever it reappears, so
+    // role-based queries stay valid for the rest of the test.
+    await this.page.evaluate(() => {
+      const strip = () => {
+        const dialog = Array.from(
+          document.querySelectorAll('[role="dialog"]'),
+        ).find((d) => d.textContent?.includes('Edit Agent'));
+        let node: Element | null = dialog ?? null;
+        while (node) {
+          if (node.getAttribute('aria-hidden') === 'true') {
+            node.removeAttribute('aria-hidden');
+          }
+          if (node.hasAttribute('inert')) {
+            node.removeAttribute('inert');
+          }
+          node = node.parentElement;
+        }
+      };
+
+      strip();
+      // Observing a live node keeps the observer reachable for the page's
+      // lifetime; no need to stash a reference.
+      new MutationObserver(strip).observe(document.body, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'inert'],
+      });
+    });
+  }
+
+  async open(tabName?: string): Promise<void> {
+    // Restore any chrome a previous dialog left in a broken state before
+    // looking for the nav-bar trigger (see restoreAppChrome).
+    await this.restoreAppChrome();
 
     // Match the trigger by its `aria-label` attribute. A DOM query is robust
     // even if any stale `aria-hidden` slips past the cleanup above, and
@@ -156,6 +237,68 @@ export class EditMentorPage {
     }
   }
 
+  /**
+   * Opens the Edit Mentor modal via the sidebar's Agents → My Agents flow:
+   * expands the Agents section, clicks My Agents to surface the agent list,
+   * then clicks the first row. This path is the regression case behind
+   * `edit-mentor-modal/index.tsx`'s RBAC-hydration effect — the page mentor's
+   * RBAC is loaded on boot, but a sibling agent opened from this list has no
+   * permissions cached and the segment filter would otherwise strip every
+   * tab except Privacy. The companion test in journey 06 asserts the full
+   * sidebar still renders.
+   */
+  async openFromMyAgents(): Promise<void> {
+    await this.restoreAppChrome();
+
+    const sidebar = this.page.locator('aside').first();
+    const agentsTrigger = sidebar.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    await expect(agentsTrigger).toBeVisible({ timeout: 10_000 });
+    const expanded = await agentsTrigger
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await agentsTrigger.click();
+      await expect(agentsTrigger).toHaveAttribute('aria-expanded', 'true', {
+        timeout: 5_000,
+      });
+    }
+
+    const myAgents = sidebar.getByRole('button', {
+      name: 'My Agents',
+      exact: true,
+    });
+    await expect(myAgents).toBeVisible({ timeout: 10_000 });
+    await myAgents.click();
+
+    const settingsDialog = this.page.getByRole('dialog').filter({
+      hasText: 'Showing the list of agents available in your tenant',
+    });
+    await expect(settingsDialog).toBeVisible({ timeout: 30_000 });
+
+    // Agents list is fetched server-side with pagination — on tenants with
+    // many agents the first page can take a while to arrive. Wait for the
+    // first row to render before reaching for the clickable name inside it.
+    const agentRows = settingsDialog.locator('tbody tr');
+    await expect(agentRows.first()).toBeVisible({ timeout: 90_000 });
+
+    // Mentor names live in a `div` with `cursor-pointer` inside the first
+    // cell of each row (see `components/modals/settings-modal.tsx`).
+    const firstAgentName = settingsDialog
+      .locator('tbody tr td:first-child div.cursor-pointer')
+      .first();
+    await expect(firstAgentName).toBeVisible({ timeout: 30_000 });
+    await firstAgentName.click();
+
+    // The Edit dialog opens on top of the still-open settings list, which
+    // leaves it aria-hidden. Repair the a11y tree before role-based queries.
+    await this.unhideEditDialog();
+
+    await expect(this.dialog).toBeVisible({ timeout: 35_000 });
+  }
+
   async navigateToTab(tabName: string): Promise<void> {
     // The sidebar now renders only the segments belonging to the active
     // category, so segment triggers outside that category aren't in the DOM
@@ -179,7 +322,27 @@ export class EditMentorPage {
       }
     }
 
-    const tab = this.dialog.getByRole('tab', { name: tabName, exact: true });
+    // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
+    // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
+    // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
+    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
+    // generated `radix-*` id, so filtering on that prefix isolates the sidebar
+    // tab without needing to know each segment's value.
+    //
+    // `:visible` additionally excludes the host's hidden responsive twin —
+    // every sidebar trigger is rendered twice (desktop `#desktop-tab-<value>`
+    // + compact `#tab-<value>`); both own the same `aria-controls`, so without
+    // the visibility filter the locator resolves to two elements and `.click`
+    // hangs waiting for the strict-mode collision to resolve itself.
+    const tab = this.dialog
+      .getByRole('tab', { name: tabName, exact: true })
+      .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+    // Wait for the tab to actually appear before reaching for its state.
+    // The modal renders a loading spinner until mentor-settings + RBAC have
+    // hydrated; segment-list tabs only mount once both resolve. Using waitFor
+    // here means callers don't have to know about that timing.
+    await tab.waitFor({ state: 'visible', timeout: 15_000 });
     const isActive =
       (await tab.getAttribute('data-state').catch(() => null)) === 'active';
     if (!isActive) {
@@ -200,20 +363,34 @@ export class EditMentorPage {
 
     // The Edit Mentor dialog hosts portal-rendered child modals (New Skill,
     // Edit Skill, Delete Skill, New/Edit Instance, Disconnect Instance,
-    // etc.). When a child modal is left open, its Radix overlay
-    // (`[data-iblai-dialog-interaction-layer]`) covers the parent and
-    // intercepts pointer events — making the parent's Close button
-    // appear "visible, enabled and stable" yet unclickable. Dismiss any
-    // leftover child modals first via Escape so cleanup can proceed
-    // even when an earlier API call left a modal stuck open.
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const overlay = this.page.locator(
+    // generated Embed Code dialog, etc.). When a child modal is left open,
+    // its overlay covers the parent and intercepts pointer events — making
+    // the parent's Close button appear "visible, enabled and stable" yet
+    // unclickable. Dismiss any leftover child modals first via Escape so
+    // cleanup can proceed even when an earlier API call left a modal stuck open.
+    //
+    // Two overlay patterns exist:
+    //   1. SDK custom layers: [data-iblai-dialog-interaction-layer][data-state="open"]
+    //   2. Standard Radix dialogs (e.g. the "Embedded Code" dialog rendered by
+    //      `components/ui/dialog.tsx`) that use a plain `[data-state="open"]`
+    //      overlay without the SDK custom attribute.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const sdkOverlay = this.page.locator(
         '[data-iblai-dialog-interaction-layer][data-state="open"]',
       );
-      const overlayCount = await overlay.count().catch(() => 0);
-      if (overlayCount === 0) break;
+      const sdkOverlayCount = await sdkOverlay.count().catch(() => 0);
+
+      // Count open dialogs; if more than one is present the extra ones are
+      // child/portal modals that need to be dismissed before we can click the
+      // Edit Agent Close button.
+      const allDialogCount = await this.page
+        .getByRole('dialog')
+        .count()
+        .catch(() => 0);
+
+      if (sdkOverlayCount === 0 && allDialogCount <= 1) break;
       await this.page.keyboard.press('Escape').catch(() => {});
-      await this.page.waitForTimeout(250);
+      await this.page.waitForTimeout(300);
     }
 
     // The parent might have been closed by a stray Escape that propagated
@@ -224,6 +401,12 @@ export class EditMentorPage {
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
     await this.closeButton.click();
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The SDK dialog frequently leaves the app shell `aria-hidden="true"`
+    // after closing, hiding the navbar/chat chrome from the a11y tree and
+    // breaking role-based queries that callers run right after close()
+    // (e.g. the chat "Prompts" button, the User-mode switch). Restore it.
+    await this.restoreAppChrome();
   }
 
   async isOpen(): Promise<boolean> {

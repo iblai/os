@@ -28,7 +28,7 @@ jobs:
 
   build:
     needs: prepare
-    uses: iblai/iblai-web-ops/.github/workflows/reusable-spa-docker-build.yml@main
+    uses: ./.github/workflows/reusable-spa-docker-build.yml
     with:
       app_name: mentor
       source_repo: ${{ github.repository }}

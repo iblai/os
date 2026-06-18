@@ -469,8 +469,12 @@ export class MemoryTab {
     await expect(this.page.getByText('Category created')).toBeVisible({
       timeout: 10_000,
     });
+    // The "Category created" toast confirms the POST succeeded, but the
+    // category list only repaints once RTK Query invalidates and refetches —
+    // which can take well over 10s under CI load. Wait generously for the
+    // new name to render so callers don't flake on the refetch.
     await expect(modal.getByText(name, { exact: true })).toBeVisible({
-      timeout: 10_000,
+      timeout: 30_000,
     });
   }
 

@@ -13,7 +13,7 @@ import { Page, Locator, expect } from '@playwright/test';
  * signal for every mutation. We key off those rather than DOM transitions
  * where possible — they're the contract between the SDK and consumers.
  *
- * Toasts (from @iblai/web-containers/dist):
+ * Toasts (from @iblai/iblai-js/web-containers/dist):
  *   "Instance created"      — handleCreateInstance success
  *   "Instance updated"      — EditInstanceDialog save success
  *   "Instance connected"    — handleConnect success

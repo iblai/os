@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 // Store the onSubmit callback so we can trigger it in tests
 let onSubmitCallback: ((data: { value: any }) => void | Promise<void>) | null =
   null;
+// Capture the defaultValues passed to useForm so we can assert prefill behaviour
+let capturedDefaultValues: Record<string, any> | null = null;
 
 // Mock form state that can be updated
 let mockFormState = {
@@ -26,6 +28,8 @@ vi.mock('@tanstack/react-form', () => ({
   useForm: vi.fn((config) => {
     // Store the onSubmit callback
     onSubmitCallback = config.onSubmit;
+    // Store the defaultValues so tests can assert prefill/merge behaviour
+    capturedDefaultValues = config.defaultValues;
 
     return {
       store: {
@@ -122,6 +126,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 describe('useCreateMentor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedDefaultValues = null;
     mockUnwrap.mockResolvedValue({ unique_id: 'new-mentor-id' });
 
     // Reset mockFormState to default values before each test
@@ -158,6 +163,105 @@ describe('useCreateMentor', () => {
       expect(result.current.systemPrompt).toBe('System prompt');
       expect(result.current.guidedPrompt).toBe('Guided prompt');
       expect(result.current.proactivePrompt).toBe('Proactive prompt');
+    });
+  });
+
+  describe('initialValues (prefill)', () => {
+    it('uses the built-in defaults when no initialValues are provided', () => {
+      renderHook(() => useCreateMentor());
+
+      expect(capturedDefaultValues).toMatchObject({
+        name: '',
+        description: '',
+        category: null,
+        file: null,
+        systemPrompt: 'System prompt',
+        proactivePrompt: 'Proactive prompt',
+        guidedPrompt: 'Guided prompt',
+        moderationPrompt: 'Moderation prompt',
+        mentorVisibility: 'public',
+      });
+    });
+
+    it('merges provided initialValues over the defaults (including prompts)', () => {
+      renderHook(() =>
+        useCreateMentor({
+          name: 'Prefilled Agent',
+          description: 'Prefilled description',
+          category: 7,
+          systemPrompt: 'Custom system prompt',
+          guidedPrompt: 'Custom guided prompt',
+        }),
+      );
+
+      // Provided values win
+      expect(capturedDefaultValues).toMatchObject({
+        name: 'Prefilled Agent',
+        description: 'Prefilled description',
+        category: 7,
+        systemPrompt: 'Custom system prompt',
+        guidedPrompt: 'Custom guided prompt',
+      });
+      // Unspecified fields fall back to the defaults
+      expect(capturedDefaultValues?.proactivePrompt).toBe('Proactive prompt');
+      expect(capturedDefaultValues?.moderationPrompt).toBe('Moderation prompt');
+      expect(capturedDefaultValues?.mentorVisibility).toBe('public');
+    });
+
+    it('does not mutate the shared defaults across calls', () => {
+      renderHook(() => useCreateMentor({ name: 'First' }));
+      const first = capturedDefaultValues;
+
+      renderHook(() => useCreateMentor());
+      const second = capturedDefaultValues;
+
+      expect(first?.name).toBe('First');
+      // A subsequent call with no overrides must still see the pristine default
+      expect(second?.name).toBe('');
+    });
+  });
+
+  describe('onCreated callback', () => {
+    it('calls onCreated after a successful creation', async () => {
+      const onCreated = vi.fn();
+      const { result } = renderHook(() =>
+        useCreateMentor(undefined, onCreated),
+      );
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      expect(onCreated).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onCreated when creation fails', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      mockUnwrap.mockRejectedValue({ error: { error: 'boom' } });
+
+      const onCreated = vi.fn();
+      const { result } = renderHook(() =>
+        useCreateMentor(undefined, onCreated),
+      );
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      expect(onCreated).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('still succeeds when onCreated is not provided', async () => {
+      const { result } = renderHook(() => useCreateMentor());
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      expect(toast.success).toHaveBeenCalledWith('Agent created successfully');
     });
   });
 
