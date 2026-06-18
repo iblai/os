@@ -15,6 +15,7 @@ import {
 
 // Modals
 import { SettingsModal } from '@/components/modals/settings-modal';
+import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
@@ -45,6 +46,7 @@ export const ModalContainer = () => {
     // closeCreateMentorModal,
     closeInviteUserModal,
     closeSettingsModal,
+    closeEditMentorModal,
     closeNoMentorSelectedModal,
   } = useNavigate();
 
@@ -64,6 +66,7 @@ export const ModalContainer = () => {
   // );
   const showInviteUserModal = selectIsModalOpen(MODALS.INVITE_USER.name)(state);
   const showSettingsModal = selectIsModalOpen(MODALS.SETTINGS.name)(state);
+  const showEditMentorModal = selectIsModalOpen(MODALS.EDIT_MENTOR.name)(state);
   const showNoMentorSelectedModal = selectIsModalOpen(
     MODALS.NO_MENTOR_SELECTED.name,
   )(state);
@@ -105,6 +108,13 @@ export const ModalContainer = () => {
         <SettingsModal
           isOpen={showSettingsModal}
           onClose={closeSettingsModal}
+        />
+      )}
+
+      {showEditMentorModal && (
+        <EditMentorModal
+          isOpen={showEditMentorModal}
+          onClose={closeEditMentorModal}
         />
       )}
 

@@ -143,7 +143,7 @@ describe('mentor constants', () => {
         value: 'viewable_by_tenant_admins',
       });
       expect(MENTOR_VISIBILITY[1]).toEqual({
-        label: 'Students',
+        label: 'Users',
         value: 'viewable_by_tenant_students',
       });
       expect(MENTOR_VISIBILITY[2]).toEqual({

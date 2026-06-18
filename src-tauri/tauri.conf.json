@@ -76,7 +76,8 @@
     "deep-link": {
       "mobile": [
         { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
-        { "host": "login.iblai.app", "pathPrefix": ["/"] }
+        { "host": "login.iblai.app", "pathPrefix": ["/"] },
+        { "scheme": ["iblai-mentor", "ai.ibl.mentorai"] }
       ],
       "desktop": {
         "schemes": ["iblai-mentor", "ai.ibl.mentorai"]

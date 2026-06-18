@@ -1,6 +1,5 @@
 'use client';
 
-import { forwardRef } from 'react';
 import { RefreshCcw } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -71,31 +70,25 @@ interface AIMessageBubbleProps {
   showReasoning?: boolean;
 }
 
-export const AIMessageBubble = forwardRef<
-  HTMLButtonElement,
-  AIMessageBubbleProps
->(function AIMessageBubble(
-  {
-    content,
-    profileImage,
-    mentorName,
-    timestamp,
-    sessionId,
-    mentorId,
-    onRetry,
-    messages,
-    message,
-    tenantKey,
-    onOpenCanvas,
-    streamingArtifactId,
-    reasoningContent,
-    toolCalls,
-    isReasoning,
-    isCurrentlyStreaming,
-    showReasoning,
-  },
-  ref,
-) {
+export function AIMessageBubble({
+  content,
+  profileImage,
+  mentorName,
+  timestamp,
+  sessionId,
+  mentorId,
+  onRetry,
+  messages,
+  message,
+  tenantKey,
+  onOpenCanvas,
+  streamingArtifactId,
+  reasoningContent,
+  toolCalls,
+  isReasoning,
+  isCurrentlyStreaming,
+  showReasoning,
+}: AIMessageBubbleProps) {
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
   const { metadata: tenantMetadata } = useTenantMetadataHook({
     org: tenantKey,
@@ -190,15 +183,14 @@ export const AIMessageBubble = forwardRef<
             </div>
             {/* Action toolbar (copy, rating, share, report, retry) — hidden
                 while this message is still streaming; only meaningful once the
-                response is complete. Kept mounted (not unmounted) so the
-                copy-button ref stays valid for post-stream focus handling. */}
+                response is complete. */}
             <div
               className={cn(
                 'flex items-center space-x-4',
                 isCurrentlyStreaming && 'hidden',
               )}
             >
-              <AIMessageCopy ref={ref} content={content} />
+              <AIMessageCopy content={content} />
 
               {isLoggedIn() && !showingSharedChat && (
                 <AIMessageRating
@@ -257,4 +249,4 @@ export const AIMessageBubble = forwardRef<
       </div>
     </TooltipProvider>
   );
-});
+}
