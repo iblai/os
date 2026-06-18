@@ -3,6 +3,9 @@
 
 mod foundry_installer;
 mod foundry_manager;
+mod ghost_os_manager;
+mod mcp_bridge_installer;
+mod mcp_bridge_manager;
 mod model_manager;
 mod oauth;
 mod offline_server;
@@ -19,6 +22,7 @@ use model_manager::{
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
     SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
+use mcp_bridge_installer::install_mcp_bridge;
 use offline_server::{get_server_url, start_offline_server_with_signal};
 use ollama_installer::download_and_install_ollama;
 use std::sync::Arc;
@@ -261,6 +265,7 @@ async fn install_ollama() -> Result<String, String> {
             // "running" instead of racing it.
             wait_for_ollama_ready(5).await;
         }
+        ensure_mcp_bridge().await;
         return Ok("Model manager is installed and running".into());
     }
 
@@ -270,7 +275,37 @@ async fn install_ollama() -> Result<String, String> {
     start_ollama_server().map_err(|e| e.to_string())?;
     wait_for_ollama_ready(5).await;
 
+    // Give Ollama the ability to call MCP tools. Best-effort: a failure here
+    // must not block enabling local models.
+    ensure_mcp_bridge().await;
+
     Ok("Model manager installed and started".into())
+}
+
+/// Best-effort install + start of the ollama-mcp-bridge. Logs and swallows
+/// errors so a missing package manager / network issue never blocks the Ollama
+/// flow. Starting here (not only in `start_ollama_server`) ensures the bridge
+/// comes up even when Ollama was already running and the server start was
+/// skipped. `start_bridge` is idempotent (no-ops if not installed or already up).
+async fn ensure_mcp_bridge() {
+    if let Err(e) = install_mcp_bridge().await {
+        println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+    }
+    mcp_bridge_manager::start_bridge();
+}
+
+/// Absolute path to the user-editable `mcp-config.json`. MCP servers are managed
+/// by editing this file directly; changes apply when local models are toggled
+/// off/on (or the app restarts) and the bridge is relaunched.
+#[command]
+async fn get_mcp_config_path(app: AppHandle) -> Result<String, String> {
+    if let Some(p) = mcp_bridge_manager::mcp_config_path() {
+        return Ok(p.to_string_lossy().into_owned());
+    }
+    // Config dir not recorded yet (e.g. called very early) — resolve and record.
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    mcp_bridge_manager::init(dir.clone());
+    Ok(dir.join("mcp-config.json").to_string_lossy().into_owned())
 }
 
 /// Stop the Ollama model manager server. Backs "Enable Local Models" === run the
@@ -893,8 +928,9 @@ async fn ollama_chat(
         }
     }
 
-    println!("[ibl.ai] Using Ollama for chat");
-    let ollama_url = "http://localhost:11434/api/chat";
+    let base = model_manager::chat_base_url();
+    let ollama_url = format!("{base}/api/chat");
+    println!("[ibl.ai] Using Ollama for chat — streaming from {base}");
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
@@ -966,8 +1002,9 @@ async fn ollama_chat_stream(
         }
     }
 
-    println!("[ibl.ai] Using Ollama for streaming chat");
-    let ollama_url = "http://localhost:11434/api/chat";
+    let base = model_manager::chat_base_url();
+    let ollama_url = format!("{base}/api/chat");
+    println!("[ibl.ai] Using Ollama for streaming chat — streaming from {base}");
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -994,9 +1031,13 @@ async fn ollama_chat_stream(
         return Err(format!("Ollama returned error {}: {}", status, error_text));
     }
 
-    // Stream the response
+    // Stream the response. The bridge (when serving MCP tools) streams ONE
+    // Ollama round per tool cycle, each ending in its own `done: true`, so we
+    // must NOT stop on the first `done` — only a `done` with no tool calls is
+    // the final answer. Intermediate tool rounds just log "running tool...".
     let mut stream = response.bytes_stream();
     let mut full_content = String::new();
+    let mut round_has_tool_calls = false;
 
     use futures_util::StreamExt;
 
@@ -1026,8 +1067,25 @@ async fn ollama_chat_stream(
                                 }),
                             );
                         }
+                        // The model requested MCP tools this round (bridge only).
+                        if json
+                            .get("message")
+                            .and_then(|m| m.get("tool_calls"))
+                            .and_then(|t| t.as_array())
+                            .map(|a| !a.is_empty())
+                            .unwrap_or(false)
+                        {
+                            round_has_tool_calls = true;
+                        }
                         if json.get("done").and_then(|d| d.as_bool()).unwrap_or(false) {
-                            // Emit done event
+                            if round_has_tool_calls {
+                                // Tool round boundary: the bridge runs the tools
+                                // and streams another round — keep reading.
+                                println!("[ibl.ai] running tool...");
+                                round_has_tool_calls = false;
+                                continue;
+                            }
+                            // No tool calls -> final answer.
                             let _ = app.emit(
                                 "ollama:done",
                                 serde_json::json!({
@@ -1053,7 +1111,7 @@ async fn ollama_chat_stream(
         }
     }
 
-    // If we get here without done=true, still emit done
+    // Stream closed without a tool-free `done` — emit done with what we have.
     let _ = app.emit(
         "ollama:done",
         serde_json::json!({
@@ -1959,6 +2017,10 @@ fn main() {
     #[cfg(not(debug_assertions))]
     let base = tauri::Builder::default();
 
+    // Accessibility / system-permission checks are macOS-only.
+    #[cfg(target_os = "macos")]
+    let base = base.plugin(tauri_plugin_macos_permissions::init());
+
     base
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -1975,6 +2037,10 @@ fn main() {
             if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
                 println!("[ibl.ai] Failed to create app data dir: {}", e);
             }
+
+            // Record the app data dir for the MCP bridge and scaffold its config
+            // file so it's editable before local models are ever enabled.
+            mcp_bridge_manager::init(app_data_dir.clone());
 
             // CRITICAL FIX: Clear only the webview HTTP cache, not localStorage
             // We need to preserve localStorage (auth tokens) but clear stale HTTP cache
@@ -2527,6 +2593,10 @@ fn main() {
             install_ollama,
             stop_ollama,
             check_ollama_status,
+            get_mcp_config_path,
+            ghost_os_manager::install_ghost_os,
+            ghost_os_manager::stop_ghost_os,
+            ghost_os_manager::check_ghost_os_status,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,

@@ -109,7 +109,28 @@ struct OllamaModel {
 }
 
 pub const OLLAMA_API_URL: &str = "http://localhost:11434";
+/// The ollama-mcp-bridge listens here (Ollama-API-compatible + MCP tools).
+pub const BRIDGE_API_URL: &str = "http://localhost:8000";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
+
+/// Base URL chat should target: the MCP bridge when it's listening on :8000 (so
+/// the local model gets MCP tools), otherwise Ollama directly on :11434. The
+/// bridge mirrors Ollama's REST API, so callers just append `/api/chat`.
+///
+/// The probe is a loopback TCP connect: when the bridge is down the OS refuses
+/// the connection immediately, so this is effectively instant and the timeout
+/// only bounds pathological cases.
+pub fn chat_base_url() -> &'static str {
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+
+    let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
+    if TcpStream::connect_timeout(&addr, Duration::from_millis(200)).is_ok() {
+        BRIDGE_API_URL
+    } else {
+        OLLAMA_API_URL
+    }
+}
 
 /// Get the current timestamp in RFC3339 format
 pub fn get_timestamp() -> String {
@@ -130,8 +151,14 @@ pub fn check_ollama_installed() -> bool {
 
     #[cfg(target_os = "macos")]
     {
-        let ollama_path = "/Applications/Ollama.app";
-        return Path::new(ollama_path).exists();
+        // The DMG installs /Applications/Ollama.app; Homebrew installs only the
+        // `ollama` CLI (no .app). Detect either, otherwise we reinstall over an
+        // existing `brew install ollama` and end up with a duplicate Ollama.app.
+        if Path::new("/Applications/Ollama.app").exists() {
+            return true;
+        }
+        return Path::new("/opt/homebrew/bin/ollama").exists()
+            || Path::new("/usr/local/bin/ollama").exists();
     }
 
     #[cfg(target_os = "linux")]
@@ -186,11 +213,24 @@ pub async fn wait_for_ollama_ready(timeout_secs: u64) -> bool {
 pub fn start_ollama_server() -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        create_command("open")
-            .arg("-a")
-            .arg("Ollama")
-            .spawn()
-            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        // Prefer the GUI app when present; otherwise start the Homebrew CLI
+        // server directly (`brew install ollama` provides no .app bundle).
+        if Path::new("/Applications/Ollama.app").exists() {
+            create_command("open")
+                .arg("-a")
+                .arg("Ollama")
+                .spawn()
+                .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        } else {
+            let bin = ["/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"]
+                .into_iter()
+                .find(|p| Path::new(p).exists())
+                .unwrap_or("ollama");
+            create_command(bin)
+                .arg("serve")
+                .spawn()
+                .map_err(|e| format!("Failed to start Ollama: {}", e))?;
+        }
     }
 
     #[cfg(target_os = "windows")]
@@ -234,7 +274,11 @@ pub fn start_ollama_server() -> Result<(), String> {
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-    Ok(())
+    {
+        // The MCP bridge runs alongside Ollama, so bring it up with the server.
+        crate::mcp_bridge_manager::start_bridge();
+        Ok(())
+    }
 }
 
 /// Stop the Ollama server (the model manager). On Linux prefer the systemd
@@ -274,6 +318,9 @@ pub fn stop_ollama_server() -> Result<(), String> {
                 .ok();
         }
     }
+
+    // The MCP bridge follows Ollama's lifecycle: stop it with the server.
+    crate::mcp_bridge_manager::stop_bridge();
 
     Ok(())
 }

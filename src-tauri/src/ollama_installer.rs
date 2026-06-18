@@ -75,6 +75,26 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
     // =========================
     #[cfg(target_os = "macos")]
     {
+        // Prefer Homebrew when present — matches how many users manage Ollama and
+        // avoids installing a duplicate /Applications/Ollama.app over an existing
+        // `brew install ollama`. Falls back to the DMG if brew is absent or fails.
+        let brew = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
+            .into_iter()
+            .find(|p| Path::new(p).exists());
+        if let Some(brew) = brew {
+            println!("[Ollama] Installing via Homebrew (brew install ollama)...");
+            let ok = create_command(brew)
+                .args(["install", "ollama"])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+            if ok {
+                println!("[Ollama] Installed via Homebrew");
+                return Ok(());
+            }
+            println!("[Ollama] Homebrew install failed; falling back to DMG");
+        }
+
         let dmg_url = "https://ollama.com/download/Ollama.dmg";
         let dmg_path = "/tmp/Ollama.dmg";
 

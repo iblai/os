@@ -113,6 +113,8 @@ export const TAURI_COMMANDS = {
   INSTALL_OLLAMA: 'install_ollama',
   STOP_OLLAMA: 'stop_ollama',
   CHECK_OLLAMA_STATUS: 'check_ollama_status',
+  // Path to the user-editable mcp-config.json (MCP servers are managed in-file).
+  GET_MCP_CONFIG_PATH: 'get_mcp_config_path',
   CHECK_DISK_SPACE: 'check_disk_space_for_model',
   GET_SYSTEM_MEMORY: 'get_system_memory',
   DOWNLOAD_MODEL: 'download_model',

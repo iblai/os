@@ -1,6 +1,9 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ghost_os_manager;
+mod mcp_bridge_installer;
+mod mcp_bridge_manager;
 mod model_manager;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod offline_server;
@@ -14,6 +17,7 @@ use model_manager::{
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
     SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
+use mcp_bridge_installer::install_mcp_bridge;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use offline_server::{get_server_url, start_offline_server};
 use ollama_installer::download_and_install_ollama;
@@ -725,6 +729,7 @@ async fn install_ollama() -> Result<String, String> {
             // Wait until the server actually answers its API before returning.
             wait_for_ollama_ready(5).await;
         }
+        ensure_mcp_bridge().await;
         return Ok("Model manager is installed and running".into());
     }
 
@@ -734,7 +739,37 @@ async fn install_ollama() -> Result<String, String> {
     start_ollama_server().map_err(|e| e.to_string())?;
     wait_for_ollama_ready(5).await;
 
+    // Give Ollama the ability to call MCP tools. Best-effort: a failure here
+    // must not block enabling local models.
+    ensure_mcp_bridge().await;
+
     Ok("Model manager installed and started".into())
+}
+
+/// Best-effort install + start of the ollama-mcp-bridge. Logs and swallows
+/// errors so a missing package manager / network issue never blocks the Ollama
+/// flow. Starting here (not only in `start_ollama_server`) ensures the bridge
+/// comes up even when Ollama was already running and the server start was
+/// skipped. `start_bridge` is idempotent (no-ops if not installed or already up).
+async fn ensure_mcp_bridge() {
+    if let Err(e) = install_mcp_bridge().await {
+        println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+    }
+    mcp_bridge_manager::start_bridge();
+}
+
+/// Absolute path to the user-editable `mcp-config.json`. MCP servers are managed
+/// by editing this file directly; changes apply when local models are toggled
+/// off/on (or the app restarts) and the bridge is relaunched.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+#[command]
+async fn get_mcp_config_path(app: AppHandle) -> Result<String, String> {
+    if let Some(p) = mcp_bridge_manager::mcp_config_path() {
+        return Ok(p.to_string_lossy().into_owned());
+    }
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    mcp_bridge_manager::init(dir.clone());
+    Ok(dir.join("mcp-config.json").to_string_lossy().into_owned())
 }
 
 /// Stop the Ollama model manager server (mobile/cdylib parity with main.rs).
@@ -1216,9 +1251,13 @@ async fn navigate_to(app: AppHandle, url: String) -> Result<(), String> {
 #[command]
 async fn ollama_chat(messages: Vec<serde_json::Value>, model: Option<String>) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let ollama_url = "http://localhost:11434/api/chat";
+    let base = model_manager::chat_base_url();
+    let ollama_url = format!("{base}/api/chat");
 
-    println!("[MentorAI] Proxying Ollama chat request with {} messages", messages.len());
+    println!(
+        "[MentorAI] Proxying Ollama chat ({} messages) from {base}",
+        messages.len()
+    );
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
@@ -1264,9 +1303,13 @@ async fn ollama_chat_stream(
     generation_id: String,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let ollama_url = "http://localhost:11434/api/chat";
+    let base = model_manager::chat_base_url();
+    let ollama_url = format!("{base}/api/chat");
 
-    println!("[MentorAI] Proxying Ollama streaming chat request with {} messages", messages.len());
+    println!(
+        "[MentorAI] Streaming Ollama chat ({} messages) from {base}",
+        messages.len()
+    );
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300))
@@ -1293,9 +1336,13 @@ async fn ollama_chat_stream(
         return Err(format!("Ollama returned error {}: {}", status, error_text));
     }
 
-    // Stream the response
+    // Stream the response. The bridge (when serving MCP tools) streams ONE
+    // Ollama round per tool cycle, each ending in its own `done: true`, so we
+    // must NOT stop on the first `done` — only a `done` with no tool calls is
+    // the final answer. Intermediate tool rounds just log "running tool...".
     let mut stream = response.bytes_stream();
     let mut full_content = String::new();
+    let mut round_has_tool_calls = false;
 
     use futures_util::StreamExt;
 
@@ -1318,8 +1365,24 @@ async fn ollama_chat_stream(
                                 "full_content": full_content
                             }));
                         }
+                        // The model requested MCP tools this round (bridge only).
+                        if json.get("message")
+                            .and_then(|m| m.get("tool_calls"))
+                            .and_then(|t| t.as_array())
+                            .map(|a| !a.is_empty())
+                            .unwrap_or(false)
+                        {
+                            round_has_tool_calls = true;
+                        }
                         if json.get("done").and_then(|d| d.as_bool()).unwrap_or(false) {
-                            // Emit done event
+                            if round_has_tool_calls {
+                                // Tool round boundary: the bridge runs the tools
+                                // and streams another round — keep reading.
+                                println!("[MentorAI] running tool...");
+                                round_has_tool_calls = false;
+                                continue;
+                            }
+                            // No tool calls -> final answer.
                             let _ = app.emit("ollama:done", serde_json::json!({
                                 "generation_id": generation_id,
                                 "full_content": full_content
@@ -1339,7 +1402,7 @@ async fn ollama_chat_stream(
         }
     }
 
-    // If we get here without done=true, still emit done
+    // Stream closed without a tool-free `done` — emit done with what we have.
     let _ = app.emit("ollama:done", serde_json::json!({
         "generation_id": generation_id,
         "full_content": full_content
@@ -1950,6 +2013,10 @@ pub fn run() {
     #[cfg(not(debug_assertions))]
     let base = tauri::Builder::default();
 
+    // Accessibility / system-permission checks are macOS-only.
+    #[cfg(target_os = "macos")]
+    let base = base.plugin(tauri_plugin_macos_permissions::init());
+
     let builder = base
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
@@ -2008,6 +2075,10 @@ pub fn run() {
                 if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
                     println!("[MentorAI] Failed to create app data dir: {}", e);
                 }
+
+                // Record the app data dir for the MCP bridge and scaffold its
+                // config so it's editable before local models are enabled.
+                mcp_bridge_manager::init(app_data_dir.clone());
 
                 let cache = WebCache::new(app_data_dir.clone());
 
@@ -2593,6 +2664,10 @@ pub fn run() {
             install_ollama,
             stop_ollama,
             check_ollama_status,
+            get_mcp_config_path,
+            ghost_os_manager::install_ghost_os,
+            ghost_os_manager::stop_ghost_os,
+            ghost_os_manager::check_ghost_os_status,
             check_disk_space_for_model,
             get_system_memory,
             download_phi3_model,
