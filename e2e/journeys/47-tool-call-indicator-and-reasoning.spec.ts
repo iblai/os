@@ -53,7 +53,7 @@ test.describe('Journey 47: Tool Call Indicator and Reasoning Section', () => {
     const toolCallTrigger = chatPage.aiMessages
       .last()
       .getByRole('button', { name: /used \d+ tools?/i });
-    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
+    await expect(toolCallTrigger).toBeVisible({ timeout: STREAMING_TIMEOUT });
 
     // While streaming, the trigger shows bounce dots. The dots are a transient
     // streaming-only animation; a fast reply can settle before they are
@@ -131,7 +131,7 @@ test.describe('Journey 47: Tool Call Indicator and Reasoning Section', () => {
     const toolCallTrigger = chatPage.aiMessages
       .last()
       .getByRole('button', { name: /used \d+ tools?/i });
-    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
+    await expect(toolCallTrigger).toBeVisible({ timeout: STREAMING_TIMEOUT });
 
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
 
@@ -148,7 +148,9 @@ test.describe('Journey 47: Tool Call Indicator and Reasoning Section', () => {
 
     // Expanded content shows the friendly tool name
     const lastAIMessage = chatPage.aiMessages.last();
-    await expect(lastAIMessage.getByText(/searching the web/i)).toBeVisible({
+    await expect(
+      lastAIMessage.getByText(/searching the web/i).first(),
+    ).toBeVisible({
       timeout: 5_000,
     });
 
@@ -211,7 +213,7 @@ test.describe('Journey 47: Tool Call Indicator and Reasoning Section', () => {
     const toolCallTrigger = chatPage.aiMessages
       .last()
       .getByRole('button', { name: /used \d+ tools?/i });
-    await expect(toolCallTrigger).toBeVisible({ timeout: 30_000 });
+    await expect(toolCallTrigger).toBeVisible({ timeout: STREAMING_TIMEOUT });
 
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
 
@@ -537,7 +539,7 @@ test.describe('Journey 47: Tool Call Indicator and Reasoning Section', () => {
     const toolCallTrigger = lastAIMessage.getByRole('button', {
       name: /used \d+ tools?/i,
     });
-    await expect(toolCallTrigger).toBeVisible({ timeout: 60_000 });
+    await expect(toolCallTrigger).toBeVisible({ timeout: STREAMING_TIMEOUT });
 
     // Wait for streaming to complete
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
