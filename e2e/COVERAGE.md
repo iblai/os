@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-18 | 451 checkpoints (431 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-19 | 471 checkpoints (450 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 53 journeys (52 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -27,7 +27,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (7 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (8 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
@@ -751,7 +751,7 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 
 - [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Master Privacy Router switch is visible
+- [x] PR-03: Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → "Filter PII from messages" (the in-tab master switch was removed; flipping it now lives only in Capabilities)
 - [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
 - [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
 - [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
@@ -862,11 +862,49 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
+## Journey 50: Chat Privacy (20 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
----
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
-## Journey: Prompt Caching Toggle (3 checkpoints) — `journeys/50-prompt-caching-toggle.spec.ts`
+Covers all four user-facing surfaces of the chat-privacy feature and verifies the precedence chain (highest → lowest): **mentor > tenant > session > user > default**. All SDK surface assertions use `@iblai/iblai-js/playwright` helpers (`getChatPrivacyToggle`, `expectChatPrivacyState`, `expectChatPrivacySource`, `expectChatPrivacyLocked`, `setTenantChatPrivacyEnabled`, `selectPrivateMode`, etc.) driven by `data-state` / `data-source` / `aria-pressed` / `aria-disabled`. The in-repo agent-settings switch is located by its `aria-label="Enable private mode"`.
+
+The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
+
+**cp-tenant-05** is marked `test.skip` — non-admins cannot reach the tenant Advanced settings (the "More options" menu only shows Profile / Help / Log out), which is the correct UX. This is implicitly covered by journey 03's non-admin dropdown test.
+
+### Tenant gate (cp-tenant-\*)
+
+- [x] cp-tenant-01: Admin sees the "Allow users to control chat privacy" switch in Account Settings → Advanced tab
+- [x] cp-tenant-02: Disabling the tenant gate hides the header Private Mode toggle across the app
+- [x] cp-tenant-03: Enabling the tenant gate shows the header Private Mode toggle
+- [x] cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on
+- [ ] cp-tenant-05: Non-admin cannot reach the tenant Advanced settings _(not-reproducible: non-admin More options menu has no platform-name item; test.skipped with explanation in spec)_
+
+### Agent settings kill switch (cp-agent-\*)
+
+- [x] cp-agent-01: "Enable private mode" row is visible in Edit Mentor → Settings → Capabilities sub-tab for admins
+- [x] cp-agent-02: Saving "Enable private mode" ON persists across modal close and re-open
+- [x] cp-agent-03: Saving "Enable private mode" ON locks the header toggle to `data-state="on"` / `data-source="mentor"` without a page refresh _(regression for `chatPrivacyApiSlice.util.invalidateTags` wiring)_
+- [x] cp-agent-04: Saving "Enable private mode" OFF removes the mentor lock; `data-source` is no longer `"mentor"`
+
+### Header toggle — unlocked mentor (cp-header-\*)
+
+- [x] cp-header-01: Fresh chat starts with the header toggle in the `off` state
+- [x] cp-header-02: Clicking the toggle with no user messages starts a private session (`data-state="on"`, `data-source="session"`)
+- [x] cp-header-03: Clicking an `on` toggle with no messages returns to normal mode (`data-state="off"`)
+- [x] cp-header-04: Clicking the toggle after sending a message opens the confirm dialog; cancelling leaves state `off`
+- [x] cp-header-05: Confirming enable-private-mode mid-session locks the session as `on` (`aria-disabled`) — one-way per spec
+- [x] cp-header-06: Private session state persists as `data-state="on"` across a page refresh (localStorage cache + SDK hydration)
+
+### User profile "Private Mode" tab (cp-profile-\*)
+
+- [x] cp-profile-01: "Private Mode" tab is visible in `UserProfileModal` when the tenant gate is on; all three cards render
+- [x] cp-profile-02: "Private Mode" tab is hidden in `UserProfileModal` when the tenant gate is off
+- [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
+- [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
+- [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
+
+## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -875,3 +913,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
 - [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
 - [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
+
+---
+
+> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.

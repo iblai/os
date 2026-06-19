@@ -38,6 +38,17 @@ export class SettingsTab {
   readonly enableVideoToggle: Locator;
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
+  /**
+   * "Filter PII from messages" — agent-level toggle for the privacy router
+   * (`mentor.enable_privacy_router`). Lives in the Capabilities sub-tab.
+   * Previously this lived as the master switch inside the Privacy tab body;
+   * that switch was removed from the SDK and the master state is now
+   * controlled exclusively from here. Privacy-tab field rendering is gated
+   * on the new value of `enable_privacy_router` so flipping this toggle on
+   * is the precondition for any Privacy-tab assertion that reads the
+   * action select / entity chips / output filter.
+   */
+  readonly enablePrivacyRouterToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -119,6 +130,12 @@ export class SettingsTab {
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
     });
+    // Capabilities sub-tab. Labelled "Filter PII from messages" — the only
+    // surface that flips `enable_privacy_router` after the SDK removed the
+    // in-tab master toggle from the Privacy tab.
+    this.enablePrivacyRouterToggle = dialog.getByRole('switch', {
+      name: /filter PII from messages/i,
+    });
   }
 
   /**
@@ -169,9 +186,9 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
-    );
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /** Idempotently toggle "Smart document retrieval" + Save. */
@@ -193,9 +210,48 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
+  /** Read the current state of the "Filter PII from messages" switch. */
+  async isEnablePrivacyRouterEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.enablePrivacyRouterToggle);
+  }
+
+  /**
+   * Idempotently flip "Filter PII from messages" + Save. This is the only
+   * surface that mutates `enable_privacy_router` after the SDK removed the
+   * in-Privacy-tab master switch. The Privacy tab's field rendering is
+   * gated on the new value, so the journey-45 PrivacyTab page-object
+   * delegates here for every router flip.
+   *
+   * Resolves after the "Agent updated successfully" toast appears so the
+   * caller can immediately switch back to the Privacy tab and read the
+   * updated render shape — RTK Query has already invalidated the relevant
+   * tags by then.
+   */
+  async setEnablePrivacyRouterAndSave(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.enablePrivacyRouterToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isOn = await this.isEnablePrivacyRouterEnabled();
+    if (isOn === target) return;
+
+    await this.enablePrivacyRouterToggle.click();
+    await expect(this.enablePrivacyRouterToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
     );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /**
