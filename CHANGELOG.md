@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.77.0](https://github.com/iblai/os/compare/v0.76.0...v0.77.0) (2026-06-19)
+
+### Features
+
+- **mentor:** add prompt caching toggle to agent settings ([2c90236](https://github.com/iblai/os/commit/2c9023664f6be4818787f3a33773f08e6cae8167))
+
+### Chores
+
+- **tests:** add playwright tests for prompt caching ([29cf427](https://github.com/iblai/os/commit/29cf42769b53bc26f12ddaabbafccd32452c9ddb))
+
+## [0.76.0](https://github.com/iblai/os/compare/v0.75.17...v0.76.0) (2026-06-19)
+
+### Features
+
+- **mentor:** adding private mode for temprary chat ([4f1d5c3](https://github.com/iblai/os/commit/4f1d5c307e1d610f5c5c266388afc5d883b37b0b))
+- **mentor:** fix for privacy and settings tab categorized ([0fed802](https://github.com/iblai/os/commit/0fed8025cba229db335af8dfa9d0f97ef3e34319))
+
+### Bug Fixes
+
+- **e2e:** fixing e2e failed tests ([53aea03](https://github.com/iblai/os/commit/53aea03f5187fa660adfde280fa710799141ef95))
+- **e2e:** fixing e2e tests for private chat and privacy ([33346dd](https://github.com/iblai/os/commit/33346dd66be5b8deec321f6fb2de7698ae0253f1))
+- **e2e:** fixing flaky tests for journey 44 and 45 ([4bca2e1](https://github.com/iblai/os/commit/4bca2e115d943e3516d0b4cf43248cac8ce2c20c))
+- **e2e:** fixing privacy tab flaky tests ([a0ed517](https://github.com/iblai/os/commit/a0ed5178cf5abc34455436abc4aa361011715ee1))
+- **mentor:** add private mode for embed and smaller screens ([6b9b314](https://github.com/iblai/os/commit/6b9b314da5989aa9b2fc3589a5293381782101f7))
+- **mentor:** adding fix for the comments and coverage fixes ([1d7dc0d](https://github.com/iblai/os/commit/1d7dc0d2a88b4965d29d552d0aca6b9f26500d88))
+- **mentor:** adding fix the e2e tests ([f601161](https://github.com/iblai/os/commit/f601161e29d1a3d1ed9632a3d48878302466b9ff))
+- **mentor:** adding playwright test changes ([ad225b8](https://github.com/iblai/os/commit/ad225b85aa9a16c1f01a24db013c73672acd23a1))
+- **mentor:** e2e test fixes and real time toggle for private mode ([8293874](https://github.com/iblai/os/commit/829387409e1df199040ffb0007e6f7a136a254f1))
+- **mentor:** fixing pnpm-lock file ([5fc6f94](https://github.com/iblai/os/commit/5fc6f94ea84a4254a98dcbd50832c1bcbc2b1d56))
+- **mentor:** more fix for the extra comments ([7bdc193](https://github.com/iblai/os/commit/7bdc1932d1b3649cc4ebe257361eb67a9d41e2f6))
+- **mentor:** pattern fixes for settings ([59f48c8](https://github.com/iblai/os/commit/59f48c884be8341a228ffc0ec5af1384abd1bc77))
+- **mentor:** privacy toggle moved to settings ([3181ca4](https://github.com/iblai/os/commit/3181ca4e7cb4ca2ab203ce3d74b4dec82dc8f501))
+
+## [0.75.17](https://github.com/iblai/os/compare/v0.75.16...v0.75.17) (2026-06-18)
+
+### Bug Fixes
+
+- **embed:** remove redundant auth-redirect from embed snippet ([6a464d7](https://github.com/iblai/os/commit/6a464d76fd7b9bbeb48f7a09cea598bd6740d34a))
+
 ## [0.75.16](https://github.com/iblai/os/compare/v0.75.15...v0.75.16) (2026-06-18)
 
 ### Bug Fixes

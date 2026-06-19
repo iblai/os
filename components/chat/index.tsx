@@ -1607,6 +1607,7 @@ export function Chat({
           </div>
         </div>
       )}
+
       <div
         className={cn({
           // Fill available space when the messages section won't render
