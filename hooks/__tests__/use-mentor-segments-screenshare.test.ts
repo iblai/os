@@ -104,6 +104,7 @@ const baseFlags = {
   // Voice calls default on so the Screen Share gating tests aren't perturbed
   // by the separate Voice-tab gate.
   isVoiceCallEnabled: true,
+  isPrivacyEnabled: false,
 };
 
 const buildContext = (

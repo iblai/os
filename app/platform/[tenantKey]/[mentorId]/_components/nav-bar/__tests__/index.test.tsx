@@ -82,6 +82,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
 }));
 
+// The nav-bar imports `Tenant` (type-only at runtime) from
+// @iblai/iblai-js/web-utils. Loading that module under the yalc/pnpm
+// linkage fails to resolve `axios`. Stub the module so the import
+// graph stays resolvable.
+vi.mock('@iblai/iblai-js/web-utils', () => ({}));
+
 vi.mock('next/image', () => ({
   default: (props: any) => {
     return <img {...props} alt={props.alt || ''} />;
@@ -384,6 +390,10 @@ vi.mock('@/components/modals/auth-modal', () => ({
 
 let lastCreditBalanceProps: any = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // The toggle now ships from the SDK; tests don't exercise its internals,
+  // so a no-render stub is enough — it also blocks the SDK's transitive
+  // axios chain from being pulled into the test's module graph.
+  ChatPrivacyToggle: () => null,
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
@@ -932,6 +942,7 @@ const buildContext = (
     clawConfigExists: false,
     isScreenshareEnabled: false,
     isVoiceCallEnabled: true,
+    isPrivacyEnabled: false,
   },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
@@ -1180,6 +1191,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             clawConfigExists: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
           },
         }),
       );
@@ -1202,6 +1214,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             clawConfigExists: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
           },
         }),
       );
@@ -1224,6 +1237,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             clawConfigExists: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
           },
         }),
       );
@@ -1243,6 +1257,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             clawConfigExists: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
           },
         }),
       );
@@ -1432,6 +1447,27 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       // Base class always present; the conditional override must NOT be added
       expect(span!.className).toContain('max-w-[150px]');
       expect(span!.className).not.toContain('max-w-[100px]');
+    });
+
+    it('hides the LLM name on phones and reveals it from sm up', () => {
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('hidden');
+      expect(span!.className).toContain('sm:block');
     });
   });
 });
