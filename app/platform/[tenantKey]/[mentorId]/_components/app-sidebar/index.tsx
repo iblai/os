@@ -597,6 +597,14 @@ function SidebarProjectsSection({
     executeWithTrialCheck(() => setCreateOpen(true));
   };
 
+  // Navigates to the dedicated Projects index page
+  // (/platform/<tenant>/projects), mirroring "My Workflows".
+  const openProjectsIndex = () => {
+    if (!tenantKey) return;
+    router.push(`/platform/${tenantKey}/projects`);
+    onNavigate?.();
+  };
+
   if (collapsed) {
     return (
       <>
@@ -606,6 +614,7 @@ function SidebarProjectsSection({
           openProject={openProject}
           onIconClick={onCollapsedIconClick}
           onCreateClick={handleCreateClick}
+          onMyProjectsClick={openProjectsIndex}
         />
         <ProjectDialogs
           createOpen={createOpen}
@@ -663,6 +672,20 @@ function SidebarProjectsSection({
                     aria-hidden
                   />
                   <span className="min-w-0 flex-1 truncate">New Project</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={openProjectsIndex}
+                  className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-[14px] font-normal text-[#4a5568] transition-colors hover:bg-[#f4f4f4]"
+                >
+                  <Folder
+                    className="size-3.5 shrink-0 text-[#7d7e82]"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate">My Projects</span>
                 </button>
               </li>
               {projects.length === 0 ? (
@@ -780,12 +803,14 @@ function CollapsedProjectsFlyout({
   openProject,
   onIconClick,
   onCreateClick,
+  onMyProjectsClick,
 }: {
   projects: SdkProject[];
   isProjectActive: (projectId: string) => boolean;
   openProject: (projectId: string) => void;
   onIconClick?: () => void;
   onCreateClick: () => void;
+  onMyProjectsClick: () => void;
 }) {
   return (
     <HoverCard openDelay={180} closeDelay={120}>
@@ -831,6 +856,21 @@ function CollapsedProjectsFlyout({
                 aria-hidden
               />
               New Project
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={onMyProjectsClick}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
+              style={{ color: FLYOUT_ITEM_COLOR }}
+            >
+              <Folder
+                className="size-3.5 shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+              My Projects
             </button>
           </li>
           {projects.length === 0 ? (
