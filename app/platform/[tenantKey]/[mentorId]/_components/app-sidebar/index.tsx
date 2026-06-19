@@ -69,7 +69,10 @@ import {
 import {
   chatActions,
   clearFiles,
+  selectActiveChatMessages,
+  selectNumberOfActiveChatMessages,
   selectSessionId,
+  selectStreaming,
 } from '@iblai/iblai-js/web-utils';
 import {
   Admin,
@@ -1172,6 +1175,28 @@ function SidebarChatsSection({
         }),
       },
     );
+
+  const isStreaming = useAppSelector(selectStreaming);
+  const numberOfActiveChatMessages = useAppSelector(
+    selectNumberOfActiveChatMessages,
+  );
+  const activeChatMessages = useAppSelector(selectActiveChatMessages);
+
+  React.useEffect(() => {
+    if (
+      getUserName() &&
+      !isStreaming &&
+      numberOfActiveChatMessages === 2 &&
+      activeChatMessages[1]?.role === 'assistant'
+    ) {
+      refetchRecent();
+    }
+  }, [
+    refetchRecent,
+    isStreaming,
+    numberOfActiveChatMessages,
+    activeChatMessages,
+  ]);
 
   const filterByMentor = React.useCallback(
     (list: ChatRow[]) =>
