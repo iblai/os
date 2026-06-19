@@ -1,5 +1,70 @@
 # Changelog
 
+## [0.78.0](https://github.com/iblai/os/compare/v0.77.0...v0.78.0) (2026-06-19)
+
+### Features
+
+* **chat:** add ReasoningSection and ToolCallIndicator to AIMessageBubble ([fe5b6c5](https://github.com/iblai/os/commit/fe5b6c559a2514c5ca8cbe406193a47cc034c361))
+* **chat:** add ReasoningSection component with auto-open/collapse behavior and corresponding tests ([42428a5](https://github.com/iblai/os/commit/42428a5c0ed9d6c8d941978a8988f52f67e0cc57))
+* **chat:** add streaming reasoning and tool call selectors to Chat component with tests ([b5d6fb1](https://github.com/iblai/os/commit/b5d6fb15b779fd3e38b1ac385ae6ae398379b359))
+* **chat:** add ToolCallIndicator component and corresponding tests for rendering tool calls ([bec8377](https://github.com/iblai/os/commit/bec8377dbb6989f7dd68684f28ce66afc82f1a8a))
+* **chat:** add utility functions for tool call handling and corresponding tests ([7942fa6](https://github.com/iblai/os/commit/7942fa6f4ba48c0e7246928cab1a725763baba8f))
+* **chat:** enhance ChatMessages component to support streaming reasoning and tool calls ([72d408f](https://github.com/iblai/os/commit/72d408ffb444f2a1b212cdcef62bb92af36ebba7))
+* **chat:** extract reasoning content and tool calls from additional_kwargs in AppSidebar with tests ([447454a](https://github.com/iblai/os/commit/447454a0bec64285e48d4d4007b6380cdf63a19e))
+* **chat:** gate reasoning + tool-call UI on Verbose Reasoning toggle ([def67d4](https://github.com/iblai/os/commit/def67d4924dff4a2c86f186272b9900a5901db6d))
+* **chat:** implement ToolCallItem component with collapsible details and add corresponding tests ([a591ae4](https://github.com/iblai/os/commit/a591ae464f96451d866f3f3e6d7d623c05a2e1ec))
+* **chat:** integrate ReasoningSection and ToolCallIndicator into AIMessageBubble with tests ([6e106e4](https://github.com/iblai/os/commit/6e106e488d0f0ca209a05010f22f0aee798b522d))
+* **lint:** add lint-on-save script for automatic formatting and type checking of JS/TS files ([be06f74](https://github.com/iblai/os/commit/be06f741fb43105631797a7486c33e498e8b9d9b))
+* **mentor:** add reasoning visibility toggle to agent settings tab ([b25519b](https://github.com/iblai/os/commit/b25519b2d1e609f022eba642bd188ba142f5b698))
+* **mentor:** add the dedicated Projects page route ([33235c8](https://github.com/iblai/os/commit/33235c871b5b5349309bfe0c8c82ac6b0824e712))
+
+### Bug Fixes
+
+* **auth:** remove invalid hasNonExpiredAuthToken prop from AuthProvider ([c5647f9](https://github.com/iblai/os/commit/c5647f90e7211788c2a63738c237cdf98ea4c4e1))
+* **chat:** hide AI message action toolbar while the message is streaming ([871ca7e](https://github.com/iblai/os/commit/871ca7efcafecb4e57bfe41da8ba96ee08166a87))
+* **chat:** keep loading placeholder from showing while a response is already streaming ([a4b7847](https://github.com/iblai/os/commit/a4b784740deea73947d7b2d14e8e2255b2b22ac9))
+* **chat:** show stop-streaming tooltip on hover only ([868dacd](https://github.com/iblai/os/commit/868dacd9154d6adbd8f23b91c2e39ee9d262fa51))
+* **chat:** stop streaming indicator and restore toolbar after response completes ([dc216c4](https://github.com/iblai/os/commit/dc216c42312cc758aeaf91cffd366484a223ca8f))
+* **chat:** suppress empty AI bubble when verbose reasoning is off ([40786c5](https://github.com/iblai/os/commit/40786c50c351a2a82238e901225e3ad1ffe86365))
+* **chat:** update ToolCallIndicator to count unique tools used and adjust related tests ([90c272d](https://github.com/iblai/os/commit/90c272d5e5b959b97d4cae81e8f116ddda9e4cb9))
+* **chore:** remove `learning` text from explore ([cdff754](https://github.com/iblai/os/commit/cdff754b16419c409b9de9de57bf75dc77f48801))
+* **chore:** simplify marketing copy in ExplorePageContent and update test ([a1ffc8a](https://github.com/iblai/os/commit/a1ffc8aac6035a0bd85d931086ab303ebab233ee))
+* **e2e:** reach projects index via My Projects and match New Chat in either rail state ([2e6d5b5](https://github.com/iblai/os/commit/2e6d5b51b3078330594b464392c851e99227318a))
+* **e2e:** reload before asserting the chat Prompts button in user mode ([0c79b22](https://github.com/iblai/os/commit/0c79b2212a78c5825e2752a6cf8f6602c9662e86))
+* **e2e:** use a non-disposable email for the sign-up journey ([1f59dc4](https://github.com/iblai/os/commit/1f59dc49a514e98e268c63afebe82c8b560f73fd))
+* **mentor:** navigate to Explore from the No Agent Selected modal ([37a9c39](https://github.com/iblai/os/commit/37a9c398db5304625fa6f39465b8f1f0f375779b))
+
+### Refactors
+
+* **chat:** simplify ReasoningSection auto-open logic and enhance  collapsible details and tests ([674425c](https://github.com/iblai/os/commit/674425c501158d4c902438742bb1b4bea3fc7189))
+* **mentor:** rename "Show Reasoning" label to "Verbose Reasoning" ([6d83812](https://github.com/iblai/os/commit/6d838120317f9cdbc6a55974533a02cd5d3ffc63))
+* **mentor:** replace the projects sidebar dropdown with a nav button ([578230c](https://github.com/iblai/os/commit/578230c5b5cf3a473884a31ea69e5647eef56719))
+* **mentor:** source the projects UI from the SDK ([5c02208](https://github.com/iblai/os/commit/5c02208b7401e8055d37c5e2d7d831b376cf95a6))
+
+### Chores
+
+* **claude:** add configuration for lint-on-save hook to automate code formatting and type checking ([760b858](https://github.com/iblai/os/commit/760b85835fd3afb2210e19af27e4d03769e6e7f4))
+* **deps:** upgrade @iblai/iblai-js to 1.17.9 ([e1e4658](https://github.com/iblai/os/commit/e1e465889e86ecdea9a671e269c513913ce4ee54))
+* **e2e:** map no-mentor-selected-modal and welcome-chat-new to journey 26 ([25656e4](https://github.com/iblai/os/commit/25656e43e5bb47741b77d216a785a3ccefba1dd8))
+* remove accidentally-committed .claude/agent-memory ([3d01e55](https://github.com/iblai/os/commit/3d01e557dea17bf5a7c43fabe9361b36083c30ba))
+* **security:** fix code review issues suggested ([836d8eb](https://github.com/iblai/os/commit/836d8eb9426e5115418e463db5f35a7c3ec2f742))
+* **tests:** fix selector query in claw sandbox playwright tests ([7fee41a](https://github.com/iblai/os/commit/7fee41aecb681e0c635c7319da0ad48d848abb1a))
+
+### Styles
+
+* **chat:** adjust spacing and padding in ToolCallIndicator for improved layout ([816bad9](https://github.com/iblai/os/commit/816bad949473dc51a8fb6ad3d6db043fdf902bd5))
+* **chat:** refine spacing in ToolCallIndicator for better visual consistency ([5f7fe33](https://github.com/iblai/os/commit/5f7fe3306340ab9a6645a16e0033ffa87304988f))
+
+### Tests
+
+* **chat:** update Tool Call Indicator tests to reflect new behavior and unique tool count ([b151fbd](https://github.com/iblai/os/commit/b151fbda2645b95b3a0ba3e1e5471b1e5b59e8dc))
+* **e2e:** cover the dedicated Projects page (journey 26) ([0cbed13](https://github.com/iblai/os/commit/0cbed135edd29edac635e764773f9098b20eafd9))
+* **e2e:** fix journey 46 streaming tests ([8c620f6](https://github.com/iblai/os/commit/8c620f6d8a725ff4c2a197c451d9cf23e719288d))
+* **e2e:** harden journey 47 tool-call assertions for live LLM ([782f49a](https://github.com/iblai/os/commit/782f49ae8afaa03fbd47d042de223e7f5b8d8dcf))
+* **e2e:** renumber tool-call journey 47 -> 52 to resolve collision ([c58fa25](https://github.com/iblai/os/commit/c58fa25daadbcd7c7acf7b5ae9e88baddfd56a8b))
+* **e2e:** revert chat textarea locator to role+name ([ecb2683](https://github.com/iblai/os/commit/ecb268301b26686bf2535388c3182a09aad31e99)), closes [#chat-input-textarea](https://github.com/iblai/os/issues/chat-input-textarea)
+* **e2e:** use stable id locator for chat textarea ([29007d1](https://github.com/iblai/os/commit/29007d14d07e611996946646ebfca19e2a4aa029)), closes [#chat-input-textarea](https://github.com/iblai/os/issues/chat-input-textarea)
+
 ## [0.77.0](https://github.com/iblai/os/compare/v0.76.0...v0.77.0) (2026-06-19)
 
 ### Features
