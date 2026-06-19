@@ -1417,6 +1417,13 @@ describe('AppSidebar — Projects section', () => {
     ).toBeInTheDocument();
   });
 
+  it('clicking "My Projects" navigates to the Projects index page', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'My Projects' }));
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
+  });
+
   it('clicking "New Project" opens (and can close) the Create Project modal', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
@@ -2575,6 +2582,17 @@ describe('AppSidebar — Rail-collapsed Projects flyout', () => {
     expect(pushMock).toHaveBeenCalledWith(
       '/platform/tenant-a/projects/flyout-p/mentor-1',
     );
+  });
+
+  it('navigates to the Projects index from the rail flyout "My Projects"', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.hover(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    const myProjects = await screen.findByRole('button', {
+      name: 'My Projects',
+    });
+    fireEvent.click(myProjects);
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
   });
 
   it('toasts when a rail flyout project has no default mentor', async () => {
