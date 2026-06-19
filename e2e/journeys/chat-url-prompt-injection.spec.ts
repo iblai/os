@@ -229,6 +229,25 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
       { key: SESSION_ID_KEY, mid: mentorId },
     );
 
+    // The chat backend persists the WebSocket exchange asynchronously, so the
+    // session's history is not queryable the instant the assistant reply
+    // renders. This test navigates far faster than a real user would, so
+    // without waiting for durable persistence step 2 can reload the session
+    // before the first exchange lands — yielding an empty history and a false
+    // failure. Reload the mentor with NO ?prompt= (so nothing is auto-submitted)
+    // until the first message is served from persisted history, establishing
+    // the precondition that the cached session is durable before navigating on.
+    const bareMentorUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}`;
+    await expect(async () => {
+      await page.goto(bareMentorUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60_000,
+      });
+      await expect(
+        page.locator('.chat-user-message-query', { hasText: firstPrompt }),
+      ).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 120_000 });
+
     // Step 2 — Navigate with a DIFFERENT prompt (same mentor, same tenant)
     const secondUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(secondPrompt)}`;
     await page.goto(secondUrl, {

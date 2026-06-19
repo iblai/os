@@ -1,5 +1,5 @@
 /**
- * Journey 51 — Recent Chats Refresh (issue #1982)
+ * Journey 53 — Recent Chats Refresh (issue #1982)
  *
  * Regression guard for the `SidebarChatsSection` `useEffect` that calls
  * `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2
@@ -65,7 +65,7 @@ async function waitForStreamingDone(
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-test.describe('Journey 51: Recent Chats Refresh', () => {
+test.describe('Journey 53: Recent Chats Refresh', () => {
   test.setTimeout(180_000);
 
   test.beforeEach(async ({ page, createMentorPage }) => {

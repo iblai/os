@@ -78,7 +78,32 @@ export class CreateMentorPage {
    * Fill the required fields on the Settings tab and advance to Prompts.
    */
   async fillRequiredFields(name: string, description?: string): Promise<void> {
-    await expect(this.nameInput).toBeEnabled({ timeout: 30_000 });
+    // The modal starts with fields disabled while mentor categories load from
+    // the API (isLoadingMentorCategories). Use a generous timeout to
+    // accommodate slow environments / cold API caches.
+    //
+    // When multiple parallel workers each open the Create Agent dialog at the
+    // same time, the categories API can become overwhelmed and time out. In
+    // that case we close and reopen the dialog once — the retry almost always
+    // resolves because the server-side API cache has since warmed up. This
+    // is a best-effort recovery; the second wait uses the full 60 s budget.
+    let inputEnabled = false;
+    try {
+      await expect(this.nameInput).toBeEnabled({ timeout: 20_000 });
+      inputEnabled = true;
+    } catch {
+      // Categories API may be overloaded — close, wait briefly, then reopen.
+    }
+    if (!inputEnabled) {
+      await this.page.keyboard.press('Escape');
+      try {
+        await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
+      } catch {
+        // Dialog may have already closed; continue.
+      }
+      await this.open();
+      await expect(this.nameInput).toBeEnabled({ timeout: 60_000 });
+    }
     await this.nameInput.fill(name);
 
     await this.descriptionInput.fill(
@@ -91,10 +116,10 @@ export class CreateMentorPage {
     // for stability and retries the whole click, so a detach just re-runs.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
-    await reliableClick(this.page, firstCategory, 5_000);
+    await reliableClick(this.page, firstCategory, 10_000);
 
     // Wait for Next button to become enabled
-    await expect(this.nextButton).toBeEnabled({ timeout: 5_000 });
+    await expect(this.nextButton).toBeEnabled({ timeout: 10_000 });
   }
 
   /**
@@ -118,7 +143,7 @@ export class CreateMentorPage {
       this.page,
       (url) => url.href.includes('/platform/') && previousUrl != url.href,
       {
-        timeout: 30_000,
+        timeout: 60_000,
       },
     );
     await waitForPageReady(this.page);
