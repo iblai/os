@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-18",
+  "lastUpdated": "2026-06-19",
   "summary": {
-    "totalCheckpoints": 448,
-    "coveredCheckpoints": 428,
+    "totalCheckpoints": 468,
+    "coveredCheckpoints": 447,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 7,
+    "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 51,
-    "activeJourneys": 50
+    "totalJourneys": 52,
+    "activeJourneys": 51
   },
   "journeys": [
     {
@@ -424,7 +424,7 @@
         },
         {
           "id": "uid-09",
-          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected \u2014 unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -708,7 +708,7 @@
         },
         {
           "id": "emb-09",
-          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent \u2014 holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         }
       ]
@@ -1385,7 +1385,7 @@
         },
         {
           "id": "mem-06",
-          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) \u2014 unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -1569,12 +1569,12 @@
         },
         {
           "id": "ov-11",
-          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to ≤100px",
+          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to \u2264100px",
           "status": "covered"
         },
         {
           "id": "ov-12",
-          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
+          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays \u2264150px",
           "status": "covered"
         }
       ]
@@ -2123,7 +2123,7 @@
         },
         {
           "id": "cpm-11",
-          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) \u2014 unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2287,7 +2287,7 @@
         },
         {
           "id": "claw-16",
-          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) \u2014 unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2316,7 +2316,7 @@
         },
         {
           "id": "pr-03",
-          "description": "Master Privacy Router switch is visible",
+          "description": "Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → 'Filter PII from messages' (the in-tab master switch was removed; flipping it now lives only in Capabilities)",
           "status": "covered"
         },
         {
@@ -2821,14 +2821,14 @@
         },
         {
           "id": "upi-05",
-          "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "description": "URL-encoded prompt (%20 \u2192 space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
           "status": "covered"
         }
       ]
     },
     {
       "id": "chat-upload-camera-and-image-display",
-      "name": "Chat Upload — Camera Option & Image Display",
+      "name": "Chat Upload \u2014 Camera Option & Image Display",
       "spec": "46-chat-upload-camera-and-image-display.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/upload-menu.tsx",
@@ -2874,6 +2874,118 @@
         {
           "id": "cam-07",
           "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-privacy",
+      "name": "Chat Privacy",
+      "spec": "50-chat-privacy.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "cp-tenant-01",
+          "description": "Admin sees the Allow users to control chat privacy switch in Account Settings Advanced tab",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-02",
+          "description": "Disabling the tenant gate hides the header Private Mode toggle across the app",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-03",
+          "description": "Enabling the tenant gate shows the header Private Mode toggle",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-04",
+          "description": "Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-05",
+          "description": "Non-admin cannot reach the tenant Advanced settings (no platform-name menu item in More options)",
+          "status": "not-reproducible",
+          "note": "Non-admin More options menu does not surface the platform-name item; test.skipped with explanation in spec"
+        },
+        {
+          "id": "cp-agent-01",
+          "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-02",
+          "description": "Saving Enable private mode ON persists across modal close and re-open",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-03",
+          "description": "Saving Enable private mode ON locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in settings-tab.tsx)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-04",
+          "description": "Saving Enable private mode OFF removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-01",
+          "description": "Fresh chat starts with the header toggle in the off state",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-02",
+          "description": "Clicking the toggle with no user messages starts a private session (data-state=on, data-source=session)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-03",
+          "description": "Clicking an on toggle with no messages returns to normal mode (data-state=off)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-04",
+          "description": "Clicking the toggle after sending a message opens the confirm dialog; cancelling leaves state off",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-05",
+          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) \u2014 session is one-way per spec",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-06",
+          "description": "Private session state persists as data-state=on across a page refresh (localStorage cache + SDK hydration)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-01",
+          "description": "Private Mode tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-02",
+          "description": "Private Mode tab is hidden in UserProfileModal when the tenant gate is off",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-03",
+          "description": "All three radio cards (Normal, Anonymized, Disabled) render after switching to the Private Mode tab",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-04",
+          "description": "Selecting Disabled propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-05",
+          "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
           "status": "covered"
         }
       ]

@@ -136,7 +136,11 @@ test.describe('Journey 34: Workflows', () => {
     await createWorkflow(page);
     await waitForWorkflowEditorReady(page);
 
-    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+    // Exact name — a loose 'Save' also matches the chat-privacy toggle's
+    // aria-label ("...won't be saved to history...") → strict-mode violation.
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible();
 
