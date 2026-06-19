@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+  ChatPrivacyToggle,
   CreditBalance,
   NotificationDropdown,
 } from '@iblai/iblai-js/web-containers';
@@ -440,6 +441,7 @@ export function NavBar() {
           mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''
         }
         tenantKey={tenantKey}
+        mentorId={mentorId}
       />
     );
   }
@@ -499,7 +501,8 @@ export function NavBar() {
                     </div>
                     <span
                       className={cn(
-                        'max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap',
+                        // Hidden below sm; the name is shown in the tooltip.
+                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
                         creditBalanceComponentIsDisplayed
                           ? 'max-w-[100px] md:max-w-[150px]'
                           : '',
@@ -513,7 +516,8 @@ export function NavBar() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? 'Select Model' : selectedMentorName}
+                  {selectedMentorCategory ||
+                    (isAdmin ? 'Select Model' : selectedMentorName)}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -626,6 +630,14 @@ export function NavBar() {
             </div>
           )}
           <div className="flex items-center gap-2">
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <ChatPrivacyToggle
+                org={tenantKey}
+                userId={username ?? ''}
+                mentor={mentorId}
+                className="inline-flex max-md:[&>span]:hidden"
+              />
+            )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
                 tenant={tenantKey}
