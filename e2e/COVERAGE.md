@@ -836,21 +836,6 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 ---
 
-## Journey 47: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/47-tool-call-indicator-and-reasoning.spec.ts`
-
-**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
-
-- [x] Web Search tool pill appears during streaming with tool name and pulse animation
-- [x] Tool call pill is expandable and shows query detail
-- [x] Web Search button is not visible when tool is disabled on mentor
-- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
-- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
-- [x] Reasoning section does not appear for non-reasoning model
-- [x] Tool call indicator and reasoning section both render in correct order in same message
-- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
-
----
-
 ## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
@@ -941,3 +926,18 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 ---
 
 > **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
+
+## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+
+---
