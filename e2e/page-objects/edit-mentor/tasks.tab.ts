@@ -85,8 +85,11 @@ export class TasksTab {
     });
   }
 
+  static readonly HEADER_DESCRIPTION =
+    'Configure automated tasks for your agent.';
+
   description(): Locator {
-    return this.dialog.getByText(TASKS_LABELS.headerDescription, {
+    return this.dialog.getByText(TasksTab.HEADER_DESCRIPTION, {
       exact: true,
     });
   }
