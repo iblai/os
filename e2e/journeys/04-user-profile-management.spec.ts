@@ -233,7 +233,7 @@ test.describe('Journey 4: User Profile Management', () => {
     await nonadminProfilePage.switchToTab('Education');
     await expect(
       nonadminProfilePage.modal.getByRole('heading', {
-        name: 'education',
+        name: 'Education',
         level: 3,
         exact: true,
       }),
@@ -739,7 +739,7 @@ test.describe('Journey 4: User Profile Management', () => {
     await nonadminProfilePage.switchToTab('Resume');
     await expect(
       nonadminProfilePage.modal.getByRole('heading', {
-        name: 'resume',
+        name: 'Resume',
         level: 3,
         exact: true,
       }),
@@ -765,7 +765,7 @@ test.describe('Journey 4: User Profile Management', () => {
     await nonadminProfilePage.switchToTab('Security');
     await expect(
       nonadminProfilePage.modal.getByRole('heading', {
-        name: 'security',
+        name: 'Security',
         level: 3,
         exact: true,
       }),
