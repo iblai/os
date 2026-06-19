@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.77.0](https://github.com/iblai/os/compare/v0.76.0...v0.77.0) (2026-06-19)
+
+### Features
+
+* **mentor:** add prompt caching toggle to agent settings ([2c90236](https://github.com/iblai/os/commit/2c9023664f6be4818787f3a33773f08e6cae8167))
+
+### Chores
+
+* **tests:** add playwright tests for prompt caching ([29cf427](https://github.com/iblai/os/commit/29cf42769b53bc26f12ddaabbafccd32452c9ddb))
+
 ## [0.76.0](https://github.com/iblai/os/compare/v0.75.17...v0.76.0) (2026-06-19)
 
 ### Features
