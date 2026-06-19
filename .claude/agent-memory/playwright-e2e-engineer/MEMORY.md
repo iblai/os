@@ -1,1 +1,0 @@
-- [project_feat_1821_projects_page.md](project_feat_1821_projects_page.md) — feat/1821 Projects page E2E: key bug, fixes applied, confirmed passing
