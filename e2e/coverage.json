@@ -2,13 +2,13 @@
   "version": 2,
   "lastUpdated": "2026-06-19",
   "summary": {
-    "totalCheckpoints": 468,
-    "coveredCheckpoints": 447,
+    "totalCheckpoints": 471,
+    "coveredCheckpoints": 450,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 52,
-    "activeJourneys": 51
+    "totalJourneys": 53,
+    "activeJourneys": 52
   },
   "journeys": [
     {
@@ -2986,6 +2986,31 @@
         {
           "id": "cp-profile-05",
           "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "prompt-caching-toggle",
+      "name": "Prompt Caching Toggle",
+      "spec": "51-prompt-caching-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pc-01",
+          "description": "Fresh mentor: Settings → Capabilities — \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "status": "covered"
+        },
+        {
+          "id": "pc-02",
+          "description": "Toggle ON → Save: switch reflects ON, \"Agent updated successfully\" toast appears, and switch stays ON in the same open dialog after save. Persistence across close/reopen is not asserted (enable_prompt_caching not yet in SDK type).",
+          "status": "covered"
+        },
+        {
+          "id": "pc-03",
+          "description": "Toggle ON → click OFF → aria-checked=false immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of false via multipart is a pre-existing backend limitation shared with enable_multi_query_rag)",
           "status": "covered"
         }
       ]

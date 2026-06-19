@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-19 | 468 checkpoints (447 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 52 journeys (51 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-19 | 471 checkpoints (450 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 53 journeys (52 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -903,6 +903,16 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
 - [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
 - [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
+
+## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+
+Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
+
+- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
+- [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
+- [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
 
 ---
 
