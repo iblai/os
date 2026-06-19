@@ -248,7 +248,7 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
       'Requires MENTOR_NEXTJS_HOST and AUTH_HOST',
     );
     await goToAnonymousMentor(page);
-    
+
     const analyticsBtn = page.getByRole('button', {
       name: 'Analytics',
       exact: true,
