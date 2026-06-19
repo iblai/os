@@ -2181,7 +2181,7 @@
     {
       "id": "tool-call-indicator-and-reasoning",
       "name": "Tool Call Indicator & Reasoning Section",
-      "spec": "47-tool-call-indicator-and-reasoning.spec.ts",
+      "spec": "52-tool-call-indicator-and-reasoning.spec.ts",
       "sourceFiles": [
         "components/chat/tool-call-indicator.tsx",
         "components/chat/tool-call-item.tsx",
