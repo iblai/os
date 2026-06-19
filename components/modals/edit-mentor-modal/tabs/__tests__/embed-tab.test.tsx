@@ -48,7 +48,6 @@ vi.mock('next/navigation', () => ({
 // next/image
 vi.mock('next/image', () => ({
   default: ({ src, alt, onError, onClick, ...props }: any) => (
-     
     <img src={src} alt={alt} onError={onError} onClick={onClick} {...props} />
   ),
 }));
