@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-19 | 470 checkpoints (449 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 53 journeys (52 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-19 | 490 checkpoints (469 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 55 journeys (54 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -423,18 +423,27 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 26: Projects (8 checkpoints) — `journeys/26-projects.spec.ts`
+## Journey 26: Projects (17 checkpoints) — `journeys/26-projects.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/projects/project-landing-page.tsx`, `components/projects/create-project-modal.tsx`, `components/projects/project-mentors-list.tsx`, `components/projects/project-action-buttons.tsx`, `components/projects/project-files-modal.tsx`, `components/projects/project-instructions-modal.tsx`, `components/projects/rename-project-modal.tsx`, `components/projects/delete-project-modal.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat-new.tsx`, `components/modals/no-mentor-selected-modal.tsx`
 
 - [x] A new project can be created from the sidebar
 - [x] Project landing page shows the assigned mentor list and action buttons
 - [x] A mentor can be added to a project
 - [x] Project instructions (system prompt) can be set and saved
-- [x] Project files modal opens with search input and Add Files button
+- [x] Project files modal opens cleanly (no crash) with Add Files button and either empty-state "No files found" or a populated table
 - [x] Chatting within a project creates a session
 - [x] A project can be renamed
 - [x] A project can be deleted
+- [x] Projects index page renders with h1 "Projects", subtitle, "Search projects..." input, and gradient "New Project" button when reached via the sidebar "Projects" nav button (no redirect back to chat) _(feat-1821)_
+- [x] Projects index shows either project cards (name + agent count) or the empty-state "No projects found" / "Create your first project" _(feat-1821)_
+- [x] "New Project" button on the index page opens the create-project modal _(feat-1821)_
+- [x] Project cards show the project name and agent count; intentionally NO description and NO "Updated …" timestamp; kebab button aria-label="Project actions" shows Rename and Delete items _(feat-1821)_
+- [x] Clicking a project card navigates to the project chat route /platform/\<tenantKey\>/projects/\<projectId\>/\<mentorId\> _(feat-1821)_
+- [x] Kebab Rename flow on index page: modal accepts new name and card updates _(feat-1821)_
+- [x] Kebab Delete flow on index page: confirmation dialog removes the card _(feat-1821)_
+- [x] "LLM Model Selector" navbar button is visible on a mentor chat page but hidden on the projects index (isProjectsIndexPage guard) _(feat-1821)_
+- [x] On projects index with no mentorId, clicking "New Chat" shows "No Agent Selected" modal; "Explore Agents" button navigates to /explore _(feat-1821)_
 
 ---
 
@@ -904,9 +913,36 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
 - [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
 
+## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+
+Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
+
+- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
+- [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
+- [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
+
 ---
 
-## Journey 51: Recent Chats Refresh (2 checkpoints) — `journeys/51-recent-chats-refresh.spec.ts`
+> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
+
+## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+
+---
+
+## Journey 53: Recent Chats Refresh (2 checkpoints) — `journeys/53-recent-chats-refresh.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -916,5 +952,3 @@ Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRe
 - [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
 
 ---
-
-> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.

@@ -20,8 +20,11 @@ export class SettingsTab {
   readonly advancedSandboxToggle: Locator;
   readonly chatAccessCombobox: Locator;
   readonly memoryToggle: Locator;
+  readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
+  readonly promptCachingToggle: Locator;
+  readonly promptCachingTooltipTrigger: Locator;
   /**
    * Voice-call toggle: persists `use_function_calling_for_rag` on the
    * mentor's CallConfiguration. Resolved via `data-testid` so the
@@ -106,12 +109,25 @@ export class SettingsTab {
     this.memoryToggle = dialog.getByRole('switch', {
       name: /remember past conversations/i,
     });
+    // Capabilities sub-tab. The "Verbose Reasoning" toggle (show_reasoning);
+    // aria-label is "Verbose reasoning enabled" / "Verbose reasoning disabled"
+    // depending on current state.
+    this.verboseReasoningToggle = dialog.getByRole('switch', {
+      name: /^Verbose reasoning /i,
+    });
     // Capabilities sub-tab. Renamed visible label "Enhanced document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
       name: /enhanced document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced document retrieval',
+    });
+    // Capabilities sub-tab. Label: "Enable prompt caching".
+    this.promptCachingToggle = dialog.getByRole('switch', {
+      name: /enable prompt caching/i,
+    });
+    this.promptCachingTooltipTrigger = dialog.getByRole('button', {
+      name: 'More info about enable prompt caching',
     });
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
@@ -443,6 +459,50 @@ export class SettingsTab {
     await this.page.waitForTimeout(500);
   }
 
+  /**
+   * Returns true when the Verbose Reasoning toggle is ON (aria-checked="true").
+   */
+  async isVerboseReasoningEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.verboseReasoningToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Verbose Reasoning toggle to the desired state and saves the form.
+   * A no-op if the toggle is already in the desired state. Save is called
+   * internally (same as setMemoryEnabled) and we block on the success toast so
+   * callers can immediately send a chat message that relies on the new setting.
+   */
+  async setVerboseReasoning(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.verboseReasoningToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) {
+      return;
+    }
+    await this.verboseReasoningToggle.click();
+    await expect(this.verboseReasoningToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer for RTK Query cache invalidation before the caller closes
+    // or re-opens the dialog.
+    await this.page.waitForTimeout(500);
+  }
+
   async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
     await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
@@ -529,6 +589,45 @@ export class SettingsTab {
     await expect(
       this.page.getByText(/agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
+  }
+
+  async isPromptCachingEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.promptCachingToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Prompt Caching toggle to the desired state and saves the form.
+   * Waits for the success toast before returning so callers can rely on the
+   * persisted state immediately (e.g. close → reopen → assert).
+   */
+  async setPromptCaching(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.promptCachingToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked !== target) {
+      await this.promptCachingToggle.click();
+      await expect(this.promptCachingToggle).toHaveAttribute(
+        'aria-checked',
+        String(target),
+        { timeout: 10_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Buffer for RTK Query cache invalidation: the mutation response triggers
+    // an invalidate tag, but the refetch is async. 2 s is enough for the
+    // follow-on GET to land and React to re-render before close+reopen.
+    await this.page.waitForTimeout(2_000);
   }
 
   /**

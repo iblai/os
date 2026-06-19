@@ -101,9 +101,11 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  show_reasoning: boolean;
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
+  enable_prompt_caching: boolean;
   /** Gates the standalone Privacy tab (PII-rules UI) — hidden when off. */
   enable_privacy_router: boolean;
   /** Mentor-level private-mode kill switch → `mentor.disable_chathistory`. */
@@ -241,10 +243,14 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - show_reasoning exists in API response but not in type
+      show_reasoning: mentor?.show_reasoning ?? false,
       // @ts-ignore - enable_claw exists in API response but not in type
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
+      // @ts-ignore - enable_prompt_caching exists in the API response but not yet in the installed SDK type
+      enable_prompt_caching: mentor?.enable_prompt_caching ?? false,
       // @ts-ignore - enable_privacy_router exists on API but not in the public type yet
       enable_privacy_router: mentor?.enable_privacy_router ?? false,
       // @ts-ignore - disable_chathistory exists on the mentor object but not in the public type yet
@@ -307,6 +313,10 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
+      if (value.show_reasoning !== undefined) {
+        values.show_reasoning = value.show_reasoning;
+      }
+
       if (value.enable_claw !== undefined) {
         values.enable_claw = value.enable_claw;
       }
@@ -328,6 +338,10 @@ export function SettingsTab() {
 
       if (value.enable_multi_query_rag !== undefined) {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
+      }
+
+      if (value.enable_prompt_caching !== undefined) {
+        values.enable_prompt_caching = value.enable_prompt_caching;
       }
 
       if (value.enable_privacy_router !== undefined) {
@@ -1108,6 +1122,42 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
+                  <form.Field name="show_reasoning">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Verbose Reasoning
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about verbose reasoning"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Show the agent’s reasoning steps while it
+                                  responds.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled}
+                          aria-label={`Verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+
                   <WithFormPermissions
                     name="enable_multi_query_rag"
                     // @ts-ignore
@@ -1146,6 +1196,53 @@ export function SettingsTab() {
                               }
                               disabled={isDisabled || disabled}
                               aria-label="Enhanced document retrieval"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="enable_prompt_caching"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_prompt_caching">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable prompt caching
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable prompt caching"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Caches large or long system prompts so
+                                      they are reused across requests, reducing
+                                      LLM cost and latency. By default this is
+                                      disabled.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable prompt caching"
                               aria-checked={field.state.value}
                             />
                           </div>
