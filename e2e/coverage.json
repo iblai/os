@@ -2,13 +2,13 @@
   "version": 2,
   "lastUpdated": "2026-06-19",
   "summary": {
-    "totalCheckpoints": 468,
-    "coveredCheckpoints": 447,
+    "totalCheckpoints": 470,
+    "coveredCheckpoints": 449,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 52,
-    "activeJourneys": 51
+    "totalJourneys": 53,
+    "activeJourneys": 52
   },
   "journeys": [
     {
@@ -2986,6 +2986,26 @@
         {
           "id": "cp-profile-05",
           "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "recent-chats-refresh",
+      "name": "Recent Chats Refresh",
+      "spec": "51-recent-chats-refresh.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "rcr-01",
+          "description": "New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload (regression guard for issue #1982: refetchRecent() was orphaned in an unrendered component on main)",
+          "status": "covered"
+        },
+        {
+          "id": "rcr-02",
+          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
           "status": "covered"
         }
       ]
