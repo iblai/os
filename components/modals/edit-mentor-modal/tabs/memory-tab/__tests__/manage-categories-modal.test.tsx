@@ -156,8 +156,10 @@ describe('ManageCategoriesModal', () => {
       });
     });
     expect(toast.success).toHaveBeenCalledWith('Category created');
-    // Input should reset after success
-    expect(input.value).toBe('');
+    // Input should reset after success. The reset runs in the post-await
+    // microtask of handleCreate, so poll for the committed re-render rather
+    // than asserting synchronously (which races React's commit under load).
+    await waitFor(() => expect(input.value).toBe(''));
   });
 
   it('does nothing when the new category name is blank', () => {
