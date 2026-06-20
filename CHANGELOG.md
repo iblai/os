@@ -4,18 +4,18 @@
 
 ### Bug Fixes
 
-* **mentor:** restore recent chats refetch after first AI response ([187d5b3](https://github.com/iblai/os/commit/187d5b39a3b736a383bab02dc8ad50bef718f5cd))
+- **mentor:** restore recent chats refetch after first AI response ([187d5b3](https://github.com/iblai/os/commit/187d5b39a3b736a383bab02dc8ad50bef718f5cd))
 
 ### Chores
 
-* **format:** prettier sweep of pre-existing drift ([13f3e04](https://github.com/iblai/os/commit/13f3e04cbcd508468a51b2cfe2b23172fdb202f7))
-* **mentor:** remove orphaned recent/pinned message components ([46a299e](https://github.com/iblai/os/commit/46a299e14f1b2824b67c0177f54f638d4ac94cf8))
+- **format:** prettier sweep of pre-existing drift ([13f3e04](https://github.com/iblai/os/commit/13f3e04cbcd508468a51b2cfe2b23172fdb202f7))
+- **mentor:** remove orphaned recent/pinned message components ([46a299e](https://github.com/iblai/os/commit/46a299e14f1b2824b67c0177f54f638d4ac94cf8))
 
 ### Tests
 
-* **e2e:** cover recent chats refresh after first AI response ([5ee610b](https://github.com/iblai/os/commit/5ee610b48956cb3ba043fb08b2e2940d0407498c))
-* **e2e:** gate prompt-injection TC3 on streaming completion ([b0d5ed3](https://github.com/iblai/os/commit/b0d5ed36075da3f26a7af6f1b4cb29c88b976cc2))
-* **mentor:** cover recent chats first-response refetch effect ([ecd41bd](https://github.com/iblai/os/commit/ecd41bdfe75c31c1394520baa7d7b389ba844b0a))
+- **e2e:** cover recent chats refresh after first AI response ([5ee610b](https://github.com/iblai/os/commit/5ee610b48956cb3ba043fb08b2e2940d0407498c))
+- **e2e:** gate prompt-injection TC3 on streaming completion ([b0d5ed3](https://github.com/iblai/os/commit/b0d5ed36075da3f26a7af6f1b4cb29c88b976cc2))
+- **mentor:** cover recent chats first-response refetch effect ([ecd41bd](https://github.com/iblai/os/commit/ecd41bdfe75c31c1394520baa7d7b389ba844b0a))
 
 ## [0.78.0](https://github.com/iblai/os/compare/v0.77.0...v0.78.0) (2026-06-19)
 

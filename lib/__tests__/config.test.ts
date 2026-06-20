@@ -376,6 +376,27 @@ describe('config', () => {
       });
     });
 
+    describe('maximumCharacterSizeToCopy', () => {
+      it('should return the maximum character size to copy', () => {
+        const result = config.maximumCharacterSizeToCopy();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should default to 2000 when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '500',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('500');
+      });
+    });
+
     describe('defaultSupportPhoneNumber', () => {
       it('should return default support phone number', () => {
         const result = config.defaultSupportPhoneNumber();
