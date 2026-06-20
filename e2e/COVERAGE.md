@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-19 | 488 checkpoints (467 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 54 journeys (53 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-19 | 490 checkpoints (469 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 55 journeys (54 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -939,5 +939,16 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+
+---
+
+## Journey 53: Recent Chats Refresh (2 checkpoints) — `journeys/53-recent-chats-refresh.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
+
+- [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
+- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
 
 ---
