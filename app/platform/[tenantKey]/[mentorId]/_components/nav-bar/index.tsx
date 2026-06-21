@@ -30,8 +30,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import {
+  ChatPrivacyToggle,
   CreditBalance,
   NotificationDropdown,
 } from '@iblai/iblai-js/web-containers';
@@ -193,8 +193,6 @@ export function NavBar() {
 
   const {
     openEditMentorModal,
-    showEditMentorModal,
-    closeEditMentorModal,
     showCreateMentorModal,
     closeCreateMentorModal,
     navigateToAnalytics,
@@ -402,11 +400,17 @@ export function NavBar() {
   const isPromptGalleryOrAnalytics =
     pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
   const isOnChatPage =
     !pathname.includes('/prompt-gallery') &&
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore') &&
-    !isWorkflowsPage;
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -443,6 +447,7 @@ export function NavBar() {
           mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''
         }
         tenantKey={tenantKey}
+        mentorId={mentorId}
       />
     );
   }
@@ -502,7 +507,8 @@ export function NavBar() {
                     </div>
                     <span
                       className={cn(
-                        'max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap',
+                        // Hidden below sm; the name is shown in the tooltip.
+                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
                         creditBalanceComponentIsDisplayed
                           ? 'max-w-[100px] md:max-w-[150px]'
                           : '',
@@ -516,7 +522,8 @@ export function NavBar() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? 'Select Model' : selectedMentorName}
+                  {selectedMentorCategory ||
+                    (isAdmin ? 'Select Model' : selectedMentorName)}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -629,6 +636,14 @@ export function NavBar() {
             </div>
           )}
           <div className="flex items-center gap-2">
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <ChatPrivacyToggle
+                org={tenantKey}
+                userId={username ?? ''}
+                mentor={mentorId}
+                className="inline-flex max-md:[&>span]:hidden"
+              />
+            )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
                 tenant={tenantKey}
@@ -670,17 +685,6 @@ export function NavBar() {
           onClose={() => setIsProviderSelectionOpen(false)}
         />
       )}
-      {/*
-        Radix Dialog must observe the open: true -> false transition to run
-        react-remove-scroll cleanup. Conditional unmount while open=true leaves
-        body[data-scroll-locked] and the sidebar-wrapper aria-hidden set,
-        which blocks subsequent nav-bar interactions (the dropdown remains in
-        the DOM but is invisible to accessibility-tree queries).
-      */}
-      <EditMentorModal
-        isOpen={showEditMentorModal}
-        onClose={closeEditMentorModal}
-      />
       {showCreateMentorModal && (
         <CreateMentorModal
           isOpen={showCreateMentorModal}

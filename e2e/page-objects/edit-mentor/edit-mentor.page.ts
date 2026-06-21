@@ -99,6 +99,14 @@ export class EditMentorPage {
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
+
+    // The Privacy-tab master switch was removed from the SDK and now lives
+    // only in Settings → Capabilities. Hand the Privacy page-object a
+    // reference to the Settings page-object + this dialog's tab nav so
+    // `privacy.setRouterEnabled(...)` can transparently drive the moved
+    // switch and return focus to the Privacy tab. Bound to a bound method
+    // so the callback retains `this`.
+    this.privacy.bindSettingsTab(this.settings, this.navigateToTab.bind(this));
   }
 
   /**
@@ -381,26 +389,39 @@ export class EditMentorPage {
     // unclickable. Dismiss any leftover child modals first via Escape so
     // cleanup can proceed even when an earlier API call left a modal stuck open.
     //
-    // Two overlay patterns exist:
+    // Two overlay patterns for child modals:
     //   1. SDK custom layers: [data-iblai-dialog-interaction-layer][data-state="open"]
     //   2. Standard Radix dialogs (e.g. the "Embedded Code" dialog rendered by
     //      `components/ui/dialog.tsx`) that use a plain `[data-state="open"]`
     //      overlay without the SDK custom attribute.
+    //
+    // IMPORTANT: the My Agents flow opens Edit Agent on top of the still-open
+    // Settings list dialog (a PARENT dialog, not a child). We must NOT press
+    // Escape in that case — it would dismiss the topmost Edit Agent dialog
+    // rather than a child, leaving the Settings parent open and the test dirty.
+    // We detect this by subtracting known parent dialogs from the count: the
+    // Settings list dialog contains the text "Showing the list of agents".
     for (let attempt = 0; attempt < 8; attempt++) {
       const sdkOverlay = this.page.locator(
         '[data-iblai-dialog-interaction-layer][data-state="open"]',
       );
       const sdkOverlayCount = await sdkOverlay.count().catch(() => 0);
 
-      // Count open dialogs; if more than one is present the extra ones are
-      // child/portal modals that need to be dismissed before we can click the
-      // Edit Agent Close button.
+      // Count open dialogs then subtract any known parent dialogs (the
+      // Settings list that remains open in the My Agents flow). Child
+      // modals are those opened ON TOP of Edit Agent — they need dismissal.
       const allDialogCount = await this.page
         .getByRole('dialog')
         .count()
         .catch(() => 0);
+      const parentSettingsDialogCount = await this.page
+        .getByRole('dialog')
+        .filter({ hasText: 'Showing the list of agents' })
+        .count()
+        .catch(() => 0);
+      const childDialogCount = allDialogCount - parentSettingsDialogCount;
 
-      if (sdkOverlayCount === 0 && allDialogCount <= 1) break;
+      if (sdkOverlayCount === 0 && childDialogCount <= 1) break;
       await this.page.keyboard.press('Escape').catch(() => {});
       await this.page.waitForTimeout(300);
     }
@@ -411,7 +432,28 @@ export class EditMentorPage {
     if (stillOpen === 0) return;
 
     await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
-    await this.closeButton.click();
+    // The Edit Agent dialog's top-right Close (X) can be occluded at its exact
+    // pixel by a stacked, aria-hidden sibling "Edit Agent" dialog. In the My
+    // Agents flow the global `showEditMentorModal` flag drives TWO mounted
+    // EditMentorModal instances at once (nav-bar/index.tsx and the one the open
+    // SettingsModal renders, settings-modal.tsx). Both portal a layout-identical
+    // DialogContent to <body> with the X at the same `absolute top-4 right-4`.
+    // Radix's hideOthers() marks the backgrounded duplicate aria-hidden — so
+    // getByRole resolves `closeButton` to the single foreground one — but
+    // aria-hidden only drops a node from the a11y tree; it stays in layout and
+    // remains a valid pointer hit-test target, so the duplicate's X (or the
+    // Settings overlay) can sit on top and intercept the click, timing it out.
+    //
+    // Dispatch a native click straight onto the resolved Close button instead of
+    // click()'s hit-testing. Radix DialogClose closes purely via React onClick
+    // (no onPointerDown/onMouseDown — @radix-ui/react-dialog), and the dialog
+    // portals under React's root container, so the bubbling DOM click reaches
+    // React's delegated listener and fires onOpenChange(false) → onClose
+    // regardless of what is painted on top. The toBeVisible() above guarantees
+    // `closeButton` is the single mounted, attached Edit Agent Close before we
+    // dispatch. On the non-stacked open() path (one dialog, no occlusion) this
+    // behaves identically to a normal click.
+    await this.closeButton.dispatchEvent('click');
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
 
     // The SDK dialog frequently leaves the app shell `aria-hidden="true"`

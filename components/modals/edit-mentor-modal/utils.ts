@@ -445,11 +445,6 @@ export const getEmbedCode = async (
                     ${
                       !settings.allow_anonymous
                         ? `
-                        if (message?.loaded && message?.auth?.axd_token){
-                          const _userData = document.cookie.includes('userData=') ? document.cookie.split('userData=')[1].split(';')[0] : null;
-                          !_userData && redirectToAuthSPA(true);
-                        }
-                        
                         if (
                           message?.loaded &&
                           (!message.auth.axd_token ||

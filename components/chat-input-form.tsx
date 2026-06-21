@@ -14,6 +14,7 @@ import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload';
 import { cn, isLoggedIn } from '@/lib/utils';
+import { extractFilesFromClipboard } from '@/lib/clipboard';
 import useVoiceChat from '@/hooks/use-voice-chat';
 import { VoiceChatButton } from './chat-input-form/voice-chat-button';
 import { RetrievedDocumentsButton } from './retrieved-documents-button';
@@ -48,6 +49,7 @@ import { toast } from 'sonner';
 import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-capabilities';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
+import { config } from '@/lib/config';
 
 const PromptGalleryModal = dynamic(
   () =>
@@ -90,8 +92,6 @@ interface ChatInputFormProps {
   chatAreaMaxWidth?: number;
   /** When true, shows a loading state in the submit button indicating the connection is being established */
   isConnecting?: boolean;
-  /** Ref forwarded to the stop streaming button for focus management */
-  stopStreamingButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function ChatInputForm({
@@ -121,7 +121,6 @@ export function ChatInputForm({
   compactMode = false,
   chatAreaMaxWidth,
   isConnecting = false,
-  stopStreamingButtonRef,
 }: ChatInputFormProps) {
   const dispatch = useAppDispatch();
   const mentorSettings = useMentorSettings();
@@ -288,6 +287,23 @@ export function ChatInputForm({
     setInputValue(text);
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!e.clipboardData) return;
+    const files = extractFilesFromClipboard(e.clipboardData);
+    if (files.length) {
+      e.preventDefault();
+      void processFiles(files);
+      return;
+    }
+    const text = e.clipboardData.getData('text/plain');
+    if (text.length > Number(config.maximumCharacterSizeToCopy())) {
+      e.preventDefault();
+      void processFiles([
+        new File([text], `pasted-${Date.now()}.txt`, { type: 'text/plain' }),
+      ]);
+    }
+  };
+
   const textAreaPlaceholder = () => {
     if (recording) {
       const formattedTime = format(new Date(time), 'mm:ss');
@@ -373,6 +389,7 @@ export function ChatInputForm({
               }
               value={inputValue}
               onChange={handleInputChange}
+              onPaste={handlePaste}
               onSubmit={handleSubmit}
               sessionId={sessionId}
               isPreviewMode={isPreviewMode}
@@ -454,10 +471,7 @@ export function ChatInputForm({
                 )}
 
                 {isStreaming ? (
-                  <StopStreamingButton
-                    ref={stopStreamingButtonRef}
-                    stopGenerating={stopGenerating}
-                  />
+                  <StopStreamingButton stopGenerating={stopGenerating} />
                 ) : (
                   <SubmitMessageButton
                     isPreviewMode={isPreviewMode}

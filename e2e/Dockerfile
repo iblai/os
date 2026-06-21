@@ -17,6 +17,9 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Copy package manifests from repo root (deps live here, not in e2e/)
 COPY package.json pnpm-lock.yaml ./
+# pnpm patchedDependencies reference files under patches/ that must exist at
+# install time (pnpm hashes them), so copy them before install.
+COPY patches ./patches
 
 # Install dependencies (skip postinstall scripts)
 RUN pnpm install --frozen-lockfile --ignore-scripts --no-optional
