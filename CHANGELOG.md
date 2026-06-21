@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.80.0](https://github.com/iblai/os/compare/v0.79.0...v0.80.0) (2026-06-21)
+
+### Features
+
+* **chat:** paginate chat history with infinite scroll-up ([1741f49](https://github.com/iblai/os/commit/1741f494c6f7118c66cf9629a3e359ba501f3d47))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.20.5 ([d6c8a47](https://github.com/iblai/os/commit/d6c8a47b20ccad629c5e537b0c4005ace5ca4053))
+
+### Tests
+
+* **e2e:** match tasks-tab description by stable prefix ([4f4925e](https://github.com/iblai/os/commit/4f4925ec7ffcffb0a66b70b4667d21a5c21401fe))
+
 ## [0.79.0](https://github.com/iblai/os/compare/v0.78.1...v0.79.0) (2026-06-21)
 
 ### Features
