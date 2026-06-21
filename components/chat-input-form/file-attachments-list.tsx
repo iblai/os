@@ -48,6 +48,7 @@ export function FileAttachmentsList({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
+                  data-testid="attachment-chip"
                   className={cn(
                     'inline-flex max-w-fit cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors',
                     statusColors[file.uploadStatus],
