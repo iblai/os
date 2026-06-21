@@ -176,6 +176,9 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       isPending: false,
       isLoadingChats: false,
       refetchChats: vi.fn(),
+      loadOlderMessages: vi.fn(),
+      hasMore: false,
+      isLoadingOlderMessages: false,
     })),
     CHAT_AREA_SIZE: {
       MIN: 600,
@@ -19478,6 +19481,338 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       expect(await getInitialPromptArg()).toBeUndefined();
+    });
+  });
+
+  describe('pagination - load older messages on scroll', () => {
+    const baseMessages = [
+      {
+        id: '1',
+        role: 'user',
+        content: 'Hello',
+        timestamp: new Date().toISOString(),
+        visible: true,
+      },
+      {
+        id: '2',
+        role: 'assistant',
+        content: 'Hi there',
+        timestamp: new Date().toISOString(),
+        visible: true,
+      },
+    ];
+
+    const setupChatMock = async (overrides: Record<string, unknown>) => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: baseMessages,
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        isConnected: true,
+        refetchChats: vi.fn(),
+        loadOlderMessages: vi.fn(),
+        hasMore: false,
+        isLoadingOlderMessages: false,
+        ...overrides,
+      });
+    };
+
+    const getScrollContainer = (container: HTMLElement) =>
+      container.querySelector('.overflow-y-auto') as HTMLDivElement;
+
+    const setScrollMetrics = (
+      el: HTMLDivElement,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      }: { scrollTop: number; scrollHeight: number; clientHeight: number },
+    ) => {
+      Object.defineProperty(el, 'scrollHeight', {
+        value: scrollHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'clientHeight', {
+        value: clientHeight,
+        configurable: true,
+      });
+      el.scrollTop = scrollTop;
+    };
+
+    const scrollUpTo = (
+      scrollEl: HTMLDivElement,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      }: { scrollTop: number; scrollHeight: number; clientHeight: number },
+    ) => {
+      setScrollMetrics(scrollEl, {
+        scrollTop: scrollTop + 600,
+        scrollHeight,
+        clientHeight,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, { scrollTop, scrollHeight, clientHeight });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+    };
+
+    it('calls loadOlderMessages when scrolled near top and hasMore', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      expect(scrollEl).toBeTruthy();
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call loadOlderMessages on initial load position without scrolling up', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      setScrollMetrics(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages when hasMore is false', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: false, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages while already loading older messages', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({
+        hasMore: true,
+        isLoadingOlderMessages: true,
+        loadOlderMessages,
+      });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages when not near the top', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 500,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does not trigger a second load while one is already pending', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      setScrollMetrics(scrollEl, {
+        scrollTop: 600,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, {
+        scrollTop: 5,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a loading affordance while older messages load', async () => {
+      await setupChatMock({ hasMore: true, isLoadingOlderMessages: true });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('loading-older-messages')).toBeInTheDocument();
+    });
+
+    it('restores scroll position after older messages are prepended', async () => {
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<
+        typeof vi.fn
+      >;
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container, rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+
+      scrollToSpy.mockClear();
+
+      const olderMessages = [
+        {
+          id: '0a',
+          role: 'user',
+          content: 'Older 1',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+        ...baseMessages,
+      ];
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...(useAdvancedChat as any).mock.results[0].value,
+        messages: olderMessages,
+        isLoadingOlderMessages: false,
+        hasMore: true,
+        loadOlderMessages,
+      });
+
+      Object.defineProperty(scrollEl, 'scrollHeight', {
+        value: 2600,
+        configurable: true,
+      });
+
+      act(() => {
+        rerender(
+          <Provider store={createMockStore({})}>
+            <Chat mode="default" isPreviewMode={false} />
+          </Provider>,
+        );
+      });
+
+      expect(scrollEl.scrollTop).toBe(2600 - 2000);
+      expect(scrollToSpy).not.toHaveBeenCalled();
+    });
+
+    it('still scrolls to bottom on a normal new message (no prepend)', async () => {
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<
+        typeof vi.fn
+      >;
+      await setupChatMock({ hasMore: true });
+
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      scrollToSpy.mockClear();
+
+      const moreMessages = [
+        ...baseMessages,
+        {
+          id: '3',
+          role: 'user',
+          content: 'New question',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+      ];
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...(useAdvancedChat as any).mock.results[0].value,
+        messages: moreMessages,
+      });
+
+      act(() => {
+        rerender(
+          <Provider store={createMockStore({})}>
+            <Chat mode="default" isPreviewMode={false} />
+          </Provider>,
+        );
+      });
+
+      expect(scrollToSpy).toHaveBeenCalled();
     });
   });
 });
