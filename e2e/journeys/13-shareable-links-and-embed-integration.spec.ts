@@ -360,6 +360,88 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     );
   });
 
+  // emb-10: Optimize Page Context Tokens toggle — label visible, tooltip
+  // reachable, and the value flips and persists after a submit + modal reopen.
+  // (Off-by-default for a new mentor is asserted by the unit test in
+  // embed-tab.test.tsx; this journey reuses a shared mentor, so it verifies the
+  // persistence round-trip rather than the literal default.)
+  //
+  // Uses the currently loaded mentor. To satisfy the "Create Embed" URL gate
+  // without changing the mentor's visibility (which would disrupt auth redirects
+  // for subsequent tests), a throwaway https://example.com URL is filled into the
+  // Website URL field. The original toggle state is restored at the end.
+  test('embed tab Optimize Page Context Tokens toggle: label, tooltip, and persists when toggled', async ({
+    page,
+    editMentorPage,
+  }) => {
+    // This test exercises a full cycle: open Embed tab → check UI → submit →
+    // close → reopen → verify persistence → cleanup. The cycle takes up to 3
+    // minutes in slow environments, so extend the timeout to avoid false failures.
+    test.setTimeout(300_000);
+
+    // Step 1: open Edit modal → Embed tab.
+    await editMentorPage.open('Embed');
+    await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Step 2: record the initial state (backend default is false; may already
+    // have been flipped in a previous run — we work with whatever the current
+    // value is and restore it at the end).
+    const initialState =
+      await editMentorPage.embed.getOptimizePageContextState();
+
+    // Step 3: visible label "Optimize Page Context Tokens" is present.
+    await expect(
+      editMentorPage.dialog.getByText('Optimize Page Context Tokens', {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Step 4: tooltip trigger is reachable and shows the expected body text.
+    const tooltipTrigger = editMentorPage.dialog.locator(
+      '[aria-label="More info about optimizing page context tokens"]',
+    );
+    await expect(tooltipTrigger).toBeVisible({ timeout: 5_000 });
+    await tooltipTrigger.hover();
+    await expect(
+      page
+        .getByText('Strips HTML tags from page context', { exact: false })
+        .first(),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Step 5: fill the Website URL field so "Create Embed" can proceed without
+    // the mentor needing to be anonymous (avoids mutating the mentor's visibility
+    // settings which can break auth redirects for subsequent tests).
+    await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+
+    // Toggle to the OPPOSITE of the initial state, then submit to persist.
+    await editMentorPage.embed.setOptimizePageContext(!initialState);
+    await editMentorPage.embed.submit();
+
+    // Step 6: close and reopen the Embed tab — switch must now reflect the
+    // toggled value, proving the setting round-trips via GET /settings/.
+    await editMentorPage.close();
+    // Let the SDK dialog cleanup settle before reopening — the Embedded Code
+    // dialog that appears during submit() can leave stale aria-hidden state on
+    // the page that breaks a11y-tree queries in the immediately following open().
+    await waitForPageReady(page);
+    await editMentorPage.open('Embed');
+    await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+      timeout: 15_000,
+    });
+    const persistedState =
+      await editMentorPage.embed.getOptimizePageContextState();
+    expect(persistedState).toBe(!initialState);
+
+    // Cleanup: restore the toggle to the original value and submit so the shared
+    // mentor is not permanently modified.
+    await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+    await editMentorPage.embed.setOptimizePageContext(initialState);
+    await editMentorPage.embed.submit();
+    await editMentorPage.close();
+  });
+
   // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)
   test('admin opens embedded mentor and pressing Escape inside the iframe closes the widget', async ({
     page,
