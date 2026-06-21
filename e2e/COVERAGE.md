@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-22 | 495 checkpoints (474 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 56 journeys (55 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-22 | 495 checkpoints (473 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 56 journeys (55 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -214,7 +214,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
-- [x] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip
+- [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
 
 ---
 
