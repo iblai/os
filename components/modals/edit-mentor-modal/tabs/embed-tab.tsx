@@ -1335,6 +1335,40 @@ export function EmbedTab() {
                   )}
                 </form.Field>
 
+                <form.Field name="strip_page_content_html">
+                  {(field) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#646464]">
+                          Optimize Page Context Tokens
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger aria-label="More info about optimizing page context tokens">
+                              <Info className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent className="ibl-tooltip-content">
+                              <p>
+                                Strips HTML tags from page context before it's
+                                sent to the model. Cuts token usage; leave on
+                                unless you need the raw HTML.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        disabled={form.state.isSubmitting}
+                        aria-label={`Optimize page context tokens ${field.state.value ? 'enabled' : 'disabled'}`}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+
                 {/* <form.Field name="safety_disclaimer">
                 {(field) => (
                   <div className="flex items-center justify-between">

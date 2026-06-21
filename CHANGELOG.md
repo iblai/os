@@ -4,39 +4,39 @@
 
 ### Bug Fixes
 
-* **mentor:** rename 'Student Success' tools category and reword canvas reading-level prompts ([ae9f787](https://github.com/iblai/os/commit/ae9f78796eee2a51c90a23997c5677c60b6cbaec))
-* **mentor:** replace 'Students' visibility label and default prompt copy with 'Users' ([54fdcf5](https://github.com/iblai/os/commit/54fdcf5dac2314e0eda00c230cde141e5ccccb66))
-* **mentor:** shorten navbar model-selector tooltip to 'Select Model' ([1a2df4c](https://github.com/iblai/os/commit/1a2df4c83db10603facce9326695c49ac5714239))
+- **mentor:** rename 'Student Success' tools category and reword canvas reading-level prompts ([ae9f787](https://github.com/iblai/os/commit/ae9f78796eee2a51c90a23997c5677c60b6cbaec))
+- **mentor:** replace 'Students' visibility label and default prompt copy with 'Users' ([54fdcf5](https://github.com/iblai/os/commit/54fdcf5dac2314e0eda00c230cde141e5ccccb66))
+- **mentor:** shorten navbar model-selector tooltip to 'Select Model' ([1a2df4c](https://github.com/iblai/os/commit/1a2df4c83db10603facce9326695c49ac5714239))
 
 ### Chores
 
-* normalize CHANGELOG formatting via prettier ([abbedcd](https://github.com/iblai/os/commit/abbedcd90223c8f2dccd252edeb202502228dea5))
+- normalize CHANGELOG formatting via prettier ([abbedcd](https://github.com/iblai/os/commit/abbedcd90223c8f2dccd252edeb202502228dea5))
 
 ### Tests
 
-* **e2e:** map canvas-controls to canvas journey; exclude dead tools-section ([48e89e7](https://github.com/iblai/os/commit/48e89e7835508ca742f38850107178037b9258bd))
-* **e2e:** update prompt visibility page-object label Students→Users ([e88b8d1](https://github.com/iblai/os/commit/e88b8d173491f8e2f30d0697040e22567303af9a))
-* **mentor:** update unit tests for Students→Users rename ([2f351e5](https://github.com/iblai/os/commit/2f351e59fea93fdb622299197370bc65ade57ad5))
+- **e2e:** map canvas-controls to canvas journey; exclude dead tools-section ([48e89e7](https://github.com/iblai/os/commit/48e89e7835508ca742f38850107178037b9258bd))
+- **e2e:** update prompt visibility page-object label Students→Users ([e88b8d1](https://github.com/iblai/os/commit/e88b8d173491f8e2f30d0697040e22567303af9a))
+- **mentor:** update unit tests for Students→Users rename ([2f351e5](https://github.com/iblai/os/commit/2f351e59fea93fdb622299197370bc65ade57ad5))
 
 ## [0.75.6](https://github.com/iblai/os/compare/v0.75.5...v0.75.6) (2026-06-16)
 
 ### Bug Fixes
 
-* **mentor:** scroll history user-search list inside dialog ([41a22df](https://github.com/iblai/os/commit/41a22dfc0eb3c242c145c3d68a2b9c09506cfb1f))
+- **mentor:** scroll history user-search list inside dialog ([41a22df](https://github.com/iblai/os/commit/41a22dfc0eb3c242c145c3d68a2b9c09506cfb1f))
 
 ### Tests
 
-* **history-tab:** add unit coverage for HistoryTab ([b4c3173](https://github.com/iblai/os/commit/b4c31734a095c22bd4e433599163a451ff11751b))
+- **history-tab:** add unit coverage for HistoryTab ([b4c3173](https://github.com/iblai/os/commit/b4c31734a095c22bd4e433599163a451ff11751b))
 
 ## [0.75.5](https://github.com/iblai/os/compare/v0.75.4...v0.75.5) (2026-06-16)
 
 ### Bug Fixes
 
-* **android:** route iblai-mentor:// SSO deep link back into the app ([d472ad4](https://github.com/iblai/os/commit/d472ad49f009e4346812665c0930c10f7576c377))
+- **android:** route iblai-mentor:// SSO deep link back into the app ([d472ad4](https://github.com/iblai/os/commit/d472ad49f009e4346812665c0930c10f7576c377))
 
 ### Refactors
 
-* **tenant-switch:** consume cross-tab tenant switch from the SDK ([367da66](https://github.com/iblai/os/commit/367da6672f03cf55ee977263b8138434f25e95e7))
+- **tenant-switch:** consume cross-tab tenant switch from the SDK ([367da66](https://github.com/iblai/os/commit/367da6672f03cf55ee977263b8138434f25e95e7))
 
 ## [0.75.4](https://github.com/iblai/os/compare/v0.75.3...v0.75.4) (2026-06-15)
 
