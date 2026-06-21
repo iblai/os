@@ -94,7 +94,7 @@ if ($RegisterOnly) {
     if (Test-Path $StagingDir) {
         # Unregister previous if exists
         try {
-            Get-AppxPackage -Name "ibl.ai.ibl.aiOS" | Remove-AppxPackage -ErrorAction SilentlyContinue
+            Get-AppxPackage -Name "ibl.ai.ibl.ai" | Remove-AppxPackage -ErrorAction SilentlyContinue
         } catch {}
         Remove-Item -Recurse -Force $StagingDir
     }
@@ -125,7 +125,7 @@ if ($RegisterOnly) {
     Add-AppxPackage -Register $ManifestPath
 
     Write-Host "`nApp registered! Look for 'ibl.ai' in your Start menu." -ForegroundColor Green
-    Write-Host 'To unregister: Get-AppxPackage -Name ibl.ai.ibl.aiOS | Remove-AppxPackage' -ForegroundColor Gray
+    Write-Host 'To unregister: Get-AppxPackage -Name ibl.ai.ibl.ai | Remove-AppxPackage' -ForegroundColor Gray
     exit 0
 }
 
@@ -279,4 +279,4 @@ Write-Host "Install options:" -ForegroundColor Yellow
 $installCmd = '  Unsigned (Win11):  Add-AppxPackage -AllowUnsigned -Path ' + $MsixPath
 Write-Host $installCmd -ForegroundColor White
 Write-Host '  Signed:            Double-click the .msix file' -ForegroundColor White
-Write-Host '  Uninstall:         Get-AppxPackage -Name ibl.ai.ibl.aiOS | Remove-AppxPackage' -ForegroundColor White
+Write-Host '  Uninstall:         Get-AppxPackage -Name ibl.ai.ibl.ai | Remove-AppxPackage' -ForegroundColor White

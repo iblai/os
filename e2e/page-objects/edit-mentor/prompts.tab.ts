@@ -284,15 +284,7 @@ export class PromptsTab {
    * coupling to Tailwind class signatures.
    */
   agentConfigFieldRowByLabel(label: string): Locator {
-    const tooltipBtn = this.dialog.getByRole('button', {
-      name: `More info about ${label}`,
-    });
-    const editBtn = this.dialog.getByRole('button', { name: /^edit$/i });
-    return this.dialog
-      .locator('div')
-      .filter({ has: tooltipBtn })
-      .filter({ has: editBtn })
-      .last();
+    return this.dialog.getByText(`${label}Edit`);
   }
 
   /**

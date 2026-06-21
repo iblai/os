@@ -155,6 +155,89 @@ export async function checkAdminStatus(page: Page): Promise<boolean> {
 }
 
 /**
+ * Block until the page has admin tenant context in `current_tenant`
+ * localStorage, or THROW. Unlike `checkAdminStatus`, this is non-optional:
+ * it never returns `false`. Use this in `beforeEach` hooks for admin-only
+ * journeys so a missing-admin state fails LOUD instead of silently
+ * skipping every test downstream.
+ *
+ * Strategy:
+ *   1. Poll `localStorage.current_tenant.is_admin === true` for up to
+ *      `firstWindowMs` (default 20 s).
+ *   2. If the first window expires, force a `navigateToMentorApp` to
+ *      re-trigger AuthProvider's `request-jwt` chain, then poll again
+ *      for the remaining budget.
+ *   3. On final timeout, throw with a diagnostic that names the
+ *      `localStorage` keys actually present and a preview of
+ *      `current_tenant` (if any), so the failure shows the root cause
+ *      (empty storageState file, stub JWT from auth.setup.ts, etc.).
+ *
+ * The 60 s default budget covers slow CI auth-host round trips —
+ * previously `checkAdminStatus`'s 10 s window was the proximate cause
+ * of journey-49 skip cascades.
+ */
+export async function waitForAdmin(
+  page: Page,
+  budgetMs = 60_000,
+): Promise<void> {
+  const firstWindowMs = Math.min(20_000, budgetMs);
+  const secondWindowMs = Math.max(budgetMs - firstWindowMs, 10_000);
+
+  const probe = async (timeout: number): Promise<boolean> => {
+    try {
+      await page.waitForFunction(
+        () => {
+          const raw = window.localStorage.getItem('current_tenant');
+          if (!raw) return false;
+          try {
+            return JSON.parse(raw).is_admin === true;
+          } catch {
+            return false;
+          }
+        },
+        { timeout },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (await probe(firstWindowMs)) return;
+
+  // First window failed — force AuthProvider to re-hydrate by
+  // re-navigating. Handles the stub-JWT fallback path where the saved
+  // storageState contains an unusable JWT and only the live request-jwt
+  // round trip writes `current_tenant`.
+  logger.warn(
+    '[waitForAdmin] Admin state missing after first probe — re-navigating to force re-hydration',
+  );
+  await navigateToMentorApp(page).catch(() => undefined);
+  if (await probe(secondWindowMs)) return;
+
+  const diagnostic = await page
+    .evaluate(() => {
+      const keys = Object.keys(window.localStorage);
+      const tenant = window.localStorage.getItem('current_tenant');
+      return {
+        keys,
+        tenantPreview: tenant ? tenant.slice(0, 200) : null,
+      };
+    })
+    .catch(() => ({ keys: [], tenantPreview: null }));
+  throw new Error(
+    `[waitForAdmin] Admin tenant context not present after ${budgetMs} ms. ` +
+      `localStorage keys: ${JSON.stringify(diagnostic.keys)}. ` +
+      `current_tenant preview: ${diagnostic.tenantPreview ?? 'absent'}. ` +
+      `Likely causes: (a) playwright/.auth/user-{browser}.json is the empty ` +
+      `28-byte stub (delete it and re-run setup); (b) auth.setup.ts wrote a ` +
+      `stub JWT (look for "request-jwt: status … → returning stub JWT" in ` +
+      `setup logs); (c) MENTOR_NEXTJS_HOST changed between setup and test ` +
+      `runs so the storageState origin doesn't match.`,
+  );
+}
+
+/**
  * Waits for the platform to be fully loaded and returns the
  * current tenantKey and mentorId from the URL.
  */

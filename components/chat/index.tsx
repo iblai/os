@@ -34,6 +34,10 @@ import {
   selectToken,
   selectTokenEnabled,
   selectShowingSharedChat,
+  selectStreamingReasoningContent,
+  selectIsReasoning,
+  selectStreamingToolCalls,
+  selectCurrentStreamingMessage,
   useMentorTools,
   useTenantContext,
   useTenantMetadata as useTenantMetadataHook,
@@ -300,6 +304,13 @@ export function Chat({
   const attachedFiles = useAppSelector(
     (state: RootState) => state.files.attachedFiles || [],
   );
+  // Reasoning and tool call selectors
+  const streamingReasoningContent = useAppSelector(
+    selectStreamingReasoningContent,
+  );
+  const isReasoning = useAppSelector(selectIsReasoning);
+  const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
+  const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
 
   // Offline mode detection (for Tauri desktop app)
@@ -345,6 +356,9 @@ export function Chat({
     isLoadingChats,
     isConnected,
     refetchChats,
+    loadOlderMessages,
+    hasMore,
+    isLoadingOlderMessages,
   } = useAdvancedChat({
     mentorId,
     mode,
@@ -543,12 +557,7 @@ export function Chat({
   const [canvasState, setCanvasState] = useState<CanvasState>(() =>
     createEmptyCanvasState(),
   );
-  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
-  const lastAIMessageCopyButtonRef = useRef<HTMLButtonElement>(null);
-  const stopStreamingButtonRef = useRef<HTMLButtonElement>(null);
-  const wasIsStreamingRef = useRef(false);
-  const wasStreamingActiveRef = useRef(false);
 
   const [isMdUp, setIsMdUp] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -686,6 +695,9 @@ export function Chat({
   const prevSessionIdRef = useRef<string | undefined>(sessionId);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number | null>(null);
+  const skipNextBottomScrollRef = useRef(false);
+  const lastScrollTopRef = useRef(0);
   const lastChatScrollRef = useRef<number>(0);
   const lastWindowScrollRef = useRef<number>(0);
   const enableChatPopupActions = useAppSelector(selectEnableChatActionsPopup);
@@ -727,6 +739,7 @@ export function Chat({
     }
   }, SCROLLING_DEBOUNCE_TIME);
 
+  const LOAD_OLDER_THRESHOLD_PX = 80;
   const handleScroll = () => {
     if (chatContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } =
@@ -734,6 +747,21 @@ export function Chat({
       // Consider the user scrolled up if they're more than 100px from the bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setIsScrolledUp(!isAtBottom);
+
+      const isScrollingUp = scrollTop < lastScrollTopRef.current;
+      lastScrollTopRef.current = scrollTop;
+
+      if (
+        isScrollingUp &&
+        scrollTop < LOAD_OLDER_THRESHOLD_PX &&
+        hasMore &&
+        !isLoadingOlderMessages &&
+        prevScrollHeightRef.current === null
+      ) {
+        prevScrollHeightRef.current = scrollHeight;
+        skipNextBottomScrollRef.current = true;
+        void loadOlderMessages();
+      }
     }
   };
 
@@ -1024,48 +1052,24 @@ export function Chat({
     };
   }, [isCanvasOpen, canvasRefreshTrigger]);
 
+  // Restore scroll position after older messages are prepended (before paint)
+  useLayoutEffect(() => {
+    if (prevScrollHeightRef.current !== null && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = null;
+      lastScrollTopRef.current = chatContainerRef.current.scrollTop;
+    }
+  }, [messages]);
+
   // Scroll to bottom when messages change or loading state changes
   useEffect(() => {
+    if (skipNextBottomScrollRef.current) {
+      skipNextBottomScrollRef.current = false;
+      return;
+    }
     scrollToBottom();
   }, [messages, isStreaming]);
-
-  // Focus management for streaming state transitions (WCAG 2.4.3)
-  // - When isStreaming becomes true: focus the stop streaming button
-  //   (StopStreamingButton renders based on isStreaming, not isPending,
-  //    so we must track isStreaming specifically)
-  // - When both isStreaming and isPending become false: focus the copy button
-  useEffect(() => {
-    // Stop button: track isStreaming directly since it controls rendering
-    if (isStreaming && !wasIsStreamingRef.current) {
-      setTimeout(() => {
-        stopStreamingButtonRef.current?.focus();
-      }, 100);
-    }
-    wasIsStreamingRef.current = isStreaming;
-
-    // Copy button: track combined state so we wait for everything to settle
-    const currentlyActive = isStreaming || isPending;
-    if (wasStreamingActiveRef.current && !currentlyActive) {
-      setTimeout(() => {
-        lastAIMessageCopyButtonRef.current?.focus();
-      }, 100);
-    }
-    wasStreamingActiveRef.current = currentlyActive;
-  }, [isStreaming, isPending]);
-
-  // Add scroll event listener
-  useEffect(() => {
-    const chatContainer = chatContainerRef.current;
-    if (chatContainer) {
-      chatContainer.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      if (chatContainer) {
-        chatContainer.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
 
   // Reset isScrolledUp state when messages are cleared
   useEffect(() => {
@@ -1570,6 +1574,39 @@ export function Chat({
     [enabledGuidedPrompts, tenantKey, sessionId, username, handleSubmit],
   );
 
+  // Gate for the "Just a sec..." loading placeholder.
+  // It must only appear in the brief window where a response is pending but
+  // nothing has rendered yet. Without the checks below, an unstable socket
+  // that retries/duplicates a generation renders "Just a sec..." next to an
+  // answer that is already streaming (or finished) in the current/previous
+  // bubble — the duplicate "stream showing while another stream is incoming"
+  // bug. So also hide it when the current stream already has reasoning/tool
+  // output, or when the last assistant message already shows any output.
+  const lastMessage =
+    messages.length > 0 ? messages[messages.length - 1] : undefined;
+  // Reasoning steps and tool calls only count as visible "output" when Verbose
+  // Reasoning is enabled. With it off those surfaces are hidden in the bubble,
+  // so they must not suppress the typing indicator — otherwise the user sees
+  // nothing while the agent reasons before any text streams in.
+  const verboseReasoningEnabled = mentorSettings.showReasoning;
+  const lastAssistantHasOutput =
+    lastMessage?.role === 'assistant' &&
+    ((lastMessage.content ?? '').trim().length > 0 ||
+      (verboseReasoningEnabled &&
+        ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
+          (lastMessage.toolCalls?.length ?? 0) > 0)) ||
+      (lastMessage.artifactVersions?.length ?? 0) > 0);
+  const currentStreamHasOutput =
+    (currentStreamingMessage?.content ?? '').trim().length > 0 ||
+    (verboseReasoningEnabled &&
+      (isReasoning ||
+        (streamingReasoningContent ?? '').trim().length > 0 ||
+        (streamingToolCalls?.length ?? 0) > 0));
+  const showLoadingMessage =
+    (isPending || isStreaming) &&
+    !currentStreamHasOutput &&
+    !lastAssistantHasOutput;
+
   return (
     <div
       className={cn(
@@ -1592,6 +1629,7 @@ export function Chat({
           </div>
         </div>
       )}
+
       <div
         className={cn({
           // Fill available space when the messages section won't render
@@ -1754,10 +1792,17 @@ export function Chat({
               className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
             >
               <div className="px-3 py-4">
+                {isLoadingOlderMessages && (
+                  <div
+                    className="flex justify-center py-2"
+                    data-testid="loading-older-messages"
+                  >
+                    <Spinner className="h-5 w-5" />
+                  </div>
+                )}
                 <ErrorBoundary>
                   {messages.length > 0 ? (
                     <ChatMessages
-                      ref={lastAIMessageCopyButtonRef}
                       messages={messages}
                       highlightedMessageId={highlightedMessageId}
                       profileImage={profileImage}
@@ -1769,14 +1814,15 @@ export function Chat({
                       handleSubmit={handleSubmit}
                       onReply={(message) => {
                         setReplyingToMessage(message);
-                        /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                        if (promptTextareaRef.current) {
-                          promptTextareaRef.current.focus();
-                        }
                       }}
                       onOpenCanvas={handleOpenCanvas}
                       streamingArtifactId={streamingArtifactId}
                       isStreaming={isStreaming}
+                      streamingReasoningContent={streamingReasoningContent}
+                      streamingToolCalls={streamingToolCalls}
+                      isReasoning={isReasoning}
+                      showReasoning={mentorSettings.showReasoning}
+                      currentStreamingMessageId={currentStreamingMsg?.id}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -1795,21 +1841,13 @@ export function Chat({
                     {mentorAccessibilityMessage}
                   </div>
 
-                  {/* Loading indicator - hide if last message has canvas preview */}
-                  {(isPending || isStreaming) &&
-                    !currentStreamingMessage?.content &&
-                    !(
-                      messages.length > 0 &&
-                      messages[messages.length - 1]?.role === 'assistant' &&
-                      messages[messages.length - 1]?.artifactVersions &&
-                      (messages[messages.length - 1]?.artifactVersions
-                        ?.length ?? 0) > 0
-                    ) && (
-                      <LoadingMessage
-                        mentorName={mentorName}
-                        profileImage={profileImage}
-                      />
-                    )}
+                  {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
+                  {showLoadingMessage && (
+                    <LoadingMessage
+                      mentorName={mentorName}
+                      profileImage={profileImage}
+                    />
+                  )}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -1869,7 +1907,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 chatAreaMaxWidth={chatAreaMaxWidth}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1969,7 +2006,6 @@ export function Chat({
                 artifactsEnabled={artifactsEnabled}
                 compactMode={isCompactMode}
                 isConnecting={!isConnected}
-                stopStreamingButtonRef={stopStreamingButtonRef}
               />
             </div>
           </div>
@@ -1988,10 +2024,17 @@ export function Chat({
               className="mx-auto w-full py-6"
               style={{ maxWidth: `${chatAreaMaxWidth}px` }}
             >
+              {isLoadingOlderMessages && (
+                <div
+                  className="flex justify-center py-2"
+                  data-testid="loading-older-messages"
+                >
+                  <Spinner className="h-5 w-5" />
+                </div>
+              )}
               <ErrorBoundary>
                 {/* Messages with file attachments */}
                 <ChatMessages
-                  ref={lastAIMessageCopyButtonRef}
                   messages={
                     messages[0].role === 'assistant'
                       ? messages.slice(1)
@@ -2007,34 +2050,27 @@ export function Chat({
                   handleSubmit={handleSubmit}
                   onReply={(message) => {
                     setReplyingToMessage(message);
-                    /* istanbul ignore next -- @preserve ref not attached in JSDOM tests */
-                    if (promptTextareaRef.current) {
-                      promptTextareaRef.current.focus();
-                    }
                   }}
                   onOpenCanvas={handleOpenCanvas}
                   streamingArtifactId={streamingArtifactId}
                   isStreaming={isStreaming}
+                  streamingReasoningContent={streamingReasoningContent}
+                  streamingToolCalls={streamingToolCalls}
+                  isReasoning={isReasoning}
+                  showReasoning={mentorSettings.showReasoning}
+                  currentStreamingMessageId={currentStreamingMsg?.id}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
                 </div>
 
-                {/* Loading indicator - hide if last message has canvas preview */}
-                {(isPending || isStreaming) &&
-                  !currentStreamingMessage?.content &&
-                  !(
-                    messages.length > 0 &&
-                    messages[messages.length - 1]?.role === 'assistant' &&
-                    messages[messages.length - 1]?.artifactVersions &&
-                    (messages[messages.length - 1]?.artifactVersions?.length ??
-                      0) > 0
-                  ) && (
-                    <LoadingMessage
-                      mentorName={mentorName}
-                      profileImage={profileImage}
-                    />
-                  )}
+                {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
+                {showLoadingMessage && (
+                  <LoadingMessage
+                    mentorName={mentorName}
+                    profileImage={profileImage}
+                  />
+                )}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}
@@ -2129,7 +2165,6 @@ export function Chat({
               artifactsEnabled={artifactsEnabled}
               compactMode={isCompactMode}
               chatAreaMaxWidth={chatAreaMaxWidth}
-              stopStreamingButtonRef={stopStreamingButtonRef}
             />
           </div>
         )}

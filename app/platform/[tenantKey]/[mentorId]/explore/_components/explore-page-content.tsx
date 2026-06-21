@@ -244,9 +244,9 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
             <div className="mb-6 text-center">
               <div className="mx-auto w-full">
                 <h1 className="mb-6 text-lg leading-relaxed font-medium text-gray-600 md:text-xl">
-                  Discover and create academic agents that combine{' '}
+                  Discover and create agents that combine{' '}
                   <br className="hidden md:block" />
-                  subject expertise, educational resources, and teaching skills
+                  subject expertise, resources, and skills
                 </h1>
               </div>
 
