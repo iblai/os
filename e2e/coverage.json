@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-19",
+  "lastUpdated": "2026-06-21",
   "summary": {
-    "totalCheckpoints": 490,
-    "coveredCheckpoints": 469,
+    "totalCheckpoints": 494,
+    "coveredCheckpoints": 473,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 55,
-    "activeJourneys": 54
+    "totalJourneys": 56,
+    "activeJourneys": 55
   },
   "journeys": [
     {
@@ -3138,6 +3138,38 @@
         {
           "id": "rcr-02",
           "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-paste-to-attachment",
+      "name": "Chat Paste-to-Attachment",
+      "spec": "54-chat-paste-to-attachment.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form.tsx",
+        "lib/clipboard.ts",
+        "components/chat-input-form/file-attachments-list.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pta-01",
+          "description": "Pasting plain text over the NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY threshold converts it to a pasted-*.txt attachment chip and leaves the textarea empty",
+          "status": "covered"
+        },
+        {
+          "id": "pta-02",
+          "description": "Pasting plain text under the threshold is not converted into an attachment chip",
+          "status": "covered"
+        },
+        {
+          "id": "pta-03",
+          "description": "Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty",
+          "status": "covered"
+        },
+        {
+          "id": "pta-04",
+          "description": "Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added",
           "status": "covered"
         }
       ]

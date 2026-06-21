@@ -277,6 +277,7 @@ vi.mock('@/components/auto-resize-text-area', () => ({
     value,
     onChange,
     onSubmit,
+    onPaste,
     placeholder,
     disabled,
     allowAnonymousAccess,
@@ -288,6 +289,7 @@ vi.mock('@/components/auto-resize-text-area', () => ({
       data-allow-empty={allowEmptySubmit ? 'true' : 'false'}
       value={value}
       onChange={onChange}
+      onPaste={onPaste}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
@@ -313,6 +315,19 @@ vi.mock('sonner', () => ({
 vi.mock('@/hoc/withPermissions', () => ({
   checkRbacPermission: mockCheckRbacPermission,
 }));
+
+let mockMaxCharacterSize = '2000';
+vi.mock('@/lib/config', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/config')>('@/lib/config');
+  return {
+    ...actual,
+    config: {
+      ...actual.config,
+      maximumCharacterSizeToCopy: () => mockMaxCharacterSize,
+    },
+  };
+});
 
 const defaultChatSliceState = {
   showingSharedChat: false,
@@ -409,6 +424,7 @@ describe('ChatInputForm', () => {
     mockFreeTrialDialogState.executeWithTrialCheck = mockExecuteWithTrialCheck;
     mockCheckRbacPermission.mockReturnValue(true);
     mockExecuteWithTrialCheck.mockImplementation((fn: () => void) => fn());
+    mockMaxCharacterSize = '2000';
   });
 
   const renderWithRedux = (
@@ -1227,6 +1243,200 @@ describe('ChatInputForm', () => {
 
       // The change event should be handled without error
       expect(textarea).toBeInTheDocument();
+    });
+  });
+
+  describe('paste handling', () => {
+    const firePaste = (
+      textarea: HTMLElement,
+      clipboardData: Partial<DataTransfer>,
+    ) => {
+      const event = new Event('paste', {
+        bubbles: true,
+        cancelable: true,
+      }) as any;
+      event.clipboardData = clipboardData;
+      fireEvent(textarea, event);
+      return event;
+    };
+
+    it('should convert large pasted text into a .txt file upload and not insert text', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      mockMaxCharacterSize = '10';
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const largeText = 'a'.repeat(50);
+      const event = firePaste(textarea, {
+        files: [] as any,
+        items: [] as any,
+        getData: () => largeText,
+      });
+
+      expect(event.defaultPrevented).toBe(true);
+      await waitFor(() => {
+        expect(uploadFiles).toHaveBeenCalledTimes(1);
+      });
+      const uploaded = uploadFiles.mock.calls[0][0];
+      expect(uploaded).toHaveLength(1);
+      expect(uploaded[0]).toBeInstanceOf(File);
+      expect(uploaded[0].type).toBe('text/plain');
+      expect(uploaded[0].name).toMatch(/^pasted-\d+\.txt$/);
+      expect(textarea).toHaveValue('');
+    });
+
+    it('should let small pasted text fall through to default paste without uploading', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      mockMaxCharacterSize = '2000';
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const event = firePaste(textarea, {
+        files: [] as any,
+        items: [] as any,
+        getData: () => 'short text',
+      });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(uploadFiles).not.toHaveBeenCalled();
+    });
+
+    it('should upload pasted image files through the existing upload path', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const image = new File(['img'], 'pasted.png', { type: 'image/png' });
+      const event = firePaste(textarea, {
+        files: [image] as any,
+        items: [] as any,
+        getData: () => '',
+      });
+
+      expect(event.defaultPrevented).toBe(true);
+      await waitFor(() => {
+        expect(uploadFiles).toHaveBeenCalledWith([image]);
+      });
+    });
+
+    it('should collect pasted files from clipboard items when files list is empty', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const file = new File(['data'], 'clip.png', { type: 'image/png' });
+      const event = firePaste(textarea, {
+        files: [] as any,
+        items: [
+          { kind: 'string', getAsFile: () => null },
+          { kind: 'file', getAsFile: () => file },
+          { kind: 'file', getAsFile: () => null },
+        ] as any,
+        getData: () => '',
+      });
+
+      expect(event.defaultPrevented).toBe(true);
+      await waitFor(() => {
+        expect(uploadFiles).toHaveBeenCalledWith([file]);
+      });
+    });
+
+    it('should route pasted files through the upload hook so size limits are enforced', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const oversizedFile = new File(['x'], 'huge.pdf', {
+        type: 'application/pdf',
+      });
+      firePaste(textarea, {
+        files: [oversizedFile] as any,
+        items: [] as any,
+        getData: () => '',
+      });
+
+      await waitFor(() => {
+        expect(uploadFiles).toHaveBeenCalledWith([oversizedFile]);
+      });
+    });
+
+    it('should fall through to text handling when no files or items are present', async () => {
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      const uploadFiles = vi.fn();
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles,
+        retryUpload: vi.fn(),
+      });
+
+      mockMaxCharacterSize = '5';
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const event = firePaste(textarea, {
+        getData: () => 'this is long enough',
+      } as any);
+
+      expect(event.defaultPrevented).toBe(true);
+      await waitFor(() => {
+        expect(uploadFiles).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should do nothing when clipboardData is unavailable', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      const event = new Event('paste', {
+        bubbles: true,
+        cancelable: true,
+      }) as any;
+      event.clipboardData = null;
+      fireEvent(textarea, event);
+
+      expect(mockUploadFiles).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 
