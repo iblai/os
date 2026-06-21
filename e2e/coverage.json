@@ -3,7 +3,7 @@
   "lastUpdated": "2026-06-22",
   "summary": {
     "totalCheckpoints": 495,
-    "coveredCheckpoints": 474,
+    "coveredCheckpoints": 473,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
@@ -714,7 +714,7 @@
         {
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
-          "status": "covered"
+          "status": "pending"
         }
       ]
     },
