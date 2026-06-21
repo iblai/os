@@ -356,6 +356,9 @@ export function Chat({
     isLoadingChats,
     isConnected,
     refetchChats,
+    loadOlderMessages,
+    hasMore,
+    isLoadingOlderMessages,
   } = useAdvancedChat({
     mentorId,
     mode,
@@ -692,6 +695,9 @@ export function Chat({
   const prevSessionIdRef = useRef<string | undefined>(sessionId);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number | null>(null);
+  const skipNextBottomScrollRef = useRef(false);
+  const lastScrollTopRef = useRef(0);
   const lastChatScrollRef = useRef<number>(0);
   const lastWindowScrollRef = useRef<number>(0);
   const enableChatPopupActions = useAppSelector(selectEnableChatActionsPopup);
@@ -733,6 +739,7 @@ export function Chat({
     }
   }, SCROLLING_DEBOUNCE_TIME);
 
+  const LOAD_OLDER_THRESHOLD_PX = 80;
   const handleScroll = () => {
     if (chatContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } =
@@ -740,6 +747,21 @@ export function Chat({
       // Consider the user scrolled up if they're more than 100px from the bottom
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setIsScrolledUp(!isAtBottom);
+
+      const isScrollingUp = scrollTop < lastScrollTopRef.current;
+      lastScrollTopRef.current = scrollTop;
+
+      if (
+        isScrollingUp &&
+        scrollTop < LOAD_OLDER_THRESHOLD_PX &&
+        hasMore &&
+        !isLoadingOlderMessages &&
+        prevScrollHeightRef.current === null
+      ) {
+        prevScrollHeightRef.current = scrollHeight;
+        skipNextBottomScrollRef.current = true;
+        void loadOlderMessages();
+      }
     }
   };
 
@@ -1030,24 +1052,24 @@ export function Chat({
     };
   }, [isCanvasOpen, canvasRefreshTrigger]);
 
+  // Restore scroll position after older messages are prepended (before paint)
+  useLayoutEffect(() => {
+    if (prevScrollHeightRef.current !== null && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = null;
+      lastScrollTopRef.current = chatContainerRef.current.scrollTop;
+    }
+  }, [messages]);
+
   // Scroll to bottom when messages change or loading state changes
   useEffect(() => {
+    if (skipNextBottomScrollRef.current) {
+      skipNextBottomScrollRef.current = false;
+      return;
+    }
     scrollToBottom();
   }, [messages, isStreaming]);
-
-  // Add scroll event listener
-  useEffect(() => {
-    const chatContainer = chatContainerRef.current;
-    if (chatContainer) {
-      chatContainer.addEventListener('scroll', handleScroll);
-    }
-
-    return () => {
-      if (chatContainer) {
-        chatContainer.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
 
   // Reset isScrolledUp state when messages are cleared
   useEffect(() => {
@@ -1770,6 +1792,14 @@ export function Chat({
               className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
             >
               <div className="px-3 py-4">
+                {isLoadingOlderMessages && (
+                  <div
+                    className="flex justify-center py-2"
+                    data-testid="loading-older-messages"
+                  >
+                    <Spinner className="h-5 w-5" />
+                  </div>
+                )}
                 <ErrorBoundary>
                   {messages.length > 0 ? (
                     <ChatMessages
@@ -1994,6 +2024,14 @@ export function Chat({
               className="mx-auto w-full py-6"
               style={{ maxWidth: `${chatAreaMaxWidth}px` }}
             >
+              {isLoadingOlderMessages && (
+                <div
+                  className="flex justify-center py-2"
+                  data-testid="loading-older-messages"
+                >
+                  <Spinner className="h-5 w-5" />
+                </div>
+              )}
               <ErrorBoundary>
                 {/* Messages with file attachments */}
                 <ChatMessages
