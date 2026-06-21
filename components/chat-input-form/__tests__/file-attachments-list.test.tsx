@@ -56,13 +56,13 @@ describe('FileAttachmentsList', () => {
     expect(screen.getAllByTestId('attachment-chip')).toHaveLength(2);
   });
 
-  it('shows the file extension derived from the mime type', () => {
-    renderList([buildFile({ fileType: 'image/png' })]);
-    expect(screen.getByText('png')).toBeInTheDocument();
+  it('shows the full mime type', () => {
+    renderList([buildFile({ fileType: 'text/plain' })]);
+    expect(screen.getByText('text/plain')).toBeInTheDocument();
   });
 
-  it('falls back to FILE when the mime type has no subtype', () => {
-    renderList([buildFile({ fileType: 'pdf' })]);
+  it('falls back to FILE when the mime type is empty', () => {
+    renderList([buildFile({ fileType: '' })]);
     expect(screen.getByText('FILE')).toBeInTheDocument();
   });
 
