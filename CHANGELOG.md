@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.79.0](https://github.com/iblai/os/compare/v0.78.1...v0.79.0) (2026-06-21)
+
+### Features
+
+* **chat:** add attachment-chip test id ([ffcb585](https://github.com/iblai/os/commit/ffcb585f9f9423911928a8a2c79093d1ff9076be))
+* **chat:** add clipboard file extraction helper ([25a5404](https://github.com/iblai/os/commit/25a5404fa01de6e747164938ad37404f01c5ee64))
+* **chat:** convert pasted text and files into uploads ([bdbe1fe](https://github.com/iblai/os/commit/bdbe1fef74f3feff33657f3d40a3febb9c854b87))
+* **chat:** show full mime type on attachment chips ([3f8bead](https://github.com/iblai/os/commit/3f8bead3817567c9e0d4c120f269799f0e8b369f))
+* **config:** add NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY env var ([2c3b9ef](https://github.com/iblai/os/commit/2c3b9ef3e279a012445672a77a21afd4736de673))
+
+### Chores
+
+* **env:** document NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY ([8603f93](https://github.com/iblai/os/commit/8603f933c5c0165686d017035583001ac06722f2))
+
+### Tests
+
+* **chat:** cover file attachments list component ([d342beb](https://github.com/iblai/os/commit/d342beba45b7e0f2ecb35b3298c80185995965b5))
+* **e2e:** cover chat paste-to-attachment journey ([dc13b5a](https://github.com/iblai/os/commit/dc13b5a33bdd8ccb7ee5b0f4be2c19e257d566d3)), closes [#1993](https://github.com/iblai/os/issues/1993)
+
 ## [0.78.1](https://github.com/iblai/os/compare/v0.78.0...v0.78.1) (2026-06-20)
 
 ### Bug Fixes
