@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation';
 
 import { ProjectsPage } from '@iblai/iblai-js/web-containers';
 import type { Project } from '@iblai/iblai-js/data-layer';
+import { useLazyGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer';
+import { toast } from 'sonner';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
@@ -14,10 +16,35 @@ export default function ProjectsRoute() {
   const username = useUsername();
   const { navigateToProject, navigateToMentorInProject } = useNavigate();
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
+  const [getProjectDetails] = useLazyGetUserProjectDetailsQuery();
 
-  const handleOpenProject = (project: Project) => {
-    const firstMentor = project.mentors?.[0];
-    navigateToProject(String(project.id), firstMentor?.unique_id ?? '');
+  const handleOpenProject = async (project: Project) => {
+    if (project.mentor_count === 0) {
+      toast.error('This project has no agents yet.');
+      return;
+    }
+
+    let firstMentorId = project.mentors?.[0]?.unique_id ?? '';
+
+    if (!firstMentorId) {
+      try {
+        const details = await getProjectDetails({
+          tenantKey: tenantKey ?? '',
+          username: username ?? '',
+          id: project.id,
+        }).unwrap();
+        firstMentorId = details.mentors?.[0]?.unique_id ?? '';
+      } catch {
+        firstMentorId = '';
+      }
+    }
+
+    if (!firstMentorId) {
+      toast.error("Couldn't open this project. Please try again.");
+      return;
+    }
+
+    navigateToProject(String(project.id), firstMentorId);
   };
 
   return (
