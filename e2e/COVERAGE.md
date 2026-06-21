@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-19 | 490 checkpoints (469 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 55 journeys (54 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-21 | 494 checkpoints (473 covered, 1 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 56 journeys (55 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -950,5 +950,18 @@ Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRe
 
 - [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
 - [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
+
+---
+
+## Journey 54: Chat Paste-to-Attachment (4 checkpoints) — `journeys/54-chat-paste-to-attachment.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`, `lib/clipboard.ts`, `components/chat-input-form/file-attachments-list.tsx`
+
+Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path added in issue #1993. When a user pastes into the chat composer, the app inspects the clipboard: file items are immediately routed through the existing upload flow; plain text over `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY` (default 2000 chars) is converted to a `pasted-<timestamp>.txt` File and uploaded the same way; text under the limit goes into the textarea as a normal paste. Validation (size limits) triggers a sonner toast and blocks the chip. Each test creates its own mentor via `createMentorPage.openAndCreate()`. Paste is simulated by dispatching a `ClipboardEvent` with a constructed `DataTransfer` on the focused `#chat-input-textarea`, which hits the exact `onPaste` → `e.clipboardData` → `extractFilesFromClipboard` path. The 2100-char over-limit string is hardcoded above the 2000-char default threshold.
+
+- [x] pta-01: Pasting plain text over the `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY` threshold converts it to a `pasted-*.txt` attachment chip and leaves the textarea empty
+- [x] pta-02: Pasting plain text under the threshold is not converted into an attachment chip
+- [x] pta-03: Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty
+- [x] pta-04: Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added
 
 ---
