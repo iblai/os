@@ -3,9 +3,10 @@ import { render, screen } from '@testing-library/react';
 import ProjectsRoute from '../page';
 
 // Mock next/navigation
+let mockTenantKey: string | undefined = 'test-tenant';
 vi.mock('next/navigation', () => ({
   useParams: () => ({
-    tenantKey: 'test-tenant',
+    tenantKey: mockTenantKey,
     mentorId: 'mentor-123',
   }),
 }));
@@ -22,8 +23,9 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 }));
 
 // Mock username hook
+let mockUsername: string | undefined = 'test-user';
 vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => 'test-user',
+  useUsername: () => mockUsername,
 }));
 
 // Mock navigate hook
@@ -44,9 +46,26 @@ vi.mock('@/hooks/user-user-actions', () => ({
   }),
 }));
 
+// Mock lazy project-details query
+const mockUnwrap = vi.fn();
+const mockTriggerDetails = vi.fn(() => ({ unwrap: mockUnwrap }));
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useLazyGetUserProjectDetailsQuery: () => [mockTriggerDetails],
+}));
+
+// Mock sonner toast
+const mockToastError = vi.fn();
+vi.mock('sonner', () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
+}));
+
 describe('ProjectsRoute (thin wrapper)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTenantKey = 'test-tenant';
+    mockUsername = 'test-user';
   });
 
   it('renders the web-containers ProjectsPage', () => {
@@ -71,38 +90,120 @@ describe('ProjectsRoute (thin wrapper)', () => {
     expect(props.executeWithTrialCheck).toBe(mockExecuteWithTrialCheck);
   });
 
-  it('onOpenProject navigates to the project with its first mentor', async () => {
+  const getOpenProject = () => {
     render(<ProjectsRoute />);
     const props = mockProjectsPage.mock.calls[0][0] as {
-      onOpenProject: (project: unknown) => void;
+      onOpenProject: (project: unknown) => Promise<void>;
     };
+    return props.onOpenProject;
+  };
 
-    props.onOpenProject({
+  it('onOpenProject navigates using an already-populated first mentor', async () => {
+    const onOpenProject = getOpenProject();
+
+    await onOpenProject({
       id: 42,
       name: 'Test Project',
+      mentor_count: 1,
       mentors: [{ id: 9, unique_id: 'm-9', name: 'A' }],
     });
 
     expect(mockNavigateToProject).toHaveBeenCalledWith('42', 'm-9');
+    expect(mockTriggerDetails).not.toHaveBeenCalled();
   });
 
-  it('onOpenProject falls back to empty mentor id when there are no mentors', () => {
-    render(<ProjectsRoute />);
-    const props = mockProjectsPage.mock.calls[0][0] as {
-      onOpenProject: (project: unknown) => void;
-    };
+  it('onOpenProject shows a toast and does not navigate for a 0-agent project', async () => {
+    const onOpenProject = getOpenProject();
 
-    props.onOpenProject({ id: 7, name: 'No Mentors', mentors: [] });
-    expect(mockNavigateToProject).toHaveBeenCalledWith('7', '');
+    await onOpenProject({
+      id: 5,
+      name: 'Empty',
+      mentor_count: 0,
+      mentors: [],
+    });
+
+    expect(mockNavigateToProject).not.toHaveBeenCalled();
+    expect(mockTriggerDetails).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith(
+      'This project has no agents yet.',
+    );
   });
 
-  it('onOpenProject falls back to empty mentor id when mentors is undefined', () => {
-    render(<ProjectsRoute />);
-    const props = mockProjectsPage.mock.calls[0][0] as {
-      onOpenProject: (project: unknown) => void;
-    };
+  it('onOpenProject lazily fetches details when mentors are not populated', async () => {
+    mockUnwrap.mockResolvedValueOnce({
+      mentors: [{ id: 3, unique_id: 'm-3', name: 'B' }],
+    });
+    const onOpenProject = getOpenProject();
 
-    props.onOpenProject({ id: 8, name: 'Undefined Mentors' });
-    expect(mockNavigateToProject).toHaveBeenCalledWith('8', '');
+    await onOpenProject({
+      id: 11,
+      name: 'Lazy',
+      mentor_count: 2,
+      mentors: [],
+    });
+
+    expect(mockTriggerDetails).toHaveBeenCalledWith({
+      tenantKey: 'test-tenant',
+      username: 'test-user',
+      id: 11,
+    });
+    expect(mockNavigateToProject).toHaveBeenCalledWith('11', 'm-3');
+  });
+
+  it('onOpenProject shows an error toast when details have no mentors', async () => {
+    mockUnwrap.mockResolvedValueOnce({ mentors: [] });
+    const onOpenProject = getOpenProject();
+
+    await onOpenProject({
+      id: 12,
+      name: 'No Details Mentors',
+      mentor_count: 2,
+      mentors: [],
+    });
+
+    expect(mockNavigateToProject).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't open this project. Please try again.",
+    );
+  });
+
+  it('onOpenProject falls back to empty tenantKey/username when undefined', async () => {
+    mockTenantKey = undefined;
+    mockUsername = undefined;
+    mockUnwrap.mockResolvedValueOnce({
+      mentors: [{ id: 4, unique_id: 'm-4', name: 'C' }],
+    });
+    const onOpenProject = getOpenProject();
+
+    await onOpenProject({
+      id: 14,
+      name: 'No Tenant',
+      mentor_count: 1,
+      mentors: [],
+    });
+
+    expect(mockTriggerDetails).toHaveBeenCalledWith({
+      tenantKey: '',
+      username: '',
+      id: 14,
+    });
+    expect(mockNavigateToProject).toHaveBeenCalledWith('14', 'm-4');
+  });
+
+  it('onOpenProject shows an error toast when the details fetch rejects', async () => {
+    mockUnwrap.mockRejectedValueOnce(new Error('boom'));
+    const onOpenProject = getOpenProject();
+
+    await onOpenProject({
+      id: 13,
+      name: 'Reject',
+      mentor_count: 2,
+      mentors: [],
+    });
+
+    expect(mockNavigateToProject).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Couldn't open this project. Please try again.",
+    );
   });
 });
