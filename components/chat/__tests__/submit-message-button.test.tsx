@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubmitMessageButton } from '../submit-message-button';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -922,6 +922,83 @@ describe('SubmitMessageButton Component', () => {
 
       const button = screen.getByRole('button');
       expect(button).toBeDisabled();
+    });
+  });
+
+  describe('Connecting State', () => {
+    it('should be disabled when isConnecting is true', () => {
+      render(<SubmitMessageButton isConnecting={true} />);
+
+      const button = screen.getByRole('button', { name: 'Connecting' });
+      expect(button).toBeDisabled();
+    });
+
+    it('should render a spinner and Connecting aria-label when connecting', () => {
+      render(<SubmitMessageButton isConnecting={true} />);
+
+      const button = screen.getByRole('button', { name: 'Connecting' });
+      expect(button).toHaveAttribute('aria-label', 'Connecting');
+      const svg = button.querySelector('svg');
+      expect(svg).toHaveClass('animate-spin');
+    });
+
+    it('should render Connecting screen reader text when connecting', () => {
+      render(<SubmitMessageButton isConnecting={true} />);
+
+      const srText = screen.getByText('Connecting');
+      expect(srText).toHaveClass('sr-only');
+    });
+
+    it('should apply connecting styles when isConnecting is true', () => {
+      render(<SubmitMessageButton isConnecting={true} />);
+
+      const button = screen.getByRole('button', { name: 'Connecting' });
+      expect(button).toHaveClass('opacity-50');
+      expect(button).toHaveClass('cursor-not-allowed');
+    });
+
+    it('should show "Connecting..." tooltip when connecting', async () => {
+      const user = userEvent.setup();
+      render(<SubmitMessageButton isConnecting={true} />);
+
+      const button = screen.getByRole('button', { name: 'Connecting' });
+      await user.hover(button);
+
+      const tooltips = await screen.findAllByText('Connecting...');
+      expect(tooltips.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should prioritize Connecting tooltip over Uploading', async () => {
+      const user = userEvent.setup();
+      render(<SubmitMessageButton isConnecting={true} isUploading={true} />);
+
+      const button = screen.getByRole('button', { name: 'Connecting' });
+      await user.hover(button);
+
+      const tooltips = await screen.findAllByText('Connecting...');
+      expect(tooltips.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('Focus retention on click', () => {
+    it('should prevent default on mousedown so it does not steal focus from the textarea', () => {
+      render(<SubmitMessageButton />);
+
+      const button = screen.getByRole('button');
+      const event = fireEvent.mouseDown(button);
+
+      // fireEvent returns false when defaultPrevented was set
+      expect(event).toBe(false);
+    });
+
+    it('should still allow click/submit while preventing focus theft', () => {
+      render(<SubmitMessageButton />);
+
+      const button = screen.getByRole('button');
+      // mousedown is prevented...
+      expect(fireEvent.mouseDown(button)).toBe(false);
+      // ...but click is not blocked
+      expect(fireEvent.click(button)).toBe(true);
     });
   });
 

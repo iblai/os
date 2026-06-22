@@ -16,6 +16,19 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
+// Mock useUsername from use-user
+const mockUseUsername = vi.fn();
+vi.mock('../use-user', () => ({
+  useUsername: () => mockUseUsername(),
+}));
+
+// Mock useGetMentorPublicSettingsQuery from data-layer
+const mockUseGetMentorPublicSettingsQuery = vi.fn();
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorPublicSettingsQuery: (params: unknown) =>
+    mockUseGetMentorPublicSettingsQuery(params),
+}));
+
 // Mock useReports from web-containers
 const mockInitializeReportDownload = vi.fn();
 const mockUseReports = vi.fn();
@@ -33,6 +46,10 @@ describe('useExportChatHistory', () => {
       mentorId: 'mentor-123',
     });
     mockGetMentorId.mockReturnValue(null);
+    mockUseUsername.mockReturnValue('test-user');
+    mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+      data: { mentor_id: 456 },
+    });
 
     mockUseReports.mockReturnValue({
       initializeReportDownload: mockInitializeReportDownload,
@@ -56,6 +73,7 @@ describe('useExportChatHistory', () => {
       expect(mockUseReports).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         selectedMentorId: 'mentor-123',
+        selectedMentorDbId: '456',
       });
     });
 
@@ -67,7 +85,113 @@ describe('useExportChatHistory', () => {
       expect(mockUseReports).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         selectedMentorId: 'override-mentor-id',
+        selectedMentorDbId: '456',
       });
+    });
+  });
+
+  describe('mentor public settings query', () => {
+    it('should query mentor public settings with the active mentor id, tenant and username', () => {
+      mockGetMentorId.mockReturnValue(null);
+      mockUseUsername.mockReturnValue('test-user');
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseGetMentorPublicSettingsQuery).toHaveBeenCalledWith({
+        mentor: 'mentor-123',
+        org: 'test-tenant',
+        userId: 'test-user',
+      });
+    });
+
+    it('should use the getMentorId override as the queried mentor', () => {
+      mockGetMentorId.mockReturnValue('override-mentor-id');
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseGetMentorPublicSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ mentor: 'override-mentor-id' }),
+      );
+    });
+
+    it('should fall back to ANONYMOUS_USERNAME when username is null', () => {
+      mockUseUsername.mockReturnValue(null);
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseGetMentorPublicSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'anonymous' }),
+      );
+    });
+
+    it('should fall back to ANONYMOUS_USERNAME when username is undefined', () => {
+      mockUseUsername.mockReturnValue(undefined);
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseGetMentorPublicSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'anonymous' }),
+      );
+    });
+  });
+
+  describe('selectedMentorDbId', () => {
+    it('should pass the stringified mentor_id from public settings', () => {
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { mentor_id: 789 },
+      });
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseReports).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedMentorDbId: '789' }),
+      );
+    });
+
+    it('should keep a string mentor_id as-is', () => {
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { mentor_id: 'db-id-abc' },
+      });
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseReports).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedMentorDbId: 'db-id-abc' }),
+      );
+    });
+
+    it('should be undefined (not the string "undefined") when settings are not yet loaded', () => {
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({ data: undefined });
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseReports).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedMentorDbId: undefined }),
+      );
+    });
+
+    it('should be undefined when public settings have no mentor_id', () => {
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { allow_anonymous: true },
+      });
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseReports).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedMentorDbId: undefined }),
+      );
+    });
+
+    it('should be undefined when mentor_id is 0', () => {
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { mentor_id: 0 },
+      });
+
+      renderHook(() => useExportChatHistory());
+
+      expect(mockUseReports).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedMentorDbId: undefined }),
+      );
     });
   });
 
@@ -321,6 +445,7 @@ describe('useExportChatHistory', () => {
       expect(mockUseReports).toHaveBeenCalledWith({
         tenantKey: '',
         selectedMentorId: 'mentor-123',
+        selectedMentorDbId: '456',
       });
     });
 
@@ -337,6 +462,7 @@ describe('useExportChatHistory', () => {
       expect(mockUseReports).toHaveBeenCalledWith({
         tenantKey: 'test-tenant',
         selectedMentorId: undefined,
+        selectedMentorDbId: '456',
       });
     });
 

@@ -140,6 +140,15 @@ let mockActiveSessionId = 'sess-active';
 let mockCachedSessionId: Record<string, string> = {};
 const saveCachedSessionIdMock = vi.fn();
 
+// First-response refetch effect (issue #1982). The Chats section refetches
+// Recent once a brand-new chat reaches exactly 2 messages (user + first
+// assistant reply) and streaming has finished, so the new chat appears in
+// the sidebar without a manual refresh. These drive that effect's branches.
+let mockIsStreaming = false;
+let mockNumberOfActiveChatMessages = 0;
+let mockActiveChatMessages: Array<{ role?: string }> = [];
+const refetchRecentMock = vi.fn(() => Promise.resolve(undefined));
+
 // Data sources
 let mockMentorPublicSettings: any = {
   mentor_id: 42,
@@ -374,9 +383,9 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       return options.selectFromResult
         ? {
             ...options.selectFromResult(skipped),
-            refetch: () => Promise.resolve(undefined),
+            refetch: refetchRecentMock,
           }
-        : { ...skipped, refetch: () => Promise.resolve(undefined) };
+        : { ...skipped, refetch: refetchRecentMock };
     }
     const state = {
       data: mockRecentPages,
@@ -386,9 +395,9 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     return options?.selectFromResult
       ? {
           ...options.selectFromResult(state),
-          refetch: () => Promise.resolve(undefined),
+          refetch: refetchRecentMock,
         }
-      : { ...state, refetch: () => Promise.resolve(undefined) };
+      : { ...state, refetch: refetchRecentMock };
   },
   useGetUserProjectsQuery: () => ({
     data: mockProjects,
@@ -427,6 +436,9 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
   clearFiles: (...a: unknown[]) => ({ type: 'chat/clearFiles', payload: a }),
   selectSessionId: () => mockActiveSessionId,
+  selectStreaming: () => mockIsStreaming,
+  selectNumberOfActiveChatMessages: () => mockNumberOfActiveChatMessages,
+  selectActiveChatMessages: () => mockActiveChatMessages,
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -641,8 +653,12 @@ function resetState() {
   closeFreeTrialModalMock.mockReset();
   updateQueryDataMock.mockClear();
   saveCachedSessionIdMock.mockReset();
+  refetchRecentMock.mockClear();
   mockActiveSessionId = 'sess-active';
   mockCachedSessionId = {};
+  mockIsStreaming = false;
+  mockNumberOfActiveChatMessages = 0;
+  mockActiveChatMessages = [];
 
   mockPathname = '/platform/tenant-a/mentor-1';
   mockSearchParams = new URLSearchParams();
@@ -1415,6 +1431,13 @@ describe('AppSidebar — Projects section', () => {
     expect(
       screen.getByRole('button', { name: 'Beta Project' }),
     ).toBeInTheDocument();
+  });
+
+  it('clicking "My Projects" navigates to the Projects index page', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'My Projects' }));
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
   });
 
   it('clicking "New Project" opens (and can close) the Create Project modal', async () => {
@@ -2577,6 +2600,17 @@ describe('AppSidebar — Rail-collapsed Projects flyout', () => {
     );
   });
 
+  it('navigates to the Projects index from the rail flyout "My Projects"', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.hover(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    const myProjects = await screen.findByRole('button', {
+      name: 'My Projects',
+    });
+    fireEvent.click(myProjects);
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
+  });
+
   it('toasts when a rail flyout project has no default mentor', async () => {
     mockProjects = {
       results: [
@@ -2644,5 +2678,52 @@ describe('AppSidebar — Per-mentor row filtering', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     expect(screen.queryByText('Other mentor chat')).not.toBeInTheDocument();
     expect(screen.getByText('Current mentor chat')).toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — Recent refetch on first assistant response (#1982)', () => {
+  it('refetches Recent when signed in, not streaming, exactly 2 messages and msg[1] is assistant', async () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    await waitFor(() => expect(refetchRecentMock).toHaveBeenCalled());
+  });
+
+  it('does NOT refetch Recent while streaming', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = true;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent when the message count is not exactly 2', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 1;
+    mockActiveChatMessages = [{ role: 'user' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent when the second message is not an assistant message', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'user' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent for an anonymous user with no username', () => {
+    mockUserName = '';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
   });
 });

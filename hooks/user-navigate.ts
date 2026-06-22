@@ -32,6 +32,7 @@ import {
   Settings,
   LucideMail,
   Workflow,
+  FolderKanban,
 } from 'lucide-react';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -402,6 +403,15 @@ export function useNavigate() {
         );
       }
     },
+    navigateToProjects: () => {
+      if (tenantKey) {
+        router.push(`/platform/${tenantKey}/projects`);
+      } else {
+        console.warn(
+          'Cannot navigate to projects: tenantKey missing from URL params.',
+        );
+      }
+    },
 
     // Enhanced modal functions
     openCreateMentorModal: (tab?: string) =>
@@ -490,6 +500,7 @@ export function useSidebarNavigation() {
     openNoMentorSelectedModal,
     navigateToNotifications,
     navigateToWorkflows,
+    navigateToProjects,
   } = useNavigate();
   const pathname = usePathname();
   const isChatPage =
@@ -581,6 +592,15 @@ export function useSidebarNavigation() {
           return;
         }
         executeWithTrialCheck(navigateToWorkflows);
+      },
+      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
+      isAnAdminAction: true,
+    },
+    {
+      label: 'Projects',
+      icon: FolderKanban,
+      onClick: () => {
+        executeWithTrialCheck(navigateToProjects);
       },
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
       isAnAdminAction: true,

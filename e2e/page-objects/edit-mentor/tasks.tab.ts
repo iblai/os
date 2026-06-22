@@ -86,8 +86,8 @@ export class TasksTab {
   }
 
   description(): Locator {
-    return this.dialog.getByText(TASKS_LABELS.headerDescription, {
-      exact: true,
+    return this.dialog.getByText('Configure automated tasks for your', {
+      exact: false,
     });
   }
 
