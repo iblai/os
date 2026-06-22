@@ -23,9 +23,15 @@ export function NoMentorSelectedModal({
 }: NoMentorSelectedModalProps) {
   const { navigateToExplore } = useNavigate();
 
-  const handleExplore = () => {
-    onClose();
-    navigateToExplore();
+  const handleExplore = (event: React.MouseEvent) => {
+    // Prevent Radix's default "close on action" behaviour. That auto-close
+    // fires onOpenChange -> closeModal -> router.push(currentPath), a competing
+    // navigation that runs last and clobbers the explore push below (leaving the
+    // user on the current page). Navigating to the tenant-scoped explore page
+    // (/platform/<tenantKey>/explore) is a route change with no ?modal= param,
+    // so it closes this modal on its own — a single navigation, no race.
+    event.preventDefault();
+    navigateToExplore(true);
   };
 
   return (

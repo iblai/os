@@ -22,6 +22,7 @@ const CopyMentorModal = dynamic(
 );
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 
 import {
   useGetMentorSettingsQuery,
@@ -32,6 +33,8 @@ import {
   useGetCallConfigurationsQuery,
   useCreateCallConfigurationMutation,
   useUpdateCallConfigurationMutation,
+  useGetTenantChatPrivacyConfigQuery,
+  chatPrivacyApiSlice,
 } from '@iblai/iblai-js/data-layer';
 import { useForm, useStore } from '@tanstack/react-form';
 
@@ -98,9 +101,15 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  show_reasoning: boolean;
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
+  enable_prompt_caching: boolean;
+  /** Gates the standalone Privacy tab (PII-rules UI) — hidden when off. */
+  enable_privacy_router: boolean;
+  /** Mentor-level private-mode kill switch → `mentor.disable_chathistory`. */
+  disable_chathistory: boolean;
   /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
   use_function_calling_for_rag: boolean;
   /** Voice-call: enable screen sharing. Persisted on CallConfiguration, not MentorSettings. */
@@ -134,6 +143,16 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+  const dispatch = useDispatch();
+
+  // Tenant gate for the agent-level "Enable private mode" row — hidden when off.
+  const { data: tenantChatPrivacyConfig } = useGetTenantChatPrivacyConfigQuery(
+    // @ts-ignore - userId is not part of the public query args type
+    { org: tenantKey ?? '', userId: username ?? '' },
+    { skip: !tenantKey || !username },
+  );
+  const tenantAllowsChatPrivacyControl =
+    !!tenantChatPrivacyConfig?.allow_user_chat_privacy_control;
 
   // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
   // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
@@ -145,11 +164,7 @@ export function SettingsTab() {
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
-  // CallConfiguration is the source of truth for the two voice-call toggles
-  // surfaced in Settings (`use_function_calling_for_rag` and `enable_video`).
-  // The backend embeds the active config inside the mentor-settings response,
-  // but we still hit the list endpoint as a fallback for older API versions
-  // that don't inline it. Skip the network call when the inline value exists.
+  // Voice-call toggles live on CallConfiguration; use the inlined config, else fetch the list.
   // @ts-ignore call_configuration is on the API response but not typed
   const inlineCallConfig = mentor?.call_configuration ?? undefined;
   const { data: callConfigList } = useGetCallConfigurationsQuery(
@@ -228,10 +243,18 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - show_reasoning exists in API response but not in type
+      show_reasoning: mentor?.show_reasoning ?? false,
       // @ts-ignore - enable_claw exists in API response but not in type
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
+      // @ts-ignore - enable_prompt_caching exists in the API response but not yet in the installed SDK type
+      enable_prompt_caching: mentor?.enable_prompt_caching ?? false,
+      // @ts-ignore - enable_privacy_router exists on API but not in the public type yet
+      enable_privacy_router: mentor?.enable_privacy_router ?? false,
+      // @ts-ignore - disable_chathistory exists on the mentor object but not in the public type yet
+      disable_chathistory: mentor?.disable_chathistory ?? false,
       use_function_calling_for_rag:
         existingCallConfig?.use_function_calling_for_rag ?? false,
       enable_video: existingCallConfig?.enable_video ?? false,
@@ -290,6 +313,10 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
+      if (value.show_reasoning !== undefined) {
+        values.show_reasoning = value.show_reasoning;
+      }
+
       if (value.enable_claw !== undefined) {
         values.enable_claw = value.enable_claw;
       }
@@ -311,6 +338,18 @@ export function SettingsTab() {
 
       if (value.enable_multi_query_rag !== undefined) {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
+      }
+
+      if (value.enable_prompt_caching !== undefined) {
+        values.enable_prompt_caching = value.enable_prompt_caching;
+      }
+
+      if (value.enable_privacy_router !== undefined) {
+        values.enable_privacy_router = value.enable_privacy_router;
+      }
+
+      if (value.disable_chathistory !== undefined) {
+        values.disable_chathistory = value.disable_chathistory;
       }
 
       // Drop any field the user only has read access to. Field-level RBAC
@@ -338,6 +377,12 @@ export function SettingsTab() {
           },
         }).unwrap();
 
+        // Refresh the nav-bar chat-privacy toggle — the mentor-settings mutation
+        // doesn't invalidate chat-privacy-effective. Unconditional on purpose.
+        dispatch(
+          chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
+        );
+
         if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
           try {
             await updateClawConfig({
@@ -353,12 +398,8 @@ export function SettingsTab() {
           }
         }
 
-        // Sync the voice-call toggles (use_function_calling_for_rag,
-        // enable_video) to the CallConfiguration endpoint. Only fire when
-        // the user actually changed one of them so we don't churn the
-        // backend on no-op saves. If no config exists yet, POST a new one
-        // with mode='realtime' as the default; otherwise PATCH the two
-        // fields against the existing config id.
+        // Sync the voice-call toggles to CallConfiguration only when changed
+        // (POST a new config if none exists, else PATCH).
         const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
           ? true
           : false;
@@ -400,9 +441,7 @@ export function SettingsTab() {
               }).unwrap();
             }
           } catch (callConfigError) {
-            // Mirror the claw-config approach: don't fail the whole save
-            // if the voice-call sync fails — mentor settings already
-            // persisted. Surface a separate toast so admins know.
+            // Settings already saved — surface a separate toast if the voice-call sync fails.
             console.error(
               JSON.stringify({ tenant: tenantKey, callConfigError }),
             );
@@ -1083,6 +1122,42 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
+                  <form.Field name="show_reasoning">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Verbose Reasoning
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about verbose reasoning"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Show the agent’s reasoning steps while it
+                                  responds.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled}
+                          aria-label={`Verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
+
                   <WithFormPermissions
                     name="enable_multi_query_rag"
                     // @ts-ignore
@@ -1121,6 +1196,53 @@ export function SettingsTab() {
                               }
                               disabled={isDisabled || disabled}
                               aria-label="Enhanced document retrieval"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="enable_prompt_caching"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_prompt_caching">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable prompt caching
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable prompt caching"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Caches large or long system prompts so
+                                      they are reused across requests, reducing
+                                      LLM cost and latency. By default this is
+                                      disabled.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Enable prompt caching"
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1349,6 +1471,103 @@ export function SettingsTab() {
                       </form.Field>
                     )}
                   </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="enable_privacy_router"
+                    // @ts-ignore - enable_privacy_router not in permissions type yet
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_privacy_router">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Filter PII from messages
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about filter PII from messages"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Enable the privacy router. When on, a
+                                      dedicated Privacy tab appears for
+                                      configuring PII detection rules.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Filter PII from messages"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  {/* Hidden when the tenant disables chat-privacy control — the kill switch is a no-op then. */}
+                  {tenantAllowsChatPrivacyControl && (
+                    <WithFormPermissions
+                      name="disable_chathistory"
+                      // @ts-ignore - disable_chathistory not in permissions type yet
+                      permissions={mentor?.permissions?.field}
+                    >
+                      {({ disabled }) => (
+                        <form.Field name="disable_chathistory">
+                          {(field) => (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-[#646464]">
+                                  Enable private mode
+                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      type="button"
+                                      aria-label="More info about enable private mode"
+                                    >
+                                      <Info className="h-4 w-4 text-gray-400" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="ibl-tooltip-content">
+                                      <p>
+                                        When on, every conversation with this
+                                        agent runs in private mode — no chat
+                                        history or memory is stored for any
+                                        user. Use this for sensitive or
+                                        compliance-bound deployments.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <Switch
+                                checked={field.state.value}
+                                onCheckedChange={(checked) =>
+                                  field.handleChange(checked)
+                                }
+                                disabled={isDisabled || disabled}
+                                aria-label="Enable private mode"
+                                aria-checked={field.state.value}
+                              />
+                            </div>
+                          )}
+                        </form.Field>
+                      )}
+                    </WithFormPermissions>
+                  )}
 
                   <WithFormPermissions
                     name="forkable"

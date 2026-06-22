@@ -110,7 +110,11 @@ export async function createWorkflow(
  * Wait for the workflow editor to be ready (canvas loaded).
  */
 export async function waitForWorkflowEditorReady(page: Page): Promise<void> {
-  const saveButton = page.getByRole('button', { name: 'Save' });
+  // Exact name — NOT a loose 'Save' substring match. The always-present
+  // chat-privacy toggle's aria-label ("...This chat won't be saved to
+  // history...") substring-matches "Save", so a non-exact locator resolves
+  // to BOTH that toggle and the real Save button → strict-mode violation.
+  const saveButton = page.getByRole('button', { name: 'Save', exact: true });
   await expect(saveButton).toBeVisible({ timeout: 30_000 });
 
   const canvas = page.locator('[data-testid="workflow-canvas"]');
@@ -251,7 +255,9 @@ export async function exitPreviewMode(page: Page): Promise<void> {
  * Click the Save button.
  */
 export async function saveWorkflow(page: Page): Promise<void> {
-  const saveButton = page.getByRole('button', { name: 'Save' });
+  // Exact name — see waitForWorkflowEditorReady: a loose 'Save' also matches
+  // the chat-privacy toggle's aria-label ("...won't be saved to history...").
+  const saveButton = page.getByRole('button', { name: 'Save', exact: true });
   await expect(saveButton).toBeVisible({ timeout: 10_000 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
