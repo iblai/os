@@ -565,7 +565,7 @@ export function EmbedTab() {
                           >
                             <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
+                          <TooltipContent className="ibl-tooltip-content">
                             <p>
                               Add custom CSS to style your agent chat interface.
                               Styles will be applied to the embedded chat
@@ -736,7 +736,7 @@ export function EmbedTab() {
                           >
                             <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
+                          <TooltipContent className="ibl-tooltip-content">
                             <p>
                               Add custom JavaScript to enhance your agent chat
                               interface. Scripts will be executed when the
