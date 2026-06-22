@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.80.2](https://github.com/iblai/os/compare/v0.80.1...v0.80.2) (2026-06-22)
+
+### Chores
+
+* **env:** wire NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY into runtime env ([485d4ea](https://github.com/iblai/os/commit/485d4ea47a36b1a6acdcae6cfe8efadd7900b77b))
+
 ## [0.80.1](https://github.com/iblai/os/compare/v0.80.0...v0.80.1) (2026-06-22)
 
 ### Bug Fixes
