@@ -268,7 +268,7 @@ export function useModelDownload() {
         '[useModelDownload] Skipping checkStatus - already checked (hasCheckedStatus.current = true)',
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     // checkStatus is intentionally omitted - we only want to run once on mount using hasCheckedStatus ref guard
   }, [isAvailable, invoke, foundryStatus, foundryStatusLoaded]);
 
@@ -632,6 +632,26 @@ export function useModelDownload() {
       toast.success(result);
       setState((prev) => ({ ...prev, managerInstalling: false }));
       await checkStatus();
+
+      // A freshly installed Ollama can take a few seconds to start serving (first
+      // launch / app onboarding), and nothing else re-polls — so the Model
+      // Manager would otherwise stay stuck on "Starting…". Re-check in the
+      // background until it reports running (bounded; also stops if Ollama isn't
+      // the active backend, e.g. Foundry).
+      void (async () => {
+        for (let i = 0; i < 20; i++) {
+          try {
+            const s = await invoke<OllamaStatus>(
+              TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
+            );
+            setOllamaStatus(s);
+            if (s.running === true || s.installed !== true) break;
+          } catch {
+            // command not ready yet — keep trying
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      })();
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
