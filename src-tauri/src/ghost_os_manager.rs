@@ -109,8 +109,8 @@ fn emit_progress(app: &AppHandle, status: &str, percentage: f64, message: &str) 
     );
 }
 
-/// Snapshot current GhostOS state: installed (binary present), running (a `ghost`
-/// MCP process is alive) and version (`ghost --version`).
+/// Snapshot current GhostOS state: installed (binary present), ready, and
+/// version (`ghost --version`).
 #[cfg(target_os = "macos")]
 fn compute_status() -> GhostOsStatus {
     let bin = resolve_bin("ghost");
@@ -126,17 +126,13 @@ fn compute_status() -> GhostOsStatus {
             .filter(|s| !s.is_empty())
     });
 
-    // `-x` matches the process name exactly so we don't catch `ghost-vision`
-    // or unrelated processes.
-    let running = Command::new("pgrep")
-        .args(["-x", "ghost"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
+    // GhostOS is an on-demand stdio MCP server — the client (the bridge) spawns
+    // `ghost mcp` only while a tool call is in flight, so there is no persistent
+    // process to poll for. "running" therefore means "ready to use" == installed;
+    // otherwise the card would sit on "Starting…" forever.
     GhostOsStatus {
         installed,
-        running,
+        running: installed,
         installing: false,
         version,
     }

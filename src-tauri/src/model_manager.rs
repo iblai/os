@@ -113,23 +113,21 @@ pub const OLLAMA_API_URL: &str = "http://localhost:11434";
 pub const BRIDGE_API_URL: &str = "http://localhost:8000";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 
-/// Base URL chat should target: the MCP bridge when it's listening on :8000 (so
-/// the local model gets MCP tools), otherwise Ollama directly on :11434. The
-/// bridge mirrors Ollama's REST API, so callers just append `/api/chat`.
-///
-/// The probe is a loopback TCP connect: when the bridge is down the OS refuses
-/// the connection immediately, so this is effectively instant and the timeout
-/// only bounds pathological cases.
-pub fn chat_base_url() -> &'static str {
-    use std::net::{SocketAddr, TcpStream};
-    use std::time::Duration;
-
-    let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
-    if TcpStream::connect_timeout(&addr, Duration::from_millis(200)).is_ok() {
-        BRIDGE_API_URL
-    } else {
-        OLLAMA_API_URL
+/// Base URL chat must stream from: the MCP bridge on :8000 — the one and only
+/// chat port. Plain Ollama on :11434 is reserved for status/version/pull checks,
+/// never chat. A non-tool-capable model can't use the bridge (Ollama would 400
+/// the injected `tools` field), so we refuse rather than route anywhere.
+/// `tool_support` is the selected model's catalog flag, forwarded by the SDK.
+pub fn chat_base_url(tool_support: bool) -> Result<&'static str, String> {
+    if !tool_support {
+        let msg = "Local chat requires a tool-capable model — streaming only runs \
+                   through the MCP bridge on :8000, and the selected model has \
+                   tool_support=false"
+            .to_string();
+        println!("[McpBridge] {msg}");
+        return Err(msg);
     }
+    Ok(BRIDGE_API_URL)
 }
 
 /// Get the current timestamp in RFC3339 format

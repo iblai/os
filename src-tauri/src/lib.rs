@@ -1249,9 +1249,13 @@ async fn navigate_to(app: AppHandle, url: String) -> Result<(), String> {
 /// This is needed because the app runs on HTTPS but Ollama runs on HTTP (localhost)
 /// Browsers block mixed content, so we proxy through Tauri
 #[command]
-async fn ollama_chat(messages: Vec<serde_json::Value>, model: Option<String>) -> Result<String, String> {
+async fn ollama_chat(
+    messages: Vec<serde_json::Value>,
+    model: Option<String>,
+    tool_support: Option<bool>,
+) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url();
+    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
 
     println!(
@@ -1301,9 +1305,10 @@ async fn ollama_chat_stream(
     messages: Vec<serde_json::Value>,
     model: Option<String>,
     generation_id: String,
+    tool_support: Option<bool>,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url();
+    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
 
     println!(

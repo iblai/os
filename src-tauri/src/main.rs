@@ -908,6 +908,7 @@ fn get_os_type() -> String {
 async fn ollama_chat(
     messages: Vec<serde_json::Value>,
     model: Option<String>,
+    tool_support: Option<bool>,
 ) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
 
@@ -928,7 +929,7 @@ async fn ollama_chat(
         }
     }
 
-    let base = model_manager::chat_base_url();
+    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
     println!("[ibl.ai] Using Ollama for chat — streaming from {base}");
 
@@ -975,6 +976,7 @@ async fn ollama_chat_stream(
     messages: Vec<serde_json::Value>,
     model: Option<String>,
     generation_id: String,
+    tool_support: Option<bool>,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
 
@@ -1002,7 +1004,7 @@ async fn ollama_chat_stream(
         }
     }
 
-    let base = model_manager::chat_base_url();
+    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
     println!("[ibl.ai] Using Ollama for streaming chat — streaming from {base}");
 
