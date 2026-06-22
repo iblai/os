@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.80.1](https://github.com/iblai/os/compare/v0.80.0...v0.80.1) (2026-06-22)
+
+### Bug Fixes
+
+* **projects:** block navigation into agentless projects ([59e965f](https://github.com/iblai/os/commit/59e965fdd234ceaee3a800bc090477fe9ccde2c3))
+* **projects:** redirect to projects list when mentorId is missing ([5c0a663](https://github.com/iblai/os/commit/5c0a6636741dde248534af11a3da8de3e80bddb7))
+
 ## [0.80.0](https://github.com/iblai/os/compare/v0.79.0...v0.80.0) (2026-06-21)
 
 ### Features
