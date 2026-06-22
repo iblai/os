@@ -202,21 +202,48 @@ pub fn start_bridge() {
             "[McpBridge] Starting bridge: {bin} --host {BRIDGE_HOST} --config {} --port {BRIDGE_PORT}",
             config.display()
         );
-        match create_command(&bin)
-            .arg("--host")
+        let mut cmd = create_command(&bin);
+        cmd.arg("--host")
             .arg(BRIDGE_HOST)
             .arg("--config")
             .arg(&config)
             .arg("--port")
             .arg(BRIDGE_PORT.to_string())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
+            .stderr(Stdio::null());
+
+        // macOS: the bridge spawns the configured MCP servers (e.g. the `ghost`
+        // helper) and they may spawn sidecars (`ghost-vision`). When the helper is
+        // installed to ~/.local/bin (no-Homebrew fallback) that dir often isn't on
+        // a GUI app's PATH, so prepend the common bins to the bridge's PATH so the
+        // servers and their sidecars resolve.
+        #[cfg(target_os = "macos")]
         {
+            cmd.env("PATH", macos_server_path());
+        }
+
+        match cmd.spawn() {
             Ok(_) => println!("[McpBridge] Bridge started"),
             Err(e) => println!("[McpBridge] Failed to start bridge: {e}"),
         }
     }
+}
+
+/// PATH for spawned MCP servers on macOS: `~/.local/bin` and the Homebrew bins
+/// (so a helper installed by the no-Homebrew fallback resolves even when
+/// `~/.local/bin` isn't on the app's PATH), followed by the inherited PATH.
+#[cfg(target_os = "macos")]
+fn macos_server_path() -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(home) = home_dir() {
+        parts.push(home.join(".local").join("bin").to_string_lossy().into_owned());
+    }
+    parts.push("/opt/homebrew/bin".to_string());
+    parts.push("/usr/local/bin".to_string());
+    if let Ok(existing) = std::env::var("PATH") {
+        parts.push(existing);
+    }
+    parts.join(":")
 }
 
 /// Stop the bridge process. No-op on unsupported platforms.
