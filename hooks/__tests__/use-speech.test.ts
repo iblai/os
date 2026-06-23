@@ -118,7 +118,7 @@ function headers(contentType: string | null) {
 
 // A successful, fully-buffered response (no streaming body). The hook reads it
 // via response.blob() and plays it from an object URL.
-function mockFetchOk(contentType = 'audio/mpeg') {
+function mockFetchOk(contentType: string | null = 'audio/mpeg') {
   const blob = new Blob([new ArrayBuffer(8)]);
   globalThis.fetch = vi.fn(async () => ({
     ok: true,
@@ -261,6 +261,21 @@ describe('useSpeech', () => {
       expect(createdAudios[0]?.play).not.toHaveBeenCalled();
     });
 
+    it('defaults the audio type and plays when no content-type is returned', async () => {
+      mockFetchOk(null);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({
+          id: 'm-noct',
+          content: 'no content type',
+        } as never);
+      });
+
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      expect(createdAudios[0].play).toHaveBeenCalled();
+    });
+
     it('omits the auth header when no DM token is available', async () => {
       window.localStorage.removeItem('dm_token');
       mockFetchOk();
@@ -285,6 +300,33 @@ describe('useSpeech', () => {
       });
 
       await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+    });
+
+    it('swallows the abort error when playback is stopped mid-request', async () => {
+      // A request that only settles when its abort signal fires.
+      globalThis.fetch = vi.fn(
+        (_url, opts) =>
+          new Promise((_resolve, reject) => {
+            (opts as RequestInit).signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            );
+          }),
+      ) as unknown as typeof fetch;
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-abort', content: 'abort me' } as never);
+      });
+      expect(result.current.isLoading).toBe(true);
+
+      await act(async () => {
+        result.current.stop();
+        await Promise.resolve();
+      });
+
+      expect(result.current.isLoading).toBe(false);
       expect(result.current.isSpeaking).toBe(false);
       expect(result.current.currentMessageId).toBeNull();
     });
@@ -325,6 +367,7 @@ describe('useSpeech', () => {
 
     class FakeSourceBuffer {
       appended: Uint8Array[] = [];
+      failOnAppend = false;
       private listeners: Record<string, Listener[]> = {};
       addEventListener(type: string, cb: Listener) {
         (this.listeners[type] ||= []).push(cb);
@@ -336,10 +379,10 @@ describe('useSpeech', () => {
       }
       appendBuffer(chunk: Uint8Array) {
         this.appended.push(chunk);
-        // Mirror the async nature of a real append.
-        queueMicrotask(() =>
-          (this.listeners['updateend'] || []).forEach((l) => l()),
-        );
+        // Mirror the async nature of a real append, emitting either success
+        // (`updateend`) or failure (`error`) on the next microtask.
+        const event = this.failOnAppend ? 'error' : 'updateend';
+        queueMicrotask(() => (this.listeners[event] || []).forEach((l) => l()));
       }
     }
 
@@ -373,7 +416,10 @@ describe('useSpeech', () => {
       }
     }
 
-    function mockFetchStream(chunks: Uint8Array[], contentType = 'audio/mpeg') {
+    function mockFetchStream(
+      chunks: Uint8Array[],
+      { contentType = 'audio/mpeg', readError = false } = {},
+    ) {
       let i = 0;
       globalThis.fetch = vi.fn(async () => ({
         ok: true,
@@ -381,11 +427,15 @@ describe('useSpeech', () => {
         headers: headers(contentType),
         body: {
           getReader: () => ({
-            read: vi.fn(async () =>
-              i < chunks.length
-                ? { done: false, value: chunks[i++] }
-                : { done: true, value: undefined },
-            ),
+            read: vi.fn(async () => {
+              if (i < chunks.length) {
+                return { done: false, value: chunks[i++] };
+              }
+              if (readError) {
+                throw new Error('network dropped mid-stream');
+              }
+              return { done: true, value: undefined };
+            }),
           }),
         },
         blob: async () => new Blob([]),
@@ -443,7 +493,9 @@ describe('useSpeech', () => {
     });
 
     it('normalises audio/mp3 to audio/mpeg for streaming', async () => {
-      mockFetchStream([new Uint8Array([1, 2, 3])], 'audio/mp3');
+      mockFetchStream([new Uint8Array([1, 2, 3])], {
+        contentType: 'audio/mp3',
+      });
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
       await act(async () => {
@@ -454,6 +506,155 @@ describe('useSpeech', () => {
       expect(fakeMediaSource.addSourceBuffer).toHaveBeenCalledWith(
         'audio/mpeg',
       );
+    });
+
+    it('falls back to buffered playback when the codec is not stream-supported', async () => {
+      mockFetchStream([new Uint8Array([1, 2, 3])]);
+      (
+        window as unknown as { MediaSource: { isTypeSupported: () => boolean } }
+      ).MediaSource.isTypeSupported = vi.fn(() => false);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-nocodec', content: 'no codec' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      // No streaming: the buffered fallback plays from an object URL instead.
+      expect(fakeMediaSource.addSourceBuffer).not.toHaveBeenCalled();
+      expect(createdAudios[0].src).toBe('blob:fake-url');
+      expect(createdAudios[0].play).toHaveBeenCalled();
+    });
+
+    it('skips empty chunks while streaming', async () => {
+      mockFetchStream([new Uint8Array(0), new Uint8Array([1, 2, 3])]);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-gap', content: 'gap' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      // The zero-length chunk is ignored; only the real chunk is buffered.
+      await waitFor(() =>
+        expect(fakeMediaSource.sourceBuffers[0].appended).toHaveLength(1),
+      );
+    });
+
+    it('resets when the browser cannot create a source buffer for the stream', async () => {
+      mockFetchStream([new Uint8Array([1, 2, 3])]);
+      fakeMediaSource.addSourceBuffer = vi.fn(() => {
+        throw new Error('unsupported codec');
+      });
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-nosb', content: 'no buffer' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(fakeMediaSource.addSourceBuffer).toHaveBeenCalled();
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+    });
+
+    it('resets and finalises the stream when a chunk fails to buffer', async () => {
+      mockFetchStream([new Uint8Array([1, 2, 3])]);
+      const failingBuffer = new FakeSourceBuffer();
+      failingBuffer.failOnAppend = true;
+      fakeMediaSource.addSourceBuffer = vi.fn(() => failingBuffer);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-aperr', content: 'append err' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+      // The pump tears the source down after the append error.
+      expect(fakeMediaSource.endOfStream).toHaveBeenCalled();
+    });
+
+    it('resets when the stream errors mid-download', async () => {
+      mockFetchStream([new Uint8Array([1, 2, 3])], { readError: true });
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-neterr', content: 'drop' } as never);
+      });
+
+      // The first chunk buffers and plays, then the read rejects.
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      await waitFor(() =>
+        expect(fakeMediaSource.endOfStream).toHaveBeenCalled(),
+      );
+    });
+
+    it('resets when the stream produces no audio', async () => {
+      mockFetchStream([]);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-empty', content: 'silence' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+    });
+
+    it('stops streaming without re-finalising the source when aborted mid-stream', async () => {
+      // First read yields a chunk; the second only settles when aborted.
+      let reads = 0;
+      globalThis.fetch = vi.fn((_url, opts) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: headers('audio/mpeg'),
+          body: {
+            getReader: () => ({
+              read: vi.fn(() => {
+                reads += 1;
+                if (reads === 1) {
+                  return Promise.resolve({
+                    done: false,
+                    value: new Uint8Array([1, 2, 3]),
+                  });
+                }
+                return new Promise((_resolve, reject) => {
+                  (opts as RequestInit).signal?.addEventListener('abort', () =>
+                    reject(new DOMException('Aborted', 'AbortError')),
+                  );
+                });
+              }),
+            }),
+          },
+          blob: async () => new Blob([]),
+        }),
+      ) as unknown as typeof fetch;
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({
+          id: 'm-streamabort',
+          content: 'abort stream',
+        } as never);
+      });
+
+      // The first chunk buffers and plays.
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      fakeMediaSource.endOfStream.mockClear();
+
+      await act(async () => {
+        result.current.stop();
+        await Promise.resolve();
+      });
+
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+      // An aborted stream is torn down by stop(), not finalised by the pump.
+      expect(fakeMediaSource.endOfStream).not.toHaveBeenCalled();
     });
   });
 
