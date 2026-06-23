@@ -93,17 +93,38 @@ beforeEach(() => {
 
   // Audio constructor used by useSpeech
   (globalThis as unknown as { Audio: typeof FakeAudio }).Audio = FakeAudio;
+
+  // jsdom doesn't implement object URLs — stub them so playback can attach.
+  URL.createObjectURL = vi.fn(
+    () => 'blob:fake-url',
+  ) as typeof URL.createObjectURL;
+  URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+
+  // jsdom has no MediaSource, so the hook uses the buffered fallback by
+  // default. Streaming-specific tests install a fake MediaSource explicitly.
+  delete (window as unknown as { MediaSource?: unknown }).MediaSource;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockFetchOk(data: ArrayBuffer | string = new ArrayBuffer(8)) {
-  const blob = new Blob([data]);
+function headers(contentType: string | null) {
+  return {
+    get: (key: string) =>
+      key.toLowerCase() === 'content-type' ? contentType : null,
+  };
+}
+
+// A successful, fully-buffered response (no streaming body). The hook reads it
+// via response.blob() and plays it from an object URL.
+function mockFetchOk(contentType = 'audio/mpeg') {
+  const blob = new Blob([new ArrayBuffer(8)]);
   globalThis.fetch = vi.fn(async () => ({
     ok: true,
     status: 200,
+    headers: headers(contentType),
+    body: null,
     blob: async () => blob,
   })) as unknown as typeof fetch;
 }
@@ -112,29 +133,10 @@ function mockFetchFail(status = 500) {
   globalThis.fetch = vi.fn(async () => ({
     ok: false,
     status,
+    headers: headers(null),
+    body: null,
     blob: async () => new Blob([]),
   })) as unknown as typeof fetch;
-}
-
-function stubFileReader(result: string | null) {
-  class StubReader {
-    onloadend: (() => void) | null = null;
-    onerror: (() => void) | null = null;
-    result: string | null = result;
-    error: unknown = null;
-    readAsDataURL() {
-      queueMicrotask(() => {
-        if (result === null) {
-          this.error = new Error('reader failed');
-          this.onerror?.();
-        } else {
-          this.onloadend?.();
-        }
-      });
-    }
-  }
-  (globalThis as unknown as { FileReader: typeof StubReader }).FileReader =
-    StubReader;
 }
 
 describe('useSpeech', () => {
@@ -201,7 +203,7 @@ describe('useSpeech', () => {
     });
   });
 
-  describe('speakViaEndpoint', () => {
+  describe('speakViaEndpoint (buffered fallback)', () => {
     beforeEach(() => {
       mockUseMentorSettings.mockReturnValue({
         data: { voiceProvider: 'openai' },
@@ -211,7 +213,6 @@ describe('useSpeech', () => {
 
     it('fetches the TTS endpoint and plays the returned audio', async () => {
       mockFetchOk();
-      stubFileReader('data:audio/mp3;base64,AAA');
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
 
@@ -228,6 +229,7 @@ describe('useSpeech', () => {
           headers: { Authorization: 'Token tok-123' },
         }),
       );
+      expect(createdAudios[0].src).toBe('blob:fake-url');
       expect(createdAudios[0].play).toHaveBeenCalled();
       await waitFor(() => expect(result.current.isSpeaking).toBe(true));
       expect(result.current.currentMessageId).toBe('m-endpoint');
@@ -237,11 +239,12 @@ describe('useSpeech', () => {
       });
       expect(result.current.isSpeaking).toBe(false);
       expect(result.current.currentMessageId).toBeNull();
+      // The object URL backing playback is released when playback ends.
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
     });
 
-    it('falls back to browser speech when the endpoint returns a non-data URL', async () => {
-      mockFetchOk();
-      stubFileReader('https://not-a-data-url.test/audio.mp3');
+    it('falls back to browser speech when the endpoint returns a non-audio payload', async () => {
+      mockFetchOk('application/json');
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
 
@@ -253,14 +256,14 @@ describe('useSpeech', () => {
       });
 
       await waitFor(() => expect(createdUtterances).toHaveLength(1));
-      expect(createdAudios).toHaveLength(0);
       expect(speak).toHaveBeenCalled();
+      // An audio element is created up front but never played for non-audio.
+      expect(createdAudios[0]?.play).not.toHaveBeenCalled();
     });
 
     it('omits the auth header when no DM token is available', async () => {
       window.localStorage.removeItem('dm_token');
       mockFetchOk();
-      stubFileReader('data:audio/mp3;base64,AAA');
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
       await act(async () => {
@@ -288,7 +291,6 @@ describe('useSpeech', () => {
 
     it('emits audio error -> resets snapshot', async () => {
       mockFetchOk();
-      stubFileReader('data:audio/mp3;base64,AAA');
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
       await act(async () => {
@@ -316,13 +318,152 @@ describe('useSpeech', () => {
     });
   });
 
+  describe('speakViaEndpoint (progressive MediaSource streaming)', () => {
+    let fakeMediaSource: FakeMediaSource;
+
+    type Listener = () => void;
+
+    class FakeSourceBuffer {
+      appended: Uint8Array[] = [];
+      private listeners: Record<string, Listener[]> = {};
+      addEventListener(type: string, cb: Listener) {
+        (this.listeners[type] ||= []).push(cb);
+      }
+      removeEventListener(type: string, cb: Listener) {
+        this.listeners[type] = (this.listeners[type] || []).filter(
+          (l) => l !== cb,
+        );
+      }
+      appendBuffer(chunk: Uint8Array) {
+        this.appended.push(chunk);
+        // Mirror the async nature of a real append.
+        queueMicrotask(() =>
+          (this.listeners['updateend'] || []).forEach((l) => l()),
+        );
+      }
+    }
+
+    class FakeMediaSource {
+      static isTypeSupported = vi.fn(() => true);
+      readyState: 'closed' | 'open' | 'ended' = 'closed';
+      sourceBuffers: FakeSourceBuffer[] = [];
+      endOfStream = vi.fn(() => {
+        this.readyState = 'ended';
+      });
+      addSourceBuffer = vi.fn((_mime: string) => {
+        const sb = new FakeSourceBuffer();
+        this.sourceBuffers.push(sb);
+        return sb;
+      });
+      private listeners: Record<string, Listener[]> = {};
+      addEventListener(type: string, cb: Listener) {
+        (this.listeners[type] ||= []).push(cb);
+        if (type === 'sourceopen') {
+          // The browser opens the source asynchronously after src assignment.
+          queueMicrotask(() => {
+            this.readyState = 'open';
+            cb();
+          });
+        }
+      }
+      removeEventListener(type: string, cb: Listener) {
+        this.listeners[type] = (this.listeners[type] || []).filter(
+          (l) => l !== cb,
+        );
+      }
+    }
+
+    function mockFetchStream(chunks: Uint8Array[], contentType = 'audio/mpeg') {
+      let i = 0;
+      globalThis.fetch = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: headers(contentType),
+        body: {
+          getReader: () => ({
+            read: vi.fn(async () =>
+              i < chunks.length
+                ? { done: false, value: chunks[i++] }
+                : { done: true, value: undefined },
+            ),
+          }),
+        },
+        blob: async () => new Blob([]),
+      })) as unknown as typeof fetch;
+    }
+
+    beforeEach(() => {
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'openai' },
+      });
+      window.localStorage.setItem('dm_token', 'tok-123');
+      fakeMediaSource = new FakeMediaSource();
+      // The hook does `new window.MediaSource()`; hand back our single instance
+      // so the test can assert against it.
+      const ctor = function () {
+        return fakeMediaSource;
+      } as unknown as typeof MediaSource;
+      (
+        ctor as unknown as {
+          isTypeSupported: typeof FakeMediaSource.isTypeSupported;
+        }
+      ).isTypeSupported = FakeMediaSource.isTypeSupported;
+      (window as unknown as { MediaSource: typeof MediaSource }).MediaSource =
+        ctor;
+    });
+
+    it('streams chunks through a SourceBuffer and plays progressively', async () => {
+      const chunks = [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6])];
+      mockFetchStream(chunks);
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+
+      await act(async () => {
+        result.current.speak({ id: 'm-stream', content: 'stream me' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      expect(FakeMediaSource.isTypeSupported).toHaveBeenCalledWith(
+        'audio/mpeg',
+      );
+      expect(fakeMediaSource.addSourceBuffer).toHaveBeenCalledWith(
+        'audio/mpeg',
+      );
+      expect(createdAudios[0].src).toBe('blob:fake-url');
+      expect(createdAudios[0].play).toHaveBeenCalled();
+
+      // All chunks are appended and the stream is finalised.
+      await waitFor(() =>
+        expect(fakeMediaSource.sourceBuffers[0].appended).toHaveLength(2),
+      );
+      await waitFor(() =>
+        expect(fakeMediaSource.endOfStream).toHaveBeenCalled(),
+      );
+      expect(result.current.currentMessageId).toBe('m-stream');
+    });
+
+    it('normalises audio/mp3 to audio/mpeg for streaming', async () => {
+      mockFetchStream([new Uint8Array([1, 2, 3])], 'audio/mp3');
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-mp3', content: 'mp3' } as never);
+      });
+
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+      expect(fakeMediaSource.addSourceBuffer).toHaveBeenCalledWith(
+        'audio/mpeg',
+      );
+    });
+  });
+
   describe('toggle and stop', () => {
     it('stop resets the snapshot and tears down active audio', async () => {
       mockUseMentorSettings.mockReturnValue({
         data: { voiceProvider: 'openai' },
       });
+      window.localStorage.setItem('dm_token', 'tok-123');
       mockFetchOk();
-      stubFileReader('data:audio/mp3;base64,AAA');
 
       const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
       await act(async () => {
@@ -336,6 +477,7 @@ describe('useSpeech', () => {
       expect(createdAudios[0].pause).toHaveBeenCalled();
       expect(result.current.isSpeaking).toBe(false);
       expect(cancel).toHaveBeenCalled();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
     });
 
     it('toggle stops when the same message is active', () => {

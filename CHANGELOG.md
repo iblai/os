@@ -4,28 +4,28 @@
 
 ### Chores
 
-* **env:** wire NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY into runtime env ([485d4ea](https://github.com/iblai/os/commit/485d4ea47a36b1a6acdcae6cfe8efadd7900b77b))
+- **env:** wire NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY into runtime env ([485d4ea](https://github.com/iblai/os/commit/485d4ea47a36b1a6acdcae6cfe8efadd7900b77b))
 
 ## [0.80.1](https://github.com/iblai/os/compare/v0.80.0...v0.80.1) (2026-06-22)
 
 ### Bug Fixes
 
-* **projects:** block navigation into agentless projects ([59e965f](https://github.com/iblai/os/commit/59e965fdd234ceaee3a800bc090477fe9ccde2c3))
-* **projects:** redirect to projects list when mentorId is missing ([5c0a663](https://github.com/iblai/os/commit/5c0a6636741dde248534af11a3da8de3e80bddb7))
+- **projects:** block navigation into agentless projects ([59e965f](https://github.com/iblai/os/commit/59e965fdd234ceaee3a800bc090477fe9ccde2c3))
+- **projects:** redirect to projects list when mentorId is missing ([5c0a663](https://github.com/iblai/os/commit/5c0a6636741dde248534af11a3da8de3e80bddb7))
 
 ## [0.80.0](https://github.com/iblai/os/compare/v0.79.0...v0.80.0) (2026-06-21)
 
 ### Features
 
-* **chat:** paginate chat history with infinite scroll-up ([1741f49](https://github.com/iblai/os/commit/1741f494c6f7118c66cf9629a3e359ba501f3d47))
+- **chat:** paginate chat history with infinite scroll-up ([1741f49](https://github.com/iblai/os/commit/1741f494c6f7118c66cf9629a3e359ba501f3d47))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 1.20.5 ([d6c8a47](https://github.com/iblai/os/commit/d6c8a47b20ccad629c5e537b0c4005ace5ca4053))
+- **deps:** bump @iblai/iblai-js to 1.20.5 ([d6c8a47](https://github.com/iblai/os/commit/d6c8a47b20ccad629c5e537b0c4005ace5ca4053))
 
 ### Tests
 
-* **e2e:** match tasks-tab description by stable prefix ([4f4925e](https://github.com/iblai/os/commit/4f4925ec7ffcffb0a66b70b4667d21a5c21401fe))
+- **e2e:** match tasks-tab description by stable prefix ([4f4925e](https://github.com/iblai/os/commit/4f4925ec7ffcffb0a66b70b4667d21a5c21401fe))
 
 ## [0.79.0](https://github.com/iblai/os/compare/v0.78.1...v0.79.0) (2026-06-21)
 
