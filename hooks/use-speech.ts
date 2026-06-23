@@ -9,11 +9,123 @@ import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
-async function fetchTtsDataUrl(
+// The TTS endpoint streams audio, so playback can begin as soon as the first
+// bytes arrive instead of waiting for the whole file. `audio/mp3` is a common
+// (non-standard) alias the browser's MediaSource only recognises as
+// `audio/mpeg`, so we normalise it to keep the streaming path available.
+const DEFAULT_TTS_MIME = 'audio/mpeg';
+
+function normalizeAudioMime(contentType: string | null): string {
+  const mime = (contentType ?? '').split(';')[0].trim().toLowerCase();
+  if (!mime) return DEFAULT_TTS_MIME;
+  return mime === 'audio/mp3' ? DEFAULT_TTS_MIME : mime;
+}
+
+function canStreamWithMediaSource(mime: string): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.MediaSource !== 'undefined' &&
+    typeof window.MediaSource.isTypeSupported === 'function' &&
+    window.MediaSource.isTypeSupported(mime)
+  );
+}
+
+// Pipes a fetch response body into a MediaSource so the audio element can play
+// the stream progressively. Resolves once the first chunk has been buffered
+// (enough to start playback); the remaining chunks keep streaming in the
+// background. The returned object URL must be revoked once playback is done.
+function attachMediaSourceStream(
+  audio: HTMLAudioElement,
+  body: ReadableStream<Uint8Array>,
+  mime: string,
+  signal: AbortSignal,
+): { objectUrl: string; ready: Promise<void> } {
+  const mediaSource = new window.MediaSource();
+  const objectUrl = URL.createObjectURL(mediaSource);
+  audio.src = objectUrl;
+
+  const ready = new Promise<void>((resolve, reject) => {
+    const onSourceOpen = () => {
+      mediaSource.removeEventListener('sourceopen', onSourceOpen);
+
+      let sourceBuffer: SourceBuffer;
+      try {
+        sourceBuffer = mediaSource.addSourceBuffer(mime);
+      } catch (err) {
+        reject(err);
+        return;
+      }
+
+      const appendChunk = (chunk: Uint8Array) =>
+        new Promise<void>((res, rej) => {
+          const onUpdateEnd = () => {
+            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
+            sourceBuffer.removeEventListener('error', onError);
+            res();
+          };
+          const onError = () => {
+            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
+            sourceBuffer.removeEventListener('error', onError);
+            rej(new Error('TTS source buffer append failed'));
+          };
+          sourceBuffer.addEventListener('updateend', onUpdateEnd);
+          sourceBuffer.addEventListener('error', onError);
+          // A fetch body is never SharedArrayBuffer-backed, so this view is a
+          // valid BufferSource even though the generic type allows otherwise.
+          sourceBuffer.appendBuffer(chunk as BufferSource);
+        });
+
+      const pump = async () => {
+        const reader = body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value && value.byteLength > 0) {
+              await appendChunk(value);
+              // First playable chunk is buffered — let the caller start
+              // playback while the rest continues to stream. `resolve` is a
+              // no-op on subsequent chunks.
+              resolve();
+            }
+          }
+          if (mediaSource.readyState === 'open') {
+            mediaSource.endOfStream();
+          }
+        } catch (err) {
+          // Once playback has started this reject is a no-op; the audio
+          // element's error handler covers mid-stream failures.
+          reject(err);
+          if (!signal.aborted && mediaSource.readyState === 'open') {
+            try {
+              mediaSource.endOfStream();
+            } catch {
+              // The source may already be torn down; nothing to recover.
+            }
+          }
+        }
+      };
+
+      void pump();
+    };
+
+    mediaSource.addEventListener('sourceopen', onSourceOpen);
+  });
+
+  return { objectUrl, ready };
+}
+
+// Loads the TTS audio for a message into `audio`, streaming progressively when
+// the browser supports it and falling back to a buffered object URL otherwise.
+// Resolves `true` once the audio has a playable source, or `false` when the
+// response was not audio (the caller should fall back to browser speech).
+async function loadTtsAudio(
+  audio: HTMLAudioElement,
   org: string,
   userId: string,
   chatMessageId: string,
-): Promise<string> {
+  signal: AbortSignal,
+): Promise<boolean> {
   const token =
     typeof window !== 'undefined'
       ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
@@ -23,17 +135,38 @@ async function fetchTtsDataUrl(
     method: 'GET',
     cache: 'no-cache',
     headers: token ? { Authorization: `Token ${token}` } : undefined,
+    signal,
   });
   if (!response.ok) {
     throw new Error(`TTS request failed with status ${response.status}`);
   }
+
+  const contentType = response.headers?.get?.('Content-Type') ?? null;
+  // An explicit non-audio payload (e.g. a JSON error) means there is nothing to
+  // play — let the caller fall back to browser speech synthesis.
+  if (contentType && !contentType.toLowerCase().startsWith('audio/')) {
+    return false;
+  }
+  const mime = normalizeAudioMime(contentType);
+
+  if (response.body && canStreamWithMediaSource(mime)) {
+    const { objectUrl, ready } = attachMediaSourceStream(
+      audio,
+      response.body,
+      mime,
+      signal,
+    );
+    activeObjectUrl = objectUrl;
+    await ready;
+    return true;
+  }
+
+  // No streaming support — buffer the whole response, then play it.
   const blob = await response.blob();
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+  const objectUrl = URL.createObjectURL(blob);
+  activeObjectUrl = objectUrl;
+  audio.src = objectUrl;
+  return true;
 }
 
 // Module-level store so every consumer of useSpeech (the per-message
@@ -53,6 +186,10 @@ let snapshot: SpeechSnapshot = {
 };
 
 let activeAudio: HTMLAudioElement | null = null;
+// Tracks the in-flight TTS stream so stopping playback can abort the fetch and
+// stop pumping chunks, and the object URL backing playback so it can be revoked.
+let activeStreamController: AbortController | null = null;
+let activeObjectUrl: string | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -72,12 +209,24 @@ function update(patch: Partial<SpeechSnapshot>) {
   listeners.forEach((l) => l());
 }
 
+function releaseObjectUrl() {
+  if (activeObjectUrl) {
+    URL.revokeObjectURL(activeObjectUrl);
+    activeObjectUrl = null;
+  }
+}
+
 function teardownPlayback() {
+  if (activeStreamController) {
+    activeStreamController.abort();
+    activeStreamController = null;
+  }
   if (activeAudio) {
     activeAudio.pause();
     activeAudio.src = '';
     activeAudio = null;
   }
+  releaseObjectUrl();
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
@@ -154,29 +303,38 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         isLoading: true,
       });
 
+      const controller = new AbortController();
+      activeStreamController = controller;
+      const audio = new Audio();
+      activeAudio = audio;
+      audio.onended = () => {
+        activeAudio = null;
+        releaseObjectUrl();
+        update({ currentMessageId: null, isSpeaking: false });
+      };
+      audio.onerror = () => {
+        activeAudio = null;
+        releaseObjectUrl();
+        update({ currentMessageId: null, isSpeaking: false });
+      };
+
       try {
-        const dataUrl = await fetchTtsDataUrl(
+        const isAudio = await loadTtsAudio(
+          audio,
           tenantKey,
           username,
           String(message.id),
+          controller.signal,
         );
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+        if (!isAudio) {
           speakViaBrowser(message);
           return;
         }
-        const audio = new Audio(dataUrl);
-        activeAudio = audio;
-        audio.onended = () => {
-          activeAudio = null;
-          update({ currentMessageId: null, isSpeaking: false });
-        };
-        audio.onerror = () => {
-          activeAudio = null;
-          update({ currentMessageId: null, isSpeaking: false });
-        };
         update({ isSpeaking: true, isLoading: false });
         await audio.play();
       } catch {
+        // A deliberate stop aborts the stream; its teardown already reset state.
+        if (controller.signal.aborted) return;
         resetSpeech();
       }
     },
